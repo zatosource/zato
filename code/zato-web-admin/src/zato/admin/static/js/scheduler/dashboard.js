@@ -92,10 +92,6 @@ $.fn.zato.scheduler.dashboard.outcome_tooltips = {
     'skipped_already_in_flight': 'Skipped because run #{ctx} was already in flight'
 };
 
-$.fn.zato.scheduler.dashboard.job_type_labels = {
-    'one_time': 'One-time',
-    'interval_based': 'Interval-based'
-};
 
 $.fn.zato.scheduler.dashboard.outcome_palette = {
     colors: $.fn.zato.scheduler.dashboard.outcome_colors,
@@ -922,7 +918,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
                 job_id: job.id
             });
 
-            if (job.job_type === 'interval_based' && job.interval_ms && job.interval_ms > 0) {
+            if (job.interval_ms && job.interval_ms > 0) {
                 var run_time = new Date(job.next_fire_utc).getTime();
                 var interval = parseInt(job.interval_ms, 10);
                 for (var projection_index = 1; projection_index < dash.config.max_upcoming_rows; projection_index++) {

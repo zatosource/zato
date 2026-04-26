@@ -264,7 +264,6 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', job.name);
     row += String.format('<td style="text-align:center">{0}</td>', job.is_active ? 'Yes' : 'No');
-    row += String.format('<td style="text-align:center">{0}</td>', friendly_names[job.job_type]);
     row += String.format('<td style="text-align:center">{0}</td>', data.definition_text);
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(job.service, cluster_id));
     row += String.format('<td><a href="' + $.fn.zato.scheduler.dashboard_base_url + 'job/{0}/?cluster={1}&outcomes=all">Statistics</a></td>', job.id, cluster_id);
@@ -273,7 +272,6 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.delete_('{0}');\">Delete</a>", job.id));
     row += String.format("<td class='ignore job_id_{0}'>{0}</td>", job.id);
     row += String.format("<td class='ignore'>{0}</td>", job.is_active);
-    row += String.format("<td class='ignore'>{0}</td>", job.job_type);
     row += String.format("<td class='ignore'>{0}</td>", job.start_date);
     row += String.format("<td class='ignore'>{0}</td>", job.extra);
 

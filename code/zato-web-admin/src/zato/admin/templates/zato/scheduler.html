@@ -28,19 +28,12 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
-    var friendly_names = new Object();
-
-    {% for name, friendly_name in friendly_names%}
-        friendly_names['{{ name }}'] = '{{ friendly_name }}';
-    {% endfor %}
-
     $.fn.zato.data_table.get_columns = function() {
         return [
             '_numbering',
             '_selection',
             'name',
             '_is_active',
-            '_job_type',
             '_definition_text',
             'service',
             '_statistics',
@@ -49,7 +42,6 @@
             '_delete',
             'id',
             'is_active',
-            'job_type',
             'start_date',
             'extra',
             'weeks',
@@ -104,7 +96,6 @@
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
                         <th style="text-align:center"><a href="#">Active</a></th>
-                        <th style="text-align:center"><a href="#">Job type</a></th>
                         <th>Definition</th>
                         <th><a href="#">Service</a></th>
                         <th>&nbsp;</th>
@@ -132,7 +123,6 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ job.name }}</td>
                         <td style="text-align:center">{{ job.is_active|yesno:"Yes,No" }}</td>
-                        <td style="text-align:center">{{ job.job_type_friendly }}</td>
                         <td style="text-align:center">{{ job.definition_text|safe }}</td>
                         <td><a href="{% url "service-ide" "service" job.service_name %}?cluster={{ cluster_id }}">{{ job.service_name }}</a></td>
                         <td><a href="{% url "scheduler-job-detail" job.id %}?cluster={{ cluster_id }}&outcomes=all">Statistics</a></td>
@@ -141,7 +131,6 @@
                         <td><a href="javascript:$.fn.zato.scheduler.delete_('{{ job.id }}');">Delete</a></td>
                         <td class='ignore job_id_{{ job.id }}'>{{ job.id }}</td>
                         <td class='ignore'>{{ job.is_active }}</td>
-                        <td class='ignore'>{{ job.job_type }}</td>
                         <td class='ignore'>{{ job.start_date }}</td>
                         <td class='ignore'>{{ job.extra|default:"" }}</td>
                         <td class='ignore'>{{ job.interval_based.weeks|default:"" }}</td>

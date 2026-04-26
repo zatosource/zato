@@ -365,9 +365,6 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
     var service_link = config_service ? $.fn.zato.data_table.service_text(config_service, cluster_id) : '-';
     html += card('Service', service_link, true);
 
-    var type_label = dashboard.job_type_labels[job.job_type];
-    html += card('Job type', type_label, false);
-
     var start_display = job.start_date ? kit.format_local_time(job.start_date) : '-';
     html += card('Start date', start_display, false);
 
@@ -376,21 +373,19 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
         : '<span style="color:var(--text-muted);font-weight:700">Paused</span>';
     html += card('Status', status_html, true);
 
-    if (job.job_type === 'interval_based') {
-        var parts = [];
-        if (job.weeks) parts.push(kit.format_number_full(job.weeks) + (job.weeks === 1 ? ' week' : ' weeks'));
-        if (job.days) parts.push(kit.format_number_full(job.days) + (job.days === 1 ? ' day' : ' days'));
-        if (job.hours) parts.push(kit.format_number_full(job.hours) + (job.hours === 1 ? ' hour' : ' hours'));
-        if (job.minutes) parts.push(kit.format_number_full(job.minutes) + (job.minutes === 1 ? ' minute' : ' minutes'));
-        if (job.seconds) parts.push(kit.format_number_full(job.seconds) + (job.seconds === 1 ? ' second' : ' seconds'));
-        var interval_text = '-';
-        if (parts.length === 1) {
-            interval_text = parts[0];
-        } else if (parts.length > 1) {
-            interval_text = parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1];
-        }
-        html += card('Interval', interval_text, false);
+    var parts = [];
+    if (job.weeks) parts.push(kit.format_number_full(job.weeks) + (job.weeks === 1 ? ' week' : ' weeks'));
+    if (job.days) parts.push(kit.format_number_full(job.days) + (job.days === 1 ? ' day' : ' days'));
+    if (job.hours) parts.push(kit.format_number_full(job.hours) + (job.hours === 1 ? ' hour' : ' hours'));
+    if (job.minutes) parts.push(kit.format_number_full(job.minutes) + (job.minutes === 1 ? ' minute' : ' minutes'));
+    if (job.seconds) parts.push(kit.format_number_full(job.seconds) + (job.seconds === 1 ? ' second' : ' seconds'));
+    var interval_text = '-';
+    if (parts.length === 1) {
+        interval_text = parts[0];
+    } else if (parts.length > 1) {
+        interval_text = parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1];
     }
+    html += card('Interval', interval_text, false);
 
     if (job.repeats !== null) {
         html += card('Repeats', job.repeats === 0 ? 'Unlimited' : kit.format_number_full(job.repeats), false);
