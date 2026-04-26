@@ -333,12 +333,15 @@ impl Scheduler {
         with_state_mut(&self.shared, |state| {
             if let Some(running_job) = state.jobs.get_mut(&job_id) {
                 log::info!(
-                    "mark_complete: job_id={job_id} job.current_run={} with_test_data={}",
-                    running_job.current_run, state.with_test_data,
+                    "mark_complete: job_id={job_id} name={} job.current_run={} in_flight={} in_flight_run={:?} next_fire_utc={:?} interval_ms={} with_test_data={}",
+                    running_job.name, running_job.current_run, running_job.in_flight, running_job.in_flight_run,
+                    running_job.next_fire_utc, running_job.interval_ms, state.with_test_data,
                 );
                 running_job.in_flight = false;
                 running_job.in_flight_since = None;
                 running_job.in_flight_run = None;
+
+                let mut found_rec = false;
                 for rec in running_job.history.iter_mut().rev() {
                     if rec.current_run == current_run {
                         rec.duration_ms = Some(duration_ms);
@@ -348,18 +351,42 @@ impl Scheduler {
                             level: "SYSTEM".into(),
                             message: format!("Job completed, outcome: {outcome}, duration: {}", humanize_ms(duration_ms)),
                         });
+                        found_rec = true;
+                        log::info!(
+                            "mark_complete: job_id={job_id} updated history rec for run={current_run} planned={} actual={}",
+                            rec.planned_fire_time_iso, rec.actual_fire_time_iso,
+                        );
                         break;
                     }
                 }
+                if !found_rec {
+                    log::warn!(
+                        "mark_complete: job_id={job_id} name={} could not find history rec for run={current_run}, history_len={}",
+                        running_job.name, running_job.history.len(),
+                    );
+                }
 
-                if running_job.interval_ms > 0 && duration_ms >= running_job.interval_ms {
+                let catchup_eligible = running_job.interval_ms > 0 && duration_ms >= running_job.interval_ms;
+                log::info!(
+                    "mark_complete: job_id={job_id} catchup_eligible={catchup_eligible} (duration_ms={duration_ms} >= interval_ms={})",
+                    running_job.interval_ms,
+                );
+                if catchup_eligible {
                     let now = Utc::now();
+                    let mut catchup_count: u32 = 0;
                     while let Some(fire) = running_job.next_fire_utc {
                         if fire >= now {
+                            log::info!(
+                                "mark_complete: job_id={job_id} catchup loop done, fire={fire} >= now={now}, caught_up={catchup_count}",
+                            );
                             break;
                         }
                         running_job.current_run += 1;
+                        catchup_count += 1;
                         let skipped_run = running_job.current_run;
+                        log::info!(
+                            "mark_complete: job_id={job_id} catchup skip run={skipped_run} fire={fire} now={now}",
+                        );
                         running_job.record_execution(
                             ExecutionRecord::new(
                                 &fire.to_rfc3339(),
@@ -370,6 +397,10 @@ impl Scheduler {
                         );
                         running_job.advance_to_next(now);
                     }
+                    log::info!(
+                        "mark_complete: job_id={job_id} catchup finished, total_caught_up={catchup_count} final_current_run={} final_next_fire={:?}",
+                        running_job.current_run, running_job.next_fire_utc,
+                    );
                 }
 
                 if state.with_test_data {

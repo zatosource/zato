@@ -1058,7 +1058,19 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
                 $data_row.css('display', 'none');
                 $panel.css('box-shadow', cfg.shadow);
                 detail._fetch_and_render_log_entries($panel_log, detail._object_id, record.current_run);
+
+                // .. poll for new log entries while panel is open
+                var log_poll_id = setInterval(function() {
+                    if (!$panel.hasClass('expanded')) {
+                        clearInterval(log_poll_id);
+                        return;
+                    }
+                    detail._fetch_and_render_log_entries($panel_log, detail._object_id, record.current_run);
+                }, 1000);
+                $panel.data('log-poll-id', log_poll_id);
             } else {
+                var old_poll_id = $panel.data('log-poll-id');
+                if (old_poll_id) clearInterval(old_poll_id);
                 $panel.find('.detail-log-mirror').remove();
                 $panel.find('.detail-log-line').not('.detail-log-mirror').remove();
                 $data_row.css('display', '');

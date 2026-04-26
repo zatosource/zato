@@ -178,8 +178,15 @@ pub fn scheduler_loop(shared: Arc<SchedulerShared>, odb_adapter: PyObject, callb
         let now_mono = Instant::now();
         let wall_delta_ms = (now_wall - last_wall).num_milliseconds();
         let mono_delta_ms = i64::try_from(now_mono.duration_since(last_mono).as_millis()).unwrap_or(i64::MAX);
+        let drift_ms = (wall_delta_ms - mono_delta_ms).abs();
 
-        if (wall_delta_ms - mono_delta_ms).abs() > shared.clock_jump_threshold_ms {
+        log::info!(
+            "scheduler_loop tick: now_wall={now_wall} wall_delta_ms={wall_delta_ms} mono_delta_ms={mono_delta_ms} drift_ms={drift_ms} threshold={}",
+            shared.clock_jump_threshold_ms,
+        );
+
+        if drift_ms > shared.clock_jump_threshold_ms {
+            log::warn!("scheduler_loop: clock jump detected (drift_ms={drift_ms}), reanchoring all jobs");
             let mut state = shared.state.lock();
             reanchor_all_jobs(&mut state, now_wall);
         }
@@ -195,6 +202,12 @@ pub fn scheduler_loop(shared: Arc<SchedulerShared>, odb_adapter: PyObject, callb
         };
 
         if !fire_batch.is_empty() {
+            for item in &fire_batch {
+                log::info!(
+                    "scheduler_loop: dispatching job_id={} name={} service={} run={}",
+                    item.job_id.0, item.name, item.service, item.current_run,
+                );
+            }
             dispatch_jobs(&fire_batch, &callbacks.run_cb, &callbacks.spawn_fn, &callbacks.on_job_executed_cb);
         }
     }
@@ -225,13 +238,20 @@ pub fn load_jobs(
 
 /// Loads jobs from the ODB adapter into the shared state at startup.
 fn load_initial_jobs(shared: &SchedulerShared, odb_adapter: &PyObject) {
+    log::info!("load_initial_jobs: starting");
     let _attached = Python::try_attach(|py| {
         let adapter = odb_adapter.bind(py);
         match load_jobs(adapter) {
             Ok((jobs, _cals)) => {
+                log::info!("load_initial_jobs: loaded {} jobs from ODB", jobs.len());
                 let mut state = shared.state.lock();
                 for job in &jobs {
                     let running_job = RunningJob::from_scheduler_job(job);
+                    log::info!(
+                        "load_initial_jobs: job_id={} name={} interval_ms={} start_date={:?} next_fire_utc={:?} is_active={}",
+                        job.id, running_job.name, running_job.interval_ms, running_job.start_date,
+                        running_job.next_fire_utc, running_job.is_active,
+                    );
                     state.jobs.insert(job.id, running_job);
                 }
             }
@@ -247,6 +267,7 @@ fn load_initial_jobs(shared: &SchedulerShared, odb_adapter: &PyObject) {
 pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
     let now = Utc::now();
     let mut min_ms: i64 = 60_000;
+    let mut closest_job_name: Option<&str> = None;
 
     for running_job in state.jobs.values() {
         if !running_job.is_active {
@@ -256,6 +277,7 @@ pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
             let diff = (fire_utc - now).num_milliseconds();
             if diff < min_ms {
                 min_ms = diff;
+                closest_job_name = Some(&running_job.name);
             }
         }
     }
@@ -269,6 +291,10 @@ pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
     }
 
     let clamped = min_ms.max(1);
+    log::info!(
+        "compute_sleep: now={now} min_ms={min_ms} clamped={clamped} closest_job={:?}",
+        closest_job_name,
+    );
     Duration::from_millis(u64::try_from(clamped).unwrap_or(1))
 }
 
@@ -282,21 +308,36 @@ pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, 
 
     let job_ids: Vec<i64> = state.jobs.keys().copied().collect();
 
+    log::info!("collect_due_jobs: now={now} threshold={threshold} coalesce_window_ms={coalesce_window_ms} job_count={}", job_ids.len());
+
     for job_id in job_ids {
         let calendars_ref = &state.calendars;
         let Some(running_job) = state.jobs.get_mut(&job_id) else { continue };
 
         if !running_job.is_active {
+            log::info!("collect_due_jobs: job_id={job_id} name={} skipped (not active)", running_job.name);
             continue;
         }
 
-        let Some(fire_utc) = running_job.next_fire_utc else { continue };
+        let Some(fire_utc) = running_job.next_fire_utc else {
+            log::info!("collect_due_jobs: job_id={job_id} name={} skipped (no next_fire_utc)", running_job.name);
+            continue;
+        };
 
         if fire_utc > threshold {
+            let diff_ms = (fire_utc - now).num_milliseconds();
+            log::info!(
+                "collect_due_jobs: job_id={job_id} name={} skipped (not due) fire_utc={fire_utc} threshold={threshold} diff_ms={diff_ms}",
+                running_job.name,
+            );
             continue;
         }
 
         if running_job.in_flight {
+            log::info!(
+                "collect_due_jobs: job_id={job_id} name={} skipped (in_flight) in_flight_run={:?} fire_utc={fire_utc}",
+                running_job.name, running_job.in_flight_run,
+            );
             continue;
         }
 
@@ -305,12 +346,16 @@ pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, 
 
         let prev_run = running_job.current_run;
         running_job.current_run += 1;
+        let delay_ms = (now - fire_utc).num_milliseconds().max(0);
+        let delay_ms_unsigned = u64::try_from(delay_ms).unwrap_or(0);
+
         log::info!(
-            "collect_due_jobs: job_id={} name={} prev_run={} new_run={} fire_utc={}",
-            job_id, running_job.name, prev_run, running_job.current_run, fire_utc,
+            "collect_due_jobs: FIRING job_id={job_id} name={} prev_run={prev_run} new_run={} fire_utc={fire_utc} now={now} delay_ms={delay_ms} interval_ms={} start_date={:?}",
+            running_job.name, running_job.current_run, running_job.interval_ms, running_job.start_date,
         );
 
         if running_job.is_holiday_today(calendars_ref) {
+            log::info!("collect_due_jobs: job_id={job_id} name={} skipped (holiday)", running_job.name);
             running_job.record_execution(ExecutionRecord::new(
                 &planned,
                 &actual,
@@ -324,9 +369,6 @@ pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, 
         running_job.in_flight = true;
         running_job.in_flight_since = Some(Instant::now());
         running_job.in_flight_run = Some(running_job.current_run);
-
-        let delay_ms = (now - fire_utc).num_milliseconds().max(0);
-        let delay_ms_unsigned = u64::try_from(delay_ms).unwrap_or(0);
 
         batch.push(FireBatch {
             job_id: running_job.id,
@@ -347,9 +389,18 @@ pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, 
 
         running_job.record_execution(rec);
 
+        log::info!(
+            "collect_due_jobs: job_id={job_id} name={} about to advance_to_next, current next_fire_utc={:?}",
+            running_job.name, running_job.next_fire_utc,
+        );
         running_job.advance_to_next(now);
+        log::info!(
+            "collect_due_jobs: job_id={job_id} name={} after advance_to_next, new next_fire_utc={:?}",
+            running_job.name, running_job.next_fire_utc,
+        );
     }
 
+    log::info!("collect_due_jobs: returning {} jobs to fire", batch.len());
     batch
 }
 
@@ -390,6 +441,10 @@ pub fn check_in_flight_timeouts(state: &mut SchedulerState) {
         let elapsed_ms = u64::try_from(now_instant.duration_since(since).as_millis()).unwrap_or(u64::MAX);
         if elapsed_ms > running_job.max_execution_time_ms {
             let timed_out_run = running_job.in_flight_run.unwrap_or(0);
+            log::warn!(
+                "check_in_flight_timeouts: job={} run={timed_out_run} timed out after {elapsed_ms}ms (max={})",
+                running_job.name, running_job.max_execution_time_ms,
+            );
             running_job.in_flight = false;
             running_job.in_flight_since = None;
             running_job.in_flight_run = None;
@@ -437,9 +492,18 @@ pub fn drain_synthetic_drips(state: &mut SchedulerState) {
 
 /// Recomputes `next_fire_utc` for every active job after a clock jump.
 pub fn reanchor_all_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>) {
+    log::info!("reanchor_all_jobs: now={now} job_count={}", state.jobs.len());
     for running_job in state.jobs.values_mut() {
         if running_job.is_active {
+            log::info!(
+                "reanchor_all_jobs: job={} old_next_fire={:?} current_run={}",
+                running_job.name, running_job.next_fire_utc, running_job.current_run,
+            );
             running_job.compute_next_fire(now);
+            log::info!(
+                "reanchor_all_jobs: job={} new_next_fire={:?}",
+                running_job.name, running_job.next_fire_utc,
+            );
         }
     }
     apply_missed_catchup(state, now);
@@ -449,21 +513,44 @@ pub fn reanchor_all_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>)
 pub fn apply_missed_catchup(state: &mut SchedulerState, now: chrono::DateTime<Utc>) {
     let job_ids: Vec<i64> = state.jobs.keys().copied().collect();
 
+    log::info!("apply_missed_catchup: now={now} job_count={}", job_ids.len());
+
     for job_id in job_ids {
         let Some(running_job) = state.jobs.get_mut(&job_id) else { continue };
 
         if !running_job.is_active || running_job.job_type == JobType::OneTime {
+            log::info!(
+                "apply_missed_catchup: job_id={job_id} name={} skipped (active={} type={:?})",
+                running_job.name, running_job.is_active, running_job.job_type,
+            );
             continue;
         }
 
-        let Some(start_date) = running_job.start_date else { continue };
+        let Some(start_date) = running_job.start_date else {
+            log::info!("apply_missed_catchup: job_id={job_id} name={} skipped (no start_date)", running_job.name);
+            continue;
+        };
         if start_date > now {
+            log::info!(
+                "apply_missed_catchup: job_id={job_id} name={} skipped (start_date={start_date} > now={now})",
+                running_job.name,
+            );
             continue;
         }
+
+        log::info!(
+            "apply_missed_catchup: job_id={job_id} name={} on_missed={:?} next_fire_utc={:?} current_run={}",
+            running_job.name, running_job.on_missed, running_job.next_fire_utc, running_job.current_run,
+        );
 
         match running_job.on_missed {
             OnMissedPolicy::Skip => {
+                log::info!("apply_missed_catchup: job_id={job_id} name={} policy=Skip, recomputing next_fire", running_job.name);
                 running_job.compute_next_fire(now);
+                log::info!(
+                    "apply_missed_catchup: job_id={job_id} name={} after recompute, next_fire_utc={:?}",
+                    running_job.name, running_job.next_fire_utc,
+                );
             }
             OnMissedPolicy::RunOnce => {
                 if let Some(fire) = running_job.next_fire_utc
@@ -472,8 +559,8 @@ pub fn apply_missed_catchup(state: &mut SchedulerState, now: chrono::DateTime<Ut
                     let prev_run = running_job.current_run;
                     running_job.current_run += 1;
                     log::info!(
-                        "apply_missed_catchup: job_id={job_id} name={} prev_run={prev_run} new_run={} fire={fire}",
-                        running_job.name, running_job.current_run,
+                        "apply_missed_catchup: job_id={job_id} name={} policy=RunOnce FIRING prev_run={prev_run} new_run={} missed_fire={fire} now={now} delay_ms={}",
+                        running_job.name, running_job.current_run, (now - fire).num_milliseconds(),
                     );
                     running_job.record_execution(ExecutionRecord::new(
                         &fire.to_rfc3339(),
@@ -483,6 +570,11 @@ pub fn apply_missed_catchup(state: &mut SchedulerState, now: chrono::DateTime<Ut
                     ));
                     running_job.next_fire_utc = Some(now);
                     running_job.sync_instant_from_utc_pub(now);
+                } else {
+                    log::info!(
+                        "apply_missed_catchup: job_id={job_id} name={} policy=RunOnce, no missed fire (next_fire_utc={:?} >= now={now})",
+                        running_job.name, running_job.next_fire_utc,
+                    );
                 }
             }
         }

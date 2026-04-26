@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import logging
+import threading
 from datetime import datetime
 
 # ################################################################################################################################
@@ -31,22 +32,24 @@ class RedisHandler(logging.Handler):
     def __init__(self, channel='zato.logs', redis_host='localhost', redis_port=6379, redis_db=0):
         super().__init__()
         self.channel = channel
-        self.redis_client = None
+        self._local = threading.local()
         self.redis_host = redis_host
         self.redis_port = redis_port
         self.redis_db = redis_db
         self.emit_count = 0
 
-    def _get_redis_client(self):
-        if self.redis_client is None:
+    def _get_redis_client(self) -> 'Redis':
+        client = getattr(self._local, 'redis_client', None)
+        if client is None:
             import redis
-            self.redis_client = redis.Redis(
+            client = redis.Redis(
                 host=self.redis_host,
                 port=self.redis_port,
                 db=self.redis_db,
                 decode_responses=True
             )
-        return self.redis_client
+            self._local.redis_client = client
+        return client
 
     def emit(self, record):
         if record.name in ('zato.common.log_streaming', 'zato.redis_handler', 'zato.stream_manager', 'zato.sse_stream', 'zato.admin.web.util'):
