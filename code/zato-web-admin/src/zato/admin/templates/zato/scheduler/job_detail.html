@@ -14,9 +14,11 @@
         <a href="/zato/scheduler/dashboard/?cluster={{ cluster_id }}" class="detail-component-pill menu-link">Scheduler</a>
         Job detail
     </span>
-    <span class="detail-header-right detail-header-next-fire">
-        <span class="detail-header-next-fire-label">Next fire</span>
-        <span class="detail-header-next-fire-value" id="header-next-fire">-</span>
+    <span class="detail-header-right">
+        <span class="detail-header-extra" hidden>
+            <span class="detail-header-extra-label">Next run</span>
+            <span class="detail-header-extra-value" id="header-extra-value">-</span>
+        </span>
         <button class="action-button detail-header-execute-btn" id="btn-execute-now">Execute now</button>
     </span>
 </div>
@@ -95,6 +97,7 @@ $(document).ready(function() {
             <span class="detail-inline-stat"><span class="detail-inline-stat-label">Total</span> <span id="stat-total-runs">-</span></span>
             <span class="detail-inline-stat"><span class="detail-inline-stat-label">Errors</span> <span id="stat-errors">-</span></span>
             <span class="detail-inline-stat"><span class="detail-inline-stat-label">Avg</span> <span id="stat-avg-duration">-</span></span>
+            <span class="detail-inline-stat"><span class="detail-inline-stat-label">Next run</span> <span id="stat-next-run" data-countdown-target="">-</span> <span id="stat-next-run-ts" class="detail-inline-stat-muted"></span></span>
         </span>
     </h3>
     <div id="detail-timeline" style="min-height:60px"></div>

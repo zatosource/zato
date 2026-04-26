@@ -114,7 +114,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
     // Spark buffers via kit
     dash._spark_buffers = kit.spark.create({
-        keys: ['total_jobs', 'active', 'paused', 'runs', 'recent_runs'],
+        keys: ['total_jobs', 'active', 'paused', 'runs', 'recent'],
         window_ms: 60 * 60 * 1000,
         bucket_count: 60
     });
@@ -138,12 +138,12 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         return new Date(iso).getTime();
     };
 
-    dash._rebuild_recent_runs_series = function(timeline) {
+    dash._rebuild_recent_series = function(timeline) {
         var result = kit.bucket_events_per_minute(
             timeline, dash._is_failure, _ts_accessor,
             dash._spark_buffers.window_ms(), 60
         );
-        dash._spark_buffers.set_buffer('recent_runs', result.series);
+        dash._spark_buffers.set_buffer('recent', result.series);
         return result.total;
     };
 
@@ -781,8 +781,8 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
         for (var job_index = 0; job_index < jobs.length; job_index++) {
             var job = jobs[job_index];
-            var next_fire_text = kit.relative_time_future(job.next_fire_utc);
-            var next_fire_tooltip = kit.format_local_time(job.next_fire_utc);
+            var next_run_text = kit.relative_time_future(job.next_fire_utc);
+            var next_run_tooltip = kit.format_local_time(job.next_fire_utc);
             var detail_url = '/zato/scheduler/dashboard/job/' + encodeURIComponent(job.id) + '/?cluster=' + cluster_id + '&outcomes=' + dash.Outcome_All;
 
             var service_name = job.service;
@@ -794,7 +794,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
                 (dash.config.show_live_status ? '' : ' style="display:none"') + '>' + status.html + '</td>';
             row += '<td><a href="' + detail_url + '">' + job.name + '</a></td>';
             row += '<td>' + service_cell + '</td>';
-            row += '<td data-countdown-target="' + (job.next_fire_utc || '') + '" style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73" title="' + next_fire_tooltip + '">' + next_fire_text + '</td>';
+            row += '<td data-countdown-target="' + (job.next_fire_utc || '') + '" style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73" title="' + next_run_tooltip + '">' + next_run_text + '</td>';
             row += '<td>' + dash.outcome_squares(job.recent_outcomes) + '</td>';
             row += '</tr>';
             table_body.append(row);
@@ -824,8 +824,8 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
     // Render recent runs table (capped to 100 rows, with Run number column)
     // ////////////////////////////////////////////////////////////////////////
 
-    dash.render_recent_runs = function(timeline) {
-        var container = $('#dashboard-recent-runs-body');
+    dash.render_recent = function(timeline) {
+        var container = $('#dashboard-recent-body');
         container.find('.dashboard-outcome-badge').each(function() {
             if (this._tippy) {
                 this._tippy.destroy();
@@ -835,7 +835,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
         if (!timeline || timeline.length === 0) {
             container.html('<div class="dashboard-no-data">No recent runs</div>');
-            $('#dashboard-recent-runs-count').text('0');
+            $('#dashboard-recent-count').text('0');
             return;
         }
 
@@ -848,7 +848,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
                 exec_count++;
             }
         }
-        kit.set_number($('#dashboard-recent-runs-count'), exec_count);
+        kit.set_number($('#dashboard-recent-count'), exec_count);
 
         var html = '<table class="zato-table"><thead><tr>';
         html += '<th>Run</th><th>Time</th><th>Job name</th><th>Outcome</th>';
@@ -913,10 +913,10 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             });
 
             if (job.job_type === 'interval_based' && job.interval_ms && job.interval_ms > 0) {
-                var fire_time = new Date(job.next_fire_utc).getTime();
+                var run_time = new Date(job.next_fire_utc).getTime();
                 var interval = parseInt(job.interval_ms, 10);
                 for (var projection_index = 1; projection_index < 5; projection_index++) {
-                    var projected_time = fire_time + (projection_index * interval);
+                    var projected_time = run_time + (projection_index * interval);
                     upcoming.push({
                         time: new Date(projected_time).toISOString(),
                         name: job.name,
@@ -968,7 +968,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         var paused_jobs = data.paused_jobs;
 
         var outcome_counts = data.outcome_counts;
-        var recent_runs_lifetime = outcome_counts['error'] + outcome_counts['timeout'];
+        var recent_lifetime = outcome_counts['error'] + outcome_counts['timeout'];
 
         var buffers = dash._spark_buffers;
         buffers.seed_flat({
@@ -982,18 +982,18 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         buffers.push('paused', paused_jobs);
 
         var runs_last_hour = dash._rebuild_runs_series(data.history_timeline);
-        var recent_runs_last_hour = dash._rebuild_recent_runs_series(data.history_timeline);
+        var recent_last_hour = dash._rebuild_recent_series(data.history_timeline);
 
         kit.set_number($('#stat-total-jobs'), total_jobs);
         kit.set_number($('#stat-active'), active_jobs);
         kit.set_number($('#stat-paused'), paused_jobs);
         kit.set_number($('#stat-runs'), runs_last_hour);
-        kit.set_number($('#stat-recent-runs'), recent_runs_last_hour);
+        kit.set_number($('#stat-recent'), recent_last_hour);
 
-        if (recent_runs_last_hour > 0) {
-            $('#stat-recent-runs').css('color', '#ff6b6b');
+        if (recent_last_hour > 0) {
+            $('#stat-recent').css('color', '#ff6b6b');
         } else {
-            $('#stat-recent-runs').css('color', '#fff');
+            $('#stat-recent').css('color', '#fff');
         }
 
         var timeline = data.history_timeline;
@@ -1008,10 +1008,10 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         $('#stat-runs-sublabel')
             .text(runs_sub)
             .attr('title', kit.format_number_full(timeline_total) + ' total');
-        var recent_runs_sub = kit.format_number_compact(recent_runs_lifetime) + ' total';
-        $('#stat-recent-runs-sublabel')
-            .text(recent_runs_sub)
-            .attr('title', kit.format_number_full(recent_runs_lifetime) + ' total');
+        var recent_sub = kit.format_number_compact(recent_lifetime) + ' total';
+        $('#stat-recent-sublabel')
+            .text(recent_sub)
+            .attr('title', kit.format_number_full(recent_lifetime) + ' total');
 
         var _theme = dash.theme;
         var base_spark = {height: 36, color: _theme.spark_color, dot_color: _theme.spark_color, dot_radius: 3.5};
@@ -1022,7 +1022,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             {sel: '#spark-active', key: 'active', opts: base_spark, dot_style: 'filled_halo'},
             {sel: '#spark-paused', key: 'paused', opts: base_spark, dot_style: 'filled_halo'},
             {sel: '#spark-runs', key: 'runs', opts: base_spark, dot_style: 'filled_halo'},
-            {sel: '#spark-recent-runs', key: 'recent_runs', opts: base_spark_err, dot_style: 'filled_halo'}
+            {sel: '#spark-recent', key: 'recent', opts: base_spark_err, dot_style: 'filled_halo'}
         ];
 
         for (var tile_i = 0; tile_i < tile_specs.length; tile_i++) {
@@ -1038,17 +1038,17 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
         dash.render_bar_chart(data.history_timeline);
         dash.render_job_table(data.jobs);
-        dash.render_recent_runs(data.history_timeline);
+        dash.render_recent(data.history_timeline);
         dash.render_upcoming_table(data.jobs);
 
-        var recent_runs_total = 0;
-        for (var fi = 0; fi < timeline.length; fi++) {
-            var oc = timeline[fi].outcome;
-            if (oc === 'error' || oc === 'timeout') recent_runs_total++;
-        }
-        if (dash._tabs_handle) {
+        if (dash._tabs_handle && !dash._tab_locked) {
+            var recent_total = 0;
+            for (var fi = 0; fi < timeline.length; fi++) {
+                var oc = timeline[fi].outcome;
+                if (oc === 'error' || oc === 'timeout') recent_total++;
+            }
             dash._tabs_handle.set_tab(
-                recent_runs_total === 0 ? 'upcoming' : 'recent_runs'
+                recent_total === 0 ? 'upcoming' : 'recent'
             );
         }
     };
@@ -1059,7 +1059,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
     dash.poll = function() {
         var old_run_ts = {};
-        $('#dashboard-recent-runs-body tr[data-ts]').each(function() {
+        $('#dashboard-recent-body tr[data-ts]').each(function() {
             var ts = $(this).attr('data-ts');
             if (ts) old_run_ts[ts] = true;
         });
@@ -1078,7 +1078,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
                 if (had_runs) {
                     var new_list = [];
-                    $('#dashboard-recent-runs-body tr[data-ts]').each(function() {
+                    $('#dashboard-recent-body tr[data-ts]').each(function() {
                         var ts = $(this).attr('data-ts');
                         if (ts && !old_run_ts[ts]) {
                             new_list.push(ts);
@@ -1090,7 +1090,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
                     }
                 }
                 kit.recency.apply({
-                    container: '#dashboard-recent-runs-body tbody',
+                    container: '#dashboard-recent-body tbody',
                     recent_ts: dash._recent_failure_ts,
                     rgb: dash.theme.row_recency_color
                 });
@@ -1209,7 +1209,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
                 {sparkline_selector: '#spark-active', buffer_key: 'active', label: 'Active', color: dash.theme.spark_color},
                 {sparkline_selector: '#spark-paused', buffer_key: 'paused', label: 'Paused', color: dash.theme.spark_color},
                 {sparkline_selector: '#spark-runs', buffer_key: 'runs', label: 'Runs', color: dash.theme.spark_color},
-                {sparkline_selector: '#spark-recent-runs', buffer_key: 'recent_runs', label: 'Recent runs', color: dash.theme.spark_err}
+                {sparkline_selector: '#spark-recent', buffer_key: 'recent', label: 'Recent runs', color: dash.theme.spark_err}
             ],
             get_buffer: function(key) {
                 return dash._spark_buffers.data(key);
@@ -1217,18 +1217,21 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         });
 
         // Tabs - delegated to kit, synced to URL
+        dash._tab_locked = false;
         dash._tabs_handle = kit.tabs.init({
             tab_selector: '.dashboard-tab',
             panel_prefix: 'dashboard-tab-panel-',
             storage_key: 'zato_scheduler_activity_tab',
-            default_tab: 'recent_runs',
+            default_tab: 'recent',
             on_change: function(tab_name) {
+                dash._tab_locked = true;
                 kit.url_state.set({tab: tab_name});
             }
         });
 
         var url_tab = kit.url_state.get('tab');
         if (url_tab) {
+            dash._tab_locked = true;
             dash._tabs_handle.set_tab(url_tab, true);
         }
 

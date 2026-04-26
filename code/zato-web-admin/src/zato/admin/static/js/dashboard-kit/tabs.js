@@ -32,6 +32,12 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var current_tab = stored || config.default_tab;
         var user_chose = false;
 
+        var valid_tabs = {};
+        $(tab_selector).each(function() { valid_tabs[$(this).data('tab')] = true; });
+        if (!valid_tabs[current_tab]) {
+            current_tab = config.default_tab;
+        }
+
         var apply = function() {
             $(tab_selector).each(function() {
                 var is_active = $(this).data('tab') === current_tab;

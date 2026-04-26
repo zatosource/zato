@@ -422,7 +422,20 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         $('[data-countdown-target]').each(function() {
             var $cell = $(this);
             var iso = $cell.attr('data-countdown-target');
-            $cell.text(kit.relative_time_future(iso));
+            if (!iso) return;
+            var target = new Date(iso).getTime();
+            var elapsed_past = Date.now() - target;
+            if (elapsed_past > 2000) {
+                $cell.removeClass('countdown-now');
+                return;
+            }
+            var text = kit.relative_time_future(iso);
+            $cell.text(text);
+            if (text === 'Now') {
+                $cell.addClass('countdown-now');
+            } else {
+                $cell.removeClass('countdown-now');
+            }
         });
     };
 

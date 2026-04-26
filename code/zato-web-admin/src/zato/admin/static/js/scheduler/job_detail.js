@@ -10,6 +10,7 @@ $.fn.zato.scheduler.job_detail.config = {
     default_time_range: 0,
     empty_history_text: 'No run history',
     show_search: false,
+    show_header_extra: false,
     // Delays below this threshold are hidden (shown as "-") to reduce noise.
     min_visible_delay_ms: 200,
     stat_error_color: '#e0226e',
@@ -164,8 +165,18 @@ $.fn.zato.scheduler.job_detail.render_header = function(job) {
 $.fn.zato.scheduler.job_detail.render_stats = function(job) {
     var kit = $.fn.zato.dashboard_kit;
 
-    var next_fire = job.next_fire_utc;
-    $('#header-next-fire').text(next_fire ? kit.format_local_time(next_fire) : '-');
+    var next_run = job.next_fire_utc;
+    var $stat = $('#stat-next-run');
+    var $ts = $('#stat-next-run-ts');
+    if (next_run) {
+        $stat.attr('data-countdown-target', next_run);
+        $stat.text(kit.relative_time_future(next_run));
+        $ts.text(kit.format_local_time(next_run));
+    } else {
+        $stat.attr('data-countdown-target', '');
+        $stat.text('-');
+        $ts.text('');
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -697,7 +708,7 @@ $.fn.zato.scheduler.job_detail._generate_fake_tags = function(run) {
         ],
         'system': [
             'Job started: scheduler_tick=2026-04-23T22:03:14.001Z, planned_fire=2026-04-23T22:03:14.000Z, drift_ms=1, cid=zc8f3a2b, server=zato-prod-east-1/worker-07, pid=48291',
-            'Job finished: duration_ms=10841, outcome=ok, next_fire=2026-04-23T22:04:14.000Z, items_processed=142, peak_memory_mb=284'
+            'Job finished: duration_ms=10841, outcome=ok, next_run=2026-04-23T22:04:14.000Z, items_processed=142, peak_memory_mb=284'
         ]
     };
 
@@ -1631,8 +1642,19 @@ $.fn.zato.scheduler.job_detail.poll = function() {
                     break;
                 }
             }
-            var next_fire = detail._job_data.next_fire_utc;
-            $('#header-next-fire').text(next_fire ? $.fn.zato.dashboard_kit.format_local_time(next_fire) : '-');
+            var next_run = detail._job_data.next_fire_utc;
+            var kit = $.fn.zato.dashboard_kit;
+            var $stat = $('#stat-next-run');
+            var $ts = $('#stat-next-run-ts');
+            if (next_run) {
+                $stat.attr('data-countdown-target', next_run);
+                $stat.text(kit.relative_time_future(next_run));
+                $ts.text(kit.format_local_time(next_run));
+            } else {
+                $stat.attr('data-countdown-target', '');
+                $stat.text('-');
+                $ts.text('');
+            }
         },
         complete: function() {
             if (detail._pagination) {
@@ -1668,11 +1690,15 @@ $.fn.zato.scheduler.job_detail.render = function(job, job_id, cluster_id) {
     if (!detail.config.show_search) {
         $('.detail-search-group').css('display', 'none');
     }
+    if (detail.config.show_header_extra) {
+        $('.detail-header-extra').removeAttr('hidden');
+    }
 
     detail.render_header(job);
     detail._build_legend();
     $('#detail-timeline').html('<div class="dashboard-inline-empty">' + detail.config.empty_history_text + '</div>');
     detail.render_stats(job);
+    kit.countdown.start();
     detail.render_config(job, cluster_id);
     detail.render_actions(job_id);
     detail.init_tabs();

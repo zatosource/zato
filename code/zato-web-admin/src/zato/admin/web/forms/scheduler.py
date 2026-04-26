@@ -41,4 +41,4 @@ class IntervalBasedSchedulerJobForm(_Base):
     jitter_ms = forms.CharField(required=False, initial='500', widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:12%'}))
     timezone = forms.ChoiceField(required=False, choices=_tz_choices, widget=forms.Select(attrs={'style':'width:100%'}))
     max_execution_time_ms = forms.CharField(required=False, widget=forms.TextInput(
-        attrs={'class':'validate-digits', 'style':'width:40%'}))
+        attrs={'class':'validate-digits', 'style':'width:12%'}))

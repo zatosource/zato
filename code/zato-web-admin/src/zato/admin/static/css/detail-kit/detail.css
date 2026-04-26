@@ -237,6 +237,12 @@ a {
     margin-right: 3px;
 }
 
+.detail-inline-stat-muted {
+    font-size: 10px;
+    opacity: 0.7;
+    vertical-align: baseline;
+}
+
 .detail-table {
     width: 100%;
     border-collapse: collapse;
@@ -610,15 +616,18 @@ a {
 
 .detail-header-right {
     font-size: 13px;
-}
-
-.detail-header-next-fire {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.detail-header-next-fire-label {
+.detail-header-extra {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.detail-header-extra-label {
     font-weight: 600;
     font-size: 11px;
     text-transform: uppercase;
@@ -626,7 +635,7 @@ a {
     color: var(--primary-dark);
 }
 
-.detail-header-next-fire-value {
+.detail-header-extra-value {
     font-family: monospace;
     font-size: 13px;
     color: var(--primary-dark);

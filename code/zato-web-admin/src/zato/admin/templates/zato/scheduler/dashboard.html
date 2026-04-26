@@ -51,13 +51,13 @@ $(document).ready(function() {
                     <div class="dashboard-tile-sublabel" id="stat-runs-sublabel"></div>
                 </div>
 
-                <div class="dashboard-tile dashboard-tile-recent-runs">
+                <div class="dashboard-tile dashboard-tile-recent">
                     <div class="dashboard-tile-label">Failures in last hour</div>
                     <div class="dashboard-tile-row">
-                        <div class="dashboard-tile-value" id="stat-recent-runs">-</div>
-                        <div class="dashboard-tile-spark" id="spark-recent-runs"></div>
+                        <div class="dashboard-tile-value" id="stat-recent">-</div>
+                        <div class="dashboard-tile-spark" id="spark-recent"></div>
                     </div>
-                    <div class="dashboard-tile-sublabel" id="stat-recent-runs-sublabel"></div>
+                    <div class="dashboard-tile-sublabel" id="stat-recent-sublabel"></div>
                 </div>
 
 {% endblock %}
@@ -92,7 +92,7 @@ $(document).ready(function() {
                             <th class="dashboard-th-dot"></th>
                             <th>Job name</th>
                             <th>Service</th>
-                            <th style="width:9em">Next fire</th>
+                            <th style="width:9em">Next run</th>
                             <th>Recent</th>
                         </tr>
                     </thead>
@@ -105,12 +105,12 @@ $(document).ready(function() {
             <div class="dashboard-card-header dashboard-card-header-tabs">
                 <div class="dashboard-tabs" role="tablist" aria-label="Activity">
                     <button type="button"
-                            class="dashboard-tab dashboard-tab-active"
-                            data-tab="recent_runs"
+                            class="dashboard-tab"
+                            data-tab="recent"
                             role="tab"
-                            aria-selected="true">
+                            aria-selected="false">
                         <span class="dashboard-tab-label">Recent runs</span>
-                        <span class="dashboard-pill dashboard-pill-recent-runs" id="dashboard-recent-runs-count"></span>
+                        <span class="dashboard-pill dashboard-pill-recent" id="dashboard-recent-count"></span>
                     </button>
                     <button type="button"
                             class="dashboard-tab"
@@ -123,11 +123,12 @@ $(document).ready(function() {
                 </div>
             </div>
 
-            <div class="dashboard-tab-panel dashboard-tab-panel-active"
-                 id="dashboard-tab-panel-recent_runs"
+            <div class="dashboard-tab-panel"
+                 id="dashboard-tab-panel-recent"
                  role="tabpanel"
-                 aria-labelledby="dashboard-tab-recent_runs">
-                <div class="dashboard-card-scroll" id="dashboard-recent-runs-body"></div>
+                 aria-labelledby="dashboard-tab-recent"
+                 hidden>
+                <div class="dashboard-card-scroll" id="dashboard-recent-body"></div>
             </div>
 
             <div class="dashboard-tab-panel"
