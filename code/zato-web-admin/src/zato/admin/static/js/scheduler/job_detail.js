@@ -1043,6 +1043,8 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
 
     $body.find('tr[data-run]').not('.detail-panel-row').off('click.panel').on('click.panel', function(e) {
         if ($(e.target).closest('a.detail-run-link').length) return;
+        var sel = window.getSelection();
+        if (sel && sel.toString().length > 0) return;
         var $data_row = $(this);
         var run = $data_row.attr('data-run');
         var $panel = $body.find('tr.detail-panel-row[data-run="' + run + '"]');
