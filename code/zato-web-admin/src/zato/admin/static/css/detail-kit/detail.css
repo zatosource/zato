@@ -819,6 +819,7 @@ a.detail-component-pill:visited {
     color: var(--text-muted, #aaa);
     opacity: 0.4;
     pointer-events: none;
+    user-select: none;
     font-weight: 400;
     cursor: default;
 }
@@ -826,6 +827,7 @@ a.detail-component-pill:visited {
 .detail-page-sep {
     font-size: 80%;
     opacity: 0.5;
+    user-select: none;
 }
 
 .detail-pagination-info {
