@@ -260,7 +260,10 @@ impl Scheduler {
         let scheduler_job = dict_to_scheduler_job(job_id, job_data)?;
         log::info!(
             "create_job: job_id={job_id} seconds={:?} is_active={} repeats={:?} service={}",
-            scheduler_job.seconds, scheduler_job.is_active, scheduler_job.repeats, scheduler_job.service,
+            scheduler_job.seconds,
+            scheduler_job.is_active,
+            scheduler_job.repeats,
+            scheduler_job.service,
         );
         let running_job = RunningJob::from_scheduler_job(&scheduler_job);
         with_state_mut(&self.shared, |state| {
@@ -275,18 +278,25 @@ impl Scheduler {
         let scheduler_job = dict_to_scheduler_job(job_id, job_data)?;
         log::info!(
             "edit_job: job_id={job_id} seconds={:?} is_active={} repeats={:?} service={}",
-            scheduler_job.seconds, scheduler_job.is_active, scheduler_job.repeats, scheduler_job.service,
+            scheduler_job.seconds,
+            scheduler_job.is_active,
+            scheduler_job.repeats,
+            scheduler_job.service,
         );
         with_state_mut(&self.shared, |state| {
             if let Some(existing) = state.jobs.get_mut(&job_id) {
                 log::info!(
                     "edit_job: updating existing job_id={job_id} old_interval_ms={} old_current_run={} old_next_fire={:?}",
-                    existing.interval_ms, existing.current_run, existing.next_fire_utc,
+                    existing.interval_ms,
+                    existing.current_run,
+                    existing.next_fire_utc,
                 );
                 existing.update_from_job(&scheduler_job);
                 log::info!(
                     "edit_job: after update job_id={job_id} new_interval_ms={} new_current_run={} new_next_fire={:?}",
-                    existing.interval_ms, existing.current_run, existing.next_fire_utc,
+                    existing.interval_ms,
+                    existing.current_run,
+                    existing.next_fire_utc,
                 );
             } else {
                 log::info!("edit_job: inserting new job_id={job_id}");
@@ -327,15 +337,18 @@ impl Scheduler {
     #[pyo3(signature = (job_id, outcome, duration_ms, current_run))]
     #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
     fn mark_complete(&self, job_id: i64, outcome: &str, duration_ms: u64, current_run: u32) -> PyResult<()> {
-        log::info!(
-            "mark_complete called: job_id={job_id} outcome={outcome} current_run={current_run} duration_ms={duration_ms}",
-        );
+        log::info!("mark_complete called: job_id={job_id} outcome={outcome} current_run={current_run} duration_ms={duration_ms}");
         with_state_mut(&self.shared, |state| {
             if let Some(running_job) = state.jobs.get_mut(&job_id) {
                 log::info!(
                     "mark_complete: job_id={job_id} name={} job.current_run={} in_flight={} in_flight_run={:?} next_fire_utc={:?} interval_ms={} with_test_data={}",
-                    running_job.name, running_job.current_run, running_job.in_flight, running_job.in_flight_run,
-                    running_job.next_fire_utc, running_job.interval_ms, state.with_test_data,
+                    running_job.name,
+                    running_job.current_run,
+                    running_job.in_flight,
+                    running_job.in_flight_run,
+                    running_job.next_fire_utc,
+                    running_job.interval_ms,
+                    state.with_test_data,
                 );
                 running_job.in_flight = false;
                 running_job.in_flight_since = None;
@@ -354,7 +367,8 @@ impl Scheduler {
                         found_rec = true;
                         log::info!(
                             "mark_complete: job_id={job_id} updated history rec for run={current_run} planned={} actual={}",
-                            rec.planned_fire_time_iso, rec.actual_fire_time_iso,
+                            rec.planned_fire_time_iso,
+                            rec.actual_fire_time_iso,
                         );
                         break;
                     }
@@ -362,7 +376,8 @@ impl Scheduler {
                 if !found_rec {
                     log::warn!(
                         "mark_complete: job_id={job_id} name={} could not find history rec for run={current_run}, history_len={}",
-                        running_job.name, running_job.history.len(),
+                        running_job.name,
+                        running_job.history.len(),
                     );
                 }
 
@@ -384,22 +399,22 @@ impl Scheduler {
                         running_job.current_run += 1;
                         catchup_count += 1;
                         let skipped_run = running_job.current_run;
-                        log::info!(
-                            "mark_complete: job_id={job_id} catchup skip run={skipped_run} fire={fire} now={now}",
-                        );
+                        log::info!("mark_complete: job_id={job_id} catchup skip run={skipped_run} fire={fire} now={now}");
                         running_job.record_execution(
                             ExecutionRecord::new(
                                 &fire.to_rfc3339(),
                                 &now.to_rfc3339(),
                                 types::outcome::SKIPPED_ALREADY_IN_FLIGHT,
                                 skipped_run,
-                            ).with_outcome_ctx(current_run.to_string()),
+                            )
+                            .with_outcome_ctx(current_run.to_string()),
                         );
                         running_job.advance_to_next(now);
                     }
                     log::info!(
                         "mark_complete: job_id={job_id} catchup finished, total_caught_up={catchup_count} final_current_run={} final_next_fire={:?}",
-                        running_job.current_run, running_job.next_fire_utc,
+                        running_job.current_run,
+                        running_job.next_fire_utc,
                     );
                 }
 
@@ -480,10 +495,6 @@ impl Scheduler {
     /// Returns a page of execution-history records for a single job.
     #[pyo3(signature = (job_id, offset, limit, outcomes))]
     #[expect(clippy::needless_pass_by_value, reason = "PyO3 requires owned Bound for extraction")]
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "PyO3 method with 4 Python-visible args called from multiple files"
-    )]
     fn get_history_page(
         &self,
         py: Python<'_>,
@@ -492,48 +503,54 @@ impl Scheduler {
         limit: usize,
         outcomes: Bound<'_, PyAny>,
     ) -> PyResult<Py<PyDict>> {
-        let state = self.shared.state.lock();
-        if let Some(running_job) = state.jobs.get(&job_id) {
-            let filter = parse_outcome_filter(&outcomes)?;
-            filter.map_or_else(
-                || {
-                    let total = running_job
-                        .history
-                        .iter()
-                        .filter(|rec| rec.outcome != types::outcome::RUNNING)
-                        .count();
-                    let all_len = running_job.history.len();
-                    let start = if offset >= all_len { all_len } else { all_len - offset };
-                    let end = start.saturating_sub(limit);
-                    let slice: Vec<&ExecutionRecord> = running_job.history.range(end..start).rev().collect();
-                    history::records_page_to_py_dict(py, &slice, total)
-                },
-                |allowed| {
-                    let mut total: usize = 0;
-                    let mut page: Vec<&ExecutionRecord> = Vec::with_capacity(limit);
-                    let mut skipped: usize = 0;
+        let filter = parse_outcome_filter(&outcomes)?;
 
-                    for rec in running_job.history.iter().rev() {
-                        if !allowed.iter().any(|allowed_val| allowed_val == &rec.outcome) {
-                            continue;
-                        }
-                        if rec.outcome != types::outcome::RUNNING {
-                            total += 1;
-                        }
-                        if page.len() < limit {
-                            if skipped < offset {
-                                skipped += 1;
-                            } else {
-                                page.push(rec);
+        let (records, total) = {
+            let state = self.shared.state.lock();
+            state.jobs.get(&job_id).map_or_else(
+                || (Vec::new(), 0),
+                |running_job| {
+                    filter.as_ref().map_or_else(
+                        || {
+                            let total = running_job
+                                .history
+                                .iter()
+                                .filter(|rec| rec.outcome != types::outcome::RUNNING)
+                                .count();
+                            let all_len = running_job.history.len();
+                            let start = if offset >= all_len { all_len } else { all_len - offset };
+                            let end = start.saturating_sub(limit);
+                            let page: Vec<ExecutionRecord> = running_job.history.range(end..start).rev().cloned().collect();
+                            (page, total)
+                        },
+                        |allowed| {
+                            let mut total: usize = 0;
+                            let mut page: Vec<ExecutionRecord> = Vec::with_capacity(limit);
+                            let mut skipped: usize = 0;
+
+                            for rec in running_job.history.iter().rev() {
+                                if !allowed.iter().any(|allowed_val| allowed_val == &rec.outcome) {
+                                    continue;
+                                }
+                                if rec.outcome != types::outcome::RUNNING {
+                                    total += 1;
+                                }
+                                if page.len() < limit {
+                                    if skipped < offset {
+                                        skipped += 1;
+                                    } else {
+                                        page.push(rec.clone());
+                                    }
+                                }
                             }
-                        }
-                    }
-                    history::records_page_to_py_dict(py, &page, total)
+                            (page, total)
+                        },
+                    )
                 },
             )
-        } else {
-            history::records_page_to_py_dict(py, &[], 0)
-        }
+        };
+
+        history::records_page_to_py_dict(py, &records, total)
     }
 
     /// Returns records added since a given ISO timestamp, optionally filtered by outcome.
@@ -542,10 +559,6 @@ impl Scheduler {
     /// Python caller does not need a second round-trip for the total.
     #[pyo3(signature = (job_id, since_iso, outcomes, running_runs))]
     #[expect(clippy::needless_pass_by_value, reason = "PyO3 requires owned Bound and Vec for extraction")]
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "PyO3 method with 4 Python-visible args called from multiple files"
-    )]
     fn get_history_since(
         &self,
         py: Python<'_>,
@@ -554,40 +567,46 @@ impl Scheduler {
         outcomes: Bound<'_, PyAny>,
         running_runs: Vec<u32>,
     ) -> PyResult<Py<PyDict>> {
-        let state = self.shared.state.lock();
-        if let Some(running_job) = state.jobs.get(&job_id) {
-            let filter = parse_outcome_filter(&outcomes)?;
-            let mut records: Vec<&ExecutionRecord> = Vec::new();
-            let mut total: usize = 0;
+        let filter = parse_outcome_filter(&outcomes)?;
 
-            for rec in &running_job.history {
-                let outcome_allowed = filter
-                    .as_ref()
-                    .is_none_or(|allowed| allowed.iter().any(|allowed_val| allowed_val == &rec.outcome));
+        let (records, total) = {
+            let state = self.shared.state.lock();
+            state.jobs.get(&job_id).map_or_else(
+                || (Vec::new(), 0),
+                |running_job| {
+                    let mut records: Vec<ExecutionRecord> = Vec::new();
+                    let mut total: usize = 0;
 
-                if outcome_allowed && rec.outcome != types::outcome::RUNNING {
-                    total += 1;
-                }
+                    for rec in &running_job.history {
+                        let outcome_allowed = filter
+                            .as_ref()
+                            .is_none_or(|allowed| allowed.iter().any(|allowed_val| allowed_val == &rec.outcome));
 
-                let run_override = running_runs.contains(&rec.current_run);
-                let is_since = rec.actual_fire_time_iso.as_str() >= since_iso || run_override;
-                if is_since && (outcome_allowed || run_override) {
-                    records.push(rec);
-                }
-            }
+                        if outcome_allowed && rec.outcome != types::outcome::RUNNING {
+                            total += 1;
+                        }
 
-            records.reverse();
+                        let run_override = running_runs.contains(&rec.current_run);
+                        let is_since = rec.actual_fire_time_iso.as_str() >= since_iso || run_override;
+                        if is_since && (outcome_allowed || run_override) {
+                            records.push(rec.clone());
+                        }
+                    }
 
-            let out = PyDict::new(py);
-            out.set_item("rows", history::records_to_py_list(py, &records)?)?;
-            out.set_item("total", total)?;
-            Ok(out.unbind())
-        } else {
-            let out = PyDict::new(py);
+                    records.reverse();
+                    (records, total)
+                },
+            )
+        };
+
+        let out = PyDict::new(py);
+        if records.is_empty() {
             out.set_item("rows", PyList::empty(py))?;
-            out.set_item("total", 0)?;
-            Ok(out.unbind())
+        } else {
+            out.set_item("rows", history::records_to_py_list(py, &records)?)?;
         }
+        out.set_item("total", total)?;
+        Ok(out.unbind())
     }
 
     /// Returns a summary list of all jobs including history-derived fields.
@@ -597,62 +616,50 @@ impl Scheduler {
     /// `recent_outcomes` (last 10), and per-job `outcome_counts`.
     #[pyo3(signature = ())]
     fn get_job_summaries(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
-        let state = self.shared.state.lock();
+        let summaries: Vec<job::JobSummary> = {
+            let state = self.shared.state.lock();
+            state.jobs.values().map(job::RunningJob::summary).collect()
+        };
+
+        let countable = types::outcome::COUNTABLE;
         let list = PyList::empty(py);
-        for (job_id, running_job) in &state.jobs {
+        for summary in &summaries {
             let dict = PyDict::new(py);
-            dict.set_item("id", *job_id)?;
-            dict.set_item("name", running_job.name.as_str())?;
-            dict.set_item("is_active", running_job.is_active)?;
-            dict.set_item("service", running_job.service.as_ref())?;
-            dict.set_item("job_type", running_job.job_type.as_str())?;
-            dict.set_item("in_flight", running_job.in_flight)?;
-            dict.set_item("current_run", running_job.current_run)?;
-            dict.set_item("interval_ms", running_job.interval_ms)?;
-            match running_job.next_fire_utc {
-                Some(fire_dt) => dict.set_item("next_fire_utc", fire_dt.to_rfc3339())?,
+            dict.set_item("id", summary.id)?;
+            dict.set_item("name", summary.name.as_str())?;
+            dict.set_item("is_active", summary.is_active)?;
+            dict.set_item("service", summary.service.as_str())?;
+            dict.set_item("job_type", summary.job_type.as_str())?;
+            dict.set_item("in_flight", summary.in_flight)?;
+            dict.set_item("current_run", summary.current_run)?;
+            dict.set_item("interval_ms", summary.interval_ms)?;
+            match &summary.next_fire_utc {
+                Some(val) => dict.set_item("next_fire_utc", val.as_str())?,
                 None => dict.set_item("next_fire_utc", py.None())?,
             }
-
-            let history = &running_job.history;
-
-            let last_outcome = history.back().map(|rec| rec.outcome.as_str());
-            match last_outcome {
-                Some(val) => dict.set_item("last_outcome", val)?,
+            match &summary.last_outcome {
+                Some(val) => dict.set_item("last_outcome", val.as_str())?,
                 None => dict.set_item("last_outcome", py.None())?,
             }
-
-            let last_duration_ms = history.iter().rev().find_map(|rec| rec.duration_ms);
-            match last_duration_ms {
+            match summary.last_duration_ms {
                 Some(val) => dict.set_item("last_duration_ms", val)?,
                 None => dict.set_item("last_duration_ms", py.None())?,
             }
 
-            let recent_start = history.len().saturating_sub(10);
             let recent_outcomes = PyList::empty(py);
-            for rec in history.range(recent_start..) {
-                recent_outcomes.append(rec.outcome.as_str())?;
+            for outcome in &summary.recent_outcomes {
+                recent_outcomes.append(outcome.as_str())?;
             }
             dict.set_item("recent_outcomes", recent_outcomes)?;
 
             let outcome_counts = PyDict::new(py);
-            let countable = types::outcome::COUNTABLE;
-            let mut counts = vec![0usize; countable.len()];
-            for rec in history {
-                if let Some(pos) = countable.iter().position(|label| *label == rec.outcome)
-                    && let Some(slot) = counts.get_mut(pos)
-                {
-                    *slot += 1;
-                }
-            }
-            for (label, count) in countable.iter().zip(&counts) {
+            for (label, count) in countable.iter().zip(&summary.outcome_counts) {
                 outcome_counts.set_item(*label, *count)?;
             }
             dict.set_item("outcome_counts", outcome_counts)?;
 
             list.append(dict)?;
         }
-        drop(state);
         Ok(list.unbind())
     }
 
@@ -663,25 +670,32 @@ impl Scheduler {
     /// (most recent first) so the Python side does not need to re-sort.
     #[pyo3(signature = (max_events=1000))]
     fn get_timeline_events(&self, py: Python<'_>, max_events: usize) -> PyResult<Py<PyList>> {
-        let state = self.shared.state.lock();
-
-        let mut refs: Vec<(i64, &str, &ExecutionRecord)> = Vec::new();
-        for (job_id, running_job) in &state.jobs {
-            for rec in &running_job.history {
-                refs.push((*job_id, running_job.name.as_str(), rec));
+        let events: Vec<job::TimelineEvent> = {
+            let state = self.shared.state.lock();
+            let mut events: Vec<job::TimelineEvent> = Vec::new();
+            for (job_id, running_job) in &state.jobs {
+                for rec in &running_job.history {
+                    events.push(job::TimelineEvent {
+                        job_id: *job_id,
+                        job_name: running_job.name.clone(),
+                        record: rec.clone(),
+                    });
+                }
             }
-        }
-
-        refs.sort_unstable_by(|lhs, rhs| rhs.2.actual_fire_time_iso.cmp(&lhs.2.actual_fire_time_iso));
-        refs.truncate(max_events);
+            drop(state);
+            events.sort_unstable_by(|lhs, rhs| rhs.record.actual_fire_time_iso.cmp(&lhs.record.actual_fire_time_iso));
+            events.truncate(max_events);
+            events
+        };
 
         let list = PyList::empty(py);
-        for (job_id, job_name, rec) in &refs {
+        for event in &events {
+            let rec = &event.record;
             let dict = PyDict::new(py);
             dict.set_item("outcome", rec.outcome.as_str())?;
             dict.set_item("actual_fire_time_iso", rec.actual_fire_time_iso.as_str())?;
-            dict.set_item("job_id", *job_id)?;
-            dict.set_item("job_name", *job_name)?;
+            dict.set_item("job_id", event.job_id)?;
+            dict.set_item("job_name", event.job_name.as_str())?;
             match rec.duration_ms {
                 Some(duration) => dict.set_item("duration_ms", duration)?,
                 None => dict.set_item("duration_ms", py.None())?,
@@ -698,17 +712,12 @@ impl Scheduler {
             dict.set_item("planned_fire_time_iso", rec.planned_fire_time_iso.as_str())?;
             list.append(dict)?;
         }
-        drop(state);
         Ok(list.unbind())
     }
 
     /// Appends a log entry to the execution record for a given job and run number.
     #[pyo3(signature = (job_id, current_run, timestamp_iso, level, message))]
     #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "PyO3 method with 5 Python-visible args called from Python log handler"
-    )]
     fn append_log_entry(&self, job_id: i64, current_run: u32, timestamp_iso: &str, level: &str, message: &str) -> PyResult<()> {
         let mut state = self.shared.state.lock();
         if let Some(running_job) = state.jobs.get_mut(&job_id) {
@@ -735,23 +744,29 @@ impl Scheduler {
     #[pyo3(signature = (job_id, current_run, since_idx))]
     fn get_log_entries(&self, py: Python<'_>, job_id: i64, current_run: u32, since_idx: usize) -> PyResult<Py<PyList>> {
         log::info!("get_log_entries: job_id={job_id} current_run={current_run} since_idx={since_idx}");
-        let state = self.shared.state.lock();
-        let list = PyList::empty(py);
-        if let Some(running_job) = state.jobs.get(&job_id) {
-            for rec in running_job.history.iter().rev() {
-                if rec.current_run == current_run {
-                    for entry in rec.log_entries.iter().skip(since_idx) {
-                        let dict = PyDict::new(py);
-                        dict.set_item("timestamp_iso", entry.timestamp_iso.as_str())?;
-                        dict.set_item("level", entry.level.as_str())?;
-                        dict.set_item("message", entry.message.as_str())?;
-                        list.append(dict)?;
+
+        let entries: Vec<LogEntry> = {
+            let state = self.shared.state.lock();
+            state.jobs.get(&job_id).map_or_else(Vec::new, |running_job| {
+                let mut found = Vec::new();
+                for rec in running_job.history.iter().rev() {
+                    if rec.current_run == current_run {
+                        found = rec.log_entries.iter().skip(since_idx).cloned().collect();
+                        break;
                     }
-                    break;
                 }
-            }
+                found
+            })
+        };
+
+        let list = PyList::empty(py);
+        for entry in &entries {
+            let dict = PyDict::new(py);
+            dict.set_item("timestamp_iso", entry.timestamp_iso.as_str())?;
+            dict.set_item("level", entry.level.as_str())?;
+            dict.set_item("message", entry.message.as_str())?;
+            list.append(dict)?;
         }
-        drop(state);
         Ok(list.unbind())
     }
 }

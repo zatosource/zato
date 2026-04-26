@@ -25,6 +25,56 @@ pub const MIN_MAX_EXECUTION_TIME_MS: u64 = 1_000;
 /// Maximum allowed `max_execution_time_ms` (24 hours).
 pub const MAX_MAX_EXECUTION_TIME_MS: u64 = 86_400_000;
 
+/// Number of distinct outcome labels tracked per job.
+pub const OUTCOME_COUNT: usize = crate::types::outcome::COUNTABLE.len();
+
+/// Computed summary of a scheduler job for the dashboard API.
+///
+/// Contains both static job metadata and derived stats from execution history.
+/// Built by `RunningJob::summary()` under the state mutex, then used outside the
+/// mutex to construct Python objects without holding both locks.
+pub struct JobSummary {
+    /// Unique job identifier.
+    pub id: i64,
+    /// Human-readable job name.
+    pub name: String,
+    /// Whether the job is enabled.
+    pub is_active: bool,
+    /// Zato service to invoke.
+    pub service: String,
+    /// Job type label (e.g. "`interval_based`").
+    pub job_type: String,
+    /// Whether the job is currently executing.
+    pub in_flight: bool,
+    /// Current run counter.
+    pub current_run: u32,
+    /// Computed interval between firings (ms).
+    pub interval_ms: u64,
+    /// Next scheduled fire time as an ISO string, if any.
+    pub next_fire_utc: Option<String>,
+    /// Outcome label of the most recent execution, if any.
+    pub last_outcome: Option<String>,
+    /// Duration of the most recent completed execution (ms), if any.
+    pub last_duration_ms: Option<u64>,
+    /// Outcome labels of the last 10 executions (most recent last).
+    pub recent_outcomes: Vec<String>,
+    /// Per-outcome execution counts, indexed by `COUNTABLE` position.
+    pub outcome_counts: [usize; OUTCOME_COUNT],
+}
+
+/// A single timeline event combining job metadata with an execution record.
+///
+/// Built under the state mutex by cloning job fields and the record,
+/// then used outside the mutex to construct Python objects.
+pub struct TimelineEvent {
+    /// Unique job identifier.
+    pub job_id: i64,
+    /// Human-readable job name.
+    pub job_name: String,
+    /// Cloned execution record.
+    pub record: ExecutionRecord,
+}
+
 /// A single log entry captured from a service during scheduler-initiated execution.
 #[derive(Debug, Clone)]
 pub struct LogEntry {
@@ -239,12 +289,15 @@ impl RunningJob {
             let now = Utc::now();
             log::info!(
                 "from_scheduler_job: job={} interval_ms={interval_ms} start_date={:?} jitter_ms={:?} computing initial next_fire at now={now}",
-                running_job.name, running_job.start_date, running_job.jitter_ms,
+                running_job.name,
+                running_job.start_date,
+                running_job.jitter_ms,
             );
             running_job.compute_next_fire(now);
             log::info!(
                 "from_scheduler_job: job={} initial next_fire_utc={:?}",
-                running_job.name, running_job.next_fire_utc,
+                running_job.name,
+                running_job.next_fire_utc,
             );
         }
         running_job
@@ -315,7 +368,17 @@ impl RunningJob {
                         let new_fire = start + chrono::Duration::milliseconds(total_ms);
                         log::info!(
                             "compute_next_fire: job={} current_run={} now={} start={} interval_ms={} nth={} base_ms={} jitter={} total_ms={} old_fire={:?} new_fire={}",
-                            self.name, self.current_run, now, start, self.interval_ms, nth, base_ms, jitter, total_ms, old_fire, new_fire,
+                            self.name,
+                            self.current_run,
+                            now,
+                            start,
+                            self.interval_ms,
+                            nth,
+                            base_ms,
+                            jitter,
+                            total_ms,
+                            old_fire,
+                            new_fire,
                         );
                         self.next_fire_utc = Some(new_fire);
                     } else {
@@ -333,7 +396,12 @@ impl RunningJob {
     pub fn advance_to_next(&mut self, now: DateTime<Utc>) {
         log::info!(
             "advance_to_next: job={} current_run={} now={} old_next_fire={:?} job_type={:?} repeats={:?}",
-            self.name, self.current_run, now, self.next_fire_utc, self.job_type, self.repeats,
+            self.name,
+            self.current_run,
+            now,
+            self.next_fire_utc,
+            self.job_type,
+            self.repeats,
         );
         if self.job_type == JobType::OneTime {
             self.next_fire_utc = None;
@@ -359,8 +427,49 @@ impl RunningJob {
         self.compute_next_fire(reference);
         log::info!(
             "advance_to_next: job={} after compute_next_fire, new next_fire={:?}",
-            self.name, self.next_fire_utc,
+            self.name,
+            self.next_fire_utc,
         );
+    }
+
+    /// Computes a `JobSummary` snapshot from the current job state and history.
+    ///
+    /// Intended to be called under the state mutex. The returned value is fully
+    /// owned and can be used after the mutex is released.
+    #[must_use]
+    pub fn summary(&self) -> JobSummary {
+        let countable = crate::types::outcome::COUNTABLE;
+        let mut outcome_counts = [0usize; OUTCOME_COUNT];
+
+        for rec in &self.history {
+            if let Some(pos) = countable.iter().position(|label| *label == rec.outcome)
+                && let Some(slot) = outcome_counts.get_mut(pos)
+            {
+                *slot += 1;
+            }
+        }
+
+        let last_outcome = self.history.back().map(|rec| rec.outcome.clone());
+        let last_duration_ms = self.history.iter().rev().find_map(|rec| rec.duration_ms);
+
+        let recent_start = self.history.len().saturating_sub(10);
+        let recent_outcomes: Vec<String> = self.history.range(recent_start..).map(|rec| rec.outcome.clone()).collect();
+
+        JobSummary {
+            id: self.id.0,
+            name: self.name.clone(),
+            is_active: self.is_active,
+            service: self.service.0.clone(),
+            job_type: self.job_type.as_str().to_owned(),
+            in_flight: self.in_flight,
+            current_run: self.current_run,
+            interval_ms: self.interval_ms,
+            next_fire_utc: self.next_fire_utc.map(|fire_dt| fire_dt.to_rfc3339()),
+            last_outcome,
+            last_duration_ms,
+            recent_outcomes,
+            outcome_counts,
+        }
     }
 
     /// Appends a record to the execution history, evicting the oldest if at capacity.
@@ -391,10 +500,7 @@ impl RunningJob {
     /// Finds the next interval multiple `n` such that `start + n * interval > now`.
     fn find_next_n(&self, start: DateTime<Utc>, now: DateTime<Utc>) -> u64 {
         if now <= start {
-            log::info!(
-                "find_next_n: job={} now={} <= start={}, returning 0",
-                self.name, now, start,
-            );
+            log::info!("find_next_n: job={} now={} <= start={}, returning 0", self.name, now, start);
             return 0;
         }
         let elapsed_ms = (now - start).num_milliseconds().unsigned_abs();
@@ -404,7 +510,16 @@ impl RunningJob {
         let result = if candidate <= now { nth + 1 } else { nth };
         log::info!(
             "find_next_n: job={} now={} start={} elapsed_ms={} interval_ms={} nth={} offset_ms={} candidate={} candidate<=now={} result={}",
-            self.name, now, start, elapsed_ms, self.interval_ms, nth, offset_ms, candidate, candidate <= now, result,
+            self.name,
+            now,
+            start,
+            elapsed_ms,
+            self.interval_ms,
+            nth,
+            offset_ms,
+            candidate,
+            candidate <= now,
+            result,
         );
         result
     }

@@ -58,12 +58,12 @@ fn record_to_py_dict<'py>(py: Python<'py>, rec: &ExecutionRecord) -> PyResult<Bo
     Ok(out)
 }
 
-/// Converts a slice of execution record references into a Python list of dictionaries.
+/// Converts a slice of execution records into a Python list of dictionaries.
 ///
 /// # Errors
 ///
 /// Returns a `PyErr` if record conversion or list insertion fails.
-pub fn records_to_py_list(py: Python<'_>, records: &[&ExecutionRecord]) -> PyResult<Py<PyList>> {
+pub fn records_to_py_list(py: Python<'_>, records: &[ExecutionRecord]) -> PyResult<Py<PyList>> {
     let list = PyList::empty(py);
     for rec in records {
         list.append(record_to_py_dict(py, rec)?)?;
@@ -71,13 +71,13 @@ pub fn records_to_py_list(py: Python<'_>, records: &[&ExecutionRecord]) -> PyRes
     Ok(list.unbind())
 }
 
-/// Converts a page of execution record references and total count into a Python dictionary
+/// Converts a page of execution records and total count into a Python dictionary
 /// with `records` and `total` keys.
 ///
 /// # Errors
 ///
 /// Returns a `PyErr` if record conversion or dict insertion fails.
-pub fn records_page_to_py_dict(py: Python<'_>, records: &[&ExecutionRecord], total: usize) -> PyResult<Py<PyDict>> {
+pub fn records_page_to_py_dict(py: Python<'_>, records: &[ExecutionRecord], total: usize) -> PyResult<Py<PyDict>> {
     let out = PyDict::new(py);
     let list = PyList::empty(py);
     for rec in records {

@@ -90,14 +90,7 @@ pub mod outcome {
     pub const TIMEOUT: &str = "timeout";
 
     /// All countable outcome labels, in the order used for summary dicts.
-    pub const COUNTABLE: &[&str] = &[
-        EXECUTED,
-        ERROR,
-        TIMEOUT,
-        RUNNING,
-        SKIPPED_ALREADY_IN_FLIGHT,
-        SKIPPED_HOLIDAY,
-    ];
+    pub const COUNTABLE: &[&str] = &[EXECUTED, ERROR, TIMEOUT, RUNNING, SKIPPED_ALREADY_IN_FLIGHT, SKIPPED_HOLIDAY];
 }
 
 /// A batch of fire information for a single job invocation.

@@ -199,7 +199,10 @@ pub fn scheduler_loop(shared: Arc<SchedulerShared>, odb_adapter: PyObject, callb
             for item in &fire_batch {
                 log::info!(
                     "scheduler_loop: dispatching job_id={} name={} service={} run={}",
-                    item.job_id.0, item.name, item.service, item.current_run,
+                    item.job_id.0,
+                    item.name,
+                    item.service,
+                    item.current_run,
                 );
             }
             dispatch_jobs(&fire_batch, &callbacks.run_cb, &callbacks.spawn_fn, &callbacks.on_job_executed_cb);
@@ -243,8 +246,12 @@ fn load_initial_jobs(shared: &SchedulerShared, odb_adapter: &PyObject) {
                     let running_job = RunningJob::from_scheduler_job(job);
                     log::info!(
                         "load_initial_jobs: job_id={} name={} interval_ms={} start_date={:?} next_fire_utc={:?} is_active={}",
-                        job.id, running_job.name, running_job.interval_ms, running_job.start_date,
-                        running_job.next_fire_utc, running_job.is_active,
+                        job.id,
+                        running_job.name,
+                        running_job.interval_ms,
+                        running_job.start_date,
+                        running_job.next_fire_utc,
+                        running_job.is_active,
                     );
                     state.jobs.insert(job.id, running_job);
                 }
@@ -271,8 +278,7 @@ pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
 
         if running_job.in_flight {
             if let Some(since) = running_job.in_flight_since {
-                let elapsed_ms =
-                    i64::try_from(now_instant.saturating_duration_since(since).as_millis()).unwrap_or(i64::MAX);
+                let elapsed_ms = i64::try_from(now_instant.saturating_duration_since(since).as_millis()).unwrap_or(i64::MAX);
                 let limit_ms = i64::try_from(running_job.max_execution_time_ms).unwrap_or(i64::MAX);
                 let until_timeout_ms = (limit_ms - elapsed_ms).max(1);
                 if until_timeout_ms < min_ms {
@@ -302,9 +308,7 @@ pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
     }
 
     let clamped = min_ms.max(1);
-    log::info!(
-        "compute_sleep: now={now} min_ms={min_ms} clamped={clamped} closest={closest_reason:?}",
-    );
+    log::info!("compute_sleep: now={now} min_ms={min_ms} clamped={clamped} closest={closest_reason:?}");
     Duration::from_millis(u64::try_from(clamped).unwrap_or(1))
 }
 
@@ -318,7 +322,10 @@ pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, 
 
     let job_ids: Vec<i64> = state.jobs.keys().copied().collect();
 
-    log::info!("collect_due_jobs: now={now} threshold={threshold} coalesce_window_ms={coalesce_window_ms} job_count={}", job_ids.len());
+    log::info!(
+        "collect_due_jobs: now={now} threshold={threshold} coalesce_window_ms={coalesce_window_ms} job_count={}",
+        job_ids.len()
+    );
 
     for job_id in job_ids {
         let calendars_ref = &state.calendars;
@@ -330,7 +337,10 @@ pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, 
         }
 
         let Some(fire_utc) = running_job.next_fire_utc else {
-            log::info!("collect_due_jobs: job_id={job_id} name={} skipped (no next_fire_utc)", running_job.name);
+            log::info!(
+                "collect_due_jobs: job_id={job_id} name={} skipped (no next_fire_utc)",
+                running_job.name
+            );
             continue;
         };
 
@@ -346,7 +356,8 @@ pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, 
         if running_job.in_flight {
             log::info!(
                 "collect_due_jobs: job_id={job_id} name={} skipped (in_flight) in_flight_run={:?} fire_utc={fire_utc}",
-                running_job.name, running_job.in_flight_run,
+                running_job.name,
+                running_job.in_flight_run,
             );
             continue;
         }
@@ -361,7 +372,10 @@ pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, 
 
         log::info!(
             "collect_due_jobs: FIRING job_id={job_id} name={} prev_run={prev_run} new_run={} fire_utc={fire_utc} now={now} delay_ms={delay_ms} interval_ms={} start_date={:?}",
-            running_job.name, running_job.current_run, running_job.interval_ms, running_job.start_date,
+            running_job.name,
+            running_job.current_run,
+            running_job.interval_ms,
+            running_job.start_date,
         );
 
         if running_job.is_holiday_today(calendars_ref) {
@@ -401,12 +415,14 @@ pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, 
 
         log::info!(
             "collect_due_jobs: job_id={job_id} name={} about to advance_to_next, current next_fire_utc={:?}",
-            running_job.name, running_job.next_fire_utc,
+            running_job.name,
+            running_job.next_fire_utc,
         );
         running_job.advance_to_next(now);
         log::info!(
             "collect_due_jobs: job_id={job_id} name={} after advance_to_next, new next_fire_utc={:?}",
-            running_job.name, running_job.next_fire_utc,
+            running_job.name,
+            running_job.next_fire_utc,
         );
     }
 
@@ -453,7 +469,8 @@ pub fn check_in_flight_timeouts(state: &mut SchedulerState) {
             let timed_out_run = running_job.in_flight_run.unwrap_or(0);
             log::warn!(
                 "check_in_flight_timeouts: job={} run={timed_out_run} timed out after {elapsed_ms}ms (max={})",
-                running_job.name, running_job.max_execution_time_ms,
+                running_job.name,
+                running_job.max_execution_time_ms,
             );
             running_job.in_flight = false;
             running_job.in_flight_since = None;
@@ -507,12 +524,15 @@ pub fn reanchor_all_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>)
         if running_job.is_active {
             log::info!(
                 "reanchor_all_jobs: job={} old_next_fire={:?} current_run={}",
-                running_job.name, running_job.next_fire_utc, running_job.current_run,
+                running_job.name,
+                running_job.next_fire_utc,
+                running_job.current_run,
             );
             running_job.compute_next_fire(now);
             log::info!(
                 "reanchor_all_jobs: job={} new_next_fire={:?}",
-                running_job.name, running_job.next_fire_utc,
+                running_job.name,
+                running_job.next_fire_utc,
             );
         }
     }
