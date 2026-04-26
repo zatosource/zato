@@ -61,7 +61,7 @@ def get_user_profile(user, needs_logging=True):
     try:
         user_profile = UserProfile.objects.get(user=user)
         if needs_logging:
-            logger.info('Found an existing profile for user `%s`', user)
+            logger.debug('Found an existing profile for user `%s`', user)
     except UserProfile.DoesNotExist:
 
         if needs_logging:
@@ -75,7 +75,7 @@ def get_user_profile(user, needs_logging=True):
 
     finally:
         if needs_logging:
-            logger.info('Returning a user profile for `%s`', user)
+            logger.debug('Returning a user profile for `%s`', user)
         return user_profile
 
 # ################################################################################################################################
