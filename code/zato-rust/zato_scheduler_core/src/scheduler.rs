@@ -212,15 +212,6 @@ pub fn scheduler_loop(
         };
 
         if !fire_batch.is_empty() {
-            for item in &fire_batch {
-                log::info!(
-                    "Dispatching job_id={} name={} service={} run={}",
-                    item.job_id.0,
-                    item.name,
-                    item.service,
-                    item.current_run,
-                );
-            }
             dispatch_jobs(&fire_batch, &callbacks.run_cb, &callbacks.spawn_fn, &callbacks.on_job_executed_cb);
         }
     }
@@ -337,9 +328,10 @@ pub fn collect_due_jobs(
         deferred_log!(
             deferred,
             log::Level::Info,
-            "Firing job_id={job_id} name={} run={} delay_ms={delay_ms}",
+            "Executing name={} run={} service={} delay_ms={delay_ms} job_id={job_id}",
             running_job.name,
             running_job.current_run,
+            running_job.service,
         );
 
         if running_job.is_holiday_today(calendars_ref) {
@@ -410,7 +402,7 @@ fn dispatch_jobs(batch: &[FireBatch], run_cb: &PyObject, spawn_fn: &PyObject, on
 pub fn check_in_flight_timeouts(state: &mut SchedulerState, deferred: &mut DeferredLog) {
     let now_instant = Instant::now();
 
-    for running_job in state.jobs.values_mut() {
+    for (&job_id, running_job) in &mut state.jobs {
         if !running_job.in_flight {
             continue;
         }
@@ -421,9 +413,10 @@ pub fn check_in_flight_timeouts(state: &mut SchedulerState, deferred: &mut Defer
             deferred_log!(
                 deferred,
                 log::Level::Warn,
-                "Timed out job={} run={timed_out_run} after {elapsed_ms}ms (max={})",
+                "Timed out name={} run={timed_out_run} after {elapsed_ms}ms (max={}) job_id={}",
                 running_job.name,
                 running_job.max_execution_time_ms,
+                job_id,
             );
             running_job.in_flight = false;
             running_job.in_flight_since = None;

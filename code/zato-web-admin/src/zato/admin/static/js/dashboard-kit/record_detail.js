@@ -10,7 +10,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     var kit = $.fn.zato.dashboard_kit;
     kit.record_detail = {};
 
-    var FADE_MS = 100;
+    var TRANSITION_MS = 150;
 
     kit.record_detail.render_log_entry = function(entry, is_last, panel) {
         var level_key = entry.level.toUpperCase();
@@ -281,16 +281,12 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         }
 
         function crossfade_load(run_number) {
-            $container.css({transition: 'opacity ' + FADE_MS + 'ms', opacity: 0});
-            setTimeout(function() {
-                kit.record_detail._fetch_run(config, run_number, function(data) {
-                    var $panel_log = $container.find('.detail-panel-log');
-                    $panel_log.children().remove();
-                    $panel_log.attr('data-since-idx', '0');
-                    populate_run(data, run_number);
-                    $container.css({opacity: 1});
-                });
-            }, FADE_MS);
+            kit.record_detail._fetch_run(config, run_number, function(data) {
+                var $panel_log = $container.find('.detail-panel-log');
+                $panel_log.children().remove();
+                $panel_log.attr('data-since-idx', '0');
+                populate_run(data, run_number);
+            });
         }
 
         function populate_run(data, run_number) {
@@ -353,7 +349,6 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         function load_run(run_number) {
             kit.record_detail._fetch_run(config, run_number, function(data) {
                 populate_run(data, run_number);
-                $container.css({opacity: 1});
             });
         }
 

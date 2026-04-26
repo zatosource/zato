@@ -181,6 +181,11 @@ tbody tr[data-run]:not(.detail-panel-row) {
     user-select: none;
 }
 
+.detail-log-mirror {
+    min-height: 32px;
+    align-items: center;
+}
+
 .detail-log-line:hover {
     filter: brightness(1.15);
 }

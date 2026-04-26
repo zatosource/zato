@@ -2151,6 +2151,9 @@ class CySimpleIO:
     def get_output(self, data:object, data_format:object, serialise:cy.int=True) -> object: # noqa: E252
         """ Returns input converted to the output format, possibly including serialisation to a string representation.
         """
+        logger.info('CySimpleIO.get_output called -> data_format:%r, type(data_format):%s, serialise:%s, data:%s, type(data):%s',
+            data_format, type(data_format), serialise, data, type(data))
+
         if data_format == DATA_FORMAT_JSON:
             return self._get_output_json(data, serialise)
 
