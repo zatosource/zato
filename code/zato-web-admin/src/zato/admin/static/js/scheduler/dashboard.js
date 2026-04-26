@@ -1076,16 +1076,6 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         kit.lock_table_widths('#dashboard-upcoming-table');
         kit.lock_table_widths('#dashboard-recent-body table');
 
-        if (dash._tabs_handle && !dash._tab_locked) {
-            var recent_total = 0;
-            for (var fi = 0; fi < timeline.length; fi++) {
-                var oc = timeline[fi].outcome;
-                if (oc === 'error' || oc === 'timeout') recent_total++;
-            }
-            dash._tabs_handle.set_tab(
-                recent_total === 0 ? 'upcoming' : 'recent'
-            );
-        }
     };
 
     // ////////////////////////////////////////////////////////////////////////
