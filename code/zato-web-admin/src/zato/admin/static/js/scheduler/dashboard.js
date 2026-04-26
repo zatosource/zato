@@ -1248,7 +1248,6 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         dash._tabs_handle = kit.tabs.init({
             tab_selector: '.dashboard-tab',
             panel_prefix: 'dashboard-tab-panel-',
-            storage_key: 'zato_scheduler_activity_tab',
             default_tab: 'recent',
             on_change: function(tab_name) {
                 dash._tab_locked = true;
