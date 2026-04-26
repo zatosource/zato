@@ -371,7 +371,7 @@ impl Scheduler {
     #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
     fn mark_complete(&self, py: Python<'_>, job_id: i64, outcome: &str, duration_ms: u64, current_run: u32) -> PyResult<()> {
         let outcome_owned = outcome.to_string();
-        log::info!("mark_complete: job_id={job_id} outcome={outcome_owned} run={current_run} duration_ms={duration_ms}");
+        log::info!("Completed job_id={job_id} outcome={outcome_owned} run={current_run} duration_ms={duration_ms}");
         with_state_mut(py, &self.shared, |state, deferred| {
             let outcome = outcome_owned.as_str();
             if let Some(running_job) = state.jobs.get_mut(&job_id) {
@@ -397,7 +397,7 @@ impl Scheduler {
                     deferred_log!(
                         deferred,
                         log::Level::Warn,
-                        "mark_complete: job_id={job_id} name={} no history rec for run={current_run}",
+                        "No history rec for job_id={job_id} name={} run={current_run}",
                         running_job.name,
                     );
                 }

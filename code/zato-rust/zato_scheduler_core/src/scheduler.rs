@@ -191,7 +191,7 @@ pub fn scheduler_loop(
         let drift_ms = (wall_delta_ms - mono_delta_ms).abs();
 
         if drift_ms > shared.clock_jump_threshold_ms {
-            log::warn!("scheduler_loop: clock jump detected (drift_ms={drift_ms}), reanchoring all jobs");
+            log::warn!("Clock jump detected (drift_ms={drift_ms}), reanchoring all jobs");
             let mut state = shared.state.lock();
             reanchor_all_jobs(&mut state, now_wall);
         }
@@ -214,7 +214,7 @@ pub fn scheduler_loop(
         if !fire_batch.is_empty() {
             for item in &fire_batch {
                 log::info!(
-                    "scheduler_loop: dispatching job_id={} name={} service={} run={}",
+                    "Dispatching job_id={} name={} service={} run={}",
                     item.job_id.0,
                     item.name,
                     item.service,
@@ -337,7 +337,7 @@ pub fn collect_due_jobs(
         deferred_log!(
             deferred,
             log::Level::Info,
-            "FIRING job_id={job_id} name={} run={} delay_ms={delay_ms}",
+            "Firing job_id={job_id} name={} run={} delay_ms={delay_ms}",
             running_job.name,
             running_job.current_run,
         );
@@ -421,7 +421,7 @@ pub fn check_in_flight_timeouts(state: &mut SchedulerState, deferred: &mut Defer
             deferred_log!(
                 deferred,
                 log::Level::Warn,
-                "check_in_flight_timeouts: job={} run={timed_out_run} timed out after {elapsed_ms}ms (max={})",
+                "Timed out job={} run={timed_out_run} after {elapsed_ms}ms (max={})",
                 running_job.name,
                 running_job.max_execution_time_ms,
             );

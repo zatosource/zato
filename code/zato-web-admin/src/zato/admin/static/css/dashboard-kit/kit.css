@@ -164,6 +164,7 @@ a.dashboard-hero-pill-link:not(.menu-link):not(.chosen-single):hover {
 
 .dashboard-card-scroll {
     flex: 1 1 auto;
+    overflow-x: hidden;
     overflow-y: auto;
     margin: 0 -24px 0;
     padding: 0 24px 0;

@@ -2,6 +2,7 @@
 
 .zato-table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: separate;
     border-spacing: 0;
     border: none;
@@ -51,6 +52,7 @@
     color: rgb(64, 64, 64);
     vertical-align: middle;
     line-height: 20px;
+    word-break: break-word;
 }
 
 .zato-table tbody tr {

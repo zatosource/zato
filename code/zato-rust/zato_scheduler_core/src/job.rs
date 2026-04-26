@@ -367,19 +367,9 @@ impl RunningJob {
 
     /// Advances to the next fire time after the current run completes.
     pub fn advance_to_next(&mut self, now: DateTime<Utc>) {
-        log::info!(
-            "advance_to_next: job={} current_run={} now={} old_next_fire={:?} job_type={:?} repeats={:?}",
-            self.name,
-            self.current_run,
-            now,
-            self.next_fire_utc,
-            self.job_type,
-            self.repeats,
-        );
         if self.job_type == JobType::OneTime {
             self.next_fire_utc = None;
             self.next_fire_instant = None;
-            log::info!("advance_to_next: job={} one-time, cleared next_fire", self.name);
             return;
         }
         if let Some(max) = self.repeats
@@ -387,22 +377,13 @@ impl RunningJob {
         {
             self.next_fire_utc = None;
             self.next_fire_instant = None;
-            log::info!("advance_to_next: job={} reached max repeats={max}, cleared next_fire", self.name);
             return;
         }
-        // Use whichever is later - the current fire time or wall-clock now.
-        // When the coalesce window fires a job slightly early (now < fire_utc),
-        // searching from `now` would land on the same fire time again.
         let reference = match self.next_fire_utc {
             Some(fire) if fire > now => fire,
             _ => now,
         };
         self.compute_next_fire(reference);
-        log::info!(
-            "advance_to_next: job={} after compute_next_fire, new next_fire={:?}",
-            self.name,
-            self.next_fire_utc,
-        );
     }
 
     /// Computes a `JobSummary` snapshot from the current job state and history.
@@ -473,28 +454,13 @@ impl RunningJob {
     /// Finds the next interval multiple `n` such that `start + n * interval > now`.
     fn find_next_n(&self, start: DateTime<Utc>, now: DateTime<Utc>) -> u64 {
         if now <= start {
-            log::info!("find_next_n: job={} now={} <= start={}, returning 0", self.name, now, start);
             return 0;
         }
         let elapsed_ms = (now - start).num_milliseconds().unsigned_abs();
         let nth = elapsed_ms / self.interval_ms;
         let offset_ms = i64::try_from(nth * self.interval_ms).unwrap_or(i64::MAX);
         let candidate = start + chrono::Duration::milliseconds(offset_ms);
-        let result = if candidate <= now { nth + 1 } else { nth };
-        log::info!(
-            "find_next_n: job={} now={} start={} elapsed_ms={} interval_ms={} nth={} offset_ms={} candidate={} candidate<=now={} result={}",
-            self.name,
-            now,
-            start,
-            elapsed_ms,
-            self.interval_ms,
-            nth,
-            offset_ms,
-            candidate,
-            candidate <= now,
-            result,
-        );
-        result
+        if candidate <= now { nth + 1 } else { nth }
     }
 
     /// Computes a random jitter value in `[0, jitter_ms)`, or 0 if jitter is not configured.
