@@ -168,11 +168,17 @@ $.fn.zato.scheduler.job_detail.render_stats = function(job) {
     var next_run = job.next_fire_utc;
     var $stat = $('#stat-next-run');
     var $ts = $('#stat-next-run-ts');
-    if (next_run) {
+    var target_ms = next_run ? new Date(next_run).getTime() : 0;
+    var now_ms = Date.now();
+    var is_future = next_run && target_ms > now_ms;
+    console.log('[render_stats] next_run=' + next_run + ', target_ms=' + target_ms + ', now_ms=' + now_ms + ', diff_ms=' + (target_ms - now_ms) + ', is_future=' + is_future + ', now_locked=' + kit.countdown._now_locked);
+    if (is_future) {
         $stat.attr('data-countdown-target', next_run);
         $stat.text(kit.relative_time_future(next_run));
         $ts.text(kit.format_local_time(next_run));
+        kit.countdown._schedule_target(next_run);
     } else {
+        console.log('[render_stats] clearing countdown, past timestamp');
         $stat.attr('data-countdown-target', '');
         $stat.text('-');
         $ts.text('');
@@ -1646,9 +1652,14 @@ $.fn.zato.scheduler.job_detail.poll = function() {
             var kit = $.fn.zato.dashboard_kit;
             var $stat = $('#stat-next-run');
             var $ts = $('#stat-next-run-ts');
-            if (next_run) {
+            var target_ms = next_run ? new Date(next_run).getTime() : 0;
+            var now_ms = Date.now();
+            var is_future = next_run && target_ms > now_ms;
+            console.log('[poll_cb] next_run=' + next_run + ', diff_ms=' + (target_ms - now_ms) + ', is_future=' + is_future + ', now_locked=' + kit.countdown._now_locked + ', current_text=' + $stat.text() + ', current_attr=' + $stat.attr('data-countdown-target'));
+            if (is_future) {
                 var prev = $stat.attr('data-countdown-target');
                 if (prev !== next_run) {
+                    console.log('[poll_cb] new target, prev=' + prev + ', new=' + next_run);
                     delete kit.countdown._fired_targets[prev];
                 }
                 $stat.attr('data-countdown-target', next_run);
@@ -1657,8 +1668,11 @@ $.fn.zato.scheduler.job_detail.poll = function() {
                 }
                 $ts.text(kit.format_local_time(next_run));
             } else {
+                console.log('[poll_cb] past/null timestamp, clearing');
                 $stat.attr('data-countdown-target', '');
-                $stat.text('-');
+                if (!kit.countdown._now_locked) {
+                    $stat.text('-');
+                }
                 $ts.text('');
             }
         },

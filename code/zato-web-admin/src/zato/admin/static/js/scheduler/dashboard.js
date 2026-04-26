@@ -794,7 +794,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
                 (dash.config.show_live_status ? '' : ' style="display:none"') + '>' + status.html + '</td>';
             row += '<td><a href="' + detail_url + '">' + job.name + '</a></td>';
             row += '<td>' + service_cell + '</td>';
-            row += '<td data-countdown-target="' + (job.next_fire_utc || '') + '" style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73" title="' + next_run_tooltip + '">' + next_run_text + '</td>';
+            row += '<td data-countdown-target="' + (job.next_fire_utc || '') + '" style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;min-width:7em" title="' + next_run_tooltip + '">' + next_run_text + '</td>';
             row += '<td>' + dash.outcome_squares(job.recent_outcomes) + '</td>';
             row += '</tr>';
             table_body.append(row);
@@ -946,7 +946,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             var service_cell = entry.service ? $.fn.zato.data_table.service_text(entry.service, cluster_id) : '';
 
             var row = '<tr>';
-            row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap" title="' + time_tooltip + '">' + time_text + '</td>';
+            row += '<td data-countdown-target="' + entry.time + '" style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap;min-width:7em" title="' + time_tooltip + '">' + time_text + '</td>';
             row += '<td><a href="/zato/scheduler/dashboard/job/' + encodeURIComponent(entry.job_id) + '/?cluster=' + cluster_id + '&outcomes=' + dash.Outcome_All + '">' + entry.name + '</a></td>';
             row += '<td>' + service_cell + '</td>';
             row += '</tr>';

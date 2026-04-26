@@ -428,15 +428,20 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     kit.countdown._now_locked = false;
 
     kit.countdown._fire_now = function(iso) {
+        console.log('[fire_now] iso=' + iso + ', locked=' + kit.countdown._now_locked + ', already_fired=' + !!kit.countdown._fired_targets[iso]);
         var $cells = $('[data-countdown-target="' + iso + '"]');
-        $cells.text(kit.labels.ready).addClass('countdown-now');
-        kit.countdown._now_locked = true;
-        setTimeout(function() {
-            kit.countdown._now_locked = false;
-            $('.countdown-now').removeClass('countdown-now');
-        }, 900);
+        console.log('[fire_now] matched_cells=' + $cells.length);
+        $cells.text(kit.labels.ready);
         if (kit.countdown._on_now && !kit.countdown._fired_targets[iso]) {
             kit.countdown._fired_targets[iso] = true;
+            $cells.addClass('countdown-now');
+            kit.countdown._now_locked = true;
+            setTimeout(function() {
+                console.log('[fire_now_unlock] unlocking after 900ms');
+                kit.countdown._now_locked = false;
+                $('.countdown-now').removeClass('countdown-now');
+            }, 900);
+            console.log('[fire_now] calling on_now callback');
             kit.countdown._on_now();
         }
     };
@@ -445,6 +450,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         if (kit.countdown._scheduled_targets[iso]) return;
         var target = new Date(iso).getTime();
         var delay = target - Date.now();
+        console.log('[schedule] iso=' + iso + ', delay_ms=' + delay);
         if (delay <= 0) {
             kit.countdown._fire_now(iso);
             return;
