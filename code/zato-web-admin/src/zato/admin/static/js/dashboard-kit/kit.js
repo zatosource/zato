@@ -434,7 +434,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         setTimeout(function() {
             kit.countdown._now_locked = false;
             $('.countdown-now').removeClass('countdown-now');
-        }, 3000);
+        }, 900);
         if (kit.countdown._on_now && !kit.countdown._fired_targets[iso]) {
             kit.countdown._fired_targets[iso] = true;
             kit.countdown._on_now();
