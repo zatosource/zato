@@ -183,6 +183,7 @@ a.dashboard-hero-pill-link:not(.menu-link):not(.chosen-single):hover {
 }
 
 .dashboard-card .zato-table {
+    table-layout: fixed;
     box-shadow: none;
     border-radius: 0;
 }
