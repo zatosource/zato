@@ -34,8 +34,8 @@
 
     <div class="dashboard-section dashboard-chart-section">
         <div class="dashboard-card">
-            <div class="dashboard-card-header">
-                <h3>{% block dashboard_chart_title %}{% endblock %}</h3>
+            <div class="dashboard-card-header {% block dashboard_chart_header_class %}{% endblock %}">
+                {% block dashboard_chart_header_content %}<h3>{% block dashboard_chart_title %}{% endblock %}</h3>{% endblock %}
                 <div class="dashboard-chart-controls">
                 <span class="dashboard-pill dashboard-pill-clickable dashboard-chart-type-toggle" id="dashboard-chart-type-toggle" title="Toggle chart style"></span>
                 <div class="dashboard-time-range-wrapper">

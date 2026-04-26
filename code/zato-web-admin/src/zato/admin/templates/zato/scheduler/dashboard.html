@@ -73,7 +73,18 @@ $(document).ready(function() {
 
 {% endblock %}
 
-{% block dashboard_chart_title %}Run history{% endblock %}
+{% block dashboard_chart_header_class %}dashboard-card-header-tabs{% endblock %}
+{% block dashboard_chart_header_content %}
+                <div class="dashboard-tabs" role="tablist" aria-label="Run history">
+                    <button type="button"
+                            class="dashboard-tab dashboard-tab-active"
+                            data-tab="run-history"
+                            role="tab"
+                            aria-selected="true">
+                        <span class="dashboard-tab-label">Run history</span>
+                    </button>
+                </div>
+{% endblock %}
 
 {% block dashboard_time_range_options %}
                         <div class="dashboard-time-range-option" data-minutes="5">Last 5 minutes</div>
