@@ -1238,8 +1238,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             sub_key = self._broker_sub_map.get(broker_sub_id)
 
             if not sub_key:
+                known = {sub_id: (type(sub_id).__name__, sub_key) for sub_id, sub_key in self._broker_sub_map.items()}
                 logger.warning('Unknown broker sub_id `%r` (type=%s), known: %s',
-                    broker_sub_id, type(broker_sub_id).__name__, sorted(self._broker_sub_map))
+                    broker_sub_id, type(broker_sub_id).__name__, known)
                 return
 
             topic_name = msg['topic_name']
