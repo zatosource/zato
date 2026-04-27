@@ -124,43 +124,47 @@
                 <form novalidate action="{% url "channel-kafka-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%">Name</td>
+                            <td style="vertical-align:middle; width:14%"><label for="id_name">Name</label></td>
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
+                            <td style="vertical-align:middle"><label for="id_is_active">Active</label></td>
                             <td>{{ create_form.is_active }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Address</td>
+                            <td style="vertical-align:middle"><label for="id_address">Address</label></td>
                             <td>{{ create_form.address }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Topic</td>
+                            <td style="vertical-align:middle"><label for="id_topic">Topic</label></td>
                             <td>{{ create_form.topic }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Group ID</td>
+                            <td style="vertical-align:middle"><label for="id_group_id">Group ID</label></td>
                             <td>{{ create_form.group_id }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Service</td>
+                            <td style="vertical-align:middle"><label for="id_service">Service</label></td>
                             <td>{{ create_form.service }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">SSL</td>
+                            <td style="vertical-align:middle">Extra</td>
+                            <td><a href="javascript:$.fn.zato.toggle_visibility('.create-ssl-block')">SSL options</a></td>
+                        </tr>
+                        <tr class="create-ssl-block hidden">
+                            <td style="vertical-align:middle"><label for="id_ssl">Use SSL</label></td>
                             <td>{{ create_form.ssl }}</td>
                         </tr>
-                        <tr>
-                            <td style="vertical-align:middle">CA file</td>
+                        <tr class="create-ssl-block hidden">
+                            <td style="vertical-align:middle"><label for="id_ssl_ca_file">CA file</label></td>
                             <td>{{ create_form.ssl_ca_file }}</td>
                         </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Cert file</td>
+                        <tr class="create-ssl-block hidden">
+                            <td style="vertical-align:middle"><label for="id_ssl_cert_file">Cert file</label></td>
                             <td>{{ create_form.ssl_cert_file }}</td>
                         </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Key file</td>
+                        <tr class="create-ssl-block hidden">
+                            <td style="vertical-align:middle"><label for="id_ssl_key_file">Key file</label></td>
                             <td>{{ create_form.ssl_key_file }}</td>
                         </tr>
                         <tr>
@@ -180,43 +184,47 @@
                 <form novalidate action="{% url "channel-kafka-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%">Name</td>
+                            <td style="vertical-align:middle; width:14%"><label for="id_edit-name">Name</label></td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
+                            <td style="vertical-align:middle"><label for="id_edit-is_active">Active</label></td>
                             <td>{{ edit_form.is_active }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Address</td>
+                            <td style="vertical-align:middle"><label for="id_edit-address">Address</label></td>
                             <td>{{ edit_form.address }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Topic</td>
+                            <td style="vertical-align:middle"><label for="id_edit-topic">Topic</label></td>
                             <td>{{ edit_form.topic }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Group ID</td>
+                            <td style="vertical-align:middle"><label for="id_edit-group_id">Group ID</label></td>
                             <td>{{ edit_form.group_id }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Service</td>
+                            <td style="vertical-align:middle"><label for="id_edit-service">Service</label></td>
                             <td>{{ edit_form.service }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">SSL</td>
+                            <td style="vertical-align:middle">Extra</td>
+                            <td><a href="javascript:$.fn.zato.toggle_visibility('.edit-ssl-block')">SSL options</a></td>
+                        </tr>
+                        <tr class="edit-ssl-block hidden">
+                            <td style="vertical-align:middle"><label for="id_edit-ssl">Use SSL</label></td>
                             <td>{{ edit_form.ssl }}</td>
                         </tr>
-                        <tr>
-                            <td style="vertical-align:middle">CA file</td>
+                        <tr class="edit-ssl-block hidden">
+                            <td style="vertical-align:middle"><label for="id_edit-ssl_ca_file">CA file</label></td>
                             <td>{{ edit_form.ssl_ca_file }}</td>
                         </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Cert file</td>
+                        <tr class="edit-ssl-block hidden">
+                            <td style="vertical-align:middle"><label for="id_edit-ssl_cert_file">Cert file</label></td>
                             <td>{{ edit_form.ssl_cert_file }}</td>
                         </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Key file</td>
+                        <tr class="edit-ssl-block hidden">
+                            <td style="vertical-align:middle"><label for="id_edit-ssl_key_file">Key file</label></td>
                             <td>{{ edit_form.ssl_key_file }}</td>
                         </tr>
                         <tr>
