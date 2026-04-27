@@ -71,6 +71,7 @@ vscode
 *.pyo
 *.so
 !code/support-linux/zato_hl7v2/*.so
+!code/support-linux/zato_broker_core/*.so
 *.swp
 *.*~
 ~

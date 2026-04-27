@@ -11,7 +11,7 @@ import os
 from copy import deepcopy
 
 # Zato
-from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, ZatoCommand
+from zato.cli import common_broker_db_opts, common_odb_opts, common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, ZatoCommand
 from zato.common.typing_ import cast_
 from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
 from zato.common.util.platform_ import is_windows
@@ -309,6 +309,7 @@ class Create(ZatoCommand):
     opts.append({'name':'--force', 'help':'Delete the directory if it already exists', 'action':'store_true'})
     opts.append({'name':'--password', 'help':'Password for the environment (same as Zato_Password env variable)'})
 
+    opts += deepcopy(common_broker_db_opts)
     opts += deepcopy(common_scheduler_server_address_opts)
     opts += deepcopy(common_scheduler_server_api_client_opts)
 
@@ -333,6 +334,12 @@ class Create(ZatoCommand):
         out.postgresql_schema = getattr(args, 'postgresql_schema', None)
         out.odb_password = args.odb_password
         out.kvdb_password = self.get_arg('kvdb_password')
+        out.broker_db_host = args.broker_db_host if args.broker_db_host else os.environ.get('Zato_Broker_DB_Host')
+        out.broker_db_port = args.broker_db_port if args.broker_db_port else os.environ.get('Zato_Broker_DB_Port')
+        out.broker_db_user = args.broker_db_user if args.broker_db_user else os.environ.get('Zato_Broker_DB_Username')
+        out.broker_db_name = args.broker_db_name if args.broker_db_name else os.environ.get('Zato_Broker_DB_Database')
+        out.broker_db_password = args.broker_db_password if args.broker_db_password else os.environ.get('Zato_Broker_DB_Password')
+        out.broker_db_ssl = args.broker_db_ssl if args.broker_db_ssl else os.environ.get('Zato_Broker_DB_SSL', 'False')
         out.cluster_name = cluster_name
         out.scheduler_name = 'scheduler1'
         out.scheduler_address_for_server = getattr(args, 'scheduler_address_for_server', '')

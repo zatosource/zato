@@ -170,6 +170,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self.use_tls = False
         self.is_starting_first = '<not-set>'
         self.odb_data = Bunch()
+        self._has_pubsub_broker = False
         self.repo_location = ''
         self.user_conf_location:'strlist' = []
         self.user_conf_location_extra:'strset' = set()
@@ -975,6 +976,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         # Start the Rust scheduler thread (in-process)
         self._start_scheduler()
 
+        # Start the Rust pubsub broker (partman background thread)
+        self._start_pubsub_broker()
+
         # Optionally, if we appear to be a Docker quickstart environment, log all details about the environment.
         self.log_environment_details()
 
@@ -1067,6 +1071,40 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             logger.info('Scheduler started, with_test_data=%s', self.with_test_data)
         except Exception:
             logger.warning('Scheduler could not be started: %s', format_exc())
+
+# ################################################################################################################################
+
+    def _start_pubsub_broker(self):
+        from zato.common.ext.broker.client import PubSubBroker
+        pubsub_config = self.fs_server_config.pubsub
+
+        ssl = pubsub_config.ssl
+        if ssl is True:
+            ssl = 'require'
+        elif ssl is False:
+            ssl = 'disable'
+        elif ssl == 'verify':
+            ssl = 'verify-full'
+
+        try:
+            self.pubsub_broker = PubSubBroker({
+                'host': pubsub_config.host,
+                'port': pubsub_config.port,
+                'user': pubsub_config.username,
+                'password': pubsub_config.password,
+                'db_name': pubsub_config.db_name,
+                'ssl': ssl,
+                'window_minutes': pubsub_config.window_minutes,
+                'span_days': pubsub_config.span_days,
+                'span_hours': pubsub_config.span_hours,
+                'span_minutes': pubsub_config.span_minutes,
+                'retain_minutes': pubsub_config.retain_minutes,
+                'partman_interval_secs': pubsub_config.partman_interval_secs,
+            })
+            self._has_pubsub_broker = True
+            logger.info('PubSub broker started')
+        except Exception:
+            logger.warning('PubSub broker could not be started: %s', format_exc())
 
 # ################################################################################################################################
 
@@ -1746,6 +1784,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                 return
             else:
                 self._is_process_closing = True
+
+            # Stop the pubsub broker if it was started
+            if self._has_pubsub_broker:
+                self.pubsub_broker.stop()
 
             # Close SQL pools
             self.sql_pool_store.cleanup_on_stop()
