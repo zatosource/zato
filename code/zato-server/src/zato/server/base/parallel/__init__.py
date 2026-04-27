@@ -1152,11 +1152,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             self.pubsub_delivery = PubSubDelivery(
                 broker=self.pubsub_broker,
                 on_message_cb=self._on_pubsub_message,
-                batch_size=int(pubsub_config.get('delivery_batch_size', 100)),
-                window_minutes=pubsub_config.window_minutes,
+                window_minutes=int(pubsub_config.window_minutes),
             )
-            # TODO: re-enable once the delivery greenlet is fully wired
-            # self.pubsub_delivery.start()
+            self.pubsub_delivery.start()
+
+            self._sync_pubsub_subscriptions()
 
             logger.info('PubSub broker started')
         except Exception:
@@ -1164,9 +1164,69 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def _sync_pubsub_subscriptions(self) -> 'None':
+
+        from contextlib import closing
+        from zato.common.odb.model import HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
+
+        logger.info('Syncing ODB subscriptions to Rust broker')
+
+        with closing(self.odb.session()) as session:
+
+            rows = session.query(
+                PubSubSubscription.sub_key,
+                PubSubSubscription.delivery_type,
+                PubSubSubscription.push_type,
+                PubSubSubscription.push_service_name,
+                PubSubSubscription.rest_push_endpoint_id,
+                PubSubTopic.name,
+                PubSubTopic.id,
+                SecurityBase.username,
+                SecurityBase.name.label('sec_name'),
+            ).join(
+                PubSubSubscriptionTopic, PubSubSubscriptionTopic.subscription_id == PubSubSubscription.id
+            ).join(
+                PubSubTopic, PubSubTopic.id == PubSubSubscriptionTopic.topic_id
+            ).join(
+                SecurityBase, SecurityBase.id == PubSubSubscription.sec_base_id
+            ).filter(
+                PubSubSubscription.cluster_id == self.cluster_id
+            ).all()
+
+            synced = 0
+
+            for row in rows:
+
+                topic_name = row.name
+                sub_key = row.sub_key
+
+                topic = self.pubsub_broker.get_topic_by_name(topic_name)
+                if topic is None:
+                    topic = self.pubsub_broker.create_topic(topic_name)
+
+                topic_id = topic['topic_id']
+
+                self.pubsub_broker.create_subscription(sub_key, topic_id, 'client')
+
+                config = {
+                    'sub_key': sub_key,
+                    'topic_name': topic_name,
+                    'delivery_type': row.delivery_type,
+                    'push_type': row.push_type,
+                    'push_service_name': row.push_service_name,
+                    'rest_push_endpoint_id': row.rest_push_endpoint_id,
+                }
+                self.config.pubsub_subs[topic_name] = {'config': config}
+
+                synced += 1
+
+        logger.info('Synced %d ODB subscription-topic pairs to Rust broker', synced)
+
+# ################################################################################################################################
+
     def _on_pubsub_message(self, msg:'anydict') -> 'None':
         try:
-            self.invoke('zato.pubsub.on-message', msg)
+            self.invoke('zato.pubsub.subscription.handle-delivery', msg)
         except Exception:
             logger.warning('PubSub message dispatch error: %s', format_exc())
 

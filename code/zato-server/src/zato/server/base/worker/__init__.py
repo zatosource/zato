@@ -1705,32 +1705,137 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def on_config_event_PUBSUB_SUBSCRIPTION_CREATE(self, msg:'bunch_') -> 'None':
-        pass
+
+        sub_key = msg.sub_key
+        sec_name = msg.sec_name
+        username = msg.username
+        delivery_type = msg.delivery_type
+
+        self.server.pubsub_subscriptions.register_user(username, sec_name, sub_key)
+
+        for topic_item in msg.topic_name_list:
+            topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
+
+            if self.server._has_pubsub_broker:
+                topic = self.server.pubsub_broker.get_topic_by_name(topic_name)
+                if topic is None:
+                    topic = self.server.pubsub_broker.create_topic(topic_name)
+
+                self.server.pubsub_broker.create_subscription(sub_key, topic['topic_id'], 'client')
+
+            self._add_pubsub_sub_config(sub_key, topic_name, delivery_type, msg)
 
     def on_config_event_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'bunch_') -> 'None':
-        pass
+
+        sub_key = msg.sub_key
+        delivery_type = msg.delivery_type
+
+        self._remove_pubsub_sub_configs_by_sub_key(sub_key)
+
+        for topic_item in msg.topic_name_list:
+            topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
+
+            if self.server._has_pubsub_broker:
+                topic = self.server.pubsub_broker.get_topic_by_name(topic_name)
+                if topic is None:
+                    topic = self.server.pubsub_broker.create_topic(topic_name)
+
+                self.server.pubsub_broker.create_subscription(sub_key, topic['topic_id'], 'client')
+
+            self._add_pubsub_sub_config(sub_key, topic_name, delivery_type, msg)
 
     def on_config_event_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'bunch_') -> 'None':
-        pass
+
+        sub_key = msg.sub_key
+        username = msg.username
+
+        self._remove_pubsub_sub_configs_by_sub_key(sub_key)
+
+        if self.server._has_pubsub_broker:
+            try:
+                subs = self.server.pubsub_broker.list_active_subscriptions()
+                for sub_id, topic_id in subs:
+                    self.server.pubsub_broker.delete_subscription(sub_key, topic_id)
+            except Exception:
+                logger.warning('Could not delete broker subscription for sub_key `%s`: %s', sub_key, format_exc())
+
+        self.server.pubsub_subscriptions.remove_user(username)
 
 # ################################################################################################################################
 
     def on_config_event_PUBSUB_TOPIC_EDIT(self, msg:'bunch_') -> 'None':
-        pass
+
+        old_name = msg.old_topic_name
+        new_name = msg.new_topic_name
+
+        matcher = self.server.pubsub_pattern_matcher
+        for client_id in list(matcher._clients):
+            matcher.rename_topic(client_id, old_name, new_name)
 
     def on_config_event_PUBSUB_TOPIC_DELETE(self, msg:'bunch_') -> 'None':
-        pass
+
+        topic_name = msg.topic_name
+
+        matcher = self.server.pubsub_pattern_matcher
+        for client_id in list(matcher._clients):
+            matcher.delete_topic(client_id, topic_name)
+
+        if self.server._has_pubsub_broker:
+            try:
+                self.server.pubsub_broker.delete_topic(topic_name)
+            except Exception:
+                logger.warning('Could not delete broker topic `%s`: %s', topic_name, format_exc())
 
 # ################################################################################################################################
 
     def on_config_event_PUBSUB_PERMISSION_CREATE(self, msg:'bunch_') -> 'None':
-        pass
+        self._update_pubsub_permissions(msg)
 
     def on_config_event_PUBSUB_PERMISSION_EDIT(self, msg:'bunch_') -> 'None':
-        pass
+        self._update_pubsub_permissions(msg)
 
     def on_config_event_PUBSUB_PERMISSION_DELETE(self, msg:'bunch_') -> 'None':
-        pass
+        if hasattr(msg, 'username') and msg.username:
+            self.server.pubsub_pattern_matcher.remove_client(msg.username)
+
+# ################################################################################################################################
+
+    def _add_pubsub_sub_config(self, sub_key:'str', topic_name:'str', delivery_type:'str', msg:'bunch_') -> 'None':
+        config = {
+            'sub_key': sub_key,
+            'topic_name': topic_name,
+            'delivery_type': delivery_type,
+            'push_type': getattr(msg, 'push_type', None),
+            'push_service_name': getattr(msg, 'push_service_name', None),
+            'rest_push_endpoint_id': getattr(msg, 'rest_push_endpoint_id', None),
+        }
+        self.worker_config.pubsub_subs[topic_name] = {'config': config}
+
+    def _remove_pubsub_sub_configs_by_sub_key(self, sub_key:'str') -> 'None':
+        to_remove = []
+        for topic_name, item in self.worker_config.pubsub_subs.items():
+            if item['config']['sub_key'] == sub_key:
+                to_remove.append(topic_name)
+        for topic_name in to_remove:
+            del self.worker_config.pubsub_subs[topic_name]
+
+    def _update_pubsub_permissions(self, msg:'bunch_') -> 'None':
+        if hasattr(msg, 'username') and msg.username:
+            permissions = []
+            if hasattr(msg, 'pattern') and msg.pattern:
+                for line in msg.pattern.split('\n'):
+                    line = line.strip()
+                    if line.startswith('pub='):
+                        permissions.append({
+                            'pattern': line[4:],
+                            'access_type': PubSub.API_Client.Publisher,
+                        })
+                    elif line.startswith('sub='):
+                        permissions.append({
+                            'pattern': line[4:],
+                            'access_type': PubSub.API_Client.Subscriber,
+                        })
+            self.server.pubsub_pattern_matcher.set_permissions(msg.username, permissions)
 
 # ################################################################################################################################
 # ################################################################################################################################

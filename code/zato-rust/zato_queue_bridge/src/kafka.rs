@@ -96,52 +96,69 @@ pub async fn consume_loop(
     message_sender: crossbeam_channel::Sender<ConsumedMessage>,
     stop_flag: Arc<AtomicBool>,
 ) {
-    let mut client_config = ClientConfig::new();
-    client_config
-        .set("bootstrap.servers", params.address)
-        .set("group.id", params.group_id)
-        .set("auto.offset.reset", "earliest");
-
-    apply_ssl_config(&mut client_config, &params.ssl_config);
-
-    let consumer: StreamConsumer = match client_config.create() {
-        Ok(consumer) => consumer,
-        Err(err) => {
-            eprintln!("Failed to create Kafka consumer for `{}`: {err}", params.connection_name);
-            return;
-        }
-    };
-
-    if let Err(err) = consumer.subscribe(&[params.topic]) {
-        eprintln!("Failed to subscribe to topic `{}` on `{}`: {err}", params.topic, params.connection_name);
-        return;
-    }
-
-    eprintln!("Kafka consumer `{}` subscribed to topic `{}`", params.connection_name, params.topic);
-
     loop {
         if stop_flag.load(Ordering::Relaxed) {
-            break;
+            return;
         }
 
-        match consumer.recv().await {
-            Ok(borrowed_message) => {
-                let payload = match borrowed_message.payload() {
-                    Some(bytes) => bytes.to_vec(),
-                    None => continue,
-                };
-                let msg = ConsumedMessage {
-                    payload,
-                    topic: borrowed_message.topic().to_string(),
-                    service_name: params.service_name.to_string(),
-                };
-                if message_sender.send(msg).is_err() {
-                    break;
-                }
-            }
+        let mut client_config = ClientConfig::new();
+        client_config
+            .set("bootstrap.servers", params.address)
+            .set("group.id", params.group_id)
+            .set("auto.offset.reset", "earliest")
+;
+
+        apply_ssl_config(&mut client_config, &params.ssl_config);
+
+        let consumer: StreamConsumer = match client_config.create() {
+            Ok(consumer) => consumer,
             Err(err) => {
-                eprintln!("Kafka consumer `{}` receive error: {err}", params.connection_name);
-                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                eprintln!("Kafka consumer `{}`: waiting for broker: {err}", params.connection_name);
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                continue;
+            }
+        };
+
+        if let Err(err) = consumer.subscribe(&[params.topic]) {
+            eprintln!("Kafka consumer `{}`: cannot subscribe to `{}`: {err}", params.connection_name, params.topic);
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            continue;
+        }
+
+        eprintln!("Kafka consumer `{}` subscribed to topic `{}`", params.connection_name, params.topic);
+
+        let mut consecutive_errors: u32 = 0;
+
+        loop {
+            if stop_flag.load(Ordering::Relaxed) {
+                return;
+            }
+
+            match consumer.recv().await {
+                Ok(borrowed_message) => {
+                    consecutive_errors = 0;
+                    let payload = match borrowed_message.payload() {
+                        Some(bytes) => bytes.to_vec(),
+                        None => continue,
+                    };
+                    let msg = ConsumedMessage {
+                        payload,
+                        topic: borrowed_message.topic().to_string(),
+                        service_name: params.service_name.to_string(),
+                    };
+                    if message_sender.send(msg).is_err() {
+                        return;
+                    }
+                }
+                Err(err) => {
+                    consecutive_errors += 1;
+                    eprintln!("Kafka consumer `{}`: receive warning: {err}", params.connection_name);
+                    if consecutive_errors >= 5 {
+                        eprintln!("Kafka consumer `{}`: reconnecting after repeated failures", params.connection_name);
+                        break;
+                    }
+                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                }
             }
         }
     }

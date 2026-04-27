@@ -321,6 +321,9 @@ class ConfigStore:
         # Services
         self.service = None # type: ConfigDict
 
+        # Pub/sub
+        self.pubsub_subs = None # type: ConfigDict
+
         # MQ
         self.channel_amqp = None   # type: ConfigDict
 

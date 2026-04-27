@@ -62,12 +62,12 @@ class PubSubFacade:
             'payload': data if isinstance(data, bytes) else str(data).encode('utf-8'),
             'publisher_id': kwargs.get('publisher_id', 0),
             'priority': kwargs.get('priority', 5),
-            'correl_id': kwargs.get('correl_id'),
+            'correl_id': kwargs.get('correl_id') or kwargs.get('cid'),
             'expiration': kwargs.get('expiration'),
             'in_reply_to': kwargs.get('in_reply_to'),
             'ext_client_id': kwargs.get('ext_client_id'),
             'pub_time': kwargs.get('pub_time'),
-            'pub_msg_id': kwargs.get('pub_msg_id'),
+            'pub_msg_id': kwargs.get('pub_msg_id') or kwargs.get('msg_id'),
         }
 
         return self.server.pubsub_broker.publish(config)

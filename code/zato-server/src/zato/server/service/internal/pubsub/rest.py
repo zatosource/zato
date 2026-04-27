@@ -8,11 +8,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from base64 import b64decode
+from contextlib import closing
 from http.client import BAD_REQUEST, UNAUTHORIZED
 from logging import getLogger
 
 # Zato
 from zato.common.api import PubSub
+from zato.common.odb.model import PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.auth import check_basic_auth
 from zato.server.service import AsIs, Int, Service
@@ -251,26 +253,40 @@ class GetMessages(PubSubRESTService):
         # Get optional parameters
         max_messages = input.max_messages if input.max_messages else _max_messages_default
 
-        # Find all subscriptions for this user and collect messages
-        subs = self.server.pubsub_subscriptions.get_subs_by_username(username)
+        # Find all topic associations for this user's subscription via ODB
         messages = []
+        window_minutes = int(self.server.fs_server_config.pubsub.window_minutes)
 
-        for topic_name, topic_id in subs:
+        with closing(self.odb.session()) as session:
+            rows = session.query(
+                PubSubTopic.name,
+                PubSubTopic.id,
+            ).join(
+                PubSubSubscriptionTopic, PubSubSubscriptionTopic.topic_id == PubSubTopic.id
+            ).join(
+                PubSubSubscription, PubSubSubscription.id == PubSubSubscriptionTopic.subscription_id
+            ).filter(
+                PubSubSubscription.sub_key == sub_key,
+                PubSubSubscription.cluster_id == self.server.cluster_id,
+            ).all()
+
+        for topic_name, topic_id in rows:
             sub_id = self.server.pubsub_broker.get_subscription_id(sub_key, topic_id)
             if sub_id is None:
                 continue
 
-            window_minutes = self.server.fs_server_config.pubsub.window_minutes
             result = self.server.pubsub_broker.get_messages(topic_id, sub_id, max_messages, window_minutes)
 
             for msg in result['msgs']:
                 messages.append({
-                    'msg_id': msg['pub_msg_id'],
-                    'topic': msg['topic_name'],
-                    'payload': msg['payload'],
-                    'priority': msg['priority'],
-                    'pub_time': msg['pub_time'],
-                    'correl_id': msg['correl_id'],
+                    'meta': {
+                        'msg_id': msg['pub_msg_id'],
+                        'topic_name': msg['topic_name'],
+                        'priority': msg['priority'],
+                        'pub_time': msg['pub_time'],
+                        'correl_id': msg['correl_id'],
+                    },
+                    'data': msg['payload'],
                 })
 
         self.response.payload.is_ok = True
