@@ -36,7 +36,7 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 # Zato
 from zato.common.config_dispatcher import ConfigDispatchReceiver, ConfigDispatcher
 from zato.bunch import Bunch
-from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  HotDeploy, SERVER_STARTUP, \
+from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, HotDeploy, PubSub, SERVER_STARTUP, \
     SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.bearer_token import BearerTokenManager
@@ -68,7 +68,7 @@ from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.worker import WorkerStore
-from zato.server.config import ConfigStore
+from zato.server.config import ConfigDict, ConfigStore
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import ODBConfigSource
 from zato.server.groups.base import GroupsManager
@@ -110,6 +110,8 @@ if 0:
 
 logger = logging.getLogger(__name__)
 kvdb_logger = logging.getLogger('zato_kvdb')
+
+_push = PubSub.Delivery_Type.Push
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1220,58 +1222,60 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
                 topic_id = topic['topic_id']
 
-                result = self.pubsub_broker.create_subscription(sub_key, topic_id, 'client')
-                sub_id = result['sub_id']
-
-                config = {
-                    'sub_key': sub_key,
-                    'topic_name': topic_name,
-                    'delivery_type': row.delivery_type,
-                    'push_type': row.push_type,
-                    'push_service_name': row.push_service_name,
-                    'rest_push_endpoint_id': row.rest_push_endpoint_id,
-                }
-                self.config.pubsub_subs[sub_id] = {'config': config}
+                self.pubsub_broker.create_subscription(sub_key, topic_id, 'client')
 
                 synced += 1
 
         noun = 'pair' if synced == 1 else 'pairs'
         logger.info('Synced %d ODB subscription-topic %s to broker', synced, noun)
 
+        query = self.odb.get_pubsub_subscription_list(self.cluster_id, True)
+        self.config.pubsub_subs = ConfigDict.from_query('pubsub_subs', query, decrypt_func=self.decrypt, list_config=True)
+
 # ################################################################################################################################
 
     def _on_pubsub_message(self, msg:'anydict') -> 'None':
         try:
+            topic_name = msg['topic_name']
             sub_id = msg['sub_id']
-            logger.info('PubSub message received, sub_id=%r (type=%s), known keys=%s', sub_id, type(sub_id).__name__, list(self.config.pubsub_subs.keys()))
-            sub_entry = self.config.pubsub_subs[sub_id]
-            sub_config = sub_entry['config']
+            sub_list = self.config.pubsub_subs.get(topic_name)
 
-            delivery_type = sub_config['delivery_type']
-            if delivery_type != 'push':
+            if not sub_list:
                 return
 
-            delivery_msg = {
-                'msg_id': msg['pub_msg_id'],
-                'correl_id': msg['correl_id'],
-                'data': msg['payload'],
-                'size': len(msg['payload']),
-                'publisher': msg['publisher_id'],
-                'pub_time_iso': msg['pub_time'],
-                'recv_time_iso': msg['msg_creation_time'],
-                'priority': msg['priority'],
-                'expiration': msg['expiration'],
-                'expiration_time_iso': msg['expiration'],
-                'topic_name': msg['topic_name'],
-                'ext_client_id': msg['ext_client_id'],
-                'in_reply_to': msg['in_reply_to'],
-                '_zato_meta': {
-                    'sub_key': sub_config['sub_key'],
-                    'delivery_count': 1,
-                },
-            }
+            for sub_config in sub_list:
+                if sub_config['id'] != sub_id:
+                    continue
 
-            self.invoke('zato.pubsub.subscription.handle-delivery', delivery_msg)
+                delivery_type = sub_config['delivery_type']
+                if delivery_type != _push:
+                    return
+
+                sub_key = sub_config['sub_key']
+                payload = msg['payload']
+
+                delivery_msg = {
+                    'msg_id': msg['pub_msg_id'],
+                    'correl_id': msg['correl_id'],
+                    'data': payload,
+                    'size': len(payload),
+                    'publisher': msg['publisher_id'],
+                    'pub_time_iso': msg['pub_time'],
+                    'recv_time_iso': msg['msg_creation_time'],
+                    'priority': msg['priority'],
+                    'expiration': msg['expiration'],
+                    'expiration_time_iso': msg['expiration'],
+                    'topic_name': topic_name,
+                    'ext_client_id': msg['ext_client_id'],
+                    'in_reply_to': msg['in_reply_to'],
+                    '_zato_meta': {
+                        'sub_key': sub_key,
+                        'delivery_count': 1,
+                    },
+                }
+
+                self.invoke('zato.pubsub.subscription.handle-delivery', delivery_msg)
+                break
         except Exception:
             logger.warning('PubSub message dispatch error: %s', format_exc())
 
@@ -1282,7 +1286,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         Runs on a real OS thread (via gevent's native threadpool) so that blocking
         inotify calls do not interfere with the gevent event loop.
         """
-        import time as time_
+        from gevent.monkey import get_original
+        _real_sleep = get_original('time', 'sleep')
 
         pickup_dir = self.hot_deploy_config.pickup_dir
 
@@ -1321,9 +1326,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             observer.start()
             logger.info('File watcher started for `%s`', pickup_dir)
 
-            # Block this native thread forever - the observer runs its own internal thread
             while True:
-                time_.sleep(1)
+                _real_sleep(1)
 
         try:
             _ = gevent.get_hub().threadpool.spawn(_run_watcher)

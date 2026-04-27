@@ -921,13 +921,13 @@ class WorkerStore(_WorkerStoreBase):
         # Local variables
         not_applicable = {}
 
-        for sub_id, config in self.worker_config.pubsub_subs.items():
-            config = config['config']
-            config_sub_key = config['sub_key']
-            if config_sub_key == sub_key:
-                return config
-            else:
-                not_applicable[config_sub_key] = sub_id
+        for topic_name, sub_list in self.worker_config.pubsub_subs.items():
+            for sub_config in sub_list:
+                config_sub_key = sub_config['sub_key']
+                if config_sub_key == sub_key:
+                    return sub_config
+                else:
+                    not_applicable[config_sub_key] = topic_name
         else:
             subs = sorted(not_applicable.items())
             msg = f'No such sub_key `{sub_key}` among `{subs}`'
@@ -1721,16 +1721,14 @@ class WorkerStore(_WorkerStoreBase):
         for topic_item in msg.topic_name_list:
             topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
 
-            sub_id = None
             if self.server._has_pubsub_broker:
                 topic = self.server.pubsub_broker.get_topic_by_name(topic_name)
                 if topic is None:
                     topic = self.server.pubsub_broker.create_topic(topic_name)
 
-                result = self.server.pubsub_broker.create_subscription(sub_key, topic['topic_id'], 'client')
-                sub_id = result['sub_id']
+                self.server.pubsub_broker.create_subscription(sub_key, topic['topic_id'], 'client')
 
-            self._add_pubsub_sub_config(sub_id, sub_key, topic_name, delivery_type, msg)
+            self._add_pubsub_sub_config(sub_key, topic_name, delivery_type, msg)
 
     def on_config_event_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'bunch_') -> 'None':
 
@@ -1742,16 +1740,14 @@ class WorkerStore(_WorkerStoreBase):
         for topic_item in msg.topic_name_list:
             topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
 
-            sub_id = None
             if self.server._has_pubsub_broker:
                 topic = self.server.pubsub_broker.get_topic_by_name(topic_name)
                 if topic is None:
                     topic = self.server.pubsub_broker.create_topic(topic_name)
 
-                result = self.server.pubsub_broker.create_subscription(sub_key, topic['topic_id'], 'client')
-                sub_id = result['sub_id']
+                self.server.pubsub_broker.create_subscription(sub_key, topic['topic_id'], 'client')
 
-            self._add_pubsub_sub_config(sub_id, sub_key, topic_name, delivery_type, msg)
+            self._add_pubsub_sub_config(sub_key, topic_name, delivery_type, msg)
 
     def on_config_event_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'bunch_') -> 'None':
 
@@ -1809,24 +1805,27 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _add_pubsub_sub_config(self, sub_id:'int', sub_key:'str', topic_name:'str', delivery_type:'str', msg:'bunch_') -> 'None':
-        config = {
-            'sub_key': sub_key,
-            'topic_name': topic_name,
-            'delivery_type': delivery_type,
-            'push_type': getattr(msg, 'push_type', None),
-            'push_service_name': getattr(msg, 'push_service_name', None),
-            'rest_push_endpoint_id': getattr(msg, 'rest_push_endpoint_id', None),
-        }
-        self.worker_config.pubsub_subs[sub_id] = {'config': config}
+    def _add_pubsub_sub_config(self, sub_key:'str', topic_name:'str', delivery_type:'str', msg:'bunch_') -> 'None':
+        sub_config = Bunch()
+        sub_config.sub_key = sub_key
+        sub_config.topic_name = topic_name
+        sub_config.delivery_type = delivery_type
+        sub_config.push_type = getattr(msg, 'push_type', None)
+        sub_config.push_service_name = getattr(msg, 'push_service_name', None)
+        sub_config.rest_push_endpoint_id = getattr(msg, 'rest_push_endpoint_id', None)
+
+        if topic_name not in self.worker_config.pubsub_subs:
+            self.worker_config.pubsub_subs[topic_name] = []
+        self.worker_config.pubsub_subs[topic_name].append(sub_config)
 
     def _remove_pubsub_sub_configs_by_sub_key(self, sub_key:'str') -> 'None':
-        to_remove = []
-        for sub_id, item in self.worker_config.pubsub_subs.items():
-            if item['config']['sub_key'] == sub_key:
-                to_remove.append(sub_id)
-        for sub_id in to_remove:
-            del self.worker_config.pubsub_subs[sub_id]
+        empty_topics = []
+        for topic_name, sub_list in self.worker_config.pubsub_subs.items():
+            sub_list[:] = [item for item in sub_list if item['sub_key'] != sub_key]
+            if not sub_list:
+                empty_topics.append(topic_name)
+        for topic_name in empty_topics:
+            del self.worker_config.pubsub_subs[topic_name]
 
     def _update_pubsub_permissions(self, msg:'bunch_') -> 'None':
         if hasattr(msg, 'username') and msg.username:
