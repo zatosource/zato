@@ -1220,7 +1220,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
                 topic_id = topic['topic_id']
 
-                self.pubsub_broker.create_subscription(sub_key, topic_id, 'client')
+                result = self.pubsub_broker.create_subscription(sub_key, topic_id, 'client')
+                sub_id = result['sub_id']
 
                 config = {
                     'sub_key': sub_key,
@@ -1230,19 +1231,24 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                     'push_service_name': row.push_service_name,
                     'rest_push_endpoint_id': row.rest_push_endpoint_id,
                 }
-                self.config.pubsub_subs[topic_name] = {'config': config}
+                self.config.pubsub_subs[sub_id] = {'config': config}
 
                 synced += 1
 
-        logger.info('Synced %d ODB subscription-topic pairs to broker', synced)
+        noun = 'pair' if synced == 1 else 'pairs'
+        logger.info('Synced %d ODB subscription-topic %s to broker', synced, noun)
 
 # ################################################################################################################################
 
     def _on_pubsub_message(self, msg:'anydict') -> 'None':
         try:
-            topic_name = msg['topic_name']
-            topic_config = self.config.pubsub_subs[topic_name]
-            sub_config = topic_config['config']
+            sub_id = msg['sub_id']
+            sub_entry = self.config.pubsub_subs[sub_id]
+            sub_config = sub_entry['config']
+
+            delivery_type = sub_config['delivery_type']
+            if delivery_type != 'push':
+                return
 
             delivery_msg = {
                 'msg_id': msg['pub_msg_id'],
@@ -1255,7 +1261,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                 'priority': msg['priority'],
                 'expiration': msg['expiration'],
                 'expiration_time_iso': msg['expiration'],
-                'topic_name': topic_name,
+                'topic_name': msg['topic_name'],
                 'ext_client_id': msg['ext_client_id'],
                 'in_reply_to': msg['in_reply_to'],
                 '_zato_meta': {
