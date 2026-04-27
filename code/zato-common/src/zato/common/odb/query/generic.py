@@ -284,11 +284,6 @@ class GroupsWrapper(GenericObjectWrapper):
 def connection_list(session:'SASession', cluster_id:'int', type_:'strnone'=None, needs_columns:'bool'=False) -> 'any_':
     """ A list of generic connections by their type.
     """
-    import logging
-    _logger = logging.getLogger('zato.generic.connection_list')
-
-    _logger.info('connection_list called cluster_id=`%s`, type_=`%s`, needs_columns=`%s`', cluster_id, type_, needs_columns)
-
     q = session.query(ModelGenericConn).\
         filter(ModelGenericConn.cluster_id==cluster_id) # type: ignore
 
@@ -296,8 +291,6 @@ def connection_list(session:'SASession', cluster_id:'int', type_:'strnone'=None,
         q = q.filter(ModelGenericConn.type_==type_)
 
     q = q.order_by(ModelGenericConn.name)
-
-    _logger.info('connection_list SQL=`%s`', q)
 
     return q
 

@@ -164,7 +164,18 @@ impl QueueBridge {
             std::thread::Builder::new()
                 .name("zato-queue-bridge".into())
                 .spawn(move || {
-                    bridge::bridge_loop(bridge_state, callback, receiver, bridge_stop_flag, Some(registry_for_thread));
+                    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        bridge::bridge_loop(bridge_state, callback, receiver, bridge_stop_flag, Some(registry_for_thread));
+                    }));
+                    if let Err(panic) = result {
+                        let msg = panic
+                            .downcast_ref::<String>()
+                            .map(|s| s.as_str())
+                            .or_else(|| panic.downcast_ref::<&str>().copied())
+                            .unwrap_or("unknown panic");
+                        eprintln!("queue-bridge thread panicked: {msg}");
+                        log::error!("queue-bridge thread panicked: {msg}");
+                    }
                 })
                 .map_err(|err| pyo3::exceptions::PyException::new_err(format!("spawn failed: {err}")))
         })?;
@@ -287,7 +298,7 @@ impl QueueBridge {
 /// PyO3 module entry point - registers the `QueueBridge` class.
 #[pymodule]
 fn zato_queue_bridge(module: &Bound<'_, PyModule>) -> PyResult<()> {
-    pyo3_log::init();
+    let _ = pyo3_log::try_init();
     module.add_class::<QueueBridge>()?;
     Ok(())
 }

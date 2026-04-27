@@ -276,7 +276,7 @@ class ServiceInvokeResponse(JSONSIOResponse):
                 data_key = data_keys[0]
                 if isinstance(data_key, text) and data_key.startswith('zato'):
                     self.data = data[data_key]
-                elif data_key == 'response' and isinstance(data[data_key], dict):
+                elif data_key == 'response' and isinstance(data[data_key], (dict, list)):
                     self.data = data[data_key]
                 else:
                     self.data = data
