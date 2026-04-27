@@ -94,21 +94,17 @@ pub async fn consume_loop(params: &ConsumeParams<'_>, on_message_cb: Py<PyAny>, 
     let consumer: StreamConsumer = match client_config.create() {
         Ok(consumer) => consumer,
         Err(err) => {
-            log::error!("Failed to create Kafka consumer for `{}`: {err}", params.connection_name);
+            eprintln!("Failed to create Kafka consumer for `{}`: {err}", params.connection_name);
             return;
         }
     };
 
     if let Err(err) = consumer.subscribe(&[params.topic]) {
-        log::error!(
-            "Failed to subscribe to topic `{}` on `{}`: {err}",
-            params.topic,
-            params.connection_name
-        );
+        eprintln!("Failed to subscribe to topic `{}` on `{}`: {err}", params.topic, params.connection_name);
         return;
     }
 
-    log::info!("Kafka consumer `{}` subscribed to topic `{}`", params.connection_name, params.topic);
+    eprintln!("Kafka consumer `{}` subscribed to topic `{}`", params.connection_name, params.topic);
 
     loop {
         if stop_flag.load(Ordering::Relaxed) {
@@ -133,7 +129,7 @@ pub async fn consume_loop(params: &ConsumeParams<'_>, on_message_cb: Py<PyAny>, 
                 }
             }
             Err(err) => {
-                log::error!("Kafka consumer `{}` receive error: {err}", params.connection_name);
+                eprintln!("Kafka consumer `{}` receive error: {err}", params.connection_name);
                 tokio::time::sleep(std::time::Duration::from_secs(1)).await;
             }
         }

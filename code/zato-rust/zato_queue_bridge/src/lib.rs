@@ -28,45 +28,6 @@ pub mod watchdog;
 /// Convenience alias so the rest of the module can say `PyObject`.
 type PyObject = Py<PyAny>;
 
-/// Collects log messages while a mutex is held so they can be flushed after the
-/// lock is released, avoiding `pyo3_log`'s blocking `Python::attach` call that
-/// would otherwise deadlock with the GIL.
-pub struct DeferredLog {
-    /// Buffered messages with their log level.
-    entries: Vec<(log::Level, String)>,
-}
-
-impl Default for DeferredLog {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl DeferredLog {
-    /// Creates an empty buffer.
-    pub const fn new() -> Self {
-        Self { entries: Vec::new() }
-    }
-
-    /// Flushes all buffered messages through `log::log!`.
-    ///
-    /// Must be called only when no mutex is held.
-    pub fn flush(self) {
-        for (level, msg) in self.entries {
-            log::log!(level, "{msg}");
-        }
-    }
-}
-
-/// Buffers a formatted log message into a `DeferredLog` instead of calling `log::` directly.
-macro_rules! deferred_log {
-    ($deferred:expr, $level:expr, $($arg:tt)*) => {
-        $deferred.entries.push(($level, format!($($arg)*)))
-    };
-}
-
-pub(crate) use deferred_log;
-
 /// Extracts a required string value from a Python dict.
 fn extract_required_str(dict: &Bound<'_, PyDict>, key: &str) -> PyResult<String> {
     let val = dict

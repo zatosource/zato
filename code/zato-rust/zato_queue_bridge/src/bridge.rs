@@ -7,9 +7,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use crossbeam_channel::Receiver;
 use pyo3::prelude::*;
 
-use crate::DeferredLog;
-use crate::deferred_log;
-
 #[cfg(feature = "kafka")]
 use crate::kafka;
 
@@ -122,7 +119,7 @@ pub fn bridge_loop(
             let callback = match callback {
                 Some(cb_ref) => cb_ref,
                 None => {
-                    log::error!("Failed to acquire GIL to clone callback for consumer `{}`", channel_config.name);
+                    eprintln!("Failed to acquire GIL to clone callback for consumer `{}`", channel_config.name);
                     continue;
                 }
             };
@@ -184,7 +181,6 @@ pub fn bridge_loop(
                     };
 
                     if let Some((address, topic, outgoing_ssl, ssl_ca, ssl_cert, ssl_key)) = outgoing_snapshot {
-                        let mut deferred = DeferredLog::new();
                         #[cfg(feature = "kafka")]
                         {
                             let publish_params = kafka::PublishParams {
@@ -198,19 +194,17 @@ pub fn bridge_loop(
                             };
 
                             if let Err(err) = kafka::publish_message(&publish_params).await {
-                                deferred_log!(deferred, log::Level::Error, "Failed to publish to connection `{conn_name}`: {err}");
+                                eprintln!("Failed to publish to connection `{conn_name}`: {err}");
                             }
                         }
 
                         #[cfg(not(feature = "kafka"))]
                         {
                             let _ = (&payload, &address, &topic, outgoing_ssl, &ssl_ca, &ssl_cert, &ssl_key);
-                            deferred_log!(deferred, log::Level::Warn, "No queue backend compiled for connection `{conn_name}`");
+                            eprintln!("No queue backend compiled for connection `{conn_name}`");
                         }
-
-                        deferred.flush();
                     } else {
-                        log::warn!("Publish requested for unknown outgoing connection `{conn_name}`");
+                        eprintln!("Publish requested for unknown outgoing connection `{conn_name}`");
                     }
                 }
                 Err(crossbeam_channel::TryRecvError::Empty) => {
