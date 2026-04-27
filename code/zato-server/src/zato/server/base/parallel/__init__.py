@@ -1240,7 +1240,31 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
     def _on_pubsub_message(self, msg:'anydict') -> 'None':
         try:
-            self.invoke('zato.pubsub.subscription.handle-delivery', msg)
+            topic_name = msg['topic_name']
+            topic_config = self.config.pubsub_subs[topic_name]
+            sub_config = topic_config['config']
+
+            delivery_msg = {
+                'msg_id': msg['pub_msg_id'],
+                'correl_id': msg['correl_id'],
+                'data': msg['payload'],
+                'size': len(msg['payload']),
+                'publisher': msg['publisher_id'],
+                'pub_time_iso': msg['pub_time'],
+                'recv_time_iso': msg['msg_creation_time'],
+                'priority': msg['priority'],
+                'expiration': msg['expiration'],
+                'expiration_time_iso': msg['expiration'],
+                'topic_name': topic_name,
+                'ext_client_id': msg['ext_client_id'],
+                'in_reply_to': msg['in_reply_to'],
+                '_zato_meta': {
+                    'sub_key': sub_config['sub_key'],
+                    'delivery_count': 1,
+                },
+            }
+
+            self.invoke('zato.pubsub.subscription.handle-delivery', delivery_msg)
         except Exception:
             logger.warning('PubSub message dispatch error: %s', format_exc())
 
