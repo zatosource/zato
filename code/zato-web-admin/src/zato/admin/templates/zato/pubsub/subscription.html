@@ -8,6 +8,47 @@
     <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
     <style>
 
+        /* Pub/sub reusable design tokens */
+        :root {
+            --ps-badge-radius: 4px;
+            --ps-badge-font-size: 11px;
+            --ps-badge-font-weight: 700;
+            --ps-badge-padding: 2px 8px;
+            --ps-badge-letter-spacing: 0.3px;
+
+            --ps-enabled-color: #1b6d2f;
+            --ps-enabled-bg: rgba(27, 109, 47, 0.12);
+            --ps-disabled-color: #9e9e9e;
+            --ps-disabled-bg: rgba(158, 158, 158, 0.10);
+        }
+
+        .ps-badge {
+            display: inline-block;
+            padding: var(--ps-badge-padding);
+            border-radius: var(--ps-badge-radius);
+            font-size: var(--ps-badge-font-size);
+            font-weight: var(--ps-badge-font-weight);
+            letter-spacing: var(--ps-badge-letter-spacing);
+            line-height: 1.15;
+        }
+
+        .ps-badge-enabled {
+            color: var(--ps-enabled-color);
+            background: var(--ps-enabled-bg);
+        }
+
+        .ps-badge-disabled {
+            color: var(--ps-disabled-color);
+            background: var(--ps-disabled-bg);
+        }
+
+        .ps-status-cell {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+            flex-wrap: nowrap;
+        }
+
         /* Smooth transitions for security definitions loading */
         .loading-spinner {
             opacity: 0;

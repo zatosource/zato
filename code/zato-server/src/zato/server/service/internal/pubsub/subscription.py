@@ -124,7 +124,7 @@ class GetList(AdminService):
         input_required = 'cluster_id'
         input_optional = 'needs_password'
         output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', AsIs('topic_link_list'), 'sec_base_id', \
-            'sec_name', 'username', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
+            'sec_name', 'security', 'username', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
         output_optional = 'rest_push_endpoint_name', AsIs('topic_name_list'), 'password'
         output_repeated = True
 
@@ -151,6 +151,9 @@ class GetList(AdminService):
             if sub_id not in subscriptions_by_id:
 
                 item_dict = item._asdict()
+
+                # The web-admin template uses 'security' as the display name
+                item_dict['security'] = item_dict['sec_name']
 
                 # Include password in response only if requested
                 if needs_password:
@@ -217,7 +220,7 @@ class Create(AdminService):
         response_elem = 'zato_pubsub_subscription_create_response'
         input_required = 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type'
         input_optional = 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name', 'sub_key'
-        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_name', 'delivery_type'
+        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_name', 'security', 'delivery_type'
         output_optional = AsIs('topic_name_list'), AsIs('topic_link_list')
 
     def handle(self):
@@ -375,6 +378,7 @@ class Create(AdminService):
                 self.response.payload.is_delivery_active = sub.is_delivery_active
                 self.response.payload.created = sub.created
                 self.response.payload.sec_name = sec_base.name # type: ignore
+                self.response.payload.security = sec_base.name # type: ignore
                 self.response.payload.delivery_type = sub.delivery_type
 
                 self.response.payload.topic_name_list = topic_objects_list
@@ -393,7 +397,7 @@ class Edit(AdminService):
         response_elem = 'zato_pubsub_subscription_edit_response'
         input_required = 'sub_key', 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type'
         input_optional = 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'sec_name', 'delivery_type'
+        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'sec_name', 'security', 'delivery_type'
         output_optional = AsIs('topic_name_list'), AsIs('topic_link_list')
 
     def handle(self):
@@ -462,6 +466,7 @@ class Edit(AdminService):
                     self.response.payload.is_pub_active = sub.is_pub_active
                     self.response.payload.is_delivery_active = sub.is_delivery_active
                     self.response.payload.sec_name = sec_base.name
+                    self.response.payload.security = sec_base.name
                     self.response.payload.delivery_type = sub.delivery_type
                     self.response.payload.topic_name_list = []
                     self.response.payload.topic_link_list = []
@@ -552,6 +557,7 @@ class Edit(AdminService):
                 self.response.payload.is_pub_active = sub.is_pub_active
                 self.response.payload.is_delivery_active = sub.is_delivery_active
                 self.response.payload.sec_name = sec_base.name
+                self.response.payload.security = sec_base.name
                 self.response.payload.delivery_type = sub.delivery_type
 
                 self.response.payload.topic_name_list = topic_objects_list
