@@ -329,6 +329,9 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
                     }
                     else {
                         form_elem.val(value);
+                        if(name_prefix) {
+                            form_elem.data('zato-original-value', value);
+                        }
                     }
                 }
             }
@@ -409,6 +412,9 @@ $.fn.zato.data_table.parse = function() {
 
 $.fn.zato.data_table.reset_form = function(form_id) {
     var form = $(form_id);
+
+    form.find('.zato-unique-indicator').remove();
+    form.find('input[type="text"]').removeData('zato-original-value');
 
     form.each(function() {
         this.reset();
@@ -2463,15 +2469,14 @@ $.fn.zato.pubsub.download_openapi = function() {
 
 $.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
     var field = $(field_id);
-    console.log('[validate_unique] Binding field_id=' + JSON.stringify(field_id) + ', found=' + JSON.stringify(field.length));
     if(!field.length) {
         return;
     }
 
     var timer = null;
+    var is_edit = field_id.indexOf('edit-') !== -1;
 
     field.on('input', function() {
-        console.log('[validate_unique] Input event on ' + JSON.stringify(field_id));
         field.siblings('.zato-unique-indicator').css('opacity', '0');
         setTimeout(function() { field.siblings('.zato-unique-indicator').remove(); }, 200);
 
@@ -2484,8 +2489,14 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
             return;
         }
 
+        if(is_edit) {
+            var original = field.data('zato-original-value');
+            if(original !== undefined && value === original) {
+                return;
+            }
+        }
+
         timer = setTimeout(function() {
-            console.log('[validate_unique] Checking ' + JSON.stringify(field_id) + ' value=' + JSON.stringify(value));
             $.ajax({
                 type: 'POST',
                 url: '/zato/check-attr-exists/',
@@ -2497,10 +2508,8 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
                 headers: {'X-CSRFToken': $.cookie('csrftoken')},
                 dataType: 'json',
                 success: function(data) {
-                    console.log('[validate_unique] Response for ' + JSON.stringify(field_id) + ': ' + JSON.stringify(data));
                     field.siblings('.zato-unique-indicator').remove();
                     var current = field.val().trim();
-                    console.log('[validate_unique] Current val=' + JSON.stringify(current) + ', checked val=' + JSON.stringify(value));
                     if(current !== value) {
                         return;
                     }
@@ -2518,7 +2527,7 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
                     }
                     field.after(html);
                     var indicator = field.next('.zato-unique-indicator');
-                    var measureSpan = $('<span>').css({
+                    var measure_span = $('<span>').css({
                         'font': field.css('font'),
                         'font-size': field.css('font-size'),
                         'font-family': field.css('font-family'),
@@ -2527,36 +2536,11 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
                         'position': 'absolute',
                         'white-space': 'pre'
                     }).text(value).appendTo('body');
-                    var textWidth = measureSpan.width();
-                    measureSpan.remove();
-                    var fieldLeft = field.position().left;
-                    var inputPaddingLeft = parseInt(field.css('padding-left'), 10) || 2;
-                    indicator.css('left', (fieldLeft + inputPaddingLeft + textWidth + 7) + 'px');
-                    var indicator = field.siblings('.zato-unique-indicator');
-                    var indicatorEl = indicator[0];
-                    var parentEl = field.parent()[0];
-                    var parentCs = indicatorEl ? window.getComputedStyle(parentEl) : null;
-                    var indCs = indicatorEl ? window.getComputedStyle(indicatorEl) : null;
-                    var indRect = indicatorEl ? indicatorEl.getBoundingClientRect() : null;
-                    var parentRect = parentEl ? parentEl.getBoundingClientRect() : null;
-                    console.log('[validate_unique] Indicator count: ' + JSON.stringify(indicator.length));
-                    console.log('[validate_unique] Indicator outerHTML: ' + JSON.stringify(indicator.prop('outerHTML')));
-                    if(indCs) {
-                        console.log('[validate_unique] Indicator computed: display=' + JSON.stringify(indCs.display) + ', visibility=' + JSON.stringify(indCs.visibility) + ', opacity=' + JSON.stringify(indCs.opacity) + ', position=' + JSON.stringify(indCs.position) + ', width=' + JSON.stringify(indCs.width) + ', height=' + JSON.stringify(indCs.height));
-                        console.log('[validate_unique] Indicator rect: ' + JSON.stringify({left: indRect.left, top: indRect.top, width: indRect.width, height: indRect.height}));
-                    }
-                    if(parentCs) {
-                        console.log('[validate_unique] Parent computed: display=' + JSON.stringify(parentCs.display) + ', overflow=' + JSON.stringify(parentCs.overflow) + ', overflowX=' + JSON.stringify(parentCs.overflowX) + ', overflowY=' + JSON.stringify(parentCs.overflowY) + ', position=' + JSON.stringify(parentCs.position));
-                        console.log('[validate_unique] Parent rect: ' + JSON.stringify({left: parentRect.left, top: parentRect.top, width: parentRect.width, height: parentRect.height}));
-                    }
-                    var ancestor = parentEl ? parentEl.parentElement : null;
-                    while(ancestor && ancestor !== document.documentElement) {
-                        var acs = window.getComputedStyle(ancestor);
-                        if(acs.overflow !== 'visible' || acs.overflowX !== 'visible' || acs.overflowY !== 'visible') {
-                            console.log('[validate_unique] Ancestor clipping: tag=' + JSON.stringify(ancestor.tagName) + ', id=' + JSON.stringify(ancestor.id) + ', class=' + JSON.stringify(ancestor.className) + ', overflow=' + JSON.stringify(acs.overflow) + ', overflowX=' + JSON.stringify(acs.overflowX) + ', overflowY=' + JSON.stringify(acs.overflowY));
-                        }
-                        ancestor = ancestor.parentElement;
-                    }
+                    var text_width = measure_span.width();
+                    measure_span.remove();
+                    var field_left = field.position().left;
+                    var input_padding_left = parseInt(field.css('padding-left'), 10) || 2;
+                    indicator.css('left', (field_left + input_padding_left + text_width + 7) + 'px');
                 },
                 error: function(xhr, status, err) {
                     console.log('[validate_unique] Error: status=' + JSON.stringify(status) + ', err=' + JSON.stringify(err));

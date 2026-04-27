@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from json import dumps as json_dumps
 from logging import getLogger
 
 # ################################################################################################################################
@@ -59,7 +60,7 @@ class PubSubFacade:
 
         config = {
             'topic_id': topic['topic_id'],
-            'payload': data if isinstance(data, bytes) else str(data).encode('utf-8'),
+            'payload': data if isinstance(data, bytes) else (json_dumps(data).encode('utf-8') if isinstance(data, (dict, list)) else str(data).encode('utf-8')),
             'publisher_id': kwargs.get('publisher_id', 0),
             'priority': kwargs.get('priority', 5),
             'correl_id': kwargs.get('correl_id') or kwargs.get('cid'),

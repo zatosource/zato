@@ -1523,18 +1523,23 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
     def import_demo_pubsub(self):
 
+        import shutil
         import zato.server.service.internal.pubsub
         from zato.server.commands import CommandsFacade
 
-        config_path = os.path.join(
-            os.path.dirname(zato.server.service.internal.pubsub.__file__),
-            'demo-enmasse.yaml',
-        )
+        pubsub_dir = os.path.dirname(zato.server.service.internal.pubsub.__file__)
+
+        config_path = os.path.join(pubsub_dir, 'demo-enmasse.yaml')
 
         facade = CommandsFacade()
         facade.init(self)
 
         result = facade.run_enmasse_sync_import(config_path)
+
+        if result.is_ok:
+            service_src = os.path.join(pubsub_dir, 'demo_pubsub_services.py')
+            shutil.copy2(service_src, self.hot_deploy_config.pickup_dir)
+
         return result.is_ok
 
 # ################################################################################################################################
