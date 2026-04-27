@@ -499,6 +499,12 @@ class Index(BaseView):
                 if response and response.ok:
                     return_data['response_inner'] = response.inner_service_response
 
+                    logger.info('Index response.data type=`%s`, is_list=`%s`, len=`%s`, data=`%r`',
+                        type(response.data).__name__,
+                        isinstance(response.data, list),
+                        len(response.data) if isinstance(response.data, (list, dict, str)) else 'n/a',
+                        response.data)
+
                     if isinstance(response.data, list):
                         self.handle_item_list(response.data, True)
                     else:

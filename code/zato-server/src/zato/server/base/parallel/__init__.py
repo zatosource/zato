@@ -1089,6 +1089,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         from contextlib import closing
 
         from zato.common.api import GENERIC
+        from zato.server.generic.connection import GenericConnection
         from zato.common.odb.query.generic import connection_list
         from zato_queue_bridge import QueueBridge
 
@@ -1104,11 +1105,17 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             for type_ in (GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA):
                 items = connection_list(session, self.cluster_id, type_, False)
                 for item in items:
-                    config = item._asdict() if hasattr(item, '_asdict') else item
-                    if type_ == GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA:
-                        self._queue_bridge.add_channel(config)
-                    else:
-                        self._queue_bridge.add_outgoing(config)
+                    conn = GenericConnection.from_model(item)
+                    config = conn.to_dict()
+                    logger.info('Queue bridge loading %s -> %s', type_, config)
+                    try:
+                        if type_ == GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA:
+                            self._queue_bridge.add_channel(config)
+                        else:
+                            self._queue_bridge.add_outgoing(config)
+                    except Exception:
+                        logger.warning('Queue bridge could not load `%s` (%s), config: %s',
+                            config.get('name', '?'), type_, config, exc_info=True)
 
 # ################################################################################################################################
 

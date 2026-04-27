@@ -9,22 +9,19 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from logging import getLogger
 
-# Zato
-from zato.server.connection.queue import Wrapper
-
 if 0:
     from bunch import Bunch
     from zato.server.base.parallel import ParallelServer
 
 logger = getLogger(__name__)
 
-class ChannelKafkaWrapper(Wrapper):
-    """ Wraps a Kafka channel connection managed by the Rust QueueBridge.
+class ChannelKafkaWrapper:
+    """ Config holder for a Kafka channel - actual connections are in Rust (QueueBridge).
     """
     def __init__(self, config:'Bunch', server:'ParallelServer') -> 'None':
-        config.parent = self
-        config.auth_url = config.address
-        super(ChannelKafkaWrapper, self).__init__(config, 'Kafka channel', server)
+        self.config = config
+        self.server = server
+        logger.info('Kafka channel `%s` registered', config.name)
 
-    def add_client(self):
-        logger.info('Kafka channel `%s` registered', self.config.name)
+    def build_wrapper(self) -> 'None':
+        pass

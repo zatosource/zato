@@ -69,14 +69,19 @@ pub(crate) use deferred_log;
 
 /// Extracts a required string value from a Python dict.
 fn extract_required_str(dict: &Bound<'_, PyDict>, key: &str) -> PyResult<String> {
-    dict.get_item(key)?
-        .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err(key.to_string()))?
-        .extract::<String>()
+    let val = dict
+        .get_item(key)?
+        .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err(format!("missing key: {key}")))?;
+    val.extract::<String>().map_err(|_| {
+        let type_name = val.get_type().name().map_or_else(|_| "?".to_string(), |n| n.to_string());
+        pyo3::exceptions::PyTypeError::new_err(format!("key `{key}` must be a str, got: {type_name}"))
+    })
 }
 
 /// Extracts an optional string value from a Python dict.
 fn extract_optional_str(dict: &Bound<'_, PyDict>, key: &str) -> PyResult<Option<String>> {
     match dict.get_item(key)? {
+        Some(val) if val.is_none() => Ok(None),
         Some(val) => {
             let text: String = val.extract()?;
             if text.is_empty() { Ok(None) } else { Ok(Some(text)) }

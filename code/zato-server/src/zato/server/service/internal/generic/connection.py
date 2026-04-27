@@ -381,19 +381,27 @@ class GetList(AdminService):
         out = {'_meta':{}, 'response':[]}
         _meta = cast_('anydict', out['_meta'])
 
+        type_ = self.request.input.get('type_')
+        self.logger.info('GetList.handle type_=`%s`, cluster_id=`%s`', type_, self.request.input.get('cluster_id'))
+
         with closing(self.odb.session()) as session:
 
             search_result = self.get_data(session)
             _meta.update(search_result.to_dict())
 
+            self.logger.info('GetList search_result meta=`%s`', _meta)
+
             for item in search_result:
                 conn = GenericConnection.from_model(item)
                 conn_dict = conn.to_dict()
                 self._enrich_conn_dict(conn_dict)
+                self.logger.info('GetList item name=`%s`, type_=`%s`, keys=`%s`', conn_dict.get('name'), conn_dict.get('type_'), sorted(conn_dict.keys()))
                 cast_('anylist', out['response']).append(conn_dict)
 
         # Results are already included in the list of out['response'] elements
         _ = _meta.pop('result', None)
+
+        self.logger.info('GetList final response_count=`%s`, meta=`%s`', len(out['response']), _meta)
 
         self.response.payload = dumps(out)
 
