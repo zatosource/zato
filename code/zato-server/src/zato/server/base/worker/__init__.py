@@ -1726,7 +1726,9 @@ class WorkerStore(_WorkerStoreBase):
                 if topic is None:
                     topic = self.server.pubsub_broker.create_topic(topic_name)
 
-                self.server.pubsub_broker.create_subscription(sub_key, topic['topic_id'], 'client')
+                result = self.server.pubsub_broker.create_subscription(sub_key, topic['topic_id'], 'client')
+                broker_sub_id = result['sub_id']
+                self.server._broker_sub_map[broker_sub_id] = sub_key
 
             self._add_pubsub_sub_config(sub_key, topic_name, delivery_type, msg)
 
@@ -1745,7 +1747,9 @@ class WorkerStore(_WorkerStoreBase):
                 if topic is None:
                     topic = self.server.pubsub_broker.create_topic(topic_name)
 
-                self.server.pubsub_broker.create_subscription(sub_key, topic['topic_id'], 'client')
+                result = self.server.pubsub_broker.create_subscription(sub_key, topic['topic_id'], 'client')
+                broker_sub_id = result['sub_id']
+                self.server._broker_sub_map[broker_sub_id] = sub_key
 
             self._add_pubsub_sub_config(sub_key, topic_name, delivery_type, msg)
 

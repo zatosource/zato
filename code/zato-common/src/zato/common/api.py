@@ -1215,41 +1215,13 @@ from zato.server.service import Service
 # ################################################################################################################################
 # ################################################################################################################################
 
-_topic_messages = {
+_topic = 'demo.events'
 
-    'crm.contacts.updated': [
-        {'contact_id': 'C-10042', 'name': 'Alice Novak', 'email': 'alice.novak@example.com', 'change': 'email_updated'},
-        {'contact_id': 'C-10078', 'name': 'Jan Kowalski', 'email': 'jan.k@example.com', 'change': 'phone_added'},
-    ],
-
-    'crm.leads.created': [
-        {'lead_id': 'L-2091', 'company': 'Acme Corp', 'source': 'webinar', 'score': 82},
-        {'lead_id': 'L-2092', 'company': 'Globex Ltd', 'source': 'referral', 'score': 95},
-    ],
-
-    'billing.invoices.issued': [
-        {'invoice_id': 'INV-8834', 'customer': 'Acme Corp', 'amount': 4250.00, 'currency': 'EUR'},
-        {'invoice_id': 'INV-8835', 'customer': 'Globex Ltd', 'amount': 1890.50, 'currency': 'USD'},
-    ],
-
-    'billing.payments.received': [
-        {'payment_id': 'PAY-6621', 'invoice_id': 'INV-8801', 'amount': 3200.00, 'currency': 'EUR', 'method': 'wire'},
-    ],
-
-    'orders.created': [
-        {'order_id': 'ORD-55210', 'customer': 'Acme Corp', 'items': 3, 'total': 1560.00, 'currency': 'EUR'},
-        {'order_id': 'ORD-55211', 'customer': 'Stark Industries', 'items': 1, 'total': 299.99, 'currency': 'USD'},
-    ],
-
-    'orders.fulfilled': [
-        {'order_id': 'ORD-55190', 'shipped_via': 'DHL Express', 'tracking': 'DHL-9928374650'},
-    ],
-
-    'system.audit.events': [
-        {'event': 'config_change', 'user': 'admin', 'target': 'billing.gateway', 'detail': 'timeout raised to 60s'},
-        {'event': 'permission_grant', 'user': 'admin', 'target': 'demo_eda.reconciliation', 'detail': 'sub billing.*'},
-    ],
-}
+_messages = [
+    {'event': 'order_created', 'order_id': 'ORD-55210', 'customer': 'Acme Corp', 'total': 1560.00},
+    {'event': 'contact_updated', 'contact_id': 'C-10042', 'name': 'Alice Novak', 'change': 'email_updated'},
+    {'event': 'payment_received', 'payment_id': 'PAY-6621', 'amount': 3200.00, 'currency': 'EUR'},
+]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1261,33 +1233,17 @@ class DemoPubSubPublisher(Service):
     def handle(self):
 
         now = datetime.now(timezone.utc).strftime('%H:%M:%S')
-        total = 0
 
-        for topic_name, messages in _topic_messages.items():
-            for data in messages:
-                self.pubsub.publish(topic_name, data)
-                total += 1
+        for data in _messages:
+            self.pubsub.publish(_topic, data)
 
-        self.logger.info('\\033[36m[pub/sub demo]\\033[0m Published %d messages across %d topics at %s',
-            total, len(_topic_messages), now)
+        self.logger.info('\\033[36m[pub/sub demo]\\033[0m Published %d messages to `%s` at %s',
+            len(_messages), _topic, now)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_topic_colors = {
-    'crm':     '\\033[35m',
-    'billing': '\\033[33m',
-    'orders':  '\\033[32m',
-    'system':  '\\033[34m',
-}
-
-_topic_icons = {
-    'crm':     '\\U0001f4c7',
-    'billing': '\\U0001f4b3',
-    'orders':  '\\U0001f4e6',
-    'system':  '\\U0001f6e1\\ufe0f',
-}
-
+_cyan = '\\033[36m'
 _reset = '\\033[0m'
 _dim = '\\033[2m'
 
@@ -1301,19 +1257,14 @@ class DemoPubSubSubscriber(Service):
     def handle(self):
 
         msg = self.request.raw_request
-        topic_name = msg.topic_name
-        prefix = topic_name.split('.')[0]
-
-        color = _topic_colors.get(prefix, '\\033[37m')
-        icon = _topic_icons.get(prefix, '\\U0001f4e8')
+        topic_name = msg['topic_name']
 
         self.logger.info(
-            '%s %s%s%s %s p=%d %s#%s%s',
-            icon,
-            color, topic_name, _reset,
-            msg.data,
-            msg.priority,
-            _dim, msg.msg_id, _reset,
+            '%s[pub/sub demo]%s %s %s%s#%s%s',
+            _cyan, _reset,
+            topic_name,
+            msg['data'],
+            _dim, msg['msg_id'], _reset,
         )
 """
 

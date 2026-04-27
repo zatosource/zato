@@ -54,10 +54,8 @@ from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
     fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid_server, \
-    parse_extra_into_dict, publish_enmasse, publish_file, publish_user_conf, \
-    register_diag_handlers, spawn_greenlet, StaticConfig, utcnow
+    parse_extra_into_dict, register_diag_handlers, spawn_greenlet, StaticConfig, utcnow
 from zato.common.util.env import populate_environment_from_file
-from zato.common.file_transfer.listener import watch_directory as watch_pickup_directory
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.file_system import get_python_files
 from zato.common.util.hot_deploy_ import extract_pickup_from_items
@@ -968,9 +966,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         if self.deploy_auto_from:
             self.handle_enmasse_auto_from()
 
-        # Start watching the pickup directory for hot-deployment
-        self._start_file_watcher()
-
         # Start the Rust scheduler thread (in-process)
         self._start_scheduler()
 
@@ -1210,6 +1205,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             ).all()
 
             synced = 0
+            self._broker_sub_map = {}
 
             for row in rows:
 
@@ -1222,7 +1218,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
                 topic_id = topic['topic_id']
 
-                self.pubsub_broker.create_subscription(sub_key, topic_id, 'client')
+                result = self.pubsub_broker.create_subscription(sub_key, topic_id, 'client')
+                broker_sub_id = result['sub_id']
+                self._broker_sub_map[broker_sub_id] = sub_key
 
                 synced += 1
 
@@ -1236,23 +1234,32 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
     def _on_pubsub_message(self, msg:'anydict') -> 'None':
         try:
+            broker_sub_id = msg['sub_id']
+            sub_key = self._broker_sub_map.get(broker_sub_id)
+
+            if not sub_key:
+                logger.warning('Unknown broker sub_id `%s`, known: %s', broker_sub_id, sorted(self._broker_sub_map))
+                return
+
             topic_name = msg['topic_name']
-            sub_id = msg['sub_id']
             sub_list = self.config.pubsub_subs.get(topic_name)
 
             if not sub_list:
                 return
 
             for sub_config in sub_list:
-                if sub_config['id'] != sub_id:
+                if sub_config['sub_key'] != sub_key:
                     continue
 
                 delivery_type = sub_config['delivery_type']
                 if delivery_type != _push:
                     return
 
-                sub_key = sub_config['sub_key']
                 payload = msg['payload']
+                recv_time_iso = msg['msg_creation_time']
+                pub_time = msg['pub_time']
+                if pub_time is None:
+                    pub_time = recv_time_iso
 
                 delivery_msg = {
                     'msg_id': msg['pub_msg_id'],
@@ -1260,8 +1267,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                     'data': payload,
                     'size': len(payload),
                     'publisher': msg['publisher_id'],
-                    'pub_time_iso': msg['pub_time'],
-                    'recv_time_iso': msg['msg_creation_time'],
+                    'pub_time_iso': pub_time,
+                    'recv_time_iso': recv_time_iso,
                     'priority': msg['priority'],
                     'expiration': msg['expiration'],
                     'expiration_time_iso': msg['expiration'],
@@ -1278,61 +1285,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                 break
         except Exception:
             logger.warning('PubSub message dispatch error: %s', format_exc())
-
-# ################################################################################################################################
-
-    def _start_file_watcher(self) -> 'None':
-        """ Start a file-system watcher for the hot-deploy pickup directory.
-        Runs on a real OS thread (via gevent's native threadpool) so that blocking
-        inotify calls do not interfere with the gevent event loop.
-        """
-        from gevent.monkey import get_original
-        _real_sleep = get_original('time', 'sleep')
-
-        pickup_dir = self.hot_deploy_config.pickup_dir
-
-        _main_hub = gevent.get_hub()
-
-        def _do_publish_file(event_path:'str') -> 'None':
-            """ Called on the gevent main loop to publish a broker message for a changed file.
-            """
-            cid = new_cid_server()
-            is_enmasse = 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path)
-            is_static = event_path.endswith('.ini') or event_path.endswith('.zrules')
-
-            if is_enmasse:
-                publish_enmasse(self.config_dispatcher, cid, event_path)
-            elif is_static:
-                publish_user_conf(self.config_dispatcher, cid, event_path)
-            else:
-                publish_file(self.config_dispatcher, cid, event_path)
-
-        def _on_file_ready(event_path:'str') -> 'None':
-            """ Called from the watchdog thread - bounces work to the gevent loop.
-            """
-            _main_hub.loop.run_callback(spawn, _do_publish_file, event_path)
-
-        def _run_watcher() -> 'None':
-            """ Runs on a native OS thread from gevent's threadpool.
-            """
-            matching_items = [pickup_dir]
-            observer = watch_pickup_directory(
-                pickup_dir,
-                matching_items,
-                on_file_ready=_on_file_ready,
-                event_types=None,
-                file_patterns=None,
-            )
-            observer.start()
-            logger.info('File watcher started for `%s`', pickup_dir)
-
-            while True:
-                _real_sleep(1)
-
-        try:
-            _ = gevent.get_hub().threadpool.spawn(_run_watcher)
-        except Exception:
-            logger.warning('File watcher could not be started: %s', format_exc())
 
 # ################################################################################################################################
 

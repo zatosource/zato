@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from logging import getLogger
 
 # Zato
@@ -190,9 +190,13 @@ def set_time_since(message:'dict', pub_time_iso:'str', recv_time_iso:'str', curr
     """ Calculate and set time_since_pub and time_since_recv on the message.
     """
     pub_timestamp = datetime.fromisoformat(pub_time_iso)
+    if pub_timestamp.tzinfo is None:
+        pub_timestamp = pub_timestamp.replace(tzinfo=timezone.utc)
     time_since_pub = str(current_time - pub_timestamp)
 
     recv_timestamp = datetime.fromisoformat(recv_time_iso)
+    if recv_timestamp.tzinfo is None:
+        recv_timestamp = recv_timestamp.replace(tzinfo=timezone.utc)
     time_since_recv = str(current_time - recv_timestamp)
 
     message['time_since_pub'] = time_since_pub
