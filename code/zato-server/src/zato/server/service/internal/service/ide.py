@@ -250,12 +250,20 @@ class _IDEBase(Service):
             'skip_response_elem': True,
         }
 
+        self.logger.warning('TRACE get_deployment_info_list: invoking with %s', invoke_params)
+
         # Invoke the service
         service_list_response = self.invoke('zato.service.get-deployment-info-list', **invoke_params)
 
         # Check if the response is None
         if service_list_response is None:
+            self.logger.warning('TRACE get_deployment_info_list: response is None')
             return
+
+        self.logger.warning('TRACE get_deployment_info_list: got %d items', len(service_list_response))
+        for item in service_list_response:
+            if 'demo.pubsub' in item.get('service_name', ''):
+                self.logger.warning('TRACE get_deployment_info_list: item=%s', item)
 
         # Iterate and yield items
         for item in service_list_response:

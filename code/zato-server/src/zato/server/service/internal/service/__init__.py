@@ -73,6 +73,9 @@ class GetList(AdminService):
 
         out = []
 
+        self.logger.warning('TRACE _get_data: return_internal=%s, include_list=%s, internal_del=%s',
+            return_internal, include_list, internal_del)
+
         search_result = self._search(service_list, session, self.request.input.cluster_id, return_internal, include_list, False)
         search_result = elems_with_opaque(search_result)
 
@@ -87,14 +90,21 @@ class GetList(AdminService):
             # .. check if we have any deployment info about this module ..
             deployment_info = self.server.service_store.get_deployment_info(impl_name)
 
+            if 'demo.pubsub' in item.name:
+                self.logger.warning('TRACE _get_data: name=%s, impl_name=%s, is_internal=%s, deployment_info=%s',
+                    item.name, impl_name, item.is_internal, deployment_info)
+
             # .. if there's no file-system path for the module's file, it means it's not deployed ..
             if not deployment_info.get('fs_location'):
+                if 'demo.pubsub' in item.name:
+                    self.logger.warning('TRACE _get_data: SKIPPING %s - no fs_location in deployment_info', item.name)
                 continue
 
             item.may_be_deleted = internal_del if item.is_internal else True
 
             out.append(item)
 
+        self.logger.warning('TRACE _get_data: returning %d items', len(out))
         return out
 
 # ################################################################################################################################

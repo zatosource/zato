@@ -595,6 +595,8 @@ def service_list(session, cluster_id, return_internal=True, include_list=None, n
     """
     q = _service(session, cluster_id)
 
+    logger.warning('TRACE service_list: cluster_id=%s, return_internal=%s, include_list=%s', cluster_id, return_internal, include_list)
+
     if include_list:
         q = q.filter(or_(Service.name.in_(include_list)))
     else:
@@ -607,6 +609,11 @@ def service_list(session, cluster_id, return_internal=True, include_list=None, n
                     Service.name.startswith('pub.zato'),
                 ))
             ))
+
+    all_rows = q.all()
+    logger.warning('TRACE service_list: total rows from SQL=%d', len(all_rows))
+    demo_rows = [r for r in all_rows if 'demo' in r.name]
+    logger.warning('TRACE service_list: demo rows=%s', [(r.name, r.is_internal) for r in demo_rows])
 
     return q
 
@@ -626,6 +633,9 @@ def service_id_list(session, cluster_id, name_list=None):
 # ################################################################################################################################
 
 def service_deployment_list(session, service_id=None, include_internal=None):
+
+    logger.warning('TRACE service_deployment_list: service_id=%s, include_internal=%s', service_id, include_internal)
+
     query = session.query(
         DeployedService.details,
         Server.name.label('server_name'),
@@ -653,7 +663,12 @@ def service_deployment_list(session, service_id=None, include_internal=None):
             )
         )
 
-    return query.all()
+    result = query.all()
+    logger.warning('TRACE service_deployment_list: total results=%d', len(result))
+    demo_results = [r for r in result if 'demo.pubsub' in r.service_name]
+    logger.warning('TRACE service_deployment_list: demo.pubsub results=%s', [(r.service_name, r.service_id) for r in demo_results])
+
+    return result
 
 # ################################################################################################################################
 

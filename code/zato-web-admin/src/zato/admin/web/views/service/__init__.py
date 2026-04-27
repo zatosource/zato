@@ -101,10 +101,14 @@ class Index(_Index):
         }
 
     def handle_return_data(self, return_data:'any_') -> 'any_':
+        logger.warning('TRACE handle_return_data: total self.items=%d', len(self.items))
+        for item in self.items:
+            logger.warning('TRACE handle_return_data: item name=%s is_internal=%s impl_name=%s', item.name, item.is_internal, item.impl_name)
         return_data['items'] = [
             item for item in self.items
             if item.name.startswith('demo.') and item.name not in _to_ignore
         ]
+        logger.warning('TRACE handle_return_data: filtered items=%d, names=%s', len(return_data['items']), [i.name for i in return_data['items']])
         return return_data
 
 # ################################################################################################################################
