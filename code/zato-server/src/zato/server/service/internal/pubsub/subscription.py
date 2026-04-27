@@ -974,8 +974,10 @@ class HandleDelivery(Service):
         # Get the detailed configuration of the subscriber ..
         config = self.server.worker_store.get_pubsub_sub_config(sub_key)
 
+        push_type = config['push_type']
+
         # .. we go here if we're to invoke a specific service
-        if config.push_type == _push_type.Service:
+        if push_type == _push_type.Service:
 
             # .. the service we need to invoke ..
             service_name = config['push_service_name']
@@ -987,7 +989,7 @@ class HandleDelivery(Service):
             _ = self.invoke(service_name, msg)
 
         # .. and we go here if we're invoking a REST endpoint.
-        elif config.push_type == _push_type.REST:
+        elif push_type == _push_type.REST:
 
             # .. the REST connection we'll be invoking ..
             conn_name = config['rest_push_endpoint_name']
