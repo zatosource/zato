@@ -75,6 +75,8 @@ common_broker_db_opts = [
     {'name':'--broker-db-name', 'help':'Broker database name'},
     {'name':'--broker-db-password', 'help':'Broker database password', 'default':''},
     {'name':'--broker-db-ssl', 'help':'Broker database SSL (False, True, verify)', 'default':'False'},
+    {'name':'--broker-db-pool-size-producers', 'help':'Broker producer pool size', 'default':'50'},
+    {'name':'--broker-db-pool-size-subscribers', 'help':'Broker subscriber pool size', 'default':'50'},
 ]
 
 common_ca_create_opts = [

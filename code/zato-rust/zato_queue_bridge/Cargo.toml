@@ -1,0 +1,37 @@
+[package]
+name = "zato_queue_bridge"
+version = "4.1.0"
+edition = "2024"
+license = "AGPL-3.0-only"
+description = "Queue bridge for Zato - connects Kafka, AWS SQS, and IBM MQ to the Zato integration platform"
+repository = "https://github.com/zatosource/zato"
+readme = false
+keywords = ["zato", "api", "integration-platform", "ipaas", "rule-engine"]
+categories = ["development-tools"]
+
+[lib]
+name = "zato_queue_bridge"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["kafka"]
+extension-module = ["pyo3/extension-module"]
+kafka = ["rdkafka", "rdkafka/ssl"]
+
+[dependencies]
+pyo3 = { version = "0.28.3" }
+pyo3-log = "0.13.3"
+log = "0.4.29"
+parking_lot = "0.12"
+crossbeam-channel = "0.5"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "time", "sync"] }
+rdkafka = { version = "0.38", features = ["tokio"], optional = true }
+
+[dev-dependencies]
+pyo3 = { version = "0.28.3", features = ["auto-initialize"] }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[profile.release]
+overflow-checks = true

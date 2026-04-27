@@ -183,6 +183,8 @@ def get_top_level_order() -> 'strlist':
         'cache',
         'confluence',
         'jira',
+        'kafka_channel',
+        'kafka_outgoing',
         'email_imap',
         'email_smtp',
         'odoo',
@@ -214,6 +216,8 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['cache'] = 'name', 'is_active', 'extend_expiry_on_get', 'extend_expiry_on_set',
     order['confluence'] = 'name', 'is_active', 'address', 'username',
     order['jira'] = 'name', 'is_active', 'address', 'username',
+    order['kafka_channel'] = 'name', 'is_active', 'address', 'topic', 'group_id', 'service',
+    order['kafka_outgoing'] = 'name', 'is_active', 'address', 'topic',
     order['email_imap'] = 'name', 'is_active', 'type', 'host', 'port', 'username', 'tenant_id', 'client_id', # TODO: Implement type vs. server_type
     order['email_smtp'] = 'name', 'is_active', 'host', 'port', 'username',
     order['odoo'] = 'name', 'is_active', 'host', 'port', 'database', 'user'

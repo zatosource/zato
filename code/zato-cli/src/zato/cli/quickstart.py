@@ -340,6 +340,8 @@ class Create(ZatoCommand):
         out.broker_db_name = args.broker_db_name if args.broker_db_name else os.environ.get('Zato_Broker_DB_Database')
         out.broker_db_password = args.broker_db_password if args.broker_db_password else os.environ.get('Zato_Broker_DB_Password')
         out.broker_db_ssl = args.broker_db_ssl if args.broker_db_ssl else os.environ.get('Zato_Broker_DB_SSL', 'False')
+        out.broker_db_pool_size_producers = args.broker_db_pool_size_producers if args.broker_db_pool_size_producers else os.environ.get('Zato_Broker_DB_Pool_Size_Producers', '50')
+        out.broker_db_pool_size_subscribers = args.broker_db_pool_size_subscribers if args.broker_db_pool_size_subscribers else os.environ.get('Zato_Broker_DB_Pool_Size_Subscribers', '50')
         out.cluster_name = cluster_name
         out.scheduler_name = 'scheduler1'
         out.scheduler_address_for_server = getattr(args, 'scheduler_address_for_server', '')

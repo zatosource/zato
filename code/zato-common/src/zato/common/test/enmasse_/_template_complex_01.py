@@ -156,6 +156,40 @@ scheduler:
     start_date: '2025-04-21 23:19:47'
     days: 10
 
+kafka_channel:
+
+  - name: enmasse.kafka.channel.1
+    is_active: true
+    address: localhost:9092
+    topic: enmasse-test-topic
+    group_id: enmasse-test-group
+    service: enmasse.kafka.test.service
+
+  - name: enmasse.kafka.channel.2
+    is_active: false
+    address: broker1:9093
+    topic: enmasse-test-topic-2
+    group_id: enmasse-test-group-2
+    service: enmasse.kafka.test.service.2
+    ssl: true
+    ssl_ca_file: /path/to/ca.pem
+    ssl_cert_file: /path/to/cert.pem
+    ssl_key_file: /path/to/key.pem
+
+kafka_outgoing:
+
+  - name: enmasse.kafka.outgoing.1
+    is_active: true
+    address: localhost:9092
+    topic: enmasse-test-out-topic
+
+  - name: enmasse.kafka.outgoing.2
+    is_active: true
+    address: broker2:9093
+    topic: enmasse-test-out-topic-2
+    ssl: true
+    ssl_ca_file: /path/to/ca.pem
+
 ldap:
 
   - name: enmasse.ldap.1

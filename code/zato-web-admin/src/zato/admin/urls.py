@@ -32,6 +32,8 @@ from zato.admin.web.views.outgoing import amqp_ as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing.hl7 import fhir as out_hl7_fhir
 from zato.admin.web.views.outgoing.hl7 import mllp as out_hl7_mllp
+from zato.admin.web.views.channel import kafka as channel_kafka
+from zato.admin.web.views.outgoing import kafka as out_kafka
 from zato.admin.web.views.outgoing import ldap as out_ldap
 from zato.admin.web.views.outgoing import mongodb as out_mongodb
 from zato.admin.web.views.outgoing import odoo as out_odoo
@@ -337,6 +339,24 @@ urlpatterns += [
 
 urlpatterns += [
 
+    # .. Kafka channels
+
+    url(r'^zato/channel/kafka/$',
+        login_required(channel_kafka.Index()), name=channel_kafka.Index.url_name),
+    url(r'^zato/channel/kafka/create/$',
+        login_required(channel_kafka.Create()), name=channel_kafka.Create.url_name),
+    url(r'^zato/channel/kafka/edit/$',
+        login_required(channel_kafka.Edit()), name=channel_kafka.Edit.url_name),
+    url(r'^zato/channel/kafka/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(channel_kafka.Delete()), name=channel_kafka.Delete.url_name),
+    url(r'^zato/channel/kafka/import-demo-config$',
+        login_required(channel_kafka.import_demo_config), name='channel-kafka-import-demo-config'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
     # .. LDAP
 
     url(r'^zato/outgoing/ldap/$',
@@ -351,6 +371,24 @@ urlpatterns += [
         login_required(out_ldap.change_password), name='out-ldap-change-password'),
     url(r'^zato/outgoing/ldap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_ldap.ping), name='out-ldap-ping'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. Kafka outgoing
+
+    url(r'^zato/outgoing/kafka/$',
+        login_required(out_kafka.Index()), name=out_kafka.Index.url_name),
+    url(r'^zato/outgoing/kafka/create/$',
+        login_required(out_kafka.Create()), name=out_kafka.Create.url_name),
+    url(r'^zato/outgoing/kafka/edit/$',
+        login_required(out_kafka.Edit()), name=out_kafka.Edit.url_name),
+    url(r'^zato/outgoing/kafka/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_kafka.Delete()), name=out_kafka.Delete.url_name),
+    url(r'^zato/outgoing/kafka/import-demo-config$',
+        login_required(out_kafka.import_demo_config), name='out-kafka-import-demo-config'),
     ]
 
 # ################################################################################################################################

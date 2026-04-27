@@ -751,11 +751,13 @@ class GENERIC:
     class CONNECTION:
         class TYPE:
             CHANNEL_OPENAPI = 'channel-openapi'
+            CHANNEL_KAFKA = 'channel-kafka'
             CLOUD_CONFLUENCE = 'cloud-confluence'
             CLOUD_JIRA = 'cloud-jira'
             CLOUD_MICROSOFT_365 = 'cloud-microsoft-365'
             CLOUD_SALESFORCE = 'cloud-salesforce'
             OUTCONN_LDAP = 'outconn-ldap'
+            OUTCONN_KAFKA = 'outconn-kafka'
             OUTCONN_MONGODB = 'outconn-mongodb'
 
 # ################################################################################################################################

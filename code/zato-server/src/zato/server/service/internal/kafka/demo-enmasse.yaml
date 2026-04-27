@@ -1,0 +1,15 @@
+kafka_channel:
+
+  - name: demo.kafka.channel
+    is_active: true
+    address: localhost:9092
+    topic: zato-kafka
+    group_id: zato-kafka-group
+    service: demo.kafka.receiver
+
+kafka_outgoing:
+
+  - name: demo.kafka.publisher
+    is_active: true
+    address: localhost:9092
+    topic: zato-kafka

@@ -1,6 +1,6 @@
-.PHONY: build install clean server-build scheduler-build sio-build common-core-build \
-	server-clean scheduler-clean sio-clean common-core-clean \
-	server-install scheduler-install sio-install common-core-install \
+.PHONY: build install clean server-build scheduler-build sio-build common-core-build queue-bridge-build \
+	server-clean scheduler-clean sio-clean common-core-clean queue-bridge-clean \
+	server-install scheduler-install sio-install common-core-install queue-bridge-install \
 	ruff qa-reqs-install unify \
 	update cron-update stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard
@@ -11,7 +11,7 @@ ZATO_RUST := $(CURDIR)/code/zato-rust
 
 default: build
 
-build: common-core-build server-build scheduler-build sio-build
+build: common-core-build server-build scheduler-build sio-build queue-bridge-build
 
 server-build:
 	. $(HOME)/.cargo/env && \
@@ -32,6 +32,11 @@ common-core-build:
 	. $(HOME)/.cargo/env && \
 	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
 	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_common_core/Cargo.toml
+
+queue-bridge-build:
+	. $(HOME)/.cargo/env && \
+	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
+	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_queue_bridge/Cargo.toml
 
 install:
 ifeq ($(strip $(PKG)),)
@@ -55,6 +60,9 @@ sio-clean:
 common-core-clean:
 	rm -rf $(ZATO_RUST)/zato_common_core/target
 
+queue-bridge-clean:
+	rm -rf $(ZATO_RUST)/zato_queue_bridge/target
+
 server-install: server-build
 
 scheduler-install: scheduler-build
@@ -62,6 +70,8 @@ scheduler-install: scheduler-build
 sio-install: sio-build
 
 common-core-install: common-core-build
+
+queue-bridge-install: queue-bridge-build
 
 qa-reqs-install:
 	$(CURDIR)/code/support-linux/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python -r $(CURDIR)/code/qa-requirements.txt

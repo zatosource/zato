@@ -190,6 +190,8 @@ span_hours=0
 span_minutes=0
 retain_minutes=1
 partman_interval_secs=60
+pool_size_pub={{broker_db_pool_size_producers}}
+pool_size_sub={{broker_db_pool_size_subscribers}}
 
 """.format(**server_conf_dict)
 
@@ -584,6 +586,8 @@ class Create(ZatoCommand):
                     broker_db_user=args.broker_db_user,
                     broker_db_name=args.broker_db_name,
                     broker_db_ssl=args.broker_db_ssl,
+                    broker_db_pool_size_producers=args.broker_db_pool_size_producers,
+                    broker_db_pool_size_subscribers=args.broker_db_pool_size_subscribers,
                 )
 
             # .. and special-case this one as it contains the {} characters

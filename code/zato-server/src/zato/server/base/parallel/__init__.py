@@ -979,6 +979,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         # Start the Rust pubsub broker (partman background thread)
         self._start_pubsub_broker()
 
+        # Start the queue bridge (Kafka, SQS, etc.)
+        self._start_queue_bridge()
+
         # Optionally, if we appear to be a Docker quickstart environment, log all details about the environment.
         self.log_environment_details()
 
@@ -1074,6 +1077,41 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def _invoke_queue_service(self, service_name, data):
+        """ Invoked by the queue bridge background thread when a message is received
+        from an external queue (Kafka, SQS, etc.).
+        """
+        self.invoke(service_name, data)
+
+# ################################################################################################################################
+
+    def _start_queue_bridge(self):
+        from contextlib import closing
+
+        from zato.common.api import GENERIC
+        from zato.common.odb.query.generic import connection_list
+        from zato_queue_bridge import QueueBridge
+
+        _main_hub = gevent.get_hub()
+
+        def _on_queue_bridge_recv(payload, topic, service_name):
+            _main_hub.loop.run_callback(spawn, self._invoke_queue_service, service_name, payload)
+
+        self._queue_bridge = QueueBridge()
+        self._queue_bridge.start({'on_message_cb': _on_queue_bridge_recv})
+
+        with closing(self.odb.session()) as session:
+            for type_ in (GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA):
+                items = connection_list(session, self.cluster_id, type_, False)
+                for item in items:
+                    config = item._asdict() if hasattr(item, '_asdict') else item
+                    if type_ == GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA:
+                        self._queue_bridge.add_channel(config)
+                    else:
+                        self._queue_bridge.add_outgoing(config)
+
+# ################################################################################################################################
+
     def _start_pubsub_broker(self):
         from zato.common.ext.broker.client import PubSubBroker
         pubsub_config = self.fs_server_config.pubsub
@@ -1100,6 +1138,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                 'span_minutes': pubsub_config.span_minutes,
                 'retain_minutes': pubsub_config.retain_minutes,
                 'partman_interval_secs': pubsub_config.partman_interval_secs,
+                'pool_size_pub': pubsub_config.pool_size_pub,
+                'pool_size_sub': pubsub_config.pool_size_sub,
             })
             self._has_pubsub_broker = True
             logger.info('PubSub broker started')
@@ -1366,6 +1406,21 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         from zato.server.commands import CommandsFacade
 
         config_path = os.path.join(os.path.dirname(zato.server.service.internal.scheduler.__file__), 'demo-enmasse.yaml')
+
+        facade = CommandsFacade()
+        facade.init(self)
+
+        result = facade.run_enmasse_sync_import(config_path)
+        return result.is_ok
+
+# ################################################################################################################################
+
+    def import_demo_kafka(self):
+
+        import zato.server.service.internal.kafka
+        from zato.server.commands import CommandsFacade
+
+        config_path = os.path.join(os.path.dirname(zato.server.service.internal.kafka.__file__), 'demo-enmasse.yaml')
 
         facade = CommandsFacade()
         facade.init(self)
