@@ -1154,14 +1154,16 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             })
             self._has_pubsub_broker = True
 
+            self._sync_pubsub_subscriptions()
+
+            self.pubsub_broker.run_partman_ensure()
+
             self.pubsub_delivery = PubSubDelivery(
                 broker=self.pubsub_broker,
                 on_message_cb=self._on_pubsub_message,
                 window_minutes=int(pubsub_config.window_minutes),
             )
             self.pubsub_delivery.start()
-
-            self._sync_pubsub_subscriptions()
 
             logger.info('PubSub broker started')
         except Exception:

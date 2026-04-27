@@ -771,9 +771,9 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 
     row += String.format('<td>{0}</td>', item.sub_key);
 
-    var dlv_cls = is_delivery_active ? 'ps-badge-deliv-enabled' : 'ps-badge-deliv-disabled';
-    var pub_cls = is_pub_active ? 'ps-badge-pub-enabled' : 'ps-badge-pub-disabled';
-    row += '<td><div class="ps-status-cell"><span class="ps-badge ' + dlv_cls + '">Deliv</span><span class="ps-badge ' + pub_cls + '">Pub</span></div></td>';
+    var delivery_css_class = is_delivery_active ? 'ps-badge-deliv-enabled' : 'ps-badge-deliv-disabled';
+    var pub_css_class = is_pub_active ? 'ps-badge-pub-enabled' : 'ps-badge-pub-disabled';
+    row += '<td><div class="ps-status-cell"><span class="ps-badge ' + delivery_css_class + '">Delivery</span><span class="ps-badge ' + pub_css_class + '">Pub</span></div></td>';
 
     // For Push delivery type, display information based on push_type
     if(item.delivery_type === 'pull') {

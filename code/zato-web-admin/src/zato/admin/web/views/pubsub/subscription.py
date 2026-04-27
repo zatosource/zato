@@ -312,6 +312,7 @@ def _get_subscriber_patterns_for_sec_def(req, sec_base_id, cluster_id):
     logger.info('Got %d permissions', len(permissions_response.data))
 
     subscriber_patterns = []
+    sec_base_id = int(sec_base_id)
     for perm in permissions_response.data:
         if perm.sec_base_id == sec_base_id and _is_subscriber_access(perm.access_type):
             logger.info('Found subscriber permission with pattern: %s', perm.pattern)

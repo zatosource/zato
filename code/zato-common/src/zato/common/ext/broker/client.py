@@ -15,6 +15,9 @@ class PubSubBroker:
         self._hub = get_hub()
         self._broker = _BrokerImpl(config)
 
+    def run_partman_ensure(self):
+        self._hub.threadpool.apply(self._broker.run_partman_ensure)
+
     def reconfigure_partman(self, config):
         self._hub.threadpool.apply(self._broker.reconfigure_partman, (config,))
 

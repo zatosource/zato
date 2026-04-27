@@ -230,8 +230,15 @@
             background: transparent !important;
         }
 
-        #multi-select-table td {
+        #multi-select-table td,
+        #id_edit-multi-select-table td {
             background: transparent !important;
+        }
+
+        .multi-select-table td:first-child {
+            width: 1%;
+            white-space: nowrap;
+            padding-right: 4px;
         }
 
         #multi-select-table td:hover {
@@ -446,7 +453,7 @@
                         <td><a href="/zato/security/basic-auth/?cluster={{ cluster_id }}&amp;query={{ item.security|urlencode }}">{{ item.security }}</a></td>
 
                         <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ item.sub_key }}">{{ item.sub_key }}</td>
-                        <td><div class="ps-status-cell"><span class="ps-badge {{ item.is_delivery_active|yesno:'ps-badge-deliv-enabled,ps-badge-deliv-disabled' }}">Deliv</span><span class="ps-badge {{ item.is_pub_active|yesno:'ps-badge-pub-enabled,ps-badge-pub-disabled' }}">Pub</span></div></td>
+                        <td><div class="ps-status-cell"><span class="ps-badge {{ item.is_delivery_active|yesno:'ps-badge-deliv-enabled,ps-badge-deliv-disabled' }}">Delivery</span><span class="ps-badge {{ item.is_pub_active|yesno:'ps-badge-pub-enabled,ps-badge-pub-disabled' }}">Pub</span></div></td>
 
                         <td style="text-align:center">
                             {% if item.delivery_type == 'pull' %}
