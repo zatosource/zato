@@ -88,6 +88,7 @@ extra_simple_type = {
 # This key should be left as they are given on input, without trying to parse them into non-string types.
 skip_simple_type = {
     'api_version',
+    'group_id',
 }
 
 # ################################################################################################################################
@@ -111,8 +112,9 @@ def ensure_ints(data:'strdict') -> 'None':
 # ################################################################################################################################
 
 class _CreateEditSIO(AdminSIO):
-    input_required = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn', Int('pool_size'))
-    input_optional = ('cluster_id', 'id', Int('cache_expiry'), 'address', Int('port'), Int('timeout'), 'data_format', 'version',
+    input_required = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn')
+    input_optional = ('cluster_id', 'id', Int('pool_size'), Int('cache_expiry'), 'address', Int('port'), Int('timeout'),
+        'data_format', 'version',
         'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id', AsIs('tenant_id'),
         AsIs('client_id'), AsIs('security_id')) + extra_secret_keys + generic_attrs
     force_empty_keys = True
@@ -158,7 +160,7 @@ class _CreateEdit(_BaseService):
             if key not in data:
                 if key not in skip_simple_type:
                     value = parse_simple_type(value)
-                value = self._sio.eval_(key, value, self.server.encrypt)
+                    value = self._sio.eval_(key, value, self.server.encrypt)
 
             if key in extra_secret_keys:
                 if value is None:

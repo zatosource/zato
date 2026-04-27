@@ -1103,6 +1103,13 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                     conn = GenericConnection.from_model(item)
                     config = conn.to_dict()
                     logger.info('Queue bridge loading %s -> %s', type_, config)
+
+                    # The SSL fields may come from the DB as empty strings rather than proper types
+                    config['ssl'] = bool(config.get('ssl'))
+                    for _ssl_key in ('ssl_ca_file', 'ssl_cert_file', 'ssl_key_file'):
+                        if not config.get(_ssl_key):
+                            config[_ssl_key] = None
+
                     try:
                         if type_ == GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA:
                             self._queue_bridge.add_channel(config)
@@ -1523,8 +1530,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
     def import_demo_pubsub(self):
 
-        import shutil
         import zato.server.service.internal.pubsub
+        from zato.common.api import Default_Demo_PubSub_Service_File_Data
+        from zato.common.util.open_ import open_w
         from zato.server.commands import CommandsFacade
 
         pubsub_dir = os.path.dirname(zato.server.service.internal.pubsub.__file__)
@@ -1537,8 +1545,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         result = facade.run_enmasse_sync_import(config_path)
 
         if result.is_ok:
-            service_src = os.path.join(pubsub_dir, 'demo_pubsub_services.py')
-            shutil.copy2(service_src, self.hot_deploy_config.pickup_dir)
+            full_path = os.path.join(self.hot_deploy_config.pickup_dir, 'demo_pubsub_services.py')
+            with open_w(full_path) as f:
+                f.write(Default_Demo_PubSub_Service_File_Data)
 
         return result.is_ok
 

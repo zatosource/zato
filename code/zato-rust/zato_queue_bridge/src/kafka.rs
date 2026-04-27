@@ -106,6 +106,13 @@ pub async fn consume_loop(
             .set("bootstrap.servers", params.address)
             .set("group.id", params.group_id)
             .set("auto.offset.reset", "earliest")
+            .set("session.timeout.ms", "6000")
+            .set("heartbeat.interval.ms", "2000")
+            .set("max.poll.interval.ms", "300000")
+            .set("fetch.wait.max.ms", "500")
+            .set("reconnect.backoff.ms", "100")
+            .set("reconnect.backoff.max.ms", "10000")
+            .set("enable.partition.eof", "false")
 ;
 
         apply_ssl_config(&mut client_config, &params.ssl_config);
