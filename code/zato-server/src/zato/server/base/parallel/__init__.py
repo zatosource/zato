@@ -1234,7 +1234,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
                 synced += 1
 
-        logger.info('Synced %d ODB subscription-topic pairs to Rust broker', synced)
+        logger.info('Synced %d ODB subscription-topic pairs to broker', synced)
 
 # ################################################################################################################################
 
