@@ -770,8 +770,10 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += String.format('<td><a href="/zato/security/basic-auth/?cluster=1&query={0}">{1}</a></td>', encodeURIComponent(item.security), item.security);
 
     row += String.format('<td>{0}</td>', item.sub_key);
-    row += String.format('<td style="text-align:center">{0}</td>', is_delivery_active ? 'Enabled' : 'Disabled');
-    row += String.format('<td style="text-align:center">{0}</td>', is_pub_active ? 'Enabled' : 'Disabled');
+
+    var dlv_cls = is_delivery_active ? 'ps-badge-deliv-enabled' : 'ps-badge-deliv-disabled';
+    var pub_cls = is_pub_active ? 'ps-badge-pub-enabled' : 'ps-badge-pub-disabled';
+    row += '<td><div class="ps-status-cell"><span class="ps-badge ' + dlv_cls + '">Deliv</span><span class="ps-badge ' + pub_cls + '">Pub</span></div></td>';
 
     // For Push delivery type, display information based on push_type
     if(item.delivery_type === 'pull') {

@@ -16,10 +16,15 @@
             --ps-badge-padding: 2px 8px;
             --ps-badge-letter-spacing: 0.3px;
 
-            --ps-enabled-color: #1b6d2f;
-            --ps-enabled-bg: rgba(27, 109, 47, 0.12);
-            --ps-disabled-color: #9e9e9e;
-            --ps-disabled-bg: rgba(158, 158, 158, 0.10);
+            --ps-deliv-enabled-color: #8a7fa6;
+            --ps-deliv-enabled-bg: rgba(138, 127, 166, 0.09);
+            --ps-deliv-disabled-color: #9e9e9e;
+            --ps-deliv-disabled-bg: rgba(158, 158, 158, 0.10);
+
+            --ps-pub-enabled-color: #7e96a8;
+            --ps-pub-enabled-bg: rgba(126, 150, 168, 0.09);
+            --ps-pub-disabled-color: #bbb;
+            --ps-pub-disabled-bg: rgba(187, 187, 187, 0.08);
         }
 
         .ps-badge {
@@ -32,14 +37,24 @@
             line-height: 1.15;
         }
 
-        .ps-badge-enabled {
-            color: var(--ps-enabled-color);
-            background: var(--ps-enabled-bg);
+        .ps-badge-deliv-enabled {
+            color: var(--ps-deliv-enabled-color);
+            background: var(--ps-deliv-enabled-bg);
         }
 
-        .ps-badge-disabled {
-            color: var(--ps-disabled-color);
-            background: var(--ps-disabled-bg);
+        .ps-badge-deliv-disabled {
+            color: var(--ps-deliv-disabled-color);
+            background: var(--ps-deliv-disabled-bg);
+        }
+
+        .ps-badge-pub-enabled {
+            color: var(--ps-pub-enabled-color);
+            background: var(--ps-pub-enabled-bg);
+        }
+
+        .ps-badge-pub-disabled {
+            color: var(--ps-pub-disabled-color);
+            background: var(--ps-pub-disabled-bg);
         }
 
         .ps-status-cell {
@@ -321,8 +336,7 @@
             'security',
 
             'sub_key',
-            '_is_delivery_active',
-            '_is_pub_active',
+            '_status',
 
             '_delivery_type',
             'topic_link_list',
@@ -345,6 +359,27 @@
             'topic_name_list',
         ]
     }
+    </script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $(document).ready(function() {
+        tippy('.ps-badge-pub-enabled, .ps-badge-pub-disabled', {
+            content: 'Can publish messages',
+            placement: 'top',
+            trigger: 'mouseenter',
+            hideOnClick: false,
+            theme: 'dark',
+            allowHTML: false
+        });
+        tippy('.ps-badge-deliv-enabled, .ps-badge-deliv-disabled', {
+            content: 'Can receive messages',
+            placement: 'top',
+            trigger: 'mouseenter',
+            hideOnClick: false,
+            theme: 'dark',
+            allowHTML: false
+        });
+    });
     </script>
 
 {% endblock %}
@@ -377,8 +412,7 @@
                         <th style="width:1%; white-space:nowrap;">Security definition</th>
 
                         <th style="max-width:220px; white-space:nowrap;">Sub key</th>
-                        <th style="text-align:center"><a href="#">Delivery</a></th>
-                        <th style="text-align:center"><a href="#">Publications</a></th>
+                        <th style="text-align:center">Enabled for</th>
 
                         <th style="text-align:center">Delivery type</th>
                         <th>Topics</th>
@@ -412,8 +446,7 @@
                         <td><a href="/zato/security/basic-auth/?cluster={{ cluster_id }}&amp;query={{ item.security|urlencode }}">{{ item.security }}</a></td>
 
                         <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ item.sub_key }}">{{ item.sub_key }}</td>
-                        <td style="text-align:center">{{ item.is_delivery_active|yesno:"Enabled,Disabled" }}</td>
-                        <td style="text-align:center">{{ item.is_pub_active|yesno:"Enabled,Disabled" }}</td>
+                        <td><div class="ps-status-cell"><span class="ps-badge {{ item.is_delivery_active|yesno:'ps-badge-deliv-enabled,ps-badge-deliv-disabled' }}">Deliv</span><span class="ps-badge {{ item.is_pub_active|yesno:'ps-badge-pub-enabled,ps-badge-pub-disabled' }}">Pub</span></div></td>
 
                         <td style="text-align:center">
                             {% if item.delivery_type == 'pull' %}
