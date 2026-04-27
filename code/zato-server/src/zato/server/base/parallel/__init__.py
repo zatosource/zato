@@ -1243,6 +1243,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
     def _on_pubsub_message(self, msg:'anydict') -> 'None':
         try:
             sub_id = msg['sub_id']
+            logger.info('PubSub message received, sub_id=%r (type=%s), known keys=%s', sub_id, type(sub_id).__name__, list(self.config.pubsub_subs.keys()))
             sub_entry = self.config.pubsub_subs[sub_id]
             sub_config = sub_entry['config']
 
