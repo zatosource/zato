@@ -20,6 +20,7 @@ distro==1.5.0
 Django==4.2.30
 django-csp==3.8
 django-zato-plugin
+edwh_uuid7==0.2.3
 elasticsearch==9.0.1
 faker==8.12.1
 fhirpy==2.2.0

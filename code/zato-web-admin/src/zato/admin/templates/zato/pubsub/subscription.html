@@ -411,6 +411,9 @@
             $(elem).on('click', function() {
                 navigator.clipboard.writeText(sub_key);
                 instance.setContent(sub_key + '<br><span style="color:#aaa">Copied to clipboard</span>');
+                setTimeout(function() {
+                    instance.setContent(default_content);
+                }, 600);
             });
         });
     });

@@ -2974,13 +2974,6 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
             (diff.renamed && diff.renamed.length)
         )) {
             config.reload_callback();
-
-            if(!skip_puff) {
-                var $container = $(config.container || '');
-                if($container.length) {
-                    $.fn.zato.live_form_updates._puff($container);
-                }
-            }
         }
     };
 

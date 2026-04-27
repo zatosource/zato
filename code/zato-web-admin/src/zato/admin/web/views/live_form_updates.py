@@ -102,6 +102,14 @@ OBJECT_TYPE_CONFIG = {
         'extra_params': {'connection': 'outgoing', 'transport': 'plain_http'},
         'filter_func': None,
     },
+
+    'pubsub_topic': {
+        'service_name': 'zato.pubsub.topic.get-list',
+        'id_field': 'id',
+        'label_fields': ['name'],
+        'extra_params': {},
+        'filter_func': None,
+    },
 }
 
 # ################################################################################################################################
@@ -136,7 +144,7 @@ def _fetch_list(client, cluster_id, object_type):
         object_type, hasattr(response, 'data'), type(getattr(response, 'data', None)).__name__)
 
     data = getattr(response, 'data', None)
-    if not data:
+    if data is None:
         logger.warning('live_form_updates._fetch_list: no data in response for %s', object_type)
         return []
 

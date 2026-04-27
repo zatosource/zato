@@ -535,7 +535,6 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
 
     // Clear existing options
     $endpointSelect.empty();
-    $endpointSelect.append('<option value="">Select an endpoint...</option>');
 
     // Show loading spinner
     var $container = $endpointSelect.parent();
@@ -561,43 +560,31 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
             console.log('DEBUG populateRestEndpoints: select element before population - parent visible:', $endpointSelect.parent().is(':visible'));
             console.log('DEBUG populateRestEndpoints: select element before population - options count:', $endpointSelect.find('option').length);
 
+            $endpointSelect.append('<option value="">Select an endpoint ...</option>');
+
             if (response.rest_endpoints && response.rest_endpoints.length > 0) {
-                console.log('DEBUG populateRestEndpoints: Populating', response.rest_endpoints.length, 'endpoints');
                 $.each(response.rest_endpoints, function(index, endpoint) {
                     var option = $('<option></option>')
                         .attr('value', endpoint.id)
                         .text(endpoint.name);
                     if (selectedId && endpoint.id == selectedId) {
                         option.prop('selected', true);
-                        console.log('DEBUG populateRestEndpoints: Selected endpoint:', endpoint.name, 'with id:', endpoint.id);
                     }
                     $endpointSelect.append(option);
-                    console.log('DEBUG populateRestEndpoints: Added option:', endpoint.name, 'with id:', endpoint.id);
                 });
-            } else {
-                console.log('DEBUG populateRestEndpoints: No endpoints found');
-                $endpointSelect.append('<option value="">No endpoints available</option>');
             }
 
-            console.log('DEBUG populateRestEndpoints: select element after population - options count:', $endpointSelect.find('option').length);
-            console.log('DEBUG populateRestEndpoints: select element after population - HTML:', $endpointSelect.html());
+            $endpointSelect.append('<option value="__create_new__">Create a new endpoint \u2192</option>');
 
-            // Refresh Chosen if it's initialized
-            if ($endpointSelect.hasClass('chosen-select')) {
-                console.log('DEBUG populateRestEndpoints: Triggering chosen:updated');
-                $endpointSelect.trigger('chosen:updated');
-            } else {
-                console.log('DEBUG populateRestEndpoints: No chosen-select class found');
-                console.log('DEBUG populateRestEndpoints: Select element classes: ' + $endpointSelect.attr('class'));
-                console.log('DEBUG populateRestEndpoints: Checking if Chosen is already initialized');
-                var chosenId = form_type === 'create' ? '#id_rest_push_endpoint_id_chosen' : '#id_edit_rest_push_endpoint_id_chosen';
-                var $chosenExists = $(chosenId);
-                console.log('DEBUG populateRestEndpoints: Chosen container exists: ' + $chosenExists.length);
-                if ($chosenExists.length > 0) {
-                    console.log('DEBUG populateRestEndpoints: Chosen exists but select lacks chosen-select class, triggering update anyway');
+            $endpointSelect.trigger('chosen:updated');
+
+            $endpointSelect.off('change.create_new').on('change.create_new', function() {
+                if ($(this).val() === '__create_new__') {
+                    window.open('/zato/http-soap/?cluster=1&connection=outgoing&transport=plain_http', '_blank');
+                    $(this).val('');
                     $endpointSelect.trigger('chosen:updated');
                 }
-            }
+            });
 
             console.log('DEBUG populateRestEndpoints: select element final state - visible:', $endpointSelect.is(':visible'));
             console.log('DEBUG populateRestEndpoints: select element final state - display:', $endpointSelect.css('display'));
@@ -1099,16 +1086,73 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type, 
 // Live form updates registration
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.pubsub.subscription._snapshot_topic_values = function(container_selector) {
+    var values = {};
+    $(container_selector).find('input[name="topic_name"]').each(function() {
+        values[this.id] = $(this).val();
+    });
+    return values;
+};
+
+$.fn.zato.pubsub.subscription._puff_changed_rows = function(container_selector, old_values) {
+    $(container_selector).find('input[name="topic_name"]').each(function() {
+        var checkbox = $(this);
+        var old_value = old_values[this.id];
+        if (old_value === undefined || old_value !== checkbox.val()) {
+            $.fn.zato.live_form_updates._puff(checkbox.closest('tr'));
+        }
+    });
+
+    var old_ids = Object.keys(old_values);
+    for (var i = 0; i < old_ids.length; i++) {
+        if (!$(container_selector).find('#' + old_ids[i]).length) {
+            $.fn.zato.live_form_updates._puff($(container_selector).find('.multi-select-table'));
+            break;
+        }
+    }
+};
+
+$.fn.zato.pubsub.subscription._reload_create_topics = function() {
+    var sec_base_id = $('#id_sec_base_id').val();
+    if (sec_base_id) {
+        var old_values = $.fn.zato.pubsub.subscription._snapshot_topic_values('#multi-select-div');
+        var cluster_id = $('#cluster_id').val();
+        var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', sec_base_id, cluster_id);
+        $.fn.zato.post(url, function(data, status) {
+            $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, null);
+            $.fn.zato.pubsub.subscription._puff_changed_rows('#multi-select-div', old_values);
+        }, null, null, true);
+    }
+};
+
+$.fn.zato.pubsub.subscription._reload_edit_topics = function() {
+    var instance_id = $.fn.zato.pubsub.subscription._current_edit_instance_id;
+    if (instance_id) {
+        var instance = $.fn.zato.data_table.data[instance_id];
+        if (instance && instance.sec_base_id) {
+            var old_values = $.fn.zato.pubsub.subscription._snapshot_topic_values('#id_edit-multi-select-div');
+            var cluster_id = $('#cluster_id').val();
+            var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', instance.sec_base_id, cluster_id);
+            $.fn.zato.post(url, function(data, status) {
+                $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id);
+                $.fn.zato.pubsub.subscription._puff_changed_rows('#id_edit-multi-select-div', old_values);
+            }, null, null, true);
+        }
+    }
+};
+
 $.fn.zato.live_form_updates.register('create', [
     {object_type: 'security_basic', target_select: '#id_sec_base_id'},
     {object_type: 'service', target_select: '#id_push_service_name'},
-    {object_type: 'rest_outconn', target_select: '#id_rest_push_endpoint_id'}
+    {object_type: 'rest_outconn', target_select: '#id_rest_push_endpoint_id'},
+    {object_type: 'pubsub_topic', handler: 'multi_checkbox', container: '#multi-select-div', reload_callback: function() { $.fn.zato.pubsub.subscription._reload_create_topics(); }}
 ]);
 
 $.fn.zato.live_form_updates.register('edit', [
     {object_type: 'security_basic', target_select: '#id_edit-sec_base_id'},
     {object_type: 'service', target_select: '#id_edit-push_service_name'},
-    {object_type: 'rest_outconn', target_select: '#id_edit-rest_push_endpoint_id'}
+    {object_type: 'rest_outconn', target_select: '#id_edit-rest_push_endpoint_id'},
+    {object_type: 'pubsub_topic', handler: 'multi_checkbox', container: '#id_edit-multi-select-div', reload_callback: function() { $.fn.zato.pubsub.subscription._reload_edit_topics(); }}
 ]);
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
