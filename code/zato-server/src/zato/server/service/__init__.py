@@ -34,7 +34,7 @@ from zato.bunch import Bunch
 from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, NotGiven, PARAMS_PRIORITY, \
      RESTAdapterResponse, zato_no_op_marker
 from zato.common.exception import Inactive, Reportable, ZatoException
-from zato.common.facade import SecurityFacade
+from zato.common.facade import PubSubFacade, SecurityFacade
 from zato.common.json_internal import dumps
 from zato.common.monitoring.logger_ import DatadogLogger
 from zato.common.monitoring.metrics import ServiceMetrics
@@ -351,6 +351,7 @@ class Service:
     rest: 'RESTFacade'
     schedule: 'SchedulerFacade'
     security: 'SecurityFacade'
+    pubsub: 'PubSubFacade'
 
     call_hooks:'bool' = True
     _filter_by = None
@@ -1255,6 +1256,7 @@ class Service:
         service.static_config = server.static_config
         service.time = server.time_util
         service.security = SecurityFacade(service.server)
+        service.pubsub = PubSubFacade(service.server)
         service.metrics = ServiceMetrics(service)
 
         if channel_params:
@@ -1691,20 +1693,6 @@ class BusinessCentralAdapter(Service):
         base_url = self._replace_placeholders(self.base_url)
 
         self.response.payload = self._invoke_business_central(endpoint, base_url)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass(init=False)
-class PubSubHookMessage:
-    phase: 'str'
-    message: 'any_'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class PubSubHook(Service):
-    pass
 
 # ################################################################################################################################
 # ################################################################################################################################

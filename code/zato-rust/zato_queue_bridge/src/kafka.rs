@@ -9,7 +9,6 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use pyo3::prelude::*;
 use rdkafka::ClientConfig;
 use rdkafka::Message;
 use rdkafka::consumer::{Consumer, StreamConsumer};
@@ -78,11 +77,25 @@ fn apply_ssl_config(client_config: &mut ClientConfig, ssl_config: &SslConfig<'_>
     }
 }
 
-/// Runs a consume loop for a single Kafka topic, invoking the Python callback for each message.
-///
-/// This function is meant to be spawned as a tokio task. It blocks until the stop flag
-/// is set or an unrecoverable error occurs.
-pub async fn consume_loop(params: &ConsumeParams<'_>, on_message_cb: Py<PyAny>, stop_flag: Arc<AtomicBool>) {
+/// A message consumed from Kafka, ready to be forwarded to the Python callback
+/// on the main bridge OS thread.
+pub struct ConsumedMessage {
+    /// Raw message payload.
+    pub payload: Vec<u8>,
+    /// Topic the message was received from.
+    pub topic: String,
+    /// Zato service name to invoke.
+    pub service_name: String,
+}
+
+/// Runs a consume loop for a single Kafka topic, sending received messages through
+/// the provided channel. The Python callback is NOT invoked here - that happens on
+/// the main bridge OS thread to avoid GIL contention from tokio worker threads.
+pub async fn consume_loop(
+    params: &ConsumeParams<'_>,
+    message_sender: crossbeam_channel::Sender<ConsumedMessage>,
+    stop_flag: Arc<AtomicBool>,
+) {
     let mut client_config = ClientConfig::new();
     client_config
         .set("bootstrap.servers", params.address)
@@ -117,15 +130,13 @@ pub async fn consume_loop(params: &ConsumeParams<'_>, on_message_cb: Py<PyAny>, 
                     Some(bytes) => bytes.to_vec(),
                     None => continue,
                 };
-                let message_topic = borrowed_message.topic().to_string();
-                let svc_name = params.service_name.to_string();
-
-                if let Some(result) = Python::try_attach(|py| -> PyResult<()> {
-                    let args = (payload.as_slice(), message_topic.as_str(), svc_name.as_str());
-                    on_message_cb.call1(py, args)?;
-                    Ok(())
-                }) {
-                    result.ok();
+                let msg = ConsumedMessage {
+                    payload,
+                    topic: borrowed_message.topic().to_string(),
+                    service_name: params.service_name.to_string(),
+                };
+                if message_sender.send(msg).is_err() {
+                    break;
                 }
             }
             Err(err) => {

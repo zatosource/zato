@@ -71,21 +71,18 @@ pub struct WatchdogRegistry {
     threads: Mutex<Vec<Registration>>,
     /// Stop flag shared with the bridge - watchdog exits when this is set.
     stop_flag: Arc<AtomicBool>,
-    /// Bridge state mutex reference for diagnostic `try_lock` checks.
-    bridge_state: Arc<Mutex<crate::bridge::BridgeState>>,
 }
 
 impl WatchdogRegistry {
     /// Creates a new registry tied to the given bridge stop flag and state.
     pub fn new(
         stop_flag: Arc<AtomicBool>,
-        bridge_state: Arc<Mutex<crate::bridge::BridgeState>>,
+        _bridge_state: Arc<Mutex<crate::bridge::BridgeState>>,
     ) -> Self {
         Self {
             epoch: Instant::now(),
             threads: Mutex::new(Vec::new()),
             stop_flag,
-            bridge_state,
         }
     }
 
@@ -176,9 +173,6 @@ fn log_diagnostics(registry: &WatchdogRegistry) {
         registry.stop_flag.load(Ordering::Relaxed)
     );
 
-    let mutex_held = registry.bridge_state.try_lock().is_none();
-    log::error!("queue-bridge-watchdog: bridge state mutex currently held={mutex_held}");
-
     log_proc_thread_info();
 
     log::error!("queue-bridge-watchdog: --- end diagnostics ---");
@@ -216,3 +210,4 @@ fn log_proc_thread_info() {
         log::error!("queue-bridge-watchdog: tid={tid_str} wchan={wchan} {state_line}");
     }
 }
+

@@ -114,15 +114,10 @@ pub fn bridge_loop(
         };
 
         #[cfg(feature = "kafka")]
+        let (consume_sender, consume_receiver) = crossbeam_channel::unbounded::<kafka::ConsumedMessage>();
+
+        #[cfg(feature = "kafka")]
         for channel_config in &channel_configs {
-            let callback = Python::try_attach(|py| on_message_cb.clone_ref(py));
-            let callback = match callback {
-                Some(cb_ref) => cb_ref,
-                None => {
-                    eprintln!("Failed to acquire GIL to clone callback for consumer `{}`", channel_config.name);
-                    continue;
-                }
-            };
             let channel_stop_flag = Arc::clone(&stop_flag);
             let consumer_name = channel_config.name.clone();
             let consumer_address = channel_config.address.clone();
@@ -133,6 +128,7 @@ pub fn bridge_loop(
             let consumer_ssl_ca_file = channel_config.ssl_ca_file.clone();
             let consumer_ssl_cert_file = channel_config.ssl_cert_file.clone();
             let consumer_ssl_key_file = channel_config.ssl_key_file.clone();
+            let sender = consume_sender.clone();
 
             tokio::spawn(async move {
                 let consume_params = kafka::ConsumeParams {
@@ -148,7 +144,7 @@ pub fn bridge_loop(
                         ssl_key_file: consumer_ssl_key_file.as_deref(),
                     },
                 };
-                kafka::consume_loop(&consume_params, callback, channel_stop_flag).await;
+                kafka::consume_loop(&consume_params, sender, channel_stop_flag).await;
             });
         }
 
@@ -162,6 +158,17 @@ pub fn bridge_loop(
 
             if let Some(hb) = &heartbeat {
                 hb.beat();
+            }
+
+            #[cfg(feature = "kafka")]
+            while let Ok(msg) = consume_receiver.try_recv() {
+                if let Some(Err(err)) = Python::try_attach(|py| -> PyResult<()> {
+                    let args = (msg.payload.as_slice(), msg.topic.as_str(), msg.service_name.as_str());
+                    on_message_cb.call1(py, args)?;
+                    Ok(())
+                }) {
+                    log::error!("Python callback error: {err}");
+                }
             }
 
             match publish_receiver.try_recv() {
@@ -194,17 +201,17 @@ pub fn bridge_loop(
                             };
 
                             if let Err(err) = kafka::publish_message(&publish_params).await {
-                                eprintln!("Failed to publish to connection `{conn_name}`: {err}");
+                                log::error!("Failed to publish to connection `{conn_name}`: {err}");
                             }
                         }
 
                         #[cfg(not(feature = "kafka"))]
                         {
                             let _ = (&payload, &address, &topic, outgoing_ssl, &ssl_ca, &ssl_cert, &ssl_key);
-                            eprintln!("No queue backend compiled for connection `{conn_name}`");
+                            log::warn!("No queue backend compiled for connection `{conn_name}`");
                         }
                     } else {
-                        eprintln!("Publish requested for unknown outgoing connection `{conn_name}`");
+                        log::warn!("Publish requested for unknown outgoing connection `{conn_name}`");
                     }
                 }
                 Err(crossbeam_channel::TryRecvError::Empty) => {

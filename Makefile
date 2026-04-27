@@ -39,11 +39,14 @@ queue-bridge-build:
 	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_queue_bridge/Cargo.toml
 
 install:
-ifeq ($(strip $(PKG)),)
-	$(CURDIR)/code/install.sh
-else
-	$(CURDIR)/code/support-linux/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python $(PKG)
-endif
+	@if [ "$(filter-out install,$(MAKECMDGOALS))" = "" ]; then \
+		$(CURDIR)/code/install.sh; \
+	else \
+		$(CURDIR)/code/support-linux/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python $(filter-out install,$(MAKECMDGOALS)); \
+	fi
+
+%:
+	@:
 
 clean:
 	$(CURDIR)/code/clean.sh

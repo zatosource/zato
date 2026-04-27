@@ -39,7 +39,7 @@ except ImportError:
 
 # Zato
 from zato.common.api import DONT_DEPLOY_ATTR_NAME, SourceCodeInfo, TRACE1
-from zato.common.facade import SecurityFacade
+from zato.common.facade import PubSubFacade, SecurityFacade
 from zato.common.json_internal import dumps
 from zato.common.marshal_.api import Model as DataClassModel
 from zato.common.marshal_.simpleio import DataClassSimpleIO
@@ -49,7 +49,7 @@ from zato.common.util.api import deployment_info, import_module_from_path, is_py
 from zato.common.util.python_ import get_module_name_by_path
 from zato.common.util.time_ import utcnow
 from zato.server.config import ConfigDict
-from zato.server.service import PubSubHook, SchedulerFacade, Service
+from zato.server.service import SchedulerFacade, Service
 from zato.server.service.internal import AdminService
 
 # Zato - Cython
@@ -669,6 +669,7 @@ class ServiceStore:
         service.user_config = self.server.user_config
         service.time = self.server.time_util
         service.security = SecurityFacade(service.server)
+        service.pubsub = PubSubFacade(service.server)
 
         # .. and return everything to our caller.
         return service, is_active
@@ -1502,15 +1503,6 @@ class ServiceStore:
 
         # Assign all the required attributes to this class
         self.set_up_class_attributes(class_, self)
-
-        # Handle pub/sub hooks ..
-        if issubclass(class_, PubSubHook):
-
-            # .. append the hook's name itself ..
-            self.server.pubsub_hooks.append(name)
-
-            # .. and keep the list sorted.
-            self.server.pubsub_hooks.sort()
 
         # Note that at this point we do not have the service's ID, is_active and slow_threshold values;
         # this is because this object is created prior to its deployment in ODB.

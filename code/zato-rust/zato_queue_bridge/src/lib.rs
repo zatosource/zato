@@ -134,7 +134,6 @@ impl QueueBridge {
                             .map(|s| s.as_str())
                             .or_else(|| panic.downcast_ref::<&str>().copied())
                             .unwrap_or("unknown panic");
-                        eprintln!("queue-bridge thread panicked: {msg}");
                         log::error!("queue-bridge thread panicked: {msg}");
                     }
                 })

@@ -5,7 +5,7 @@ kafka_channel:
     address: localhost:9092
     topic: zato-kafka
     group_id: zato-kafka-group
-    service: demo.kafka.receiver
+    service: demo.echo
 
 kafka_outgoing:
 

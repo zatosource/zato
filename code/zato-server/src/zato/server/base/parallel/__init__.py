@@ -258,10 +258,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         # As above, but as a regular expression pattern
         self.http_methods_allowed_re = ''
 
-        # A list of all the pub/sub hook services that will be invoked (alphabetically)
-        # for any pub/sub message before it's delivered.
-        self.pubsub_hooks:'strlist' = []
-
         self.access_logger = logging.getLogger('zato_access_log')
         self.access_logger_log = self.access_logger._log
         self.needs_access_log = self.access_logger.isEnabledFor(INFO)
@@ -1099,7 +1095,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             _main_hub.loop.run_callback(spawn, self._invoke_queue_service, service_name, payload)
 
         self._queue_bridge = QueueBridge()
-        self._queue_bridge.start({'on_message_cb': _on_queue_bridge_recv})
 
         with closing(self.odb.session()) as session:
             for type_ in (GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA):
@@ -1117,10 +1112,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                         logger.warning('Queue bridge could not load `%s` (%s), config: %s',
                             config.get('name', '?'), type_, config, exc_info=True)
 
+        self._queue_bridge.start({'on_message_cb': _on_queue_bridge_recv})
+
 # ################################################################################################################################
 
     def _start_pubsub_broker(self):
         from zato.common.ext.broker.client import PubSubBroker
+        from zato.server.base.parallel.delivery import PubSubDelivery
+
         pubsub_config = self.fs_server_config.pubsub
 
         ssl = pubsub_config.ssl
@@ -1149,9 +1148,27 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                 'pool_size_sub': pubsub_config.pool_size_sub,
             })
             self._has_pubsub_broker = True
+
+            self.pubsub_delivery = PubSubDelivery(
+                broker=self.pubsub_broker,
+                on_message_cb=self._on_pubsub_message,
+                batch_size=int(pubsub_config.get('delivery_batch_size', 100)),
+                window_minutes=pubsub_config.window_minutes,
+            )
+            # TODO: re-enable once the delivery greenlet is fully wired
+            # self.pubsub_delivery.start()
+
             logger.info('PubSub broker started')
         except Exception:
             logger.warning('PubSub broker could not be started: %s', format_exc())
+
+# ################################################################################################################################
+
+    def _on_pubsub_message(self, msg:'anydict') -> 'None':
+        try:
+            self.invoke('zato.pubsub.on-message', msg)
+        except Exception:
+            logger.warning('PubSub message dispatch error: %s', format_exc())
 
 # ################################################################################################################################
 
@@ -1847,8 +1864,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             else:
                 self._is_process_closing = True
 
-            # Stop the pubsub broker if it was started
+            # Stop the pubsub delivery greenlet and broker if they were started
             if self._has_pubsub_broker:
+                self.pubsub_delivery.stop()
                 self.pubsub_broker.stop()
 
             # Close SQL pools
