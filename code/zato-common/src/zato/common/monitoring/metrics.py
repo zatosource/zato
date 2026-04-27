@@ -10,7 +10,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from threading import RLock
 
 # ddtrace
-from ddtrace.vendor.dogstatsd.base import statsd
+try:
+    from ddtrace.vendor.dogstatsd.base import statsd
+except ImportError as e:
+    from logging import getLogger
+    logger = getLogger('zato')
+    logger.debug(f'Datadog not available: {e}')
 
 # Zato
 from zato.common.typing_ import anydict, floatnone

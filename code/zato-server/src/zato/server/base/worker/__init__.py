@@ -736,26 +736,31 @@ class WorkerStore(_WorkerStoreBase):
     def init_generic_connections_config(self) -> 'None':
 
         # Local aliases
+        channel_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, {})
         channel_openapi_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI, {})
         cloud_confluence_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE, {})
         cloud_jira_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA, {})
         cloud_microsoft_365_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365, {})
         cloud_salesforce_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE, {})
+        outconn_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA, {})
         outconn_ldap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
         outconn_mongodb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB, {})
 
         # These generic connections are regular - they use common API methods for such connections
         regular_maps = [
+            channel_kafka_map,
             channel_openapi_map,
             cloud_confluence_map,
             cloud_jira_map,
             cloud_microsoft_365_map,
             cloud_salesforce_map,
+            outconn_kafka_map,
             outconn_ldap_map,
             outconn_mongodb_map,
         ]
 
         password_maps = [
+            outconn_kafka_map,
             outconn_ldap_map,
             outconn_mongodb_map,
         ]

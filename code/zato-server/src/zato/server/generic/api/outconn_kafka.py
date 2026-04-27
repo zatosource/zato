@@ -23,5 +23,8 @@ class OutconnKafkaWrapper:
         self.server = server
         logger.info('Outgoing Kafka connection `%s` registered', config.name)
 
+    def delete(self) -> 'None':
+        pass
+
     def build_wrapper(self) -> 'None':
         pass

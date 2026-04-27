@@ -331,11 +331,11 @@
                 <thead>
                     <tr class='ignore'>
 
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
+                        <th style="width:1%; white-space:nowrap;">&nbsp;</th>
+                        <th style="width:1%; white-space:nowrap;">&nbsp;</th>
                         <th style="width:1%; white-space:nowrap;">Security definition</th>
 
-                        <th style="width:1%; white-space:nowrap;">Sub key</th>
+                        <th style="max-width:220px; white-space:nowrap;">Sub key</th>
                         <th style="text-align:center"><a href="#">Delivery</a></th>
                         <th style="text-align:center"><a href="#">Publications</a></th>
 
@@ -366,11 +366,11 @@
                 {% for item in items %}
                     <tr id='tr_{{ item.id }}'>
 
-                        <td class='numbering'>&nbsp;</td>
-                        <td class='impexp'><input type='checkbox' /></td>
+                        <td class='numbering' style="width:1%; white-space:nowrap;">&nbsp;</td>
+                        <td class='impexp' style="width:1%; white-space:nowrap;"><input type='checkbox' /></td>
                         <td><a href="/zato/security/basic-auth/?cluster={{ cluster_id }}&amp;query={{ item.security|urlencode }}">{{ item.security }}</a></td>
 
-                        <td>{{ item.sub_key }}</td>
+                        <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ item.sub_key }}">{{ item.sub_key }}</td>
                         <td style="text-align:center">{{ item.is_delivery_active|yesno:"Enabled,Disabled" }}</td>
                         <td style="text-align:center">{{ item.is_pub_active|yesno:"Enabled,Disabled" }}</td>
 

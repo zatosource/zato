@@ -1130,6 +1130,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         elif ssl == 'verify':
             ssl = 'verify-full'
 
+        import sys
+        from pathlib import Path
+        partman_bin = str(Path(sys.executable).parent.parent / 'support-linux' / 'bin' / 'partman')
+
         try:
             self.pubsub_broker = PubSubBroker({
                 'host': pubsub_config.host,
@@ -1146,6 +1150,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                 'partman_interval_secs': pubsub_config.partman_interval_secs,
                 'pool_size_pub': pubsub_config.pool_size_pub,
                 'pool_size_sub': pubsub_config.pool_size_sub,
+                'partman_bin': partman_bin,
             })
             self._has_pubsub_broker = True
 

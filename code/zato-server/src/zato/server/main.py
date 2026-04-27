@@ -53,7 +53,12 @@ if is_datadog_enabled:
     os.environ['DD_SERVICE'] = datadog_service_name
 
     # .. import ddtrace.auto before gevent patching ..
-    import ddtrace.auto # noqa: F401
+    try:
+        import ddtrace.auto # noqa: F401
+    except ImportError as e:
+        from logging import getLogger
+        logger = getLogger('zato')
+        logger.warning(f'Datadog not available: {e}')
 
 # Monkey-patching modules individually can be about 20% faster,
 # or, in absolute terms, instead of 275 ms it may take 220 ms.

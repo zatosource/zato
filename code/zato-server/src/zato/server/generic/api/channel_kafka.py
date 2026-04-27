@@ -23,5 +23,8 @@ class ChannelKafkaWrapper:
         self.server = server
         logger.info('Kafka channel `%s` registered', config.name)
 
+    def delete(self) -> 'None':
+        pass
+
     def build_wrapper(self) -> 'None':
         pass
