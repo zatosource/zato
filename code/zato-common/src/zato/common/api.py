@@ -1257,14 +1257,13 @@ class DemoPubSubSubscriber(Service):
     def handle(self):
 
         msg = self.request.raw_request
-        topic_name = msg['topic_name']
 
         self.logger.info(
             '%s[pub/sub demo]%s %s %s%s#%s%s',
             _cyan, _reset,
-            topic_name,
-            msg['data'],
-            _dim, msg['msg_id'], _reset,
+            msg.topic_name,
+            msg.data,
+            _dim, msg.msg_id, _reset,
         )
 """
 

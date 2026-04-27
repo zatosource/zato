@@ -1238,7 +1238,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             sub_key = self._broker_sub_map.get(broker_sub_id)
 
             if not sub_key:
-                logger.warning('Unknown broker sub_id `%s`, known: %s', broker_sub_id, sorted(self._broker_sub_map))
+                logger.warning('Unknown broker sub_id `%r` (type=%s), known: %s',
+                    broker_sub_id, type(broker_sub_id).__name__, sorted(self._broker_sub_map))
                 return
 
             topic_name = msg['topic_name']
@@ -1256,6 +1257,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                     return
 
                 payload = msg['payload']
+                if isinstance(payload, bytes):
+                    payload = payload.decode('utf-8')
                 recv_time_iso = msg['msg_creation_time']
                 pub_time = msg['pub_time']
                 if pub_time is None:
@@ -1946,7 +1949,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         """ Publishes a message on the broker so all the servers (this one including
         can deploy a new package).
         """
-        msg = {'action': HOT_DEPLOY.CREATE_SERVICE.value, 'package_id': package_id} # type: ignore
+        msg = {'action': HOT_DEPLOY.CREATE_SERVICE.value, 'package_id': package_id}
         self.config_dispatcher.publish(msg)
 
 # ################################################################################################################################

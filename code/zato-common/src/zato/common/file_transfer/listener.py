@@ -382,13 +382,12 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
                 file_data = f.read()
 
             inner_payload = dumps({
-                'cluster_id': 1,
                 'payload': b64encode(file_data).decode('ascii'),
                 'payload_name': event_path,
             })
 
             request_body = dumps({
-                'name': 'zato.service.upload-package',
+                'name': 'zato.hot-deploy.create',
                 'payload': b64encode(inner_payload.encode('utf8')).decode('ascii'),
                 'channel': 'invoke',
                 'data_format': 'json',
