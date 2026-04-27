@@ -64,6 +64,10 @@
             flex-wrap: nowrap;
         }
 
+        .ps-sub-key {
+            cursor: pointer;
+        }
+
         /* Smooth transitions for security definitions loading */
         .loading-spinner {
             opacity: 0;
@@ -386,6 +390,29 @@
             theme: 'dark',
             allowHTML: false
         });
+
+        $('.ps-sub-key').each(function() {
+            var elem = this;
+            var sub_key = $(elem).data('sub-key');
+            var default_content = sub_key + '<br><span style="color:#aaa">(Click to copy)</span>';
+
+            var instance = tippy(elem, {
+                content: default_content,
+                placement: 'top',
+                trigger: 'mouseenter',
+                hideOnClick: false,
+                theme: 'dark',
+                allowHTML: true,
+                onHidden: function() {
+                    instance.setContent(default_content);
+                }
+            });
+
+            $(elem).on('click', function() {
+                navigator.clipboard.writeText(sub_key);
+                instance.setContent(sub_key + '<br><span style="color:#aaa">Copied to clipboard</span>');
+            });
+        });
     });
     </script>
 
@@ -452,7 +479,7 @@
                         <td class='impexp' style="width:1%; white-space:nowrap;"><input type='checkbox' /></td>
                         <td><a href="/zato/security/basic-auth/?cluster={{ cluster_id }}&amp;query={{ item.security|urlencode }}">{{ item.security }}</a></td>
 
-                        <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ item.sub_key }}">{{ item.sub_key }}</td>
+                        <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><span class="ps-sub-key" data-sub-key="{{ item.sub_key }}">{{ item.sub_key }}</span></td>
                         <td><div class="ps-status-cell"><span class="ps-badge {{ item.is_delivery_active|yesno:'ps-badge-deliv-enabled,ps-badge-deliv-disabled' }}">Delivery</span><span class="ps-badge {{ item.is_pub_active|yesno:'ps-badge-pub-enabled,ps-badge-pub-disabled' }}">Pub</span></div></td>
 
                         <td style="text-align:center">
