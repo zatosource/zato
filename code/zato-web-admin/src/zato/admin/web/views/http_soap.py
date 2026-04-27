@@ -391,20 +391,12 @@ def ping(req, id, cluster_id): # type: ignore
         err = response.content.decode('utf-8', 'replace')
         return JsonResponse({
             'is_success': False,
-            'status_code': 0,
-            'status_text': '',
-            'exception_message': err,
-            'inner_exception_message': '',
             'info': err,
         })
 
     data = response.data
     return JsonResponse({
         'is_success': data.is_success,
-        'status_code': data.status_code,
-        'status_text': data.status_text,
-        'exception_message': data.exception_message,
-        'inner_exception_message': data.inner_exception_message,
         'info': data.info,
     })
 

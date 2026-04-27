@@ -1088,55 +1088,13 @@ $.fn.zato.invoker._format_xml = function(xml_text) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.invoker._render_highlighted_response = function(pre_elem, text) {
-    if (!text) {
-        pre_elem.html('');
-        pre_elem.removeClass('syntax-monokai');
-        $.fn.zato.invoker._update_line_numbers(pre_elem);
-        return;
-    }
-
-    pre_elem.text(text);
-    pre_elem.removeClass('syntax-monokai');
-    $.fn.zato.invoker._update_line_numbers(pre_elem);
-
-    $.ajax({
-        type: 'POST',
-        url: '/zato/http-soap/highlight/',
-        data: {text: text},
-        headers: {'X-CSRFToken': $.cookie('csrftoken')},
-        success: function(data) {
-            if (data.html) {
-                pre_elem.html(data.html);
-                pre_elem.addClass('syntax-monokai');
-                $.fn.zato.invoker._update_line_numbers(pre_elem);
-            }
-        }
-    });
+    $.fn.zato.highlight_response(pre_elem, text);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.invoker._update_line_numbers = function(pre_elem) {
-    let gutter = pre_elem.siblings(".invoker-modal-response-gutter");
-    if (gutter.length === 0) {
-        gutter = pre_elem.parent().find(".invoker-modal-response-gutter");
-    }
-    if (gutter.length === 0) {
-        return;
-    }
-
-    let rendered_text = pre_elem.text();
-    if (!rendered_text) {
-        gutter.html('');
-        return;
-    }
-
-    let line_count = rendered_text.split('\n').length;
-    let lines = [];
-    for (let i = 1; i <= line_count; i++) {
-        lines.push(i + ' ');
-    }
-    gutter.text(lines.join('\n'));
+    $.fn.zato.update_response_line_numbers(pre_elem);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

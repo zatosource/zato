@@ -1,3 +1,4 @@
+@import url("syntax_monokai.css");
 
 /* ***************************** */
 /*   Blinking / draw-attention   */
@@ -614,8 +615,6 @@
     overflow: visible;
     outline: none;
 }
-
-@import url("syntax_monokai.css");
 
 /* "More options" toggle block inside the invoker modal */
 
