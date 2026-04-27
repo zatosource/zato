@@ -1517,22 +1517,17 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
     def import_demo_pubsub(self):
 
         import zato.server.service.internal.pubsub
-        from zato.server.base.parallel.demo_eda import start_publisher
         from zato.server.commands import CommandsFacade
 
         config_path = os.path.join(
             os.path.dirname(zato.server.service.internal.pubsub.__file__),
-            'demo-eda-enmasse.yaml',
+            'demo-enmasse.yaml',
         )
 
         facade = CommandsFacade()
         facade.init(self)
 
         result = facade.run_enmasse_sync_import(config_path)
-
-        if result.is_ok:
-            start_publisher(self)
-
         return result.is_ok
 
 # ################################################################################################################################
