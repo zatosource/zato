@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import json
 import os
 from datetime import datetime, timedelta, timezone
 
@@ -35,10 +36,12 @@ from zato.common.json_internal import dumps
 
 if 0:
     from requests import Response
-    from zato.common.typing_ import any_, callnone
+    from zato.common.typing_ import any_, anydict, callnone
     from zato.server.base.parallel import ParallelServer
+    from zato.server.base.worker import WorkerStore
     from zato.server.config import ConfigDict
     from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
+    from zato.server.queue_bridge.client import QueueBridgeClient
     from zato.server.service import Service
 
 ################################################################################################################################
@@ -377,6 +380,55 @@ class KeysightContainer:
 
         self.hawkeye = KeysightHawkeyeFacade()
         self.hawkeye.init(cid, _out_plain_http)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class KafkaInvoker:
+    _conn_name: 'str'
+    _queue_bridge: 'QueueBridgeClient'
+
+    def __init__(self, conn_name:'str', queue_bridge:'QueueBridgeClient') -> 'None':
+        self._conn_name = conn_name
+        self._queue_bridge = queue_bridge
+
+# ################################################################################################################################
+
+    def send(self, data:'any_') -> 'None':
+        if isinstance(data, bytes):
+            to_send = data
+        elif isinstance(data, str):
+            to_send = data.encode('utf-8')
+        else:
+            to_send = json.dumps(data).encode('utf-8')
+
+        reply = self._queue_bridge.send_message(self._conn_name, to_send) # type: anydict
+
+        status = reply['status']
+        if status == 'ok':
+            return
+
+        if status == 'error':
+            raise Exception('Kafka send to `{}` failed: {}'.format(self._conn_name, reply['data']))
+
+        raise Exception('Kafka send to `{}` timed out'.format(self._conn_name))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class KafkaFacade:
+    _outconn_kafka: 'anydict'
+    _queue_bridge: 'QueueBridgeClient'
+
+    def init(self, worker_store:'WorkerStore') -> 'None':
+        self._outconn_kafka = worker_store.outconn_kafka
+        self._queue_bridge = worker_store.server._queue_bridge
+
+# ################################################################################################################################
+
+    def __getitem__(self, name:'str') -> 'KafkaInvoker':
+        self._outconn_kafka[name]
+        return KafkaInvoker(name, self._queue_bridge)
 
 # ################################################################################################################################
 # ################################################################################################################################

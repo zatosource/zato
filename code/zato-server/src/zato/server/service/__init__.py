@@ -45,7 +45,7 @@ from zato.common.util.time_ import utcnow
 from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
-from zato.server.connection.facade import KeysightContainer, RESTFacade, SchedulerFacade
+from zato.server.connection.facade import KafkaFacade, KeysightContainer, RESTFacade, SchedulerFacade
 from zato.server.connection.http_soap.outgoing import current_datadog_cid, current_datadog_context, \
     current_datadog_env_name, current_datadog_process_name, current_datadog_service_name
 from zato.server.connection.search import SearchAPI
@@ -348,6 +348,7 @@ class Service:
 
     process_name:'str' = 'No name'
 
+    kafka: 'KafkaFacade'
     rest: 'RESTFacade'
     schedule: 'SchedulerFacade'
     security: 'SecurityFacade'
@@ -469,6 +470,9 @@ class Service:
         # REST facade for outgoing connections
         self.rest = RESTFacade()
 
+        # Kafka facade for outgoing connections
+        self.kafka = KafkaFacade()
+
 # ################################################################################################################################
 
     @staticmethod
@@ -575,6 +579,9 @@ class Service:
 
         # REST facade
         self.rest.init(self.cid, self._worker_store.worker_config.out_plain_http)
+
+        # Kafka facade
+        self.kafka.init(self._worker_store)
 
         # Vendors - Keysight
         self.keysight = KeysightContainer()
