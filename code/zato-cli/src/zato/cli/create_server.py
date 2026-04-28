@@ -11,7 +11,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 
 # Zato
-from zato.cli import common_broker_db_opts, common_odb_opts, common_scheduler_server_api_client_opts, \
+from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, \
     common_scheduler_server_address_opts, sql_conf_contents, ZatoCommand
 from zato.common.api import CONTENT_TYPE, Default_Extra_Service_File_Data, Default_Service_File_Data, NotGiven, SCHEDULER
 from zato.common.crypto.api import ServerCryptoManager
@@ -177,22 +177,6 @@ sample_key=sample_value
 
 [command_set_scheduler]
 
-[pubsub]
-host={{broker_db_host}}
-port={{broker_db_port}}
-username={{broker_db_user}}
-password=zato+secret://zato.server_conf.pubsub.password
-db_name={{broker_db_name}}
-ssl={{broker_db_ssl}}
-window_minutes=60
-span_days=7
-span_hours=0
-span_minutes=0
-retain_minutes=1
-partman_interval_secs=60
-pool_size_pub={{broker_db_pool_size_producers}}
-pool_size_sub={{broker_db_pool_size_subscribers}}
-
 """.format(**server_conf_dict)
 
 # ################################################################################################################################
@@ -275,7 +259,6 @@ well_known_data={zato_well_known_data} # Pi number
 server_conf.kvdb.password={zato_kvdb_password}
 server_conf.main.token={zato_main_token}
 server_conf.odb.password={zato_odb_password}
-server_conf.pubsub.password={zato_pubsub_password}
 """
 
 # ################################################################################################################################
@@ -343,7 +326,6 @@ class Create(ZatoCommand):
     opts.append({'name':'--scheduler-port', 'help':'Deprecated. Use --scheduler-address-for-server instead.'})
     opts.append({'name':'--threads', 'help':'How many main threads the server should use', 'default':1}) # type: ignore
 
-    opts += deepcopy(common_broker_db_opts)
     opts += deepcopy(common_scheduler_server_address_opts)
     opts += deepcopy(common_scheduler_server_api_client_opts)
 
@@ -581,13 +563,6 @@ class Create(ZatoCommand):
                     scheduler_use_tls=scheduler_config.scheduler_use_tls,
                     scheduler_api_client_for_server_username=scheduler_config.api_client.from_server_to_scheduler.username,
                     scheduler_api_client_for_server_password=scheduler_config.api_client.from_server_to_scheduler.password,
-                    broker_db_host=args.broker_db_host,
-                    broker_db_port=args.broker_db_port,
-                    broker_db_user=args.broker_db_user,
-                    broker_db_name=args.broker_db_name,
-                    broker_db_ssl=args.broker_db_ssl,
-                    broker_db_pool_size_producers=args.broker_db_pool_size_producers,
-                    broker_db_pool_size_subscribers=args.broker_db_pool_size_subscribers,
                 )
 
             # .. and special-case this one as it contains the {} characters
@@ -640,11 +615,6 @@ class Create(ZatoCommand):
             odb_password = fernet1.encrypt(odb_password)
             odb_password = odb_password.decode('utf8')
 
-            pubsub_password = args.broker_db_password or ''
-            pubsub_password = pubsub_password.encode('utf8')
-            pubsub_password = fernet1.encrypt(pubsub_password)
-            pubsub_password = pubsub_password.decode('utf8')
-
             zato_well_known_data = fernet1.encrypt(well_known_data.encode('utf8'))
             zato_well_known_data = zato_well_known_data.decode('utf8')
 
@@ -660,7 +630,6 @@ class Create(ZatoCommand):
                 zato_kvdb_password=kvdb_password,
                 zato_main_token=zato_main_token,
                 zato_odb_password=odb_password,
-                zato_pubsub_password=pubsub_password,
             ))
             secrets_conf.close()
 

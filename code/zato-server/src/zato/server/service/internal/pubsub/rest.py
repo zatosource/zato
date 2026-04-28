@@ -8,13 +8,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from base64 import b64decode
-from contextlib import closing
-from http.client import BAD_REQUEST, UNAUTHORIZED
+from http.client import BAD_REQUEST, OK, UNAUTHORIZED
 from logging import getLogger
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.odb.model import PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.auth import check_basic_auth
 from zato.server.service import AsIs, Int, Service
@@ -190,24 +188,20 @@ class Publish(PubSubRESTService):
         if expiration < 1:
             expiration = 1
 
-        # Publish via the Rust broker
-        try:
-            result = self.pubsub.publish(
-                topic_name,
-                data,
-                priority=priority,
-                correl_id=correl_id,
-                ext_client_id=ext_client_id,
-                pub_msg_id=cid,
-            )
-            msg_id = result['msg_id'] if result else cid
-        except Exception as e:
-            self.response.payload.is_ok = False
-            self.response.payload.cid = cid
-            self.response.payload.status = BAD_REQUEST
-            self.response.payload.details = str(e)
-            return
+        # Publish to Redis
+        msg_id = self.server.pubsub_redis.publish(
+            topic_name,
+            data,
+            priority=priority,
+            expiration=expiration,
+            correl_id=correl_id,
+            in_reply_to=in_reply_to,
+            ext_client_id=ext_client_id,
+            publisher=username,
+            pub_time=pub_time,
+        )
 
+        # Build response
         self.response.payload.is_ok = True
         self.response.payload.cid = cid
         self.response.payload.msg_id = msg_id
@@ -252,43 +246,16 @@ class GetMessages(PubSubRESTService):
 
         # Get optional parameters
         max_messages = input.max_messages if input.max_messages else _max_messages_default
+        max_len = input.max_len if input.max_len else _max_len_default
 
-        # Find all topic associations for this user's subscription via ODB
-        messages = []
-        window_minutes = int(self.server.fs_server_config.pubsub.window_minutes)
+        # Fetch messages from Redis
+        messages = self.server.pubsub_redis.fetch_messages(
+            sub_key,
+            max_messages=max_messages,
+            max_len=max_len
+        )
 
-        with closing(self.odb.session()) as session:
-            rows = session.query(
-                PubSubTopic.name,
-                PubSubTopic.id,
-            ).join(
-                PubSubSubscriptionTopic, PubSubSubscriptionTopic.topic_id == PubSubTopic.id
-            ).join(
-                PubSubSubscription, PubSubSubscription.id == PubSubSubscriptionTopic.subscription_id
-            ).filter(
-                PubSubSubscription.sub_key == sub_key,
-                PubSubSubscription.cluster_id == self.server.cluster_id,
-            ).all()
-
-        for topic_name, topic_id in rows:
-            sub_id = self.server.pubsub_broker.get_subscription_id(sub_key, topic_id)
-            if sub_id is None:
-                continue
-
-            result = self.server.pubsub_broker.get_messages(topic_id, sub_id, max_messages, window_minutes)
-
-            for msg in result['msgs']:
-                messages.append({
-                    'meta': {
-                        'msg_id': msg['pub_msg_id'],
-                        'topic_name': msg['topic_name'],
-                        'priority': msg['priority'],
-                        'pub_time': msg['pub_time'],
-                        'correl_id': msg['correl_id'],
-                    },
-                    'data': msg['payload'],
-                })
-
+        # Build response
         self.response.payload.is_ok = True
         self.response.payload.cid = cid
         self.response.payload.messages = messages
@@ -356,19 +323,40 @@ class Subscribe(PubSubRESTService):
         # Get or create sub_key for this user
         sub_key = self.server.pubsub_subscriptions.get_or_create_sub_key(username)
 
-        # Subscribe via the Rust broker
-        try:
-            self.pubsub.subscribe(topic_name, sub_key)
-        except Exception as e:
-            self.response.payload.is_ok = False
-            self.response.payload.cid = cid
-            self.response.payload.status = BAD_REQUEST
-            self.response.payload.details = str(e)
-            return
+        # Subscribe in Redis
+        self.server.pubsub_redis.subscribe(sub_key, topic_name)
 
+        # Persist subscription in ODB
+        self._persist_subscription(username, topic_name, sub_key)
+
+        # Build response
         self.response.payload.is_ok = True
         self.response.payload.cid = cid
         self.response.payload.sub_key = sub_key
+
+# ################################################################################################################################
+
+    def _persist_subscription(self, username:'str', topic_name:'str', sub_key:'str') -> 'None':
+        """ Persist subscription to ODB.
+        """
+        sec_name = self._get_sec_name(username)
+
+        request = {
+            'sub_key': sub_key,
+            'topic_name_list': [topic_name],
+            'sec_name': sec_name,
+            'is_delivery_active': True,
+            'is_pub_active': True,
+            'delivery_type': PubSub.Delivery_Type.Pull,
+        }
+        _ = self.invoke('zato.pubsub.subscription.subscribe', request)
+
+# ################################################################################################################################
+
+    def _get_sec_name(self, username:'str') -> 'str':
+        """ Get security definition name for username.
+        """
+        return self.server.pubsub_subscriptions.get_sec_name_by_username(username)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -415,25 +403,44 @@ class Unsubscribe(PubSubRESTService):
         sub_key = self.server.pubsub_subscriptions.get_sub_key_by_username(username)
 
         if not sub_key:
+            # User has no subscriptions, return success (idempotent)
             self.response.payload.is_ok = True
             self.response.payload.cid = cid
             return
 
-        # Unsubscribe via the Rust broker
-        try:
-            self.pubsub.unsubscribe(topic_name, sub_key)
-        except Exception as e:
-            self.response.payload.is_ok = False
-            self.response.payload.cid = cid
-            self.response.payload.status = BAD_REQUEST
-            self.response.payload.details = str(e)
-            return
+        # Unsubscribe in Redis
+        self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
 
         # Clear sub_key so a new one is generated on next subscribe
         self.server.pubsub_subscriptions.clear_sub_key(username)
 
+        # Remove subscription from ODB
+        self._remove_subscription(username, topic_name)
+
+        # Build response
         self.response.payload.is_ok = True
         self.response.payload.cid = cid
+
+# ################################################################################################################################
+
+    def _remove_subscription(self, username:'str', topic_name:'str') -> 'None':
+        """ Remove subscription from ODB.
+        """
+        sec_name = self._get_sec_name(username)
+
+        request = {
+            'sec_name': sec_name,
+            'username': username,
+            'topic_name_list': [topic_name],
+        }
+        _ = self.invoke('zato.pubsub.subscription.unsubscribe', request)
+
+# ################################################################################################################################
+
+    def _get_sec_name(self, username:'str') -> 'str':
+        """ Get security definition name for username.
+        """
+        return self.server.pubsub_subscriptions.get_sec_name_by_username(username)
 
 # ################################################################################################################################
 # ################################################################################################################################

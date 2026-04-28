@@ -49,6 +49,7 @@ from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub.matcher import PatternMatcher
+from zato.common.pubsub.redis_backend import RedisPubSubBackend
 from zato.common.pubsub.subscriptions_store import SubscriptionsStore
 from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
@@ -109,7 +110,6 @@ if 0:
 logger = logging.getLogger(__name__)
 kvdb_logger = logging.getLogger('zato_kvdb')
 
-_push = PubSub.Delivery_Type.Push
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -158,6 +158,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
     groups_manager: 'GroupsManager'
     security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'
 
+    pubsub_redis: 'RedisPubSubBackend'
     pubsub_pattern_matcher: 'PatternMatcher'
     pubsub_subscriptions: 'SubscriptionsStore'
 
@@ -170,7 +171,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self.use_tls = False
         self.is_starting_first = '<not-set>'
         self.odb_data = Bunch()
-        self._has_pubsub_broker = False
+        self._has_pubsub_redis = False
         self.repo_location = ''
         self.user_conf_location:'strlist' = []
         self.user_conf_location_extra:'strset' = set()
@@ -969,8 +970,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         # Start the Rust scheduler thread (in-process)
         self._start_scheduler()
 
-        # Start the Rust pubsub broker (partman background thread)
-        self._start_pubsub_broker()
+        # Start the Redis pub/sub backend
+        self._start_pubsub_redis()
 
         # Start the queue bridge (Kafka, SQS, etc.)
         self._start_queue_bridge()
@@ -1120,78 +1121,43 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _start_pubsub_broker(self):
-        from zato.common.ext.broker.client import PubSubBroker
-        from zato.server.base.parallel.delivery import PubSubDelivery
+    def _start_pubsub_redis(self):
 
-        pubsub_config = self.fs_server_config.pubsub
+        from redis import Redis
 
-        ssl = pubsub_config.ssl
-        if ssl is True:
-            ssl = 'require'
-        elif ssl is False:
-            ssl = 'disable'
-        elif ssl == 'verify':
-            ssl = 'verify-full'
-
-        import sys
-        from pathlib import Path
-        partman_bin = str(Path(sys.executable).parent.parent / 'support-linux' / 'bin' / 'partman')
+        kvdb_config = self.fs_server_config.kvdb
 
         try:
-            self.pubsub_broker = PubSubBroker({
-                'host': pubsub_config.host,
-                'port': pubsub_config.port,
-                'user': pubsub_config.username,
-                'password': pubsub_config.password,
-                'db_name': pubsub_config.db_name,
-                'ssl': ssl,
-                'window_minutes': pubsub_config.window_minutes,
-                'span_days': pubsub_config.span_days,
-                'span_hours': pubsub_config.span_hours,
-                'span_minutes': pubsub_config.span_minutes,
-                'retain_minutes': pubsub_config.retain_minutes,
-                'partman_interval_secs': pubsub_config.partman_interval_secs,
-                'pool_size_pub': pubsub_config.pool_size_pub,
-                'pool_size_sub': pubsub_config.pool_size_sub,
-                'partman_bin': partman_bin,
-            })
-            self._has_pubsub_broker = True
+            redis_conn = Redis(
+                host=kvdb_config.host or 'localhost',
+                port=int(kvdb_config.port or 6379),
+                db=int(kvdb_config.get('db', 0)),
+                password=kvdb_config.password if kvdb_config.password else None,
+                decode_responses=True,
+            )
+            self.pubsub_redis = RedisPubSubBackend(redis_conn)
+            self._has_pubsub_redis = True
 
             self._sync_pubsub_subscriptions()
 
-            self.pubsub_broker.run_partman_ensure()
-
-            self.pubsub_delivery = PubSubDelivery(
-                broker=self.pubsub_broker,
-                on_message_cb=self._on_pubsub_message,
-                window_minutes=int(pubsub_config.window_minutes),
-            )
-            self.pubsub_delivery.start()
-
-            logger.info('PubSub broker started')
+            logger.info('PubSub Redis backend started')
         except Exception:
-            logger.warning('PubSub broker could not be started: %s', format_exc())
+            logger.warning('PubSub Redis backend could not be started: %s', format_exc())
 
 # ################################################################################################################################
 
     def _sync_pubsub_subscriptions(self) -> 'None':
 
         from contextlib import closing
-        from zato.common.odb.model import HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
+        from zato.common.odb.model import PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 
-        logger.info('Syncing ODB subscriptions to Rust broker')
+        logger.info('Syncing ODB subscriptions to Redis pub/sub backend')
 
         with closing(self.odb.session()) as session:
 
             rows = session.query(
                 PubSubSubscription.sub_key,
-                PubSubSubscription.delivery_type,
-                PubSubSubscription.push_type,
-                PubSubSubscription.push_service_name,
-                PubSubSubscription.rest_push_endpoint_id,
                 PubSubTopic.name,
-                PubSubTopic.id,
                 SecurityBase.username,
                 SecurityBase.name.label('sec_name'),
             ).join(
@@ -1205,90 +1171,15 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             ).all()
 
             synced = 0
-            self._broker_sub_map = {}
 
             for row in rows:
-
                 topic_name = row.name
                 sub_key = row.sub_key
-
-                topic = self.pubsub_broker.get_topic_by_name(topic_name)
-                if topic is None:
-                    topic = self.pubsub_broker.create_topic(topic_name)
-
-                topic_id = topic['topic_id']
-
-                result = self.pubsub_broker.create_subscription(sub_key, topic_id, 'client')
-                broker_sub_id = result['sub_id']
-                self._broker_sub_map[broker_sub_id] = sub_key
-
+                self.pubsub_redis.subscribe(sub_key, topic_name)
                 synced += 1
 
         noun = 'pair' if synced == 1 else 'pairs'
-        logger.info('Synced %d ODB subscription-topic %s to broker', synced, noun)
-
-        query = self.odb.get_pubsub_subscription_list(self.cluster_id, True)
-        self.config.pubsub_subs = ConfigDict.from_query('pubsub_subs', query, decrypt_func=self.decrypt, list_config=True)
-
-# ################################################################################################################################
-
-    def _on_pubsub_message(self, msg:'anydict') -> 'None':
-        try:
-            broker_sub_id = msg['sub_id']
-            sub_key = self._broker_sub_map.get(broker_sub_id)
-
-            if not sub_key:
-                known = {sub_id: (type(sub_id).__name__, sub_key) for sub_id, sub_key in self._broker_sub_map.items()}
-                logger.warning('Unknown broker sub_id `%r` (type=%s), known: %s',
-                    broker_sub_id, type(broker_sub_id).__name__, known)
-                return
-
-            topic_name = msg['topic_name']
-            sub_list = self.config.pubsub_subs.get(topic_name)
-
-            if not sub_list:
-                return
-
-            for sub_config in sub_list:
-                if sub_config['sub_key'] != sub_key:
-                    continue
-
-                delivery_type = sub_config['delivery_type']
-                if delivery_type != _push:
-                    return
-
-                payload = msg['payload']
-                if isinstance(payload, bytes):
-                    payload = payload.decode('utf-8')
-                recv_time_iso = msg['msg_creation_time']
-                pub_time = msg['pub_time']
-                if pub_time is None:
-                    pub_time = recv_time_iso
-
-                delivery_msg = {
-                    'msg_id': msg['pub_msg_id'],
-                    'correl_id': msg['correl_id'],
-                    'data': payload,
-                    'size': len(payload),
-                    'publisher': msg['publisher_id'],
-                    'pub_time_iso': pub_time,
-                    'recv_time_iso': recv_time_iso,
-                    'priority': msg['priority'],
-                    'expiration': msg['expiration'],
-                    'expiration_time_iso': msg['expiration'],
-                    'topic_name': topic_name,
-                    'ext_client_id': msg['ext_client_id'],
-                    'in_reply_to': msg['in_reply_to'],
-                    '_zato_meta': {
-                        'sub_key': sub_key,
-                        'delivery_count': 1,
-                    },
-                }
-
-                self.invoke('zato.pubsub.subscription.handle-delivery', delivery_msg)
-                break
-        except Exception:
-            logger.warning('PubSub message dispatch error: %s', format_exc())
+        logger.info('Synced %d ODB subscription-topic %s to Redis', synced, noun)
 
 # ################################################################################################################################
 
@@ -1931,10 +1822,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             else:
                 self._is_process_closing = True
 
-            # Stop the pubsub delivery greenlet and broker if they were started
-            if self._has_pubsub_broker:
-                self.pubsub_delivery.stop()
-                self.pubsub_broker.stop()
+            # Stop the Redis pub/sub backend if it was started
+            if self._has_pubsub_redis:
+                self.pubsub_redis.redis.close()
 
             # Close SQL pools
             self.sql_pool_store.cleanup_on_stop()

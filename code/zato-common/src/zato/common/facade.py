@@ -7,14 +7,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from json import dumps as json_dumps
 from logging import getLogger
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anydictnone, anynone
+    from zato.common.typing_ import any_, anydict, anydictnone
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -53,51 +52,27 @@ class PubSubFacade:
     def __init__(self, server:'ParallelServer') -> 'None':
         self.server = server
 
-    def publish(self, topic_name:'str', data:'any_', **kwargs:'any_') -> 'anydict':
-        topic = self.server.pubsub_broker.get_topic_by_name(topic_name)
-        if topic is None:
-            topic = self.server.pubsub_broker.create_topic(topic_name)
+    def publish(self, topic_name:'str', data:'any_', **kwargs:'any_') -> 'str':
+        return self.server.pubsub_redis.publish(
+            topic_name,
+            data,
+            priority=kwargs.get('priority', 5),
+            expiration=kwargs.get('expiration', 31536000),
+            correl_id=kwargs.get('correl_id') or kwargs.get('cid'),
+            in_reply_to=kwargs.get('in_reply_to'),
+            ext_client_id=kwargs.get('ext_client_id'),
+            publisher=kwargs.get('publisher'),
+            pub_time=kwargs.get('pub_time'),
+        )
 
-        config = {
-            'topic_id': topic['topic_id'],
-            'payload': data if isinstance(data, bytes) else (json_dumps(data).encode('utf-8') if isinstance(data, (dict, list)) else str(data).encode('utf-8')),
-            'publisher_id': kwargs.get('publisher_id', 0),
-            'priority': kwargs.get('priority', 5),
-            'correl_id': kwargs.get('correl_id') or kwargs.get('cid'),
-            'expiration': kwargs.get('expiration'),
-            'in_reply_to': kwargs.get('in_reply_to'),
-            'ext_client_id': kwargs.get('ext_client_id'),
-            'pub_time': kwargs.get('pub_time'),
-            'pub_msg_id': kwargs.get('pub_msg_id') or kwargs.get('msg_id'),
-        }
+    def get_messages(self, sub_key:'str', max_messages:'int'=50, max_len:'int'=5_000_000) -> 'list':
+        return self.server.pubsub_redis.fetch_messages(sub_key, max_messages=max_messages, max_len=max_len)
 
-        return self.server.pubsub_broker.publish(config)
+    def subscribe(self, topic_name:'str', sub_key:'str') -> 'None':
+        self.server.pubsub_redis.subscribe(sub_key, topic_name)
 
-    def get_messages(self, topic_name:'str', sub_key:'str', batch_size:'int'=100) -> 'anydict':
-        topic = self.server.pubsub_broker.get_topic_by_name(topic_name)
-        if topic is None:
-            return {'msgs': []}
-
-        sub_id = self.server.pubsub_broker.get_subscription_id(sub_key, topic['topic_id'])
-        if sub_id is None:
-            return {'msgs': []}
-
-        window_minutes = self.server.fs_server_config.pubsub.window_minutes
-        return self.server.pubsub_broker.get_messages(topic['topic_id'], sub_id, batch_size, window_minutes)
-
-    def subscribe(self, topic_name:'str', sub_key:'str', ack_mode:'str'='client') -> 'anydict':
-        topic = self.server.pubsub_broker.get_topic_by_name(topic_name)
-        if topic is None:
-            topic = self.server.pubsub_broker.create_topic(topic_name)
-
-        return self.server.pubsub_broker.create_subscription(sub_key, topic['topic_id'], ack_mode)
-
-    def unsubscribe(self, topic_name:'str', sub_key:'str') -> 'anynone':
-        topic = self.server.pubsub_broker.get_topic_by_name(topic_name)
-        if topic is None:
-            return None
-
-        return self.server.pubsub_broker.delete_subscription(sub_key, topic['topic_id'])
+    def unsubscribe(self, topic_name:'str', sub_key:'str') -> 'None':
+        self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
