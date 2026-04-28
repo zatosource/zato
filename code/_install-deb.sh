@@ -78,8 +78,6 @@ echo Installing maturin
 $UV_BIN pip install maturin
 
 echo Building Rust components
-cd "$CURDIR/.."
-make build
-cd "$CURDIR"
+make -C "$CURDIR/.." build
 
 echo ⭐ Successfully installed `zato --version`
