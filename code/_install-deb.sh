@@ -65,4 +65,21 @@ echo "$CURDIR/support-linux" > "$SITE_PACKAGES/zato_hl7v2.pth"
 mkdir -p "$CURDIR/zato-libs"
 cp "$CURDIR/zato-libs.pth" "$SITE_PACKAGES/zato-libs.pth"
 
+if ! [ -x "$(command -v cargo)" ] && ! [ -f "$HOME/.cargo/env" ]; then
+    echo Installing Rust
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+fi
+
+if [ -f "$HOME/.cargo/env" ]; then
+    . "$HOME/.cargo/env"
+fi
+
+echo Installing maturin
+$CURDIR/bin/pip install maturin
+
+echo Building Rust components
+cd "$CURDIR/.."
+make build
+cd "$CURDIR"
+
 echo ⭐ Successfully installed `zato --version`
