@@ -3,7 +3,7 @@
 	server-install scheduler-install sio-install common-core-install queue-bridge-install \
 	ruff qa-reqs-install unify \
 	update cron-update stop-server restart-server restart-server-with-scheduler \
-	stop-dashboard restart-dashboard scheduler queue-bridge
+	stop-dashboard restart-dashboard scheduler queue-bridge file-listener
 
 MAKEFLAGS += --silent
 
@@ -43,6 +43,9 @@ queue-bridge-build:
 
 queue-bridge:
 	$(CURDIR)/code/bin/_zato_queue_bridge
+
+file-listener:
+	$(CURDIR)/code/bin/py $(CURDIR)/code/zato-common/src/zato/common/file_transfer/listener.py
 
 install:
 	@if [ "$(filter-out install,$(MAKECMDGOALS))" = "" ]; then \
