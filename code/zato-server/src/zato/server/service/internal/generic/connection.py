@@ -278,9 +278,7 @@ class _CreateEdit(_BaseService):
         data['old_name'] = old_name
         data['action'] = GENERIC.CONNECTION_EDIT.value if self.is_edit else GENERIC.CONNECTION_CREATE.value
         data['id'] = instance.id
-        self.logger.info('_CreateEdit publishing: action=%s type_=%s name=%s id=%s', data['action'], data.get('type_', ''), data.get('name', ''), data['id'])
         self.config_dispatcher.publish(data)
-        self.logger.info('_CreateEdit publishing: done')
 
 # ################################################################################################################################
 # ################################################################################################################################

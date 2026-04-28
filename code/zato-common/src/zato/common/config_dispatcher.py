@@ -95,7 +95,6 @@ class ConfigDispatcher:
         self.server = server
 
     def publish(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
-        logger.info('ConfigDispatcher.publish: action=%s type_=%s name=%s', msg.get('action', ''), msg.get('type_', ''), msg.get('name', ''))
         handle_config_event(msg, self.server.worker_store)
 
     invoke_async = publish

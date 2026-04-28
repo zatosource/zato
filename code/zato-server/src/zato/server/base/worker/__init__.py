@@ -786,43 +786,33 @@ class WorkerStore(_WorkerStoreBase):
 
     def _notify_queue_bridge_channel(self, action, msg):
         bridge = getattr(self.server, '_queue_bridge', None)
-        self.logger.info('Queue bridge channel notify: action=%s name=%s bridge=%s', action, msg.get('name', ''), bridge)
         if not bridge:
-            self.logger.info('Queue bridge channel notify: no bridge, skipping')
             return
         try:
             name = msg.get('name', '')
+            self.logger.info('Queue bridge channel %s: %s', action, name)
             if action == 'create':
-                self.logger.info('Queue bridge channel notify: calling add_channel with %s', dict(msg))
                 bridge.add_channel(dict(msg))
             elif action == 'edit':
-                self.logger.info('Queue bridge channel notify: calling edit_channel with %s', dict(msg))
                 bridge.edit_channel(dict(msg))
             elif action == 'delete':
-                self.logger.info('Queue bridge channel notify: calling delete_channel name=%s', name)
                 bridge.delete_channel(name)
-            self.logger.info('Queue bridge channel notify: done action=%s name=%s', action, name)
         except Exception:
             self.logger.warning('Could not notify queue bridge about channel %s=%s: %s', action, msg.get('name', ''), format_exc())
 
     def _notify_queue_bridge_outconn(self, action, msg):
         bridge = getattr(self.server, '_queue_bridge', None)
-        self.logger.info('Queue bridge outconn notify: action=%s name=%s bridge=%s', action, msg.get('name', ''), bridge)
         if not bridge:
-            self.logger.info('Queue bridge outconn notify: no bridge, skipping')
             return
         try:
             name = msg.get('name', '')
+            self.logger.info('Queue bridge outconn %s: %s', action, name)
             if action == 'create':
-                self.logger.info('Queue bridge outconn notify: calling add_outgoing with %s', dict(msg))
                 bridge.add_outgoing(dict(msg))
             elif action == 'edit':
-                self.logger.info('Queue bridge outconn notify: calling edit_outgoing with %s', dict(msg))
                 bridge.edit_outgoing(dict(msg))
             elif action == 'delete':
-                self.logger.info('Queue bridge outconn notify: calling delete_outgoing name=%s', name)
                 bridge.delete_outgoing(name)
-            self.logger.info('Queue bridge outconn notify: done action=%s name=%s', action, name)
         except Exception:
             self.logger.warning('Could not notify queue bridge about outconn %s=%s: %s', action, msg.get('name', ''), format_exc())
 
@@ -979,10 +969,8 @@ class WorkerStore(_WorkerStoreBase):
         """
         conn_type = msg['type_']
         msg_action = msg['action']
-        logger.info('_get_generic_impl_func: conn_type=%s msg_action=%s name=%s', conn_type, msg_action, msg.get('name', ''))
         func_map = self.generic_impl_func_map[conn_type]
         impl_func = func_map.get(msg_action)
-        logger.info('_get_generic_impl_func: impl_func=%s', impl_func)
         if impl_func:
             return impl_func
         else:
