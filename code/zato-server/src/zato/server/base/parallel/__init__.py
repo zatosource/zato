@@ -1000,15 +1000,18 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             from zato.server.scheduler_.adapter import SchedulerODBAdapter
             from zato.server.scheduler_.client import SchedulerClient
 
+            logger.info('Connecting to standalone scheduler via Redis Streams')
+
             scheduler_adapter = SchedulerODBAdapter(self.odb, self.cluster_id)
 
             self._scheduler = SchedulerClient()
+            logger.info('Sending reload to scheduler with jobs from ODB')
             self._scheduler.reload(odb_adapter=scheduler_adapter)
             self._scheduler_started = True
 
             self._start_scheduler_fire_listener()
 
-            logger.info('Scheduler client connected')
+            logger.info('Scheduler client connected, fire listener started')
         except Exception:
             logger.warning('Scheduler could not be started: %s', format_exc())
 
@@ -1049,6 +1052,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                     raise
 
         def _fire_listener_loop() -> 'None':
+            logger.info('Scheduler fire listener loop entering')
             while True:
                 try:
                     result = fire_redis.xreadgroup(
@@ -1064,6 +1068,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
                     for stream_name, messages in result:
                         for msg_id, fields in messages:
+                            logger.info('Fire listener received: stream=%s msg_id=%s fields=%s', stream_name, msg_id, fields)
                             if stream_name == fire_stream:
                                 self._handle_fire_event(fields)
                             elif stream_name == timeout_stream:
@@ -1087,11 +1092,13 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 
         payload_json = fields.get('payload', '{}')
+        logger.info('Fire event payload: %s', payload_json)
         ctx = json_loads(payload_json)
 
         job_id = ctx['job_id']
         job_name = ctx['name']
         current_run = ctx['current_run']
+        logger.info('Invoking service for job: id=%s name=%s run=%s', job_id, job_name, current_run)
 
         extra = ctx.get('extra')
         if extra and isinstance(extra, str):

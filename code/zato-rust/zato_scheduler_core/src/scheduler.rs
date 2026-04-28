@@ -101,6 +101,8 @@ pub fn scheduler_loop(
         return;
     }
 
+    tracing::info!("Scheduler loop started");
+
     let mut last_wall = Utc::now();
     let mut last_mono = Instant::now();
     let mut last_status_log = Instant::now();
@@ -118,6 +120,10 @@ pub fn scheduler_loop(
         {
             let mut state = shared.state.lock();
             let sleep_duration = compute_sleep_duration(&state);
+            tracing::debug!(
+                "Sleeping for {}",
+                crate::humanize_ms(u64::try_from(sleep_duration.as_millis()).unwrap_or(0))
+            );
             if let Some(handle) = &heartbeat {
                 handle.set_expected_sleep(sleep_duration);
             }

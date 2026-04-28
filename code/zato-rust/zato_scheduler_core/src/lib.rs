@@ -99,19 +99,23 @@ pub fn reload_jobs(state: &mut scheduler::SchedulerState, new_jobs: &[crate::mod
         let job_id = scheduler_job.id;
         if let Some(existing) = state.jobs.get_mut(&job_id) {
             existing.update_from_job(scheduler_job);
+            let interval = humanize_ms(existing.interval_ms);
+            let next = existing.next_fire_utc.map_or_else(|| "none".to_string(), |fire| fire.to_rfc3339());
             tracing::info!(
-                "Job updated: id={job_id} name={} type={} active={} service={}",
+                "Job updated: id={job_id} name={} interval={interval} next={next} active={} service={}",
                 scheduler_job.name,
-                scheduler_job.job_type,
                 scheduler_job.is_active,
                 scheduler_job.service,
             );
         } else {
             let running_job = RunningJob::from_scheduler_job(scheduler_job);
+            let interval = humanize_ms(running_job.interval_ms);
+            let next = running_job
+                .next_fire_utc
+                .map_or_else(|| "none".to_string(), |fire| fire.to_rfc3339());
             tracing::info!(
-                "Job loaded: id={job_id} name={} type={} active={} service={}",
+                "Job loaded: id={job_id} name={} interval={interval} next={next} active={} service={}",
                 scheduler_job.name,
-                scheduler_job.job_type,
                 scheduler_job.is_active,
                 scheduler_job.service,
             );

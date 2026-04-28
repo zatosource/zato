@@ -376,6 +376,7 @@ impl RunningJob {
             return;
         }
         if let Some(max) = self.repeats
+            && max > 0
             && self.current_run >= max
         {
             self.next_fire_utc = None;
