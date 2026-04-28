@@ -192,14 +192,14 @@ pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
             continue;
         }
 
-        if running_job.in_flight {
-            if let Some(since) = running_job.in_flight_since {
-                let elapsed_ms = i64::try_from(now_instant.saturating_duration_since(since).as_millis()).unwrap_or(i64::MAX);
-                let limit_ms = i64::try_from(running_job.max_execution_time_ms).unwrap_or(i64::MAX);
-                let until_timeout_ms = (limit_ms - elapsed_ms).max(1);
-                if until_timeout_ms < min_ms {
-                    min_ms = until_timeout_ms;
-                }
+        if running_job.in_flight
+            && let Some(since) = running_job.in_flight_since
+        {
+            let elapsed_ms = i64::try_from(now_instant.saturating_duration_since(since).as_millis()).unwrap_or(i64::MAX);
+            let limit_ms = i64::try_from(running_job.max_execution_time_ms).unwrap_or(i64::MAX);
+            let until_timeout_ms = (limit_ms - elapsed_ms).max(1);
+            if until_timeout_ms < min_ms {
+                min_ms = until_timeout_ms;
             }
         }
 

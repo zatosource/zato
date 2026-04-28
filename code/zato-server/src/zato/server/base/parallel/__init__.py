@@ -1010,6 +1010,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             self._scheduler_started = True
 
             self._start_scheduler_fire_listener()
+            self._start_scheduler_request_listener(scheduler_adapter)
 
             logger.info('Scheduler client connected, fire listener started')
         except Exception:
@@ -1024,20 +1025,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         from zato.common.api import SCHEDULER
         from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 
-        import os
-
-        from redis import Redis
-
-        redis_host = os.environ.get('Zato_Scheduler_Redis_Host', 'localhost')
-        redis_port = int(os.environ.get('Zato_Scheduler_Redis_Port', '6379'))
-        redis_password = os.environ.get('Zato_Scheduler_Redis_Password', None)
-
-        fire_redis = Redis(
-            host=redis_host,
-            port=redis_port,
-            password=redis_password,
-            decode_responses=True,
-        )
+        fire_redis = self._scheduler.new_redis_conn()
 
         fire_stream = 'zato:scheduler:stream:fire'
         timeout_stream = 'zato:scheduler:stream:timeout'
@@ -1083,6 +1071,50 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         spawn(_fire_listener_loop)
         logger.info('Scheduler fire listener greenlet started')
 
+    def _start_scheduler_request_listener(self, scheduler_adapter:'any_') -> 'None':
+        """ Listens for request_jobs messages from the scheduler and responds with a reload. """
+        req_redis = self._scheduler.new_redis_conn()
+
+        request_stream = 'zato:scheduler:stream:request'
+        group_name = 'server-request'
+        consumer_name = 'server-request-0'
+
+        try:
+            req_redis.xgroup_create(request_stream, group_name, id='$', mkstream=True)
+        except Exception as exc:
+            if 'BUSYGROUP' not in str(exc):
+                raise
+
+        def _request_listener_loop() -> 'None':
+            logger.info('Scheduler request listener loop entering')
+            while True:
+                try:
+                    result = req_redis.xreadgroup(
+                        groupname=group_name,
+                        consumername=consumer_name,
+                        streams={request_stream: '>'},
+                        count=10,
+                        block=5000,
+                    )
+
+                    if not result:
+                        continue
+
+                    for stream_name, messages in result:
+                        for msg_id, fields in messages:
+                            command = fields['command']
+                            if command == 'request_jobs':
+                                logger.info('Scheduler requested jobs, sending reload')
+                                self._scheduler.reload(odb_adapter=scheduler_adapter)
+                            req_redis.xack(stream_name, group_name, msg_id)
+
+                except Exception:
+                    logger.warning('Error in scheduler request listener: %s', format_exc())
+                    sleep(1)
+
+        spawn(_request_listener_loop)
+        logger.info('Scheduler request listener greenlet started')
+
     def _handle_fire_event(self, fields:'dict') -> 'None':
         """ Processes a fire event from the scheduler - invokes the target service. """
         import time as _time
@@ -1091,7 +1123,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         from zato.common.api import SCHEDULER
         from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 
-        payload_json = fields.get('payload', '{}')
+        payload_json = fields['payload']
         logger.info('Fire event payload: %s', payload_json)
         ctx = json_loads(payload_json)
 
@@ -1140,10 +1172,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
     def _handle_timeout_event(self, fields:'dict') -> 'None':
         """ Processes a timeout event from the scheduler. """
-        job_id = fields.get('job_id', '?')
-        current_run = fields.get('current_run', '?')
-        elapsed_ms = fields.get('elapsed_ms', '?')
-        error = fields.get('error', '')
+        job_id = fields['job_id']
+        current_run = fields['current_run']
+        elapsed_ms = fields['elapsed_ms']
+        error = fields['error']
         logger.warning('Scheduler timeout: job_id=%s run=%s elapsed_ms=%s error=%s', job_id, current_run, elapsed_ms, error)
 
 # ################################################################################################################################
