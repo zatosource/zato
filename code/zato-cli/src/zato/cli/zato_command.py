@@ -629,9 +629,20 @@ def main() -> 'any_':
     # .. otherwise, try to run the command now ..
     else:
 
-        # Now that we are here, we also need to check if non-SQLite databases
-        # have all their required options on input. We do it here rather than in create_odb.py
-        # because we want to report it as soon as possible, before actual commands execute.
+        # Populate ODB args from Zato_Database_* env vars if not provided via CLI
+        _odb_env_map = {
+            'odb_host': 'Zato_Database_Host',
+            'odb_port': 'Zato_Database_Port',
+            'odb_user': 'Zato_Database_Username',
+            'odb_db_name': 'Zato_Database_Name',
+            'odb_password': 'Zato_Database_Password',
+        }
+        for _attr, _env in _odb_env_map.items():
+            if not getattr(args, _attr, None):
+                _env_value = os.environ.get(_env)
+                if _env_value:
+                    setattr(args, _attr, _env_value)
+
         odb_type = getattr(args, 'odb_type', None)
         if odb_type and odb_type != 'sqlite':
             missing = []
