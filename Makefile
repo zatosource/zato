@@ -7,6 +7,9 @@
 
 MAKEFLAGS += --silent
 
+CARGO_ENV := $(HOME)/.cargo/env
+LOAD_CARGO_ENV := if [ -f $(CARGO_ENV) ]; then . $(CARGO_ENV); fi
+
 ZATO_RUST := $(CURDIR)/code/zato-rust
 
 default: build
@@ -15,13 +18,13 @@ build: common-core-build server-build scheduler-build sio-build queue-bridge-bui
 
 server-build:
 	@echo ">>> Building server"
-	. $(HOME)/.cargo/env && \
+	$(LOAD_CARGO_ENV) && \
 	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
 	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_server_core/Cargo.toml
 
 scheduler-build:
 	@echo ">>> Building scheduler"
-	. $(HOME)/.cargo/env && \
+	$(LOAD_CARGO_ENV) && \
 	cargo build --release --manifest-path $(ZATO_RUST)/zato_scheduler_core/Cargo.toml --bin _zato_scheduler && \
 	cp $(ZATO_RUST)/zato_scheduler_core/target/release/_zato_scheduler $(CURDIR)/code/bin/_zato_scheduler
 
@@ -30,19 +33,19 @@ scheduler:
 
 sio-build:
 	@echo ">>> Building sio"
-	. $(HOME)/.cargo/env && \
+	$(LOAD_CARGO_ENV) && \
 	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
 	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_sio/Cargo.toml
 
 common-core-build:
 	@echo ">>> Building common-core"
-	. $(HOME)/.cargo/env && \
+	$(LOAD_CARGO_ENV) && \
 	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
 	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_common_core/Cargo.toml
 
 queue-bridge-build:
 	@echo ">>> Building queue-bridge"
-	. $(HOME)/.cargo/env && \
+	$(LOAD_CARGO_ENV) && \
 	cargo build --release --manifest-path $(ZATO_RUST)/zato_queue_bridge/Cargo.toml --bin _zato_queue_bridge && \
 	cp $(ZATO_RUST)/zato_queue_bridge/target/release/_zato_queue_bridge $(CURDIR)/code/bin/_zato_queue_bridge
 
