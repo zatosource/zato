@@ -88,6 +88,7 @@ if 0:
     from zato.common.odb.model import Cluster as ClusterModel
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, strdict, strbytes, \
         strlist, strorlistnone, strnone, strorlist, strset
+    from zato.server.base.parallel.delivery import RedisPushDelivery
     from zato.server.connection.cache import Cache, CacheAPI
     from zato.server.ext.zunicorn.arbiter import Arbiter
     from zato.server.ext.zunicorn.workers.ggevent import GeventWorker
@@ -159,6 +160,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
     security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'
 
     pubsub_redis: 'RedisPubSubBackend'
+    pubsub_push_delivery: 'RedisPushDelivery'
     pubsub_pattern_matcher: 'PatternMatcher'
     pubsub_subscriptions: 'SubscriptionsStore'
 
@@ -172,6 +174,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self.is_starting_first = '<not-set>'
         self.odb_data = Bunch()
         self._has_pubsub_redis = False
+        self._push_subs = {} # type: anydict
         self.repo_location = ''
         self.user_conf_location:'strlist' = []
         self.user_conf_location_extra:'strset' = set()
@@ -1124,6 +1127,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
     def _start_pubsub_redis(self):
 
         from redis import Redis
+        from zato.server.base.parallel.delivery import RedisPushDelivery
 
         kvdb_config = self.fs_server_config.kvdb
 
@@ -1140,6 +1144,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
             self._sync_pubsub_subscriptions()
 
+            self.pubsub_push_delivery = RedisPushDelivery(self, self.pubsub_redis)
+            self.pubsub_push_delivery.start()
+
             logger.info('PubSub Redis backend started')
         except Exception:
             logger.warning('PubSub Redis backend could not be started: %s', format_exc())
@@ -1149,7 +1156,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
     def _sync_pubsub_subscriptions(self) -> 'None':
 
         from contextlib import closing
-        from zato.common.odb.model import PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
+        from zato.common.odb.model import HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
+
+        _push = PubSub.Delivery_Type.Push
 
         logger.info('Syncing ODB subscriptions to Redis pub/sub backend')
 
@@ -1157,6 +1166,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
             rows = session.query(
                 PubSubSubscription.sub_key,
+                PubSubSubscription.delivery_type,
+                PubSubSubscription.push_type,
+                PubSubSubscription.push_service_name,
+                PubSubSubscription.rest_push_endpoint_id,
                 PubSubTopic.name,
                 SecurityBase.username,
                 SecurityBase.name.label('sec_name'),
@@ -1171,6 +1184,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             ).all()
 
             synced = 0
+            push_subs = {}
 
             for row in rows:
                 topic_name = row.name
@@ -1178,8 +1192,28 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                 self.pubsub_redis.subscribe(sub_key, topic_name)
                 synced += 1
 
+                if row.delivery_type == _push:
+                    sub_config = {
+                        'sub_key': sub_key,
+                        'topic_name': topic_name,
+                        'push_type': row.push_type,
+                        'push_service_name': row.push_service_name,
+                        'rest_push_endpoint_id': row.rest_push_endpoint_id,
+                    }
+
+                    if row.push_type == 'rest' and row.rest_push_endpoint_id:
+                        endpoint = session.query(HTTPSOAP).filter(
+                            HTTPSOAP.id == row.rest_push_endpoint_id
+                        ).first()
+                        if endpoint:
+                            sub_config['rest_push_url'] = (endpoint.host or '') + endpoint.url_path
+
+                    push_subs[sub_key] = sub_config
+
+            self._push_subs = push_subs
+
         noun = 'pair' if synced == 1 else 'pairs'
-        logger.info('Synced %d ODB subscription-topic %s to Redis', synced, noun)
+        logger.info('Synced %d ODB subscription-topic %s to Redis (%d push)', synced, noun, len(push_subs))
 
 # ################################################################################################################################
 
@@ -1824,6 +1858,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
             # Stop the Redis pub/sub backend if it was started
             if self._has_pubsub_redis:
+                self.pubsub_push_delivery.stop()
                 self.pubsub_redis.redis.close()
 
             # Close SQL pools
