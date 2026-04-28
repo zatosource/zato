@@ -392,6 +392,12 @@ class KafkaInvoker:
         self._conn_name = conn_name
         self._queue_bridge = queue_bridge
 
+    def __repr__(self) -> 'str':
+        return f'KafkaInvoker({self._conn_name} at {hex(id(self))})'
+
+    def to_dict(self) -> 'anydict':
+        return {'conn_name': self._conn_name}
+
 # ################################################################################################################################
 
     def send(self, data:'any_') -> 'None':

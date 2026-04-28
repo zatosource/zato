@@ -239,6 +239,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self.api_key_header = 'Zato-Default-Not-Set-API-Key-Header'
         self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
         self.needs_x_zato_cid = False
+        self._queue_bridge = None
+        self._queue_bridge_started = False
 
         # Our arbiter may potentially call the cleanup procedure multiple times
         # and this will be set to True the first time around.
@@ -1196,8 +1198,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         from zato.common.api import GENERIC
         from zato.server.generic.connection import GenericConnection
         from zato.common.odb.query.generic import connection_list
-
-        self._queue_bridge_started = False
 
         try:
             from zato.server.queue_bridge.client import QueueBridgeClient
