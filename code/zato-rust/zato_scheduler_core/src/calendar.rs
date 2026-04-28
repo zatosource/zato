@@ -6,9 +6,10 @@
 use std::collections::HashSet;
 
 use chrono::{Datelike, NaiveDate};
+use serde::Serialize;
 
 /// Holds calendar exclusion data - specific dates and weekdays that should be skipped.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct CalendarData {
     /// Human-readable name of the calendar.
     pub name: String,

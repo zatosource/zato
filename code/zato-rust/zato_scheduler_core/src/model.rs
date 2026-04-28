@@ -1,7 +1,9 @@
 //! Data types for scheduler job and calendar definitions.
 
+use serde::{Deserialize, Serialize};
+
 /// A scheduler job loaded from the ODB.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SchedulerJob {
     /// ODB primary key.
     pub id: i64,
@@ -40,7 +42,7 @@ pub struct SchedulerJob {
 }
 
 /// A named set of holidays and weekday rules.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HolidayCalendar {
     /// Human-readable calendar description.
     pub description: Option<String>,

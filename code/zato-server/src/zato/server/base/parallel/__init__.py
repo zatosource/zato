@@ -987,90 +987,157 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def _start_scheduler(self) -> 'None':
-        """ Start the Rust scheduler thread inside this server process.
+        """ Connect to the standalone scheduler binary via Redis Streams and HTTP.
         """
         from json import loads as json_loads
 
         from zato.common.api import SCHEDULER
         from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
-        from zato_scheduler_core import Scheduler as RustScheduler
 
         self._scheduler_started = False
 
-        _main_hub = gevent.get_hub()
-
-        def _scheduler_run_cb(spawn_fn:'callable_', on_job_executed_cb:'callable_', ctx:'anydict') -> 'None':
-            """ Bridges the Rust scheduler thread into the gevent event loop.
-            """
-            _main_hub.loop.run_callback(spawn, on_job_executed_cb, ctx)
-
-        def _on_job_executed(ctx:'anydict') -> 'None':
-            """ Callback invoked by the Rust scheduler after dispatching a job.
-            Invokes the target service and reports the outcome back via mark_complete.
-            """
-            import time as _time
-            from bunch import Bunch
-
-            job_id = ctx['id']
-            job_name = ctx['name']
-            current_run = ctx['current_run']
-
-            extra = ctx['extra']
-            if extra and isinstance(extra, str):
-                try:
-                    extra = json_loads(extra)
-                except Exception:
-                    try:
-                        extra = parse_extra_into_dict(extra)
-                    except Exception:
-                        pass
-
-            msg = Bunch({
-                'action': SCHEDULER_MSG.JOB_EXECUTED.value,
-                'name': ctx['name'],
-                'service': ctx['service'],
-                'payload': extra,
-                'cid': new_cid_server(),
-                'job_type': ctx['job_type'],
-                'zato_ctx': {
-                    'scheduler_job_id': ctx['id'],
-                    'scheduler_current_run': current_run,
-                },
-            })
-
-            outcome = SCHEDULER.OUTCOME.OK
-            _t0 = _time.monotonic()
-            try:
-                self.worker_store.on_message_invoke_service(msg, 'scheduler', 'SCHEDULER_JOB_EXECUTED')
-            except Exception:
-                outcome = SCHEDULER.OUTCOME.ERROR
-                logger.warning('Scheduler job_id=%s; name=%s; outcome=error; traceback=%s', job_id, job_name, format_exc())
-
-            duration_ms = int((_time.monotonic() - _t0) * 1000)
-
-            try:
-                self._scheduler.mark_complete(job_id, outcome, duration_ms, current_run)
-            except Exception:
-                logger.warning('Scheduler mark_complete failed; job_id=%s; name=%s; traceback=%s', job_id, job_name, format_exc())
-
         try:
             from zato.server.scheduler_.adapter import SchedulerODBAdapter
+            from zato.server.scheduler_.client import SchedulerClient
+
             scheduler_adapter = SchedulerODBAdapter(self.odb, self.cluster_id)
 
-            self._scheduler = RustScheduler()
-            self._scheduler.start({
-                'odb_adapter': scheduler_adapter,
-                'run_cb': _scheduler_run_cb,
-                'spawn_fn': spawn,
-                'on_job_executed_cb': _on_job_executed,
-                'initial_sleep_time': 0.5,
-                'with_test_data': self.with_test_data,
-            })
-            self._scheduler.reload()
+            self._scheduler = SchedulerClient()
+            self._scheduler.reload(odb_adapter=scheduler_adapter)
             self._scheduler_started = True
-            logger.info('Scheduler started, with_test_data=%s', self.with_test_data)
+
+            self._start_scheduler_fire_listener()
+
+            logger.info('Scheduler client connected')
         except Exception:
             logger.warning('Scheduler could not be started: %s', format_exc())
+
+    def _start_scheduler_fire_listener(self) -> 'None':
+        """ Starts a dedicated greenlet that consumes fire and timeout events
+        from the scheduler via Redis Streams.
+        """
+        from json import loads as json_loads
+
+        from zato.common.api import SCHEDULER
+        from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
+
+        import os
+
+        from redis import Redis
+
+        redis_host = os.environ.get('Zato_Scheduler_Redis_Host', 'localhost')
+        redis_port = int(os.environ.get('Zato_Scheduler_Redis_Port', '6379'))
+        redis_password = os.environ.get('Zato_Scheduler_Redis_Password', None)
+
+        fire_redis = Redis(
+            host=redis_host,
+            port=redis_port,
+            password=redis_password,
+            decode_responses=True,
+        )
+
+        fire_stream = 'zato:scheduler:stream:fire'
+        timeout_stream = 'zato:scheduler:stream:timeout'
+        group_name = 'server-fire'
+        consumer_name = 'server-fire-0'
+
+        for stream in (fire_stream, timeout_stream):
+            try:
+                fire_redis.xgroup_create(stream, group_name, id='$', mkstream=True)
+            except Exception as exc:
+                if 'BUSYGROUP' not in str(exc):
+                    raise
+
+        def _fire_listener_loop() -> 'None':
+            while True:
+                try:
+                    result = fire_redis.xreadgroup(
+                        groupname=group_name,
+                        consumername=consumer_name,
+                        streams={fire_stream: '>', timeout_stream: '>'},
+                        count=10,
+                        block=1000,
+                    )
+
+                    if not result:
+                        continue
+
+                    for stream_name, messages in result:
+                        for msg_id, fields in messages:
+                            if stream_name == fire_stream:
+                                self._handle_fire_event(fields)
+                            elif stream_name == timeout_stream:
+                                self._handle_timeout_event(fields)
+
+                            fire_redis.xack(stream_name, group_name, msg_id)
+
+                except Exception:
+                    logger.warning('Error in scheduler fire listener: %s', format_exc())
+                    sleep(1)
+
+        spawn(_fire_listener_loop)
+        logger.info('Scheduler fire listener greenlet started')
+
+    def _handle_fire_event(self, fields:'dict') -> 'None':
+        """ Processes a fire event from the scheduler - invokes the target service. """
+        import time as _time
+        from json import loads as json_loads
+        from bunch import Bunch
+        from zato.common.api import SCHEDULER
+        from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
+
+        payload_json = fields.get('payload', '{}')
+        ctx = json_loads(payload_json)
+
+        job_id = ctx['job_id']
+        job_name = ctx['name']
+        current_run = ctx['current_run']
+
+        extra = ctx.get('extra')
+        if extra and isinstance(extra, str):
+            try:
+                extra = json_loads(extra)
+            except Exception:
+                try:
+                    extra = parse_extra_into_dict(extra)
+                except Exception:
+                    pass
+
+        msg = Bunch({
+            'action': SCHEDULER_MSG.JOB_EXECUTED.value,
+            'name': ctx['name'],
+            'service': ctx['service'],
+            'payload': extra,
+            'cid': new_cid_server(),
+            'job_type': ctx['job_type'],
+            'zato_ctx': {
+                'scheduler_job_id': job_id,
+                'scheduler_current_run': current_run,
+            },
+        })
+
+        outcome = SCHEDULER.OUTCOME.OK
+        _t0 = _time.monotonic()
+        try:
+            self.worker_store.on_message_invoke_service(msg, 'scheduler', 'SCHEDULER_JOB_EXECUTED')
+        except Exception:
+            outcome = SCHEDULER.OUTCOME.ERROR
+            logger.warning('Scheduler job_id=%s; name=%s; outcome=error; traceback=%s', job_id, job_name, format_exc())
+
+        duration_ms = int((_time.monotonic() - _t0) * 1000)
+
+        try:
+            self._scheduler.mark_complete(job_id, outcome, duration_ms, current_run)
+        except Exception:
+            logger.warning('Scheduler mark_complete failed; job_id=%s; name=%s; traceback=%s', job_id, job_name, format_exc())
+
+    def _handle_timeout_event(self, fields:'dict') -> 'None':
+        """ Processes a timeout event from the scheduler. """
+        job_id = fields.get('job_id', '?')
+        current_run = fields.get('current_run', '?')
+        elapsed_ms = fields.get('elapsed_ms', '?')
+        error = fields.get('error', '')
+        logger.warning('Scheduler timeout: job_id=%s run=%s elapsed_ms=%s error=%s', job_id, current_run, elapsed_ms, error)
 
 # ################################################################################################################################
 
@@ -1333,9 +1400,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self.worker_store.init()
         self.worker_store.init_pubsub()
 
-        # .. reload the Rust scheduler if it was started ..
+        # .. reload the scheduler if it was started ..
         if getattr(self, '_scheduler_started', False):
-            self._scheduler.reload()
+            from zato.server.scheduler_.adapter import SchedulerODBAdapter
+            scheduler_adapter = SchedulerODBAdapter(self.odb, self.cluster_id)
+            self._scheduler.reload(odb_adapter=scheduler_adapter)
 
         # .. finally, log what happened.
         logger.info('⭐ Config loaded OK')

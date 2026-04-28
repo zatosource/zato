@@ -4,13 +4,14 @@ use std::collections::VecDeque;
 use std::time::Instant;
 
 use chrono::{DateTime, LocalResult, TimeZone, Utc};
-/// Alias for the chrono timezone type.
-type Timezone = chrono_tz::Tz;
 use rand::rngs::SmallRng;
 use rand::{RngExt, SeedableRng};
+use serde::Serialize;
+
+/// Alias for the chrono timezone type.
+type Timezone = chrono_tz::Tz;
 
 use crate::model::SchedulerJob;
-
 use crate::types::{JobId, JobType, ServiceName};
 
 /// Default maximum execution time for a job (1 hour in ms).
@@ -31,8 +32,9 @@ pub const OUTCOME_COUNT: usize = crate::types::outcome::COUNTABLE.len();
 /// Computed summary of a scheduler job for the dashboard API.
 ///
 /// Contains both static job metadata and derived stats from execution history.
-/// Built by `RunningJob::summary()` under the state mutex, then used outside the
-/// mutex to construct Python objects without holding both locks.
+/// Built by `RunningJob::summary()` under the state mutex, then serialized
+/// to JSON for the HTTP query API.
+#[derive(Serialize)]
 pub struct JobSummary {
     /// Unique job identifier.
     pub id: i64,
@@ -65,7 +67,8 @@ pub struct JobSummary {
 /// A single timeline event combining job metadata with an execution record.
 ///
 /// Built under the state mutex by cloning job fields and the record,
-/// then used outside the mutex to construct Python objects.
+/// then serialized to JSON for the HTTP query API.
+#[derive(Serialize)]
 pub struct TimelineEvent {
     /// Unique job identifier.
     pub job_id: i64,
@@ -76,7 +79,7 @@ pub struct TimelineEvent {
 }
 
 /// A single log entry captured from a service during scheduler-initiated execution.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct LogEntry {
     /// ISO timestamp of when the log record was created.
     pub timestamp_iso: String,
@@ -87,7 +90,7 @@ pub struct LogEntry {
 }
 
 /// A single execution history record for a job firing.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ExecutionRecord {
     /// ISO timestamp of the planned fire time.
     pub planned_fire_time_iso: String,
@@ -213,11 +216,11 @@ pub struct RunningJob {
 #[must_use]
 pub fn clamp_max_execution_time(raw: u64, job_name: &str) -> u64 {
     if raw < MIN_MAX_EXECUTION_TIME_MS {
-        log::warn!("Job `{job_name}`: max_execution_time_ms={raw} below minimum, clamped to {MIN_MAX_EXECUTION_TIME_MS}");
+        tracing::warn!("Job `{job_name}`: max_execution_time_ms={raw} below minimum, clamped to {MIN_MAX_EXECUTION_TIME_MS}");
         return MIN_MAX_EXECUTION_TIME_MS;
     }
     if raw > MAX_MAX_EXECUTION_TIME_MS {
-        log::warn!("Job `{job_name}`: max_execution_time_ms={raw} above maximum, clamped to {MAX_MAX_EXECUTION_TIME_MS}");
+        tracing::warn!("Job `{job_name}`: max_execution_time_ms={raw} above maximum, clamped to {MAX_MAX_EXECUTION_TIME_MS}");
         return MAX_MAX_EXECUTION_TIME_MS;
     }
     raw
@@ -234,7 +237,7 @@ fn resolve_tz_and_start(
     let timezone: Option<Timezone> = tz_str.and_then(|val| {
         val.parse::<Timezone>().map_or_else(
             |_| {
-                log::error!("Job `{job_name}`: invalid timezone `{val}`");
+                tracing::error!("Job `{job_name}`: invalid timezone `{val}`");
                 None
             },
             Some,
@@ -242,7 +245,7 @@ fn resolve_tz_and_start(
     });
     let start_date = RunningJob::parse_start_date(start_date_str, timezone.as_ref()).map_or_else(
         || {
-            log::error!("Job `{job_name}`: failed to parse start_date `{start_date_str}`");
+            tracing::error!("Job `{job_name}`: failed to parse start_date `{start_date_str}`");
             Some(Utc::now())
         },
         Some,

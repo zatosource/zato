@@ -3,7 +3,7 @@
 	server-install scheduler-install sio-install common-core-install queue-bridge-install \
 	ruff qa-reqs-install unify \
 	update cron-update stop-server restart-server restart-server-with-scheduler \
-	stop-dashboard restart-dashboard
+	stop-dashboard restart-dashboard scheduler
 
 MAKEFLAGS += --silent
 
@@ -20,8 +20,11 @@ server-build:
 
 scheduler-build:
 	. $(HOME)/.cargo/env && \
-	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
-	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_scheduler_core/Cargo.toml
+	cargo build --release --manifest-path $(ZATO_RUST)/zato_scheduler_core/Cargo.toml --bin _zato_scheduler && \
+	cp $(ZATO_RUST)/zato_scheduler_core/target/release/_zato_scheduler $(CURDIR)/code/bin/_zato_scheduler
+
+scheduler:
+	$(CURDIR)/code/bin/_zato_scheduler
 
 sio-build:
 	. $(HOME)/.cargo/env && \

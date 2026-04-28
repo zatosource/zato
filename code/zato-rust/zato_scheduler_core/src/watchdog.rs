@@ -15,6 +15,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use parking_lot::Mutex;
+use tracing;
 
 use crate::scheduler::SchedulerShared;
 
@@ -127,13 +128,13 @@ pub fn start_watchdog(registry: Arc<WatchdogRegistry>) {
         .name("zato-watchdog".into())
         .spawn(move || watchdog_loop(&registry));
     if let Err(err) = result {
-        log::error!("watchdog: failed to spawn thread: {err}");
+        tracing::error!("watchdog: failed to spawn thread: {err}");
     }
 }
 
 /// Main watchdog loop.
 fn watchdog_loop(registry: &WatchdogRegistry) {
-    log::info!("watchdog: started");
+    tracing::info!("watchdog: started");
 
     let grace_nanos = u64::try_from(GRACE.as_nanos()).unwrap_or(u64::MAX);
 
@@ -141,7 +142,7 @@ fn watchdog_loop(registry: &WatchdogRegistry) {
         std::thread::sleep(CHECK_INTERVAL);
 
         if registry.shared.stop_flag.load(Ordering::Relaxed) {
-            log::info!("watchdog: stop flag set, exiting");
+            tracing::info!("watchdog: stop flag set, exiting");
             break;
         }
 
@@ -156,7 +157,7 @@ fn watchdog_loop(registry: &WatchdogRegistry) {
             let elapsed = now_nanos.saturating_sub(last_beat);
             if elapsed >= threshold {
                 let elapsed_secs = elapsed / 1_000_000_000;
-                log::error!(
+                tracing::error!(
                     "watchdog: thread '{}' appears stuck for ~{}s (last heartbeat {}ns ago, expected_sleep={}ns)",
                     reg.name,
                     elapsed_secs,
@@ -176,16 +177,16 @@ fn watchdog_loop(registry: &WatchdogRegistry) {
 
 /// Logs diagnostic information when a stuck thread is detected.
 fn log_diagnostics(registry: &WatchdogRegistry) {
-    log::error!("watchdog: --- begin diagnostics ---");
+    tracing::error!("watchdog: --- begin diagnostics ---");
 
-    log::error!("watchdog: stop_flag={}", registry.shared.stop_flag.load(Ordering::Relaxed));
+    tracing::error!("watchdog: stop_flag={}", registry.shared.stop_flag.load(Ordering::Relaxed));
 
     let mutex_held = registry.shared.state.try_lock().is_none();
-    log::error!("watchdog: state mutex currently held={mutex_held}");
+    tracing::error!("watchdog: state mutex currently held={mutex_held}");
 
     log_proc_thread_info();
 
-    log::error!("watchdog: --- end diagnostics ---");
+    tracing::error!("watchdog: --- end diagnostics ---");
 }
 
 /// Reads `/proc/self/task/*/wchan` and `/proc/self/task/*/status` for all threads.
@@ -193,7 +194,7 @@ fn log_proc_thread_info() {
     let task_dir = match std::fs::read_dir("/proc/self/task") {
         Ok(dir) => dir,
         Err(err) => {
-            log::error!("watchdog: cannot read /proc/self/task: {err}");
+            tracing::error!("watchdog: cannot read /proc/self/task: {err}");
             return;
         }
     };
@@ -212,6 +213,6 @@ fn log_proc_thread_info() {
             .and_then(|contents| contents.lines().find(|line| line.starts_with("State:")).map(String::from))
             .unwrap_or_else(|| "State: ?".into());
 
-        log::error!("watchdog: tid={tid_str} wchan={wchan} {state_line}");
+        tracing::error!("watchdog: tid={tid_str} wchan={wchan} {state_line}");
     }
 }

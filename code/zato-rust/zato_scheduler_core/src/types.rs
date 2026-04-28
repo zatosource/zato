@@ -5,8 +5,10 @@
 
 use std::fmt;
 
+use serde::Serialize;
+
 /// Unique identifier for a scheduler job, wrapping an `i64`.
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Serialize)]
 pub struct JobId(
     /// The underlying numeric identifier.
     pub i64,
@@ -19,7 +21,7 @@ impl fmt::Display for JobId {
 }
 
 /// Wrapper around a service name string.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ServiceName(
     /// The underlying service name.
     pub String,
@@ -38,7 +40,7 @@ impl AsRef<str> for ServiceName {
 }
 
 /// Represents the type of a scheduler job.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum JobType {
     /// A job that fires exactly once.
     OneTime,
@@ -94,6 +96,7 @@ pub mod outcome {
 }
 
 /// A batch of fire information for a single job invocation.
+#[derive(Serialize)]
 pub struct FireBatch {
     /// The job identifier.
     pub job_id: JobId,
