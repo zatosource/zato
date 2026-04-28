@@ -61,6 +61,12 @@ class RedisHandler(logging.Handler):
             redis_logger.debug('RedisHandler.emit: emit_count={}, record.name={}, record.levelname={}'.format(
                 self.emit_count, record.name, record.levelname))
 
+            if record.args:
+                try:
+                    record.msg = record.msg % record.args
+                except (TypeError, ValueError):
+                    record.msg = str(record.msg)
+                record.args = None
             message = self.format(record)
             level = record.levelname
 
