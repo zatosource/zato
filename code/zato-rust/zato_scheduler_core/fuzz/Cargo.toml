@@ -15,7 +15,7 @@ chrono = "0.4"
 path = ".."
 
 [dependencies.zato_server_core]
-path = "../../../../zato-server/src/zato_server_core"
+path = "../../zato_server_core"
 
 [[bin]]
 name = "fuzz_job_type_from_str"
