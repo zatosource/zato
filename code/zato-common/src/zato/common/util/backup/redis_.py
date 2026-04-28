@@ -19,7 +19,7 @@ from zato.common.util.backup.config import BackupConfig, redis_key_password, red
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_redis_connection(config:'BackupConfig') -> 'redis_lib.Redis':
+def get_redis_connection(config:'BackupConfig') -> 'redis_lib.Redis':
     out = redis_lib.Redis(
         host=config.redis_host,
         port=config.redis_port,
@@ -30,8 +30,8 @@ def _get_redis_connection(config:'BackupConfig') -> 'redis_lib.Redis':
 
 # ################################################################################################################################
 
-def _load_settings_from_redis(config:'BackupConfig', fernet_key:'str') -> 'dict':
-    connection = _get_redis_connection(config)
+def load_settings_from_redis(config:'BackupConfig', fernet_key:'str') -> 'dict':
+    connection = get_redis_connection(config)
     raw = connection.get(redis_key_settings)
 
     if not raw:
@@ -55,8 +55,8 @@ def _load_settings_from_redis(config:'BackupConfig', fernet_key:'str') -> 'dict'
 
 # ################################################################################################################################
 
-def _load_password_from_redis(config:'BackupConfig', fernet_key:'str') -> 'str':
-    connection = _get_redis_connection(config)
+def load_password_from_redis(config:'BackupConfig', fernet_key:'str') -> 'str':
+    connection = get_redis_connection(config)
     raw = connection.get(redis_key_password)
 
     if not raw:
@@ -80,7 +80,7 @@ def _load_password_from_redis(config:'BackupConfig', fernet_key:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _build_config_from_redis(
+def build_config_from_redis(
     fernet_key:'str',
     redis_host:'str'='localhost',
     redis_port:'int'=6379,
@@ -92,7 +92,7 @@ def _build_config_from_redis(
     config.redis_port = redis_port
     config.redis_db = redis_db
 
-    settings = _load_settings_from_redis(config, fernet_key)
+    settings = load_settings_from_redis(config, fernet_key)
     config.provider = settings['provider']
     config.bucket_name = settings['bucket_name']
     config.access_key = settings['access_key']

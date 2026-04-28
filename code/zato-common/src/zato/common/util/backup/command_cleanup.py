@@ -13,8 +13,8 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
-from zato.common.util.backup.cloud import _delete_from_cloud, _list_cloud_objects
-from zato.common.util.backup.common import _json_response, _write_response
+from zato.common.util.backup.cloud import delete_from_cloud, list_cloud_objects
+from zato.common.util.backup.common import json_response, write_response
 from zato.common.util.backup.config import BackupConfig, backup_prefix
 
 # ################################################################################################################################
@@ -28,7 +28,7 @@ logger = getLogger(__name__)
 def command_cleanup(config:'BackupConfig', retention_days:'int') -> 'None':
     try:
         now = datetime.now(timezone.utc)
-        cloud_objects = _list_cloud_objects(config)
+        cloud_objects = list_cloud_objects(config)
 
         deleted = []
 
@@ -50,21 +50,21 @@ def command_cleanup(config:'BackupConfig', retention_days:'int') -> 'None':
             age_days = (now - last_modified).days
 
             if age_days > retention_days:
-                _delete_from_cloud(config, name)
+                delete_from_cloud(config, name)
                 deleted.append(name)
 
-        response = _json_response(
+        response = json_response(
             True,
             deleted=deleted,
             total_deleted=len(deleted),
             retention_days=retention_days,
         )
-        _write_response(response)
+        write_response(response)
 
     except Exception:
         logger.error('Cleanup failed: %s', format_exc())
-        response = _json_response(False, error=format_exc())
-        _write_response(response)
+        response = json_response(False, error=format_exc())
+        write_response(response)
         sys.exit(1)
 
 # ################################################################################################################################

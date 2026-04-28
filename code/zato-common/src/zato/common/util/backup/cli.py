@@ -17,9 +17,9 @@ from zato.common.util.backup.command_cleanup import command_cleanup
 from zato.common.util.backup.command_delete import command_delete
 from zato.common.util.backup.command_list import command_list
 from zato.common.util.backup.command_test import command_test
-from zato.common.util.backup.common import _json_response, _write_response
+from zato.common.util.backup.common import json_response, write_response
 from zato.common.util.backup.config import BackupConfig
-from zato.common.util.backup.redis_ import _build_config_from_redis, _load_password_from_redis
+from zato.common.util.backup.redis_ import build_config_from_redis, load_password_from_redis
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,7 +28,7 @@ def _build_config_from_args(args:'argparse.Namespace') -> 'BackupConfig':
     """ Builds a BackupConfig from CLI args, optionally loading defaults from Redis first.
     """
     if args.fernet_key:
-        config = _build_config_from_redis(args.fernet_key)
+        config = build_config_from_redis(args.fernet_key)
     else:
         config = BackupConfig()
 
@@ -55,13 +55,13 @@ def _validate_config(config:'BackupConfig') -> 'None':
     """ Validates that all required fields are present. Writes JSON error and exits if not.
     """
     if not config.provider:
-        response = _json_response(False, error='--provider is required (aws, gcs, azure)')
-        _write_response(response)
+        response = json_response(False, error='--provider is required (aws, gcs, azure)')
+        write_response(response)
         sys.exit(1)
 
     if not config.bucket_name:
-        response = _json_response(False, error='--bucket is required')
-        _write_response(response)
+        response = json_response(False, error='--bucket is required')
+        write_response(response)
         sys.exit(1)
 
 # ################################################################################################################################
@@ -73,7 +73,7 @@ def _resolve_password(args:'argparse.Namespace', config:'BackupConfig') -> 'str'
         return args.password
 
     if args.fernet_key:
-        return _load_password_from_redis(config, args.fernet_key)
+        return load_password_from_redis(config, args.fernet_key)
 
     return getpass('Backup encryption password: ')
 
@@ -132,8 +132,8 @@ def main() -> 'None':
     if args.command == 'backup':
 
         if not config.env_dir:
-            response = _json_response(False, error='--dir is required')
-            _write_response(response)
+            response = json_response(False, error='--dir is required')
+            write_response(response)
             sys.exit(1)
 
         password = _resolve_password(args, config)

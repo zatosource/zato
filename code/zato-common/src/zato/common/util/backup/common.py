@@ -15,7 +15,7 @@ from zato.common.json_internal import dumps
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _json_response(success:'bool', **kwargs:'str') -> 'str':
+def json_response(success:'bool', **kwargs:'str') -> 'str':
     result = {'success': success}
     result.update(kwargs)
     out = dumps(result)
@@ -23,7 +23,7 @@ def _json_response(success:'bool', **kwargs:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _write_response(response:'str') -> 'None':
+def write_response(response:'str') -> 'None':
     sys.stdout.write(response)
     sys.stdout.write('\n')
     sys.stdout.flush()

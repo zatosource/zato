@@ -12,8 +12,8 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
-from zato.common.util.backup.cloud import _list_cloud_objects
-from zato.common.util.backup.common import _json_response, _write_response
+from zato.common.util.backup.cloud import list_cloud_objects
+from zato.common.util.backup.common import json_response, write_response
 from zato.common.util.backup.config import BackupConfig, backup_prefix
 
 # ################################################################################################################################
@@ -26,7 +26,7 @@ logger = getLogger(__name__)
 
 def command_list(config:'BackupConfig') -> 'None':
     try:
-        cloud_objects = _list_cloud_objects(config)
+        cloud_objects = list_cloud_objects(config)
 
         backups = []
 
@@ -47,17 +47,17 @@ def command_list(config:'BackupConfig') -> 'None':
         # ..  sort by name descending so that the most recent backup is first.
         backups.sort(key=lambda item: item['name'], reverse=True)
 
-        response = _json_response(
+        response = json_response(
             True,
             backups=backups,
             total=len(backups),
         )
-        _write_response(response)
+        write_response(response)
 
     except Exception:
         logger.error('List backups failed: %s', format_exc())
-        response = _json_response(False, error=format_exc())
-        _write_response(response)
+        response = json_response(False, error=format_exc())
+        write_response(response)
         sys.exit(1)
 
 # ################################################################################################################################
