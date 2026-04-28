@@ -43,6 +43,7 @@ code/src/*
 code/support-linux/zato_fhir
 code/tests/*
 code/util/extra/
+code/uv.lock
 code/windows-bin/zato.py
 code/zato-common/src/zato/common/pubsub/server/*.multi.yaml
 code/zato-cy/src/zato/cy/*.c

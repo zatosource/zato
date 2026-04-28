@@ -1,7 +1,7 @@
 [package]
 name = "zato_common_core"
 version = "4.1.0"
-edition = "2021"
+edition = "2024"
 license = "AGPL-3.0-only"
 description = "Core utilities shared across all Zato Rust crates - API, ESB, SOA, iPaaS, integration platform, middleware, rule engine"
 repository = "https://github.com/zatosource/zato"
