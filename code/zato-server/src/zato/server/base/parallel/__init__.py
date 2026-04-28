@@ -1070,9 +1070,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                         for msg_id, fields in messages:
                             logger.info('Fire listener received: stream=%s msg_id=%s fields=%s', stream_name, msg_id, fields)
                             if stream_name == fire_stream:
-                                self._handle_fire_event(fields)
+                                spawn(self._handle_fire_event, fields)
                             elif stream_name == timeout_stream:
-                                self._handle_timeout_event(fields)
+                                spawn(self._handle_timeout_event, fields)
 
                             fire_redis.xack(stream_name, group_name, msg_id)
 

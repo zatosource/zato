@@ -120,10 +120,10 @@ pub fn scheduler_loop(
         {
             let mut state = shared.state.lock();
             let sleep_duration = compute_sleep_duration(&state);
-            tracing::debug!(
-                "Sleeping for {}",
-                crate::humanize_ms(u64::try_from(sleep_duration.as_millis()).unwrap_or(0))
-            );
+            let sleep_ms = sleep_duration.as_millis() as u64;
+            if sleep_ms > 100 {
+                tracing::debug!("Sleeping for {}", crate::humanize_ms(sleep_ms));
+            }
             if let Some(handle) = &heartbeat {
                 handle.set_expected_sleep(sleep_duration);
             }
@@ -201,7 +201,6 @@ pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
                     min_ms = until_timeout_ms;
                 }
             }
-            continue;
         }
 
         if let Some(fire_utc) = running_job.next_fire_utc {
