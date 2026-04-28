@@ -977,7 +977,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self._start_pubsub_redis()
 
         # Start the queue bridge (Kafka, SQS, etc.)
-        self._start_queue_bridge()
+        # self._start_queue_bridge()
 
         # Optionally, if we appear to be a Docker quickstart environment, log all details about the environment.
         self.log_environment_details()

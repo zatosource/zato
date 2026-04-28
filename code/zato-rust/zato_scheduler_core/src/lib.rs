@@ -99,8 +99,22 @@ pub fn reload_jobs(state: &mut scheduler::SchedulerState, new_jobs: &[crate::mod
         let job_id = scheduler_job.id;
         if let Some(existing) = state.jobs.get_mut(&job_id) {
             existing.update_from_job(scheduler_job);
+            tracing::info!(
+                "Job updated: id={job_id} name={} type={} active={} service={}",
+                scheduler_job.name,
+                scheduler_job.job_type,
+                scheduler_job.is_active,
+                scheduler_job.service,
+            );
         } else {
             let running_job = RunningJob::from_scheduler_job(scheduler_job);
+            tracing::info!(
+                "Job loaded: id={job_id} name={} type={} active={} service={}",
+                scheduler_job.name,
+                scheduler_job.job_type,
+                scheduler_job.is_active,
+                scheduler_job.service,
+            );
             state.jobs.insert(job_id, running_job);
         }
     }

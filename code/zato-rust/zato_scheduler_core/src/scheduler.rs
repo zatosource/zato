@@ -103,6 +103,8 @@ pub fn scheduler_loop(
 
     let mut last_wall = Utc::now();
     let mut last_mono = Instant::now();
+    let mut last_status_log = Instant::now();
+    let status_log_interval = Duration::from_secs(60);
 
     loop {
         if let Some(handle) = &heartbeat {
@@ -144,6 +146,13 @@ pub fn scheduler_loop(
 
         last_wall = now_wall;
         last_mono = now_mono;
+
+        if last_status_log.elapsed() >= status_log_interval {
+            last_status_log = Instant::now();
+            let state = shared.state.lock();
+            log_scheduler_status(&state, now_wall);
+            drop(state);
+        }
 
         let fire_batch = {
             let mut deferred = DeferredLog::new();
@@ -329,5 +338,42 @@ pub fn reanchor_all_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>)
         if running_job.is_active {
             running_job.compute_next_fire(now);
         }
+    }
+}
+
+/// Logs a periodic summary of scheduler state - active/paused/in-flight counts
+/// and the soonest upcoming fire time.
+fn log_scheduler_status(state: &SchedulerState, now: chrono::DateTime<Utc>) {
+    let total = state.jobs.len();
+    let mut active: usize = 0;
+    let mut in_flight: usize = 0;
+    let mut soonest_name: Option<&str> = None;
+    let mut soonest_ms: i64 = i64::MAX;
+
+    for running_job in state.jobs.values() {
+        if running_job.is_active {
+            active += 1;
+        }
+        if running_job.in_flight {
+            in_flight += 1;
+        }
+        if let Some(fire_utc) = running_job.next_fire_utc {
+            let diff = (fire_utc - now).num_milliseconds();
+            if diff < soonest_ms {
+                soonest_ms = diff;
+                soonest_name = Some(&running_job.name);
+            }
+        }
+    }
+
+    let paused = total - active;
+
+    if let Some(name) = soonest_name {
+        let soonest_human = crate::humanize_ms(u64::try_from(soonest_ms.max(0)).unwrap_or(0));
+        tracing::info!(
+            "Status: {total} jobs ({active} active, {paused} paused, {in_flight} in-flight), next fire: {name} in {soonest_human}"
+        );
+    } else {
+        tracing::info!("Status: {total} jobs ({active} active, {paused} paused, {in_flight} in-flight), no upcoming fires");
     }
 }
