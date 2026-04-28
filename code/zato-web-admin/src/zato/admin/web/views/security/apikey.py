@@ -8,12 +8,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from json import loads
 
 # Zato
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.apikey import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common.odb.model import APIKeySecurity
+# Bunch
+from bunch import Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +24,7 @@ class Index(_Index):
     url_name = 'security-apikey'
     template = 'zato/security/apikey.html'
     service_name = 'zato.security.apikey.get-list'
-    output_class = APIKeySecurity
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
@@ -51,6 +53,18 @@ class _CreateEdit(CreateEdit):
 class Create(_CreateEdit):
     url_name = 'security-apikey-create'
     service_name = 'zato.security.apikey.create'
+
+    def __call__(self, req, *args, **kwargs):
+        response = super().__call__(req, *args, **kwargs)
+        if response.status_code == 200:
+            data = loads(response.content)
+            password = req.POST.get('password', '')
+            if password:
+                req.zato.client.invoke('zato.security.apikey.change-password', {
+                    'id': data['id'],
+                    'password': password,
+                })
+        return response
 
 class Edit(_CreateEdit):
     url_name = 'security-apikey-edit'

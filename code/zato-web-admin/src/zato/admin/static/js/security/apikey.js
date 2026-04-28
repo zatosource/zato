@@ -19,6 +19,13 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.security.apikey.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'username']);
+    var unique_constraints = [
+        {field: 'name', entity_type: 'security', attr_name: 'name'}
+    ];
+    $.each(unique_constraints, function(i, c) {
+        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
+        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+    });
 })
 
 
@@ -46,9 +53,9 @@ $.fn.zato.security.apikey.data_table.new_row = function(item, data, include_tr) 
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td id="{0}">{1}</td>', item_header_id, item_header_value);
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change API key</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Change API key', 'API key', 'API key')\">Change API key</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.security.apikey.edit('{0}')\">Edit</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.security.apikey.delete_({0});'>Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.security.apikey.delete_('{0}');\">Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
 

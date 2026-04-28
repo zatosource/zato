@@ -13,20 +13,21 @@ from operator import itemgetter
 from traceback import format_exc
 
 # Django
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError, JsonResponse
 from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_group_list as common_get_group_list, get_http_channel_security_id, \
     get_security_id_from_select, get_security_groups_from_checkbox_list, id_only_service, \
-        method_allowed, parse_response_data, SecurityList
+        method_allowed, SecurityList
 from zato.common.api import CACHE, DATA_FORMAT, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      generic_attrs, Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
      SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
-from zato.common.odb.model import HTTPSOAP
+# Bunch
+from bunch import Bunch
 from zato.common.util import openapi_ as openapi_module
 
 # ################################################################################################################################
@@ -82,7 +83,7 @@ def _get_edit_create_message(params, prefix=''): # type: ignore
         'name': params[prefix + 'name'],
         'is_active': bool(params.get(prefix + 'is_active')),
         'host': params.get(prefix + 'host'),
-        'url_path': params[prefix + 'url_path'],
+        'url_path': params.get(prefix + 'url_path', '/'),
         'merge_url_params_req': bool(params.get(prefix + 'merge_url_params_req')),
         'match_slash': bool(params.get(prefix + 'match_slash')),
         'http_accept': params.get(prefix + 'http_accept'),
@@ -142,21 +143,22 @@ def _edit_create_response(req, id, verb, transport, connection, name): # type: i
         'security_groups_info': f'{group_count} group{group_count_suffix}, {group_member_count} client{group_member_count_suffix}'
     }
 
-    # If current item has a cache assigned, provide its human-friendly name to the caller
-    response = req.zato.client.invoke('zato.http-soap.get', {
-        'cluster_id': req.zato.cluster_id,
-        'id': id,
-    })
+    # Caching is a channel-only concept
+    if connection == 'channel':
+        response = req.zato.client.invoke('zato.http-soap.get', {
+            'cluster_id': req.zato.cluster_id,
+            'id': id,
+        })
 
-    if response.data.cache_id:
-        cache_type = response.data.cache_type
-        cache_name = '{}/{}'.format(CACHE_TYPE[cache_type], response.data.cache_name)
-    else:
-        cache_type = None
-        cache_name = None
+        if response.data.cache_id:
+            cache_type = response.data.cache_type
+            cache_name = '{}/{}'.format(CACHE_TYPE[cache_type], response.data.cache_name)
+        else:
+            cache_type = None
+            cache_name = None
 
-    return_data['cache_type'] = cache_type
-    return_data['cache_name'] = cache_name
+        return_data['cache_type'] = cache_type
+        return_data['cache_name'] = cache_name
 
     return HttpResponse(dumps(return_data), content_type='application/javascript')
 
@@ -207,6 +209,10 @@ def index(req): # type: ignore
         create_form = CreateForm(_security, cache_list, _soap_versions, req=req)
         edit_form = EditForm(_security, cache_list, _soap_versions, prefix='edit', req=req)
 
+        if connection == 'outgoing':
+            create_form.fields['url_path'].required = False
+            edit_form.fields['url_path'].required = False
+
         input_dict = {
             'cluster_id': req.zato.cluster_id,
             'connection': connection,
@@ -216,9 +222,9 @@ def index(req): # type: ignore
             'query': req.GET.get('query', ''),
         }
 
-        data, meta = parse_response_data(req.zato.client.invoke('zato.http-soap.get-list', input_dict))
+        response = req.zato.client.invoke('zato.http-soap.get-list', input_dict)
 
-        for item in data:
+        for item in response.data:
             if query not in item.name:
                 continue
 
@@ -238,29 +244,53 @@ def index(req): # type: ignore
 
             security_id = get_http_channel_security_id(item)
 
-            if item.cache_id:
-                cache_name = '{}/{}'.format(CACHE_TYPE[item.cache_type], item.cache_name)
+            http_soap = Bunch()
+            http_soap.id = item.id
+            http_soap.name = item.name
+            http_soap.is_active = item.is_active
+            http_soap.is_internal = item.is_internal
+            http_soap.connection = connection
+            http_soap.transport = transport
+            http_soap.host = item.host
+            http_soap.url_path = item.url_path
+            http_soap.method = item.method
+            http_soap.soap_action = item.soap_action
+            http_soap.soap_version = item.soap_version
+            http_soap.data_format = item.data_format
+            http_soap.security_id = security_id
+            http_soap.security_name = security_name
+            http_soap.content_type = item.content_type
+            http_soap.serialization_type = item.serialization_type
+            http_soap.timeout = item.timeout
+
+            if connection == 'channel':
+                http_soap.service_id = item.service_id
+                http_soap.service_name = item.service_name
+                http_soap.merge_url_params_req = item.merge_url_params_req
+                http_soap.url_params_pri = item.url_params_pri
+                http_soap.params_pri = item.params_pri
+                http_soap.content_encoding = item.content_encoding
+
+                if item.cache_id:
+                    cache_name = '{}/{}'.format(CACHE_TYPE[item.cache_type], item.cache_name)
+                else:
+                    cache_name = None
+
+                http_soap.cache_id = item.cache_id
+                http_soap.cache_name = cache_name
+                http_soap.cache_type = item.cache_type
+                http_soap.cache_expiry = item.cache_expiry
+
+                match_slash = item.get('match_slash')
+                if match_slash == '':
+                    match_slash = True
+
+                http_soap.match_slash = match_slash
+                http_soap.http_accept = item.get('http_accept') or ''
             else:
-                cache_name = None
-
-            # New in 3.0, hence optional
-            match_slash = item.get('match_slash')
-            if match_slash == '':
-                match_slash = True
-
-            # New in 3.1
-            http_accept = item.get('http_accept') or ''
-
-            http_soap = HTTPSOAP(item.id, item.name, item.is_active, item.is_internal, connection,
-                    transport, item.host, item.url_path, item.method, item.soap_action,
-                    item.soap_version, item.data_format, item.ping_method,
-                    item.pool_size, item.merge_url_params_req, item.url_params_pri, item.params_pri,
-                    item.serialization_type, item.timeout, service_id=item.service_id,
-                    service_name=item.service_name, security_id=security_id,
-                    security_name=security_name, content_type=item.content_type,
-                    cache_id=item.cache_id, cache_name=cache_name, cache_type=item.cache_type, cache_expiry=item.cache_expiry,
-                    content_encoding=item.content_encoding, match_slash=match_slash, http_accept=http_accept,
-                    validate_tls=item.get('validate_tls', True))
+                http_soap.ping_method = item.ping_method
+                http_soap.pool_size = item.pool_size
+                http_soap.validate_tls = item.get('validate_tls', True)
 
             for name in generic_attrs:
                 setattr(http_soap, name, item.get(name))
@@ -274,6 +304,12 @@ def index(req): # type: ignore
         docusign_path = os.path.join(samples_dir, 'docusign-v2.yaml')
         with open(docusign_path, 'r', encoding='utf-8') as f:
             openapi_sample_data = f.read()
+
+    internal_service_prefixes = ('zato.', 'pub.zato.', 'demo.', 'pubsub.')
+    internal_services = sorted({
+        item.service_name for item in items
+        if getattr(item, 'service_name', None) and item.service_name.startswith(internal_service_prefixes)
+    })
 
     return_data = {'zato_clusters':req.zato.clusters,
         'cluster_id':req.zato.cluster_id,
@@ -291,9 +327,11 @@ def index(req): # type: ignore
         'default_http_pool_size':DEFAULT_HTTP_POOL_SIZE,
         'default_http_timeout':MISC.DEFAULT_HTTP_TIMEOUT,
         'paginate':True,
+        'show_search_form':True,
         'meta': meta,
         'req':req,
         'openapi_sample_data': openapi_sample_data,
+        'internal_services': internal_services,
         'zato_template_name': 'zato/http_soap/index.html',
         }
 
@@ -350,12 +388,17 @@ def ping(req, id, cluster_id): # type: ignore
     response = id_only_service(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:`{}`')
 
     if isinstance(response, HttpResponseServerError):
-        return response
-    else:
-        if response.data.is_success:
-            return HttpResponse(response.data.info)
-        else:
-            return HttpResponseServerError(response.data.info)
+        err = response.content.decode('utf-8', 'replace')
+        return JsonResponse({
+            'is_success': False,
+            'info': err,
+        })
+
+    data = response.data
+    return JsonResponse({
+        'is_success': data.is_success,
+        'info': data.info,
+    })
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -366,6 +409,104 @@ def reload_wsdl(req, id, cluster_id): # type: ignore
     if isinstance(ret, HttpResponseServerError):
         return ret
     return HttpResponse('WSDL reloaded, check server logs for details')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _extract_invoke_params(req):
+    return {
+        'payload': req.POST.get('data-request', ''),
+        'request_method': req.POST.get('request_method', 'POST'),
+        'query_params': req.POST.get('query_params', ''),
+        'path_params': req.POST.get('path_params', ''),
+    }
+
+# ################################################################################################################################
+
+def _build_invoke_response(service_response):
+    if service_response.ok:
+        data = service_response.data
+        return JsonResponse({
+            'data': getattr(data, 'response_body', ''),
+            'response_time_human': getattr(data, 'response_time', ''),
+        })
+
+    return JsonResponse({
+        'data': str(service_response.details),
+        'response_time_human': '',
+    }, status=500)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def highlight(req):
+    """ Uses Pygments to syntax-highlight the given text, auto-detecting the lexer. """
+    from pygments import highlight as pyg_highlight
+    from pygments.formatters import HtmlFormatter
+    from pygments.lexers import JsonLexer, XmlLexer, HtmlLexer, TextLexer, guess_lexer
+
+    text = req.POST.get('text', '')
+    if not text.strip():
+        return JsonResponse({'html': '', 'lexer': 'text'})
+
+    lexer = _guess_pygments_lexer(text, guess_lexer, JsonLexer, XmlLexer, HtmlLexer, TextLexer)
+    formatter = HtmlFormatter(nowrap=True)
+    html = pyg_highlight(text, lexer, formatter)
+    lexer_name = type(lexer).__name__
+    return JsonResponse({'html': html, 'lexer': lexer_name})
+
+# ################################################################################################################################
+
+def _guess_pygments_lexer(text, guess_lexer, JsonLexer, XmlLexer, HtmlLexer, TextLexer):
+    trimmed = text.strip()
+
+    if (trimmed.startswith('{') and trimmed.endswith('}')) or \
+       (trimmed.startswith('[') and trimmed.endswith(']')):
+        try:
+            import json
+            json.loads(trimmed)
+            return JsonLexer()
+        except (ValueError, TypeError):
+            pass
+
+    if trimmed.startswith('<') and '>' in trimmed:
+        if '<!doctype' in trimmed.lower() or '<html' in trimmed.lower():
+            return HtmlLexer()
+        return XmlLexer()
+
+    try:
+        return guess_lexer(text)
+    except Exception:
+        return TextLexer()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def invoke_channel(req, id):
+    try:
+        params = _extract_invoke_params(req)
+        params['id'] = id
+        response = req.zato.client.invoke('zato.http-soap.invoke-channel', params)
+        return _build_invoke_response(response)
+    except Exception as e:
+        logger.error('invoke_channel error: %s', format_exc())
+        return JsonResponse({'data': str(e), 'response_time_human': ''}, status=500)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def invoke_outconn(req, id):
+    try:
+        params = _extract_invoke_params(req)
+        params['id'] = id
+        response = req.zato.client.invoke('zato.http-soap.invoke-outconn', params)
+        return _build_invoke_response(response)
+    except Exception as e:
+        logger.error('invoke_outconn error: %s', format_exc())
+        return JsonResponse({'data': str(e), 'response_time_human': ''}, status=500)
 
 # ################################################################################################################################
 # ################################################################################################################################

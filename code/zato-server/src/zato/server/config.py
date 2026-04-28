@@ -257,9 +257,14 @@ class ConfigDict:
 
         # Post-process data before it is returned to resolve any opaque attributes
         for value in config_dict.values():
-            value_config = value['config']
-            if ElemsWithOpaqueMaker.has_opaque_data(value_config):
-                ElemsWithOpaqueMaker.process_config_dict(value_config, drop_opaque)
+            if list_config:
+                for item in value:
+                    if ElemsWithOpaqueMaker.has_opaque_data(item):
+                        ElemsWithOpaqueMaker.process_config_dict(item, drop_opaque)
+            else:
+                value_config = value['config']
+                if ElemsWithOpaqueMaker.has_opaque_data(value_config):
+                    ElemsWithOpaqueMaker.process_config_dict(value_config, drop_opaque)
 
         return config_dict
 
@@ -320,6 +325,9 @@ class ConfigStore:
 
         # Services
         self.service = None # type: ConfigDict
+
+        # Pub/sub
+        self.pubsub_subs = None # type: ConfigDict
 
         # MQ
         self.channel_amqp = None   # type: ConfigDict

@@ -41,15 +41,12 @@ function pip_install() {
     $uv_bin pip install \
         -e $CURDIR/zato-common      \
         -e $CURDIR/zato-agent       \
-        -e $CURDIR/zato-broker      \
         -e $CURDIR/zato-cli         \
         -e $CURDIR/zato-client      \
         -e $CURDIR/zato-cy          \
         -e $CURDIR/zato-distlock    \
-        -e $CURDIR/zato-scheduler   \
         -e $CURDIR/zato-server      \
-        -e $CURDIR/zato-web-admin   \
-        -e $CURDIR/zato-testing
+        -e $CURDIR/zato-web-admin
 
     # Delete packages no longer needed
     $uv_bin pip uninstall \

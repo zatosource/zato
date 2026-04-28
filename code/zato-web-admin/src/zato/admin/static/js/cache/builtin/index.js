@@ -18,6 +18,13 @@ $(document).ready(function() {
     $.fn.zato.data_table.add_row_hook = $.fn.zato.cache.builtin.add_row_hook;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'max_size', 'max_item_size', 'sync_method', 'persistent_storage']);
+    var unique_constraints = [
+        {field: 'name', entity_type: 'cache_builtin', attr_name: 'name'}
+    ];
+    $.each(unique_constraints, function(i, c) {
+        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
+        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+    });
 })
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -51,7 +58,7 @@ $.fn.zato.cache.builtin.data_table.new_row = function(item, data, include_tr) {
         var delete_link = String.format("<span class='form_hint'>(Delete)</span>");
     }
     else {
-        var delete_link = String.format("<a href=\"javascript:$.fn.zato.cache.builtin.delete_('{0}')\">Delete</a>", data.cache_id);
+        var delete_link = String.format("<a href=\"javascript:$.fn.zato.cache.builtin.delete_('{0}')\">Delete</a>", item.id);
     }
 
     row += "<td class='numbering'>&nbsp;</td>";
@@ -68,19 +75,19 @@ $.fn.zato.cache.builtin.data_table.new_row = function(item, data, include_tr) {
 
     row += String.format('<td>{0}</td>',
         String.format("<a href=\"/zato/cache/builtin/details/entry/create/cache-id/{0}/cluster/{1}/\">Add a new entry</a>",
-            data.cache_id, item.cluster_id));
+            item.id, item.cluster_id));
     row += String.format('<td>{0}</td>',
-        String.format("<a href=\"javascript:$.fn.zato.cache.builtin.clear('{0}')\">Clear</a>", data.cache_id));
+        String.format("<a href=\"javascript:$.fn.zato.cache.builtin.clear('{0}')\">Clear</a>", item.id));
     row += String.format('<td>{0}</td>',
-        String.format("<a href=\"javascript:$.fn.zato.cache.builtin.edit('{0}')\">Edit</a>", data.cache_id));
+        String.format("<a href=\"javascript:$.fn.zato.cache.builtin.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', delete_link);
-    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", data.cache_id);
+    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
 
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", is_default);
     row += String.format("<td class='ignore'>{0}</td>", item.extend_expiry_on_get);
     row += String.format("<td class='ignore'>{0}</td>", item.extend_expiry_on_set);
-    row += String.format("<td class='ignore'>{0}</td>", data.cache_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.id);
 
     if(include_tr) {
         row += '</tr>';

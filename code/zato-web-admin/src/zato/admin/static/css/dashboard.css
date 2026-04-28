@@ -1,0 +1,14 @@
+/* Dashboard CSS - backwards-compatible umbrella file.
+   The real CSS now lives under css/dashboard-kit/ split by component.
+   This file simply pulls every component in so existing pages that
+   still reference dashboard.css keep working. New pages that only need
+   a subset should <link> the individual dashboard-kit/*.css files. */
+
+@import url("shared/tabs.css");
+@import url("dashboard-kit/kit.css");
+@import url("dashboard-kit/stat_tile.css");
+@import url("dashboard-kit/sparkline.css");
+@import url("dashboard-kit/main_chart.css");
+@import url("dashboard-kit/time_range.css");
+@import url("dashboard-kit/tabs.css");
+@import url("dashboard-kit/outcome.css");

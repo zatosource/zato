@@ -136,7 +136,7 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
         self.assertIsNotNone(push_service_sub)
         self.assertEqual(push_service_sub.delivery_type, 'push')
         self.assertEqual(push_service_sub.push_type, 'service')
-        self.assertEqual(push_service_sub.push_service_name, 'demo.input-logger')
+        self.assertEqual(push_service_sub.push_service_name, 'demo.echo')
 
 # ################################################################################################################################
 

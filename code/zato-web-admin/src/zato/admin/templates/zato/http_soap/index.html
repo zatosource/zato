@@ -20,6 +20,8 @@
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
     <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
     {% if connection == 'channel' and transport == 'plain_http' %}
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/channel.css">
     {% endif %}
@@ -40,12 +42,17 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/invoker.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/index.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/data-table-widget.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/openapi.js"></script>
 
 
     <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.internal_services = {
+        {% for svc in internal_services %}"{{ svc }}": true{% if not forloop.last %}, {% endif %}{% endfor %}
+    };
     $.fn.zato.data_table.get_columns = function() {
         return [
 
@@ -97,18 +104,24 @@
             'security',
 
             // 17, 18, 19
-            'cache_id',
-            'cache_type',
-            'cache_expiry',
+            {% if connection == 'channel' %}
+                'cache_id',
+                'cache_type',
+                'cache_expiry',
+            {% endif %}
 
             // 20
             'data_format',
 
             // 22, 23a, 23b, 23c
             'timeout',
-            'validate_tls',
-            'match_slash',
-            'http_accept',
+            {% if connection == 'outgoing' %}
+                'validate_tls',
+            {% endif %}
+            {% if connection == 'channel' %}
+                'match_slash',
+                'http_accept',
+            {% endif %}
 
             // 24, 25, 26, 27
             {% if connection == 'outgoing' %}
@@ -135,6 +148,11 @@
                 '_ping',
             {% endif %}
 
+            // 34 - Invoke
+            {% if transport == 'plain_http' %}
+                '_invoke',
+            {% endif %}
+
             // 38a
             'data_encoding',
 
@@ -150,19 +168,21 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">{{ transport_label }} {{ connection_label_plural }}</h2>
-
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
 {% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
+    {% if cluster_id %}
+
+        <div id="markup">
+<h2 class="zato">{{ transport_label }} {{ connection_label_plural }}</h2>
+
 {% with full_prompt="Show "|add:transport_label|add:" "|add:connection_label_plural %}
     {% include "zato/search-form.html" with page_prompt=full_prompt %}
 {% endwith %}
 
-    {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.http_soap.create('{{ transport_label }} {{ connection_label }}')">Create a new {{ transport_label }} {{ connection_label }}</a>
             {% if connection == 'outgoing' and transport == 'plain_http' %}
@@ -171,8 +191,7 @@
             {% endif %}
         </div>
 
-        <div id="markup">
-            <table id="data-table">
+            <table class="zato-table" id="data-table">
                 <thead>
                     <tr class='ignore'>
 
@@ -224,18 +243,24 @@
                         <th class='ignore'>&nbsp;</th> {% comment %} security {% endcomment %}
 
                         <!-- 17, 18, 19 -->
-                        <th class='ignore'>&nbsp;</th> {% comment %} cache_id {% endcomment %}
-                        <th class='ignore'>&nbsp;</th> {% comment %} cache_type {% endcomment %}
-                        <th class='ignore'>&nbsp;</th> {% comment %} cache_expiry {% endcomment %}
+                        {% if connection == 'channel' %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} cache_id {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} cache_type {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} cache_expiry {% endcomment %}
+                        {% endif %}
 
                         <!-- 20, 21 -->
                         <th class='ignore'>&nbsp;</th> {% comment %} data_format {% endcomment %}
 
                         <!-- 22, 23a, 23b, 23c -->
                         <th class='ignore'>&nbsp;</th> {% comment %} timeout {% endcomment %}
-                        <th class='ignore'>&nbsp;</th> {% comment %} use_tls {% endcomment %}
-                        <th class='ignore'>&nbsp;</th> {% comment %} match_slash {% endcomment %}
-                        <th class='ignore'>&nbsp;</th> {% comment %} http_accept {% endcomment %}
+                        {% if connection == 'outgoing' %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} validate_tls {% endcomment %}
+                        {% endif %}
+                        {% if connection == 'channel' %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} match_slash {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} http_accept {% endcomment %}
+                        {% endif %}
 
                         <!-- 24, 25, 26, 27 -->
                         {% if connection == 'outgoing' %}
@@ -269,6 +294,11 @@
                           {% endif %}
                         {% endif %}
 
+                        <!-- Invoke -->
+                        {% if transport == 'plain_http' %}
+                            <th>&nbsp;</th> {% comment %} _invoke {% endcomment %}
+                        {% endif %}
+
                         <!-- 38a -->
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -283,7 +313,7 @@
                 <tbody>
                 {% if items %}
                 {% for item in items %}
-                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                    <tr id='tr_{{ item.id }}'>
 
                         <!-- 1, 2 -->
                         <td class='numbering'>&nbsp;</td>
@@ -313,7 +343,7 @@
 
                         <!-- 7, 8 -->
                         {% if connection == 'channel' %}
-                            <td><a href="{% url "service-ide" "service" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                            <td>{% if item.service_name in internal_services %}{{ item.service_name }}{% else %}<a href="{% url "service-ide" "service" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a>{% endif %}</td>
                             <td class='ignore'>
                             {% if item.cache_id %}
                                 <a href="/zato/cache/{{ item.cache_type }}/?cluster={{ cluster_id }}&amp;highlight={{ item.cache_id }}">{{ item.cache_name }}</a>
@@ -360,18 +390,24 @@
                         <td class='ignore'>{{ item.security_id }}</td>
 
                         <!-- 17, 18, 19 -->
-                        <td class='ignore'>{{ item.cache_id }}</td>
-                        <td class='ignore'>{{ item.cache_type }}</td>
-                        <td class='ignore'>{{ item.cache_expiry }}</td>
+                        {% if connection == 'channel' %}
+                            <td class='ignore'>{{ item.cache_id }}</td>
+                            <td class='ignore'>{{ item.cache_type }}</td>
+                            <td class='ignore'>{{ item.cache_expiry }}</td>
+                        {% endif %}
 
                         <!-- 20 -->
                         <td class='ignore'>{{ item.data_format }}</td>
 
                         <!-- 22, 23a, 23b, 23c -->
                         <td class='ignore'>{{ item.timeout }}</td>
-                        <td class='ignore'>{{ item.validate_tls }}</td>
-                        <td class='ignore'>{{ item.match_slash }}</td>
-                        <td class='ignore'>{{ item.http_accept|default:"" }}</td>
+                        {% if connection == 'outgoing' %}
+                            <td class='ignore'>{{ item.validate_tls }}</td>
+                        {% endif %}
+                        {% if connection == 'channel' %}
+                            <td class='ignore'>{{ item.match_slash }}</td>
+                            <td class='ignore'>{{ item.http_accept|default:"" }}</td>
+                        {% endif %}
 
                         <!-- 24, 25, 26, 27 -->
                         {% if connection == 'outgoing' %}
@@ -395,7 +431,12 @@
 
                         <!-- 33 -->
                         {% if connection == 'outgoing' %}
-                            <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
+                            <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)" class="ping-link">Ping</a></td>
+                        {% endif %}
+
+                        <!-- Invoke -->
+                        {% if transport == 'plain_http' %}
+                            <td><a href="javascript:$.fn.zato.http_soap.invoke('{{ item.id }}')">Invoke</a></td>
                         {% endif %}
 
                         <!-- 38a -->
@@ -417,9 +458,8 @@
                 </tbody>
             </table>
 
-        </div>
-
 {% include "zato/paginate/action-panel.html" %}
+        </div>
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">

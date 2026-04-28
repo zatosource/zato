@@ -23,7 +23,8 @@ from uuid import uuid4
 from bunch import bunchify
 
 # gevent
-from gevent import sleep
+import gevent
+from gevent import sleep, spawn
 from gevent.lock import RLock
 
 # Open Telemetry
@@ -33,14 +34,13 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
 # Zato
-from zato.broker import BrokerMessageReceiver
-from zato.broker.redis_client import RedisBrokerClient as BrokerClient
+from zato.common.config_dispatcher import ConfigDispatchReceiver, ConfigDispatcher
 from zato.bunch import Bunch
-from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  HotDeploy, SERVER_STARTUP, \
+from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, HotDeploy, PubSub, SERVER_STARTUP, \
     SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.bearer_token import BearerTokenManager
-from zato.common.broker_message import HOT_DEPLOY, PUBSUB
+from zato.common.broker_message import HOT_DEPLOY
 from zato.common.const import SECRETS
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import loads
@@ -48,7 +48,6 @@ from zato.common.log_streaming import LogStreamingManager
 from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
-from zato.common.pubsub.redis_consumer import start_internal_redis_consumer as start_internal_consumer
 from zato.common.pubsub.matcher import PatternMatcher
 from zato.common.pubsub.redis_backend import RedisPubSubBackend
 from zato.common.pubsub.subscriptions_store import SubscriptionsStore
@@ -56,7 +55,7 @@ from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
     fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid_server, \
-    register_diag_handlers, spawn_greenlet, StaticConfig, utcnow
+    parse_extra_into_dict, register_diag_handlers, spawn_greenlet, StaticConfig, utcnow
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.file_system import get_python_files
@@ -68,7 +67,7 @@ from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.worker import WorkerStore
-from zato.server.config import ConfigStore
+from zato.server.config import ConfigDict, ConfigStore
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import ODBConfigSource
 from zato.server.groups.base import GroupsManager
@@ -89,6 +88,7 @@ if 0:
     from zato.common.odb.model import Cluster as ClusterModel
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, strdict, strbytes, \
         strlist, strorlistnone, strnone, strorlist, strset
+    from zato.server.base.parallel.delivery import RedisPushDelivery
     from zato.server.connection.cache import Cache, CacheAPI
     from zato.server.ext.zunicorn.arbiter import Arbiter
     from zato.server.ext.zunicorn.workers.ggevent import GeventWorker
@@ -111,6 +111,7 @@ if 0:
 logger = logging.getLogger(__name__)
 kvdb_logger = logging.getLogger('zato_kvdb')
 
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -124,7 +125,7 @@ _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
+class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
     """ Main server process.
     """
     odb: 'ODBManager'
@@ -138,7 +139,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     service_store: 'ServiceStore'
 
     rpc: 'ServerRPC'
-    broker_client: 'BrokerClient'
+    config_dispatcher: 'ConfigDispatcher'
     zato_lock_manager: 'LockManager'
     startup_callable_tool: 'StartupCallableTool'
     bearer_token_manager: 'BearerTokenManager'
@@ -159,6 +160,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'
 
     pubsub_redis: 'RedisPubSubBackend'
+    pubsub_push_delivery: 'RedisPushDelivery'
     pubsub_pattern_matcher: 'PatternMatcher'
     pubsub_subscriptions: 'SubscriptionsStore'
 
@@ -171,6 +173,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.use_tls = False
         self.is_starting_first = '<not-set>'
         self.odb_data = Bunch()
+        self._has_pubsub_redis = False
+        self._push_subs = {} # type: anydict
         self.repo_location = ''
         self.user_conf_location:'strlist' = []
         self.user_conf_location_extra:'strset' = set()
@@ -257,10 +261,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # As above, but as a regular expression pattern
         self.http_methods_allowed_re = ''
-
-        # A list of all the pub/sub hook services that will be invoked (alphabetically)
-        # for any pub/sub message before it's delivered.
-        self.pubsub_hooks:'strlist' = []
 
         self.access_logger = logging.getLogger('zato_access_log')
         self.access_logger_log = self.access_logger._log
@@ -921,25 +921,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                     self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
 
         # Set up the broker client
-        self.broker_client = BrokerClient(server=self)
-        self.broker_client.ping_connection()
+        self.config_dispatcher = ConfigDispatcher(server=self)
 
-        # Delete the queue to remove any message we don't want to read since they were published when we were not running,
-        # and then create it all again so we have a fresh start.
-        self.broker_client.delete_queue(self.process_cid, 'server')
-        self.broker_client.create_internal_queue('server')
-
-        # Configure internal pub/sub
-        _ = spawn_greenlet(
-            start_internal_consumer,
-            'zato.server',
-            'server',
-            'zato-server',
-            self.on_pubsub_message
-        )
-
-        # Initialize Redis pub/sub backend using broker client's Redis connection
-        self.pubsub_redis = RedisPubSubBackend(self.broker_client.redis)
         self.pubsub_pattern_matcher = PatternMatcher()
         self.pubsub_subscriptions = SubscriptionsStore()
 
@@ -947,8 +930,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self._load_pubsub_permissions()
 
         # Let the worker know the broker client is ready
-        self.worker_store.set_broker_client(self.broker_client)
-        self.worker_store.after_broker_client_set()
+        self.worker_store.set_config_dispatcher(self.config_dispatcher)
+        self.worker_store.after_config_dispatcher_set()
 
         self._after_init_accepted(locally_deployed)
         self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host, self.port, self.preferred_address, use_tls)
@@ -987,10 +970,431 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if self.deploy_auto_from:
             self.handle_enmasse_auto_from()
 
+        # Start the Rust scheduler thread (in-process)
+        self._start_scheduler()
+
+        # Start the Redis pub/sub backend
+        self._start_pubsub_redis()
+
+        # Start the queue bridge (Kafka, SQS, etc.)
+        self._start_queue_bridge()
+
         # Optionally, if we appear to be a Docker quickstart environment, log all details about the environment.
         self.log_environment_details()
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
+
+# ################################################################################################################################
+
+    def _start_scheduler(self) -> 'None':
+        """ Connect to the standalone scheduler binary via Redis Streams and HTTP.
+        """
+        from json import loads as json_loads
+
+        from zato.common.api import SCHEDULER
+        from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
+
+        self._scheduler_started = False
+
+        try:
+            from zato.server.scheduler_.adapter import SchedulerODBAdapter
+            from zato.server.scheduler_.client import SchedulerClient
+
+            logger.info('Connecting to scheduler')
+
+            scheduler_adapter = SchedulerODBAdapter(self.odb, self.cluster_id)
+
+            self._scheduler = SchedulerClient()
+            self._scheduler.reload(odb_adapter=scheduler_adapter)
+            self._scheduler_started = True
+
+            self._start_scheduler_fire_listener()
+            self._start_scheduler_request_listener(scheduler_adapter)
+
+            logger.info('Scheduler client connected, fire listener started')
+        except Exception:
+            logger.warning('Scheduler could not be started: %s', format_exc())
+
+    def _start_scheduler_fire_listener(self) -> 'None':
+        """ Starts a dedicated greenlet that consumes fire and timeout events
+        from the scheduler via Redis Streams.
+        """
+        from json import loads as json_loads
+
+        from zato.common.api import SCHEDULER
+        from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
+
+        fire_redis = self._scheduler.new_redis_conn()
+
+        fire_stream = 'zato:scheduler:stream:fire'
+        timeout_stream = 'zato:scheduler:stream:timeout'
+        group_name = 'server-fire'
+        consumer_name = 'server-fire-0'
+
+        for stream in (fire_stream, timeout_stream):
+            try:
+                fire_redis.xgroup_create(stream, group_name, id='$', mkstream=True)
+            except Exception as exc:
+                if 'BUSYGROUP' not in str(exc):
+                    raise
+
+        def _fire_listener_loop() -> 'None':
+            logger.info('Scheduler fire listener loop entering')
+            while True:
+                try:
+                    result = fire_redis.xreadgroup(
+                        groupname=group_name,
+                        consumername=consumer_name,
+                        streams={fire_stream: '>', timeout_stream: '>'},
+                        count=10,
+                        block=1000,
+                    )
+
+                    if not result:
+                        continue
+
+                    for stream_name, messages in result:
+                        for msg_id, fields in messages:
+                            logger.info('Fire listener received: stream=%s msg_id=%s fields=%s', stream_name, msg_id, fields)
+                            if stream_name == fire_stream:
+                                spawn(self._handle_fire_event, fields)
+                            elif stream_name == timeout_stream:
+                                spawn(self._handle_timeout_event, fields)
+
+                            fire_redis.xack(stream_name, group_name, msg_id)
+
+                except Exception:
+                    logger.warning('Error in scheduler fire listener: %s', format_exc())
+                    sleep(1)
+
+        spawn(_fire_listener_loop)
+        logger.info('Scheduler fire listener greenlet started')
+
+    def _start_scheduler_request_listener(self, scheduler_adapter:'any_') -> 'None':
+        """ Listens for request_jobs messages from the scheduler and responds with a reload. """
+        req_redis = self._scheduler.new_redis_conn()
+
+        request_stream = 'zato:scheduler:stream:request'
+        group_name = 'server-request'
+        consumer_name = 'server-request-0'
+
+        try:
+            req_redis.xgroup_create(request_stream, group_name, id='$', mkstream=True)
+        except Exception as exc:
+            if 'BUSYGROUP' not in str(exc):
+                raise
+
+        def _request_listener_loop() -> 'None':
+            logger.info('Scheduler request listener loop entering')
+            while True:
+                try:
+                    result = req_redis.xreadgroup(
+                        groupname=group_name,
+                        consumername=consumer_name,
+                        streams={request_stream: '>'},
+                        count=10,
+                        block=5000,
+                    )
+
+                    if not result:
+                        continue
+
+                    for stream_name, messages in result:
+                        for msg_id, fields in messages:
+                            command = fields['command']
+                            if command == 'request_jobs':
+                                logger.info('Scheduler requested jobs, sending reload')
+                                self._scheduler.reload(odb_adapter=scheduler_adapter)
+                            req_redis.xack(stream_name, group_name, msg_id)
+
+                except Exception:
+                    logger.warning('Error in scheduler request listener: %s', format_exc())
+                    sleep(1)
+
+        spawn(_request_listener_loop)
+        logger.info('Scheduler request listener greenlet started')
+
+    def _handle_fire_event(self, fields:'dict') -> 'None':
+        """ Processes a fire event from the scheduler - invokes the target service. """
+        import time as _time
+        from json import loads as json_loads
+        from bunch import Bunch
+        from zato.common.api import SCHEDULER
+        from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
+
+        payload_json = fields['payload']
+        logger.info('Fire event payload: %s', payload_json)
+        ctx = json_loads(payload_json)
+
+        job_id = ctx['job_id']
+        job_name = ctx['name']
+        current_run = ctx['current_run']
+        logger.info('Invoking service for job: id=%s name=%s run=%s', job_id, job_name, current_run)
+
+        extra = ctx.get('extra')
+        if extra and isinstance(extra, str):
+            try:
+                extra = json_loads(extra)
+            except Exception:
+                try:
+                    extra = parse_extra_into_dict(extra)
+                except Exception:
+                    pass
+
+        msg = Bunch({
+            'action': SCHEDULER_MSG.JOB_EXECUTED.value,
+            'name': ctx['name'],
+            'service': ctx['service'],
+            'payload': extra,
+            'cid': new_cid_server(),
+            'job_type': ctx['job_type'],
+            'zato_ctx': {
+                'scheduler_job_id': job_id,
+                'scheduler_current_run': current_run,
+            },
+        })
+
+        outcome = SCHEDULER.OUTCOME.OK
+        _t0 = _time.monotonic()
+        try:
+            self.worker_store.on_message_invoke_service(msg, 'scheduler', 'SCHEDULER_JOB_EXECUTED')
+        except Exception:
+            outcome = SCHEDULER.OUTCOME.ERROR
+            logger.warning('Scheduler job_id=%s; name=%s; outcome=error; traceback=%s', job_id, job_name, format_exc())
+
+        duration_ms = int((_time.monotonic() - _t0) * 1000)
+
+        try:
+            self._scheduler.mark_complete(job_id, outcome, duration_ms, current_run)
+        except Exception:
+            logger.warning('Scheduler mark_complete failed; job_id=%s; name=%s; traceback=%s', job_id, job_name, format_exc())
+
+    def _handle_timeout_event(self, fields:'dict') -> 'None':
+        """ Processes a timeout event from the scheduler. """
+        job_id = fields['job_id']
+        current_run = fields['current_run']
+        elapsed_ms = fields['elapsed_ms']
+        error = fields['error']
+        logger.warning('Scheduler timeout: job_id=%s run=%s elapsed_ms=%s error=%s', job_id, current_run, elapsed_ms, error)
+
+# ################################################################################################################################
+
+    def _invoke_queue_service(self, service_name, data):
+        """ Invoked by the recv listener greenlet when a message is received
+        from an external queue (Kafka, SQS, etc.) via the queue bridge binary.
+        """
+        self.invoke(service_name, data)
+
+# ################################################################################################################################
+
+    def _start_queue_bridge(self) -> 'None':
+        """ Connect to the standalone queue bridge binary via Redis Streams and HTTP.
+        """
+        from contextlib import closing
+        from base64 import b64decode
+
+        from zato.common.api import GENERIC
+        from zato.server.generic.connection import GenericConnection
+        from zato.common.odb.query.generic import connection_list
+
+        self._queue_bridge_started = False
+
+        try:
+            from zato.server.queue_bridge.client import QueueBridgeClient
+
+            logger.info('Connecting to queue bridge')
+
+            channels = []
+            outgoing = []
+
+            with closing(self.odb.session()) as session:
+                for type_ in (GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA):
+                    items = connection_list(session, self.cluster_id, type_, False)
+                    for item in items:
+                        conn = GenericConnection.from_model(item)
+                        config = conn.to_dict()
+                        logger.info('Queue bridge loading %s -> %s', type_, config)
+
+                        if type_ == GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA:
+                            channels.append(config)
+                        else:
+                            outgoing.append(config)
+
+            self._queue_bridge = QueueBridgeClient()
+            ch_noun = 'channel' if len(channels) == 1 else 'channels'
+            out_noun = 'outgoing connection' if len(outgoing) == 1 else 'outgoing connections'
+            logger.info('Sending reload to queue bridge with %d %s and %d %s', len(channels), ch_noun, len(outgoing), out_noun)
+            self._queue_bridge.reload(channels=channels, outgoing=outgoing)
+            self._queue_bridge_started = True
+
+            self._start_queue_bridge_recv_listener(b64decode)
+
+            logger.info('Queue bridge client connected, recv listener started')
+        except Exception:
+            logger.warning('Queue bridge could not be started: %s', format_exc())
+
+    def _reload_queue_bridge(self) -> 'None':
+        from contextlib import closing
+        from zato.common.api import GENERIC
+        from zato.server.generic.connection import GenericConnection
+        from zato.common.odb.query.generic import connection_list
+
+        channels = []
+        outgoing = []
+
+        with closing(self.odb.session()) as session:
+            for type_ in (GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA):
+                items = connection_list(session, self.cluster_id, type_, False)
+                for item in items:
+                    conn = GenericConnection.from_model(item)
+                    config = conn.to_dict()
+                    if type_ == GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA:
+                        channels.append(config)
+                    else:
+                        outgoing.append(config)
+
+        ch_noun = 'channel' if len(channels) == 1 else 'channels'
+        out_noun = 'outgoing connection' if len(outgoing) == 1 else 'outgoing connections'
+        logger.info('Reloading queue bridge with %d %s and %d %s', len(channels), ch_noun, len(outgoing), out_noun)
+        self._queue_bridge.reload(channels=channels, outgoing=outgoing)
+
+    def _start_queue_bridge_recv_listener(self, b64decode:'any_') -> 'None':
+        """ Starts a dedicated greenlet that consumes recv events
+        from the queue bridge via Redis Streams.
+        """
+        recv_redis = self._queue_bridge.new_redis_conn()
+
+        recv_stream = 'zato:queue_bridge:stream:recv'
+        group_name = 'server-recv'
+        consumer_name = 'server-recv-0'
+
+        try:
+            recv_redis.xgroup_create(recv_stream, group_name, id='$', mkstream=True)
+        except Exception as exc:
+            if 'BUSYGROUP' not in str(exc):
+                raise
+
+        def _recv_listener_loop():
+            while True:
+                try:
+                    result = recv_redis.xreadgroup(
+                        groupname=group_name,
+                        consumername=consumer_name,
+                        streams={recv_stream: '>'},
+                        count=10,
+                        block=1000,
+                    )
+
+                    if not result:
+                        continue
+
+                    for stream_name, messages in result:
+                        for msg_id, fields in messages:
+                            service_name = fields['service']
+                            payload_b64 = fields['payload']
+                            payload = b64decode(payload_b64)
+                            self._invoke_queue_service(service_name, payload)
+                            recv_redis.xack(stream_name, group_name, msg_id)
+
+                except Exception:
+                    logger.warning('Error in queue bridge recv listener: %s', format_exc())
+                    sleep(1)
+
+        spawn(_recv_listener_loop)
+        logger.info('Queue bridge recv listener greenlet started')
+
+# ################################################################################################################################
+
+    def _start_pubsub_redis(self):
+
+        from redis import Redis
+        from zato.server.base.parallel.delivery import RedisPushDelivery
+
+        kvdb_config = self.fs_server_config.kvdb
+
+        try:
+            redis_conn = Redis(
+                host=kvdb_config.host or 'localhost',
+                port=int(kvdb_config.port or 6379),
+                db=int(kvdb_config.get('db', 0)),
+                password=kvdb_config.password if kvdb_config.password else None,
+                decode_responses=True,
+            )
+            self.pubsub_redis = RedisPubSubBackend(redis_conn)
+            self._has_pubsub_redis = True
+
+            self._sync_pubsub_subscriptions()
+
+            self.pubsub_push_delivery = RedisPushDelivery(self, self.pubsub_redis)
+            self.pubsub_push_delivery.start()
+
+            logger.info('PubSub Redis backend started')
+        except Exception:
+            logger.warning('PubSub Redis backend could not be started: %s', format_exc())
+
+# ################################################################################################################################
+
+    def _sync_pubsub_subscriptions(self) -> 'None':
+
+        from contextlib import closing
+        from zato.common.odb.model import HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
+
+        _push = PubSub.Delivery_Type.Push
+
+        logger.info('Syncing ODB subscriptions to Redis pub/sub backend')
+
+        with closing(self.odb.session()) as session:
+
+            rows = session.query(
+                PubSubSubscription.sub_key,
+                PubSubSubscription.delivery_type,
+                PubSubSubscription.push_type,
+                PubSubSubscription.push_service_name,
+                PubSubSubscription.rest_push_endpoint_id,
+                PubSubTopic.name,
+                SecurityBase.username,
+                SecurityBase.name.label('sec_name'),
+            ).join(
+                PubSubSubscriptionTopic, PubSubSubscriptionTopic.subscription_id == PubSubSubscription.id
+            ).join(
+                PubSubTopic, PubSubTopic.id == PubSubSubscriptionTopic.topic_id
+            ).join(
+                SecurityBase, SecurityBase.id == PubSubSubscription.sec_base_id
+            ).filter(
+                PubSubSubscription.cluster_id == self.cluster_id
+            ).all()
+
+            synced = 0
+            push_subs = {}
+
+            for row in rows:
+                topic_name = row.name
+                sub_key = row.sub_key
+                self.pubsub_redis.subscribe(sub_key, topic_name)
+                synced += 1
+
+                if row.delivery_type == _push:
+                    sub_config = {
+                        'sub_key': sub_key,
+                        'topic_name': topic_name,
+                        'push_type': row.push_type,
+                        'push_service_name': row.push_service_name,
+                        'rest_push_endpoint_id': row.rest_push_endpoint_id,
+                    }
+
+                    if row.push_type == 'rest' and row.rest_push_endpoint_id:
+                        endpoint = session.query(HTTPSOAP).filter(
+                            HTTPSOAP.id == row.rest_push_endpoint_id
+                        ).first()
+                        if endpoint:
+                            sub_config['rest_push_url'] = (endpoint.host or '') + endpoint.url_path
+
+                    push_subs[sub_key] = sub_config
+
+            self._push_subs = push_subs
+
+        noun = 'pair' if synced == 1 else 'pairs'
+        logger.info('Synced %d ODB subscription-topic %s to Redis (%d push)', synced, noun, len(push_subs))
 
 # ################################################################################################################################
 
@@ -1024,21 +1428,21 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         from zato.common.api import PubSub
         from zato.common.odb.model import PubSubPermission, SecurityBase
 
-        logger.info('_load_pubsub_permissions: starting, cluster_id=%s', self.cluster_id)
+        logger.debug('_load_pubsub_permissions: starting, cluster_id=%s', self.cluster_id)
 
         with closing(self.odb.session()) as session:
 
             # First log all SecurityBase entries
             all_sec = session.query(SecurityBase).all()
-            logger.info('_load_pubsub_permissions: found %d SecurityBase entries in DB', len(all_sec))
+            logger.debug('_load_pubsub_permissions: found %d SecurityBase entries in DB', len(all_sec))
             for sec in all_sec:
-                logger.info('_load_pubsub_permissions: SecurityBase id=%s, name=%s, username=%s', sec.id, sec.name, sec.username)
+                logger.debug('_load_pubsub_permissions: SecurityBase id=%s, name=%s, username=%s', sec.id, sec.name, sec.username)
 
             # Log all PubSubPermission entries
             all_perms = session.query(PubSubPermission).filter(PubSubPermission.cluster_id == self.cluster_id).all()
-            logger.info('_load_pubsub_permissions: found %d PubSubPermission entries in DB', len(all_perms))
+            logger.debug('_load_pubsub_permissions: found %d PubSubPermission entries in DB', len(all_perms))
             for perm in all_perms:
-                logger.info('_load_pubsub_permissions: PubSubPermission id=%s, sec_base_id=%s, pattern=%s',
+                logger.debug('_load_pubsub_permissions: PubSubPermission id=%s, sec_base_id=%s, pattern=%s',
                     perm.id, perm.sec_base_id, perm.pattern)
 
             permissions = session.query(
@@ -1052,13 +1456,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 PubSubPermission.cluster_id == self.cluster_id
             ).all()
 
-            logger.info('_load_pubsub_permissions: joined query returned %d rows', len(permissions))
+            logger.debug('_load_pubsub_permissions: joined query returned %d rows', len(permissions))
 
             client_permissions = {}
             username_to_sec_name = {}
 
             for pattern_str, access_type, username, sec_name in permissions:
-                logger.info('_load_pubsub_permissions: processing row - pattern=%s, access_type=%s, username=%s, sec_name=%s',
+                logger.debug('_load_pubsub_permissions: processing row - pattern=%s, access_type=%s, username=%s, sec_name=%s',
                     pattern_str, access_type, username, sec_name)
 
                 if username not in client_permissions:
@@ -1079,21 +1483,21 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                             'access_type': PubSub.API_Client.Subscriber
                         })
 
-            logger.info('_load_pubsub_permissions: processed %d unique users: %s', len(client_permissions), list(client_permissions.keys()))
-            logger.info('_load_pubsub_permissions: username_to_sec_name=%s', username_to_sec_name)
+            logger.debug('_load_pubsub_permissions: processed %d unique users: %s', len(client_permissions), list(client_permissions.keys()))
+            logger.debug('_load_pubsub_permissions: username_to_sec_name=%s', username_to_sec_name)
 
             for username, perms in client_permissions.items():
-                logger.info('Loading permissions for user %s: %s', username, perms)
+                logger.debug('Loading permissions for user %s: %s', username, perms)
                 self.pubsub_pattern_matcher.add_client(username, perms)
 
                 sec_name = username_to_sec_name.get(username)
                 if sec_name:
                     self.pubsub_subscriptions.register_user(username, sec_name)
-                    logger.info('Registered user %s with sec_name %s', username, sec_name)
+                    logger.debug('Registered user %s with sec_name %s', username, sec_name)
 
-                logger.info('Loaded pub/sub permissions for user: %s (%d patterns)', username, len(perms))
+                logger.debug('Loaded pub/sub permissions for user: %s (%d patterns)', username, len(perms))
 
-        logger.info('_load_pubsub_permissions: completed')
+        logger.debug('_load_pubsub_permissions: completed')
 
 # ################################################################################################################################
 
@@ -1110,13 +1514,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.worker_store.init()
         self.worker_store.init_pubsub()
 
-        # .. notify the pub/sub server too ..
-        pubsub_msg = Bunch()
-        pubsub_msg.cid = new_cid_server()
-        pubsub_msg.action = PUBSUB.RELOAD_CONFIG.value
+        # .. reload the scheduler if it was started ..
+        if getattr(self, '_scheduler_started', False):
+            from zato.server.scheduler_.adapter import SchedulerODBAdapter
+            scheduler_adapter = SchedulerODBAdapter(self.odb, self.cluster_id)
+            self._scheduler.reload(odb_adapter=scheduler_adapter)
 
-        # .. publish the message for pub/sub ..
-        self.broker_client.publish_to_pubsub(pubsub_msg)
+        # .. reload the queue bridge if it was started ..
+        if self._queue_bridge_started:
+            self._reload_queue_bridge()
 
         # .. finally, log what happened.
         logger.info('⭐ Config loaded OK')
@@ -1192,6 +1598,61 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             return data
         else:
             return result.stderr
+
+# ################################################################################################################################
+
+    def import_demo_scheduler(self):
+
+        import zato.server.service.internal.scheduler
+        from zato.server.commands import CommandsFacade
+
+        config_path = os.path.join(os.path.dirname(zato.server.service.internal.scheduler.__file__), 'demo-enmasse.yaml')
+
+        facade = CommandsFacade()
+        facade.init(self)
+
+        result = facade.run_enmasse_sync_import(config_path)
+        return result.is_ok
+
+# ################################################################################################################################
+
+    def import_demo_kafka(self):
+
+        import zato.server.service.internal.kafka
+        from zato.server.commands import CommandsFacade
+
+        config_path = os.path.join(os.path.dirname(zato.server.service.internal.kafka.__file__), 'demo-enmasse.yaml')
+
+        facade = CommandsFacade()
+        facade.init(self)
+
+        result = facade.run_enmasse_sync_import(config_path)
+        return result.is_ok
+
+# ################################################################################################################################
+
+    def import_demo_pubsub(self):
+
+        import zato.server.service.internal.pubsub
+        from zato.common.api import Default_Demo_PubSub_Service_File_Data
+        from zato.common.util.open_ import open_w
+        from zato.server.commands import CommandsFacade
+
+        pubsub_dir = os.path.dirname(zato.server.service.internal.pubsub.__file__)
+
+        config_path = os.path.join(pubsub_dir, 'demo-enmasse.yaml')
+
+        facade = CommandsFacade()
+        facade.init(self)
+
+        result = facade.run_enmasse_sync_import(config_path)
+
+        if result.is_ok:
+            full_path = os.path.join(self.hot_deploy_config.pickup_dir, 'demo_pubsub_services.py')
+            with open_w(full_path) as f:
+                f.write(Default_Demo_PubSub_Service_File_Data)
+
+        return result.is_ok
 
 # ################################################################################################################################
 
@@ -1299,7 +1760,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def invoke_startup_services(self) -> 'None':
         stanza = 'startup_services'
-        _invoke_startup_services('Parallel', stanza, self.fs_server_config, self.repo_location, self.broker_client, None)
+        _invoke_startup_services('Parallel', stanza, self.fs_server_config, self.repo_location, self.config_dispatcher, None)
 
 # ################################################################################################################################
 
@@ -1309,8 +1770,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             'name': ide_username,
             'is_active': True,
             'type_': SEC_DEF_TYPE.BASIC_AUTH,
-            'password1': ide_password,
-            'password2': ide_password,
+            'password': ide_password,
         }
         _ = self.invoke(service_name, request)
 
@@ -1435,31 +1895,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Datadog
         from ddtrace.trace import tracer
         self.datadog_tracer = tracer
-
-# ################################################################################################################################
-
-    def on_pubsub_message(self, body:'any_', amqp_msg:'KombuMessage', name:'str', config:'dict') -> 'None':
-
-        # Make sure we work with a dict ..
-        if not isinstance(body, dict):
-            body = loads(body)
-
-        # .. which we can now turn into a Bunch ..
-        body = bunchify(body)
-
-        # .. and now we can call the actual handler now ..
-        try:
-            self.on_broker_msg(body)
-
-        # .. indicate the message has not been processed
-        except Exception:
-            log_msg = f'Rejecting pub/sub message: body={body}, amqp_msg={amqp_msg}, e={format_exc()}'
-            logger.warning(log_msg)
-            amqp_msg.reject(requeue=True)
-
-        # .. otherwise, confirm it's been consumed.
-        else:
-            amqp_msg.ack()
 
 # ################################################################################################################################
 
@@ -1608,6 +2043,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             else:
                 self._is_process_closing = True
 
+            # Stop the Redis pub/sub backend if it was started
+            if self._has_pubsub_redis:
+                self.pubsub_push_delivery.stop()
+                self.pubsub_redis.redis.close()
+
             # Close SQL pools
             self.sql_pool_store.cleanup_on_stop()
 
@@ -1622,8 +2062,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         """ Publishes a message on the broker so all the servers (this one including
         can deploy a new package).
         """
-        msg = {'action': HOT_DEPLOY.CREATE_SERVICE.value, 'package_id': package_id} # type: ignore
-        self.broker_client.publish(msg)
+        msg = {'action': HOT_DEPLOY.CREATE_SERVICE.value, 'package_id': package_id}
+        self.config_dispatcher.publish(msg)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1638,6 +2078,29 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def api_worker_store_reconnect_generic(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.worker_store.reconnect_generic(*args, **kwargs) # type: ignore
+
+# ################################################################################################################################
+
+    def get_bearer_token(self, security_id='', raw_params=None):
+        return self.bearer_token_manager.get_bearer_token_from_odb(self.odb, security_id, raw_params)
+
+# ################################################################################################################################
+
+    def check_attr_exists(self, entity_type, attr_name, value):
+        import json
+        from contextlib import closing
+        from sqlalchemy import text
+        exists = False
+        with closing(self.odb.session()) as session:
+            try:
+                result = session.execute(
+                    text(f'SELECT 1 FROM {entity_type} WHERE {attr_name} = :val LIMIT 1'),
+                    {'val': value}
+                )
+                exists = result.fetchone() is not None
+            except Exception:
+                pass
+        return json.dumps({'exists': exists})
 
 # ################################################################################################################################
 # ################################################################################################################################

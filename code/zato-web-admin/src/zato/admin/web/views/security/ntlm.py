@@ -10,12 +10,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from json import loads
 
 # Zato
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.ntlm import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common.odb.model import NTLM
+# Bunch
+from bunch import Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +26,12 @@ class Index(_Index):
     url_name = 'security-ntlm'
     template = 'zato/security/ntlm.html'
     service_name = 'zato.security.ntlm.get-list'
-    output_class = NTLM
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'username')
+        output_required = ('id', 'name', 'username')
         output_repeated = True
 
     def handle(self):
@@ -43,8 +45,11 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'username')
+        input_required = ('name', 'username')
         output_required = ('id', 'name')
+
+    def populate_initial_input_dict(self, initial_input_dict):
+        initial_input_dict['is_active'] = True
 
     def success_message(self, item):
         return 'Successfully {0} the NTLM definition [{1}]'.format(self.verb, item.name)
@@ -52,6 +57,18 @@ class _CreateEdit(CreateEdit):
 class Create(_CreateEdit):
     url_name = 'security-ntlm-create'
     service_name = 'zato.security.ntlm.create'
+
+    def __call__(self, req, *args, **kwargs):
+        response = super().__call__(req, *args, **kwargs)
+        if response.status_code == 200:
+            data = loads(response.content)
+            password = req.POST.get('password', '')
+            if password:
+                req.zato.client.invoke('zato.security.ntlm.change-password', {
+                    'id': data['id'],
+                    'password': password,
+                })
+        return response
 
 class Edit(_CreateEdit):
     url_name = 'security-ntlm-edit'

@@ -4,12 +4,6 @@
 
 {% block "extra_css" %}
 
-    <style type="text/css">
-        .ui-dialog-titlebar {
-            margin-bottom: 0px !important;
-        }
-    </style>
-
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
 {% endblock %}
 
@@ -47,7 +41,6 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Basic Auth</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -55,17 +48,19 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
+    {% if cluster_id %}
+
+        <div id="markup">
+<h2 class="zato">Basic Auth</h2>
+
 {% include "zato/search-form.html" with page_prompt="Search"%}
 
-
-    {% if cluster_id %}
 
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.security.basic_auth.create()">Create Basic Auth definition</a>
         </div>
 
-        <div id="markup">
-            <table id="data-table">
+            <table class="zato-table" id="data-table">
                 <thead>
                     <tr class='ignore'>
                         <th>&nbsp;</th>
@@ -89,7 +84,7 @@
                 <tbody>
                 {% if items %}
                 {% for item in items %}
-                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                    <tr id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
@@ -110,9 +105,10 @@
 
                 </tbody>
             </table>
-        </div>
 
 {% include "zato/paginate/action-panel.html" %}
+
+        </div>
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
@@ -129,6 +125,10 @@
                         <tr>
                             <td style="vertical-align:middle">Realm</td>
                             <td>{{ create_form.realm }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Password</td>
+                            <td>{{ create_form.password }} </td>
                         </tr>
 
                         <tr>
@@ -185,11 +185,7 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Password</td>
-                            <td>{{ change_password_form.password1 }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Confirm password</td>
-                            <td>{{ change_password_form.password2 }}
+                            <td>{{ change_password_form.password }}
                                 <input type="hidden" id="id_change_password-id" name="id" />
                                 <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
                             </td>

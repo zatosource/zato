@@ -3,6 +3,27 @@
     --zato-seablue-light1: #063c65;
     --zato-seablue-light2: #14578a;
     --zato-seablue-light3: #2f81bf;
+    --zato-tile-dark1: #080808;
+    --zato-tile-dark2: #0c0c0c;
+    --zato-tile-darkblue: #060b14;
+    --zato-hero-bg: #1a1a1a;
+    --zato-pill-radius: 3px;
+    --zato-link-hover: #006fbf;
+    --zato-link-dash: rgba(0, 0, 0, 0.35);
+    --zato-row-hover: rgba(210, 195, 120, 0.15);
+    --primary-dark: var(--zato-seablue);
+    --background-light: #f8f9fa;
+    --white: #ffffff;
+    --border-light: #e9ecef;
+    --text-muted: #6c757d;
+    --shadow-dark: var(--zato-seablue-light1);
+    --zato-badge-gold: #ffd700;
+    --zato-badge-shine: rgba(255, 255, 255, 0.15);
+    --zato-badge-border: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes zato-spin {
+    to { transform: rotate(360deg); }
 }
 
 html,
@@ -80,7 +101,10 @@ html {
 
 body {
     color: black;
-    background: #fff
+    background: #f4f5f5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 }
 
 ol,
@@ -145,7 +169,9 @@ span.like-a {
     font-size: 11px;
     font-family: sans-serif;
     border: none;
-    text-decoration: none
+    text-decoration: none;
+    background-image: none;
+    padding-bottom: 0
 }
 
 .sf-sub-indicator {
@@ -257,98 +283,61 @@ span.like-a {
     padding-left: 30px
 }
 
+/* #data-table layout — visual styling comes from .zato-table */
+
 #data-table {
     width: 96%;
-    margin-top: 12px;
     margin-left: 2%;
-    border-collapse: separate;
-    border-spacing: 0;
-    border-radius: 4px;
-    overflow: hidden;
-    font-size: 0.85rem;
-    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12);
-    border: none;
-    counter-reset: data_table_counter
+    counter-reset: data_table_counter;
 }
-
-#data-table a {
-    color: #037ac7;
-    text-decoration: none;
-    font-weight: 500;
-    font-size: 0.8rem;
-    font-family: monospace;
-    letter-spacing: 0.02rem;
-    padding-top: 0.6rem;
-    padding-bottom: 0.6rem;
-}
-
-#data-table tr.odd {
-    background-color: #f8f9fa
-}
-
-#data-table tr.even {
-    background-color: #fff
-}
-
-/* Conditional hover effect - only apply if table has 3+ rows - DISABLED to always use lighter hover effect
-#data-table tbody tr:nth-child(1):hover:nth-last-child(n+3),
-#data-table tbody tr:nth-child(2):hover:nth-last-child(n+2),
-#data-table tbody tr:nth-child(3) ~ tr:hover,
-#data-table tbody tr:nth-child(3):hover {
-    background-color: var(--zato-seablue-light2) !important;
-    color: #fff !important;
-}
-*/
 
 
 #data-table tr.updated {
-    background-color: rgba(255, 243, 205, 0.7)
+    background-color: rgba(255, 243, 205, 0.7);
 }
 
 #data-table tr.attention td,
 #data-table tr.updated td {
-    border-bottom: 1px solid rgba(169, 162, 68, 0.5)
+    border-bottom: 1px solid rgba(169, 162, 68, 0.5);
 }
 
-#data-table td,
-#data-table th {
-    padding: 10px;
-    border-bottom: 1px solid rgba(6, 60, 101, 0.12)
+@keyframes zatoBounce {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.02); }
+}
+
+tr.zato-row-bounce .zato-bounce-wrap {
+    display: inline-block;
+    animation: zatoBounce 0.4s ease-in-out 2;
+}
+
+tr.zato-row-bounce {
+    animation: zatoBounce 0.4s ease-in-out 2;
+    transform-origin: center center;
 }
 
 #data-table th {
-    background: var(--zato-seablue);
-    color: #fff;
-    font-size: 0.85rem;
-    font-weight: 500;
     white-space: nowrap;
-    position: relative
+    position: relative;
 }
 
 #data-table th.header:not(.ignore):nth-child(n+3):hover {
-    background: var(--zato-seablue-light1);
-    cursor: pointer
+    background: var(--zato-row-hover);
+    cursor: pointer;
 }
 
 #data-table th a {
-    color: white;
     display: block;
     position: relative;
-    padding-right: 15px
+    padding-right: 15px;
 }
 
 #data-table th a:after {
     content: '';
-    display: none
+    display: none;
 }
 
-#data-table td {
-    vertical-align: middle !important
-}
-
-/* Center cells in columns whose headers contain specific text */
-
-/* Align columns by thead header text */
+/* Column alignment */
 #data-table tr th:has(a[href='#']:contains('Active')) ~ td:nth-child(4),
 #data-table tr td:nth-child(4) {
     text-align: center;
@@ -359,34 +348,32 @@ span.like-a {
     text-align: center;
 }
 
-/* This is the flexible approach that works with any header text */
-/* Add more rules following this pattern for other headers */
-
-/* Helper attribute to store aligned column info */
 #data-table[data-center-columns="Active,Internal"] tr td:nth-child(4),
 #data-table[data-center-columns="Active,Internal"] tr td:nth-child(6) {
     text-align: center;
 }
 
 #data-table td.inline_header {
-    background: rgba(6, 60, 101, 0.05)
+    background: rgba(6, 60, 101, 0.05);
+}
+
+#data-table tbody tr:not(.ignore):not(.updated):nth-child(even) {
+    background-color: rgba(6, 60, 101, 0.025);
+}
+
+#data-table tbody tr:not(.ignore):not(.updated):hover {
+    background-color: var(--zato-row-hover);
 }
 
 #data-table td.numbering {
     position: relative;
-    text-align: center
+    text-align: center;
 }
 
 #data-table td.numbering:before {
     content: counter(data_table_counter);
     counter-increment: data_table_counter;
-    color: #333;
-    font-size: 0.85rem;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-weight: 500
+    font-weight: 500;
 }
 
 #data-table td.impexp,
@@ -478,7 +465,12 @@ div.bd {
 }
 
 div.ui-dialog {
-    width: 38em !important
+    width: 38em;
+    z-index: 10000 !important;
+}
+
+.ui-dialog-content {
+    min-height: 0 !important;
 }
 
 p.big-notice {
@@ -498,6 +490,11 @@ p.big-notice {
     border-bottom: none;
     text-align: left;
     color: #eee;
+}
+
+.ui-dialog-titlebar.ui-helper-clearfix::before,
+.ui-dialog-titlebar.ui-helper-clearfix::after {
+    display: none;
 }
 
 .ui-icon-closethick {
@@ -538,7 +535,9 @@ select {
 h2.zato {
     font-size: 80%;
     padding: 10px;
-    padding-left: 4px;
+    padding-left: 0;
+    margin-left: 1.875rem;
+    margin-right: 1.875rem;
     color: #222;
     border-bottom: 1px dotted #767676
 }
@@ -546,7 +545,7 @@ h2.zato {
 div.prompt {
     font-size: 11px;
     padding: 10px;
-    padding-left: 4px
+    padding-left: 2%
 }
 
 div.prompt form {
@@ -554,16 +553,41 @@ div.prompt form {
 }
 
 a:not(.menu-link) {
-    color: #000;
-    font-family: arial, helvetica, clean, sans-serif;
-    text-decoration: underline;
-    padding: 3px;
+    color: rgb(17, 17, 17);
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    text-decoration: none;
+    font-weight: 400;
+    background-image: repeating-linear-gradient(
+        90deg,
+        var(--zato-link-dash) 0px,
+        var(--zato-link-dash) 3px,
+        transparent 3px,
+        transparent 6px
+    );
+    background-size: 100% 1px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    padding-bottom: 2px;
 }
 
-a:not(.menu-link):hover {
-    color: #fff !important;
-    background-color: var(--zato-seablue-light3);
+a:not(.menu-link):not(.chosen-single):not(.status-badge):hover {
+    color: var(--zato-link-hover) !important;
+    background-color: transparent;
     text-decoration: none;
+}
+
+/* Default (dark) Tippy tooltips: light link text + dashed underline via same variable */
+.tippy-box .tippy-content {
+    --zato-link-dash: rgba(255, 255, 255, 0.38);
+}
+
+.tippy-box .tippy-content a:not(.menu-link) {
+    color: #e8e8e8;
+}
+
+.tippy-box .tippy-content a:not(.menu-link):hover {
+    color: #fff !important;
+    --zato-link-dash: rgba(255, 255, 255, 0.85);
 }
 
 th.header a:hover {
@@ -572,8 +596,16 @@ th.header a:hover {
 
 a.top,
 a.top:hover {
-    color: #fff;
+    color: #fff !important;
     text-decoration: none;
+    background-image: none;
+    background-color: rgb(1, 40, 69) !important;
+    padding-bottom: 0;
+}
+
+a:not(.menu-link):not(.chosen-single):not(.status-badge):is(.top):hover {
+    color: #fff !important;
+    background-color: rgb(1, 40, 69) !important;
 }
 
 .header-link-styled {
@@ -614,7 +646,7 @@ a.hint {
 
 #markup {
     width: 94%;
-    text-align: center
+    margin: 0 auto
 }
 
 #markup.columns {
@@ -797,24 +829,32 @@ div.ignore {
 
 div.page_prompt {
     padding: 4px;
+    padding-left: 2%;
     font-size: 12px;
+    margin-bottom: 16px;
 }
 
-div.page_prompt a {
+div.page_prompt a:not(.common) {
     background-color: #ffc311;
+    background-image: none;
     color: #000;
     text-decoration: none;
+    font-weight: 400;
     padding-left: 4px !important;
     padding-right: 4px !important;
     padding-top: 6px !important;
     padding-bottom: 6px !important;
     border-radius: 5px;
-    box-shadow: 2px 2px 2px #d3d3d3
+    box-shadow: 2px 2px 2px #d3d3d3;
 }
 
-div.page_prompt a:hover {
+div.page_prompt a:not(.common):not(.menu-link):not(.chosen-single):not(.status-badge):hover {
     background-color: #ffc311;
     color: #000 !important;
+}
+
+div.page_prompt a.common:hover {
+    color: var(--zato-link-hover) !important;
 }
 
 div.page_prompt a.current {
@@ -844,6 +884,11 @@ div.page_prompt a.current {
 
 .form-data tr td a {
     color: #000;
+    font-weight: 400;
+}
+
+.form-data tr td a:not(.chosen-single):hover {
+    color: var(--zato-link-hover) !important;
 }
 
 .multirow-button {
@@ -852,14 +897,8 @@ div.page_prompt a.current {
     margin-left: 2px;
 }
 
-/* Apply hover effects only to actual data tables (those with classes odd/even on rows) */
-#data-table tbody tr.odd:hover,
-#data-table tbody tr.even:hover,
-table.multi-select-table tbody tr:hover
-{
-    background-color: rgb(211, 229, 238);
-    border-top:1px solid #222 !important;
-    border-bottom:1px solid #222 !important;
+table.multi-select-table tbody tr:hover {
+    background: rgba(0, 0, 0, 0.03);
 }
 
 .ui-icon {
@@ -868,6 +907,32 @@ table.multi-select-table tbody tr:hover
 
 .chosen-container {
     min-width:100%;
+}
+
+.chosen-container a,
+.chosen-container a:hover {
+    font-weight: 400;
+    color: #000 !important;
+    background-image: none;
+    padding-bottom: 0;
+}
+
+.chosen-container .chosen-results li {
+    font-weight: 400;
+}
+
+.chosen-container .chosen-results li.highlighted {
+    background-color: rgba(0, 0, 0, 0.03);
+    background-image: none;
+    color: #000;
+}
+
+.chosen-container .chosen-results li:hover {
+    color: #000 !important;
+}
+
+.chosen-container .chosen-results li.result-selected {
+    color: #000;
 }
 
 input[data-zato-validator-required="required"]::placeholder {
@@ -949,15 +1014,16 @@ div.action-panel a {
     display: inline-block;
     padding: 3px;
     position: relative;
-    top: 0px
+    top: 0px;
+    background-image: none;
 }
 
 .status-badge {
     display: inline;
     padding: 3px;
-    background: rgb(1, 40, 69);
+    background: var(--zato-seablue);
     color: #fff !important;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--zato-badge-border);
     border-radius: 3px;
     font-size: 12.32px;
     font-weight: 400;
@@ -978,17 +1044,17 @@ div.action-panel a {
 }
 
 .status-badge.with-shine {
-    color: #ffd700 !important;
+    color: var(--zato-badge-gold) !important;
     background:
         linear-gradient(
             90deg,
             transparent 0%,
             transparent 40%,
-            rgba(255, 255, 255, 0.15) 50%,
+            var(--zato-badge-shine) 50%,
             transparent 60%,
             transparent 100%
         ),
-        rgb(1, 40, 69);
+        var(--zato-seablue);
     background-size: 200% 100%, 100% 100%;
     transition: all 0.25s ease;
     animation: shine 3s infinite;
@@ -1009,14 +1075,13 @@ div.action-panel a {
             90deg,
             transparent 0%,
             transparent 40%,
-            rgba(255, 255, 255, 0.15) 50%,
+            var(--zato-badge-shine) 50%,
             transparent 60%,
             transparent 100%
         ),
-        rgb(1, 50, 85);
+        var(--zato-seablue);
     background-size: 200% 100%, 100% 100%;
-    border-color: rgba(255, 255, 255, 0.25);
-    color: #ffd700 !important;
+    color: var(--zato-badge-gold) !important;
 }
 
 .status-badge.header-badge {
@@ -1027,3 +1092,56 @@ div.action-panel a {
 .status-badge.white {
     color: #fff !important;
 }
+
+@keyframes zatoFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.zato-unique-indicator {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    pointer-events: none;
+    animation: zatoFadeIn 0.25s ease-in;
+    transition: opacity 0.2s ease-out
+}
+
+.zato-unique-ok {
+    color: #2e7d32;
+    font-weight: bold;
+    font-size: 0.65rem;
+    background-color: rgba(46, 125, 50, 0.12);
+    border: 1px solid rgba(46, 125, 50, 0.3);
+    width: 0.9rem;
+    height: 0.9rem;
+    line-height: 0.9rem;
+    text-align: center;
+    border-radius: 50%
+}
+
+.zato-unique-taken {
+    font-family: monospace;
+    font-size: 0.55rem;
+    font-weight: bold;
+    background-color: rgba(220, 53, 69, 0.15);
+    color: #b71c1c;
+    border: 1px solid rgba(220, 53, 69, 0.25);
+    padding: 0.02rem 0.4rem;
+    border-radius: 10px
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* Live form updates - golden puff animation for elements updated via SSE                                                       */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+@keyframes zato-live-puff {
+    0%   { background-color: rgba(255, 193, 7, 0.35); }
+    100% { background-color: transparent; }
+}
+
+.zato-live-updated {
+    animation: zato-live-puff 1.5s ease-out;
+}
+.text-center { text-align: center; }

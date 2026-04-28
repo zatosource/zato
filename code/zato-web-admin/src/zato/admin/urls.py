@@ -13,11 +13,13 @@ from django.contrib.auth.decorators import login_required
 # Zato
 from zato.admin import settings
 from zato.admin.web.util import static_serve
-from zato.admin.web.views import account, datadog, grafana_cloud, http_soap, log_streaming, main, news, openapi_, python_packages, scheduler, service, updates
+from zato.admin.web.views import account, datadog, env_variables, grafana_cloud, http_soap, live_form_updates, log_streaming, main, news, openapi_, python_packages, scheduler, service, updates
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
 from zato.admin.web.views.channel import amqp_ as channel_amqp
+from zato.admin.web.views.channel.hl7 import mllp as channel_hl7_mllp
+from zato.admin.web.views.channel.hl7 import rest as channel_hl7_rest
 from zato.admin.web.views.channel import openapi_ as channel_openapi
 from zato.admin.web.views.cloud import confluence as cloud_confluence
 from zato.admin.web.views.cloud import jira as cloud_jira
@@ -28,6 +30,10 @@ from zato.admin.web.views.email import smtp as email_smtp
 from zato.admin.web.views import groups
 from zato.admin.web.views.outgoing import amqp_ as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
+from zato.admin.web.views.outgoing.hl7 import fhir as out_hl7_fhir
+from zato.admin.web.views.outgoing.hl7 import mllp as out_hl7_mllp
+from zato.admin.web.views.channel import kafka as channel_kafka
+from zato.admin.web.views.outgoing import kafka as out_kafka
 from zato.admin.web.views.outgoing import ldap as out_ldap
 from zato.admin.web.views.outgoing import mongodb as out_mongodb
 from zato.admin.web.views.outgoing import odoo as out_odoo
@@ -43,9 +49,16 @@ from zato.admin.web.views.monitoring import dashboard as monitoring_dashboard
 from zato.admin.web.views.monitoring.wizard import health as monitoring_wizard_health
 from zato.admin.web.views.vendors import keysight_vision
 from zato.admin.web.views.pubsub import topic
-from zato.admin.web.views.pubsub import client
 from zato.admin.web.views.pubsub import permission
 from zato.admin.web.views.pubsub import subscription
+from zato.admin.web.views.eda import dashboard as eda_dashboard
+from zato.admin.web.views.eda import topic_detail as eda_topic_detail
+from zato.admin.web.views.eda import queue_detail as eda_queue_detail
+from zato.admin.web.views.eda import messages as eda_messages
+from zato.admin.web.views.eda import publish as eda_publish
+from zato.admin.web.views import detail_poll
+from zato.admin.web.views import scheduler_dashboard
+from zato.admin.web.views.check_attr import check_attr_exists
 
 urlpatterns = [
 
@@ -62,6 +75,7 @@ urlpatterns = [
     url(r'^zato/$', login_required(main.index), name='main-page'),
     url(r'^zato/news/get$', login_required(news.get_news), name='news-get'),
     url(r'^logout/$', login_required(main.logout), name='logout'),
+    url(r'^zato/check-attr-exists/$', login_required(check_attr_exists), name='check-attr-exists'),
     ]
 
 # ################################################################################################################################
@@ -118,8 +132,6 @@ urlpatterns += [
         login_required(service.enmasse_export), name='service-enmasse-export'), # type: ignore
     url(r'^zato/service/enmasse-import$',
         login_required(service.enmasse_import), name='service-enmasse-import'), # type: ignore
-    url(r'^zato/pubsub/import-test-config$',
-        login_required(service.import_test_config), name='pubsub-import-test-config'), # type: ignore
     url(r'^zato/pubsub/download-openapi$',
         login_required(service.download_openapi), name='pubsub-download-openapi'), # type: ignore
     ]
@@ -203,6 +215,9 @@ urlpatterns += [
     url(r'^zato/security/oauth/outconn/client-credentials/change-secret/$',
         login_required(oauth_outconn_client_credentials.change_secret),
             name='security-oauth-outconn-client-credentials-change-secret'),
+    url(r'^zato/security/oauth/outconn/client-credentials/get-token/$',
+        login_required(oauth_outconn_client_credentials.get_token),
+            name='security-oauth-outconn-client-credentials-get-token'),
     url(r'^zato/security/oauth/outconn/client-credentials/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(oauth_outconn_client_credentials.Delete()), name=oauth_outconn_client_credentials.Delete.url_name),
     ]
@@ -221,6 +236,25 @@ urlpatterns += [
     url(r'^zato/scheduler/get-definition/(?P<start_date>.*)/(?P<repeat>.*)/' + \
         '(?P<weeks>.*)/(?P<days>.*)/(?P<hours>.*)/(?P<minutes>.*)/(?P<seconds>.*)/$',
         login_required(scheduler.get_definition), name='scheduler-job-get-definition'),
+
+    # Scheduler dashboard
+
+    url(r'^zato/dashboard/detail-poll/$',
+        login_required(detail_poll.detail_poll), name='dashboard-detail-poll'),
+
+    url(r'^zato/scheduler/dashboard/$',
+        login_required(scheduler_dashboard.index), name='scheduler-dashboard'),
+    url(r'^zato/scheduler/dashboard/poll/$',
+        login_required(scheduler_dashboard.poll), name='scheduler-dashboard-poll'),
+    path('zato/scheduler/dashboard/job/<int:job_id>/',
+        login_required(scheduler_dashboard.job_detail), name='scheduler-job-detail'),
+    path('zato/scheduler/dashboard/job/<int:job_id>/run/<int:run_number>/',
+        login_required(scheduler_dashboard.run_detail), name='scheduler-run-detail'),
+
+    # Scheduler import demo config
+
+    url(r'^zato/scheduler/import-demo-config$',
+        login_required(service.import_demo_scheduler_config), name='scheduler-import-demo-config'),
     ]
 
 # ################################################################################################################################
@@ -253,6 +287,40 @@ urlpatterns += [
 
 urlpatterns += [
 
+    # .. HL7 FHIR
+
+    url(r'^zato/outgoing/hl7/fhir/$',
+        login_required(out_hl7_fhir.Index()), name=out_hl7_fhir.Index.url_name),
+    url(r'^zato/outgoing/hl7/fhir/create/$',
+        login_required(out_hl7_fhir.Create()), name=out_hl7_fhir.Create.url_name),
+    url(r'^zato/outgoing/hl7/fhir/edit/$',
+        login_required(out_hl7_fhir.Edit()), name=out_hl7_fhir.Edit.url_name),
+    url(r'^zato/outgoing/hl7/fhir/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_hl7_fhir.Delete()), name=out_hl7_fhir.Delete.url_name),
+    url(r'^zato/outgoing/hl7/fhir/change-password/$',
+        login_required(out_hl7_fhir.change_password), name='outgoing-hl7-fhir-change-password'),
+    url(r'^zato/outgoing/hl7/fhir/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_hl7_fhir.ping), name='outgoing-hl7-fhir-ping'),
+    url(r'^zato/outgoing/hl7/fhir/invoke/action/(?P<conn_name>.*)/$',
+        login_required(out_hl7_fhir.invoke_action), name='outgoing-hl7-fhir-invoke-action'),
+    url(r'^zato/outgoing/hl7/fhir/invoke/(?P<conn_id>.*)/(?P<max_wait_time>.*)/(?P<conn_name>.*)/(?P<conn_slug>.*)/$',
+        login_required(out_hl7_fhir.invoke), name='outgoing-hl7-fhir-invoke'),
+
+    # .. HL7 MLLP
+
+    url(r'^zato/outgoing/hl7/mllp/$',
+        login_required(out_hl7_mllp.Index()), name=out_hl7_mllp.Index.url_name),
+    url(r'^zato/outgoing/hl7/mllp/create/$',
+        login_required(out_hl7_mllp.Create()), name=out_hl7_mllp.Create.url_name),
+    url(r'^zato/outgoing/hl7/mllp/edit/$',
+        login_required(out_hl7_mllp.Edit()), name=out_hl7_mllp.Edit.url_name),
+    url(r'^zato/outgoing/hl7/mllp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_hl7_mllp.Delete()), name=out_hl7_mllp.Delete.url_name),
+    url(r'^zato/outgoing/hl7/mllp/invoke/action/(?P<conn_name>.*)/$',
+        login_required(out_hl7_mllp.invoke_action), name='outgoing-hl7-mllp-invoke-action'),
+    url(r'^zato/outgoing/hl7/mllp/invoke/(?P<conn_id>.*)/(?P<max_wait_time>.*)/(?P<conn_name>.*)/(?P<conn_slug>.*)/$',
+        login_required(out_hl7_mllp.invoke), name='outgoing-hl7-mllp-invoke'),
+
     # .. FTP
 
     url(r'^zato/outgoing/ftp/$',
@@ -265,6 +333,24 @@ urlpatterns += [
         login_required(out_ftp.Delete()), name=out_ftp.Delete.url_name),
     url(r'^zato/outgoing/ftp/change-password/$',
         login_required(out_ftp.change_password), name='out-ftp-change-password'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. Kafka channels
+
+    url(r'^zato/channel/kafka/$',
+        login_required(channel_kafka.Index()), name=channel_kafka.Index.url_name),
+    url(r'^zato/channel/kafka/create/$',
+        login_required(channel_kafka.Create()), name=channel_kafka.Create.url_name),
+    url(r'^zato/channel/kafka/edit/$',
+        login_required(channel_kafka.Edit()), name=channel_kafka.Edit.url_name),
+    url(r'^zato/channel/kafka/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(channel_kafka.Delete()), name=channel_kafka.Delete.url_name),
+    url(r'^zato/channel/kafka/import-demo-config$',
+        login_required(channel_kafka.import_demo_config), name='channel-kafka-import-demo-config'),
     ]
 
 # ################################################################################################################################
@@ -285,6 +371,24 @@ urlpatterns += [
         login_required(out_ldap.change_password), name='out-ldap-change-password'),
     url(r'^zato/outgoing/ldap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_ldap.ping), name='out-ldap-ping'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. Kafka outgoing
+
+    url(r'^zato/outgoing/kafka/$',
+        login_required(out_kafka.Index()), name=out_kafka.Index.url_name),
+    url(r'^zato/outgoing/kafka/create/$',
+        login_required(out_kafka.Create()), name=out_kafka.Create.url_name),
+    url(r'^zato/outgoing/kafka/edit/$',
+        login_required(out_kafka.Edit()), name=out_kafka.Edit.url_name),
+    url(r'^zato/outgoing/kafka/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_kafka.Delete()), name=out_kafka.Delete.url_name),
+    url(r'^zato/outgoing/kafka/import-demo-config$',
+        login_required(out_kafka.import_demo_config), name='out-kafka-import-demo-config'),
     ]
 
 # ################################################################################################################################
@@ -392,6 +496,28 @@ urlpatterns += [
 
 urlpatterns += [
 
+    # .. HL7 MLLP
+
+    url(r'^zato/channel/hl7/mllp/$',
+        login_required(channel_hl7_mllp.Index()), name=channel_hl7_mllp.Index.url_name),
+    url(r'^zato/channel/hl7/mllp/create/$',
+        login_required(channel_hl7_mllp.Create()), name=channel_hl7_mllp.Create.url_name),
+    url(r'^zato/channel/hl7/mllp/edit/$',
+        login_required(channel_hl7_mllp.Edit()), name=channel_hl7_mllp.Edit.url_name),
+    url(r'^zato/channel/hl7/mllp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(channel_hl7_mllp.Delete()), name=channel_hl7_mllp.Delete.url_name),
+
+    # .. HL7 REST
+
+    url(r'^zato/channel/hl7/rest/$',
+        login_required(channel_hl7_rest.Index()), name=channel_hl7_rest.Index.url_name),
+    url(r'^zato/channel/hl7/rest/create/$',
+        login_required(channel_hl7_rest.Create()), name=channel_hl7_rest.Create.url_name),
+    url(r'^zato/channel/hl7/rest/edit/$',
+        login_required(channel_hl7_rest.Edit()), name=channel_hl7_rest.Edit.url_name),
+    url(r'^zato/channel/hl7/rest/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(channel_hl7_rest.Delete()), name=channel_hl7_rest.Delete.url_name),
+
     # .. OpenAPI
 
     url(r'^zato/channel/openapi/$',
@@ -434,6 +560,13 @@ urlpatterns += [
         login_required(http_soap.reload_wsdl), name='http-soap-reload-wsdl'),
     url(r'^zato/http-soap/get-security-groups/(?P<group_type>.*)/$',
         login_required(groups.get_group_list), name='http-soap-get-all-security-groups'),
+
+    url(r'^zato/http-soap/invoke-channel/(?P<id>.*)/$',
+        login_required(http_soap.invoke_channel), name='http-soap-invoke-channel'),
+    url(r'^zato/http-soap/invoke-outconn/(?P<id>.*)/$',
+        login_required(http_soap.invoke_outconn), name='http-soap-invoke-outconn'),
+    url(r'^zato/http-soap/highlight/$',
+        login_required(http_soap.highlight), name='http-soap-highlight'),
 
     url(r'^zato/http-soap/openapi/parse/$',
         login_required(openapi_.parse), name='http-soap-openapi-parse'),
@@ -750,10 +883,6 @@ urlpatterns += [
 
     # Groups
 
-    url(r'^zato/groups/members/action/(?P<action>.*)/group/(?P<group_id>.*)/id-list/(?P<member_id_list>.*)/$',
-        login_required(groups.members_action), name='groups-members-action'),
-    url(r'^zato/groups/members/(?P<group_type>.*)/(?P<group_id>.*)/$', # type: ignore
-        login_required(groups.manage_group_members), name='groups-members-manage'),
     url(r'^zato/groups/group/(?P<group_type>.*)/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(groups.Delete()), name=groups.Delete.url_name),
 
@@ -788,19 +917,6 @@ urlpatterns += [
         login_required(topic.Delete()), name=topic.Delete.url_name),
     url(r'^zato/pubsub/topic/get-matches/$', login_required(topic.get_matches), name='pubsub-topic-get-matches'),
 
-    # PubSub Client Assignments
-
-    url(r'^zato/pubsub/client/$',
-        login_required(client.Index()), name=client.Index.url_name),
-    url(r'^zato/pubsub/client/create/$',
-        login_required(client.Create()), name=client.Create.url_name),
-    url(r'^zato/pubsub/client/edit/$',
-        login_required(client.Edit()), name=client.Edit.url_name),
-    url(r'^zato/pubsub/client/get-security-definitions/$',
-        login_required(client.GetSecurityDefinitions.as_view()), name=client.GetSecurityDefinitions.url_name),
-    url(r'^zato/pubsub/client/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(client.Delete()), name=client.Delete.url_name),
-
     # PubSub Permissions
 
     url(r'^zato/pubsub/permission/$',
@@ -834,9 +950,50 @@ urlpatterns += [
         login_required(subscription.get_service_list), name='pubsub-subscription-get-service-list'),
     url(r'^zato/pubsub/subscription/get-topics-by-security/$',
         login_required(subscription.get_topics_by_security), name='pubsub-subscription-get-topics-by-security'),
-    path('zato/pubsub/subscription/sec-def-topic-sub-list/<int:sec_base_id>/cluster/<int:cluster_id>/',
+    path('zato/pubsub/subscription/sec-def-topic-sub-list/<str:sec_base_id>/cluster/<int:cluster_id>/',
         login_required(subscription.sec_def_topic_sub_list),
         name='pubsub-subscription-sec-def-topic-sub-list'),
+]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# EDA dashboard, topic detail, queue detail, message browser, publish
+
+urlpatterns += [
+
+    url(r'^zato/eda/dashboard/$',
+        login_required(eda_dashboard.index), name='eda-dashboard'),
+    url(r'^zato/eda/dashboard/poll/$',
+        login_required(eda_dashboard.poll), name='eda-dashboard-poll'),
+    url(r'^zato/eda/dashboard/recent-messages/$',
+        login_required(eda_dashboard.recent_messages), name='eda-dashboard-recent-messages'),
+    url(r'^zato/eda/import-demo-config$',
+        login_required(eda_dashboard.import_demo_config), name='eda-import-demo-config'),
+
+    path('zato/eda/topic/<str:topic_name>/',
+        login_required(eda_topic_detail.index), name='eda-topic-detail'),
+    url(r'^zato/eda/topic/poll/$',
+        login_required(eda_topic_detail.poll), name='eda-topic-detail-poll'),
+    url(r'^zato/eda/topic/purge/$',
+        login_required(eda_topic_detail.purge), name='eda-topic-purge'),
+
+    path('zato/eda/queue/<str:topic_name>/<str:sub_key>/',
+        login_required(eda_queue_detail.index), name='eda-queue-detail'),
+    url(r'^zato/eda/queue/poll/$',
+        login_required(eda_queue_detail.poll), name='eda-queue-detail-poll'),
+    url(r'^zato/eda/queue/purge/$',
+        login_required(eda_queue_detail.purge), name='eda-queue-purge'),
+
+    url(r'^zato/eda/messages/$',
+        login_required(eda_messages.index), name='eda-messages'),
+    path('zato/eda/messages/<str:topic_name>/<str:msg_id>/',
+        login_required(eda_messages.detail), name='eda-message-detail'),
+
+    url(r'^zato/eda/publish/$',
+        login_required(eda_publish.index), name='eda-publish'),
+    url(r'^zato/eda/publish/submit/$',
+        login_required(eda_publish.submit), name='eda-publish-submit'),
 ]
 
 # ################################################################################################################################
@@ -920,6 +1077,14 @@ urlpatterns += [
         login_required(log_streaming.log_stream), name='log-streaming-stream'),
 ]
 
+urlpatterns += [
+
+    # Live form updates
+
+    url(r'^zato/live-form-updates/$',
+        login_required(live_form_updates.stream), name='live-form-updates'),
+]
+
 
 # ################################################################################################################################
 
@@ -941,6 +1106,20 @@ urlpatterns += [
         login_required(python_packages.restart_proxy), name='settings-python-packages-restart-proxy'),
     url(r'^zato/python-packages/restart-dashboard$',
         login_required(python_packages.restart_dashboard), name='settings-python-packages-restart-dashboard'),
+]
+# ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Settings - Environment variables
+
+    url(r'^zato/env-variables/$',
+        login_required(env_variables.index), name='settings-env-variables'),
+    url(r'^zato/env-variables/test$',
+        login_required(env_variables.test), name='settings-env-variables-test'),
+    url(r'^zato/env-variables/save$',
+        login_required(env_variables.save), name='settings-env-variables-save'),
 ]
 # ################################################################################################################################
 # ################################################################################################################################

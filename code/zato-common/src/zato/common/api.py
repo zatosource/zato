@@ -402,6 +402,15 @@ class CACHE:
 
 class SCHEDULER:
 
+    class OUTCOME:
+        OK = 'ok'
+        ERROR = 'error'
+        TIMEOUT = 'timeout'
+        RUNNING = 'running'
+        SKIPPED_ALREADY_IN_FLIGHT = 'skipped_already_in_flight'
+        SKIPPED_HOLIDAY = 'skipped_holiday'
+        All = 'all'
+
     InitialSleepTime = 0.1
     EmbeddedIndicator      = 'zato_embedded'
     EmbeddedIndicatorBytes = EmbeddedIndicator.encode('utf8')
@@ -742,11 +751,13 @@ class GENERIC:
     class CONNECTION:
         class TYPE:
             CHANNEL_OPENAPI = 'channel-openapi'
+            CHANNEL_KAFKA = 'channel-kafka'
             CLOUD_CONFLUENCE = 'cloud-confluence'
             CLOUD_JIRA = 'cloud-jira'
             CLOUD_MICROSOFT_365 = 'cloud-microsoft-365'
             CLOUD_SALESFORCE = 'cloud-salesforce'
             OUTCONN_LDAP = 'outconn-ldap'
+            OUTCONN_KAFKA = 'outconn-kafka'
             OUTCONN_MONGODB = 'outconn-mongodb'
 
 # ################################################################################################################################
@@ -1128,6 +1139,180 @@ class MyService(Service):
         # Reply to our caller
         self.response.payload.salutation = message
 """.lstrip()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+Default_Extra_Service_File_Data = """
+# -*- coding: utf-8 -*-
+
+# File path: {full_path}
+
+# stdlib
+from random import uniform
+from time import sleep
+
+# Zato
+from zato.server.service import Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_default_sleep_seconds = 3
+_default_sleep_jitter = 1.5
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Echo(Service):
+
+    name = 'demo.echo'
+
+    output = 'echo'
+
+    def handle(self):
+        payload = self.request.payload
+        self.logger.info(f'Received request: `{{payload}}`')
+        self.response.payload.echo = payload
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Sleep(Service):
+
+    name = 'demo.sleep'
+    input = '-seconds', '-jitter'
+    output = 'message'
+
+    def handle(self):
+
+        seconds = self.request.input.get('seconds') or _default_sleep_seconds
+        seconds = float(seconds)
+
+        jitter_range = self.request.input.get('jitter') or _default_sleep_jitter
+        jitter_range = float(jitter_range)
+
+        jitter = uniform(-jitter_range, jitter_range)
+        total = max(0.1, seconds + jitter)
+
+        sleep(total)
+
+        self.response.payload.message = f'OK, slept for {{total:.1f}}s (jitter={{jitter:+.1f}}s)'
+""".lstrip()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+Default_Demo_PubSub_Service_File_Data = """\
+# -*- coding: utf-8 -*-
+
+# stdlib
+from datetime import datetime, timezone
+
+# Zato
+from zato.server.service import Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_topic = 'demo.events'
+
+_messages = [
+    {'event': 'order_created', 'order_id': 'ORD-55210', 'customer': 'Acme Corp', 'total': 1560.00},
+    {'event': 'contact_updated', 'contact_id': 'C-10042', 'name': 'Alice Novak', 'change': 'email_updated'},
+    {'event': 'payment_received', 'payment_id': 'PAY-6621', 'amount': 3200.00, 'currency': 'EUR'},
+]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DemoPubSubPublisher(Service):
+
+    name = 'demo.pubsub.publisher'
+
+    def handle(self):
+
+        now = datetime.now(timezone.utc).strftime('%H:%M:%S')
+
+        for data in _messages:
+            self.pubsub.publish(_topic, data)
+
+        self.logger.info('\\033[36m[pub/sub demo]\\033[0m Published %d messages to `%s` at %s',
+            len(_messages), _topic, now)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_cyan = '\\033[36m'
+_reset = '\\033[0m'
+_dim = '\\033[2m'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DemoPubSubSubscriber(Service):
+
+    name = 'demo.pubsub.subscriber'
+
+    def handle(self):
+
+        msg = self.request.raw_request
+
+        self.logger.info(
+            '%s[pub/sub demo]%s %s %s%s#%s%s',
+            _cyan, _reset,
+            msg.topic_name,
+            msg.data,
+            _dim, msg.msg_id, _reset,
+        )
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class HL7:
+
+    class Default:
+        address_fhir = 'http://localhost:8080/fhir'
+        channel_host = '0.0.0.0'
+        channel_port = 11223
+        data_encoding = 'utf-8'
+        end_seq = '1c 0d'
+        max_msg_size = 2_000_000
+        max_wait_time = 5
+        pool_size = 10
+        read_buffer_size = 2048
+        recv_timeout = 250
+        start_seq = '0b'
+
+    class Const:
+
+        class Version:
+            v2 = NameId('HL7 v2.x', 'hl7-v2')
+
+            def __iter__(self):
+                return iter((self.v2,))
+
+        class ImplClass:
+            hl7apy = 'hl7apy'
+            zato = 'zato'
+
+        class LoggingLevel:
+            DEBUG = NameId('DEBUG', 'DEBUG')
+            INFO = NameId('INFO', 'INFO')
+            WARNING = NameId('WARNING', 'WARNING')
+            ERROR = NameId('ERROR', 'ERROR')
+
+            def __iter__(self):
+                return iter((self.DEBUG, self.INFO, self.WARNING, self.ERROR))
+
+        class FHIR_Auth_Type:
+            No_Auth = NameId('No auth', 'no-auth')
+            Basic_Auth = NameId('Basic Auth', 'basic-auth')
+            OAuth = NameId('OAuth', 'oauth')
+
+            def __iter__(self):
+                return iter((self.No_Auth, self.Basic_Auth, self.OAuth))
 
 # ################################################################################################################################
 # ################################################################################################################################

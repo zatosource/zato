@@ -1,0 +1,19 @@
+/* Dashboard kit - sparkline container.
+   The SVG itself is inline-styled by the renderer; here we only size
+   the wrapper and make sure it grows to fill the available horizontal
+   space next to the tile's big number. */
+
+.dashboard-tile-spark {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+}
+
+.dashboard-tile-spark svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}

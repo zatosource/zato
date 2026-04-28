@@ -30,7 +30,7 @@ class WorkerImpl:
 
 # ################################################################################################################################
 
-    def on_broker_msg_Common_Sync_Objects(self:'WorkerStore', msg:'Bunch') -> 'None':
+    def on_config_event_Common_Sync_Objects(self:'WorkerStore', msg:'Bunch') -> 'None':
         _ = self.server.invoke('pub.zato.common.sync-objects-impl', msg)
 
 # ################################################################################################################################

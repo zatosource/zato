@@ -29,7 +29,7 @@ if 0:
 class CacheBuiltin(WorkerImpl):
     """ Handles asynchronous updates to built-in caches.
     """
-    def on_broker_msg_CACHE_BUILTIN_CREATE(
+    def on_config_event_CACHE_BUILTIN_CREATE(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -37,7 +37,7 @@ class CacheBuiltin(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_CACHE_BUILTIN_EDIT(
+    def on_config_event_CACHE_BUILTIN_EDIT(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -45,7 +45,7 @@ class CacheBuiltin(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_CACHE_BUILTIN_DELETE(
+    def on_config_event_CACHE_BUILTIN_DELETE(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -66,7 +66,7 @@ class CacheBuiltin(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_SET(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_SET(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -75,7 +75,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_set(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_SET_BY_PREFIX(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_SET_BY_PREFIX(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -84,7 +84,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_set_by_prefix(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_SET_BY_SUFFIX(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_SET_BY_SUFFIX(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -93,7 +93,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_set_by_suffix(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_SET_BY_REGEX(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_SET_BY_REGEX(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -102,7 +102,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_set_by_regex(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_SET_CONTAINS(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_SET_CONTAINS(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -111,7 +111,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_set_contains(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_SET_NOT_CONTAINS(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_SET_NOT_CONTAINS(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -120,7 +120,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_set_not_contains(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_SET_CONTAINS_ALL(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_SET_CONTAINS_ALL(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -129,7 +129,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_set_contains_all(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_SET_CONTAINS_ANY(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_SET_CONTAINS_ANY(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -140,7 +140,7 @@ class CacheBuiltin(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_DELETE(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_DELETE(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -149,7 +149,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_delete(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_DELETE_BY_PREFIX(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_DELETE_BY_PREFIX(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -158,7 +158,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_delete_by_prefix(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_DELETE_BY_SUFFIX(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_DELETE_BY_SUFFIX(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -166,7 +166,7 @@ class CacheBuiltin(WorkerImpl):
             self._unpickle_msg(msg)
             self.cache_api.sync_after_delete_by_suffix(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_DELETE_BY_REGEX(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_DELETE_BY_REGEX(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -175,7 +175,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_delete_by_regex(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_DELETE_CONTAINS(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_DELETE_CONTAINS(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -184,7 +184,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_delete_contains(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_DELETE_NOT_CONTAINS(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_DELETE_NOT_CONTAINS(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -193,7 +193,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_delete_not_contains(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_DELETE_CONTAINS_ALL(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_DELETE_CONTAINS_ALL(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -202,7 +202,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_delete_contains_all(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_DELETE_CONTAINS_ANY(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_DELETE_CONTAINS_ANY(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -213,7 +213,7 @@ class CacheBuiltin(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_EXPIRE(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_EXPIRE(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -222,7 +222,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_expire(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_EXPIRE_BY_PREFIX(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_EXPIRE_BY_PREFIX(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -231,7 +231,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_expire_by_prefix(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_EXPIRE_BY_SUFFIX(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_EXPIRE_BY_SUFFIX(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -240,7 +240,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_expire_by_suffix(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_EXPIRE_BY_REGEX(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_EXPIRE_BY_REGEX(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -249,7 +249,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_expire_by_regex(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_EXPIRE_CONTAINS(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_EXPIRE_CONTAINS(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -258,7 +258,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_expire_contains(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_EXPIRE_NOT_CONTAINS(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_EXPIRE_NOT_CONTAINS(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -267,7 +267,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_expire_not_contains(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_EXPIRE_CONTAINS_ALL(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_EXPIRE_CONTAINS_ALL(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -276,7 +276,7 @@ class CacheBuiltin(WorkerImpl):
                 self._unpickle_msg(msg)
             self.cache_api.sync_after_expire_contains_all(CACHE.TYPE.BUILTIN, msg)
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_EXPIRE_CONTAINS_ANY(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_EXPIRE_CONTAINS_ANY(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
@@ -287,7 +287,7 @@ class CacheBuiltin(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_CLEAR(
+    def on_config_event_CACHE_BUILTIN_STATE_CHANGED_CLEAR(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':

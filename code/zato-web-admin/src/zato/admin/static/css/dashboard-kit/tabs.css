@@ -1,0 +1,37 @@
+/* Dashboard-specific tab layout overrides
+   (shared/tabs.css is loaded by the parent dashboard.css umbrella) */
+
+.dashboard-grid-section,
+.dashboard-tab-panel {
+    overflow-anchor: none;
+}
+
+.dashboard-card-header-tabs {
+    margin-bottom: 0;
+    font-size: 1.2rem;
+}
+
+.dashboard-card-header-tabs .dashboard-tabs {
+    margin-bottom: 0;
+}
+
+.dashboard-tabs {
+    align-items: center;
+}
+
+.dashboard-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dashboard-tab-label {
+    line-height: 1;
+}
+
+.dashboard-tab-panel {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}

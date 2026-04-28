@@ -34,7 +34,7 @@ from zato.bunch import Bunch
 from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, NotGiven, PARAMS_PRIORITY, \
      RESTAdapterResponse, zato_no_op_marker
 from zato.common.exception import Inactive, Reportable, ZatoException
-from zato.common.facade import SecurityFacade
+from zato.common.facade import PubSubFacade, SecurityFacade
 from zato.common.json_internal import dumps
 from zato.common.monitoring.logger_ import DatadogLogger
 from zato.common.monitoring.metrics import ServiceMetrics
@@ -91,7 +91,7 @@ UUID = UUID # type: ignore
 if 0:
     from ddtrace._trace.context import Context as DatadogContext
     from logging import Logger
-    from zato.broker.client import BrokerClient
+    from zato.common.config_dispatcher import ConfigDispatcher
     from zato.common.audit import AuditPII
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
@@ -112,7 +112,7 @@ if 0:
     modelnone = modelnone
     strdictnone = strdictnone
     AuditPII = AuditPII
-    BrokerClient = BrokerClient
+    ConfigDispatcher = ConfigDispatcher
     callable_ = callable_
     ConfigDict = ConfigDict
     ConfigStore = ConfigStore
@@ -159,6 +159,30 @@ _utcnow = utcnow
 
 # ################################################################################################################################
 
+class SchedulerLogCapture(logging.Handler):
+    """ Captures service log entries and forwards them to the Rust scheduler log store.
+    """
+
+    def __init__(self, scheduler:'any_', job_id:'int', current_run:'int') -> 'None':
+        super().__init__()
+        self._scheduler = scheduler
+        self._job_id = job_id
+        self._current_run = current_run
+
+    def emit(self, record:'any_') -> 'None':
+        try:
+            self._scheduler.append_log_entry(
+                self._job_id,
+                self._current_run,
+                datetime.fromtimestamp(record.created).isoformat(),
+                record.levelname,
+                self.format(record),
+            )
+        except Exception:
+            self.handleError(record)
+
+# ################################################################################################################################
+
 before_handle_hooks = ('before_handle',)
 after_handle_hooks = ('after_handle',)
 
@@ -177,7 +201,16 @@ def call_hook_with_service(hook:'callable_', service:'Service') -> 'None':
     except Exception:
         logger.error('Can\'t run hook `%s`, e:`%s`', hook, format_exc())
 
-internal_invoke_keys = {'target', 'set_response_func', 'cid'}
+internal_invoke_keys = {
+    'as_bunch',
+    'cid',
+    'datadog_context',
+    'serialize',
+    'set_response_func',
+    'skip_response_elem',
+    'target',
+    'zato_response_headers_container',
+}
 
 # ################################################################################################################################
 
@@ -318,6 +351,7 @@ class Service:
     rest: 'RESTFacade'
     schedule: 'SchedulerFacade'
     security: 'SecurityFacade'
+    pubsub: 'PubSubFacade'
 
     call_hooks:'bool' = True
     _filter_by = None
@@ -360,7 +394,7 @@ class Service:
     keysight: 'KeysightContainer'
 
     server: 'ParallelServer'
-    broker_client: 'BrokerClient'
+    config_dispatcher: 'ConfigDispatcher'
     time: 'TimeUtil'
 
     # These two are the same
@@ -563,7 +597,8 @@ class Service:
             elif hasattr(response, 'to_json'):
                 response = response.to_json()
 
-            service.response.payload = response
+            if kwargs.get('serialize') is not False:
+                service.response.payload = response
 
         return response
 
@@ -630,7 +665,7 @@ class Service:
         data_format,   # type: str
         transport,     # type: str
         server,        # type: ParallelServer
-        broker_client, # type: BrokerClient | None
+        config_dispatcher, # type: ConfigDispatcher | None
         worker_store,  # type: WorkerStore
         cid,           # type: str
         simple_io_config, # type: anydict
@@ -668,7 +703,7 @@ class Service:
         merge_channel_params = kwargs.get('merge_channel_params', True)
         params_priority = kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT)
 
-        service.update(service, channel, server, broker_client, # type: ignore
+        service.update(service, channel, server, config_dispatcher, # type: ignore
             worker_store, cid, payload, raw_request, transport, simple_io_config, data_format, wsgi_environ,
             job_type=job_type, channel_params=channel_params,
             merge_channel_params=merge_channel_params, params_priority=params_priority,
@@ -757,8 +792,22 @@ class Service:
                 if service.call_hooks and service.before_handle: # type: ignore
                     call_hook_no_service(service.before_handle)
 
-                # This is the place where the service is invoked
-                self._invoke(service, channel)
+                # .. attach scheduler log capture handler if this is a scheduler-initiated invocation ..
+                _scheduler_log_handler = None
+                _scheduler_zato_ctx = wsgi_environ.get('zato.zato_ctx')
+                if _scheduler_zato_ctx is not None and 'scheduler_job_id' in _scheduler_zato_ctx:
+                    _scheduler_log_handler = SchedulerLogCapture(
+                        server._scheduler,
+                        _scheduler_zato_ctx['scheduler_job_id'],
+                        _scheduler_zato_ctx['scheduler_current_run'])
+                    service.logger.addHandler(_scheduler_log_handler)
+
+                try:
+                    # This is the place where the service is invoked
+                    self._invoke(service, channel)
+                finally:
+                    if _scheduler_log_handler is not None:
+                        service.logger.removeHandler(_scheduler_log_handler)
 
                 # Called after .handle - catches exceptions
                 if service.call_hooks and service.after_handle: # type: ignore
@@ -907,7 +956,7 @@ class Service:
         set_response_func = kwargs.pop('set_response_func', service.set_response_data)
 
         invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,
-            self.broker_client, self._worker_store, kwargs.pop('cid', self.cid), {})
+            self.config_dispatcher, self._worker_store, kwargs.pop('cid', self.cid), {})
 
         kwargs.update({
             'serialize':serialize,
@@ -1035,7 +1084,7 @@ class Service:
         if not isinstance(msg, dict):
             msg = {'msg': msg}
 
-        self.broker_client.publish(
+        self.config_dispatcher.publish(
             msg,
             exchange='pubsubapi',
             routing_key=topic,
@@ -1169,7 +1218,7 @@ class Service:
         service,               # type: Service
         channel_type,          # type: str
         server,                # type: ParallelServer
-        broker_client,         # type: BrokerClient
+        config_dispatcher,         # type: ConfigDispatcher
         _ignored,              # type: any_
         cid,                   # type: str
         payload,               # type: any_
@@ -1194,7 +1243,7 @@ class Service:
         wsgi_environ = wsgi_environ or {}
 
         service.server = server
-        service.broker_client = broker_client
+        service.config_dispatcher = config_dispatcher
         service.cid = cid
         service.request.payload = payload
         service.request.raw_request = raw_request
@@ -1207,6 +1256,7 @@ class Service:
         service.static_config = server.static_config
         service.time = server.time_util
         service.security = SecurityFacade(service.server)
+        service.pubsub = PubSubFacade(service.server)
         service.metrics = ServiceMetrics(service)
 
         if channel_params:
@@ -1254,7 +1304,7 @@ class Service:
         service, _ = \
             self.server.service_store.new_instance_by_name(service_name, *args, **kwargs)
 
-        _ = service.update(service, CHANNEL.NEW_INSTANCE, self.server, broker_client=self.broker_client, _ignored=None,
+        _ = service.update(service, CHANNEL.NEW_INSTANCE, self.server, config_dispatcher=self.config_dispatcher, _ignored=None,
             cid=self.cid, payload=self.request.payload, raw_request=self.request.raw_request, wsgi_environ=self.wsgi_environ)
 
         return service
@@ -1643,20 +1693,6 @@ class BusinessCentralAdapter(Service):
         base_url = self._replace_placeholders(self.base_url)
 
         self.response.payload = self._invoke_business_central(endpoint, base_url)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass(init=False)
-class PubSubHookMessage:
-    phase: 'str'
-    message: 'any_'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class PubSubHook(Service):
-    pass
 
 # ################################################################################################################################
 # ################################################################################################################################

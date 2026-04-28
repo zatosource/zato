@@ -189,6 +189,7 @@ def _job(session, cluster_id):
         Job.job_type,
         Job.start_date,
         Job.extra,
+        Job.opaque1,
         Service.name.label('service_name'),
         Service.impl_name.label('service_impl_name'),
         Service.id.label('service_id'),
@@ -625,6 +626,7 @@ def service_id_list(session, cluster_id, name_list=None):
 # ################################################################################################################################
 
 def service_deployment_list(session, service_id=None, include_internal=None):
+
     query = session.query(
         DeployedService.details,
         Server.name.label('server_name'),

@@ -10,13 +10,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from json import loads
 
 # Zato
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.basic_auth import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
      method_allowed
-from zato.common.odb.model import HTTPBasicAuth
+# Bunch
+from bunch import Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +27,7 @@ class Index(_Index):
     url_name = 'security-basic-auth'
     template = 'zato/security/basic-auth.html'
     service_name = 'zato.security.basic-auth.get-list'
-    output_class = HTTPBasicAuth
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
@@ -45,7 +47,8 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_active', 'username', 'realm'
+        input_required = 'name', 'is_active', 'username'
+        input_optional = 'realm',
         output_required = 'id', 'name'
 
     def success_message(self, item):
@@ -54,6 +57,18 @@ class _CreateEdit(CreateEdit):
 class Create(_CreateEdit):
     url_name = 'security-basic-auth-create'
     service_name = 'zato.security.basic-auth.create'
+
+    def __call__(self, req, *args, **kwargs):
+        response = super().__call__(req, *args, **kwargs)
+        if response.status_code == 200:
+            data = loads(response.content)
+            password = req.POST.get('password', '')
+            if password:
+                req.zato.client.invoke('zato.security.basic-auth.change-password', {
+                    'id': data['id'],
+                    'password': password,
+                })
+        return response
 
 class Edit(_CreateEdit):
     url_name = 'security-basic-auth-edit'
