@@ -53,7 +53,7 @@ if [ -f "$HOME/.cargo/env" ]; then
 fi
 
 echo Installing maturin
-$CURDIR/bin/pip install maturin
+$CURDIR/support-linux/bin/uv pip install maturin
 
 echo Building Rust components
 cd "$CURDIR/.."
