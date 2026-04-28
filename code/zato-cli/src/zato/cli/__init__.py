@@ -68,17 +68,6 @@ common_odb_opts = [
     {'name':'--odb-password', 'help':'ODB database password', 'default':''},
 ]
 
-common_broker_db_opts = [
-    {'name':'--broker-db-host', 'help':'Broker database host'},
-    {'name':'--broker-db-port', 'help':'Broker database port'},
-    {'name':'--broker-db-user', 'help':'Broker database user'},
-    {'name':'--broker-db-name', 'help':'Broker database name'},
-    {'name':'--broker-db-password', 'help':'Broker database password', 'default':''},
-    {'name':'--broker-db-ssl', 'help':'Broker database SSL (False, True, verify)', 'default':'False'},
-    {'name':'--broker-db-pool-size-producers', 'help':'Broker producer pool size', 'default':'50'},
-    {'name':'--broker-db-pool-size-subscribers', 'help':'Broker subscriber pool size', 'default':'50'},
-]
-
 common_ca_create_opts = [
     {'name':'--organization', 'help':'Organization name (defaults to {organization})'.format(**ca_defaults)},
     {'name':'--locality', 'help':'Locality name (defaults to {locality})'.format(**ca_defaults)},
