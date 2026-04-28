@@ -1,7 +1,7 @@
 [package]
 name = "zato_queue_bridge"
 version = "4.1.0"
-edition = "2024"
+edition = "2021"
 license = "AGPL-3.0-only"
 description = "Queue bridge for Zato - connects Kafka, AWS SQS, and IBM MQ to the Zato integration platform"
 repository = "https://github.com/zatosource/zato"
