@@ -198,15 +198,9 @@ $.fn.zato.user_message = function(is_success, msg, loading) {
 }
 
 $.fn.zato.show_action_overlay = function(label) {
-    $.fn.zato.hide_action_overlay();
-    var html = '<div class="zato-action-overlay" id="zato-action-overlay">' +
-        '<div class="zato-action-spinner"></div>' +
-        '<span>' + (label || 'Please wait ...') + '</span></div>';
-    $('body').append(html);
 }
 
 $.fn.zato.hide_action_overlay = function() {
-    $('#zato-action-overlay').remove();
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

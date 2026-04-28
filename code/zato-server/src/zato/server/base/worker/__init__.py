@@ -773,6 +773,82 @@ class WorkerStore(_WorkerStoreBase):
         for password_item in password_maps:
             password_item[_generic_msg.change_password] = self._change_password_generic_connection
 
+        channel_kafka_map[_generic_msg.create] = self._create_kafka_channel
+        channel_kafka_map[_generic_msg.edit]   = self._edit_kafka_channel
+        channel_kafka_map[_generic_msg.delete] = self._delete_kafka_channel
+
+        outconn_kafka_map[_generic_msg.create] = self._create_kafka_outconn
+        outconn_kafka_map[_generic_msg.edit]   = self._edit_kafka_outconn
+        outconn_kafka_map[_generic_msg.delete] = self._delete_kafka_outconn
+
+
+# ################################################################################################################################
+
+    def _notify_queue_bridge_channel(self, action, msg):
+        bridge = getattr(self.server, '_queue_bridge', None)
+        self.logger.info('Queue bridge channel notify: action=%s name=%s bridge=%s', action, msg.get('name', ''), bridge)
+        if not bridge:
+            self.logger.info('Queue bridge channel notify: no bridge, skipping')
+            return
+        try:
+            name = msg.get('name', '')
+            if action == 'create':
+                self.logger.info('Queue bridge channel notify: calling add_channel with %s', dict(msg))
+                bridge.add_channel(dict(msg))
+            elif action == 'edit':
+                self.logger.info('Queue bridge channel notify: calling edit_channel with %s', dict(msg))
+                bridge.edit_channel(dict(msg))
+            elif action == 'delete':
+                self.logger.info('Queue bridge channel notify: calling delete_channel name=%s', name)
+                bridge.delete_channel(name)
+            self.logger.info('Queue bridge channel notify: done action=%s name=%s', action, name)
+        except Exception:
+            self.logger.warning('Could not notify queue bridge about channel %s=%s: %s', action, msg.get('name', ''), format_exc())
+
+    def _notify_queue_bridge_outconn(self, action, msg):
+        bridge = getattr(self.server, '_queue_bridge', None)
+        self.logger.info('Queue bridge outconn notify: action=%s name=%s bridge=%s', action, msg.get('name', ''), bridge)
+        if not bridge:
+            self.logger.info('Queue bridge outconn notify: no bridge, skipping')
+            return
+        try:
+            name = msg.get('name', '')
+            if action == 'create':
+                self.logger.info('Queue bridge outconn notify: calling add_outgoing with %s', dict(msg))
+                bridge.add_outgoing(dict(msg))
+            elif action == 'edit':
+                self.logger.info('Queue bridge outconn notify: calling edit_outgoing with %s', dict(msg))
+                bridge.edit_outgoing(dict(msg))
+            elif action == 'delete':
+                self.logger.info('Queue bridge outconn notify: calling delete_outgoing name=%s', name)
+                bridge.delete_outgoing(name)
+            self.logger.info('Queue bridge outconn notify: done action=%s name=%s', action, name)
+        except Exception:
+            self.logger.warning('Could not notify queue bridge about outconn %s=%s: %s', action, msg.get('name', ''), format_exc())
+
+    def _create_kafka_channel(self, msg, *args, **kwargs):
+        self._create_generic_connection(msg, *args, **kwargs)
+        self._notify_queue_bridge_channel('create', msg)
+
+    def _edit_kafka_channel(self, msg, *args, **kwargs):
+        self._edit_generic_connection(msg, *args, **kwargs)
+        self._notify_queue_bridge_channel('edit', msg)
+
+    def _delete_kafka_channel(self, msg, *args, **kwargs):
+        self._delete_generic_connection(msg, *args, **kwargs)
+        self._notify_queue_bridge_channel('delete', msg)
+
+    def _create_kafka_outconn(self, msg, *args, **kwargs):
+        self._create_generic_connection(msg, *args, **kwargs)
+        self._notify_queue_bridge_outconn('create', msg)
+
+    def _edit_kafka_outconn(self, msg, *args, **kwargs):
+        self._edit_generic_connection(msg, *args, **kwargs)
+        self._notify_queue_bridge_outconn('edit', msg)
+
+    def _delete_kafka_outconn(self, msg, *args, **kwargs):
+        self._delete_generic_connection(msg, *args, **kwargs)
+        self._notify_queue_bridge_outconn('delete', msg)
 
 # ################################################################################################################################
 
@@ -903,8 +979,10 @@ class WorkerStore(_WorkerStoreBase):
         """
         conn_type = msg['type_']
         msg_action = msg['action']
+        logger.info('_get_generic_impl_func: conn_type=%s msg_action=%s name=%s', conn_type, msg_action, msg.get('name', ''))
         func_map = self.generic_impl_func_map[conn_type]
         impl_func = func_map.get(msg_action)
+        logger.info('_get_generic_impl_func: impl_func=%s', impl_func)
         if impl_func:
             return impl_func
         else:

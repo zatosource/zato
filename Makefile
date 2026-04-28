@@ -3,7 +3,7 @@
 	server-install scheduler-install sio-install common-core-install queue-bridge-install \
 	ruff qa-reqs-install unify \
 	update cron-update stop-server restart-server restart-server-with-scheduler \
-	stop-dashboard restart-dashboard scheduler
+	stop-dashboard restart-dashboard scheduler queue-bridge
 
 MAKEFLAGS += --silent
 
@@ -38,8 +38,11 @@ common-core-build:
 
 queue-bridge-build:
 	. $(HOME)/.cargo/env && \
-	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
-	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_queue_bridge/Cargo.toml
+	cargo build --release --manifest-path $(ZATO_RUST)/zato_queue_bridge/Cargo.toml --bin _zato_queue_bridge && \
+	cp $(ZATO_RUST)/zato_queue_bridge/target/release/_zato_queue_bridge $(CURDIR)/code/bin/_zato_queue_bridge
+
+queue-bridge:
+	$(CURDIR)/code/bin/_zato_queue_bridge
 
 install:
 	@if [ "$(filter-out install,$(MAKECMDGOALS))" = "" ]; then \

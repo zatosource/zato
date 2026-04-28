@@ -11,24 +11,27 @@ categories = ["development-tools"]
 
 [lib]
 name = "zato_queue_bridge"
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
+
+[[bin]]
+name = "_zato_queue_bridge"
+path = "src/bin/queue_bridge.rs"
 
 [features]
 default = ["kafka"]
-extension-module = ["pyo3/extension-module"]
 kafka = ["rdkafka", "rdkafka/ssl"]
 
 [dependencies]
-pyo3 = { version = "0.28.3" }
-pyo3-log = "0.13.3"
-log = "0.4.29"
+actix-web = "4.13.0"
 parking_lot = "0.12"
-crossbeam-channel = "0.5"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "time", "sync"] }
 rdkafka = { version = "0.38", features = ["tokio"], optional = true }
-
-[dev-dependencies]
-pyo3 = { version = "0.28.3", features = ["auto-initialize"] }
+redis = "1.2.0"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+tokio = { version = "1.52.1", features = ["rt-multi-thread", "macros", "signal", "time", "sync"] }
+tokio-util = "0.7"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [lints.rust]
 unsafe_code = "forbid"

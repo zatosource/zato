@@ -977,7 +977,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self._start_pubsub_redis()
 
         # Start the queue bridge (Kafka, SQS, etc.)
-        # self._start_queue_bridge()
+        self._start_queue_bridge()
 
         # Optionally, if we appear to be a Docker quickstart environment, log all details about the environment.
         self.log_environment_details()
@@ -1000,12 +1000,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             from zato.server.scheduler_.adapter import SchedulerODBAdapter
             from zato.server.scheduler_.client import SchedulerClient
 
-            logger.info('Connecting to standalone scheduler via Redis Streams')
+            logger.info('Connecting to scheduler')
 
             scheduler_adapter = SchedulerODBAdapter(self.odb, self.cluster_id)
 
             self._scheduler = SchedulerClient()
-            logger.info('Sending reload to scheduler with jobs from ODB')
             self._scheduler.reload(odb_adapter=scheduler_adapter)
             self._scheduler_started = True
 
@@ -1181,27 +1180,67 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def _invoke_queue_service(self, service_name, data):
-        """ Invoked by the queue bridge background thread when a message is received
-        from an external queue (Kafka, SQS, etc.).
+        """ Invoked by the recv listener greenlet when a message is received
+        from an external queue (Kafka, SQS, etc.) via the queue bridge binary.
         """
         self.invoke(service_name, data)
 
 # ################################################################################################################################
 
-    def _start_queue_bridge(self):
+    def _start_queue_bridge(self) -> 'None':
+        """ Connect to the standalone queue bridge binary via Redis Streams and HTTP.
+        """
         from contextlib import closing
+        from base64 import b64decode
 
         from zato.common.api import GENERIC
         from zato.server.generic.connection import GenericConnection
         from zato.common.odb.query.generic import connection_list
-        from zato_queue_bridge import QueueBridge
 
-        _main_hub = gevent.get_hub()
+        self._queue_bridge_started = False
 
-        def _on_queue_bridge_recv(payload, topic, service_name):
-            _main_hub.loop.run_callback(spawn, self._invoke_queue_service, service_name, payload)
+        try:
+            from zato.server.queue_bridge.client import QueueBridgeClient
 
-        self._queue_bridge = QueueBridge()
+            logger.info('Connecting to queue bridge')
+
+            channels = []
+            outgoing = []
+
+            with closing(self.odb.session()) as session:
+                for type_ in (GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA):
+                    items = connection_list(session, self.cluster_id, type_, False)
+                    for item in items:
+                        conn = GenericConnection.from_model(item)
+                        config = conn.to_dict()
+                        logger.info('Queue bridge loading %s -> %s', type_, config)
+
+                        if type_ == GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA:
+                            channels.append(config)
+                        else:
+                            outgoing.append(config)
+
+            self._queue_bridge = QueueBridgeClient()
+            ch_noun = 'channel' if len(channels) == 1 else 'channels'
+            out_noun = 'outgoing connection' if len(outgoing) == 1 else 'outgoing connections'
+            logger.info('Sending reload to queue bridge with %d %s and %d %s', len(channels), ch_noun, len(outgoing), out_noun)
+            self._queue_bridge.reload(channels=channels, outgoing=outgoing)
+            self._queue_bridge_started = True
+
+            self._start_queue_bridge_recv_listener(b64decode)
+
+            logger.info('Queue bridge client connected, recv listener started')
+        except Exception:
+            logger.warning('Queue bridge could not be started: %s', format_exc())
+
+    def _reload_queue_bridge(self) -> 'None':
+        from contextlib import closing
+        from zato.common.api import GENERIC
+        from zato.server.generic.connection import GenericConnection
+        from zato.common.odb.query.generic import connection_list
+
+        channels = []
+        outgoing = []
 
         with closing(self.odb.session()) as session:
             for type_ in (GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA):
@@ -1209,24 +1248,60 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                 for item in items:
                     conn = GenericConnection.from_model(item)
                     config = conn.to_dict()
-                    logger.info('Queue bridge loading %s -> %s', type_, config)
+                    if type_ == GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA:
+                        channels.append(config)
+                    else:
+                        outgoing.append(config)
 
-                    # The SSL fields may come from the DB as empty strings rather than proper types
-                    config['ssl'] = bool(config.get('ssl'))
-                    for _ssl_key in ('ssl_ca_file', 'ssl_cert_file', 'ssl_key_file'):
-                        if not config.get(_ssl_key):
-                            config[_ssl_key] = None
+        ch_noun = 'channel' if len(channels) == 1 else 'channels'
+        out_noun = 'outgoing connection' if len(outgoing) == 1 else 'outgoing connections'
+        logger.info('Reloading queue bridge with %d %s and %d %s', len(channels), ch_noun, len(outgoing), out_noun)
+        self._queue_bridge.reload(channels=channels, outgoing=outgoing)
 
-                    try:
-                        if type_ == GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA:
-                            self._queue_bridge.add_channel(config)
-                        else:
-                            self._queue_bridge.add_outgoing(config)
-                    except Exception:
-                        logger.warning('Queue bridge could not load `%s` (%s), config: %s',
-                            config.get('name', '?'), type_, config, exc_info=True)
+    def _start_queue_bridge_recv_listener(self, b64decode:'any_') -> 'None':
+        """ Starts a dedicated greenlet that consumes recv events
+        from the queue bridge via Redis Streams.
+        """
+        recv_redis = self._queue_bridge.new_redis_conn()
 
-        self._queue_bridge.start({'on_message_cb': _on_queue_bridge_recv})
+        recv_stream = 'zato:queue_bridge:stream:recv'
+        group_name = 'server-recv'
+        consumer_name = 'server-recv-0'
+
+        try:
+            recv_redis.xgroup_create(recv_stream, group_name, id='$', mkstream=True)
+        except Exception as exc:
+            if 'BUSYGROUP' not in str(exc):
+                raise
+
+        def _recv_listener_loop():
+            while True:
+                try:
+                    result = recv_redis.xreadgroup(
+                        groupname=group_name,
+                        consumername=consumer_name,
+                        streams={recv_stream: '>'},
+                        count=10,
+                        block=1000,
+                    )
+
+                    if not result:
+                        continue
+
+                    for stream_name, messages in result:
+                        for msg_id, fields in messages:
+                            service_name = fields['service']
+                            payload_b64 = fields['payload']
+                            payload = b64decode(payload_b64)
+                            self._invoke_queue_service(service_name, payload)
+                            recv_redis.xack(stream_name, group_name, msg_id)
+
+                except Exception:
+                    logger.warning('Error in queue bridge recv listener: %s', format_exc())
+                    sleep(1)
+
+        spawn(_recv_listener_loop)
+        logger.info('Queue bridge recv listener greenlet started')
 
 # ################################################################################################################################
 
@@ -1444,6 +1519,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             from zato.server.scheduler_.adapter import SchedulerODBAdapter
             scheduler_adapter = SchedulerODBAdapter(self.odb, self.cluster_id)
             self._scheduler.reload(odb_adapter=scheduler_adapter)
+
+        # .. reload the queue bridge if it was started ..
+        if self._queue_bridge_started:
+            self._reload_queue_bridge()
 
         # .. finally, log what happened.
         logger.info('⭐ Config loaded OK')

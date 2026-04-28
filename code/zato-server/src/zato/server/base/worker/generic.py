@@ -243,13 +243,17 @@ class Generic(WorkerImpl):
         **kwargs: 'any_'
     ) -> 'None':
 
+        self.logger.info('GENERIC_CONNECTION_COMMON_ACTION: type_=%s action=%s name=%s', msg.get('type_', ''), msg.get('action', ''), msg.get('name', ''))
         func = self._get_generic_impl_func(msg)
+        self.logger.info('GENERIC_CONNECTION_COMMON_ACTION: func=%s', func)
         if func:
             func(msg)
+            self.logger.info('GENERIC_CONNECTION_COMMON_ACTION: func completed')
 
 # ################################################################################################################################
 
     def on_config_event_GENERIC_CONNECTION_CREATE(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        self.logger.info('on_config_event_GENERIC_CONNECTION_CREATE called')
         return self._on_config_event_GENERIC_CONNECTION_COMMON_ACTION(*args, **kwargs)
 
 # ################################################################################################################################
@@ -261,12 +265,13 @@ class Generic(WorkerImpl):
         **kwargs: 'any_'
     ) -> 'None':
 
-        # Update the connection now.
+        self.logger.info('on_config_event_GENERIC_CONNECTION_EDIT called')
         return self._on_config_event_GENERIC_CONNECTION_COMMON_ACTION(msg, *args, **kwargs)
 
 # ################################################################################################################################
 
     def on_config_event_GENERIC_CONNECTION_DELETE(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        self.logger.info('on_config_event_GENERIC_CONNECTION_DELETE called')
         return self._on_config_event_GENERIC_CONNECTION_COMMON_ACTION(*args, **kwargs)
 
 # ################################################################################################################################
