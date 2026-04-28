@@ -103,7 +103,7 @@ class Index(_Index):
     def handle_return_data(self, return_data:'any_') -> 'any_':
         return_data['items'] = [
             item for item in self.items
-            if item.name.startswith('demo.') and item.name not in _to_ignore
+            if item.name not in _to_ignore
         ]
         return return_data
 
