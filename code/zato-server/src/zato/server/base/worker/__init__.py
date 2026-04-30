@@ -1786,16 +1786,6 @@ class WorkerStore(_WorkerStoreBase):
 
         for topic_item in msg.topic_name_list:
             topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
-
-            if self.server._has_pubsub_broker:
-                topic = self.server.pubsub_broker.get_topic_by_name(topic_name)
-                if topic is None:
-                    topic = self.server.pubsub_broker.create_topic(topic_name)
-
-                result = self.server.pubsub_broker.create_subscription(sub_key, topic['topic_id'], 'client')
-                broker_sub_id = result['sub_id']
-                self.server._broker_sub_map[broker_sub_id] = sub_key
-
             self._add_pubsub_sub_config(sub_key, topic_name, delivery_type, msg)
 
     def on_config_event_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'bunch_') -> 'None':
@@ -1807,16 +1797,6 @@ class WorkerStore(_WorkerStoreBase):
 
         for topic_item in msg.topic_name_list:
             topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
-
-            if self.server._has_pubsub_broker:
-                topic = self.server.pubsub_broker.get_topic_by_name(topic_name)
-                if topic is None:
-                    topic = self.server.pubsub_broker.create_topic(topic_name)
-
-                result = self.server.pubsub_broker.create_subscription(sub_key, topic['topic_id'], 'client')
-                broker_sub_id = result['sub_id']
-                self.server._broker_sub_map[broker_sub_id] = sub_key
-
             self._add_pubsub_sub_config(sub_key, topic_name, delivery_type, msg)
 
     def on_config_event_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'bunch_') -> 'None':
@@ -1825,15 +1805,6 @@ class WorkerStore(_WorkerStoreBase):
         username = msg.username
 
         self._remove_pubsub_sub_configs_by_sub_key(sub_key)
-
-        if self.server._has_pubsub_broker:
-            try:
-                subs = self.server.pubsub_broker.list_active_subscriptions()
-                for sub_id, topic_id in subs:
-                    self.server.pubsub_broker.delete_subscription(sub_key, topic_id)
-            except Exception:
-                logger.warning('Could not delete broker subscription for sub_key `%s`: %s', sub_key, format_exc())
-
         self.server.pubsub_subscriptions.remove_user(username)
 
 # ################################################################################################################################
@@ -1854,12 +1825,6 @@ class WorkerStore(_WorkerStoreBase):
         matcher = self.server.pubsub_pattern_matcher
         for client_id in list(matcher._clients):
             matcher.delete_topic(client_id, topic_name)
-
-        if self.server._has_pubsub_broker:
-            try:
-                self.server.pubsub_broker.delete_topic(topic_name)
-            except Exception:
-                logger.warning('Could not delete broker topic `%s`: %s', topic_name, format_exc())
 
 # ################################################################################################################################
 

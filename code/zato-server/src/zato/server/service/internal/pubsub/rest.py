@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from base64 import b64decode
+from http.client import BAD_REQUEST, UNAUTHORIZED
 from logging import getLogger
 
 # Zato
@@ -80,10 +81,10 @@ class PubSubRESTService(Service):
         username, password = extract_basic_auth_credentials(self.wsgi_environ)
 
         if not username:
-            return None, ('Authentication required', _status_unauthorized)
+            return None, ('Authentication required', _status_unauthorized, UNAUTHORIZED)
 
         if not self._validate_credentials(username, password):
-            return None, ('Invalid credentials', _status_unauthorized)
+            return None, ('Invalid credentials', _status_unauthorized, UNAUTHORIZED)
 
         return username, None
 
@@ -130,7 +131,7 @@ class Publish(PubSubRESTService):
         if error:
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
-            self.response.payload.details, self.response.payload.status = error
+            self.response.payload.details, self.response.payload.status, self.response.status_code = error
             return
 
         # Get topic name
@@ -144,6 +145,7 @@ class Publish(PubSubRESTService):
             self.response.payload.cid = cid
             self.response.payload.status = _status_bad_request
             self.response.payload.details = str(e)
+            self.response.status_code = BAD_REQUEST
             return
 
         # Check permissions
@@ -155,6 +157,7 @@ class Publish(PubSubRESTService):
             self.response.payload.cid = cid
             self.response.payload.status = _status_unauthorized
             self.response.payload.details = 'Permission denied'
+            self.response.status_code = UNAUTHORIZED
             return
 
         # Get message data
@@ -165,6 +168,7 @@ class Publish(PubSubRESTService):
             self.response.payload.cid = cid
             self.response.payload.status = _status_bad_request
             self.response.payload.details = "Invalid input: 'data' element missing"
+            self.response.status_code = BAD_REQUEST
             return
 
         # Get optional parameters with safe parsing
@@ -235,7 +239,7 @@ class GetMessages(PubSubRESTService):
         if error:
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
-            self.response.payload.details, self.response.payload.status = error
+            self.response.payload.details, self.response.payload.status, self.response.status_code = error
             return
 
         # Get sub_key for this user
@@ -300,7 +304,7 @@ class Subscribe(PubSubRESTService):
         if error:
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
-            self.response.payload.details, self.response.payload.status = error
+            self.response.payload.details, self.response.payload.status, self.response.status_code = error
             return
 
         # Get topic name
@@ -314,6 +318,7 @@ class Subscribe(PubSubRESTService):
             self.response.payload.cid = cid
             self.response.payload.status = _status_bad_request
             self.response.payload.details = str(e)
+            self.response.status_code = BAD_REQUEST
             return
 
         # Check permissions
@@ -324,6 +329,7 @@ class Subscribe(PubSubRESTService):
             self.response.payload.cid = cid
             self.response.payload.status = _status_unauthorized
             self.response.payload.details = 'Permission denied'
+            self.response.status_code = UNAUTHORIZED
             return
 
         # Get or create sub_key for this user
@@ -390,7 +396,7 @@ class Unsubscribe(PubSubRESTService):
         if error:
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
-            self.response.payload.details, self.response.payload.status = error
+            self.response.payload.details, self.response.payload.status, self.response.status_code = error
             return
 
         # Get topic name
@@ -404,6 +410,7 @@ class Unsubscribe(PubSubRESTService):
             self.response.payload.cid = cid
             self.response.payload.status = _status_bad_request
             self.response.payload.details = str(e)
+            self.response.status_code = BAD_REQUEST
             return
 
         # Get sub_key for this user
