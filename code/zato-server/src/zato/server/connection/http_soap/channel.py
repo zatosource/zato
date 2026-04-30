@@ -191,6 +191,14 @@ class _RequestMeta(NamedTuple):
 
 # ################################################################################################################################
 
+class _URLMatchResult(NamedTuple):
+    url_match: 'str'
+    channel_item: 'anydict'
+    channel_name: 'str'
+    payload: 'bytes'
+
+# ################################################################################################################################
+
 class RequestDispatcher:
     """ Dispatches all the incoming HTTP requests to appropriate handlers.
     """
@@ -238,6 +246,40 @@ class RequestDispatcher:
 
 # ################################################################################################################################
 
+    def _match_url(self, meta:'_RequestMeta', wsgi_environ:'stranydict') -> '_URLMatchResult':
+        """ Matches the request URL, reads the raw payload and stores preliminary data in wsgi_environ.
+        """
+        url_match, channel_item = self.url_data.match(meta.path_info, meta.http_method, meta.http_accept) # type: ignore
+
+        url_match = cast_('str', url_match)
+        channel_item = cast_('anydict', channel_item)
+
+        # .. the item itself may be None in case it is a 404 ..
+        if channel_item:
+            channel_name = channel_item['name']
+        else:
+            channel_name = '(None)'
+
+        # .. this is needed in parallel.py's on_wsgi_request ..
+        wsgi_environ['zato.channel_item'] = channel_item
+
+        # .. read the raw data ..
+        payload = wsgi_environ['wsgi.input'].read()
+
+        # .. store for later use prior to any kind of parsing ..
+        wsgi_environ['zato.http.raw_request'] = payload
+
+        out = _URLMatchResult(
+            url_match=url_match,
+            channel_item=channel_item,
+            channel_name=channel_name,
+            payload=payload,
+        )
+
+        return out
+
+# ################################################################################################################################
+
     def dispatch(
         self,
         cid:'str',
@@ -261,29 +303,12 @@ class RequestDispatcher:
             wsgi_environ['zato.http.response.status'] = _status_method_not_allowed
             return client_json_error(cid, 'Unsupported HTTP method')
 
-        # Can we recognize this URL path?
-        # This gives us the URL info and security data - but note that here
-        # we still haven't validated credentials, only matched the URL.
-        # Credentials are checked in a call to self.url_data.check_security
-        url_match, channel_item = self.url_data.match(meta.path_info, meta.http_method, meta.http_accept) # type: ignore
-
-        url_match = cast_('str', url_match)
-        channel_item = cast_('anydict', channel_item)
-
-        # .. the item itself may be None in case it is a 404 ..
-        if channel_item:
-            channel_name = channel_item['name']
-        else:
-            channel_name = '(None)'
-
-        # This is needed in parallel.py's on_wsgi_request
-        wsgi_environ['zato.channel_item'] = channel_item
-
-        # Read the raw data
-        payload = wsgi_environ['wsgi.input'].read()
-
-        # Store for later use prior to any kind of parsing
-        wsgi_environ['zato.http.raw_request'] = payload
+        # Match the URL, read the raw payload and store preliminary data in wsgi_environ
+        url_match_result = self._match_url(meta, wsgi_environ)
+        url_match = url_match_result.url_match
+        channel_item = url_match_result.channel_item
+        channel_name = url_match_result.channel_name
+        payload = url_match_result.payload
 
         # This dictionary may be populated by a service with HTTP headers,
         # which the headers will be still in the dictionary even if the service
