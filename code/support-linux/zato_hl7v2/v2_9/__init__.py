@@ -7,19 +7,14 @@ from zato_hl7v2.v2_9.groups import *
 from zato_hl7v2.v2_9.messages import *
 
 from zato_hl7v2.base import HL7Message
-from zato_hl7v2.batch import (
-    HL7Batch,
-    HL7File,
-    parse_batch,
-    parse_file,
-    parse_batch_or_file,
-    create_batch,
-    create_file,
-)
-from zato_hl7v2_rs import parse as _rust_parse, validate as _rust_validate, ValidationResult, ValidationError
+from zato_hl7v2_rs import parse as _rust_parse, validate as _rust_validate, serialize as _rust_serialize, ValidationResult, ValidationError
+from zato_hl7v2_rs import apply_parser_quirks as _apply_quirks, ParserQuirks
+from zato_hl7v2.batch import parse_batch, parse_file, parse_batch_or_file
 
 
-def parse_message(raw: str, validate: bool = True) -> HL7Message:
+def parse_message(raw: str, validate: bool = True, quirks: 'ParserQuirks | None' = None) -> HL7Message:
+    if quirks is not None:
+        raw = _apply_quirks(raw, quirks)
     raw_msg = _rust_parse(raw)
     msg_class = HL7Message._registry.get(raw_msg.structure_id)
     if msg_class is None:
@@ -29,19 +24,28 @@ def parse_message(raw: str, validate: bool = True) -> HL7Message:
     return msg
 
 
-def serialize(msg) -> str:
-    from zato_hl7v2_rs import serialize as _serialize
-    if hasattr(msg, '_raw_message'):
-        return _serialize(msg._raw_message)
-    return _serialize(msg)
-
-
-def to_hl7(raw_msg) -> str:
-    return serialize(raw_msg)
-
-
-def to_er7(raw_msg) -> str:
-    return serialize(raw_msg)
+def serialize(msg: HL7Message) -> str:
+    if msg._raw_message is not None:
+        return _rust_serialize(msg._raw_message)
+    from zato_hl7v2.base import HL7SegmentAttr, HL7GroupAttr
+    lines = []
+    for name in dir(msg.__class__):
+        attr = getattr(msg.__class__, name)
+        if isinstance(attr, HL7SegmentAttr):
+            seg = msg.__dict__.get(attr.attr_name)
+            if seg is not None:
+                if isinstance(seg, list):
+                    for s in seg:
+                        line = s.serialize()
+                        if line:
+                            lines.append(line)
+                else:
+                    line = seg.serialize()
+                    if line:
+                        lines.append(line)
+    if not lines:
+        raise ValueError("Message has no data to serialize")
+    return "\r".join(lines)
 
 
 def validate_message(raw: str) -> ValidationResult:

@@ -174,7 +174,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self.is_starting_first = '<not-set>'
         self.odb_data = Bunch()
         self._has_pubsub_redis = False
-        self._push_subs = {} # type: anydict
+        self._push_subs = {} # type: dict[str, list]
         self.repo_location = ''
         self.user_conf_location:'strlist' = []
         self.user_conf_location_extra:'strset' = set()
@@ -1365,7 +1365,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             ).all()
 
             synced = 0
-            push_subs = {}
+            push_subs = {} # type: dict[str, list]
 
             for row in rows:
                 topic_name = row.name
@@ -1389,12 +1389,15 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                         if endpoint:
                             sub_config['rest_push_url'] = (endpoint.host or '') + endpoint.url_path
 
-                    push_subs[sub_key] = sub_config
+                    if sub_key not in push_subs:
+                        push_subs[sub_key] = []
+                    push_subs[sub_key].append(sub_config)
 
             self._push_subs = push_subs
 
         noun = 'pair' if synced == 1 else 'pairs'
-        logger.info('Synced %d ODB subscription-topic %s to Redis (%d push)', synced, noun, len(push_subs))
+        push_count = sum(len(v) for v in push_subs.values())
+        logger.info('Synced %d ODB subscription-topic %s to Redis (%d push)', synced, noun, push_count)
 
 # ################################################################################################################################
 

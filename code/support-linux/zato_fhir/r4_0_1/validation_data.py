@@ -38,6 +38,9 @@ REQUIRED_FIELDS: dict[str, list[dict]] = {
     "BodyStructure": [
         {"field": "patient", "min": 1, "max": "1"},
     ],
+    "Bundle": [
+        {"field": "type", "min": 1, "max": "1"},
+    ],
     "CapabilityStatement": [
         {"field": "status", "min": 1, "max": "1"},
         {"field": "date", "min": 1, "max": "1"},

@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import json
 from enum import Enum
-from typing import Any, Optional, TypeVar, Generic
+from typing import Any, Optional, TypeVar
 
 from zato_hl7v2.registry import (
     register_segment,
     register_field,
     register_component,
-    get_segment_class,
     resolve_field,
     resolve_component,
 )
@@ -57,6 +56,8 @@ class HL7Component:
                                         return comp_data
                             break
                     return None
+        if self.attr_name in instance.__dict__:
+            return instance.__dict__[self.attr_name]
         raw = getattr(instance, "_raw_components", None)
         if raw is None:
             return None
@@ -115,6 +116,11 @@ class HL7Field:
             return cache[self.attr_name]
         raw_segment = getattr(instance, "_raw_segment", None)
         if raw_segment is None:
+            dt_class = _datatype_classes.get(self.datatype)
+            if dt_class is not None:
+                obj = dt_class()
+                cache[self.attr_name] = obj
+                return obj
             return None
         idx = self.position - 1
         if idx >= len(raw_segment.fields):
@@ -145,7 +151,7 @@ class HL7Field:
             return components[0][0] if components[0][0] else None
         dt_class = _datatype_classes.get(self.datatype)
         if dt_class is not None:
-            obj = dt_class.__new__(dt_class)
+            obj = dt_class.__new__(dt_class)  # type: ignore[call-overload]
             obj._raw_components = components
             if instance is not None:
                 obj._parent_message = getattr(instance, '_parent_message', None)
@@ -183,16 +189,24 @@ class HL7SegmentAttr:
         if self.attr_name in cache:
             return cache[self.attr_name]
         raw_message = getattr(instance, "_raw_message", None)
-        if raw_message is None:
-            return None
         seg_class = _segment_classes.get(self.segment_id)
         if seg_class is None:
             return None
+        if raw_message is None:
+            if self.repeatable:
+                result: list[Any] = []
+                cache[self.attr_name] = result
+                return result
+            else:
+                seg = seg_class()
+                seg._parent_message = instance
+                cache[self.attr_name] = seg
+                return seg
         if self.repeatable:
             result = []
             for item in raw_message.items:
                 if hasattr(item, 'segment_id') and item.segment_id == self.segment_id:
-                    seg = seg_class.__new__(seg_class)
+                    seg = seg_class.__new__(seg_class)  # type: ignore[call-overload]
                     seg._raw_segment = item
                     seg._parent_message = instance
                     result.append(seg)
@@ -201,7 +215,7 @@ class HL7SegmentAttr:
         else:
             for item in raw_message.items:
                 if hasattr(item, 'segment_id') and item.segment_id == self.segment_id:
-                    seg = seg_class.__new__(seg_class)
+                    seg = seg_class.__new__(seg_class)  # type: ignore[call-overload]
                     seg._raw_segment = item
                     seg._parent_message = instance
                     cache[self.attr_name] = seg
@@ -282,6 +296,38 @@ class HL7DataType:
         for k, v in kwargs.items():
             setattr(self, k, v)
 
+    def _resolve_semantic(self, name: str) -> Optional[str]:
+        pos = resolve_component(self.__class__.__name__, name)
+        if pos is None:
+            return None
+        for attr_name in dir(self.__class__):
+            attr = getattr(self.__class__, attr_name, None)
+            if isinstance(attr, HL7Component) and attr.position == pos:
+                return attr_name
+        return None
+
+    def __getattr__(self, name: str) -> Any:
+        if name.startswith('_'):
+            raise AttributeError(name)
+        positional = self._resolve_semantic(name)
+        if positional is not None and positional != name:
+            return getattr(self, positional)
+        raise AttributeError(f"'{type(self).__name__}' has no attribute '{name}'")
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name.startswith('_'):
+            super().__setattr__(name, value)
+            return
+        cls = type(self)
+        if hasattr(cls, name) and isinstance(getattr(cls, name), HL7Component):
+            super().__setattr__(name, value)
+            return
+        positional = self._resolve_semantic(name)
+        if positional is not None:
+            setattr(self, positional, value)
+            return
+        super().__setattr__(name, value)
+
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {}
         for name in dir(self.__class__):
@@ -299,6 +345,28 @@ class HL7DataType:
 
     def to_json(self, indent: Optional[int] = None) -> str:
         return json.dumps(self.to_dict(), indent=indent)
+
+    def serialize(self) -> str:
+        components: list[HL7Component] = []
+        for name in dir(self.__class__):
+            attr = getattr(self.__class__, name)
+            if isinstance(attr, HL7Component):
+                components.append(attr)
+        if not components:
+            return ""
+        components.sort(key=lambda c: c.position)
+        max_pos = components[-1].position
+        parts: list[str] = []
+        for pos in range(1, max_pos + 1):
+            val = None
+            for comp in components:
+                if comp.position == pos:
+                    val = getattr(self, comp.attr_name, None)
+                    break
+            parts.append(str(val) if val is not None else "")
+        while parts and parts[-1] == "":
+            parts.pop()
+        return "^".join(parts)
 
 
 class HL7Segment:
@@ -342,7 +410,38 @@ class HL7Segment:
                     rep_strs.append(comp_sep.join(comp_strs))
                 result += rep_sep.join(rep_strs)
             return result
-        return ""
+        return self._serialize_from_dict()
+
+    def _serialize_from_dict(self) -> str:
+        fields_by_pos: dict[int, str] = {}
+        for name in dir(self.__class__):
+            attr = getattr(self.__class__, name)
+            if isinstance(attr, HL7Field):
+                val = self.__dict__.get(attr.attr_name)
+                if val is not None:
+                    if isinstance(val, HL7DataType):
+                        fields_by_pos[attr.position] = val.serialize()
+                    elif isinstance(val, str):
+                        fields_by_pos[attr.position] = val
+                    elif isinstance(val, list):
+                        parts = []
+                        for v in val:
+                            if isinstance(v, HL7DataType):
+                                parts.append(v.serialize())
+                            else:
+                                parts.append(str(v))
+                        fields_by_pos[attr.position] = "~".join(parts)
+                    else:
+                        fields_by_pos[attr.position] = str(val)
+        if not fields_by_pos:
+            return ""
+        max_pos = max(fields_by_pos.keys())
+        parts = [self._segment_id]
+        if self._segment_id == "MSH":
+            parts.append("^~\\&")
+        for pos in range(1 if self._segment_id != "MSH" else 2, max_pos + 1):
+            parts.append(fields_by_pos.get(pos, ""))
+        return "|".join(parts)
 
     to_hl7 = serialize
     to_er7 = serialize
@@ -373,7 +472,7 @@ class HL7Group:
     def serialize(self) -> str:
         from zato_hl7v2_rs import serialize as _rust_serialize
         if self._raw_group:
-            return _rust_serialize(self._raw_group)
+            return _rust_serialize(self._raw_group)  # type: ignore[no-any-return]
         return ""
 
     to_hl7 = serialize
@@ -387,7 +486,7 @@ class HL7Group:
                 if hasattr(item, 'segment_id'):
                     seg_class = _segment_classes.get(item.segment_id)
                     if seg_class:
-                        seg = seg_class.__new__(seg_class)
+                        seg = seg_class.__new__(seg_class)  # type: ignore[call-overload]
                         seg._raw_segment = item
                         result["segments"].append(seg.to_dict())
         return result
@@ -413,9 +512,7 @@ class HL7Message:
 
     def serialize(self) -> str:
         from zato_hl7v2.v2_9 import serialize as _serialize
-        if self._raw_message:
-            return _serialize(self._raw_message)
-        return ""
+        return _serialize(self)
 
     to_hl7 = serialize
     to_er7 = serialize
@@ -502,6 +599,8 @@ def _get_by_path(msg: "HL7Message", path: str) -> Any:
     if "[" in comp_ref:
         comp_ref, _ = comp_ref.split("[", 1)
 
+    if field_datatype is None:
+        return None
     comp_pos = _resolve_component(field_datatype, comp_ref)
     if comp_pos is None:
         return None
@@ -535,7 +634,7 @@ def _resolve_segment(msg: "HL7Message", segment_ref: str) -> Any:
         if hasattr(item, 'segment_id') and item.segment_id == segment_ref_upper:
             seg_class = _segment_classes.get(segment_ref_upper)
             if seg_class:
-                seg = seg_class.__new__(seg_class)
+                seg = seg_class.__new__(seg_class)  # type: ignore[call-overload]
                 seg._raw_segment = item
                 seg._parent_message = msg
                 return seg
@@ -547,15 +646,15 @@ def _resolve_segment(msg: "HL7Message", segment_ref: str) -> Any:
     return None
 
 
-def _resolve_field(segment: "HL7Segment", field_ref: str) -> tuple:
+def _resolve_field(segment: "HL7Segment", field_ref: str) -> tuple[Optional[int], Optional[str]]:
     return resolve_field(segment._segment_id, field_ref)
 
 
-def _resolve_component(datatype: str, comp_ref: str) -> int:
+def _resolve_component(datatype: str, comp_ref: str) -> Optional[int]:
     return resolve_component(datatype, comp_ref)
 
 
-def _resolve_subcomponent(subcomp_ref: str) -> int:
+def _resolve_subcomponent(subcomp_ref: str) -> Optional[int]:
     if subcomp_ref.isdigit():
         return int(subcomp_ref)
     return None
@@ -605,6 +704,8 @@ def _set_by_path(msg: "HL7Message", path: str, value: str) -> None:
     if "[" in comp_ref:
         comp_ref, _ = comp_ref.split("[", 1)
 
+    if field_datatype is None:
+        return
     comp_pos = _resolve_component(field_datatype, comp_ref)
     if comp_pos is None:
         return

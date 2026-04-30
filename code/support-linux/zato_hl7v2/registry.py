@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional
 
 _segment_registry: Dict[str, type] = {}
 _field_registry: Dict[str, Dict[str, Tuple[int, str]]] = {}

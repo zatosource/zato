@@ -8,7 +8,6 @@ from zato_hl7v2.v2_9.primitives import (
     ST,
 )
 
-
 class AD(HL7DataType):
     ad_1: Optional[ST] = HL7Component(position=1)
     ad_2: Optional[ST] = HL7Component(position=2)
@@ -19,23 +18,19 @@ class AD(HL7DataType):
     ad_7: Optional[ST] = HL7Component(position=7)
     ad_8: Optional[ST] = HL7Component(position=8)
 
-
 class AUI(HL7DataType):
     aui_1: Optional[ST] = HL7Component(position=1)
     aui_2: Optional[ST] = HL7Component(position=2)
     aui_3: Optional[ST] = HL7Component(position=3)
 
-
 class CCD(HL7DataType):
     ccd_1: Optional[ST] = HL7Component(position=1)
     ccd_2: Optional[ST] = HL7Component(position=2)
-
 
 class CCP(HL7DataType):
     ccp_1: Optional[ST] = HL7Component(position=1)
     ccp_2: Optional[ST] = HL7Component(position=2)
     ccp_3: Optional[ST] = HL7Component(position=3)
-
 
 class CD(HL7DataType):
     cd_1: Optional[ST] = HL7Component(position=1)
@@ -44,7 +39,6 @@ class CD(HL7DataType):
     cd_4: Optional[ST] = HL7Component(position=4)
     cd_5: Optional[ST] = HL7Component(position=5)
     cd_6: Optional[ST] = HL7Component(position=6)
-
 
 class CF(HL7DataType):
     cf_1: Optional[ST] = HL7Component(position=1)
@@ -70,7 +64,6 @@ class CF(HL7DataType):
     cf_21: Optional[ST] = HL7Component(position=21)
     cf_22: Optional[ST] = HL7Component(position=22)
 
-
 class CNE(HL7DataType):
     cne_1: Optional[ST] = HL7Component(position=1)
     cne_2: Optional[ST] = HL7Component(position=2)
@@ -95,7 +88,6 @@ class CNE(HL7DataType):
     cne_21: Optional[ST] = HL7Component(position=21)
     cne_22: Optional[ST] = HL7Component(position=22)
 
-
 class CNN(HL7DataType):
     cnn_1: Optional[ST] = HL7Component(position=1)
     cnn_2: Optional[ST] = HL7Component(position=2)
@@ -109,7 +101,6 @@ class CNN(HL7DataType):
     cnn_10: Optional[ST] = HL7Component(position=10)
     cnn_11: Optional[ST] = HL7Component(position=11)
 
-
 class CP(HL7DataType):
     cp_1: Optional[ST] = HL7Component(position=1)
     cp_2: Optional[ST] = HL7Component(position=2)
@@ -118,11 +109,9 @@ class CP(HL7DataType):
     cp_5: Optional[ST] = HL7Component(position=5)
     cp_6: Optional[ST] = HL7Component(position=6)
 
-
 class CQ(HL7DataType):
     cq_1: Optional[ST] = HL7Component(position=1)
     cq_2: Optional[ST] = HL7Component(position=2)
-
 
 class CSU(HL7DataType):
     csu_1: Optional[ST] = HL7Component(position=1)
@@ -149,7 +138,6 @@ class CSU(HL7DataType):
     csu_22: Optional[ST] = HL7Component(position=22)
     csu_23: Optional[ST] = HL7Component(position=23)
 
-
 class CWE(HL7DataType):
     cwe_1: Optional[ST] = HL7Component(position=1)
     cwe_2: Optional[ST] = HL7Component(position=2)
@@ -174,7 +162,6 @@ class CWE(HL7DataType):
     cwe_21: Optional[ST] = HL7Component(position=21)
     cwe_22: Optional[ST] = HL7Component(position=22)
 
-
 class CX(HL7DataType):
     cx_1: Optional[ST] = HL7Component(position=1)
     cx_2: Optional[ST] = HL7Component(position=2)
@@ -189,28 +176,23 @@ class CX(HL7DataType):
     cx_11: Optional[ST] = HL7Component(position=11)
     cx_12: Optional[ST] = HL7Component(position=12)
 
-
 class DDI(HL7DataType):
     ddi_1: Optional[ST] = HL7Component(position=1)
     ddi_2: Optional[ST] = HL7Component(position=2)
     ddi_3: Optional[ST] = HL7Component(position=3)
 
-
 class DIN(HL7DataType):
     din_1: Optional[ST] = HL7Component(position=1)
     din_2: Optional[ST] = HL7Component(position=2)
-
 
 class DLD(HL7DataType):
     dld_1: Optional[ST] = HL7Component(position=1)
     dld_2: Optional[ST] = HL7Component(position=2)
 
-
 class DLN(HL7DataType):
     dln_1: Optional[ST] = HL7Component(position=1)
     dln_2: Optional[ST] = HL7Component(position=2)
     dln_3: Optional[ST] = HL7Component(position=3)
-
 
 class DLT(HL7DataType):
     dlt_1: Optional[ST] = HL7Component(position=1)
@@ -218,16 +200,13 @@ class DLT(HL7DataType):
     dlt_3: Optional[ST] = HL7Component(position=3)
     dlt_4: Optional[ST] = HL7Component(position=4)
 
-
 class DR(HL7DataType):
     dr_1: Optional[ST] = HL7Component(position=1)
     dr_2: Optional[ST] = HL7Component(position=2)
 
-
 class DTN(HL7DataType):
     dtn_1: Optional[ST] = HL7Component(position=1)
     dtn_2: Optional[ST] = HL7Component(position=2)
-
 
 class ED(HL7DataType):
     ed_1: Optional[ST] = HL7Component(position=1)
@@ -236,18 +215,15 @@ class ED(HL7DataType):
     ed_4: Optional[ST] = HL7Component(position=4)
     ed_5: Optional[ST] = HL7Component(position=5)
 
-
 class EI(HL7DataType):
     ei_1: Optional[ST] = HL7Component(position=1)
     ei_2: Optional[ST] = HL7Component(position=2)
     ei_3: Optional[ST] = HL7Component(position=3)
     ei_4: Optional[ST] = HL7Component(position=4)
 
-
 class EIP(HL7DataType):
     eip_1: Optional[ST] = HL7Component(position=1)
     eip_2: Optional[ST] = HL7Component(position=2)
-
 
 class ERL(HL7DataType):
     erl_1: Optional[ST] = HL7Component(position=1)
@@ -257,11 +233,9 @@ class ERL(HL7DataType):
     erl_5: Optional[ST] = HL7Component(position=5)
     erl_6: Optional[ST] = HL7Component(position=6)
 
-
 class FC(HL7DataType):
     fc_1: Optional[ST] = HL7Component(position=1)
     fc_2: Optional[ST] = HL7Component(position=2)
-
 
 class FN(HL7DataType):
     fn_1: Optional[ST] = HL7Component(position=1)
@@ -270,24 +244,20 @@ class FN(HL7DataType):
     fn_4: Optional[ST] = HL7Component(position=4)
     fn_5: Optional[ST] = HL7Component(position=5)
 
-
 class HD(HL7DataType):
     hd_1: Optional[ST] = HL7Component(position=1)
     hd_2: Optional[ST] = HL7Component(position=2)
     hd_3: Optional[ST] = HL7Component(position=3)
-
 
 class ICD(HL7DataType):
     icd_1: Optional[ST] = HL7Component(position=1)
     icd_2: Optional[ST] = HL7Component(position=2)
     icd_3: Optional[ST] = HL7Component(position=3)
 
-
 class JCC(HL7DataType):
     jcc_1: Optional[ST] = HL7Component(position=1)
     jcc_2: Optional[ST] = HL7Component(position=2)
     jcc_3: Optional[ST] = HL7Component(position=3)
-
 
 class MA(HL7DataType):
     ma_1: Optional[ST] = HL7Component(position=1)
@@ -296,28 +266,23 @@ class MA(HL7DataType):
     ma_4: Optional[ST] = HL7Component(position=4)
     ma_5: Optional[ST] = HL7Component(position=5)
 
-
 class MO(HL7DataType):
     mo_1: Optional[ST] = HL7Component(position=1)
     mo_2: Optional[ST] = HL7Component(position=2)
 
-
 class MOC(HL7DataType):
     moc_1: Optional[ST] = HL7Component(position=1)
     moc_2: Optional[ST] = HL7Component(position=2)
-
 
 class MOP(HL7DataType):
     mop_1: Optional[ST] = HL7Component(position=1)
     mop_2: Optional[ST] = HL7Component(position=2)
     mop_3: Optional[ST] = HL7Component(position=3)
 
-
 class MSG(HL7DataType):
     msg_1: Optional[ST] = HL7Component(position=1)
     msg_2: Optional[ST] = HL7Component(position=2)
     msg_3: Optional[ST] = HL7Component(position=3)
-
 
 class NA(HL7DataType):
     na_1: Optional[ST] = HL7Component(position=1)
@@ -325,7 +290,6 @@ class NA(HL7DataType):
     na_3: Optional[ST] = HL7Component(position=3)
     na_4: Optional[ST] = HL7Component(position=4)
     na_5: Optional[ST] = HL7Component(position=5)
-
 
 class NDL(HL7DataType):
     ndl_1: Optional[ST] = HL7Component(position=1)
@@ -340,16 +304,13 @@ class NDL(HL7DataType):
     ndl_10: Optional[ST] = HL7Component(position=10)
     ndl_11: Optional[ST] = HL7Component(position=11)
 
-
 class NR(HL7DataType):
     nr_1: Optional[ST] = HL7Component(position=1)
     nr_2: Optional[ST] = HL7Component(position=2)
 
-
 class OCD(HL7DataType):
     ocd_1: Optional[ST] = HL7Component(position=1)
     ocd_2: Optional[ST] = HL7Component(position=2)
-
 
 class OG(HL7DataType):
     og_1: Optional[ST] = HL7Component(position=1)
@@ -357,12 +318,10 @@ class OG(HL7DataType):
     og_3: Optional[ST] = HL7Component(position=3)
     og_4: Optional[ST] = HL7Component(position=4)
 
-
 class OSP(HL7DataType):
     osp_1: Optional[ST] = HL7Component(position=1)
     osp_2: Optional[ST] = HL7Component(position=2)
     osp_3: Optional[ST] = HL7Component(position=3)
-
 
 class PIP(HL7DataType):
     pip_1: Optional[ST] = HL7Component(position=1)
@@ -370,7 +329,6 @@ class PIP(HL7DataType):
     pip_3: Optional[ST] = HL7Component(position=3)
     pip_4: Optional[ST] = HL7Component(position=4)
     pip_5: Optional[ST] = HL7Component(position=5)
-
 
 class PL(HL7DataType):
     pl_1: Optional[ST] = HL7Component(position=1)
@@ -385,13 +343,11 @@ class PL(HL7DataType):
     pl_10: Optional[ST] = HL7Component(position=10)
     pl_11: Optional[ST] = HL7Component(position=11)
 
-
 class PLN(HL7DataType):
     pln_1: Optional[ST] = HL7Component(position=1)
     pln_2: Optional[ST] = HL7Component(position=2)
     pln_3: Optional[ST] = HL7Component(position=3)
     pln_4: Optional[ST] = HL7Component(position=4)
-
 
 class PPN(HL7DataType):
     ppn_1: Optional[ST] = HL7Component(position=1)
@@ -418,28 +374,23 @@ class PPN(HL7DataType):
     ppn_25: Optional[ST] = HL7Component(position=22)
     ppn_26: Optional[ST] = HL7Component(position=23)
 
-
 class PRL(HL7DataType):
     prl_1: Optional[ST] = HL7Component(position=1)
     prl_2: Optional[ST] = HL7Component(position=2)
     prl_3: Optional[ST] = HL7Component(position=3)
 
-
 class PT(HL7DataType):
     pt_1: Optional[ST] = HL7Component(position=1)
     pt_2: Optional[ST] = HL7Component(position=2)
-
 
 class PTA(HL7DataType):
     pta_1: Optional[ST] = HL7Component(position=1)
     pta_2: Optional[ST] = HL7Component(position=2)
     pta_4: Optional[ST] = HL7Component(position=3)
 
-
 class QIP(HL7DataType):
     qip_1: Optional[ST] = HL7Component(position=1)
     qip_2: Optional[ST] = HL7Component(position=2)
-
 
 class QSC(HL7DataType):
     qsc_1: Optional[ST] = HL7Component(position=1)
@@ -447,12 +398,10 @@ class QSC(HL7DataType):
     qsc_3: Optional[ST] = HL7Component(position=3)
     qsc_4: Optional[ST] = HL7Component(position=4)
 
-
 class RCD(HL7DataType):
     rcd_1: Optional[ST] = HL7Component(position=1)
     rcd_2: Optional[ST] = HL7Component(position=2)
     rcd_3: Optional[ST] = HL7Component(position=3)
-
 
 class RFR(HL7DataType):
     rfr_1: Optional[ST] = HL7Component(position=1)
@@ -463,24 +412,20 @@ class RFR(HL7DataType):
     rfr_6: Optional[ST] = HL7Component(position=6)
     rfr_7: Optional[ST] = HL7Component(position=7)
 
-
 class RI(HL7DataType):
     ri_1: Optional[ST] = HL7Component(position=1)
     ri_2: Optional[ST] = HL7Component(position=2)
-
 
 class RMC(HL7DataType):
     rmc_1: Optional[ST] = HL7Component(position=1)
     rmc_2: Optional[ST] = HL7Component(position=2)
     rmc_4: Optional[ST] = HL7Component(position=3)
 
-
 class RP(HL7DataType):
     rp_1: Optional[ST] = HL7Component(position=1)
     rp_2: Optional[ST] = HL7Component(position=2)
     rp_3: Optional[ST] = HL7Component(position=3)
     rp_4: Optional[ST] = HL7Component(position=4)
-
 
 class RPT(HL7DataType):
     rpt_1: Optional[ST] = HL7Component(position=1)
@@ -495,17 +440,14 @@ class RPT(HL7DataType):
     rpt_10: Optional[ST] = HL7Component(position=10)
     rpt_11: Optional[ST] = HL7Component(position=11)
 
-
 class SAD(HL7DataType):
     sad_1: Optional[ST] = HL7Component(position=1)
     sad_2: Optional[ST] = HL7Component(position=2)
     sad_3: Optional[ST] = HL7Component(position=3)
 
-
 class SCV(HL7DataType):
     scv_1: Optional[ST] = HL7Component(position=1)
     scv_2: Optional[ST] = HL7Component(position=2)
-
 
 class SN(HL7DataType):
     sn_1: Optional[ST] = HL7Component(position=1)
@@ -513,18 +455,15 @@ class SN(HL7DataType):
     sn_3: Optional[ST] = HL7Component(position=3)
     sn_4: Optional[ST] = HL7Component(position=4)
 
-
 class SPD(HL7DataType):
     spd_1: Optional[ST] = HL7Component(position=1)
     spd_2: Optional[ST] = HL7Component(position=2)
     spd_3: Optional[ST] = HL7Component(position=3)
     spd_4: Optional[ST] = HL7Component(position=4)
 
-
 class SRT(HL7DataType):
     srt_1: Optional[ST] = HL7Component(position=1)
     srt_2: Optional[ST] = HL7Component(position=2)
-
 
 class UVC(HL7DataType):
     uvc_1: Optional[ST] = HL7Component(position=1)
@@ -532,34 +471,28 @@ class UVC(HL7DataType):
     uvc_3: Optional[ST] = HL7Component(position=3)
     uvc_4: Optional[ST] = HL7Component(position=4)
 
-
 class VH(HL7DataType):
     vh_1: Optional[ST] = HL7Component(position=1)
     vh_2: Optional[ST] = HL7Component(position=2)
     vh_3: Optional[ST] = HL7Component(position=3)
     vh_4: Optional[ST] = HL7Component(position=4)
 
-
 class VID(HL7DataType):
     vid_1: Optional[ST] = HL7Component(position=1)
     vid_2: Optional[ST] = HL7Component(position=2)
     vid_3: Optional[ST] = HL7Component(position=3)
 
-
 class VR(HL7DataType):
     vr_1: Optional[ST] = HL7Component(position=1)
     vr_2: Optional[ST] = HL7Component(position=2)
-
 
 class WVI(HL7DataType):
     wvi_1: Optional[ST] = HL7Component(position=1)
     wvi_2: Optional[ST] = HL7Component(position=2)
 
-
 class WVS(HL7DataType):
     wvs_1: Optional[ST] = HL7Component(position=1)
     wvs_2: Optional[ST] = HL7Component(position=2)
-
 
 class XAD(HL7DataType):
     xad_1: Optional[ST] = HL7Component(position=1)
@@ -584,7 +517,6 @@ class XAD(HL7DataType):
     xad_21: Optional[ST] = HL7Component(position=20)
     xad_22: Optional[ST] = HL7Component(position=21)
     xad_23: Optional[ST] = HL7Component(position=22)
-
 
 class XCN(HL7DataType):
     xcn_1: Optional[ST] = HL7Component(position=1)
@@ -611,7 +543,6 @@ class XCN(HL7DataType):
     xcn_24: Optional[ST] = HL7Component(position=22)
     xcn_25: Optional[ST] = HL7Component(position=23)
 
-
 class XON(HL7DataType):
     xon_1: Optional[ST] = HL7Component(position=1)
     xon_2: Optional[ST] = HL7Component(position=2)
@@ -620,7 +551,6 @@ class XON(HL7DataType):
     xon_8: Optional[ST] = HL7Component(position=5)
     xon_9: Optional[ST] = HL7Component(position=6)
     xon_10: Optional[ST] = HL7Component(position=7)
-
 
 class XPN(HL7DataType):
     xpn_1: Optional[ST] = HL7Component(position=1)
@@ -636,7 +566,6 @@ class XPN(HL7DataType):
     xpn_13: Optional[ST] = HL7Component(position=11)
     xpn_14: Optional[ST] = HL7Component(position=12)
     xpn_15: Optional[ST] = HL7Component(position=13)
-
 
 class XTN(HL7DataType):
     xtn_2: Optional[ST] = HL7Component(position=1)
@@ -657,6 +586,6 @@ class XTN(HL7DataType):
     xtn_17: Optional[ST] = HL7Component(position=16)
     xtn_18: Optional[ST] = HL7Component(position=17)
 
-
 class varies(HL7DataType):
     pass
+

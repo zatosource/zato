@@ -13,9 +13,8 @@ Structure:
 """
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass, field
-from typing import Iterator, List, Optional, Any
+from typing import Iterator, List, Optional
 
 from zato_hl7v2.base import HL7Message
 
@@ -291,7 +290,7 @@ def parse_batch_or_file(raw: str, validate: bool = True) -> HL7Batch | HL7File:
 
 def create_batch(
     messages: List[HL7Message],
-    bhs_fields: Optional[dict] = None,
+    bhs_fields: Optional[dict[str, str]] = None,
 ) -> HL7Batch:
     """
     Create a new HL7Batch from a list of messages.
@@ -321,7 +320,7 @@ def create_batch(
 
 def create_file(
     batches: List[HL7Batch],
-    fhs_fields: Optional[dict] = None,
+    fhs_fields: Optional[dict[str, str]] = None,
 ) -> HL7File:
     """
     Create a new HL7File from a list of batches.

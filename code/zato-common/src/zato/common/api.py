@@ -1375,6 +1375,11 @@ class PubSub:
     class Repeats:
         Max = 500
 
+    class Status:
+        OK = '200 OK'
+        Bad_Request = '400 Bad Request'
+        Unauthorized = '401 Unauthorized'
+
     class Exchange_Name:
         Pubsub_Push = 'pubsub.push.1'
 

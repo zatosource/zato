@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from zato_hl7v2.parser import parse_message
 
-def main():
+def main() -> None:
     raw_message = (
         "MSH|^~\\&|SENDING_APP|SENDING_FAC|RECEIVING_APP|RECEIVING_FAC|"
         "20240315120000||ADT^A01^ADT_A01|MSG00001|P|2.9\r"

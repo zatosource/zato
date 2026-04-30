@@ -13,6 +13,7 @@ from logging import getLogger
 # ################################################################################################################################
 
 if 0:
+    from zato.common.pubsub.redis_backend import PublishResult
     from zato.common.typing_ import any_, anydict, anydictnone
     from zato.server.base.parallel import ParallelServer
 
@@ -52,7 +53,7 @@ class PubSubFacade:
     def __init__(self, server:'ParallelServer') -> 'None':
         self.server = server
 
-    def publish(self, topic_name:'str', data:'any_', **kwargs:'any_') -> 'str':
+    def publish(self, topic_name:'str', data:'any_', **kwargs:'any_') -> 'PublishResult':
         return self.server.pubsub_redis.publish(
             topic_name,
             data,

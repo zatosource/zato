@@ -72,7 +72,7 @@ class RedisPushDelivery:
 
         found_any = False
 
-        for sub_key, sub_config in push_subs.items():
+        for sub_key, config_list in push_subs.items():
             if self._stop_event.is_set():
                 break
 
@@ -83,7 +83,15 @@ class RedisPushDelivery:
 
             found_any = True
 
+            # Build a topic_name -> config lookup for routing
+            config_by_topic = {cfg['topic_name']: cfg for cfg in config_list}
+
             for msg in messages:
+                topic_name = msg.get('meta', {}).get('topic_name', '')
+                sub_config = config_by_topic.get(topic_name)
+                if not sub_config:
+                    # Fall back to the first config if topic not found
+                    sub_config = config_list[0]
                 try:
                     self._deliver_message(msg, sub_config)
                 except Exception:
@@ -93,9 +101,6 @@ class RedisPushDelivery:
 
     def _deliver_message(self, msg:'anydict', sub_config:'anydict') -> 'None':
         push_type = sub_config['push_type']
-
-        logger.info('PubSub push delivering msg keys=%s, sub_config=%s', list(msg.keys()), sub_config)
-        logger.info('PubSub push delivering msg=%s', msg)
 
         if push_type == 'service':
             from bunch import bunchify

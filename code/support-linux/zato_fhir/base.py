@@ -9,29 +9,12 @@ T = TypeVar('T')
 
 class FHIRList(list, Generic[T]):
 
-    _element_type_name: str = ''
-
     def __getattr__(self, name: str) -> Any:
-        if name.startswith('_'):
-            raise AttributeError(name)
-        if not self:
-            if self._element_type_name:
-                elem_type = _resolve_type(self._element_type_name)
-                if elem_type:
-                    self.append(elem_type())
         if not self:
             raise AttributeError(f'Empty list has no attribute {name}')
         return getattr(self[0], name)
 
     def __setattr__(self, name: str, value: Any) -> None:
-        if name.startswith('_'):
-            list.__setattr__(self, name, value)
-            return
-        if not self:
-            if self._element_type_name:
-                elem_type = _resolve_type(self._element_type_name)
-                if elem_type:
-                    self.append(elem_type())
         if not self:
             raise AttributeError(f'Empty list, cannot set {name}')
         setattr(self[0], name, value)
@@ -69,6 +52,53 @@ def _resolve_type(type_name: str) -> type:
     return getattr(dt, type_name, None) or getattr(rs, type_name, None)
 
 
+_PY_RESERVED = frozenset({
+    'class', 'import', 'from', 'global', 'return', 'for', 'in',
+    'assert', 'pass', 'raise', 'del', 'yield', 'break', 'continue',
+    'lambda', 'not', 'or', 'and', 'is', 'if', 'else', 'elif',
+    'while', 'try', 'except', 'finally', 'with', 'as', 'def', 'type',
+})
+
+
+def _dict_to_typed(data: dict, type_name: str) -> Any:
+    field_type = _resolve_type(type_name)
+    if field_type is None:
+        return data
+    instance = field_type()
+    for k, v in data.items():
+        if k == 'resourceType':
+            continue
+        attr_name = k + '_' if k in _PY_RESERVED else k
+        setattr(instance, attr_name, v)
+    return instance
+
+
+def _fhir_setattr(obj: Any, name: str, value: Any) -> None:
+    if name.startswith('_'):
+        object.__setattr__(obj, name, value)
+        return
+
+    if name == 'contained' and isinstance(value, list):
+        import zato_fhir_r4_0_1_core as _rust
+        typed = _rust.rs_deserialize_contained(value)
+        object.__setattr__(obj, name, ListWrapper(list(typed)))
+        return
+
+    if name in obj._list_fields:
+        if isinstance(value, list):
+            object.__setattr__(obj, name, ListWrapper(value))
+        elif value is None:
+            object.__setattr__(obj, name, value)
+        else:
+            if isinstance(value, dict) and name in obj._field_types:
+                value = _dict_to_typed(value, obj._field_types[name])
+            object.__setattr__(obj, name, ListWrapper([value]))
+    elif isinstance(value, dict) and name in obj._field_types:
+        object.__setattr__(obj, name, _dict_to_typed(value, obj._field_types[name]))
+    else:
+        object.__setattr__(obj, name, value)
+
+
 class FHIRResource:
     _resource_type: str = ''
     _list_fields: set[str] = set()
@@ -95,35 +125,7 @@ class FHIRResource:
         raise AttributeError(f"'{type(self).__name__}' has no attribute '{name}'")
 
     def __setattr__(self, name: str, value: Any) -> None:
-        if name.startswith('_'):
-            object.__setattr__(self, name, value)
-            return
-
-        if isinstance(value, str) and self._field_types.get(name) == 'Reference':
-            ref_type = _resolve_type('Reference')
-            if ref_type:
-                ref = ref_type()
-                ref.reference = value
-                value = ref
-
-        if name in self._list_fields:
-            type_name = self._field_types.get(name, '')
-            if isinstance(value, list):
-                wrapped = ListWrapper(value)
-                wrapped._element_type_name = type_name
-                object.__setattr__(self, name, wrapped)
-            elif isinstance(value, (FHIRElement, FHIRResource)):
-                wrapped = ListWrapper([value])
-                wrapped._element_type_name = type_name
-                object.__setattr__(self, name, wrapped)
-            elif isinstance(value, str):
-                wrapped = ListWrapper([value])
-                wrapped._element_type_name = type_name
-                object.__setattr__(self, name, wrapped)
-            else:
-                object.__setattr__(self, name, value)
-        else:
-            object.__setattr__(self, name, value)
+        _fhir_setattr(self, name, value)
 
     def to_dict(self) -> dict[str, Any]:
         from zato_fhir.json_ import to_dict
@@ -151,6 +153,24 @@ class FHIRResource:
         from zato_fhir.path_access import set_path
         return set_path(self, path, value)
 
+    def resolve(self, ref: 'str | Any') -> 'FHIRResource | None':
+        """Resolve a reference string or Reference object.
+
+        On a plain resource, only ``#contained`` refs are supported.
+        On a Bundle, also resolves relative (``Patient/123``), absolute
+        (``https://...``), and logical (Reference with identifier) refs
+        by searching bundle entries.
+        """
+        import zato_fhir_r4_0_1_core as _rust
+        is_bundle = getattr(self, '_resource_type', '') == 'Bundle'
+        if is_bundle:
+            result = _rust.rs_resolve_bundle(self, ref)
+        elif isinstance(ref, str) and ref.startswith('#'):
+            result = _rust.rs_resolve_contained(self, ref[1:])
+        else:
+            result = None
+        return result if result is not None else None
+
 
 class FHIRElement:
     _list_fields: set[str] = set()
@@ -177,35 +197,7 @@ class FHIRElement:
         raise AttributeError(f"'{type(self).__name__}' has no attribute '{name}'")
 
     def __setattr__(self, name: str, value: Any) -> None:
-        if name.startswith('_'):
-            object.__setattr__(self, name, value)
-            return
-
-        if isinstance(value, str) and self._field_types.get(name) == 'Reference':
-            ref_type = _resolve_type('Reference')
-            if ref_type:
-                ref = ref_type()
-                ref.reference = value
-                value = ref
-
-        if name in self._list_fields:
-            type_name = self._field_types.get(name, '')
-            if isinstance(value, list):
-                wrapped = ListWrapper(value)
-                wrapped._element_type_name = type_name
-                object.__setattr__(self, name, wrapped)
-            elif isinstance(value, (FHIRElement, FHIRResource)):
-                wrapped = ListWrapper([value])
-                wrapped._element_type_name = type_name
-                object.__setattr__(self, name, wrapped)
-            elif isinstance(value, str):
-                wrapped = ListWrapper([value])
-                wrapped._element_type_name = type_name
-                object.__setattr__(self, name, wrapped)
-            else:
-                object.__setattr__(self, name, value)
-        else:
-            object.__setattr__(self, name, value)
+        _fhir_setattr(self, name, value)
 
     def to_dict(self) -> dict[str, Any]:
         from zato_fhir.json_ import to_dict
