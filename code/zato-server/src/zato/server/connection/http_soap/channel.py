@@ -268,6 +268,169 @@ class RequestDispatcher:
 
 # ################################################################################################################################
 
+    def _extract_post_data(self, channel_item:'anydict', wsgi_environ:'stranydict') -> 'anydict':
+        """ Extracts form/POST data from the WSGI environment if the channel expects it.
+        """
+        post_data:'anydict' = {}
+
+        if channel_item['data_format'] == ModuleCtx.SIO_FORM_DATA:
+            if wsgi_environ.get('CONTENT_TYPE', '').startswith(ModuleCtx.Form_Data_Content_Type):
+                post_data = util_get_form_data(wsgi_environ)
+                wsgi_environ['zato.oauth.post_data'] = post_data
+
+        return post_data
+
+# ################################################################################################################################
+
+    def _check_security(
+        self,
+        cid:'str',
+        meta:'_RequestMeta',
+        channel_item:'anydict',
+        wsgi_environ:'stranydict',
+        payload:'bytes',
+        post_data:'anydict',
+        worker_store:'WorkerStore',
+        _needs_details:'bool'=_needs_details,
+    ) -> 'None':
+        """ Validates credentials via sec_def and security groups.
+        Both check_security and check_security_via_groups may raise exceptions.
+        """
+        match_target = channel_item['match_target']
+        sec = self.url_data.url_sec[match_target] # type: ignore
+
+        security_groups_ctx = channel_item.get('security_groups_ctx')
+
+        if sec.sec_def != ZATO_NONE:
+
+            if _needs_details:
+                logger.info('*' * 60)
+
+                logger.info('Channel item: `%s`', channel_item)
+                logger.info('Path info: `%s`', meta.path_info)
+
+                logger.info('Payload: `%s`', payload)
+                logger.info('POST data: `%s`', post_data)
+
+                for key, value in sorted(wsgi_environ.items()):
+                    logger.info('WSGI key=`%s` value=`%s`', key, value)
+
+            # .. this will raise an exception if the sec_def check fails ..
+            _ = self.url_data.check_security(
+                sec,
+                cid,
+                channel_item,
+                meta.path_info,
+                payload,
+                wsgi_environ,
+                post_data,
+                worker_store,
+                enforce_auth=True
+            )
+
+        if security_groups_ctx:
+            if security_groups_ctx.has_members():
+
+                # .. this will raise an exception if the group check fails ..
+                self.check_security_via_groups(cid, channel_item['name'], security_groups_ctx, wsgi_environ)
+
+# ################################################################################################################################
+
+    def _invoke_service(
+        self,
+        cid:'str',
+        meta:'_RequestMeta',
+        url_match:'str',
+        channel_item:'anydict',
+        wsgi_environ:'stranydict',
+        payload:'bytes',
+        post_data:'anydict',
+        worker_store:'WorkerStore',
+        zato_response_headers_container:'anydict',
+    ) -> 'any_':
+        """ Builds channel params and calls request_handler.handle.
+        """
+        if channel_item['merge_url_params_req']:
+            channel_params = self.request_handler.create_channel_params(
+                url_match, # type: ignore
+                channel_item,
+                wsgi_environ,
+                payload,
+                post_data
+            )
+        else:
+            channel_params = {}
+
+        out = self.request_handler.handle(cid, url_match, channel_item, wsgi_environ,
+            payload, worker_store, self.simple_io_config, post_data, meta.path_info, channel_params,
+            zato_response_headers_container)
+
+        return out
+
+# ################################################################################################################################
+
+    def _format_response(self, channel_item:'anydict', wsgi_environ:'stranydict', response:'any_') -> 'any_':
+        """ Sets response headers, applies gzip if needed, and unwraps CySimpleIO.
+        """
+        wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
+        wsgi_environ['zato.http.response.headers'].update(response.headers)
+        wsgi_environ['zato.http.response.status'] = status_response[response.status_code]
+
+        if channel_item['content_encoding'] == 'gzip':
+
+            s = StringIO()
+            with GzipFile(fileobj=s, mode='w') as f: # type: ignore
+                _ = f.write(response.payload)
+            response.payload = s.getvalue()
+            s.close()
+
+            wsgi_environ['zato.http.response.headers']['Content-Encoding'] = 'gzip'
+
+        if isinstance(response.payload, CySimpleIOPayload):
+            out = response.payload.getvalue()
+            if isinstance(out, dict):
+                if 'response' in out:
+                    out = out['response']
+                    out = dumps(out)
+        else:
+            out = response.payload
+
+        return out
+
+# ################################################################################################################################
+
+    def _authenticate_and_invoke(
+        self,
+        cid:'str',
+        meta:'_RequestMeta',
+        url_match:'str',
+        channel_item:'anydict',
+        wsgi_environ:'stranydict',
+        payload:'bytes',
+        worker_store:'WorkerStore',
+        zato_response_headers_container:'anydict',
+    ) -> 'any_':
+        """ Checks security, builds channel params and invokes the service.
+        """
+        if not channel_item['is_active']:
+            logger.warning('url_data:`%s` is not active, raising NotFound', url_match)
+            raise NotFound(cid, 'Channel inactive')
+
+        post_data = self._extract_post_data(channel_item, wsgi_environ)
+
+        # .. this will raise an exception if credentials are invalid ..
+        self._check_security(cid, meta, channel_item, wsgi_environ, payload, post_data, worker_store)
+
+        response = self._invoke_service(
+            cid, meta, url_match, channel_item, wsgi_environ,
+            payload, post_data, worker_store, zato_response_headers_container)
+
+        out = self._format_response(channel_item, wsgi_environ, response)
+
+        return out
+
+# ################################################################################################################################
+
     def _match_url(self, meta:'_RequestMeta', wsgi_environ:'stranydict') -> '_URLMatchResult':
         """ Matches the request URL, reads the raw payload and stores preliminary data in wsgi_environ.
         """
@@ -347,118 +510,13 @@ class RequestDispatcher:
 
             try:
 
-                # Raise 404 if the channel is inactive
-                if not channel_item['is_active']:
-                    logger.warning('url_data:`%s` is not active, raising NotFound', url_match)
-                    raise NotFound(cid, 'Channel inactive')
+                # .. this will raise an exception on auth error ..
+                out = self._authenticate_and_invoke(
+                    cid, meta, url_match, channel_item, wsgi_environ,
+                    payload, worker_store, zato_response_headers_container,
+                )
 
-                # This the string pointing to the URL path that we matched
-                match_target = channel_item['match_target']
-
-                # This is the channel's security definition, if any
-                sec = self.url_data.url_sec[match_target] # type: ignore
-
-                # This may point to security groups attached to this channel
-                security_groups_ctx = channel_item.get('security_groups_ctx')
-
-                # Assume we have no form (POST) data by default.
-                post_data = {}
-
-                # Extract the form (POST) data in case we expect it and the content type indicates it will exist.
-                if channel_item['data_format'] == ModuleCtx.SIO_FORM_DATA:
-                    if wsgi_environ.get('CONTENT_TYPE', '').startswith(ModuleCtx.Form_Data_Content_Type):
-                        post_data = util_get_form_data(wsgi_environ)
-
-                        # This is handy if someone invoked URLData's OAuth API manually
-                        wsgi_environ['zato.oauth.post_data'] = post_data
-
-                #
-                # This will check credentials based on a security definition attached to the channel
-                #
-                if sec.sec_def != ZATO_NONE:
-
-                    if _needs_details:
-                        logger.info('*' * 60)
-
-                        logger.info('Channel item: `%s`', channel_item)
-                        logger.info('Path info: `%s`', meta.path_info)
-
-                        logger.info('Payload: `%s`', payload)
-                        logger.info('POST data: `%s`', post_data)
-
-                        for key, value in sorted(wsgi_environ.items()):
-                            logger.info('WSGI key=`%s` value=`%s`', key, value)
-
-                    # Do check credentials based on a security definition
-                    _ = self.url_data.check_security(
-                        sec,
-                        cid,
-                        channel_item,
-                        meta.path_info,
-                        payload,
-                        wsgi_environ,
-                        post_data,
-                        worker_store,
-                        enforce_auth=True
-                    )
-
-                #
-                # This will check credentials based on security groups potentially assigned to the channel ..
-                #
-                if security_groups_ctx:
-
-                    # .. if we do not have any members, we do not check anything ..
-                    if security_groups_ctx.has_members():
-
-                        # .. this will raise an exception if the validation fails.
-                        self.check_security_via_groups(cid, channel_item['name'], security_groups_ctx, wsgi_environ)
-
-                #
-                # If we are here, it means that credentials are correct or they were not required
-                #
-
-                if channel_item['merge_url_params_req']:
-                    channel_params = self.request_handler.create_channel_params(
-                        url_match, # type: ignore
-                        channel_item,
-                        wsgi_environ,
-                        payload,
-                        post_data
-                    )
-                else:
-                    channel_params = {}
-
-                # This is the call that obtains a response.
-                response = self.request_handler.handle(cid, url_match, channel_item, wsgi_environ,
-                    payload, worker_store, self.simple_io_config, post_data, meta.path_info, channel_params,
-                    zato_response_headers_container)
-
-                # Add the default headers.
-                wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
-                wsgi_environ['zato.http.response.headers'].update(response.headers)
-                wsgi_environ['zato.http.response.status'] = status_response[response.status_code]
-
-                if channel_item['content_encoding'] == 'gzip':
-
-                    s = StringIO()
-                    with GzipFile(fileobj=s, mode='w') as f: # type: ignore
-                        _ = f.write(response.payload)
-                    response.payload = s.getvalue()
-                    s.close()
-
-                    wsgi_environ['zato.http.response.headers']['Content-Encoding'] = 'gzip'
-
-                # Finally, return payload to the client, potentially deserializing it from CySimpleIO first.
-                if isinstance(response.payload, CySimpleIOPayload):
-                    payload = response.payload.getvalue()
-                    if isinstance(payload, dict):
-                        if 'response' in payload:
-                            payload = payload['response']
-                            payload = dumps(payload)
-                else:
-                    payload = response.payload
-
-                return payload
+                return out
 
             except Exception as e:
                 _format_exc = format_exc()
@@ -641,7 +699,7 @@ class RequestHandler:
 
 # ################################################################################################################################
 
-    def _get_flattened(self, params:'str') -> 'anydict':
+    def _get_flattened(self, params:'bytes') -> 'anydict':
         """ Returns a QueryDict of parameters with single-element lists unwrapped to point to the sole element directly.
         """
         out = {} # type: anydict
@@ -664,7 +722,7 @@ class RequestHandler:
         path_params:'strstrdict',
         channel_item:'any_',
         wsgi_environ:'stranydict',
-        raw_request:'str',
+        raw_request:'bytes',
         post_data:'dictnone'=None,
     ) -> 'strstrdict':
         """ Collects parameters specific to this channel (HTTP) and updates wsgi_environ
@@ -701,7 +759,7 @@ class RequestHandler:
     def get_response_from_cache(
         self,
         service:'Service',
-        raw_request:'str',
+        raw_request:'bytes',
         channel_item:'any_',
         channel_params:'stranydict',
         wsgi_environ:'stranydict'
@@ -759,7 +817,7 @@ class RequestHandler:
         url_match:'any_',
         channel_item:'any_',
         wsgi_environ:'stranydict',
-        raw_request:'str',
+        raw_request:'bytes',
         worker_store:'WorkerStore',
         simple_io_config:'stranydict',
         post_data:'dictnone',
