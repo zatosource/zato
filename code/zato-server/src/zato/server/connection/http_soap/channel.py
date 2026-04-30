@@ -246,6 +246,28 @@ class RequestDispatcher:
 
 # ################################################################################################################################
 
+    def _log_incoming_request(
+        self,
+        cid:'str',
+        meta:'_RequestMeta',
+        channel_item:'anydict',
+        channel_name:'str',
+        payload:'bytes',
+        user_agent:'str',
+        remote_addr:'str',
+    ) -> 'None':
+        """ Logs a summary of the incoming REST request unless the path is explicitly ignored.
+        """
+        if meta.path_info not in self.server.rest_log_ignore:
+            service_name = channel_item['service_name'] if channel_item else '<no-channel>'
+            logger.info(
+                f'REST cha \u2192 cid={cid}; {meta.http_method} {meta.wsgi_raw_uri} name={channel_name};'
+                f' service={service_name}; len={len(payload)}; agent={user_agent};'
+                f' remote-addr={remote_addr}:{meta.wsgi_remote_port}'
+            )
+
+# ################################################################################################################################
+
     def _match_url(self, meta:'_RequestMeta', wsgi_environ:'stranydict') -> '_URLMatchResult':
         """ Matches the request URL, reads the raw payload and stores preliminary data in wsgi_environ.
         """
@@ -317,14 +339,8 @@ class RequestDispatcher:
         zato_response_headers_container = {}
 
         # .. before proceeding, log what we have learned so far about the request ..
-        # .. but do not do it for paths that are explicitly configured to be ignored ..
         if _has_log_info:
-            if meta.path_info not in self.server.rest_log_ignore:
-                service_name = channel_item['service_name'] if channel_item else '<no-channel>'
-                msg = 'REST cha → cid={}; {} {} name={}; service={}; len={}; agent={}; remote-addr={}:{}'.format(
-                    cid, meta.http_method, meta.wsgi_raw_uri, channel_name,
-                    service_name, len(payload), user_agent, remote_addr, meta.wsgi_remote_port)
-                logger.info(msg)
+            self._log_incoming_request(cid, meta, channel_item, channel_name, payload, user_agent, remote_addr)
 
         # .. we have a match and ee can possibly handle the incoming request ..
         if url_match not in ModuleCtx.No_URL_Match: # type: ignore
