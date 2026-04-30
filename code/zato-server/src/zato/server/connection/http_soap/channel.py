@@ -14,6 +14,7 @@ from hashlib import sha256
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, UNAUTHORIZED
 from io import StringIO
 from traceback import format_exc
+from typing import NamedTuple
 
 # regex
 from regex import compile as regex_compile
@@ -181,6 +182,15 @@ class _HashCtx:
 
 # ################################################################################################################################
 
+class _RequestMeta(NamedTuple):
+    http_method: 'str'
+    http_accept: 'str'
+    path_info: 'str'
+    wsgi_raw_uri: 'str'
+    wsgi_remote_port: 'str'
+
+# ################################################################################################################################
+
 class RequestDispatcher:
     """ Dispatches all the incoming HTTP requests to appropriate handlers.
     """
@@ -208,6 +218,26 @@ class RequestDispatcher:
 
 # ################################################################################################################################
 
+    def _extract_request_meta(self, wsgi_environ:'stranydict') -> '_RequestMeta':
+        """ Extracts HTTP method, accept header, path and port from the WSGI environment.
+        """
+        http_method = wsgi_environ['REQUEST_METHOD']
+
+        http_accept = wsgi_environ.get('HTTP_ACCEPT') or accept_any_http
+        http_accept = http_accept.replace('*', accept_any_internal).replace('/', 'HTTP_SEP')
+
+        out = _RequestMeta(
+            http_method=http_method,
+            http_accept=http_accept,
+            path_info=wsgi_environ['PATH_INFO'],
+            wsgi_raw_uri=wsgi_environ['RAW_URI'],
+            wsgi_remote_port=wsgi_environ['REMOTE_PORT'],
+        )
+
+        return out
+
+# ################################################################################################################################
+
     def dispatch(
         self,
         cid:'str',
@@ -220,23 +250,14 @@ class RequestDispatcher:
     ) -> 'any_':
 
         # Reusable
-        _has_log_info  = _logger_is_enabled_for(_logging_info)
+        _has_log_info = _logger_is_enabled_for(_logging_info)
 
-        # Needed as one of the first steps
-        http_method = wsgi_environ['REQUEST_METHOD']
-        http_method = http_method if isinstance(http_method, str) else http_method.decode('utf8')
-
-        http_accept = wsgi_environ.get('HTTP_ACCEPT') or accept_any_http
-        http_accept = http_accept.replace('*', accept_any_internal).replace('/', 'HTTP_SEP')
-
-        # Needed in later steps
-        path_info        = wsgi_environ['PATH_INFO']
-        wsgi_raw_uri     = wsgi_environ['RAW_URI']
-        wsgi_remote_port = wsgi_environ['REMOTE_PORT']
+        # Extract core request metadata from the WSGI environment
+        meta = self._extract_request_meta(wsgi_environ)
 
         # Immediately reject the request if it is not a support HTTP method, no matter what channel
         # it would have otherwise matched.
-        if http_method not in self.http_methods_allowed:
+        if meta.http_method not in self.http_methods_allowed:
             wsgi_environ['zato.http.response.status'] = _status_method_not_allowed
             return client_json_error(cid, 'Unsupported HTTP method')
 
@@ -244,7 +265,7 @@ class RequestDispatcher:
         # This gives us the URL info and security data - but note that here
         # we still haven't validated credentials, only matched the URL.
         # Credentials are checked in a call to self.url_data.check_security
-        url_match, channel_item = self.url_data.match(path_info, http_method, http_accept) # type: ignore
+        url_match, channel_item = self.url_data.match(meta.path_info, meta.http_method, meta.http_accept) # type: ignore
 
         url_match = cast_('str', url_match)
         channel_item = cast_('anydict', channel_item)
@@ -273,10 +294,11 @@ class RequestDispatcher:
         # .. before proceeding, log what we have learned so far about the request ..
         # .. but do not do it for paths that are explicitly configured to be ignored ..
         if _has_log_info:
-            if not path_info in self.server.rest_log_ignore:
+            if meta.path_info not in self.server.rest_log_ignore:
                 service_name = channel_item['service_name'] if channel_item else '<no-channel>'
-                msg  = f'REST cha → cid={cid}; {http_method} {wsgi_raw_uri} name={channel_name}; service={service_name}; len={len(payload)}; '
-                msg += f'agent={user_agent}; remote-addr={remote_addr}:{wsgi_remote_port}'
+                msg = 'REST cha → cid={}; {} {} name={}; service={}; len={}; agent={}; remote-addr={}:{}'.format(
+                    cid, meta.http_method, meta.wsgi_raw_uri, channel_name,
+                    service_name, len(payload), user_agent, remote_addr, meta.wsgi_remote_port)
                 logger.info(msg)
 
         # .. we have a match and ee can possibly handle the incoming request ..
@@ -318,7 +340,7 @@ class RequestDispatcher:
                         logger.info('*' * 60)
 
                         logger.info('Channel item: `%s`', channel_item)
-                        logger.info('Path info: `%s`', path_info)
+                        logger.info('Path info: `%s`', meta.path_info)
 
                         logger.info('Payload: `%s`', payload)
                         logger.info('POST data: `%s`', post_data)
@@ -331,7 +353,7 @@ class RequestDispatcher:
                         sec,
                         cid,
                         channel_item,
-                        path_info,
+                        meta.path_info,
                         payload,
                         wsgi_environ,
                         post_data,
@@ -367,7 +389,7 @@ class RequestDispatcher:
 
                 # This is the call that obtains a response.
                 response = self.request_handler.handle(cid, url_match, channel_item, wsgi_environ,
-                    payload, worker_store, self.simple_io_config, post_data, path_info, channel_params,
+                    payload, worker_store, self.simple_io_config, post_data, meta.path_info, channel_params,
                     zato_response_headers_container)
 
                 # Add the default headers.
@@ -494,7 +516,7 @@ class RequestDispatcher:
             response = response_404.format(cid)
 
             # .. this goes to logs and it includes the URL sent by the client.
-            logger.warning(response_404_log, path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid)
+            logger.warning(response_404_log, meta.path_info, meta.http_method, meta.http_accept, cid)
 
             # This is the payload for the caller
             return response
