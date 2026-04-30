@@ -329,7 +329,12 @@ class RedisPubSubBackend:
             return ''
         try:
             ts = datetime.fromisoformat(iso_timestamp.replace('Z', '+00:00'))
-            delta = now - ts.replace(tzinfo=None) if ts.tzinfo and now.tzinfo is None else now - ts
+
+            # Strip tzinfo from both sides so subtraction always works
+            ts_naive = ts.replace(tzinfo=None) if ts.tzinfo else ts
+            now_naive = now.replace(tzinfo=None) if now.tzinfo else now
+
+            delta = now_naive - ts_naive
             if delta.total_seconds() < 0:
                 delta = timedelta(0)
             return str(delta)
