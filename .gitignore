@@ -83,3 +83,6 @@ vscode
 **/corpus/
 **/artifacts/
 **/coverage/
+
+# Cosmic-ray mutation testing
+*.py.meta

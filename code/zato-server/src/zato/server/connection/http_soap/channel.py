@@ -431,6 +431,89 @@ class RequestDispatcher:
 
 # ################################################################################################################################
 
+    def _handle_dispatch_error(
+        self,
+        cid:'str',
+        e:'Exception',
+        channel_item:'anydict',
+        wsgi_environ:'stranydict',
+    ) -> 'any_':
+        """ Handles all exceptions raised during _authenticate_and_invoke.
+        Determines the HTTP status, formats the response, and sets response headers.
+        """
+        _format_exc = format_exc()
+        status = _status_internal_server_error
+
+        if isinstance(e, (ClientHTTPError, ModelValidationError)):
+
+            response = e.msg
+            status_code = e.status
+
+            if isinstance(e, Unauthorized):
+                status = _status_unauthorized
+                if e.challenge:
+                    wsgi_environ['zato.http.response.headers']['WWW-Authenticate'] = e.challenge
+
+            elif isinstance(e, (BadRequest, ModelValidationError, BackendInvocationError)):
+                status = _status_bad_request
+
+                if channel_item['name'] == MISC.DefaultAdminInvokeChannel:
+                    response = e.msg
+                else:
+                    needs_msg = e.needs_msg
+                    response = e.msg if needs_msg else 'Bad request'
+
+            elif isinstance(e, NotFound):
+                status = _status_not_found
+
+            elif isinstance(e, MethodNotAllowed):
+                status = _status_method_not_allowed
+
+            elif isinstance(e, Forbidden):
+                status = _status_forbidden
+
+            elif isinstance(e, TooManyRequests):
+                status = _status_too_many_requests
+
+        else:
+
+            status_code = INTERNAL_SERVER_ERROR
+
+            if channel_item['name'] == MISC.DefaultAdminInvokeChannel:
+                wsgi_environ['zato.http.response.headers']['X-Zato-Message'] = str(e.args)
+                response = pretty_format_exception(e, cid)
+            else:
+                response = e.args if self.return_tracebacks else self.default_error_message
+
+        if channel_item['data_format'] == DATA_FORMAT.JSON:
+            wsgi_environ['zato.http.response.headers']['Content-Type'] = CONTENT_TYPE['JSON']
+
+        needs_traceback = not isinstance(e, ServiceMissingException)
+
+        if needs_traceback:
+            _exc_string = stack_format(e, style='color', show_vals='like_source', truncate_vals=5000,
+                add_summary=True, source_lines=20) if stack_format else _format_exc # type: str
+
+            logger.info(
+                'Caught an exception, cid:`%s`, status_code:`%s`, `%s`', cid, status_code, _exc_string)
+
+        try:
+            error_wrapper = get_client_error_wrapper(channel_item['transport'], channel_item['data_format'])
+        except KeyError:
+            if logger.isEnabledFor(TRACE1):
+                msg = 'No client error wrapper for transport:`{}`, data_format:`{}`'.format(
+                    channel_item.get('transport'), channel_item.get('data_format'))
+                logger.log(TRACE1, msg)
+        else:
+            response = error_wrapper(cid, response)
+
+        wsgi_environ['zato.http.response.status'] = status
+
+        out = response
+        return out
+
+# ################################################################################################################################
+
     def _match_url(self, meta:'_RequestMeta', wsgi_environ:'stranydict') -> '_URLMatchResult':
         """ Matches the request URL, reads the raw payload and stores preliminary data in wsgi_environ.
         """
