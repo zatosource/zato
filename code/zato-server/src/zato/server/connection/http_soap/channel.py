@@ -602,89 +602,10 @@ class RequestDispatcher:
                 return out
 
             except Exception as e:
-                _format_exc = format_exc()
-                status = _status_internal_server_error
-
-                if isinstance(e, (ClientHTTPError, ModelValidationError)):
-
-                    response = e.msg
-                    status_code = e.status
-
-                    # TODO: Refactor this series of if/else's into a lookup dict.
-
-                    if isinstance(e, Unauthorized):
-                        status = _status_unauthorized
-                        if e.challenge:
-                            wsgi_environ['zato.http.response.headers']['WWW-Authenticate'] = e.challenge
-
-                    elif isinstance(e, (BadRequest, ModelValidationError, BackendInvocationError)):
-                        status = _status_bad_request
-
-                        # This is the channel that Dashboard uses and we want to return
-                        # all the details in such cases because it is useful during development
-                        if channel_item['name'] == MISC.DefaultAdminInvokeChannel:
-                            response = e.msg
-                        else:
-                            needs_msg = e.needs_msg
-                            response = e.msg if needs_msg else 'Bad request'
-
-                    elif isinstance(e, NotFound):
-                        status = _status_not_found
-
-                    elif isinstance(e, MethodNotAllowed):
-                        status = _status_method_not_allowed
-
-                    elif isinstance(e, Forbidden):
-                        status = _status_forbidden
-
-                    elif isinstance(e, TooManyRequests):
-                        status = _status_too_many_requests
-
-                else:
-
-                    status_code = INTERNAL_SERVER_ERROR
-
-                    # Same comment as in BadRequest, ModelValidationError above
-                    if channel_item['name'] == MISC.DefaultAdminInvokeChannel:
-                        wsgi_environ['zato.http.response.headers']['X-Zato-Message'] = str(e.args)
-                        response = pretty_format_exception(e, cid)
-                    else:
-                        response = e.args if self.return_tracebacks else self.default_error_message
-
-                # Check whether this was a JSON-based channel, in which case our response should
-                # have a JSON data format on ouput too.
-                if channel_item['data_format'] == DATA_FORMAT.JSON:
-                    wsgi_environ['zato.http.response.headers']['Content-Type'] = CONTENT_TYPE['JSON']
-
-                # We need a traceback unless we merely report information about a missing service,
-                # which may happen if enmasse runs before such a service has been deployed.
-                needs_traceback = not isinstance(e, ServiceMissingException)
-
-                if needs_traceback:
-                    _exc_string = stack_format(e, style='color', show_vals='like_source', truncate_vals=5000,
-                        add_summary=True, source_lines=20) if stack_format else _format_exc # type: str
-
-                    # Log what happened
-                    logger.info(
-                        'Caught an exception, cid:`%s`, status_code:`%s`, `%s`', cid, status_code, _exc_string)
-
-                try:
-                    error_wrapper = get_client_error_wrapper(channel_item['transport'], channel_item['data_format'])
-                except KeyError:
-                    # It is not a data format that we have a wrapper for.
-                    if logger.isEnabledFor(TRACE1):
-                        msg = 'No client error wrapper for transport:`{}`, data_format:`{}`'.format(
-                            channel_item.get('transport'), channel_item.get('data_format'))
-                        logger.log(TRACE1, msg)
-                else:
-                    response = error_wrapper(cid, response)
-
-                wsgi_environ['zato.http.response.status'] = status
-
-                return response
+                out = self._handle_dispatch_error(cid, e, channel_item, wsgi_environ)
+                return out
 
             finally:
-                # No matter if we had an exception or not, we can add the headers that the service potentially produced.
                 if zato_response_headers_container:
                     wsgi_environ['zato.http.response.headers'].update(zato_response_headers_container)
 
