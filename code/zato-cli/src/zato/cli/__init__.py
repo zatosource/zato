@@ -59,7 +59,7 @@ default_common_name = 'localhost'
 # ################################################################################################################################
 
 common_odb_opts = [
-    {'name':'--odb-type', 'help':_opts_odb_type, 'choices':SUPPORTED_DB_TYPES, 'default':'postgresql'}, # noqa
+    {'name':'--odb-type', 'help':_opts_odb_type, 'choices':SUPPORTED_DB_TYPES, 'default':'sqlite'}, # noqa
     {'name':'--odb-host', 'help':_opts_odb_host},
     {'name':'--odb-port', 'help':_opts_odb_port},
     {'name':'--odb-user', 'help':_opts_odb_user},
