@@ -67,6 +67,9 @@ def _consume_or_deny(
     then either deducts one token (allow) or records the deficit (deny).
     """
 
+    # Our response to produce
+    out = CheckResult()
+
     #  Compute how many microtokens accumulated since the last refill ..
     elapsed_us  = max(0, now_us - bucket.last_refill_us)
     added_micro = min(elapsed_us * config.refill_rate_micro_per_us, burst_micro)
@@ -80,11 +83,9 @@ def _consume_or_deny(
         new_tokens = refilled - Microtokens_Per_Token
         bucket.tokens_remaining_micro = new_tokens
 
-        out = CheckResult()
         out.is_allowed       = True
         out.tokens_remaining = new_tokens // Microtokens_Per_Token
         out.retry_after_us   = 0
-        return out
 
     # .. otherwise the bucket is empty, so record what is left ..
     else:
@@ -102,11 +103,11 @@ def _consume_or_deny(
             retry_us = Microseconds_Per_Second
 
         # .. and deny the request.
-        out = CheckResult()
         out.is_allowed       = False
         out.tokens_remaining = 0
         out.retry_after_us   = retry_us
-        return out
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

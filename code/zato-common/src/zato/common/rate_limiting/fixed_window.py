@@ -130,7 +130,10 @@ def _check_state(
     or resets the window if it has expired, then returns an allowed-or-denied result.
     """
 
-    # .. if the current window has expired, start a fresh one ..
+    # Our response to produce
+    out = FixedWindowCheckResult()
+
+    #  If the current window has expired, start a fresh one ..
     if now_us >= state.window_end_us:
         state.count         = 0
         state.window_end_us = compute_window_end_us(config.unit(), now_us)
@@ -138,23 +141,20 @@ def _check_state(
     # .. check whether there is room left in this window ..
     if state.count < config.limit:
         state.count += 1
-        remaining = config.limit - state.count
 
-        out = FixedWindowCheckResult()
         out.is_allowed     = True
-        out.remaining      = remaining
+        out.remaining      = config.limit - state.count
         out.retry_after_us = 0
-        return out
 
     # .. otherwise the limit is already reached, so deny and report how long until the window resets.
     else:
         retry_after = state.window_end_us - now_us
 
-        out = FixedWindowCheckResult()
         out.is_allowed     = False
         out.remaining      = 0
         out.retry_after_us = max(0, retry_after)
-        return out
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -170,7 +170,7 @@ class FixedWindowRegistry:
         """ Core check logic, separated from any framework wrapper for testability.
         """
 
-        # .. look up or create the per-key window state ..
+        #  Look up or create the per-key window state ..
         state = self._windows.get(key)
 
         if state is None:
