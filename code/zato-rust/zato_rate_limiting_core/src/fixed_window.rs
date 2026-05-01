@@ -16,6 +16,12 @@ const SECONDS_PER_MINUTE: u64 = 60;
 const SECONDS_PER_HOUR: u64 = 3600;
 const SECONDS_PER_DAY: u64 = 86400;
 
+const JANUARY: u32 = 1;
+const DECEMBER: u32 = 12;
+const MIDNIGHT_HOUR: u32 = 0;
+const MIDNIGHT_MINUTE: u32 = 0;
+const MIDNIGHT_SECOND: u32 = 0;
+
 // ----------------------------------------------------------------- window unit
 
 /// Clock-aligned window period for the fixed-window counter.
@@ -88,11 +94,16 @@ pub fn compute_window_end_us(unit: WindowUnit, now_us: u64) -> Result<u64, RateL
 
     if let Some(period) = period_secs {
         let now_secs = now_us / MICROSECONDS_PER_SECOND;
-        return Ok((now_secs - now_secs % period + period) * MICROSECONDS_PER_SECOND);
+        let window_start = now_secs - now_secs % period;
+        let window_end_secs = window_start + period;
+        let window_end_us = window_end_secs * MICROSECONDS_PER_SECOND;
+        return Ok(window_end_us);
     }
 
     // Month requires chrono for calendar math.
-    let secs_i64 = i64::try_from(now_us / MICROSECONDS_PER_SECOND).map_err(|_| {
+    let now_secs = now_us / MICROSECONDS_PER_SECOND;
+
+    let secs_i64 = i64::try_from(now_secs).map_err(|_| {
         RateLimitError::new(
             format!("Month boundary failed, i64 conversion overflow: {now_us}"),
         )
@@ -104,10 +115,13 @@ pub fn compute_window_end_us(unit: WindowUnit, now_us: u64) -> Result<u64, RateL
         )
     })?;
 
-    let (next_year, next_month): (i32, u32) = if dt.month() == 12 {
-        (dt.year() + 1, 1)
+    let year = dt.year();
+    let month = dt.month();
+
+    let (next_year, next_month): (i32, u32) = if month == DECEMBER {
+        (year + 1, JANUARY)
     } else {
-        (dt.year(), dt.month() + 1)
+        (year, month + 1)
     };
 
     let first_of_next = NaiveDate::from_ymd_opt(next_year, next_month, 1)
@@ -117,23 +131,25 @@ pub fn compute_window_end_us(unit: WindowUnit, now_us: u64) -> Result<u64, RateL
             )
         })?;
 
-    let boundary_secs = first_of_next
-        .and_hms_opt(0, 0, 0)
+    let midnight = first_of_next
+        .and_hms_opt(MIDNIGHT_HOUR, MIDNIGHT_MINUTE, MIDNIGHT_SECOND)
         .ok_or_else(|| {
             RateLimitError::new(
                 format!("Month boundary failed, midnight construction for {next_year}-{next_month:02}-01"),
             )
-        })?
-        .and_utc()
-        .timestamp();
+        })?;
 
-    let boundary_us = u64::try_from(boundary_secs).map_err(|_| {
+    let boundary_secs = midnight.and_utc().timestamp();
+
+    let boundary_secs_u64 = u64::try_from(boundary_secs).map_err(|_| {
         RateLimitError::new(
             format!("Month boundary failed, negative timestamp: {boundary_secs}"),
         )
     })?;
 
-    Ok(boundary_us * MICROSECONDS_PER_SECOND)
+    let window_end_us = boundary_secs_u64 * MICROSECONDS_PER_SECOND;
+
+    Ok(window_end_us)
 }
 
 // --------------------------------------------------------------- window state
@@ -188,13 +204,10 @@ impl FixedWindowConfig {
     /// Creates a new fixed-window configuration from a limit and unit string.
     #[new]
     fn new(limit: u64, window_unit: &str) -> PyResult<Self> {
-        let parsed: WindowUnit = window_unit.parse().map_err(|err: RateLimitError| {
-            pyo3::exceptions::PyValueError::new_err(format!("{err}"))
-        })?;
-        Ok(Self {
-            limit,
-            parsed_window_unit: parsed,
-        })
+        let parsed_window_unit: WindowUnit = window_unit
+            .parse()
+            .map_err(|err: RateLimitError| pyo3::exceptions::PyValueError::new_err(err.to_string()))?;
+        Ok(Self { limit, parsed_window_unit })
     }
 
     /// Returns the window unit as a string.
