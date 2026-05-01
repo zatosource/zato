@@ -14,16 +14,31 @@ name = "zato_rate_limiting_core"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = []
 extension-module = ["pyo3/extension-module"]
 
 [dependencies]
-chrono = "0.4.44"
+chrono = { version = "0.4.44", default-features = false, features = ["std"] }
 parking_lot = "0.12"
 pyo3 = "0.28.3"
 
 [lints.rust]
 unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "deny", priority = -1 }
+nursery = { level = "deny", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+indexing_slicing = "deny"
+as_conversions = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+option_if_let_else = "allow"
 
 [profile.release]
 overflow-checks = true
