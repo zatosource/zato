@@ -10,47 +10,14 @@
 //! caller provides.
 
 use std::collections::HashMap;
-use std::fmt;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use parking_lot::Mutex;
 use pyo3::prelude::*;
-use pyo3::exceptions::PyValueError;
+
+use crate::common::{RateLimitError, RateLimitResult, current_time_us, MICROSECONDS_PER_SECOND};
 
 /// One token expressed in microtokens (fixed-point arithmetic avoids floating point).
 const MICROTOKENS_PER_TOKEN: u64 = 1_000_000;
-
-/// One second expressed in microseconds (for time conversions).
-const MICROSECONDS_PER_SECOND: u64 = 1_000_000;
-
-// -------------------------------------------------------------------- errors
-
-/// Error type for rate limiter operations that do not depend on Python.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RateLimitError {
-    msg: String,
-}
-
-impl RateLimitError {
-    /// Creates a new error with the given message.
-    pub fn new(msg: impl Into<String>) -> Self {
-        Self { msg: msg.into() }
-    }
-}
-
-impl fmt::Display for RateLimitError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(&self.msg)
-    }
-}
-
-impl std::error::Error for RateLimitError {}
-
-impl From<RateLimitError> for PyErr {
-    fn from(err: RateLimitError) -> Self {
-        PyValueError::new_err(err.msg)
-    }
-}
 
 // ----------------------------------------------------------- bucket internals
 
@@ -85,6 +52,17 @@ pub struct CheckResult {
     pub retry_after_us: u64,
 }
 
+impl RateLimitResult for CheckResult {
+
+    fn is_allowed(&self) -> bool {
+        self.allowed
+    }
+
+    fn retry_after_us(&self) -> u64 {
+        self.retry_after_us
+    }
+}
+
 // -------------------------------------------------------------------- config
 
 /// Python-visible configuration for a single token bucket.
@@ -109,6 +87,7 @@ pub struct TokenBucketConfig {
 }
 
 impl TokenBucketConfig {
+
     /// Rust-only constructor for tests and fuzz targets.
     #[must_use]
     pub const fn from_parts(rate: u64, burst_allowed: u64) -> Self {
@@ -122,6 +101,7 @@ impl TokenBucketConfig {
 
 #[pymethods]
 impl TokenBucketConfig {
+
     /// Creates a new token bucket configuration.
     ///
     /// `rate` is tokens per second. `burst_allowed` is the maximum
@@ -148,26 +128,18 @@ fn consume_or_deny(
     now_us: u64,
 ) -> CheckResult {
 
-    // Microseconds elapsed since the last refill. saturating_sub
-    // guards against clock skew where now_us < last_refill_us.
+    // saturating_sub guards against clock skew where now_us < last_refill_us.
     let elapsed_us = now_us.saturating_sub(bucket.last_refill_us);
 
-    // Compute how many microtokens have accumulated since the
-    // last refill, then add them to the current balance.
     let added_micro = elapsed_us.saturating_mul(config.refill_rate_micro_per_us);
     let refilled = bucket.tokens_remaining_micro.saturating_add(added_micro);
 
-    // Clamp the balance to the burst limit so tokens
-    // never accumulate beyond the configured maximum.
+    // Clamp to burst limit so tokens never accumulate beyond the cap.
     let capped = refilled.min(burst_micro);
 
-    // Update the refill timestamp.
     bucket.last_refill_us = now_us;
 
-    // Enough tokens to allow the request.
     if capped >= MICROTOKENS_PER_TOKEN {
-
-        // Deduct exactly one token (in microtokens) from the balance.
         let new_tokens = capped - MICROTOKENS_PER_TOKEN;
         bucket.tokens_remaining_micro = new_tokens;
 
@@ -178,15 +150,10 @@ fn consume_or_deny(
         };
     }
 
-    // Not enough tokens - deny the request.
     bucket.tokens_remaining_micro = capped;
 
-    // How many microtokens are missing to reach one full token.
     let deficit_micro = MICROTOKENS_PER_TOKEN - capped;
 
-    // Estimate how many microseconds the caller should wait
-    // before retrying. When refill_rate is zero (rate=0 policy),
-    // fall back to one full second.
     let retry_us = match deficit_micro.checked_div(config.refill_rate_micro_per_us) {
         Some(quotient) => quotient + 1,
         None => MICROSECONDS_PER_SECOND,
@@ -330,19 +297,4 @@ impl TokenBucketRegistry {
     fn clear_impl(&self) {
         self.clear();
     }
-}
-
-/// Returns the current wall clock time in microseconds since Unix epoch.
-fn current_time_us() -> Result<u64, RateLimitError> {
-    let duration = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_err(|err| RateLimitError::new(format!("System clock before Unix epoch: {err}")))?;
-
-    let micros = duration.as_micros();
-
-    let micros_u64 = u64::try_from(micros).map_err(|_| {
-        RateLimitError::new(format!("System clock microseconds too large for u64: {micros}"))
-    })?;
-
-    Ok(micros_u64)
 }
