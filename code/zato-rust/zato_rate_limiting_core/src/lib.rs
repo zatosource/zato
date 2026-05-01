@@ -3,6 +3,7 @@
 //! See [`token_bucket`] for the algorithm, data structures,
 //! and the Python-visible API.
 
+pub mod common;
 pub mod token_bucket;
 
 use pyo3::prelude::*;
