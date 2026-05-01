@@ -19,15 +19,9 @@ from zato.common.rate_limiting.common import Microseconds_Per_Second, Microtoken
 class CheckResult:
     """ Result of a rate limit check.
     """
-    allowed:          'bool'
+    is_allowed:       'bool'
     tokens_remaining: 'int'
     retry_after_us:   'int'
-
-    def is_allowed(self) -> 'bool':
-        """ Whether the request was allowed through.
-        """
-        out = self.allowed
-        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -87,31 +81,32 @@ def _consume_or_deny(
         bucket.tokens_remaining_micro = new_tokens
 
         out = CheckResult()
-        out.allowed          = True
+        out.is_allowed       = True
         out.tokens_remaining = new_tokens // Microtokens_Per_Token
         out.retry_after_us   = 0
         return out
 
     # .. otherwise the bucket is empty, so record what is left ..
-    bucket.tokens_remaining_micro = refilled
-
-    # .. figure out how long the caller needs to wait for one full token;
-    # .. if the refill rate is positive, compute from the deficit ..
-    deficit_micro = Microtokens_Per_Token - refilled
-
-    if config.refill_rate_micro_per_us > 0:
-        retry_us = deficit_micro // config.refill_rate_micro_per_us + 1
-
-    # .. otherwise no tokens will ever arrive, so fall back to one second ..
     else:
-        retry_us = Microseconds_Per_Second
+        bucket.tokens_remaining_micro = refilled
 
-    # .. and deny the request.
-    out = CheckResult()
-    out.allowed          = False
-    out.tokens_remaining = 0
-    out.retry_after_us   = retry_us
-    return out
+        # .. figure out how long the caller needs to wait for one full token;
+        # .. if the refill rate is positive, compute from the deficit ..
+        deficit_micro = Microtokens_Per_Token - refilled
+
+        if config.refill_rate_micro_per_us > 0:
+            retry_us = deficit_micro // config.refill_rate_micro_per_us + 1
+
+        # .. otherwise no tokens will ever arrive, so fall back to one second ..
+        else:
+            retry_us = Microseconds_Per_Second
+
+        # .. and deny the request.
+        out = CheckResult()
+        out.is_allowed       = False
+        out.tokens_remaining = 0
+        out.retry_after_us   = retry_us
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

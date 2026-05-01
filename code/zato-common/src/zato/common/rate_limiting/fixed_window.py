@@ -8,11 +8,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import datetime
+from dataclasses import dataclass
 
 # Zato
 from zato.common.rate_limiting.common import December, January, Microseconds_Per_Second, RateLimitError, \
-    Seconds_Per_Minute, Seconds_Per_Hour, Seconds_Per_Day, Window_Unit_Second, Window_Unit_Minute, \
-    Window_Unit_Hour, Window_Unit_Day, Window_Unit_Month
+    Seconds_Per_Minute, Seconds_Per_Hour, Seconds_Per_Day, validate_window_unit, Window_Unit_Second, \
+    Window_Unit_Minute, Window_Unit_Hour, Window_Unit_Day, Window_Unit_Month
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -71,6 +72,116 @@ def compute_window_end_us(unit:'str', now_us:'int') -> 'int':
     # .. anything else is not a recognized unit.
     else:
         raise RateLimitError(f'Unknown window_unit: {unit}')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class FixedWindowConfig:
+    """ Configuration for a fixed-window counter.
+    """
+    limit:              'int'
+    parsed_window_unit: 'str'
+
+    @classmethod
+    def from_parts(class_, limit:'int', window_unit:'str') -> 'FixedWindowConfig': # type: ignore
+        """ Creates a config from a limit and a window unit string.
+        """
+        out = class_()
+        out.limit              = limit
+        out.parsed_window_unit = validate_window_unit(window_unit)
+        return out
+
+    def unit(self) -> 'str':
+        """ Returns the parsed window unit string.
+        """
+        return self.parsed_window_unit
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class FixedWindowCheckResult:
+    """ Result of a fixed-window counter check.
+    """
+    is_allowed:     'bool'
+    remaining:      'int'
+    retry_after_us: 'int'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class _WindowState:
+    """ Internal per-key state for a fixed-window counter.
+    """
+    count:         'int'
+    window_end_us: 'int'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _check_state(
+    state:'_WindowState',
+    config:'FixedWindowConfig',
+    now_us:'int',
+    ) -> 'FixedWindowCheckResult':
+    """ Increments the counter if the window is still open and the limit has not been reached,
+    or resets the window if it has expired, then returns an allowed-or-denied result.
+    """
+
+    # .. if the current window has expired, start a fresh one ..
+    if now_us >= state.window_end_us:
+        state.count         = 0
+        state.window_end_us = compute_window_end_us(config.unit(), now_us)
+
+    # .. check whether there is room left in this window ..
+    if state.count < config.limit:
+        state.count += 1
+        remaining = config.limit - state.count
+
+        out = FixedWindowCheckResult()
+        out.is_allowed     = True
+        out.remaining      = remaining
+        out.retry_after_us = 0
+        return out
+
+    # .. otherwise the limit is already reached, so deny and report how long until the window resets.
+    else:
+        retry_after = state.window_end_us - now_us
+
+        out = FixedWindowCheckResult()
+        out.is_allowed     = False
+        out.remaining      = 0
+        out.retry_after_us = max(0, retry_after)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FixedWindowRegistry:
+    """ Top-level registry holding fixed-window counters for all keys.
+    """
+
+    def __init__(self) -> 'None':
+        self._windows:'dict[str, _WindowState]' = {}
+
+    def check_inner(self, key:'str', config:'FixedWindowConfig', now_us:'int') -> 'FixedWindowCheckResult':
+        """ Core check logic, separated from any framework wrapper for testability.
+        """
+
+        # .. look up or create the per-key window state ..
+        state = self._windows.get(key)
+
+        if state is None:
+            state = _WindowState()
+            state.count         = 0
+            state.window_end_us = compute_window_end_us(config.unit(), now_us)
+            self._windows[key] = state
+
+        # .. and decide whether the request is allowed.
+        out = _check_state(state, config, now_us)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
