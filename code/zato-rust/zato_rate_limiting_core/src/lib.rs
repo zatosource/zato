@@ -1,7 +1,7 @@
-//! Token bucket rate limiting engine for Zato REST channels.
+//! Rate limiting engine for Zato REST channels.
 //!
-//! See [`token_bucket`] for the algorithm, data structures,
-//! and the Python-visible API.
+//! Contains a token bucket (pace limiter) and a fixed-window counter
+//! (quota limiter), both exposed to Python via `PyO3`.
 
 pub mod common;
 pub mod fixed_window;

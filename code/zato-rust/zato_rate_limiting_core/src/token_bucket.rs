@@ -218,7 +218,9 @@ impl TokenBucketRegistry {
         let mut map = self.buckets.lock();
 
         if let Some(bucket) = map.get_mut(key) {
-            return Ok(consume_or_deny(bucket, config, burst_micro, now_us));
+            let result = consume_or_deny(bucket, config, burst_micro, now_us);
+            drop(map);
+            return Ok(result);
         }
 
         let bucket = map.entry(key.to_owned()).or_insert(BucketState {

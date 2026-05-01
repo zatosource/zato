@@ -47,7 +47,9 @@ impl From<RateLimitError> for PyErr {
 pub fn current_time_us() -> Result<u64, RateLimitError> {
     let duration = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map_err(|err| RateLimitError::new(format!("Clock error, duration_since(UNIX_EPOCH) failed: {err}")))?;
+        .map_err(|err| {
+            RateLimitError::new(format!("Clock error, duration_since(UNIX_EPOCH) failed: {err}"))
+        })?;
 
     let micros = duration.as_micros();
 
