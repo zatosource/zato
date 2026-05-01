@@ -41,7 +41,7 @@ class TokenBucketConfig:
     refill_rate_micro_per_us: 'int'
 
     @classmethod
-    def from_parts(class_, rate:'int', burst_allowed:'int') -> 'TokenBucketConfig':
+    def from_parts(class_, rate:'int', burst_allowed:'int') -> 'TokenBucketConfig': # type: ignore
         """ Creates a config from rate (tokens/second) and burst capacity.
         """
         out = class_()
@@ -154,14 +154,12 @@ class TokenBucketRegistry:
         self._buckets.pop(key, None)
 
     def __len__(self) -> 'int':
-        out = len(self._buckets)
-        return out
+        return len(self._buckets)
 
     def is_empty(self) -> 'bool':
         """ Returns True if no buckets are registered.
         """
-        out = len(self._buckets) == 0
-        return out
+        return not self._buckets
 
     def clear(self) -> 'None':
         """ Removes all buckets.
