@@ -3,11 +3,13 @@
 //! Enforces a hard cap of N requests per clock-aligned window
 //! (second, minute, hour, day, or calendar month).
 
+use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 
 use chrono::{DateTime, Datelike, NaiveDate};
 
+use parking_lot::Mutex;
 use pyo3::prelude::*;
 
 use crate::common::{RateLimitError, RateLimitResult, MICROSECONDS_PER_SECOND};
@@ -155,7 +157,6 @@ pub fn compute_window_end_us(unit: WindowUnit, now_us: u64) -> Result<u64, RateL
 // --------------------------------------------------------------- window state
 
 /// Per-key counter state within a single window.
-#[expect(dead_code, reason = "Used by FixedWindowRegistry in phase 14")]
 pub(crate) struct WindowState {
 
     /// Requests consumed in the current window.
@@ -244,5 +245,103 @@ impl RateLimitResult for FixedWindowCheckResult {
 
     fn retry_after_us(&self) -> u64 {
         self.retry_after_us
+    }
+}
+
+// ------------------------------------------------------------ check logic
+
+/// Applies the fixed-window check against a single key's state.
+#[expect(clippy::missing_const_for_fn, reason = "&mut in const fn requires nightly")]
+fn check_state(
+    state: &mut WindowState,
+    limit: u64,
+    window_end: u64,
+    now_us: u64,
+) -> FixedWindowCheckResult {
+
+    // Window expired - reset the counter and start a new window.
+    if now_us >= state.window_end_us {
+        state.count = 0;
+        state.window_end_us = window_end;
+    }
+
+    // Under the limit - consume one slot and allow.
+    if state.count < limit {
+        state.count += 1;
+        let remaining = limit - state.count;
+        return FixedWindowCheckResult {
+            is_allowed: true,
+            remaining,
+            retry_after_us: 0,
+        };
+    }
+
+    // Over the limit - deny and report how long until the window resets.
+    let retry_after_us = state.window_end_us.saturating_sub(now_us);
+
+    FixedWindowCheckResult {
+        is_allowed: false,
+        remaining: 0,
+        retry_after_us,
+    }
+}
+
+// ------------------------------------------------------------------ registry
+
+/// Top-level fixed-window counter registry holding all counters across all keys.
+#[pyclass(skip_from_py_object)]
+pub struct FixedWindowRegistry {
+
+    /// Maps caller-assembled keys to their window states.
+    ///
+    /// `parking_lot::Mutex` satisfies `PyO3`'s `Send + Sync` requirement.
+    counters: Mutex<HashMap<String, WindowState>>,
+}
+
+impl Default for FixedWindowRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl FixedWindowRegistry {
+
+    /// Creates an empty registry.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            counters: Mutex::new(HashMap::new()),
+        }
+    }
+
+    /// Checks whether a request identified by `key` is allowed under the
+    /// given fixed-window configuration at timestamp `now_us`.
+    pub fn check_inner(
+        &self,
+        key: &str,
+        config: &FixedWindowConfig,
+        now_us: u64,
+    ) -> Result<FixedWindowCheckResult, RateLimitError> {
+
+        // Pre-compute the window boundary before taking the lock
+        // so chrono math (for Month) does not hold the mutex.
+        let window_end = compute_window_end_us(config.unit(), now_us)?;
+
+        // Serialize access to the shared counters.
+        let mut map = self.counters.lock();
+
+        // Get existing state or create a fresh counter for new keys.
+        let state = map.entry(key.to_owned()).or_insert_with(|| WindowState {
+            count: 0,
+            window_end_us: window_end,
+        });
+
+        // Decide allow or deny based on the counter and window boundary.
+        let result = check_state(state, config.limit, window_end, now_us);
+
+        // Let other threads access the map again.
+        drop(map);
+
+        Ok(result)
     }
 }

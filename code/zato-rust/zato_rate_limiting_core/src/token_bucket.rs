@@ -23,7 +23,7 @@ const MICROTOKENS_PER_TOKEN: u64 = 1_000_000;
 
 /// Internal bucket state stored per key.
 ///
-/// Both fields are plain `u64` values - no atomics, no mutexes.
+/// Both fields are plain `u64` values.
 /// Single-threaded access is guaranteed by design.
 struct BucketState {
 
@@ -215,20 +215,19 @@ impl TokenBucketRegistry {
             RateLimitError::new(format!("Overflow: burst_allowed ({}) * MICROTOKENS_PER_TOKEN", config.burst_allowed))
         })?;
 
+        // Serialize access to the shared counters.
         let mut map = self.buckets.lock();
 
-        if let Some(bucket) = map.get_mut(key) {
-            let result = consume_or_deny(bucket, config, burst_micro, now_us);
-            drop(map);
-            return Ok(result);
-        }
-
-        let bucket = map.entry(key.to_owned()).or_insert(BucketState {
+        // Get existing bucket or create a full one for new keys.
+        let bucket = map.entry(key.to_owned()).or_insert_with(|| BucketState {
             tokens_remaining_micro: burst_micro,
             last_refill_us: now_us,
         });
 
+        // Try to consume one token or deny the request.
         let result = consume_or_deny(bucket, config, burst_micro, now_us);
+
+        // Let other threads access the map again.
         drop(map);
 
         Ok(result)
