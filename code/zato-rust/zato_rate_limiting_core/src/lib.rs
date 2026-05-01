@@ -4,6 +4,7 @@
 //! and the Python-visible API.
 
 pub mod common;
+pub mod fixed_window;
 pub mod token_bucket;
 
 use pyo3::prelude::*;
