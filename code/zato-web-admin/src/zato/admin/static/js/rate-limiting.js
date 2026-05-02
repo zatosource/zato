@@ -19,7 +19,7 @@
         {cidr: 'fe80::/10',      label: 'link-local'}
     ];
 
-    var window_units = ['second', 'minute', 'hour', 'day', 'month'];
+    var window_units = ['minute', 'hour', 'day', 'month'];
 
     var rule_counter = 0;
 
@@ -156,8 +156,8 @@
         rule_elem.appendChild(fw_group);
 
         // Remove button
-        var remove_button = document.createElement('span');
-        remove_button.className = 'rate-limiting-button-remove';
+        var remove_button = document.createElement('a');
+        remove_button.href = 'javascript:void(0)';
         remove_button.textContent = 'Delete rule';
         remove_button.onclick = function() {
             rl.remove_rule(container_id, rule_elem);

@@ -288,21 +288,6 @@
 /* Rate limiting - add and remove buttons                       */
 /* ------------------------------------------------------------ */
 
-.rate-limiting-button-remove {
-    cursor: pointer;
-    font-size: 11px;
-    color: #666666;
-    background: none;
-    border: none;
-    padding: 0;
-    white-space: nowrap;
-    flex-shrink: 0;
-    transition: color 0.15s;
-}
-
-.rate-limiting-button-remove:hover {
-    color: #333333;
-}
 
 .rate-limiting-button-add {
     cursor: pointer;
@@ -322,4 +307,16 @@
 .rate-limiting-button-add:hover {
     border-color: #5794d0;
     color: #5794d0;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - actions bar                                  */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 4px;
 }

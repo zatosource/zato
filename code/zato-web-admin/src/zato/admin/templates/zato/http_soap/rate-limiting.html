@@ -23,18 +23,14 @@
 <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
 <div id="markup">
-<h2 class="zato">Rate limiting - {{ channel_name }}</h2>
-
-<div class='page_prompt' style="clear:left">
-    <a href="/zato/http-soap/?cluster={{ cluster_id }}&connection=channel&transport=plain_http">Show REST channels</a>
-</div>
+<h2 class="zato">Rate limiting | <a href="{% url 'http-soap' %}?cluster={{ cluster_id }}&connection=channel&transport=plain_http">REST channels</a> | <a href="{% url 'http-soap' %}?cluster={{ cluster_id }}&query={{ channel_name }}&connection=channel&transport=plain_http">{{ channel_name }}</a></h2>
 
 <div class="rate-limiting-container" id="rate-limiting-container">
 </div>
-<span class="rate-limiting-button-add" onclick="$.fn.zato.rate_limiting.add_rule('rate-limiting-container')">+ Add rule</span>
 
-<div style="margin-top:12px">
-    <button type="button" class="btn btn-primary" onclick="$.fn.zato.rate_limiting.save('rate-limiting-container', '{{ channel_id }}')">Save</button>
+<div class="rate-limiting-actions">
+    <span class="rate-limiting-button-add" onclick="$.fn.zato.rate_limiting.add_rule('rate-limiting-container')">+ Add rule</span>
+    <input type="submit" value="Save" onclick="$.fn.zato.rate_limiting.save('rate-limiting-container', '{{ channel_id }}')" />
 </div>
 
 </div>
