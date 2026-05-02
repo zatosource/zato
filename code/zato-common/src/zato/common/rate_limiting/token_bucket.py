@@ -147,7 +147,7 @@ class TokenBucketRegistry:
     def remove(self, key:'str') -> 'None':
         """ Removes the bucket for the given key, if any.
         """
-        self._buckets.pop(key, None)
+        _ = self._buckets.pop(key, None)
 
     def __len__(self) -> 'int':
         return len(self._buckets)

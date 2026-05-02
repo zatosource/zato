@@ -12,8 +12,8 @@ from dataclasses import dataclass
 
 # Zato
 from zato.common.rate_limiting.common import December, January, Microseconds_Per_Second, RateLimitError, \
-    Seconds_Per_Minute, Seconds_Per_Hour, Seconds_Per_Day, validate_window_unit, Window_Unit_Second, \
-    Window_Unit_Minute, Window_Unit_Hour, Window_Unit_Day, Window_Unit_Month
+    Seconds_Per_Day, Seconds_Per_Hour, Seconds_Per_Minute, validate_window_unit, Window_Unit_Day, \
+    Window_Unit_Hour, Window_Unit_Minute, Window_Unit_Month, Window_Unit_Second
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -182,6 +182,24 @@ class FixedWindowRegistry:
         # .. and decide whether the request is allowed.
         out = _check_state(state, config, now_us)
         return out
+
+    def remove(self, key:'str') -> 'None':
+        """ Removes the window state for the given key, if any.
+        """
+        _ = self._windows.pop(key, None)
+
+    def __len__(self) -> 'int':
+        return len(self._windows)
+
+    def is_empty(self) -> 'bool':
+        """ Returns True if no windows are registered.
+        """
+        return not self._windows
+
+    def clear(self) -> 'None':
+        """ Removes all window states.
+        """
+        self._windows.clear()
 
 # ################################################################################################################################
 # ################################################################################################################################
