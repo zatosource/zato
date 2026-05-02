@@ -5,21 +5,175 @@
 
 (function($) {
 
-    // Suggested CIDR ranges - IPv4 first, then IPv6
-    var suggestions = [
-        {cidr: '0.0.0.0/0',      label: 'all IPv4'},
-        {cidr: '10.0.0.0/8',     label: 'private 10.x'},
-        {cidr: '172.16.0.0/12',  label: 'private 172.16.x'},
-        {cidr: '192.168.0.0/16', label: 'private 192.168.x'},
-        {cidr: '127.0.0.0/8',    label: 'loopback'},
-        {cidr: '::/0',           label: 'all IPv6'},
-        {cidr: '::1/128',        label: 'loopback'},
-        {cidr: 'fe80::/10',      label: 'link-local'}
+    // Suggested CIDR ranges grouped by protocol
+    var cidr_suggestions = [
+        {group: 'IPv4', items: [
+            {value: '0.0.0.0/0',      label: 'all IPv4'},
+            {value: '10.0.0.0/8',     label: 'private 10.x'},
+            {value: '172.16.0.0/12',  label: 'private 172.16.x'},
+            {value: '192.168.0.0/16', label: 'private 192.168.x'},
+            {value: '127.0.0.0/8',    label: 'loopback'}
+        ]},
+        {group: 'IPv6', items: [
+            {value: '::/0',           label: 'all IPv6'},
+            {value: '::1/128',       label: 'loopback'},
+            {value: 'fe80::/10',     label: 'link-local'}
+        ]}
+    ];
+
+    // Common time-of-day presets grouped by category
+    var time_suggestions = [
+        {group: 'Business hours', items: [
+            {value: '06:00', label: '6 AM'},
+            {value: '07:00', label: '7 AM'},
+            {value: '08:00', label: '8 AM'},
+            {value: '09:00', label: '9 AM'},
+            {value: '10:00', label: '10 AM'},
+            {value: '11:00', label: '11 AM'},
+            {value: '12:00', label: 'noon'},
+            {value: '13:00', label: '1 PM'},
+            {value: '14:00', label: '2 PM'},
+            {value: '15:00', label: '3 PM'},
+            {value: '16:00', label: '4 PM'},
+            {value: '17:00', label: '5 PM'},
+            {value: '18:00', label: '6 PM'}
+        ]},
+        {group: 'Off hours', items: [
+            {value: '19:00', label: '7 PM'},
+            {value: '20:00', label: '8 PM'},
+            {value: '21:00', label: '9 PM'},
+            {value: '22:00', label: '10 PM'},
+            {value: '23:00', label: '11 PM'},
+            {value: '00:00', label: 'midnight'},
+            {value: '01:00', label: '1 AM'},
+            {value: '02:00', label: '2 AM'},
+            {value: '03:00', label: '3 AM'},
+            {value: '04:00', label: '4 AM'},
+            {value: '05:00', label: '5 AM'}
+        ]}
     ];
 
     var window_units = ['minute', 'hour', 'day', 'month'];
 
     var rule_counter = 0;
+
+    // ////////////////////////////////////////////////////////////////////////
+    // Generic dropdown - used by both CIDR pills and time range inputs
+    // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.rate_limiting.show_dropdown = function(anchor_elem, grouped_items, filter_text, on_select, excluded) {
+
+        $.fn.zato.rate_limiting.hide_dropdown();
+
+        var dropdown = document.createElement('div');
+        dropdown.className = 'rate-limiting-suggestions';
+        dropdown.id = 'rate-limiting-dropdown-active';
+
+        var filter = (filter_text || '').trim().toLowerCase();
+        var total_items = 0;
+
+        for(var group_idx = 0; group_idx < grouped_items.length; group_idx++) {
+            var group = grouped_items[group_idx];
+            var matching_items = [];
+
+            for(var item_idx = 0; item_idx < group.items.length; item_idx++) {
+                var item = group.items[item_idx];
+
+                // Skip already-selected values
+                if(excluded && excluded[item.value]) {
+                    continue;
+                }
+
+                // Apply text filter
+                if(filter && item.value.toLowerCase().indexOf(filter) === -1 && item.label.toLowerCase().indexOf(filter) === -1) {
+                    continue;
+                }
+
+                matching_items.push(item);
+            }
+
+            if(matching_items.length === 0) {
+                continue;
+            }
+
+            // Add separator between groups
+            if(total_items > 0) {
+                var separator = document.createElement('div');
+                separator.className = 'rate-limiting-suggestion-separator';
+                dropdown.appendChild(separator);
+            }
+
+            // Group header
+            var header = document.createElement('div');
+            header.className = 'rate-limiting-suggestion-header';
+            header.textContent = group.group;
+            dropdown.appendChild(header);
+
+            // Items
+            for(var match_idx = 0; match_idx < matching_items.length; match_idx++) {
+                var match = matching_items[match_idx];
+                var row = $.fn.zato.rate_limiting.make_dropdown_item(match, on_select);
+                dropdown.appendChild(row);
+                total_items++;
+            }
+        }
+
+        if(total_items === 0) {
+            return;
+        }
+
+        // Position below the anchor element
+        var rect = anchor_elem.getBoundingClientRect();
+        dropdown.style.position = 'fixed';
+        dropdown.style.top = (rect.bottom + 2) + 'px';
+        dropdown.style.left = rect.left + 'px';
+
+        document.body.appendChild(dropdown);
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.rate_limiting.make_dropdown_item = function(item, on_select) {
+        var row = document.createElement('div');
+        row.className = 'rate-limiting-suggestion-item';
+
+        var value_span = document.createElement('span');
+        value_span.className = 'rate-limiting-suggestion-cidr';
+        value_span.textContent = item.value;
+        row.appendChild(value_span);
+
+        var label_span = document.createElement('span');
+        label_span.className = 'rate-limiting-suggestion-label';
+        label_span.textContent = item.label;
+        row.appendChild(label_span);
+
+        row.onclick = function() {
+            on_select(item.value);
+            $.fn.zato.rate_limiting.hide_dropdown();
+        };
+
+        return row;
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.rate_limiting.hide_dropdown = function() {
+        var existing = document.getElementById('rate-limiting-dropdown-active');
+        if(existing) {
+            existing.parentNode.removeChild(existing);
+        }
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.rate_limiting.close_dropdown_on_outside_click = function() {
+        $(document).on('mousedown.rate_limiting', function(event) {
+            var target = $(event.target);
+            if(!target.closest('.rate-limiting-suggestions').length && !target.hasClass('rate-limiting-pill-input') && !target.hasClass('rate-limiting-config-input')) {
+                $.fn.zato.rate_limiting.hide_dropdown();
+            }
+        });
+    };
 
     // ////////////////////////////////////////////////////////////////////////
 
@@ -28,7 +182,7 @@
         container.innerHTML = '';
         rule_counter = 0;
         $.fn.zato.rate_limiting.setup_drag(container_id);
-        $.fn.zato.rate_limiting.close_suggestions_on_outside_click();
+        $.fn.zato.rate_limiting.close_dropdown_on_outside_click();
     };
 
     // ////////////////////////////////////////////////////////////////////////
@@ -73,7 +227,7 @@
         add_pill_button.className = 'rate-limiting-pill-add-button';
         add_pill_button.textContent = '+';
         add_pill_button.onclick = function() {
-            $.fn.zato.rate_limiting.show_input(pills, add_pill_button);
+            $.fn.zato.rate_limiting.show_cidr_input(pills, add_pill_button);
         };
         pills.appendChild(add_pill_button);
 
@@ -96,9 +250,18 @@
         time_fields.className = 'rate-limiting-time-fields';
 
         var time_from_input = document.createElement('input');
-        time_from_input.type = 'time';
+        time_from_input.type = 'text';
         time_from_input.className = 'rate-limiting-config-input';
         time_from_input.setAttribute('data-field', 'time_from');
+        time_from_input.placeholder = 'from';
+        time_from_input.readOnly = true;
+
+        time_from_input.onclick = function() {
+            $.fn.zato.rate_limiting.show_dropdown(time_from_input, time_suggestions, '', function(selected_value) {
+                time_from_input.value = selected_value;
+            });
+        };
+
         time_fields.appendChild(time_from_input);
 
         var time_dash = document.createElement('span');
@@ -107,9 +270,18 @@
         time_fields.appendChild(time_dash);
 
         var time_to_input = document.createElement('input');
-        time_to_input.type = 'time';
+        time_to_input.type = 'text';
         time_to_input.className = 'rate-limiting-config-input';
         time_to_input.setAttribute('data-field', 'time_to');
+        time_to_input.placeholder = 'to';
+        time_to_input.readOnly = true;
+
+        time_to_input.onclick = function() {
+            $.fn.zato.rate_limiting.show_dropdown(time_to_input, time_suggestions, '', function(selected_value) {
+                time_to_input.value = selected_value;
+            });
+        };
+
         time_fields.appendChild(time_to_input);
 
         time_group.appendChild(time_fields);
@@ -288,7 +460,7 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.rate_limiting.show_input = function(pills_container, add_button) {
+    $.fn.zato.rate_limiting.show_cidr_input = function(pills_container, add_button) {
 
         // If there's already an input visible, focus it instead of adding another
         var existing = pills_container.querySelector('.rate-limiting-pill-input');
@@ -302,30 +474,37 @@
         input.className = 'rate-limiting-pill-input';
         input.placeholder = 'e.g. 10.0.0.0/8';
 
-        input.onkeydown = function(e) {
-            if(e.key === 'Enter') {
-                e.preventDefault();
+        input.onkeydown = function(event) {
+            if(event.key === 'Enter') {
+                event.preventDefault();
                 var value = input.value.trim();
                 if(value) {
                     var rule_elem = pills_container.closest('.rate-limiting-rule');
                     $.fn.zato.rate_limiting.add_pill(rule_elem, value);
                 }
                 input.value = '';
-                $.fn.zato.rate_limiting.hide_suggestions();
+                $.fn.zato.rate_limiting.hide_dropdown();
             }
-            if(e.key === 'Escape') {
-                $.fn.zato.rate_limiting.hide_suggestions();
+            if(event.key === 'Escape') {
+                $.fn.zato.rate_limiting.hide_dropdown();
                 input.parentNode.removeChild(input);
             }
         };
 
-        input.onfocus = function() {
-            $.fn.zato.rate_limiting.show_suggestions(input);
+        var show_cidr_dropdown = function() {
+            var rule_elem = pills_container.closest('.rate-limiting-rule');
+            var excluded = $.fn.zato.rate_limiting.get_existing_cidrs(rule_elem);
+
+            $.fn.zato.rate_limiting.show_dropdown(input, cidr_suggestions, input.value, function(selected_value) {
+                var rule_elem = pills_container.closest('.rate-limiting-rule');
+                $.fn.zato.rate_limiting.add_pill(rule_elem, selected_value);
+                input.value = '';
+                input.focus();
+            }, excluded);
         };
 
-        input.oninput = function() {
-            $.fn.zato.rate_limiting.show_suggestions(input);
-        };
+        input.onfocus = show_cidr_dropdown;
+        input.oninput = show_cidr_dropdown;
 
         pills_container.insertBefore(input, add_button);
         input.focus();
@@ -343,129 +522,6 @@
         }
 
         return existing;
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    $.fn.zato.rate_limiting.show_suggestions = function(input_elem) {
-        $.fn.zato.rate_limiting.hide_suggestions();
-
-        var filter = input_elem.value.trim().toLowerCase();
-        var rule_elem = input_elem.closest('.rate-limiting-rule');
-        var existing = $.fn.zato.rate_limiting.get_existing_cidrs(rule_elem);
-
-        var dropdown = document.createElement('div');
-        dropdown.className = 'rate-limiting-suggestions';
-        dropdown.id = 'rate-limiting-suggestions-active';
-
-        var ipv4_header = document.createElement('div');
-        ipv4_header.className = 'rate-limiting-suggestion-header';
-        ipv4_header.textContent = 'IPv4';
-        dropdown.appendChild(ipv4_header);
-
-        var has_ipv4 = false;
-        var ipv6_items = [];
-
-        for(var suggestion_idx = 0; suggestion_idx < suggestions.length; suggestion_idx++) {
-            var suggestion = suggestions[suggestion_idx];
-
-            if(existing[suggestion.cidr]) {
-                continue;
-            }
-
-            if(filter && suggestion.cidr.toLowerCase().indexOf(filter) === -1 && suggestion.label.toLowerCase().indexOf(filter) === -1) {
-                continue;
-            }
-
-            var is_ipv6 = suggestion.cidr.indexOf(':') !== -1;
-
-            if(is_ipv6) {
-                ipv6_items.push(suggestion);
-                continue;
-            }
-
-            has_ipv4 = true;
-            dropdown.appendChild($.fn.zato.rate_limiting.make_suggestion_item(suggestion, input_elem));
-        }
-
-        if(!has_ipv4) {
-            dropdown.removeChild(ipv4_header);
-        }
-
-        if(ipv6_items.length > 0) {
-            if(has_ipv4) {
-                var sep = document.createElement('div');
-                sep.className = 'rate-limiting-suggestion-separator';
-                dropdown.appendChild(sep);
-            }
-
-            var ipv6_header = document.createElement('div');
-            ipv6_header.className = 'rate-limiting-suggestion-header';
-            ipv6_header.textContent = 'IPv6';
-            dropdown.appendChild(ipv6_header);
-
-            for(var ipv6_idx = 0; ipv6_idx < ipv6_items.length; ipv6_idx++) {
-                dropdown.appendChild($.fn.zato.rate_limiting.make_suggestion_item(ipv6_items[ipv6_idx], input_elem));
-            }
-        }
-
-        if(!has_ipv4 && ipv6_items.length === 0) {
-            return;
-        }
-
-        var rect = input_elem.getBoundingClientRect();
-        dropdown.style.position = 'fixed';
-        dropdown.style.top = (rect.bottom + 2) + 'px';
-        dropdown.style.left = rect.left + 'px';
-
-        document.body.appendChild(dropdown);
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    $.fn.zato.rate_limiting.make_suggestion_item = function(suggestion, input_elem) {
-        var item = document.createElement('div');
-        item.className = 'rate-limiting-suggestion-item';
-
-        var cidr_span = document.createElement('span');
-        cidr_span.className = 'rate-limiting-suggestion-cidr';
-        cidr_span.textContent = suggestion.cidr;
-        item.appendChild(cidr_span);
-
-        var label_span = document.createElement('span');
-        label_span.className = 'rate-limiting-suggestion-label';
-        label_span.textContent = suggestion.label;
-        item.appendChild(label_span);
-
-        item.onclick = function() {
-            var rule_elem = input_elem.closest('.rate-limiting-rule');
-            $.fn.zato.rate_limiting.add_pill(rule_elem, suggestion.cidr);
-            input_elem.value = '';
-            $.fn.zato.rate_limiting.hide_suggestions();
-            input_elem.focus();
-        };
-
-        return item;
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    $.fn.zato.rate_limiting.hide_suggestions = function() {
-        var existing = document.getElementById('rate-limiting-suggestions-active');
-        if(existing) {
-            existing.parentNode.removeChild(existing);
-        }
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    $.fn.zato.rate_limiting.close_suggestions_on_outside_click = function() {
-        $(document).on('mousedown.rate_limiting', function(e) {
-            var target = $(e.target);
-            if(!target.closest('.rate-limiting-suggestions').length && !target.hasClass('rate-limiting-pill-input')) {
-                $.fn.zato.rate_limiting.hide_suggestions();
-            }
-        });
     };
 
     // ////////////////////////////////////////////////////////////////////////
