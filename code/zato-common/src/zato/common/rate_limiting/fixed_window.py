@@ -90,7 +90,10 @@ class FixedWindowConfig:
         out = class_()
         out.limit              = limit
         out.parsed_window_unit = validate_window_unit(window_unit)
+
         return out
+
+# ################################################################################################################################
 
     def unit(self) -> 'str':
         """ Returns the parsed window unit string.
@@ -166,6 +169,13 @@ class FixedWindowRegistry:
     def __init__(self) -> 'None':
         self._windows:'dict[str, _WindowState]' = {}
 
+# ################################################################################################################################
+
+    def __len__(self) -> 'int':
+        return len(self._windows)
+
+# ################################################################################################################################
+
     def check_inner(self, key:'str', config:'FixedWindowConfig', now_us:'int') -> 'FixedWindowCheckResult':
         """ Core check logic, separated from any framework wrapper for testability.
         """
@@ -181,20 +191,24 @@ class FixedWindowRegistry:
 
         # .. and decide whether the request is allowed.
         out = _check_state(state, config, now_us)
+
         return out
+
+# ################################################################################################################################
 
     def remove(self, key:'str') -> 'None':
         """ Removes the window state for the given key, if any.
         """
         _ = self._windows.pop(key, None)
 
-    def __len__(self) -> 'int':
-        return len(self._windows)
+# ################################################################################################################################
 
     def is_empty(self) -> 'bool':
         """ Returns True if no windows are registered.
         """
         return not self._windows
+
+# ################################################################################################################################
 
     def clear(self) -> 'None':
         """ Removes all window states.

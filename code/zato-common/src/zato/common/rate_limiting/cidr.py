@@ -12,8 +12,8 @@ from dataclasses import dataclass
 
 # Zato
 from zato.common.rate_limiting.common import RateLimitError
-from zato.common.rate_limiting.fixed_window import FixedWindowConfig
-from zato.common.rate_limiting.token_bucket import TokenBucketConfig
+from zato.common.rate_limiting.fixed_window import FixedWindowCheckResult, FixedWindowConfig, FixedWindowRegistry
+from zato.common.rate_limiting.token_bucket import CheckResult, TokenBucketConfig, TokenBucketRegistry
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,6 +34,7 @@ class CIDREntry:
         out = class_()
         out.network = network
         out.key     = str(network)
+
         return out
 
 # ################################################################################################################################
@@ -56,13 +57,20 @@ class CIDRRule:
         ) -> 'CIDRRule':
         """ Builds a rule from a list of CIDR strings and both limiter configs.
         """
-        entries = [CIDREntry.from_string(value) for value in cidr_list]
+        entries:'list[CIDREntry]' = []
+
+        for value in cidr_list:
+            entry = CIDREntry.from_string(value)
+            entries.append(entry)
 
         out = class_()
         out.entries             = entries
         out.token_bucket_config = token_bucket_config
         out.fixed_window_config = fixed_window_config
+
         return out
+
+# ################################################################################################################################
 
     def match(self, address:'ipaddress.IPv4Address | ipaddress.IPv6Address') -> 'CIDREntry | None':
         """ Returns the first entry whose network contains the address, or None.
@@ -100,12 +108,31 @@ class CIDRMatch:
 # ################################################################################################################################
 # ################################################################################################################################
 
+@dataclass(init=False)
+class CIDRCheckResult:
+    """ Combined result of checking a client IP against both rate limiters.
+    """
+    is_allowed:          'bool'
+    matched_key:         'str'
+    token_bucket_result: 'CheckResult'
+    fixed_window_result: 'FixedWindowCheckResult'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class CIDRMatcher:
     """ Holds an ordered list of CIDR rules and resolves client IPs to the first matching rule.
     """
 
     def __init__(self) -> 'None':
         self._rules:'list[CIDRRule]' = []
+
+# ################################################################################################################################
+
+    def __len__(self) -> 'int':
+        return len(self._rules)
+
+# ################################################################################################################################
 
     def add_rule(
         self,
@@ -117,6 +144,8 @@ class CIDRMatcher:
         """
         rule = CIDRRule.from_parts(cidr_list, token_bucket_config, fixed_window_config)
         self._rules.append(rule)
+
+# ################################################################################################################################
 
     def resolve(self, client_ip:'str') -> 'CIDRMatch | None':
         """ Parses the client IP and iterates rules top-to-bottom, returning the first match.
@@ -137,6 +166,77 @@ class CIDRMatcher:
                 return out
 
         return None
+
+# ################################################################################################################################
+
+    def check(
+        self,
+        client_ip:'str',
+        token_bucket_registry:'TokenBucketRegistry',
+        fixed_window_registry:'FixedWindowRegistry',
+        now_us:'int',
+        ) -> 'CIDRCheckResult | None':
+        """ Resolves the client IP to a rule, checks both limiters, and returns the combined result.
+        """
+
+        # Find which rule (if any) applies to this client ..
+        match = self.resolve(client_ip)
+
+        if match is None:
+            return None
+
+        # .. check both limiters using the matched CIDR block as the registry key ..
+        key  = match.key
+        rule = match.rule
+
+        token_bucket_result = token_bucket_registry.check_inner(key, rule.token_bucket_config, now_us)
+        fixed_window_result = fixed_window_registry.check_inner(key, rule.fixed_window_config, now_us)
+
+        # .. combine into a single result.
+        out = CIDRCheckResult()
+        out.is_allowed          = token_bucket_result.is_allowed and fixed_window_result.is_allowed
+        out.matched_key         = key
+        out.token_bucket_result = token_bucket_result
+        out.fixed_window_result = fixed_window_result
+
+        return out
+
+# ################################################################################################################################
+
+    def remove_rule(self, index:'int') -> 'None':
+        """ Removes the rule at the given index.
+        """
+        del self._rules[index]
+
+# ################################################################################################################################
+
+    def is_empty(self) -> 'bool':
+        """ Returns True if no rules are registered.
+        """
+        return not self._rules
+
+# ################################################################################################################################
+
+    def clear(self) -> 'None':
+        """ Removes all rules.
+        """
+        self._rules.clear()
+
+# ################################################################################################################################
+
+    def replace_all(self, rule_definitions:'list[tuple[list[str], TokenBucketConfig, FixedWindowConfig]]') -> 'None':
+        """ Atomically replaces all rules with a new ordered list.
+        """
+
+        # Build the new list first so that a parsing error does not leave us in a half-updated state ..
+        new_rules:'list[CIDRRule]' = []
+
+        for cidr_list, token_bucket_config, fixed_window_config in rule_definitions:
+            rule = CIDRRule.from_parts(cidr_list, token_bucket_config, fixed_window_config)
+            new_rules.append(rule)
+
+        # .. then swap in one shot.
+        self._rules = new_rules
 
 # ################################################################################################################################
 # ################################################################################################################################

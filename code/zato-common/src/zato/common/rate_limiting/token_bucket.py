@@ -42,6 +42,7 @@ class TokenBucketConfig:
         out.rate                     = rate
         out.burst_allowed            = burst_allowed
         out.refill_rate_micro_per_us = rate
+
         return out
 
 # ################################################################################################################################
@@ -119,6 +120,13 @@ class TokenBucketRegistry:
     def __init__(self) -> 'None':
         self._buckets:'dict[str, _BucketState]' = {}
 
+# ################################################################################################################################
+
+    def __len__(self) -> 'int':
+        return len(self._buckets)
+
+# ################################################################################################################################
+
     def check_inner(self, key:'str', config:'TokenBucketConfig', now_us:'int') -> 'CheckResult':
         """ Core check logic, separated from any framework wrapper for testability.
         """
@@ -142,20 +150,24 @@ class TokenBucketRegistry:
 
         # .. and decide whether the request is allowed.
         out = _consume_or_deny(bucket, config, burst_micro, now_us)
+
         return out
+
+# ################################################################################################################################
 
     def remove(self, key:'str') -> 'None':
         """ Removes the bucket for the given key, if any.
         """
         _ = self._buckets.pop(key, None)
 
-    def __len__(self) -> 'int':
-        return len(self._buckets)
+# ################################################################################################################################
 
     def is_empty(self) -> 'bool':
         """ Returns True if no buckets are registered.
         """
         return not self._buckets
+
+# ################################################################################################################################
 
     def clear(self) -> 'None':
         """ Removes all buckets.

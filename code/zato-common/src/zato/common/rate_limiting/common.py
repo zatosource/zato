@@ -50,6 +50,7 @@ def current_time_us() -> 'int':
     """ Returns the current wall clock time in microseconds since Unix epoch.
     """
     now_seconds = time.time()
+
     out = int(now_seconds * Microseconds_Per_Second)
     return out
 
