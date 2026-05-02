@@ -20,6 +20,11 @@
     --zato-badge-gold: #ffd700;
     --zato-badge-shine: rgba(255, 255, 255, 0.15);
     --zato-badge-border: rgba(255, 255, 255, 0.2);
+
+    --zato-page-heading-margin-inline: 1.875rem;
+    --zato-page-heading-padding-block: 10px;
+    --zato-page-heading-padding-inline-start: 0;
+    --zato-page-heading-padding-inline-end: 10px;
 }
 
 @keyframes zato-spin {
@@ -534,10 +539,9 @@ select {
 
 h2.zato {
     font-size: 80%;
-    padding: 10px;
-    padding-left: 0;
-    margin-left: 1.875rem;
-    margin-right: 1.875rem;
+    padding: var(--zato-page-heading-padding-block) var(--zato-page-heading-padding-inline-end) var(--zato-page-heading-padding-block) var(--zato-page-heading-padding-inline-start);
+    margin-left: var(--zato-page-heading-margin-inline);
+    margin-right: var(--zato-page-heading-margin-inline);
     color: #222;
     border-bottom: 1px dotted #767676
 }

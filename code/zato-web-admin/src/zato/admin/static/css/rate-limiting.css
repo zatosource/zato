@@ -6,8 +6,22 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    padding: 8px 0;
-    min-width: 620px;
+    box-sizing: border-box;
+    margin-left: var(--zato-page-heading-margin-inline);
+    margin-right: var(--zato-page-heading-margin-inline);
+    padding-left: var(--zato-page-heading-padding-inline-start);
+    padding-right: var(--zato-page-heading-padding-inline-end);
+    padding-top: 8px;
+    padding-bottom: 8px;
+    min-width: 0;
+    width: auto;
+}
+
+#markup > .rate-limiting-container {
+    margin-left: var(--zato-page-heading-margin-inline);
+    margin-right: var(--zato-page-heading-margin-inline);
+    padding-left: var(--zato-page-heading-padding-inline-start);
+    padding-right: var(--zato-page-heading-padding-inline-end);
 }
 
 /* ------------------------------------------------------------ */
@@ -22,6 +36,7 @@
     border: 1px solid #d0d0d0;
     border-radius: 4px;
     background: #fcfcfc;
+    font-size: 11px;
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 
