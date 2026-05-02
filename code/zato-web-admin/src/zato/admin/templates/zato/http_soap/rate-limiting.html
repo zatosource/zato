@@ -1,0 +1,42 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Rate limiting - {{ channel_name }}{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/rate-limiting.css">
+{% endblock %}
+
+{% block "extra_js" %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/sortable/Sortable.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/rate-limiting.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $(document).ready(function() {
+        $.fn.zato.rate_limiting.init('rate-limiting-container', 'edit');
+    });
+    </script>
+{% endblock %}
+
+{% block "content" %}
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<div id="markup">
+<h2 class="zato">Rate limiting - {{ channel_name }}</h2>
+
+<div class='page_prompt' style="clear:left">
+    <a href="/zato/http-soap/?cluster={{ cluster_id }}&connection=channel&transport=plain_http">Show REST channels</a>
+</div>
+
+<div class="rate-limiting-container" id="rate-limiting-container">
+</div>
+<span class="rate-limiting-button-add" onclick="$.fn.zato.rate_limiting.add_rule('rate-limiting-container')">+ Add rule</span>
+
+<div style="margin-top:12px">
+    <button type="button" class="btn btn-primary" onclick="$.fn.zato.rate_limiting.save('rate-limiting-container', '{{ channel_id }}')">Save</button>
+</div>
+
+</div>
+
+{% endblock %}

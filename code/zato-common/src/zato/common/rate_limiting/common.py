@@ -28,6 +28,8 @@ Window_Unit_Hour   = 'hour'
 Window_Unit_Day    = 'day'
 Window_Unit_Month  = 'month'
 
+client_address_headers = ['HTTP_X_ZATO_FORWARDED_FOR', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR']
+
 _all_window_units = {
     Window_Unit_Second,
     Window_Unit_Minute,

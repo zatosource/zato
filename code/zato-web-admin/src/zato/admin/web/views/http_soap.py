@@ -510,3 +510,22 @@ def invoke_outconn(req, id):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+@method_allowed('GET')
+def rate_limiting(req, id): # type: ignore
+    response = req.zato.client.invoke('zato.http-soap.get', {
+        'cluster_id': req.zato.cluster_id,
+        'id': id,
+    })
+
+    return_data = {
+        'cluster_id': req.zato.cluster_id,
+        'channel_id': id,
+        'channel_name': response.data.name,
+        'zato_template_name': 'zato/http_soap/rate-limiting.html',
+    }
+
+    return TemplateResponse(req, 'zato/http_soap/rate-limiting.html', return_data)
+
+# ################################################################################################################################
+# ################################################################################################################################

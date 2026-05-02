@@ -278,6 +278,10 @@
                             <th class='ignore'>&nbsp;</th> {% comment %} method {% endcomment %}
                         {% endif %}
 
+                        {% if connection == 'channel' %}
+                        <th>&nbsp;</th> {% comment %} _rate_limiting {% endcomment %}
+                        {% endif %}
+
                         <!-- 31, 32 -->
                         <th>&nbsp;</th> {% comment %} _edit {% endcomment %}
                         <th>&nbsp;</th> {% comment %} _delete {% endcomment %}
@@ -423,6 +427,10 @@
                             <td class='ignore'>{{ item.url_params_pri }}</td>
                             <td class='ignore'>{{ item.params_pri }}</td>
                             <td class='ignore'>{{ item.method|default:"" }}</td>
+                        {% endif %}
+
+                        {% if connection == 'channel' %}
+                        <td><a href="/zato/http-soap/rate-limiting/{{ item.id }}/?cluster={{ cluster_id }}">Rate limiting</a></td>
                         {% endif %}
 
                         <!-- 31, 32 -->

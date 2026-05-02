@@ -1,0 +1,325 @@
+/* ------------------------------------------------------------ */
+/* Rate limiting - container                                    */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 0;
+    min-width: 620px;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - rule row                                     */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-rule {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    background: #fcfcfc;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.rate-limiting-rule:hover {
+    border-color: #b0b0b0;
+}
+
+.rate-limiting-rule.rate-limiting-dragging {
+    opacity: 0.5;
+    border-color: #5794d0;
+    box-shadow: 0 2px 8px #5794d033;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - drag handle                                  */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-drag-handle {
+    cursor: grab;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 2px;
+    flex-shrink: 0;
+    opacity: 0.4;
+    transition: opacity 0.15s;
+}
+
+.rate-limiting-rule:hover .rate-limiting-drag-handle {
+    opacity: 0.7;
+}
+
+.rate-limiting-drag-handle-dot-row {
+    display: flex;
+    gap: 2px;
+}
+
+.rate-limiting-drag-handle-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #666666;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - rule number                                  */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-rule-number {
+    display: inline-block;
+    width: 18px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #999999;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - pills area                                   */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    min-width: 140px;
+    flex: 1;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - pill                                         */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: var(--zato-pill-radius);
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    background: #2563af14;
+    color: #1a56a8;
+    border: 1px solid #2563af38;
+    white-space: nowrap;
+    user-select: none;
+    transition: background 0.1s;
+}
+
+.rate-limiting-pill:hover {
+    background: #2563af24;
+}
+
+.rate-limiting-pill-remove {
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    color: #1a56a8;
+    opacity: 0.5;
+    transition: opacity 0.1s;
+    margin-left: 2px;
+}
+
+.rate-limiting-pill-remove:hover {
+    opacity: 1;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - pill input                                   */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-pill-input {
+    border: 1px dashed #b0b0b0;
+    border-radius: var(--zato-pill-radius);
+    padding: 3px 8px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 11px;
+    width: 130px;
+    outline: none;
+    background: #ffffff;
+    transition: border-color 0.15s;
+}
+
+.rate-limiting-pill-input:focus {
+    border-color: #5794d0;
+}
+
+.rate-limiting-pill-add-button {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--zato-pill-radius);
+    border: 1px dashed #b0b0b0;
+    font-size: 14px;
+    color: #666666;
+    background: #f8f9fa;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.rate-limiting-pill-add-button:hover {
+    border-color: #5794d0;
+    color: #5794d0;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - suggestions dropdown                         */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-suggestions {
+    position: absolute;
+    z-index: 10000;
+    background: #ffffff;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px #00000026;
+    min-width: 220px;
+    max-height: 260px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.rate-limiting-suggestion-header {
+    padding: 4px 10px 2px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: #999999;
+    user-select: none;
+}
+
+.rate-limiting-suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.1s;
+}
+
+.rate-limiting-suggestion-item:hover {
+    background: #f0f4f8;
+}
+
+.rate-limiting-suggestion-cidr {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-weight: 500;
+    color: #1a56a8;
+}
+
+.rate-limiting-suggestion-label {
+    color: #666666;
+    font-size: 11px;
+}
+
+.rate-limiting-suggestion-separator {
+    height: 1px;
+    background: #e9ecef;
+    margin: 4px 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - config fields                                */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-config-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding-left: 8px;
+    border-left: 1px solid #e9ecef;
+    margin-left: 4px;
+}
+
+.rate-limiting-config-label {
+    font-size: 11px;
+    color: #666666;
+    white-space: nowrap;
+}
+
+.rate-limiting-config-input {
+    width: 60px;
+    padding: 3px 6px;
+    border: 1px solid #d0d0d0;
+    border-radius: 3px;
+    font-size: 11px;
+    text-align: right;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.rate-limiting-config-input:focus {
+    border-color: #5794d0;
+}
+
+.rate-limiting-config-select {
+    padding: 3px 4px;
+    border: 1px solid #d0d0d0;
+    border-radius: 3px;
+    font-size: 11px;
+    outline: none;
+    background: #ffffff;
+    transition: border-color 0.15s;
+}
+
+.rate-limiting-config-select:focus {
+    border-color: #5794d0;
+}
+
+.rate-limiting-config-unit {
+    font-size: 11px;
+    color: #666666;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - add and remove buttons                       */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-button-remove {
+    cursor: pointer;
+    font-size: 11px;
+    color: #666666;
+    background: none;
+    border: none;
+    padding: 0;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: color 0.15s;
+}
+
+.rate-limiting-button-remove:hover {
+    color: #333333;
+}
+
+.rate-limiting-button-add {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 3px;
+    border: 1px dashed #b0b0b0;
+    font-size: 12px;
+    color: #666666;
+    background: #f8f9fa;
+    margin-top: 4px;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.rate-limiting-button-add:hover {
+    border-color: #5794d0;
+    color: #5794d0;
+}

@@ -51,6 +51,7 @@ from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub.matcher import PatternMatcher
 from zato.common.pubsub.redis_backend import RedisPubSubBackend
 from zato.common.pubsub.subscriptions_store import SubscriptionsStore
+from zato.common.rate_limiting.common import client_address_headers
 from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
@@ -211,7 +212,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self.delivery_store = None
         self.static_config = Bunch()
         self.component_enabled = Bunch()
-        self.client_address_headers = ['HTTP_X_ZATO_FORWARDED_FOR', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR']
+        self.client_address_headers = client_address_headers
         self.return_tracebacks = False
         self.default_error_message = ''
         self.time_util = TimeUtil()
