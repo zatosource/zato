@@ -266,11 +266,10 @@
     margin-top: 8px;
     margin-left: 28px;
     padding: 0;
-    border-left: 2px solid #e2e6ea;
+    border-left: 2px solid color-mix(in srgb, var(--slot-accent) 30%, #e2e6ea);
 }
 
 .rate-limiting-slot {
-    --slot-accent: #5794d0;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -293,7 +292,7 @@
     height: 8px;
     border-radius: 50%;
     background: #ffffff;
-    border: 2px solid #c0c8d0;
+    border: 2px solid color-mix(in srgb, var(--slot-accent) 40%, #c0c8d0);
     transition: border-color 0.15s, background 0.15s;
 }
 
@@ -306,8 +305,9 @@
     border-color: var(--slot-accent);
 }
 
-.rate-limiting-slot[data-disabled="true"] {
-    --slot-accent: #c0c8d0;
+.rate-limiting-slot[data-disabled="true"]::before {
+    background: color-mix(in srgb, var(--slot-accent) 20%, #d0d0d0);
+    border-color: color-mix(in srgb, var(--slot-accent) 20%, #d0d0d0);
 }
 
 .rate-limiting-slot-time {
@@ -343,7 +343,7 @@
 }
 
 .rate-limiting-slot-toggle:hover {
-    color: #5794d0;
+    color: var(--slot-accent);
 }
 
 .rate-limiting-slot-delete:hover {
@@ -470,8 +470,7 @@
 .rate-limiting-actions {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    gap: 12px;
+    justify-content: space-between;
     width: 75%;
     margin-left: auto;
     margin-right: auto;

@@ -59,6 +59,14 @@
 
     var rule_counter = 0;
 
+    var row_accent_colors = [
+        '#2e7d6a',
+        '#8c3a4a',
+        '#9a7b2e',
+        '#4a6280',
+        '#7a5264'
+    ];
+
     // ////////////////////////////////////////////////////////////////////////
     // Generic dropdown - used by both CIDR pills and time range inputs
     // ////////////////////////////////////////////////////////////////////////
@@ -225,8 +233,10 @@
         $.fn.zato.rate_limiting.setup_drag(container_id);
         $.fn.zato.rate_limiting.close_dropdown_on_outside_click();
 
-        // Start with one empty rule
-        $.fn.zato.rate_limiting.add_rule(container_id);
+        // Start with five rows for color preview
+        for(var init_idx = 0; init_idx < 5; init_idx++) {
+            $.fn.zato.rate_limiting.add_rule(container_id);
+        }
     };
 
     // ////////////////////////////////////////////////////////////////////////
@@ -243,6 +253,9 @@
         var rule_elem = document.createElement('div');
         rule_elem.className = 'rate-limiting-rule';
         rule_elem.setAttribute('data-rule-index', rule_index);
+
+        var accent_color = row_accent_colors[rule_index % row_accent_colors.length];
+        rule_elem.style.setProperty('--slot-accent', accent_color);
 
         // Header row: drag handle + number + CIDR pills + delete
         var header = document.createElement('div');
@@ -302,10 +315,10 @@
         // The first slot is always "all day" - it cannot be removed
         $.fn.zato.rate_limiting.add_slot(slots, 'All day', '', '', true);
 
-        // "Add time slot" button - reuses the same style as "Add rule"
+        // "Add rule" button inside the row
         var add_slot_button = document.createElement('span');
         add_slot_button.className = 'rate-limiting-button-add';
-        add_slot_button.textContent = '+ Add time slot';
+        add_slot_button.textContent = '+ Add rule';
         add_slot_button.onclick = function() {
             $.fn.zato.rate_limiting.begin_add_slot(slots, add_slot_button);
         };
@@ -514,6 +527,9 @@
             $.fn.zato.rate_limiting.show_dropdown(from_input, time_suggestions, from_input.value, function(selected_value) {
                 from_input.value = selected_value;
                 to_input.focus();
+                // The dropdown was just hidden by the item click,
+                // so we re-show it for the "to" field after a tick.
+                setTimeout(show_to_dropdown, 0);
             });
         };
 
