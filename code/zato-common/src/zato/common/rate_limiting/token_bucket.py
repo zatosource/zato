@@ -35,7 +35,7 @@ class TokenBucketConfig:
     refill_rate_micro_per_us: 'int'
 
     @classmethod
-    def from_parts(class_, rate:'int', burst_allowed:'int') -> 'TokenBucketConfig': # type: ignore
+    def from_parts(class_, rate:'int', burst_allowed:'int') -> 'TokenBucketConfig': # pyright: ignore[reportSelfClsParameterName]
         """ Creates a config from rate (tokens/second) and burst capacity.
         """
         out = class_()

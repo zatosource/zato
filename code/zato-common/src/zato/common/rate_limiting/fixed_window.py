@@ -84,7 +84,7 @@ class FixedWindowConfig:
     parsed_window_unit: 'str'
 
     @classmethod
-    def from_parts(class_, limit:'int', window_unit:'str') -> 'FixedWindowConfig': # type: ignore
+    def from_parts(class_, limit:'int', window_unit:'str') -> 'FixedWindowConfig': # pyright: ignore[reportSelfClsParameterName]
         """ Creates a config from a limit and a window unit string.
         """
         out = class_()
