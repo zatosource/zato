@@ -353,7 +353,6 @@
 .rate-limiting-rule .rate-limiting-config-input[data-field="time_to"] {
     width: 46px;
     text-align: center;
-    cursor: pointer;
 }
 
 /* ------------------------------------------------------------ */

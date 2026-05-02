@@ -53,6 +53,8 @@
         ]}
     ];
 
+    var time_input_pattern = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
     var window_units = ['minute', 'hour', 'day', 'month'];
 
     var rule_counter = 0;
@@ -166,6 +168,45 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
+    $.fn.zato.rate_limiting.filter_time_input = function(event) {
+        var input = event.target;
+        var key = event.key;
+
+        // Allow navigation and editing keys
+        if(key === 'Backspace' || key === 'Delete' || key === 'ArrowLeft' || key === 'ArrowRight' || key === 'Tab' || key === 'Escape') {
+            return;
+        }
+
+        // Block everything except digits
+        if(key < '0' || key > '9') {
+            event.preventDefault();
+            return;
+        }
+
+        // Auto-insert colon after two digits
+        var current = input.value;
+
+        if(current.length === 2 && current.indexOf(':') === -1) {
+            input.value = current + ':';
+        }
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.rate_limiting.validate_time_input = function(input) {
+        var value = input.value;
+
+        if(value === '') {
+            return;
+        }
+
+        if(!time_input_pattern.test(value)) {
+            input.value = '';
+        }
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
     $.fn.zato.rate_limiting.close_dropdown_on_outside_click = function() {
         $(document).on('mousedown.rate_limiting', function(event) {
             var target = $(event.target);
@@ -254,13 +295,18 @@
         time_from_input.className = 'rate-limiting-config-input';
         time_from_input.setAttribute('data-field', 'time_from');
         time_from_input.placeholder = 'from';
-        time_from_input.readOnly = true;
+        time_from_input.maxLength = 5;
 
-        time_from_input.onclick = function() {
-            $.fn.zato.rate_limiting.show_dropdown(time_from_input, time_suggestions, '', function(selected_value) {
+        var show_time_from_dropdown = function() {
+            $.fn.zato.rate_limiting.show_dropdown(time_from_input, time_suggestions, time_from_input.value, function(selected_value) {
                 time_from_input.value = selected_value;
             });
         };
+
+        time_from_input.onfocus = show_time_from_dropdown;
+        time_from_input.oninput = show_time_from_dropdown;
+        time_from_input.onkeydown = $.fn.zato.rate_limiting.filter_time_input;
+        time_from_input.onblur = function() { $.fn.zato.rate_limiting.validate_time_input(time_from_input); };
 
         time_fields.appendChild(time_from_input);
 
@@ -274,13 +320,18 @@
         time_to_input.className = 'rate-limiting-config-input';
         time_to_input.setAttribute('data-field', 'time_to');
         time_to_input.placeholder = 'to';
-        time_to_input.readOnly = true;
+        time_to_input.maxLength = 5;
 
-        time_to_input.onclick = function() {
-            $.fn.zato.rate_limiting.show_dropdown(time_to_input, time_suggestions, '', function(selected_value) {
+        var show_time_to_dropdown = function() {
+            $.fn.zato.rate_limiting.show_dropdown(time_to_input, time_suggestions, time_to_input.value, function(selected_value) {
                 time_to_input.value = selected_value;
             });
         };
+
+        time_to_input.onfocus = show_time_to_dropdown;
+        time_to_input.oninput = show_time_to_dropdown;
+        time_to_input.onkeydown = $.fn.zato.rate_limiting.filter_time_input;
+        time_to_input.onblur = function() { $.fn.zato.rate_limiting.validate_time_input(time_to_input); };
 
         time_fields.appendChild(time_to_input);
 
