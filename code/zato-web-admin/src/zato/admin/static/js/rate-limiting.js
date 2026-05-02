@@ -5,8 +5,6 @@
 
 (function($) {
 
-    var rl = $.fn.zato.rate_limiting;
-
     // Suggested CIDR ranges - IPv4 first, then IPv6
     var suggestions = [
         {cidr: '0.0.0.0/0',      label: 'all IPv4'},
@@ -25,17 +23,17 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    rl.init = function(container_id, mode) {
+    $.fn.zato.rate_limiting.init = function(container_id, mode) {
         var container = document.getElementById(container_id);
         container.innerHTML = '';
         rule_counter = 0;
-        rl.setup_drag(container_id);
-        rl.close_suggestions_on_outside_click();
+        $.fn.zato.rate_limiting.setup_drag(container_id);
+        $.fn.zato.rate_limiting.close_suggestions_on_outside_click();
     };
 
     // ////////////////////////////////////////////////////////////////////////
 
-    rl.add_rule = function(container_id) {
+    $.fn.zato.rate_limiting.add_rule = function(container_id) {
         var container = document.getElementById(container_id);
 
         rule_counter += 1;
@@ -48,10 +46,10 @@
         // Drag handle
         var handle = document.createElement('div');
         handle.className = 'rate-limiting-drag-handle';
-        for(var r = 0; r < 3; r++) {
+        for(var row_idx = 0; row_idx < 3; row_idx++) {
             var dot_row = document.createElement('div');
             dot_row.className = 'rate-limiting-drag-handle-dot-row';
-            for(var d = 0; d < 2; d++) {
+            for(var dot_idx = 0; dot_idx < 2; dot_idx++) {
                 var dot = document.createElement('div');
                 dot.className = 'rate-limiting-drag-handle-dot';
                 dot_row.appendChild(dot);
@@ -75,11 +73,47 @@
         add_pill_button.className = 'rate-limiting-pill-add-button';
         add_pill_button.textContent = '+';
         add_pill_button.onclick = function() {
-            rl.show_input(pills, add_pill_button);
+            $.fn.zato.rate_limiting.show_input(pills, add_pill_button);
         };
         pills.appendChild(add_pill_button);
 
         rule_elem.appendChild(pills);
+
+        // Time range config group
+        var time_group = document.createElement('div');
+        time_group.className = 'rate-limiting-config-group';
+
+        var time_toggle = document.createElement('span');
+        time_toggle.className = 'rate-limiting-time-toggle';
+        time_toggle.textContent = '\u23f0';
+        time_toggle.title = 'Toggle time range';
+        time_toggle.onclick = function() {
+            $.fn.zato.rate_limiting.toggle_time_range(rule_elem);
+        };
+        time_group.appendChild(time_toggle);
+
+        var time_fields = document.createElement('div');
+        time_fields.className = 'rate-limiting-time-fields';
+
+        var time_from_input = document.createElement('input');
+        time_from_input.type = 'time';
+        time_from_input.className = 'rate-limiting-config-input';
+        time_from_input.setAttribute('data-field', 'time_from');
+        time_fields.appendChild(time_from_input);
+
+        var time_dash = document.createElement('span');
+        time_dash.className = 'rate-limiting-time-dash';
+        time_dash.textContent = '\u2013';
+        time_fields.appendChild(time_dash);
+
+        var time_to_input = document.createElement('input');
+        time_to_input.type = 'time';
+        time_to_input.className = 'rate-limiting-config-input';
+        time_to_input.setAttribute('data-field', 'time_to');
+        time_fields.appendChild(time_to_input);
+
+        time_group.appendChild(time_fields);
+        rule_elem.appendChild(time_group);
 
         // Token bucket config group
         var tb_group = document.createElement('div');
@@ -145,10 +179,10 @@
         var unit_select = document.createElement('select');
         unit_select.className = 'rate-limiting-config-select';
         unit_select.setAttribute('data-field', 'window_unit');
-        for(var i = 0; i < window_units.length; i++) {
+        for(var unit_idx = 0; unit_idx < window_units.length; unit_idx++) {
             var opt = document.createElement('option');
-            opt.value = window_units[i];
-            opt.textContent = window_units[i];
+            opt.value = window_units[unit_idx];
+            opt.textContent = window_units[unit_idx];
             unit_select.appendChild(opt);
         }
         fw_group.appendChild(unit_select);
@@ -160,38 +194,66 @@
         remove_button.href = 'javascript:void(0)';
         remove_button.textContent = 'Delete rule';
         remove_button.onclick = function() {
-            rl.remove_rule(container_id, rule_elem);
+            $.fn.zato.rate_limiting.remove_rule(container_id, rule_elem);
         };
         rule_elem.appendChild(remove_button);
 
         container.appendChild(rule_elem);
-        rl.renumber(container_id);
+        $.fn.zato.rate_limiting.renumber(container_id);
     };
 
     // ////////////////////////////////////////////////////////////////////////
 
-    rl.remove_rule = function(container_id, rule_elem) {
+    $.fn.zato.rate_limiting.remove_rule = function(container_id, rule_elem) {
         rule_elem.parentNode.removeChild(rule_elem);
-        rl.renumber(container_id);
+        $.fn.zato.rate_limiting.renumber(container_id);
     };
 
     // ////////////////////////////////////////////////////////////////////////
 
-    rl.renumber = function(container_id) {
+    $.fn.zato.rate_limiting.toggle_time_range = function(rule_elem) {
+
+        var toggle_button = rule_elem.querySelector('.rate-limiting-time-toggle');
+        var time_fields = rule_elem.querySelector('.rate-limiting-time-fields');
+        var is_active = toggle_button.classList.contains('rate-limiting-time-active');
+
+        if(is_active) {
+
+            // Hide the fields and clear values ..
+            toggle_button.classList.remove('rate-limiting-time-active');
+            time_fields.classList.remove('rate-limiting-time-visible');
+
+            var time_from = rule_elem.querySelector('[data-field="time_from"]');
+            var time_to = rule_elem.querySelector('[data-field="time_to"]');
+
+            time_from.value = '';
+            time_to.value = '';
+        }
+        else {
+
+            // .. show the fields.
+            toggle_button.classList.add('rate-limiting-time-active');
+            time_fields.classList.add('rate-limiting-time-visible');
+        }
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.rate_limiting.renumber = function(container_id) {
         var container = document.getElementById(container_id);
         var rules = container.querySelectorAll('.rate-limiting-rule');
-        for(var i = 0; i < rules.length; i++) {
-            rules[i].setAttribute('data-rule-index', i);
-            var number = rules[i].querySelector('.rate-limiting-rule-number');
+        for(var rule_idx = 0; rule_idx < rules.length; rule_idx++) {
+            rules[rule_idx].setAttribute('data-rule-index', rule_idx);
+            var number = rules[rule_idx].querySelector('.rate-limiting-rule-number');
             if(number) {
-                number.textContent = '#' + (i + 1);
+                number.textContent = '#' + (rule_idx + 1);
             }
         }
     };
 
     // ////////////////////////////////////////////////////////////////////////
 
-    rl.add_pill = function(rule_elem, cidr_text) {
+    $.fn.zato.rate_limiting.add_pill = function(rule_elem, cidr_text) {
         cidr_text = cidr_text.trim();
         if(!cidr_text) {
             return;
@@ -211,7 +273,7 @@
         remove_x.className = 'rate-limiting-pill-remove';
         remove_x.textContent = '\u00d7';
         remove_x.onclick = function() {
-            rl.remove_pill(pill);
+            $.fn.zato.rate_limiting.remove_pill(pill);
         };
         pill.appendChild(remove_x);
 
@@ -220,13 +282,13 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    rl.remove_pill = function(pill_elem) {
+    $.fn.zato.rate_limiting.remove_pill = function(pill_elem) {
         pill_elem.parentNode.removeChild(pill_elem);
     };
 
     // ////////////////////////////////////////////////////////////////////////
 
-    rl.show_input = function(pills_container, add_button) {
+    $.fn.zato.rate_limiting.show_input = function(pills_container, add_button) {
 
         // If there's already an input visible, focus it instead of adding another
         var existing = pills_container.querySelector('.rate-limiting-pill-input');
@@ -246,23 +308,23 @@
                 var value = input.value.trim();
                 if(value) {
                     var rule_elem = pills_container.closest('.rate-limiting-rule');
-                    rl.add_pill(rule_elem, value);
+                    $.fn.zato.rate_limiting.add_pill(rule_elem, value);
                 }
                 input.value = '';
-                rl.hide_suggestions();
+                $.fn.zato.rate_limiting.hide_suggestions();
             }
             if(e.key === 'Escape') {
-                rl.hide_suggestions();
+                $.fn.zato.rate_limiting.hide_suggestions();
                 input.parentNode.removeChild(input);
             }
         };
 
         input.onfocus = function() {
-            rl.show_suggestions(input);
+            $.fn.zato.rate_limiting.show_suggestions(input);
         };
 
         input.oninput = function() {
-            rl.show_suggestions(input);
+            $.fn.zato.rate_limiting.show_suggestions(input);
         };
 
         pills_container.insertBefore(input, add_button);
@@ -271,12 +333,12 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    rl.get_existing_cidrs = function(rule_elem) {
+    $.fn.zato.rate_limiting.get_existing_cidrs = function(rule_elem) {
         var pill_elems = rule_elem.querySelectorAll('.rate-limiting-pill');
         var existing = {};
 
-        for(var i = 0; i < pill_elems.length; i++) {
-            var text_span = pill_elems[i].querySelector('span:first-child');
+        for(var pill_idx = 0; pill_idx < pill_elems.length; pill_idx++) {
+            var text_span = pill_elems[pill_idx].querySelector('span:first-child');
             existing[text_span.textContent] = true;
         }
 
@@ -285,12 +347,12 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    rl.show_suggestions = function(input_elem) {
-        rl.hide_suggestions();
+    $.fn.zato.rate_limiting.show_suggestions = function(input_elem) {
+        $.fn.zato.rate_limiting.hide_suggestions();
 
         var filter = input_elem.value.trim().toLowerCase();
         var rule_elem = input_elem.closest('.rate-limiting-rule');
-        var existing = rl.get_existing_cidrs(rule_elem);
+        var existing = $.fn.zato.rate_limiting.get_existing_cidrs(rule_elem);
 
         var dropdown = document.createElement('div');
         dropdown.className = 'rate-limiting-suggestions';
@@ -304,26 +366,26 @@
         var has_ipv4 = false;
         var ipv6_items = [];
 
-        for(var i = 0; i < suggestions.length; i++) {
-            var s = suggestions[i];
+        for(var suggestion_idx = 0; suggestion_idx < suggestions.length; suggestion_idx++) {
+            var suggestion = suggestions[suggestion_idx];
 
-            if(existing[s.cidr]) {
+            if(existing[suggestion.cidr]) {
                 continue;
             }
 
-            if(filter && s.cidr.toLowerCase().indexOf(filter) === -1 && s.label.toLowerCase().indexOf(filter) === -1) {
+            if(filter && suggestion.cidr.toLowerCase().indexOf(filter) === -1 && suggestion.label.toLowerCase().indexOf(filter) === -1) {
                 continue;
             }
 
-            var is_ipv6 = s.cidr.indexOf(':') !== -1;
+            var is_ipv6 = suggestion.cidr.indexOf(':') !== -1;
 
             if(is_ipv6) {
-                ipv6_items.push(s);
+                ipv6_items.push(suggestion);
                 continue;
             }
 
             has_ipv4 = true;
-            dropdown.appendChild(rl.make_suggestion_item(s, input_elem));
+            dropdown.appendChild($.fn.zato.rate_limiting.make_suggestion_item(suggestion, input_elem));
         }
 
         if(!has_ipv4) {
@@ -342,8 +404,8 @@
             ipv6_header.textContent = 'IPv6';
             dropdown.appendChild(ipv6_header);
 
-            for(var j = 0; j < ipv6_items.length; j++) {
-                dropdown.appendChild(rl.make_suggestion_item(ipv6_items[j], input_elem));
+            for(var ipv6_idx = 0; ipv6_idx < ipv6_items.length; ipv6_idx++) {
+                dropdown.appendChild($.fn.zato.rate_limiting.make_suggestion_item(ipv6_items[ipv6_idx], input_elem));
             }
         }
 
@@ -361,7 +423,7 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    rl.make_suggestion_item = function(suggestion, input_elem) {
+    $.fn.zato.rate_limiting.make_suggestion_item = function(suggestion, input_elem) {
         var item = document.createElement('div');
         item.className = 'rate-limiting-suggestion-item';
 
@@ -377,9 +439,9 @@
 
         item.onclick = function() {
             var rule_elem = input_elem.closest('.rate-limiting-rule');
-            rl.add_pill(rule_elem, suggestion.cidr);
+            $.fn.zato.rate_limiting.add_pill(rule_elem, suggestion.cidr);
             input_elem.value = '';
-            rl.hide_suggestions();
+            $.fn.zato.rate_limiting.hide_suggestions();
             input_elem.focus();
         };
 
@@ -388,7 +450,7 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    rl.hide_suggestions = function() {
+    $.fn.zato.rate_limiting.hide_suggestions = function() {
         var existing = document.getElementById('rate-limiting-suggestions-active');
         if(existing) {
             existing.parentNode.removeChild(existing);
@@ -397,18 +459,18 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    rl.close_suggestions_on_outside_click = function() {
+    $.fn.zato.rate_limiting.close_suggestions_on_outside_click = function() {
         $(document).on('mousedown.rate_limiting', function(e) {
             var target = $(e.target);
             if(!target.closest('.rate-limiting-suggestions').length && !target.hasClass('rate-limiting-pill-input')) {
-                rl.hide_suggestions();
+                $.fn.zato.rate_limiting.hide_suggestions();
             }
         });
     };
 
     // ////////////////////////////////////////////////////////////////////////
 
-    rl.setup_drag = function(container_id) {
+    $.fn.zato.rate_limiting.setup_drag = function(container_id) {
         var container = document.getElementById(container_id);
         if(!container) {
             return;
@@ -423,25 +485,25 @@
             animation: 150,
             ghostClass: 'rate-limiting-dragging',
             onEnd: function() {
-                rl.renumber(container_id);
+                $.fn.zato.rate_limiting.renumber(container_id);
             }
         });
     };
 
     // ////////////////////////////////////////////////////////////////////////
 
-    rl.get_rules = function(container_id) {
+    $.fn.zato.rate_limiting.get_rules = function(container_id) {
         var container = document.getElementById(container_id);
         var rule_elems = container.querySelectorAll('.rate-limiting-rule');
         var rules = [];
 
-        for(var i = 0; i < rule_elems.length; i++) {
-            var rule_elem = rule_elems[i];
+        for(var rule_idx = 0; rule_idx < rule_elems.length; rule_idx++) {
+            var rule_elem = rule_elems[rule_idx];
             var pill_elems = rule_elem.querySelectorAll('.rate-limiting-pill');
             var cidr_list = [];
 
-            for(var p = 0; p < pill_elems.length; p++) {
-                var text_span = pill_elems[p].querySelector('span:first-child');
+            for(var pill_idx = 0; pill_idx < pill_elems.length; pill_idx++) {
+                var text_span = pill_elems[pill_idx].querySelector('span:first-child');
                 cidr_list.push(text_span.textContent);
             }
 
@@ -449,13 +511,17 @@
             var burst_input = rule_elem.querySelector('[data-field="burst"]');
             var limit_input = rule_elem.querySelector('[data-field="limit"]');
             var unit_select = rule_elem.querySelector('[data-field="window_unit"]');
+            var time_from_input = rule_elem.querySelector('[data-field="time_from"]');
+            var time_to_input = rule_elem.querySelector('[data-field="time_to"]');
 
             rules.push({
                 cidr_list: cidr_list,
                 rate: rate_input.value,
                 burst: burst_input.value,
                 limit: limit_input.value,
-                window_unit: unit_select.value
+                window_unit: unit_select.value,
+                time_from: time_from_input.value,
+                time_to: time_to_input.value
             });
         }
 
@@ -464,7 +530,7 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    rl.load_rules = function(container_id, rules_json) {
+    $.fn.zato.rate_limiting.load_rules = function(container_id, rules_json) {
         if(!rules_json) {
             return;
         }
@@ -477,16 +543,16 @@
             rules = rules_json;
         }
 
-        for(var i = 0; i < rules.length; i++) {
-            rl.add_rule(container_id);
+        for(var rule_idx = 0; rule_idx < rules.length; rule_idx++) {
+            $.fn.zato.rate_limiting.add_rule(container_id);
 
             var container = document.getElementById(container_id);
             var rule_elem = container.children[container.children.length - 1];
 
-            var rule = rules[i];
+            var rule = rules[rule_idx];
 
-            for(var c = 0; c < rule.cidr_list.length; c++) {
-                rl.add_pill(rule_elem, rule.cidr_list[c]);
+            for(var cidr_idx = 0; cidr_idx < rule.cidr_list.length; cidr_idx++) {
+                $.fn.zato.rate_limiting.add_pill(rule_elem, rule.cidr_list[cidr_idx]);
             }
 
             var rate_input = rule_elem.querySelector('[data-field="rate"]');
@@ -498,13 +564,24 @@
             burst_input.value = rule.burst;
             limit_input.value = rule.limit;
             unit_select.value = rule.window_unit;
+
+            // Restore time range if saved values are present
+            if(rule.time_from && rule.time_to) {
+                var time_from_input = rule_elem.querySelector('[data-field="time_from"]');
+                var time_to_input = rule_elem.querySelector('[data-field="time_to"]');
+
+                time_from_input.value = rule.time_from;
+                time_to_input.value = rule.time_to;
+
+                $.fn.zato.rate_limiting.toggle_time_range(rule_elem);
+            }
         }
     };
 
     // ////////////////////////////////////////////////////////////////////////
 
-    rl.save = function(container_id, channel_id) {
-        var rules_json = rl.get_rules(container_id);
+    $.fn.zato.rate_limiting.save = function(container_id, channel_id) {
+        var rules_json = $.fn.zato.rate_limiting.get_rules(container_id);
 
         $.ajax({
             url: '/zato/http-soap/rate-limiting/save/' + channel_id + '/',
