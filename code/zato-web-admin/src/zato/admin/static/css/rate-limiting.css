@@ -1,4 +1,14 @@
 /* ------------------------------------------------------------ */
+/* Rate limiting - page heading                                 */
+/* ------------------------------------------------------------ */
+
+#markup > h2.zato {
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* ------------------------------------------------------------ */
 /* Rate limiting - container                                    */
 /* ------------------------------------------------------------ */
 
@@ -7,21 +17,12 @@
     flex-direction: column;
     gap: 6px;
     box-sizing: border-box;
-    margin-left: var(--zato-page-heading-margin-inline);
-    margin-right: var(--zato-page-heading-margin-inline);
-    padding-left: var(--zato-page-heading-padding-inline-start);
-    padding-right: 0;
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
     padding-top: 8px;
     padding-bottom: 8px;
     min-width: 0;
-    width: auto;
-}
-
-#markup > .rate-limiting-container {
-    margin-left: var(--zato-page-heading-margin-inline);
-    margin-right: var(--zato-page-heading-margin-inline);
-    padding-left: var(--zato-page-heading-padding-inline-start);
-    padding-right: 0;
 }
 
 /* ------------------------------------------------------------ */
@@ -32,10 +33,10 @@
     display: flex;
     flex-direction: column;
     gap: 0;
-    padding: 8px 10px;
-    border: 1px solid #d0d0d0;
-    border-radius: 4px;
-    background: #fcfcfc;
+    padding: 10px 14px 10px 10px;
+    border: 1px solid #d8dce0;
+    border-radius: 5px;
+    background: #fdfefe;
     font-size: 11px;
     transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -172,6 +173,7 @@
 
 .rate-limiting-pill-input:focus {
     border-color: #5794d0;
+    box-shadow: 0 0 0 2px #5794d01a;
 }
 
 .rate-limiting-pill-add-button {
@@ -260,24 +262,59 @@
 .rate-limiting-slots {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    margin-top: 6px;
-    padding-top: 6px;
-    border-top: 1px solid #e9ecef;
+    gap: 0;
+    margin-top: 8px;
+    margin-left: 28px;
+    padding: 0;
+    border-left: 2px solid #e2e6ea;
 }
 
 .rate-limiting-slot {
+    --slot-accent: #5794d0;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 2px 0 2px 28px;
+    gap: 6px;
+    padding: 5px 0 5px 14px;
+    position: relative;
+    transition: background 0.1s;
+}
+
+.rate-limiting-slot:hover {
+    background: #f8fafc;
+}
+
+.rate-limiting-slot::before {
+    content: '';
+    position: absolute;
+    left: -7px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #c0c8d0;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.rate-limiting-slot:hover::before {
+    border-color: var(--slot-accent);
+}
+
+.rate-limiting-slot[data-slot-type="default"]::before {
+    background: var(--slot-accent);
+    border-color: var(--slot-accent);
+}
+
+.rate-limiting-slot[data-disabled="true"] {
+    --slot-accent: #c0c8d0;
 }
 
 .rate-limiting-slot-time {
     display: flex;
     align-items: center;
     gap: 4px;
-    min-width: 110px;
+    min-width: 90px;
     flex-shrink: 0;
     font-size: 11px;
     color: #666666;
@@ -285,13 +322,38 @@
 
 .rate-limiting-slot-time-label {
     font-weight: 600;
-    color: #444444;
+    color: #2c3e50;
     white-space: nowrap;
+    letter-spacing: 0.2px;
 }
 
-.rate-limiting-slot-time svg,
-.rate-limiting-add-slot svg {
+.rate-limiting-slot-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.rate-limiting-slot-toggle,
+.rate-limiting-slot-delete {
+    font-size: 11px;
+    text-decoration: none;
     color: #999999;
+    transition: color 0.1s;
+}
+
+.rate-limiting-slot-toggle:hover {
+    color: #5794d0;
+}
+
+.rate-limiting-slot-delete:hover {
+    color: #c0392b;
+}
+
+.rate-limiting-slot[data-disabled="true"] .rate-limiting-slot-time,
+.rate-limiting-slot[data-disabled="true"] .rate-limiting-config-group {
+    opacity: 0.35;
+    pointer-events: none;
 }
 
 /* ------------------------------------------------------------ */
@@ -328,6 +390,7 @@
 .rate-limiting-config-input:focus,
 .rate-limiting-config-select:focus {
     border-color: #5794d0;
+    box-shadow: 0 0 0 2px #5794d01a;
 }
 
 .rate-limiting-slot .rate-limiting-config-input {
@@ -355,43 +418,22 @@
 .rate-limiting-time-input {
     width: 46px;
     text-align: center;
-    padding: 3px 4px;
-    border: 1px dashed #b0b0b0;
+    padding: 3px 6px;
+    border: 1px solid #c0c8d0;
     border-radius: 3px;
-    font: 11px sans-serif;
+    font: 11px/1.4 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
     outline: none;
     background: #ffffff;
-    transition: border-color 0.15s;
+    transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .rate-limiting-time-input:focus {
     border-color: #5794d0;
+    box-shadow: 0 0 0 2px #5794d01a;
 }
 
 /* ------------------------------------------------------------ */
-/* Rate limiting - add slot button                              */
-/* ------------------------------------------------------------ */
-
-.rate-limiting-add-slot {
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 8px;
-    margin-left: 28px;
-    border: none;
-    background: none;
-    font-size: 11px;
-    color: #666666;
-    transition: color 0.15s;
-}
-
-.rate-limiting-add-slot:hover {
-    color: #5794d0;
-}
-
-/* ------------------------------------------------------------ */
-/* Rate limiting - add and remove buttons                       */
+/* Rate limiting - add buttons                                  */
 /* ------------------------------------------------------------ */
 
 .rate-limiting-button-add {
@@ -414,6 +456,13 @@
     color: #5794d0;
 }
 
+.rate-limiting-rule .rate-limiting-button-add {
+    align-self: flex-start;
+    margin-left: 28px;
+    margin-top: 6px;
+    margin-bottom: 2px;
+}
+
 /* ------------------------------------------------------------ */
 /* Rate limiting - actions bar                                  */
 /* ------------------------------------------------------------ */
@@ -423,7 +472,8 @@
     align-items: center;
     justify-content: flex-end;
     gap: 12px;
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
     margin-top: 4px;
-    margin-left: var(--zato-page-heading-margin-inline);
-    margin-right: var(--zato-page-heading-margin-inline);
 }
