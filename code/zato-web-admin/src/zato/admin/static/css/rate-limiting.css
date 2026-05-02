@@ -25,13 +25,13 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Rate limiting - rule row                                     */
+/* Rate limiting - rule card                                    */
 /* ------------------------------------------------------------ */
 
 .rate-limiting-rule {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    flex-direction: column;
+    gap: 0;
     padding: 8px 10px;
     border: 1px solid #d0d0d0;
     border-radius: 4px;
@@ -48,6 +48,13 @@
     opacity: 0.5;
     border-color: #5794d0;
     box-shadow: 0 2px 8px #5794d033;
+}
+
+/* Top row: drag handle + number + CIDR pills + delete */
+.rate-limiting-rule-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 /* ------------------------------------------------------------ */
@@ -247,6 +254,47 @@
 }
 
 /* ------------------------------------------------------------ */
+/* Rate limiting - time slots                                   */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-slots {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid #e9ecef;
+}
+
+.rate-limiting-slot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 0 2px 28px;
+}
+
+.rate-limiting-slot-time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 110px;
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #666666;
+}
+
+.rate-limiting-slot-time-label {
+    font-weight: 600;
+    color: #444444;
+    white-space: nowrap;
+}
+
+.rate-limiting-slot-time svg,
+.rate-limiting-add-slot svg {
+    color: #999999;
+}
+
+/* ------------------------------------------------------------ */
 /* Rate limiting - config fields                                */
 /* ------------------------------------------------------------ */
 
@@ -282,7 +330,7 @@
     border-color: #5794d0;
 }
 
-.rate-limiting-rule .rate-limiting-config-input {
+.rate-limiting-slot .rate-limiting-config-input {
     width: 60px;
     text-align: right;
     font: 11px sans-serif;
@@ -290,75 +338,61 @@
     height: 19.8px;
 }
 
-
 .rate-limiting-config-unit {
     font-size: 11px;
     color: #666666;
 }
 
 /* ------------------------------------------------------------ */
-/* Rate limiting - time range                                   */
+/* Rate limiting - time range inputs                            */
 /* ------------------------------------------------------------ */
-
-.rate-limiting-time-toggle {
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    border-radius: var(--zato-pill-radius);
-    border: 1px dashed #b0b0b0;
-    font-size: 13px;
-    color: #666666;
-    background: #f8f9fa;
-    opacity: 0.4;
-    flex-shrink: 0;
-    transition: border-color 0.15s, color 0.15s, opacity 0.1s;
-}
-
-.rate-limiting-time-toggle:hover {
-    border-color: #5794d0;
-    color: #5794d0;
-    opacity: 0.7;
-}
-
-.rate-limiting-time-toggle.rate-limiting-time-active {
-    opacity: 1;
-    border-style: solid;
-    color: #1a56a8;
-    border-color: #2563af38;
-    background: #2563af14;
-}
-
-.rate-limiting-time-fields {
-    display: none;
-    align-items: center;
-    gap: 4px;
-    opacity: 0;
-    transition: opacity 0.1s;
-}
-
-.rate-limiting-time-fields.rate-limiting-time-visible {
-    display: flex;
-    opacity: 1;
-}
 
 .rate-limiting-time-dash {
     font-size: 11px;
     color: #666666;
 }
 
-.rate-limiting-rule .rate-limiting-config-input[data-field="time_from"],
-.rate-limiting-rule .rate-limiting-config-input[data-field="time_to"] {
+.rate-limiting-time-input {
     width: 46px;
     text-align: center;
+    padding: 3px 4px;
+    border: 1px dashed #b0b0b0;
+    border-radius: 3px;
+    font: 11px sans-serif;
+    outline: none;
+    background: #ffffff;
+    transition: border-color 0.15s;
+}
+
+.rate-limiting-time-input:focus {
+    border-color: #5794d0;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - add slot button                              */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-add-slot {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    margin-left: 28px;
+    border: none;
+    background: none;
+    font-size: 11px;
+    color: #666666;
+    transition: color 0.15s;
+}
+
+.rate-limiting-add-slot:hover {
+    color: #5794d0;
 }
 
 /* ------------------------------------------------------------ */
 /* Rate limiting - add and remove buttons                       */
 /* ------------------------------------------------------------ */
-
 
 .rate-limiting-button-add {
     cursor: pointer;

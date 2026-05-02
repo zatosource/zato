@@ -60,6 +60,17 @@
     var rule_counter = 0;
 
     // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.rate_limiting.make_clock_icon = function(size) {
+        var icon = lucide.createElement(lucide.icons.Clock);
+        icon.setAttribute('width', size);
+        icon.setAttribute('height', size);
+        icon.style.verticalAlign = 'middle';
+        icon.style.flexShrink = '0';
+        return icon;
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
     // Generic dropdown - used by both CIDR pills and time range inputs
     // ////////////////////////////////////////////////////////////////////////
 
@@ -210,7 +221,7 @@
     $.fn.zato.rate_limiting.close_dropdown_on_outside_click = function() {
         $(document).on('mousedown.rate_limiting', function(event) {
             var target = $(event.target);
-            if(!target.closest('.rate-limiting-suggestions').length && !target.hasClass('rate-limiting-pill-input') && !target.hasClass('rate-limiting-config-input')) {
+            if(!target.closest('.rate-limiting-suggestions').length && !target.hasClass('rate-limiting-pill-input') && !target.hasClass('rate-limiting-time-input')) {
                 $.fn.zato.rate_limiting.hide_dropdown();
             }
         });
@@ -224,8 +235,13 @@
         rule_counter = 0;
         $.fn.zato.rate_limiting.setup_drag(container_id);
         $.fn.zato.rate_limiting.close_dropdown_on_outside_click();
+
+        // Start with one empty rule
+        $.fn.zato.rate_limiting.add_rule(container_id);
     };
 
+    // ////////////////////////////////////////////////////////////////////////
+    // Rule structure: header row (CIDRs) + time slots (each with its own config)
     // ////////////////////////////////////////////////////////////////////////
 
     $.fn.zato.rate_limiting.add_rule = function(container_id) {
@@ -234,9 +250,14 @@
         rule_counter += 1;
         var rule_index = container.children.length;
 
+        // The rule card is a vertical flex container
         var rule_elem = document.createElement('div');
         rule_elem.className = 'rate-limiting-rule';
         rule_elem.setAttribute('data-rule-index', rule_index);
+
+        // Header row: drag handle + number + CIDR pills + delete
+        var header = document.createElement('div');
+        header.className = 'rate-limiting-rule-header';
 
         // Drag handle
         var handle = document.createElement('div');
@@ -251,19 +272,18 @@
             }
             handle.appendChild(dot_row);
         }
-        rule_elem.appendChild(handle);
+        header.appendChild(handle);
 
         // Rule number
         var number = document.createElement('span');
         number.className = 'rate-limiting-rule-number';
         number.textContent = '#' + (rule_index + 1);
-        rule_elem.appendChild(number);
+        header.appendChild(number);
 
-        // Pills area
+        // Pills area (CIDRs)
         var pills = document.createElement('div');
         pills.className = 'rate-limiting-pills';
 
-        // Add pill button
         var add_pill_button = document.createElement('span');
         add_pill_button.className = 'rate-limiting-pill-add-button';
         add_pill_button.textContent = '+';
@@ -272,132 +292,133 @@
         };
         pills.appendChild(add_pill_button);
 
-        rule_elem.appendChild(pills);
+        header.appendChild(pills);
 
-        // Time range config group
-        var time_group = document.createElement('div');
-        time_group.className = 'rate-limiting-config-group';
-
-        var time_toggle = document.createElement('span');
-        time_toggle.className = 'rate-limiting-time-toggle';
-        time_toggle.textContent = '\u23f0';
-        time_toggle.title = 'Toggle time range';
-        time_toggle.onclick = function() {
-            $.fn.zato.rate_limiting.toggle_time_range(rule_elem);
+        // Delete rule link
+        var remove_button = document.createElement('a');
+        remove_button.href = 'javascript:void(0)';
+        remove_button.textContent = 'Delete rule';
+        remove_button.onclick = function() {
+            $.fn.zato.rate_limiting.remove_rule(container_id, rule_elem);
         };
-        time_group.appendChild(time_toggle);
+        header.appendChild(remove_button);
 
-        var time_fields = document.createElement('div');
-        time_fields.className = 'rate-limiting-time-fields';
+        rule_elem.appendChild(header);
 
-        var time_from_input = document.createElement('input');
-        time_from_input.type = 'text';
-        time_from_input.className = 'rate-limiting-config-input';
-        time_from_input.setAttribute('data-field', 'time_from');
-        time_from_input.placeholder = 'from';
-        time_from_input.maxLength = 5;
+        // Time slots area
+        var slots = document.createElement('div');
+        slots.className = 'rate-limiting-slots';
+        rule_elem.appendChild(slots);
 
-        var show_time_from_dropdown = function() {
-            $.fn.zato.rate_limiting.show_dropdown(time_from_input, time_suggestions, time_from_input.value, function(selected_value) {
-                time_from_input.value = selected_value;
-            });
+        // The first slot is always "all day" - it cannot be removed
+        $.fn.zato.rate_limiting.add_slot(slots, 'all day', '', '', true);
+
+        // "Add time slot" button
+        var add_slot_button = document.createElement('button');
+        add_slot_button.className = 'rate-limiting-add-slot';
+        add_slot_button.appendChild($.fn.zato.rate_limiting.make_clock_icon(12));
+        var add_slot_text = document.createTextNode(' Add time slot');
+        add_slot_button.appendChild(add_slot_text);
+        add_slot_button.onclick = function() {
+            $.fn.zato.rate_limiting.begin_add_slot(slots, add_slot_button);
         };
+        rule_elem.appendChild(add_slot_button);
 
-        time_from_input.onfocus = show_time_from_dropdown;
-        time_from_input.oninput = show_time_from_dropdown;
-        time_from_input.onkeydown = $.fn.zato.rate_limiting.filter_time_input;
-        time_from_input.onblur = function() { $.fn.zato.rate_limiting.validate_time_input(time_from_input); };
+        container.appendChild(rule_elem);
+        $.fn.zato.rate_limiting.renumber(container_id);
+    };
 
-        time_fields.appendChild(time_from_input);
+    // ////////////////////////////////////////////////////////////////////////
+    // A single time slot row with its own rate/burst/limit/window config
+    // ////////////////////////////////////////////////////////////////////////
 
-        var time_dash = document.createElement('span');
-        time_dash.className = 'rate-limiting-time-dash';
-        time_dash.textContent = '\u2013';
-        time_fields.appendChild(time_dash);
+    $.fn.zato.rate_limiting.add_slot = function(slots_container, time_label_text, time_from, time_to, is_default) {
 
-        var time_to_input = document.createElement('input');
-        time_to_input.type = 'text';
-        time_to_input.className = 'rate-limiting-config-input';
-        time_to_input.setAttribute('data-field', 'time_to');
-        time_to_input.placeholder = 'to';
-        time_to_input.maxLength = 5;
+        var slot = document.createElement('div');
+        slot.className = 'rate-limiting-slot';
 
-        var show_time_to_dropdown = function() {
-            $.fn.zato.rate_limiting.show_dropdown(time_to_input, time_suggestions, time_to_input.value, function(selected_value) {
-                time_to_input.value = selected_value;
-            });
-        };
+        if(is_default) {
+            slot.setAttribute('data-slot-type', 'default');
+        }
+        else {
+            slot.setAttribute('data-slot-type', 'range');
+            slot.setAttribute('data-time-from', time_from);
+            slot.setAttribute('data-time-to', time_to);
+        }
 
-        time_to_input.onfocus = show_time_to_dropdown;
-        time_to_input.oninput = show_time_to_dropdown;
-        time_to_input.onkeydown = $.fn.zato.rate_limiting.filter_time_input;
-        time_to_input.onblur = function() { $.fn.zato.rate_limiting.validate_time_input(time_to_input); };
+        // Time label with clock icon
+        var time_area = document.createElement('div');
+        time_area.className = 'rate-limiting-slot-time';
 
-        time_fields.appendChild(time_to_input);
+        time_area.appendChild($.fn.zato.rate_limiting.make_clock_icon(12));
 
-        time_group.appendChild(time_fields);
-        rule_elem.appendChild(time_group);
+        var label = document.createElement('span');
+        label.className = 'rate-limiting-slot-time-label';
+        label.textContent = time_label_text;
+        time_area.appendChild(label);
 
-        // Token bucket config group
-        var tb_group = document.createElement('div');
-        tb_group.className = 'rate-limiting-config-group';
+        slot.appendChild(time_area);
+
+        // Rate/burst config group
+        var rate_group = document.createElement('div');
+        rate_group.className = 'rate-limiting-config-group';
 
         var rate_label = document.createElement('span');
         rate_label.className = 'rate-limiting-config-label';
         rate_label.textContent = 'Rate:';
-        tb_group.appendChild(rate_label);
+        rate_group.appendChild(rate_label);
 
         var rate_input = document.createElement('input');
         rate_input.type = 'text';
         rate_input.className = 'rate-limiting-config-input';
         rate_input.setAttribute('data-field', 'rate');
         rate_input.placeholder = '10';
-        tb_group.appendChild(rate_input);
+        rate_group.appendChild(rate_input);
 
         var rate_unit = document.createElement('span');
         rate_unit.className = 'rate-limiting-config-unit';
         rate_unit.textContent = '/s';
-        tb_group.appendChild(rate_unit);
+        rate_group.appendChild(rate_unit);
 
         var burst_label = document.createElement('span');
         burst_label.className = 'rate-limiting-config-label';
         burst_label.textContent = 'Burst:';
-        tb_group.appendChild(burst_label);
+        rate_group.appendChild(burst_label);
 
         var burst_input = document.createElement('input');
         burst_input.type = 'text';
         burst_input.className = 'rate-limiting-config-input';
         burst_input.setAttribute('data-field', 'burst');
         burst_input.placeholder = '20';
-        tb_group.appendChild(burst_input);
+        rate_group.appendChild(burst_input);
 
         var burst_unit = document.createElement('span');
         burst_unit.className = 'rate-limiting-config-unit';
         burst_unit.textContent = '/s';
-        tb_group.appendChild(burst_unit);
+        rate_group.appendChild(burst_unit);
 
-        rule_elem.appendChild(tb_group);
+        slot.appendChild(rate_group);
 
-        // Fixed window config group
-        var fw_group = document.createElement('div');
-        fw_group.className = 'rate-limiting-config-group';
+        // Limit/window config group
+        var limit_group = document.createElement('div');
+        limit_group.className = 'rate-limiting-config-group';
 
         var limit_label = document.createElement('span');
         limit_label.className = 'rate-limiting-config-label';
         limit_label.textContent = 'Limit:';
-        fw_group.appendChild(limit_label);
+        limit_group.appendChild(limit_label);
 
         var limit_input = document.createElement('input');
         limit_input.type = 'text';
         limit_input.className = 'rate-limiting-config-input';
         limit_input.setAttribute('data-field', 'limit');
         limit_input.placeholder = '100';
-        fw_group.appendChild(limit_input);
+        limit_group.appendChild(limit_input);
 
         var slash_label = document.createElement('span');
         slash_label.className = 'rate-limiting-config-unit';
         slash_label.textContent = '/';
-        fw_group.appendChild(slash_label);
+        limit_group.appendChild(slash_label);
 
         var unit_select = document.createElement('select');
         unit_select.className = 'rate-limiting-config-select';
@@ -408,21 +429,143 @@
             opt.textContent = window_units[unit_idx];
             unit_select.appendChild(opt);
         }
-        fw_group.appendChild(unit_select);
+        limit_group.appendChild(unit_select);
 
-        rule_elem.appendChild(fw_group);
+        slot.appendChild(limit_group);
 
-        // Remove button
-        var remove_button = document.createElement('a');
-        remove_button.href = 'javascript:void(0)';
-        remove_button.textContent = 'Delete rule';
-        remove_button.onclick = function() {
-            $.fn.zato.rate_limiting.remove_rule(container_id, rule_elem);
+        // Remove button (only for non-default slots)
+        if(!is_default) {
+            var remove_link = document.createElement('a');
+            remove_link.href = 'javascript:void(0)';
+            remove_link.textContent = '\u00d7';
+            remove_link.style.cssText = 'font-size: 14px; color: #999999; text-decoration: none; margin-left: 4px;';
+            remove_link.onclick = function() {
+                slot.parentNode.removeChild(slot);
+            };
+            slot.appendChild(remove_link);
+        }
+
+        slots_container.appendChild(slot);
+        return slot;
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+    // Begin adding a new time slot - show from/to inputs inline
+    // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.rate_limiting.begin_add_slot = function(slots_container, add_slot_button) {
+
+        // If there is already a pending slot being added, focus its input
+        var existing_input = slots_container.querySelector('.rate-limiting-time-input');
+        if(existing_input) {
+            existing_input.focus();
+            return;
+        }
+
+        // Create a temporary slot row for entering the time range
+        var pending_slot = document.createElement('div');
+        pending_slot.className = 'rate-limiting-slot';
+        pending_slot.setAttribute('data-slot-type', 'pending');
+
+        var time_area = document.createElement('div');
+        time_area.className = 'rate-limiting-slot-time';
+
+        var from_input = document.createElement('input');
+        from_input.type = 'text';
+        from_input.className = 'rate-limiting-time-input';
+        from_input.placeholder = 'from';
+        from_input.maxLength = 5;
+
+        var dash = document.createElement('span');
+        dash.className = 'rate-limiting-time-dash';
+        dash.textContent = '\u2013';
+
+        var to_input = document.createElement('input');
+        to_input.type = 'text';
+        to_input.className = 'rate-limiting-time-input';
+        to_input.placeholder = 'to';
+        to_input.maxLength = 5;
+
+        time_area.appendChild(from_input);
+        time_area.appendChild(dash);
+        time_area.appendChild(to_input);
+        pending_slot.appendChild(time_area);
+
+        slots_container.appendChild(pending_slot);
+
+        // Wire from-input
+        var show_from_dropdown = function() {
+            $.fn.zato.rate_limiting.show_dropdown(from_input, time_suggestions, from_input.value, function(selected_value) {
+                from_input.value = selected_value;
+                to_input.focus();
+            });
         };
-        rule_elem.appendChild(remove_button);
 
-        container.appendChild(rule_elem);
-        $.fn.zato.rate_limiting.renumber(container_id);
+        from_input.onfocus = show_from_dropdown;
+        from_input.oninput = show_from_dropdown;
+        from_input.onkeydown = function(event) {
+            $.fn.zato.rate_limiting.filter_time_input(event);
+            if(event.key === 'Tab' && !event.shiftKey && from_input.value.length === 5) {
+                // Let Tab naturally move to to_input
+                return;
+            }
+            if(event.key === 'Escape') {
+                $.fn.zato.rate_limiting.hide_dropdown();
+                pending_slot.parentNode.removeChild(pending_slot);
+            }
+        };
+        from_input.onblur = function() {
+            $.fn.zato.rate_limiting.validate_time_input(from_input);
+        };
+
+        // Wire to-input
+        var show_to_dropdown = function() {
+            $.fn.zato.rate_limiting.show_dropdown(to_input, time_suggestions, to_input.value, function(selected_value) {
+                to_input.value = selected_value;
+                $.fn.zato.rate_limiting.commit_pending_slot(slots_container, pending_slot, from_input, to_input);
+            });
+        };
+
+        to_input.onfocus = show_to_dropdown;
+        to_input.oninput = show_to_dropdown;
+        to_input.onkeydown = function(event) {
+            $.fn.zato.rate_limiting.filter_time_input(event);
+            if(event.key === 'Enter') {
+                event.preventDefault();
+                $.fn.zato.rate_limiting.commit_pending_slot(slots_container, pending_slot, from_input, to_input);
+            }
+            if(event.key === 'Escape') {
+                $.fn.zato.rate_limiting.hide_dropdown();
+                pending_slot.parentNode.removeChild(pending_slot);
+            }
+        };
+        to_input.onblur = function() {
+            $.fn.zato.rate_limiting.validate_time_input(to_input);
+        };
+
+        from_input.focus();
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.rate_limiting.commit_pending_slot = function(slots_container, pending_slot, from_input, to_input) {
+        var from_value = from_input.value;
+        var to_value = to_input.value;
+
+        // Both must be valid HH:MM
+        if(!time_input_pattern.test(from_value) || !time_input_pattern.test(to_value)) {
+            return;
+        }
+
+        $.fn.zato.rate_limiting.hide_dropdown();
+
+        var label_text = from_value + ' \u2013 ' + to_value;
+
+        // Remove the pending row ..
+        pending_slot.parentNode.removeChild(pending_slot);
+
+        // .. and replace it with a real slot.
+        $.fn.zato.rate_limiting.add_slot(slots_container, label_text, from_value, to_value, false);
     };
 
     // ////////////////////////////////////////////////////////////////////////
@@ -430,34 +573,6 @@
     $.fn.zato.rate_limiting.remove_rule = function(container_id, rule_elem) {
         rule_elem.parentNode.removeChild(rule_elem);
         $.fn.zato.rate_limiting.renumber(container_id);
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    $.fn.zato.rate_limiting.toggle_time_range = function(rule_elem) {
-
-        var toggle_button = rule_elem.querySelector('.rate-limiting-time-toggle');
-        var time_fields = rule_elem.querySelector('.rate-limiting-time-fields');
-        var is_active = toggle_button.classList.contains('rate-limiting-time-active');
-
-        if(is_active) {
-
-            // Hide the fields and clear values ..
-            toggle_button.classList.remove('rate-limiting-time-active');
-            time_fields.classList.remove('rate-limiting-time-visible');
-
-            var time_from = rule_elem.querySelector('[data-field="time_from"]');
-            var time_to = rule_elem.querySelector('[data-field="time_to"]');
-
-            time_from.value = '';
-            time_to.value = '';
-        }
-        else {
-
-            // .. show the fields.
-            toggle_button.classList.add('rate-limiting-time-active');
-            time_fields.classList.add('rate-limiting-time-visible');
-        }
     };
 
     // ////////////////////////////////////////////////////////////////////////
@@ -474,6 +589,8 @@
         }
     };
 
+    // ////////////////////////////////////////////////////////////////////////
+    // CIDR pills
     // ////////////////////////////////////////////////////////////////////////
 
     $.fn.zato.rate_limiting.add_pill = function(rule_elem, cidr_text) {
@@ -496,17 +613,11 @@
         remove_x.className = 'rate-limiting-pill-remove';
         remove_x.textContent = '\u00d7';
         remove_x.onclick = function() {
-            $.fn.zato.rate_limiting.remove_pill(pill);
+            pill.parentNode.removeChild(pill);
         };
         pill.appendChild(remove_x);
 
         pills.insertBefore(pill, add_button);
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    $.fn.zato.rate_limiting.remove_pill = function(pill_elem) {
-        pill_elem.parentNode.removeChild(pill_elem);
     };
 
     // ////////////////////////////////////////////////////////////////////////
@@ -576,6 +687,8 @@
     };
 
     // ////////////////////////////////////////////////////////////////////////
+    // Drag and drop
+    // ////////////////////////////////////////////////////////////////////////
 
     $.fn.zato.rate_limiting.setup_drag = function(container_id) {
         var container = document.getElementById(container_id);
@@ -598,6 +711,8 @@
     };
 
     // ////////////////////////////////////////////////////////////////////////
+    // Serialization
+    // ////////////////////////////////////////////////////////////////////////
 
     $.fn.zato.rate_limiting.get_rules = function(container_id) {
         var container = document.getElementById(container_id);
@@ -606,7 +721,9 @@
 
         for(var rule_idx = 0; rule_idx < rule_elems.length; rule_idx++) {
             var rule_elem = rule_elems[rule_idx];
-            var pill_elems = rule_elem.querySelectorAll('.rate-limiting-pill');
+
+            // Collect CIDRs
+            var pill_elems = rule_elem.querySelectorAll('.rate-limiting-pills .rate-limiting-pill');
             var cidr_list = [];
 
             for(var pill_idx = 0; pill_idx < pill_elems.length; pill_idx++) {
@@ -614,21 +731,33 @@
                 cidr_list.push(text_span.textContent);
             }
 
-            var rate_input = rule_elem.querySelector('[data-field="rate"]');
-            var burst_input = rule_elem.querySelector('[data-field="burst"]');
-            var limit_input = rule_elem.querySelector('[data-field="limit"]');
-            var unit_select = rule_elem.querySelector('[data-field="window_unit"]');
-            var time_from_input = rule_elem.querySelector('[data-field="time_from"]');
-            var time_to_input = rule_elem.querySelector('[data-field="time_to"]');
+            // Collect time slots
+            var slot_elems = rule_elem.querySelectorAll('.rate-limiting-slot:not([data-slot-type="pending"])');
+            var slots = [];
+
+            for(var slot_idx = 0; slot_idx < slot_elems.length; slot_idx++) {
+                var slot_elem = slot_elems[slot_idx];
+                var slot_type = slot_elem.getAttribute('data-slot-type');
+
+                var slot_data = {
+                    type: slot_type,
+                    rate: slot_elem.querySelector('[data-field="rate"]').value,
+                    burst: slot_elem.querySelector('[data-field="burst"]').value,
+                    limit: slot_elem.querySelector('[data-field="limit"]').value,
+                    window_unit: slot_elem.querySelector('[data-field="window_unit"]').value
+                };
+
+                if(slot_type === 'range') {
+                    slot_data.time_from = slot_elem.getAttribute('data-time-from');
+                    slot_data.time_to = slot_elem.getAttribute('data-time-to');
+                }
+
+                slots.push(slot_data);
+            }
 
             rules.push({
                 cidr_list: cidr_list,
-                rate: rate_input.value,
-                burst: burst_input.value,
-                limit: limit_input.value,
-                window_unit: unit_select.value,
-                time_from: time_from_input.value,
-                time_to: time_to_input.value
+                slots: slots
             });
         }
 
@@ -650,37 +779,54 @@
             rules = rules_json;
         }
 
+        // Clear the default empty rule added by init
+        var container = document.getElementById(container_id);
+        container.innerHTML = '';
+        rule_counter = 0;
+
         for(var rule_idx = 0; rule_idx < rules.length; rule_idx++) {
             $.fn.zato.rate_limiting.add_rule(container_id);
 
-            var container = document.getElementById(container_id);
-            var rule_elem = container.children[container.children.length - 1];
+            var container_ref = document.getElementById(container_id);
+            var rule_elem = container_ref.children[container_ref.children.length - 1];
 
             var rule = rules[rule_idx];
 
+            // Restore CIDRs
             for(var cidr_idx = 0; cidr_idx < rule.cidr_list.length; cidr_idx++) {
                 $.fn.zato.rate_limiting.add_pill(rule_elem, rule.cidr_list[cidr_idx]);
             }
 
-            var rate_input = rule_elem.querySelector('[data-field="rate"]');
-            var burst_input = rule_elem.querySelector('[data-field="burst"]');
-            var limit_input = rule_elem.querySelector('[data-field="limit"]');
-            var unit_select = rule_elem.querySelector('[data-field="window_unit"]');
+            // Restore slot config values
+            var slot_elems = rule_elem.querySelectorAll('.rate-limiting-slot');
 
-            rate_input.value = rule.rate;
-            burst_input.value = rule.burst;
-            limit_input.value = rule.limit;
-            unit_select.value = rule.window_unit;
+            if(rule.slots) {
+                // The first slot (all day) is already created by add_rule
+                var default_slot = slot_elems[0];
 
-            // Restore time range if saved values are present
-            if(rule.time_from && rule.time_to) {
-                var time_from_input = rule_elem.querySelector('[data-field="time_from"]');
-                var time_to_input = rule_elem.querySelector('[data-field="time_to"]');
+                if(rule.slots.length > 0 && rule.slots[0].type === 'default') {
+                    default_slot.querySelector('[data-field="rate"]').value = rule.slots[0].rate;
+                    default_slot.querySelector('[data-field="burst"]').value = rule.slots[0].burst;
+                    default_slot.querySelector('[data-field="limit"]').value = rule.slots[0].limit;
+                    default_slot.querySelector('[data-field="window_unit"]').value = rule.slots[0].window_unit;
+                }
 
-                time_from_input.value = rule.time_from;
-                time_to_input.value = rule.time_to;
+                // Restore additional time-range slots
+                var slots_container = rule_elem.querySelector('.rate-limiting-slots');
 
-                $.fn.zato.rate_limiting.toggle_time_range(rule_elem);
+                for(var slot_idx = 1; slot_idx < rule.slots.length; slot_idx++) {
+                    var slot_data = rule.slots[slot_idx];
+
+                    if(slot_data.type === 'range') {
+                        var label_text = slot_data.time_from + ' \u2013 ' + slot_data.time_to;
+                        var new_slot = $.fn.zato.rate_limiting.add_slot(slots_container, label_text, slot_data.time_from, slot_data.time_to, false);
+
+                        new_slot.querySelector('[data-field="rate"]').value = slot_data.rate;
+                        new_slot.querySelector('[data-field="burst"]').value = slot_data.burst;
+                        new_slot.querySelector('[data-field="limit"]').value = slot_data.limit;
+                        new_slot.querySelector('[data-field="window_unit"]').value = slot_data.window_unit;
+                    }
+                }
             }
         }
     };
