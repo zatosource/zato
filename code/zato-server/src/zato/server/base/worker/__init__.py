@@ -40,8 +40,7 @@ from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, new_cid_server, parse_datetime, \
-    rebuild_subscription_dict_list, spawn_greenlet, update_apikey_username_to_channel, utcnow, visit_py_source, \
-    wait_for_dict_key, wait_for_dict_key_by_get_func
+    update_apikey_username_to_channel, utcnow, visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
 from zato.common.util.retry import get_remaining_time, get_sleep_time
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
@@ -78,9 +77,8 @@ if 0:
     from bunch import Bunch as bunch_
     from kombu.transport.pyamqp import Message as KombuMessage
     from zato.common.config_dispatcher import ConfigDispatcher
-    from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict, tupnone
+    from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict
     from zato.server.base.parallel import ParallelServer
-    from zato.server.config import ConfigDict
     from zato.server.config import ConfigStore
     from zato.server.connection.http_soap.outgoing import BaseHTTPSOAPWrapper
     from zato.server.service import Service
@@ -1078,6 +1076,15 @@ class WorkerStore(_WorkerStoreBase):
                 security_groups_ctx.set_current_basic_auth(msg.id, sec_def['username'], sec_def['password'])
 
 # ################################################################################################################################
+
+    def on_config_event_SECURITY_BASIC_AUTH_RATE_LIMITING_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Updates rate limiting configuration for a Basic Auth security definition.
+        """
+        sec_def_id = msg['id']
+        rule_dicts = msg['rule_dicts']
+        self.server.rate_limiting_manager.set_sec_def_config(sec_def_id, rule_dicts)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
     def wait_for_apikey(self, name:'str', timeout:'int'=999999) -> 'bool':
@@ -1135,6 +1142,15 @@ class WorkerStore(_WorkerStoreBase):
         # .. and update security groups.
         for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
             security_groups_ctx.set_current_apikey(msg.id, msg.password)
+
+# ################################################################################################################################
+
+    def on_config_event_SECURITY_APIKEY_RATE_LIMITING_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Updates rate limiting configuration for an API key security definition.
+        """
+        sec_def_id = msg['id']
+        rule_dicts = msg['rule_dicts']
+        self.server.rate_limiting_manager.set_sec_def_config(sec_def_id, rule_dicts)
 
 # ################################################################################################################################
 
