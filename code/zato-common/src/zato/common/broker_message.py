@@ -83,6 +83,9 @@ class SECURITY(Constants):
     APIKEY_DELETE = ValueConstant('')
     APIKEY_CHANGE_PASSWORD = ValueConstant('')
 
+    BASIC_AUTH_RATE_LIMITING_EDIT = ValueConstant('')
+    APIKEY_RATE_LIMITING_EDIT = ValueConstant('')
+
 class OUTGOING(Constants):
 
     AMQP_CREATE = ValueConstant('')
