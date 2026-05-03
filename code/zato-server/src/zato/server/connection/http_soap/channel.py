@@ -11,6 +11,8 @@ import logging
 import os
 import socket
 import struct
+from datetime import datetime as _datetime_class, timedelta as _timedelta, timezone as _timezone
+from email.utils import format_datetime as _format_datetime
 from gzip import GzipFile
 from hashlib import sha256
 from http.client import INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, TOO_MANY_REQUESTS
@@ -83,6 +85,10 @@ _socket_SOL_SOCKET = socket.SOL_SOCKET
 _socket_SO_LINGER = socket.SO_LINGER
 _so_linger_on = struct.pack('ii', 1, 0)
 _microseconds_per_second = 1_000_000
+_utc = _timezone.utc
+
+def _datetime_utcnow():
+    return _datetime_class.now(_utc)
 _content_type_json = CONTENT_TYPE['JSON']
 _bad_request_types = (BadRequest, ModelValidationError, BackendInvocationError)
 _default_admin_channel = MISC.DefaultAdminInvokeChannel
@@ -640,7 +646,9 @@ class RequestDispatcher:
 
             # .. check rate limiting before any further processing ..
             now_us = current_time_us()
-            rate_limit_result = self.server.rate_limiting_manager.check(channel_item['id'], remote_addr, now_us)
+            channel_id = channel_item['id']
+            rate_limit_key_prefix = f'rest{channel_id}:'
+            rate_limit_result = self.server.rate_limiting_manager.check(channel_id, remote_addr, now_us, rate_limit_key_prefix)
 
             # .. if rate limiting applies, handle it and return immediately ..
             if rate_limit_result:
@@ -701,9 +709,12 @@ class RequestDispatcher:
         # Disallowed traffic - silent TCP drop, as if a firewall discarded the packet ..
         if rate_limit_result.is_disallowed:
 
-            raw_socket = wsgi_environ['gunicorn.sock']
+            raw_socket = wsgi_environ['gunicorn.socket']
             raw_socket.setsockopt(_socket_SOL_SOCKET, _socket_SO_LINGER, _so_linger_on)
             raw_socket.close()
+
+            # Tell the caller (on_wsgi_request) to skip all response processing
+            wsgi_environ['zato.http.rate_limit.dropped'] = True
 
             out = b''
 
@@ -717,11 +728,15 @@ class RequestDispatcher:
         if retry_after_us % _microseconds_per_second:
             retry_after_seconds += 1
 
+        now = _datetime_utcnow()
+        retry_at = now + _timedelta(seconds=retry_after_seconds)
+        retry_after_date = _format_datetime(retry_at, usegmt=True)
+
         logger.info('Rate limiting 429; cid:%s, channel:%s, remote_addr:%s, retry_after:%s',
-            cid, channel_name, remote_addr, retry_after_seconds)
+            cid, channel_name, remote_addr, retry_after_date)
 
         wsgi_environ['zato.http.response.status'] = _status_too_many_requests
-        wsgi_environ['zato.http.response.headers']['Retry-After'] = str(retry_after_seconds)
+        wsgi_environ['zato.http.response.headers']['Retry-After'] = retry_after_date
 
         out = client_json_error(cid, 'Too many requests')
 

@@ -1069,3 +1069,19 @@ class RateLimitingGet(AdminService):
         self.response.payload = {'rate_limiting': rate_limiting}
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+class RateLimitingClearCounters(AdminService):
+
+    name = 'zato.http-soap.rate-limiting.clear-counters'
+    input = 'id', 'rule_index'
+
+    def handle(self):
+
+        channel_id = int(self.request.input['id'])
+        rule_index = int(self.request.input['rule_index'])
+        key_prefix = f'rest{channel_id}:'
+
+        self.server.rate_limiting_manager.clear_rule_counters(channel_id, rule_index, key_prefix)
+
+# ################################################################################################################################

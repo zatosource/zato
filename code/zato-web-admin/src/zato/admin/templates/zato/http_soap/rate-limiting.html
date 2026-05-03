@@ -15,7 +15,7 @@
 
     <script nonce="{{ CSP_NONCE }}">
     $(document).ready(function() {
-        $.fn.zato.rate_limiting.init('rate-limiting-container', 'edit');
+        $.fn.zato.rate_limiting.init('rate-limiting-container', 'edit', '{{ channel_id }}');
         {% if rules_json and rules_json != '[]' %}
         $.fn.zato.rate_limiting.load_rules('rate-limiting-container', {{ rules_json|safe }});
         {% endif %}

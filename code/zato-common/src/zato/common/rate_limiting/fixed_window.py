@@ -210,6 +210,15 @@ class FixedWindowRegistry:
 
 # ################################################################################################################################
 
+    def remove_by_prefix(self, prefix:'str') -> 'None':
+        """ Removes all window states whose key starts with the given prefix.
+        """
+        keys_to_remove = [key for key in self._windows if key.startswith(prefix)]
+        for key in keys_to_remove:
+            del self._windows[key]
+
+# ################################################################################################################################
+
     def clear(self) -> 'None':
         """ Removes all window states.
         """

@@ -46,7 +46,7 @@ class RateLimitingManager:
 
 # ################################################################################################################################
 
-    def check(self, channel_id:'int', client_ip:'str', now_us:'int') -> 'SlottedCheckResult | None':
+    def check(self, channel_id:'int', client_ip:'str', now_us:'int', key_prefix:'str'='') -> 'SlottedCheckResult | None':
         """ Checks rate limits for the given channel and client IP.
 
         Returns None if the channel has no rate-limiting config or the client IP does not match any rule.
@@ -55,8 +55,6 @@ class RateLimitingManager:
 
         if matcher is None:
             return None
-
-        key_prefix = f'rest{channel_id}:'
 
         result = matcher.check(client_ip, self._token_buckets, self._fixed_windows, now_us, key_prefix)
 
@@ -75,6 +73,23 @@ class RateLimitingManager:
         """ Removes rate-limiting config for a channel.
         """
         self._matchers.pop(channel_id, None)
+
+# ################################################################################################################################
+
+    def clear_rule_counters(self, channel_id:'int', rule_index:'int', key_prefix:'str'='') -> 'None':
+        """ Clears all token bucket and fixed window counters for a specific rule of a channel.
+        """
+        matcher = self._matchers.get(channel_id)
+
+        if matcher is None:
+            return
+
+        rule = matcher._rules[rule_index]
+
+        for entry in rule.entries:
+            prefix = f'{key_prefix}{entry.key}:'
+            self._token_buckets.remove_by_prefix(prefix)
+            self._fixed_windows.remove_by_prefix(prefix)
 
 # ################################################################################################################################
 # ################################################################################################################################

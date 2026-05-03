@@ -58,6 +58,7 @@
     var window_units = ['minute', 'hour', 'day', 'month'];
 
     var rule_counter = 0;
+    var stored_channel_id = '';
 
     var row_accent_color = '#2e7d6a';
 
@@ -225,10 +226,11 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.rate_limiting.init = function(container_id, mode) {
+    $.fn.zato.rate_limiting.init = function(container_id, mode, channel_id) {
         var container = document.getElementById(container_id);
         container.innerHTML = '';
         rule_counter = 0;
+        stored_channel_id = channel_id;
         $.fn.zato.rate_limiting.setup_drag(container_id);
         $.fn.zato.rate_limiting.close_dropdown_on_outside_click();
 
@@ -348,7 +350,19 @@
 
         header.appendChild(pills);
 
-        // Delete row link
+        var clear_link = document.createElement('a');
+        clear_link.href = 'javascript:void(0)';
+        clear_link.textContent = 'Clear counters';
+        clear_link.onclick = function() {
+            $.fn.zato.rate_limiting.clear_counters(container_id, rule_elem);
+        };
+        header.appendChild(clear_link);
+
+        var separator = document.createElement('span');
+        separator.textContent = ' | ';
+        separator.style.color = '#888';
+        header.appendChild(separator);
+
         var remove_button = document.createElement('a');
         remove_button.href = 'javascript:void(0)';
         remove_button.textContent = 'Delete row';
@@ -1177,6 +1191,45 @@
                 }
             }
         }
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.rate_limiting.clear_counters = function(container_id, rule_elem) {
+        var container = document.getElementById(container_id);
+        var rule_index = Array.prototype.indexOf.call(container.children, rule_elem);
+        var status = $('#rate-limiting-status');
+
+        status.removeClass('show fade status-message-success status-message-error');
+
+        $.ajax({
+            url: '/zato/http-soap/rate-limiting/clear-counters/' + stored_channel_id + '/',
+            type: 'POST',
+            data: {rule_index: rule_index},
+            headers: {'X-CSRFToken': $.cookie('csrftoken')},
+            success: function() {
+                status.text('Counters cleared').addClass('show status-message-success');
+                setTimeout(function() {
+                    status.addClass('fade');
+                    setTimeout(function() {
+                        status.removeClass('show fade status-message-success');
+                    }, 500);
+                }, 750);
+            },
+            error: function(jqXHR) {
+                var msg = 'Could not clear counters';
+                try {
+                    var response = JSON.parse(jqXHR.responseText);
+                    if(response.error) {
+                        msg = response.error;
+                    }
+                }
+                catch(e) {
+                    msg = jqXHR.responseText || msg;
+                }
+                status.text(msg).addClass('show status-message-error');
+            }
+        });
     };
 
     // ////////////////////////////////////////////////////////////////////////

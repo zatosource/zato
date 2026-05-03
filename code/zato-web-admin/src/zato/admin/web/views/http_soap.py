@@ -555,3 +555,22 @@ def rate_limiting_save(req, id): # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+def rate_limiting_clear_counters(req, id): # type: ignore
+    try:
+        rule_index = req.POST['rule_index']
+        response = req.zato.client.invoke('zato.http-soap.rate-limiting.clear-counters', {
+            'id': id,
+            'rule_index': rule_index,
+        })
+        if response.ok:
+            return JsonResponse({'status': 'ok'})
+        else:
+            return JsonResponse({'status': 'error', 'message': response.details}, status=400)
+    except Exception:
+        msg = 'Rate limiting counters could not be cleared, e:`{}`'.format(format_exc())
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+
+# ################################################################################################################################
+# ################################################################################################################################

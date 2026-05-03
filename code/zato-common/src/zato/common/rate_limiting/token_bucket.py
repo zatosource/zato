@@ -169,6 +169,15 @@ class TokenBucketRegistry:
 
 # ################################################################################################################################
 
+    def remove_by_prefix(self, prefix:'str') -> 'None':
+        """ Removes all buckets whose key starts with the given prefix.
+        """
+        keys_to_remove = [key for key in self._buckets if key.startswith(prefix)]
+        for key in keys_to_remove:
+            del self._buckets[key]
+
+# ################################################################################################################################
+
     def clear(self) -> 'None':
         """ Removes all buckets.
         """
