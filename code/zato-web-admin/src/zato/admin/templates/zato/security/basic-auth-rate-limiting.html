@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Rate limiting - {{ channel_name }}{% endblock %}
+{% block html_title %}Rate limiting - {{ entity_name }}{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/status-message.css">
@@ -15,7 +15,7 @@
 
     <script nonce="{{ CSP_NONCE }}">
     $(document).ready(function() {
-        $.fn.zato.rate_limiting.init('rate-limiting-container', 'edit', '{{ channel_id }}', '/zato/http-soap/rate-limiting');
+        $.fn.zato.rate_limiting.init('rate-limiting-container', 'edit', '{{ entity_id }}', '/zato/security/basic-auth/rate-limiting');
         {% if rules_json and rules_json != '[]' %}
         $.fn.zato.rate_limiting.load_rules('rate-limiting-container', {{ rules_json|safe }});
         {% endif %}
@@ -26,7 +26,7 @@
 {% block "content" %}
 
 <div id="markup">
-<h2 class="zato">Rate limiting | <a href="{% url 'http-soap' %}?cluster={{ cluster_id }}&connection=channel&transport=plain_http">REST channels</a> | <a href="{% url 'http-soap' %}?cluster={{ cluster_id }}&query={{ channel_name }}&connection=channel&transport=plain_http">{{ channel_name }}</a> | {{ channel_url_path }}</h2>
+<h2 class="zato">Rate limiting | <a href="{% url 'security-basic-auth' %}?cluster={{ cluster_id }}">Basic Auth</a> | {{ entity_name }}</h2>
 
 <div class="rate-limiting-container" id="rate-limiting-container">
 </div>

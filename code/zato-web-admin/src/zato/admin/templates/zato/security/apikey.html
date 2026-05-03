@@ -24,6 +24,7 @@
             'name',
             'header',
             '_change_password',
+            '_rate_limiting',
             '_edit',
             '_delete',
             'id',
@@ -63,6 +64,7 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -82,6 +84,7 @@
                         <td>{{ item.name }}</td>
                         <td id="item_header_{{ item.id }}">{{ item.header|default:"X-API-Key" }}</td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change API key', 'API key', 'API key')">Change API key</a></td>
+                        <td><a href="/zato/security/apikey/rate-limiting/{{ item.id }}/?cluster={{ cluster_id }}&name={{ item.name|urlencode }}">Rate limiting</a></td>
                         <td><a href="javascript:$.fn.zato.security.apikey.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.security.apikey.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>

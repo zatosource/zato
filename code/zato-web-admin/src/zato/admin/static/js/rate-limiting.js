@@ -58,7 +58,8 @@
     var window_units = ['minute', 'hour', 'day', 'month'];
 
     var rule_counter = 0;
-    var stored_channel_id = '';
+    var stored_entity_id = '';
+    var stored_url_base = '';
 
     var row_accent_color = '#2e7d6a';
 
@@ -226,11 +227,12 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.rate_limiting.init = function(container_id, mode, channel_id) {
+    $.fn.zato.rate_limiting.init = function(container_id, mode, entity_id, url_base) {
         var container = document.getElementById(container_id);
         container.innerHTML = '';
         rule_counter = 0;
-        stored_channel_id = channel_id;
+        stored_entity_id = entity_id;
+        stored_url_base = url_base;
         $.fn.zato.rate_limiting.setup_drag(container_id);
         $.fn.zato.rate_limiting.close_dropdown_on_outside_click();
 
@@ -1200,7 +1202,7 @@
         var rule_index = Array.prototype.indexOf.call(container.children, rule_elem);
 
         $.ajax({
-            url: '/zato/http-soap/rate-limiting/clear-counters/' + stored_channel_id + '/',
+            url: stored_url_base + '/clear-counters/' + stored_entity_id + '/',
             type: 'POST',
             data: {rule_index: rule_index},
             headers: {'X-CSRFToken': $.cookie('csrftoken')},
@@ -1259,14 +1261,14 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.rate_limiting.save = function(container_id, channel_id) {
+    $.fn.zato.rate_limiting.save = function(container_id) {
         var rules_json = $.fn.zato.rate_limiting.get_rules(container_id);
         var status = $('#rate-limiting-status');
 
         status.removeClass('show fade status-message-success status-message-error');
 
         $.ajax({
-            url: '/zato/http-soap/rate-limiting/save/' + channel_id + '/',
+            url: stored_url_base + '/save/' + stored_entity_id + '/',
             type: 'POST',
             data: {rules_json: rules_json},
             headers: {'X-CSRFToken': $.cookie('csrftoken')},

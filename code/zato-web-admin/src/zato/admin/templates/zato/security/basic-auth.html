@@ -30,6 +30,7 @@
             'username',
             'realm',
             '_change_password',
+            '_rate_limiting',
             '_edit',
             '_delete',
             'id',
@@ -71,6 +72,7 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -91,6 +93,7 @@
                         <td>{{ item.username }}</td>
                         <td>{{ item.realm }}</td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
+                        <td><a href="/zato/security/basic-auth/rate-limiting/{{ item.id }}/?cluster={{ cluster_id }}&name={{ item.name|urlencode }}">Rate limiting</a></td>
                         <td><a href="javascript:$.fn.zato.security.basic_auth.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.security.basic_auth.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>

@@ -160,6 +160,12 @@ urlpatterns += [
         login_required(apikey.change_password), name='security-apikey-change-password'),
     url(r'^zato/security/apikey/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(apikey.Delete()), name=apikey.Delete.url_name),
+    url(r'^zato/security/apikey/rate-limiting/save/(?P<id>.*)/$',
+        login_required(apikey.rate_limiting_save), name='security-apikey-rate-limiting-save'),
+    url(r'^zato/security/apikey/rate-limiting/clear-counters/(?P<id>.*)/$',
+        login_required(apikey.rate_limiting_clear_counters), name='security-apikey-rate-limiting-clear-counters'),
+    url(r'^zato/security/apikey/rate-limiting/(?P<id>.*)/$',
+        login_required(apikey.rate_limiting), name='security-apikey-rate-limiting'),
     ]
 
 # ################################################################################################################################
@@ -178,6 +184,12 @@ urlpatterns += [
         login_required(basic_auth.change_password), name='security-basic-auth-change-password'),
     url(r'^zato/security/basic-auth/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(basic_auth.Delete()), name=basic_auth.Delete.url_name),
+    url(r'^zato/security/basic-auth/rate-limiting/save/(?P<id>.*)/$',
+        login_required(basic_auth.rate_limiting_save), name='security-basic-auth-rate-limiting-save'),
+    url(r'^zato/security/basic-auth/rate-limiting/clear-counters/(?P<id>.*)/$',
+        login_required(basic_auth.rate_limiting_clear_counters), name='security-basic-auth-rate-limiting-clear-counters'),
+    url(r'^zato/security/basic-auth/rate-limiting/(?P<id>.*)/$',
+        login_required(basic_auth.rate_limiting), name='security-basic-auth-rate-limiting'),
     ]
 
 # ################################################################################################################################
