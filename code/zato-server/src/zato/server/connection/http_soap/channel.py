@@ -102,6 +102,11 @@ _utcnow=utcnow
 
 _basic_auth = SEC_DEF_TYPE.BASIC_AUTH
 
+_sec_def_key_prefix_map = {
+    SEC_DEF_TYPE.BASIC_AUTH: 'basic{}:',
+    SEC_DEF_TYPE.APIKEY:     'apikey{}:',
+}
+
 # ################################################################################################################################
 
 status_response = {}
