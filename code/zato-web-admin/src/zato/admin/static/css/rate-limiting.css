@@ -306,15 +306,18 @@
 }
 
 .rate-limiting-slot[data-disabled="true"]::before {
-    background: color-mix(in srgb, var(--slot-accent) 20%, #d0d0d0);
-    border-color: color-mix(in srgb, var(--slot-accent) 20%, #d0d0d0);
+    border-color: #c0c8d0;
+}
+
+.rate-limiting-slot[data-slot-type="default"][data-disabled="true"]::before {
+    background: #c0c8d0;
 }
 
 .rate-limiting-slot-time {
     display: flex;
     align-items: center;
     gap: 4px;
-    min-width: 90px;
+    min-width: 110px;
     flex-shrink: 0;
     font-size: 11px;
     color: #666666;
@@ -416,12 +419,15 @@
 }
 
 .rate-limiting-time-input {
-    width: 46px;
+    width: 42px;
     text-align: center;
-    padding: 3px 6px;
+    padding: 0 3px;
     border: 1px solid #c0c8d0;
-    border-radius: 3px;
-    font: 11px/1.4 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    border-radius: 2px;
+    font: 11px 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    line-height: 1;
+    box-sizing: border-box;
+    height: 16px;
     outline: none;
     background: #ffffff;
     transition: border-color 0.15s, box-shadow 0.15s;
