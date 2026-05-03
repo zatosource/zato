@@ -834,8 +834,20 @@
         var text_node = document.createElement('span');
         text_node.textContent = cidr_text;
         text_node.style.cursor = 'pointer';
-        text_node.onclick = function() {
+        text_node.onmousedown = function(event) {
+            event.preventDefault();
             var cidr_input = pills.querySelector('.rate-limiting-pill-input');
+
+            // Commit the previously editing pill first
+            var prev = pills.querySelector('.rate-limiting-pill[data-editing="true"]');
+            if(prev && prev !== pill) {
+                var prev_value = cidr_input.value.trim();
+                if(prev_value) {
+                    prev.querySelector('span:first-child').textContent = prev_value;
+                }
+                prev.removeAttribute('data-editing');
+            }
+
             pill.setAttribute('data-editing', 'true');
             cidr_input.value = text_node.textContent;
             cidr_input.focus();
