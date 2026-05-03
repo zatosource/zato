@@ -21,17 +21,18 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-channel_matcher_dict = dict[int, SlottedCIDRMatcher]
+matcher_dict = dict[int, SlottedCIDRMatcher]
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class RateLimitingManager:
-    """ Holds per-channel SlottedCIDRMatcher instances and shared token bucket and fixed window registries.
+    """ Holds per-channel and per-sec-def SlottedCIDRMatcher instances and shared token bucket and fixed window registries.
     """
 
     def __init__(self) -> 'None':
-        self._matchers:'channel_matcher_dict' = {}
+        self._channel_matchers:'matcher_dict' = {}
+        self._sec_def_matchers:'matcher_dict' = {}
         self._token_buckets = TokenBucketRegistry()
         self._fixed_windows = FixedWindowRegistry()
 
@@ -42,16 +43,14 @@ class RateLimitingManager:
         """
         matcher = SlottedCIDRMatcher()
         matcher.replace_all(rule_dicts)
-        self._matchers[channel_id] = matcher
+        self._channel_matchers[channel_id] = matcher
 
 # ################################################################################################################################
 
     def check(self, channel_id:'int', client_ip:'str', now_us:'int', key_prefix:'str'='') -> 'SlottedCheckResult | None':
         """ Checks rate limits for the given channel and client IP.
-
-        Returns None if the channel has no rate-limiting config or the client IP does not match any rule.
         """
-        matcher = self._matchers.get(channel_id)
+        matcher = self._channel_matchers.get(channel_id)
 
         if matcher is None:
             return None
@@ -65,21 +64,75 @@ class RateLimitingManager:
     def has_channel(self, channel_id:'int') -> 'bool':
         """ Returns True if the channel has any rate-limiting config.
         """
-        return channel_id in self._matchers
+        return channel_id in self._channel_matchers
 
 # ################################################################################################################################
 
     def remove_channel(self, channel_id:'int') -> 'None':
         """ Removes rate-limiting config for a channel.
         """
-        self._matchers.pop(channel_id, None)
+        self._channel_matchers.pop(channel_id, None)
 
 # ################################################################################################################################
 
     def clear_rule_counters(self, channel_id:'int', rule_index:'int', key_prefix:'str'='') -> 'None':
         """ Clears all token bucket and fixed window counters for a specific rule of a channel.
         """
-        matcher = self._matchers.get(channel_id)
+        matcher = self._channel_matchers.get(channel_id)
+
+        if matcher is None:
+            return
+
+        rule = matcher._rules[rule_index]
+
+        for entry in rule.entries:
+            prefix = f'{key_prefix}{entry.key}:'
+            self._token_buckets.remove_by_prefix(prefix)
+            self._fixed_windows.remove_by_prefix(prefix)
+
+# ################################################################################################################################
+
+    def set_sec_def_config(self, sec_def_id:'int', rule_dicts:'strdictlist') -> 'None':
+        """ Parses and stores rate-limiting rules for a security definition, replacing any previous config.
+        """
+        matcher = SlottedCIDRMatcher()
+        matcher.replace_all(rule_dicts)
+        self._sec_def_matchers[sec_def_id] = matcher
+
+# ################################################################################################################################
+
+    def check_sec_def(self, sec_def_id:'int', client_ip:'str', now_us:'int', key_prefix:'str'='') -> 'SlottedCheckResult | None':
+        """ Checks rate limits for the given security definition and client IP.
+        """
+        matcher = self._sec_def_matchers.get(sec_def_id)
+
+        if matcher is None:
+            return None
+
+        result = matcher.check(client_ip, self._token_buckets, self._fixed_windows, now_us, key_prefix)
+
+        return result
+
+# ################################################################################################################################
+
+    def has_sec_def(self, sec_def_id:'int') -> 'bool':
+        """ Returns True if the security definition has any rate-limiting config.
+        """
+        return sec_def_id in self._sec_def_matchers
+
+# ################################################################################################################################
+
+    def remove_sec_def(self, sec_def_id:'int') -> 'None':
+        """ Removes rate-limiting config for a security definition.
+        """
+        self._sec_def_matchers.pop(sec_def_id, None)
+
+# ################################################################################################################################
+
+    def clear_sec_def_rule_counters(self, sec_def_id:'int', rule_index:'int', key_prefix:'str'='') -> 'None':
+        """ Clears all token bucket and fixed window counters for a specific rule of a security definition.
+        """
+        matcher = self._sec_def_matchers.get(sec_def_id)
 
         if matcher is None:
             return

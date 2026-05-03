@@ -368,6 +368,7 @@
 }
 
 .rate-limiting-slot[data-disallowed="true"]::before {
+    background: #ffffff;
     border-color: #c0392b;
 }
 
@@ -401,8 +402,13 @@
     border-radius: 1px;
 }
 
-.rate-limiting-slot[data-disallowed="true"][data-disabled="true"]::before {
+.rate-limiting-slot[data-slot-type="default"][data-disallowed="true"][data-disabled="true"]::before {
     background: color-mix(in srgb, #c0392b 40%, #c0c8d0);
+    border-color: color-mix(in srgb, #c0392b 40%, #c0c8d0);
+}
+
+.rate-limiting-slot:not([data-slot-type="default"])[data-disallowed="true"][data-disabled="true"]::before {
+    background: #ffffff;
     border-color: color-mix(in srgb, #c0392b 40%, #c0c8d0);
 }
 
