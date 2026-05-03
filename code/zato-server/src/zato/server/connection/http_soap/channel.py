@@ -696,6 +696,42 @@ class RequestDispatcher:
 
 # ################################################################################################################################
 
+    def _check_sec_def_rate_limiting(
+        self,
+        wsgi_environ:'stranydict',
+        remote_addr:'str',
+        now_us:'int',
+    ) -> 'SlottedCheckResult | None':
+        """ Checks rate limiting for the security definition that authenticated this request.
+        Returns the check result if rate limiting applies, or None if no sec_def or no rules configured.
+        """
+
+        # Check if a security definition was resolved during authentication ..
+        sec_def_info = wsgi_environ.get('zato.sec_def')
+
+        if not sec_def_info:
+            return None
+
+        # .. extract the sec_def type and ID ..
+        sec_def_type = sec_def_info['type']
+        sec_def_id = sec_def_info['id']
+
+        # .. look up the key prefix template for this sec_def type ..
+        prefix_template = _sec_def_key_prefix_map.get(sec_def_type)
+
+        if not prefix_template:
+            return None
+
+        # .. build the key prefix ..
+        key_prefix = prefix_template.format(sec_def_id)
+
+        # .. and check rate limiting.
+        out = self.server.rate_limiting_manager.check_sec_def(sec_def_id, remote_addr, now_us, key_prefix)
+
+        return out
+
+# ################################################################################################################################
+
     def _handle_rate_limit_result(
         self,
         cid:'str',
