@@ -7,8 +7,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import datetime
 import time
 from dataclasses import dataclass
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 if 0:
     from zato.common.typing_ import stranydict
@@ -252,6 +256,21 @@ def hh_mm_to_minutes(value:'str') -> 'int':
     minutes = int(minutes_str)
 
     out = hours * Seconds_Per_Minute + minutes
+    return out
+
+# ################################################################################################################################
+
+_utc = datetime.timezone.utc
+
+# ################################################################################################################################
+
+def now_us_to_minutes(now_us:'int') -> 'int':
+    """ Converts a microsecond-since-epoch timestamp to minutes since midnight (UTC).
+    """
+    now_secs = now_us // Microseconds_Per_Second
+    now_dt   = datetime.datetime.fromtimestamp(now_secs, tz=_utc)
+
+    out = now_dt.hour * Seconds_Per_Minute + now_dt.minute
     return out
 
 # ################################################################################################################################

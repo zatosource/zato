@@ -17,8 +17,9 @@ from zato.common.api import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_P
      ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.exception import ServiceMissingException
-from zato.common.json_internal import dumps
+from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service
+from zato.common.rate_limiting.cidr import SlottedCIDRRule
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
 from zato.common.util.api import as_bool
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
@@ -996,5 +997,42 @@ class InvokeOutconn(AdminService):
                 'response_body': str(e),
                 'response_time': '{:.1f}ms'.format(elapsed * 1000),
             }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RateLimitingSave(AdminService):
+
+    name = 'zato.http-soap.rate-limiting.save'
+    input = 'id', 'rules_json'
+
+    def handle(self):
+
+        input = self.request.input
+        channel_id = int(input['id'])
+        rules_json = input['rules_json']
+
+        # Parse the JSON string into a list of rule dicts ..
+        rule_dicts:'anylist' = loads(rules_json)
+
+        # .. validate each rule by running it through from_dict ..
+        for rule_dict in rule_dicts:
+            SlottedCIDRRule.from_dict(rule_dict)
+
+        with closing(self.odb.session()) as session:
+
+            # Read the current row ..
+            item = session.query(HTTPSOAP).filter_by(id=channel_id).one()
+
+            # .. parse the existing opaque1 or start with an empty dict ..
+            opaque = loads(item.opaque1) if item.opaque1 else {}
+
+            # .. set the rate_limiting key ..
+            opaque['rate_limiting'] = rule_dicts
+
+            # .. write it back ..
+            item.opaque1 = dumps(opaque)
+            session.add(item)
+            session.commit()
 
 # ################################################################################################################################

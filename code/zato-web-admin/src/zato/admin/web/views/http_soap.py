@@ -522,10 +522,31 @@ def rate_limiting(req, id): # type: ignore
         'cluster_id': req.zato.cluster_id,
         'channel_id': id,
         'channel_name': response.data.name,
+        'channel_url_path': response.data.url_path,
         'zato_template_name': 'zato/http_soap/rate-limiting.html',
     }
 
     return TemplateResponse(req, 'zato/http_soap/rate-limiting.html', return_data)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def rate_limiting_save(req, id): # type: ignore
+    try:
+        rules_json = req.POST['rules_json']
+        response = req.zato.client.invoke('zato.http-soap.rate-limiting.save', {
+            'id': id,
+            'rules_json': rules_json,
+        })
+        if response.ok:
+            return JsonResponse({'status': 'ok'})
+        else:
+            return JsonResponse({'status': 'error', 'message': response.details}, status=400)
+    except Exception:
+        msg = 'Rate limiting rules could not be saved, e:`{}`'.format(format_exc())
+        logger.error(msg)
+        return HttpResponseServerError(msg)
 
 # ################################################################################################################################
 # ################################################################################################################################

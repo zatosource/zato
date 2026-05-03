@@ -11,12 +11,15 @@ import ipaddress
 from dataclasses import dataclass
 
 # Zato
-from zato.common.rate_limiting.common import hh_mm_to_minutes, RateLimitError, time_in_range, TimeRange
+from zato.common.rate_limiting.common import hh_mm_to_minutes, now_us_to_minutes, RateLimitError, time_in_range, TimeRange
 from zato.common.rate_limiting.fixed_window import FixedWindowCheckResult, FixedWindowConfig, FixedWindowRegistry
 from zato.common.rate_limiting.token_bucket import CheckResult, TokenBucketConfig, TokenBucketRegistry
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 if 0:
-    from zato.common.typing_ import strlist
+    from zato.common.typing_ import stranydict, strdictlist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,8 +46,9 @@ class CIDREntry:
 # ################################################################################################################################
 # ################################################################################################################################
 
-cidr_entry_list  = list[CIDREntry]
-time_range_list  = list[TimeRange]
+cidr_entry_list   = list[CIDREntry]
+time_range_list   = list[TimeRange]
+slotted_rule_list = list['SlottedCIDRRule']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -140,6 +144,55 @@ class SlottedCIDRRule:
         out = class_()
         out.entries    = entries
         out.time_range = time_range
+
+        return out
+
+# ################################################################################################################################
+
+    @classmethod
+    def from_dict(
+        class_:'type[SlottedCIDRRule]', # pyright: ignore[reportSelfClsParameterName]
+        data:'stranydict',
+        ) -> 'SlottedCIDRRule':
+        """ Builds a SlottedCIDRRule from a dict as received from other layers.
+        """
+
+        # Parse each time range entry ..
+        cidr_list = data['cidr_list']
+
+        raw_time_range = data['time_range']
+        time_range:'time_range_list' = []
+
+        for raw_entry in raw_time_range:
+            entry = TimeRange.from_dict(raw_entry)
+            time_range.append(entry)
+
+        out = class_.from_parts(cidr_list, time_range)
+        return out
+
+# ################################################################################################################################
+
+    def to_dict(self) -> 'stranydict':
+        """ Serializes this rule to a dict.
+        """
+
+        # Build the CIDR list from the parsed entries ..
+        cidr_list:'strlist' = []
+
+        for entry in self.entries:
+            cidr_list.append(entry.key)
+
+        # .. and serialize each time range.
+        time_range:'strdictlist' = []
+
+        for time_range_entry in self.time_range:
+            serialized = time_range_entry.to_dict()
+            time_range.append(serialized)
+
+        out:'stranydict' = {
+            'cidr_list':  cidr_list,
+            'time_range': time_range,
+        }
 
         return out
 
@@ -340,6 +393,169 @@ class CIDRMatcher:
 
         # .. then swap in one shot.
         self._rules = new_rules
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class SlottedCIDRMatch:
+    """ The result of resolving a client IP against a SlottedCIDRMatcher.
+    """
+
+    rule:  'SlottedCIDRRule'
+    entry: 'CIDREntry'
+
+    @property
+    def key(self) -> 'str':
+        """ The normalised CIDR string to use as the registry key.
+        """
+        return self.entry.key
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class SlottedCheckResult:
+    """ Result of checking a client IP against a SlottedCIDRMatcher.
+    """
+
+    is_disallowed:  'bool'
+    is_allowed:     'bool'
+    retry_after_us: 'int'
+    matched_key:    'str'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SlottedCIDRMatcher:
+    """ Holds an ordered list of SlottedCIDRRule objects and resolves client IPs to the first matching rule.
+    """
+
+    def __init__(self) -> 'None':
+        self._rules:'slotted_rule_list' = []
+
+# ################################################################################################################################
+
+    def __len__(self) -> 'int':
+        return len(self._rules)
+
+# ################################################################################################################################
+
+    def resolve(self, client_ip:'str') -> 'SlottedCIDRMatch | None':
+        """ Parses the client IP and iterates rules top-to-bottom, returning the first match.
+        """
+
+        # Parse the raw IP string ..
+        address = parse_client_ip(client_ip)
+
+        # .. walk rules in insertion order ..
+        for rule in self._rules:
+            entry = rule.match(address)
+
+            if entry is not None:
+                out = SlottedCIDRMatch()
+                out.rule  = rule
+                out.entry = entry
+                return out
+
+        return None
+
+# ################################################################################################################################
+
+    def replace_all(self, rule_dicts:'strdictlist') -> 'None':
+        """ Atomically replaces all rules by parsing from UI/opaque1 JSON dicts.
+        """
+
+        # Build the new list first so that a parsing error does not leave us in a half-updated state ..
+        new_rules:'slotted_rule_list' = []
+
+        for rule_dict in rule_dicts:
+            rule = SlottedCIDRRule.from_dict(rule_dict)
+            new_rules.append(rule)
+
+        # .. then swap in one shot.
+        self._rules = new_rules
+
+# ################################################################################################################################
+
+    def to_list(self) -> 'strdictlist':
+        """ Serializes all rules back to a list of dicts for JSON storage.
+        """
+        out:'strdictlist' = []
+
+        for rule in self._rules:
+            serialized = rule.to_dict()
+            out.append(serialized)
+
+        return out
+
+# ################################################################################################################################
+
+    def is_empty(self) -> 'bool':
+        """ Returns True if no rules are registered.
+        """
+        return not self._rules
+
+# ################################################################################################################################
+
+    def clear(self) -> 'None':
+        """ Removes all rules.
+        """
+        self._rules.clear()
+
+# ################################################################################################################################
+
+    def check(
+        self,
+        client_ip:'str',
+        token_bucket_registry:'TokenBucketRegistry',
+        fixed_window_registry:'FixedWindowRegistry',
+        now_us:'int',
+        ) -> 'SlottedCheckResult | None':
+        """ Resolves the client IP to a rule and time range, then checks both limiters.
+        """
+
+        # Find which rule (if any) applies to this client ..
+        match = self.resolve(client_ip)
+
+        if match is None:
+            return None
+
+        # .. determine which time range is active right now ..
+        now_minutes  = now_us_to_minutes(now_us)
+        time_range   = match.rule.resolve_time_range(now_minutes)
+        cidr_key     = match.key
+
+        # .. build a composite key so each time range has its own counters ..
+        time_range_index = match.rule.time_range.index(time_range)
+        composite_key    = f'{cidr_key}:{time_range_index}'
+
+        # Our response to produce
+        out = SlottedCheckResult()
+        out.matched_key = composite_key
+
+        # .. if this time range is disallowed, the caller must kill the TCP connection immediately ..
+        if time_range.disallowed:
+            out.is_disallowed  = True
+            out.is_allowed     = False
+            out.retry_after_us = 0
+            return out
+
+        out.is_disallowed = False
+
+        # .. otherwise, check both limiters ..
+        token_bucket_config = TokenBucketConfig.from_parts(time_range.rate, time_range.burst)
+        fixed_window_config = FixedWindowConfig.from_parts(time_range.limit, time_range.limit_unit)
+
+        token_bucket_result = token_bucket_registry.check_inner(composite_key, token_bucket_config, now_us)
+        fixed_window_result = fixed_window_registry.check_inner(composite_key, fixed_window_config, now_us)
+
+        out.is_allowed = token_bucket_result.is_allowed and fixed_window_result.is_allowed
+
+        # .. pick the longer retry-after of the two.
+        out.retry_after_us = max(token_bucket_result.retry_after_us, fixed_window_result.retry_after_us)
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -558,6 +558,8 @@ urlpatterns += [
         login_required(http_soap.ping), name='http-soap-ping'),
     url(r'^zato/http-soap/reload-wsdl/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(http_soap.reload_wsdl), name='http-soap-reload-wsdl'),
+    url(r'^zato/http-soap/rate-limiting/save/(?P<id>.*)/$',
+        login_required(http_soap.rate_limiting_save), name='http-soap-rate-limiting-save'),
     url(r'^zato/http-soap/rate-limiting/(?P<id>.*)/$',
         login_required(http_soap.rate_limiting), name='http-soap-rate-limiting'),
     url(r'^zato/http-soap/get-security-groups/(?P<group_type>.*)/$',
