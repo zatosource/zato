@@ -11,7 +11,7 @@ import ipaddress
 from dataclasses import dataclass
 
 # Zato
-from zato.common.rate_limiting.common import RateLimitError, TimeRange
+from zato.common.rate_limiting.common import hh_mm_to_minutes, RateLimitError, time_in_range, TimeRange
 from zato.common.rate_limiting.fixed_window import FixedWindowCheckResult, FixedWindowConfig, FixedWindowRegistry
 from zato.common.rate_limiting.token_bucket import CheckResult, TokenBucketConfig, TokenBucketRegistry
 
@@ -161,6 +161,36 @@ class SlottedCIDRRule:
                 return entry
 
         return None
+
+# ################################################################################################################################
+
+    def resolve_time_range(self, now_minutes:'int') -> 'TimeRange':
+        """ Returns the first non-disabled time range whose window covers now_minutes.
+
+        Iterates time_range[1:] in user-given order. If no specific range matches,
+        returns time_range[0] (the all-day default).
+        """
+
+        # Walk the specific (non-all-day) entries in order ..
+        for time_range_entry in self.time_range[1:]:
+
+            # .. skip disabled entries ..
+            if time_range_entry.disabled:
+                continue
+
+            # .. check if the current time is within this entry's window.
+            from_minutes = hh_mm_to_minutes(time_range_entry.time_from)
+            to_minutes   = hh_mm_to_minutes(time_range_entry.time_to)
+
+            if time_in_range(now_minutes, from_minutes, to_minutes):
+                out = time_range_entry
+                break
+
+        # .. no specific range matched, use the all-day default.
+        else:
+            out = self.time_range[0]
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
