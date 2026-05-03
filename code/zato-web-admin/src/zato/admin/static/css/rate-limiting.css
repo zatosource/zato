@@ -367,6 +367,25 @@
     pointer-events: none;
 }
 
+.rate-limiting-slot[data-disallowed="true"]::before {
+    border-color: #c0392b;
+}
+
+.rate-limiting-slot[data-slot-type="default"][data-disallowed="true"]::before {
+    background: #c0392b;
+}
+
+.rate-limiting-slot[data-disallowed="true"] .rate-limiting-slot-time-label,
+.rate-limiting-slot[data-disallowed="true"] .rate-limiting-config-label {
+    text-decoration: line-through;
+    text-decoration-color: #c0392b;
+    color: #c0392b;
+}
+
+.rate-limiting-slot[data-disallowed="true"] .rate-limiting-config-input {
+    text-decoration: line-through;
+}
+
 /* ------------------------------------------------------------ */
 /* Rate limiting - config fields                                */
 /* ------------------------------------------------------------ */

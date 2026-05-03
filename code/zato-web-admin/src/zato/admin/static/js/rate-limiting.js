@@ -518,11 +518,13 @@
         disallow_link.className = 'rate-limiting-slot-action-link';
         disallow_link.textContent = 'Disallow traffic';
         disallow_link.onclick = function() {
-            if(disallow_link.textContent === 'Disallow traffic') {
-                disallow_link.textContent = 'Allow traffic';
+            if(slot.getAttribute('data-disallowed') === 'true') {
+                slot.removeAttribute('data-disallowed');
+                disallow_link.textContent = 'Disallow traffic';
             }
             else {
-                disallow_link.textContent = 'Disallow traffic';
+                slot.setAttribute('data-disallowed', 'true');
+                disallow_link.textContent = 'Allow traffic';
             }
         };
         disallow_cell.appendChild(disallow_link);
@@ -631,7 +633,7 @@
 
         var dash = document.createElement('span');
         dash.className = 'rate-limiting-time-dash';
-        dash.textContent = '\u2013';
+        dash.textContent = '-';
 
         var to_input = document.createElement('input');
         to_input.type = 'text';
@@ -650,7 +652,7 @@
             if(time_input_pattern.test(new_from) && time_input_pattern.test(new_to)) {
                 slot.setAttribute('data-time-from', new_from);
                 slot.setAttribute('data-time-to', new_to);
-                label.textContent = new_from + ' \u2013 ' + new_to;
+                label.textContent = new_from + ' - ' + new_to;
             }
 
             // Remove the editing inputs ..
@@ -764,7 +766,7 @@
 
         var dash = document.createElement('span');
         dash.className = 'rate-limiting-time-dash';
-        dash.textContent = '\u2013';
+        dash.textContent = '-';
 
         var to_input = document.createElement('input');
         to_input.type = 'text';
@@ -848,7 +850,7 @@
 
         $.fn.zato.rate_limiting.hide_dropdown();
 
-        var label_text = from_value + ' \u2013 ' + to_value;
+        var label_text = from_value + ' - ' + to_value;
 
         // Remove the pending row ..
         pending_slot.parentNode.removeChild(pending_slot);
@@ -1132,7 +1134,7 @@
                     var slot_data = rule.slots[slot_idx];
 
                     if(slot_data.type === 'range') {
-                        var label_text = slot_data.time_from + ' \u2013 ' + slot_data.time_to;
+                        var label_text = slot_data.time_from + ' - ' + slot_data.time_to;
                         var new_slot = $.fn.zato.rate_limiting.add_slot(slots_container, label_text, slot_data.time_from, slot_data.time_to, false);
 
                         new_slot.querySelector('[data-field="rate"]').value = slot_data.rate;
