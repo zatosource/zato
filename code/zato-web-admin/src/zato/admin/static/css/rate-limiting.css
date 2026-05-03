@@ -141,6 +141,11 @@
     background: #2563af24;
 }
 
+.rate-limiting-pill[data-editing="true"] {
+    border-color: var(--slot-accent);
+    background: color-mix(in srgb, var(--slot-accent) 12%, #ffffff);
+}
+
 .rate-limiting-pill-remove {
     cursor: pointer;
     font-size: 13px;

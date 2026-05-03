@@ -290,15 +290,17 @@
         cidr_input.onkeydown = function(event) {
             if(event.key === 'Enter') {
                 event.preventDefault();
-                var value = cidr_input.value.trim();
-                if(value) {
-                    $.fn.zato.rate_limiting.add_pill(rule_elem, value);
-                }
-                cidr_input.value = '';
-                $.fn.zato.rate_limiting.hide_dropdown();
+                cidr_input.blur();
             }
             if(event.key === 'Escape') {
                 $.fn.zato.rate_limiting.hide_dropdown();
+                cidr_input.value = '';
+                // If editing a pill, restore it
+                var editing_pill = pills.querySelector('.rate-limiting-pill[data-editing="true"]');
+                if(editing_pill) {
+                    editing_pill.removeAttribute('data-editing');
+                    cidr_input.removeAttribute('data-editing-pill');
+                }
                 cidr_input.blur();
             }
         };
@@ -309,6 +311,27 @@
                 $.fn.zato.rate_limiting.add_pill(rule_elem, selected_value);
                 cidr_input.value = '';
             }, excluded, true);
+        };
+
+        cidr_input.onblur = function() {
+            var editing_pill = pills.querySelector('.rate-limiting-pill[data-editing="true"]');
+
+            if(editing_pill) {
+                var new_value = cidr_input.value.trim();
+                if(new_value) {
+                    editing_pill.querySelector('span:first-child').textContent = new_value;
+                }
+                editing_pill.removeAttribute('data-editing');
+                cidr_input.removeAttribute('data-editing-pill');
+                cidr_input.value = '';
+                return;
+            }
+
+            var value = cidr_input.value.trim();
+            if(value) {
+                $.fn.zato.rate_limiting.add_pill(rule_elem, value);
+                cidr_input.value = '';
+            }
         };
 
         cidr_input.onfocus = show_cidr_dropdown;
@@ -804,13 +827,20 @@
         }
 
         var pills = rule_elem.querySelector('.rate-limiting-pills');
-        var add_button = pills.querySelector('.rate-limiting-pill-add-button');
 
         var pill = document.createElement('span');
         pill.className = 'rate-limiting-pill';
 
         var text_node = document.createElement('span');
         text_node.textContent = cidr_text;
+        text_node.style.cursor = 'pointer';
+        text_node.onclick = function() {
+            var cidr_input = pills.querySelector('.rate-limiting-pill-input');
+            pill.setAttribute('data-editing', 'true');
+            cidr_input.value = text_node.textContent;
+            cidr_input.focus();
+            cidr_input.select();
+        };
         pill.appendChild(text_node);
 
         var remove_x = document.createElement('span');
@@ -821,7 +851,7 @@
         };
         pill.appendChild(remove_x);
 
-        pills.insertBefore(pill, add_button);
+        pills.appendChild(pill);
     };
 
     // ////////////////////////////////////////////////////////////////////////
