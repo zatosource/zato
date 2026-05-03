@@ -386,6 +386,23 @@
     text-decoration: line-through;
 }
 
+.rate-limiting-slot[data-disallowed="true"][data-disabled="true"]::before {
+    background: color-mix(in srgb, #c0392b 40%, #c0c8d0);
+    border-color: color-mix(in srgb, #c0392b 40%, #c0c8d0);
+}
+
+.rate-limiting-slot[data-disallowed="true"][data-disabled="true"]::after {
+    content: '';
+    position: absolute;
+    left: -9px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 2px;
+    background: color-mix(in srgb, #c0392b 50%, transparent);
+    border-radius: 1px;
+}
+
 /* ------------------------------------------------------------ */
 /* Rate limiting - config fields                                */
 /* ------------------------------------------------------------ */

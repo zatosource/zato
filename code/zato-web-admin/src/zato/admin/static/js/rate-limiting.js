@@ -1195,7 +1195,7 @@
                     setTimeout(function() {
                         status.removeClass('show fade status-message-success');
                     }, 500);
-                }, 3000);
+                }, 750);
             },
             error: function(jqXHR) {
                 var msg = 'Could not save';
