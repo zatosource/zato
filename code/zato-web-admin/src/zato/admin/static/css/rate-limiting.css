@@ -325,7 +325,7 @@
     align-items: center;
     gap: 4px;
     min-width: 120px;
-    min-height: 22px;
+    min-height: 20px;
     flex-shrink: 0;
     font-size: 11px;
     color: #666666;
@@ -431,9 +431,14 @@
     color: #666666;
 }
 
-.rate-limiting-time-input {
+.rate-limiting-slot-time .rate-limiting-time-input {
     width: 48px;
     text-align: center;
+    box-sizing: border-box;
+    height: 20px;
+    padding: 2px 6px;
+    font: 11px 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    line-height: 1;
 }
 
 /* ------------------------------------------------------------ */

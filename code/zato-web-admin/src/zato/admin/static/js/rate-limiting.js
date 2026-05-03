@@ -839,7 +839,7 @@
             pill.setAttribute('data-editing', 'true');
             cidr_input.value = text_node.textContent;
             cidr_input.focus();
-            cidr_input.select();
+            cidr_input.setSelectionRange(0, 0);
         };
         pill.appendChild(text_node);
 
