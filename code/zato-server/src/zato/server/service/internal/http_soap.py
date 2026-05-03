@@ -1006,34 +1006,43 @@ class RateLimitingSave(AdminService):
     name = 'zato.http-soap.rate-limiting.save'
     input = 'id', 'rules_json'
 
-    def handle(self):
+    def handle(self) -> 'None':
 
         input = self.request.input
         channel_id = int(input['id'])
         rules_json = input['rules_json']
 
+        self.logger.info('RateLimitingSave; channel_id:%s, rules_json:%s', channel_id, rules_json)
+
         # Parse the JSON string into a list of rule dicts ..
         rule_dicts:'anylist' = loads(rules_json)
 
+        self.logger.info('RateLimitingSave; channel_id:%s, parsed %s rule_dicts:%s', channel_id, len(rule_dicts), rule_dicts)
+
         # .. validate each rule by running it through from_dict ..
-        for rule_dict in rule_dicts:
-            SlottedCIDRRule.from_dict(rule_dict)
+        for item in rule_dicts:
+            SlottedCIDRRule.from_dict(item)
 
         with closing(self.odb.session()) as session:
 
             # Read the current row ..
-            item = session.query(HTTPSOAP).filter_by(id=channel_id).one()
+            row = session.query(HTTPSOAP).filter_by(id=channel_id).one()
 
             # .. parse the existing opaque1 or start with an empty dict ..
-            opaque = loads(item.opaque1) if item.opaque1 else {}
+            if row.opaque1:
+                opaque = loads(row.opaque1)
+            else:
+                opaque = {}
 
             # .. set the rate_limiting key ..
             opaque['rate_limiting'] = rule_dicts
 
             # .. write it back ..
-            item.opaque1 = dumps(opaque)
-            session.add(item)
+            row.opaque1 = dumps(opaque)
+            session.add(row)
             session.commit()
+
+        self.logger.info('RateLimitingSave; channel_id:%s, ODB committed', channel_id)
 
         # After ODB commit, notify the config dispatcher so the in-process manager picks up the change
         params = {
@@ -1042,6 +1051,8 @@ class RateLimitingSave(AdminService):
             'rule_dicts': rule_dicts,
         }
         self.config_dispatcher.publish(params)
+
+        self.logger.info('RateLimitingSave; channel_id:%s, config event published', channel_id)
 
 # ################################################################################################################################
 # ################################################################################################################################

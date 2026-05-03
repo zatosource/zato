@@ -55,7 +55,7 @@ def get_template_response(req, template_name, return_data):
 def get_user_profile(user, needs_logging=False):
 
     if needs_logging:
-        logger.info('Getting profile for user `%s`', user)
+        logger.debug('Getting profile for user `%s`', user)
 
     from zato.admin.web.models import UserProfile
 

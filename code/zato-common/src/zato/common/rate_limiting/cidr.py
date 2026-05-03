@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import ipaddress
+import logging
 from dataclasses import dataclass
 
 # Zato
@@ -17,6 +18,8 @@ from zato.common.rate_limiting.token_bucket import CheckResult, TokenBucketConfi
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+logger = logging.getLogger('zato_rate_limiting')
 
 if 0:
     from zato.common.typing_ import stranydict, strdictlist, strlist
@@ -200,9 +203,19 @@ class SlottedCIDRRule:
 
     def match(self, address:'ipaddress.IPv4Address | ipaddress.IPv6Address') -> 'CIDREntry | None':
         """ Returns the first entry whose network contains the address, or None.
+
+        An empty entries list means match all IPs - returns a synthetic
+        0.0.0.0/0 or ::/0 entry depending on the address family.
         """
 
-        # Walk entries in order ..
+        # An empty CIDR list means match all IPs ..
+        if not self.entries:
+            if address.version == 4:
+                return _match_all_v4
+            else:
+                return _match_all_v6
+
+        # .. otherwise, walk entries in order ..
         for entry in self.entries:
 
             # .. skip entries of a different address family ..
@@ -520,11 +533,22 @@ class SlottedCIDRMatcher:
         match = self.resolve(client_ip)
 
         if match is None:
+            logger.info('check; client_ip:%s, no matching rule', client_ip)
             return None
 
         # .. determine which time range is active right now ..
         now_minutes  = now_us_to_minutes(now_us)
         time_range   = match.rule.resolve_time_range(now_minutes)
+
+        logger.info('check; client_ip:%s, matched_key:%s, time_range is_all_day:%s, disabled:%s, disallowed:%s, rate:%s, burst:%s, limit:%s, limit_unit:%s',
+            client_ip, match.key, time_range.is_all_day, time_range.disabled, time_range.disallowed,
+            time_range.rate, time_range.burst, time_range.limit, time_range.limit_unit)
+
+        # .. if the resolved time range is disabled, no rate limiting applies ..
+        if time_range.disabled:
+            logger.info('check; client_ip:%s, time_range disabled, skipping', client_ip)
+            return None
+
         cidr_key     = match.key
 
         # .. build a composite key so each time range has its own counters ..
@@ -540,6 +564,7 @@ class SlottedCIDRMatcher:
             out.is_disallowed  = True
             out.is_allowed     = False
             out.retry_after_us = 0
+            logger.info('check; client_ip:%s, composite_key:%s, disallowed', client_ip, composite_key)
             return out
 
         out.is_disallowed = False
@@ -555,6 +580,10 @@ class SlottedCIDRMatcher:
 
         # .. pick the longer retry-after of the two.
         out.retry_after_us = max(token_bucket_result.retry_after_us, fixed_window_result.retry_after_us)
+
+        logger.info('check; client_ip:%s, composite_key:%s, is_allowed:%s, tb_allowed:%s, fw_allowed:%s, retry_after_us:%s',
+            client_ip, composite_key, out.is_allowed, token_bucket_result.is_allowed,
+            fixed_window_result.is_allowed, out.retry_after_us)
 
         return out
 
@@ -584,6 +613,13 @@ def parse_client_ip(value:'str') -> 'ipaddress.IPv4Address | ipaddress.IPv6Addre
         raise RateLimitError(f'Invalid IP address: {value}') from None
 
     return out
+
+# ################################################################################################################################
+
+# Synthetic match-all entries for rules with an empty CIDR list,
+# defined after parse_cidr is available.
+_match_all_v4 = CIDREntry.from_string('0.0.0.0/0')
+_match_all_v6 = CIDREntry.from_string('::/0')
 
 # ################################################################################################################################
 # ################################################################################################################################

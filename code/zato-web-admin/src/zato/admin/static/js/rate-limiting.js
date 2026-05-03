@@ -1263,6 +1263,7 @@
 
     $.fn.zato.rate_limiting.save = function(container_id) {
         var rules_json = $.fn.zato.rate_limiting.get_rules(container_id);
+        console.log('[rate_limiting.save] rules_json:', rules_json);
         var status = $('#rate-limiting-status');
 
         status.removeClass('show fade status-message-success status-message-error');

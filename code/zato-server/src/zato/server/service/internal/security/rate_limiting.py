@@ -70,8 +70,12 @@ class _RateLimitingSaveBase(AdminService):
         sec_def_id = int(input['id'])
         rules_json = input['rules_json']
 
+        self.logger.info('SecDefRateLimitingSave; sec_def_id:%s, rules_json:%s', sec_def_id, rules_json)
+
         # .. parse and validate each rule ..
         rule_dicts:'anylist' = loads(rules_json)
+
+        self.logger.info('SecDefRateLimitingSave; sec_def_id:%s, parsed %s rule_dicts:%s', sec_def_id, len(rule_dicts), rule_dicts)
 
         for item in rule_dicts:
             SlottedCIDRRule.from_dict(item)
@@ -93,6 +97,8 @@ class _RateLimitingSaveBase(AdminService):
             session.add(row)
             session.commit()
 
+        self.logger.info('SecDefRateLimitingSave; sec_def_id:%s, ODB committed', sec_def_id)
+
         # .. and notify all workers via the config dispatcher.
         params = {
             'action': self._broker_message_type.value,
@@ -100,6 +106,8 @@ class _RateLimitingSaveBase(AdminService):
             'rule_dicts': rule_dicts,
         }
         self.config_dispatcher.publish(params)
+
+        self.logger.info('SecDefRateLimitingSave; sec_def_id:%s, config event published, action:%s', sec_def_id, self._broker_message_type.value)
 
 # ################################################################################################################################
 # ################################################################################################################################

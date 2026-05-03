@@ -6,6 +6,9 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import logging
+
 # Zato
 from zato.common.rate_limiting.cidr import SlottedCIDRMatcher
 from zato.common.rate_limiting.fixed_window import FixedWindowRegistry
@@ -20,6 +23,8 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+logger = logging.getLogger('zato_rate_limiting')
 
 matcher_dict = dict[int, SlottedCIDRMatcher]
 
@@ -41,6 +46,8 @@ class RateLimitingManager:
     def set_channel_config(self, channel_id:'int', rule_dicts:'strdictlist') -> 'None':
         """ Parses and stores rate-limiting rules for a channel, replacing any previous config.
         """
+        logger.info('set_channel_config; channel_id:%s, rule_count:%s, rule_dicts:%s',
+            channel_id, len(rule_dicts), rule_dicts)
         matcher = SlottedCIDRMatcher()
         matcher.replace_all(rule_dicts)
         self._channel_matchers[channel_id] = matcher
@@ -53,9 +60,13 @@ class RateLimitingManager:
         matcher = self._channel_matchers.get(channel_id)
 
         if matcher is None:
+            logger.info('check; channel_id:%s, no matcher found', channel_id)
             return None
 
         result = matcher.check(client_ip, self._token_buckets, self._fixed_windows, now_us, key_prefix)
+
+        logger.info('check; channel_id:%s, client_ip:%s, key_prefix:%s, result:%s',
+            channel_id, client_ip, key_prefix, result)
 
         return result
 
@@ -95,6 +106,8 @@ class RateLimitingManager:
     def set_sec_def_config(self, sec_def_id:'int', rule_dicts:'strdictlist') -> 'None':
         """ Parses and stores rate-limiting rules for a security definition, replacing any previous config.
         """
+        logger.info('set_sec_def_config; sec_def_id:%s (type:%s), rule_count:%s, rule_dicts:%s',
+            sec_def_id, type(sec_def_id).__name__, len(rule_dicts), rule_dicts)
         matcher = SlottedCIDRMatcher()
         matcher.replace_all(rule_dicts)
         self._sec_def_matchers[sec_def_id] = matcher
@@ -107,9 +120,14 @@ class RateLimitingManager:
         matcher = self._sec_def_matchers.get(sec_def_id)
 
         if matcher is None:
+            logger.info('check_sec_def; sec_def_id:%s (type:%s), no matcher found, known_ids:%s',
+                sec_def_id, type(sec_def_id).__name__, list(self._sec_def_matchers.keys()))
             return None
 
         result = matcher.check(client_ip, self._token_buckets, self._fixed_windows, now_us, key_prefix)
+
+        logger.info('check_sec_def; sec_def_id:%s, client_ip:%s, key_prefix:%s, result:%s',
+            sec_def_id, client_ip, key_prefix, result)
 
         return result
 

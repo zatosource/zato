@@ -81,10 +81,14 @@ class ConfigLoader:
 
             # .. extract the inner configuration ..
             config = item['config']
+            sec_def_id = config['id']
+            sec_def_name = config.get('name', '<unknown>')
             opaque1 = config.get('opaque1')
 
             # .. skip entries without opaque data ..
             if not opaque1:
+                logger.info('Startup rate limiting; sec_def_id:%s (type:%s), name:%s, no opaque1',
+                    sec_def_id, type(sec_def_id).__name__, sec_def_name)
                 continue
 
             # .. parse the JSON ..
@@ -92,8 +96,12 @@ class ConfigLoader:
 
             # .. and if rate limiting rules are configured, load them.
             if rate_limiting := opaque.get('rate_limiting'):
-                sec_def_id = config['id']
+                logger.info('Startup rate limiting; sec_def_id:%s (type:%s), name:%s, loading %s rules: %s',
+                    sec_def_id, type(sec_def_id).__name__, sec_def_name, len(rate_limiting), rate_limiting)
                 self.rate_limiting_manager.set_sec_def_config(sec_def_id, rate_limiting)
+            else:
+                logger.info('Startup rate limiting; sec_def_id:%s, name:%s, no rate_limiting in opaque',
+                    sec_def_id, sec_def_name)
 
 # ################################################################################################################################
 
@@ -228,10 +236,15 @@ class ConfigLoader:
 
         # Load rate limiting configuration for each channel that has it
         for item in http_soap:
-            rate_limiting = item.get('rate_limiting')
-            if rate_limiting:
-                channel_id = item['id']
+            channel_id = item['id']
+            channel_name = item.get('name', '<unknown>')
+
+            if rate_limiting := item.get('rate_limiting'):
+                logger.info('Startup rate limiting; channel_id:%s, name:%s, loading %s rules: %s',
+                    channel_id, channel_name, len(rate_limiting), rate_limiting)
                 self.rate_limiting_manager.set_channel_config(channel_id, rate_limiting)
+            else:
+                logger.info('Startup rate limiting; channel_id:%s, name:%s, no rate_limiting', channel_id, channel_name)
 
         # SimpleIO
         # In preparation for a SIO rewrite, we loaded SIO config from a file

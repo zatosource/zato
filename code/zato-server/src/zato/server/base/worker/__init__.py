@@ -1082,6 +1082,7 @@ class WorkerStore(_WorkerStoreBase):
         """
         sec_def_id = msg['id']
         rule_dicts = msg['rule_dicts']
+        logger.info('on_config_event_SECURITY_BASIC_AUTH_RATE_LIMITING_EDIT; sec_def_id:%s (type:%s), rule_dicts:%s', sec_def_id, type(sec_def_id).__name__, rule_dicts)
         self.server.rate_limiting_manager.set_sec_def_config(sec_def_id, rule_dicts)
 
 # ################################################################################################################################
@@ -1150,6 +1151,7 @@ class WorkerStore(_WorkerStoreBase):
         """
         sec_def_id = msg['id']
         rule_dicts = msg['rule_dicts']
+        logger.info('on_config_event_SECURITY_APIKEY_RATE_LIMITING_EDIT; sec_def_id:%s, rule_dicts:%s', sec_def_id, rule_dicts)
         self.server.rate_limiting_manager.set_sec_def_config(sec_def_id, rule_dicts)
 
 # ################################################################################################################################
@@ -1443,6 +1445,7 @@ class WorkerStore(_WorkerStoreBase):
         """
         channel_id = msg['id']
         rule_dicts = msg['rule_dicts']
+        logger.info('on_config_event_CHANNEL_HTTP_SOAP_RATE_LIMITING_EDIT; channel_id:%s, rule_dicts:%s', channel_id, rule_dicts)
         self.server.rate_limiting_manager.set_channel_config(channel_id, rule_dicts)
 
     def on_config_event_CHANNEL_HTTP_SOAP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':

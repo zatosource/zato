@@ -540,10 +540,12 @@ def rate_limiting(req, id): # type: ignore
 def rate_limiting_save(req, id): # type: ignore
     try:
         rules_json = req.POST['rules_json']
+        logger.info('rate_limiting_save; channel_id:%s, rules_json:%s', id, rules_json)
         response = req.zato.client.invoke('zato.http-soap.rate-limiting.save', {
             'id': id,
             'rules_json': rules_json,
         })
+        logger.info('rate_limiting_save; channel_id:%s, response.ok:%s', id, response.ok)
         if response.ok:
             return JsonResponse({'status': 'ok'})
         else:
