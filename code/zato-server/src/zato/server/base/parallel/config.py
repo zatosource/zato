@@ -13,6 +13,7 @@ from logging import getLogger
 # Zato
 from zato.bunch import Bunch
 from zato.common.const import SECRETS, ServiceConst
+from zato.common.json_internal import loads
 from zato.common.util.config import resolve_name
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
@@ -24,7 +25,6 @@ from zato.url_dispatcher import Matcher
 
 if 0:
     from zato.common.odb.model import Server as ServerModel
-    from zato.common.typing_ import anydict, anydictnone, anyset
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -65,8 +65,35 @@ class ConfigLoader:
         query = self.odb.get_oauth_list(cluster_id, True)
         self.config.oauth = ConfigDict.from_query('oauth', query, decrypt_func=self.decrypt)
 
+        # Load rate limiting for security definitions
+        self._load_sec_def_rate_limiting(self.config.basic_auth)
+        self._load_sec_def_rate_limiting(self.config.apikey)
+
         # Encrypt all secrets
         self._encrypt_secrets()
+
+# ################################################################################################################################
+
+    def _load_sec_def_rate_limiting(self:'ParallelServer', config_dict:'ConfigDict') -> 'None': # pyright: ignore[reportSelfClsParameterName]
+
+        # Go through each security definition in this config dict ..
+        for item in config_dict.values():
+
+            # .. extract the inner configuration ..
+            config = item['config']
+            opaque1 = config.get('opaque1')
+
+            # .. skip entries without opaque data ..
+            if not opaque1:
+                continue
+
+            # .. parse the JSON ..
+            opaque = loads(opaque1)
+
+            # .. and if rate limiting rules are configured, load them.
+            if rate_limiting := opaque.get('rate_limiting'):
+                sec_def_id = config['id']
+                self.rate_limiting_manager.set_sec_def_config(sec_def_id, rate_limiting)
 
 # ################################################################################################################################
 
