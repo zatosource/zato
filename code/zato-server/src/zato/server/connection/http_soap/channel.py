@@ -447,13 +447,25 @@ class RequestDispatcher:
         # .. this will raise an exception if credentials are invalid ..
         self._check_security(cid, meta, channel_item, wsgi_environ, payload, post_data, worker_store)
 
-        # .. now that auth succeeded, check sec_def rate limiting ..
+        # .. now that auth succeeded, check sec_def rate limiting first ..
         sec_def_rate_limit_result = self._check_sec_def_rate_limiting(wsgi_environ, remote_addr, now_us)
 
         if sec_def_rate_limit_result:
             if not sec_def_rate_limit_result.is_allowed:
                 out = self._handle_rate_limit_result(
                     cid, sec_def_rate_limit_result, wsgi_environ, remote_addr, channel_item)
+                return out
+
+        # .. then check channel rate limiting ..
+        channel_id = channel_item['id']
+        rate_limit_key_prefix = f'rest{channel_id}:'
+        channel_rate_limit_result = self.server.rate_limiting_manager.check(
+            channel_id, remote_addr, now_us, rate_limit_key_prefix)
+
+        if channel_rate_limit_result:
+            if not channel_rate_limit_result.is_allowed:
+                out = self._handle_rate_limit_result(
+                    cid, channel_rate_limit_result, wsgi_environ, remote_addr, channel_item)
                 return out
 
         # .. invoke the service ..
@@ -661,17 +673,7 @@ class RequestDispatcher:
         # .. we have a match and we can possibly handle the incoming request ..
         if url_match not in ModuleCtx.No_URL_Match: # type: ignore
 
-            # .. check rate limiting before any further processing ..
             now_us = current_time_us()
-            channel_id = channel_item['id']
-            rate_limit_key_prefix = f'rest{channel_id}:'
-            rate_limit_result = self.server.rate_limiting_manager.check(channel_id, remote_addr, now_us, rate_limit_key_prefix)
-
-            # .. if rate limiting applies, handle it and return immediately ..
-            if rate_limit_result:
-                if not rate_limit_result.is_allowed:
-                    out = self._handle_rate_limit_result(cid, rate_limit_result, wsgi_environ, remote_addr, channel_item)
-                    return out
 
             try:
 
