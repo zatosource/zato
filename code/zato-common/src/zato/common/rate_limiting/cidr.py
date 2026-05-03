@@ -105,7 +105,7 @@ class CIDRRule:
 class SlottedCIDRRule:
     """ A list of CIDR blocks paired with an ordered list of time ranges for rate limiting.
 
-    time_range[0] is always the all-day fallback (is_all_day=True).
+    time_range[0] is always the all-day one (is_all_day=True).
     """
 
     entries:    'cidr_entry_list'
@@ -126,7 +126,7 @@ class SlottedCIDRRule:
         if not time_range:
             raise RateLimitError('time_range must not be empty')
 
-        # .. and the first entry must be the all-day fallback.
+        # .. and the first entry must be the all-day one.
         if not time_range[0].is_all_day:
             raise RateLimitError('time_range[0] must be an all-day entry')
 
@@ -142,6 +142,25 @@ class SlottedCIDRRule:
         out.time_range = time_range
 
         return out
+
+# ################################################################################################################################
+
+    def match(self, address:'ipaddress.IPv4Address | ipaddress.IPv6Address') -> 'CIDREntry | None':
+        """ Returns the first entry whose network contains the address, or None.
+        """
+
+        # Walk entries in order ..
+        for entry in self.entries:
+
+            # .. skip entries of a different address family ..
+            if entry.network.version != address.version:
+                continue
+
+            # .. return the first match.
+            if address in entry.network:
+                return entry
+
+        return None
 
 # ################################################################################################################################
 # ################################################################################################################################
