@@ -378,6 +378,11 @@
         rule_elem.appendChild(add_slot_button);
 
         container.appendChild(rule_elem);
+
+        // Now that the rule is in the DOM, lock action cell widths
+        // so toggling text never causes layout shifts.
+        $.fn.zato.rate_limiting.lock_action_cells(rule_elem);
+
         $.fn.zato.rate_limiting.renumber(container_id);
     };
 
@@ -501,10 +506,37 @@
         slot.appendChild(limit_group);
 
         // Slot actions area
-        var actions = document.createElement('span');
+        var actions = document.createElement('div');
         actions.className = 'rate-limiting-slot-actions';
 
+        // Disallow/Allow traffic toggle
+        var disallow_cell = document.createElement('div');
+        disallow_cell.className = 'rate-limiting-slot-action-cell';
+
+        var disallow_link = document.createElement('a');
+        disallow_link.href = 'javascript:void(0)';
+        disallow_link.className = 'rate-limiting-slot-action-link';
+        disallow_link.textContent = 'Disallow traffic';
+        disallow_link.onclick = function() {
+            if(disallow_link.textContent === 'Disallow traffic') {
+                disallow_link.textContent = 'Allow traffic';
+            }
+            else {
+                disallow_link.textContent = 'Disallow traffic';
+            }
+        };
+        disallow_cell.appendChild(disallow_link);
+        actions.appendChild(disallow_cell);
+
+        var pipe_1 = document.createElement('span');
+        pipe_1.className = 'rate-limiting-slot-action-pipe';
+        pipe_1.textContent = '|';
+        actions.appendChild(pipe_1);
+
         // Disable/Enable toggle
+        var toggle_cell = document.createElement('div');
+        toggle_cell.className = 'rate-limiting-slot-action-cell';
+
         var toggle_link = document.createElement('a');
         toggle_link.href = 'javascript:void(0)';
         toggle_link.className = 'rate-limiting-slot-toggle';
@@ -512,10 +544,19 @@
         toggle_link.onclick = function() {
             $.fn.zato.rate_limiting.toggle_slot(slot, toggle_link);
         };
-        actions.appendChild(toggle_link);
+        toggle_cell.appendChild(toggle_link);
+        actions.appendChild(toggle_cell);
 
         // Delete rule (only for non-default slots)
         if(!is_default) {
+            var pipe_2 = document.createElement('span');
+            pipe_2.className = 'rate-limiting-slot-action-pipe';
+            pipe_2.textContent = '|';
+            actions.appendChild(pipe_2);
+
+            var delete_cell = document.createElement('div');
+            delete_cell.className = 'rate-limiting-slot-action-cell';
+
             var delete_link = document.createElement('a');
             delete_link.href = 'javascript:void(0)';
             delete_link.className = 'rate-limiting-slot-delete';
@@ -523,13 +564,34 @@
             delete_link.onclick = function() {
                 slot.parentNode.removeChild(slot);
             };
-            actions.appendChild(delete_link);
+            delete_cell.appendChild(delete_link);
+            actions.appendChild(delete_cell);
         }
 
         slot.appendChild(actions);
 
         slots_container.appendChild(slot);
+
+        // If the slot is already in the rendered DOM, lock its cell widths now.
+        // For slots created before the rule is appended, lock_action_cells
+        // is called from add_rule after the rule enters the DOM.
+        if(slot.offsetParent !== null) {
+            $.fn.zato.rate_limiting.lock_action_cells(slot);
+        }
+
         return slot;
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.rate_limiting.lock_action_cells = function(root_elem) {
+        var cells = root_elem.querySelectorAll('.rate-limiting-slot-action-cell');
+        for(var cell_idx = 0; cell_idx < cells.length; cell_idx++) {
+            var cell = cells[cell_idx];
+            if(!cell.style.width) {
+                cell.style.width = cell.offsetWidth + 'px';
+            }
+        }
     };
 
     // ////////////////////////////////////////////////////////////////////////
