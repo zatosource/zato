@@ -11,9 +11,12 @@ import ipaddress
 from dataclasses import dataclass
 
 # Zato
-from zato.common.rate_limiting.common import RateLimitError
+from zato.common.rate_limiting.common import RateLimitError, TimeRange
 from zato.common.rate_limiting.fixed_window import FixedWindowCheckResult, FixedWindowConfig, FixedWindowRegistry
 from zato.common.rate_limiting.token_bucket import CheckResult, TokenBucketConfig, TokenBucketRegistry
+
+if 0:
+    from zato.common.typing_ import strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,6 +39,12 @@ class CIDREntry:
         out.key     = str(network)
 
         return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+cidr_entry_list  = list[CIDREntry]
+time_range_list  = list[TimeRange]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,6 +97,51 @@ class CIDRRule:
                 return entry
 
         return None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class SlottedCIDRRule:
+    """ A list of CIDR blocks paired with an ordered list of time ranges for rate limiting.
+
+    time_range[0] is always the all-day fallback (is_all_day=True).
+    """
+
+    entries:    'cidr_entry_list'
+    time_range: 'time_range_list'
+
+# ################################################################################################################################
+
+    @classmethod
+    def from_parts(
+        class_:'type[SlottedCIDRRule]', # pyright: ignore[reportSelfClsParameterName]
+        cidr_list:'strlist',
+        time_range:'time_range_list',
+        ) -> 'SlottedCIDRRule':
+        """ Builds a rule from a list of CIDR strings and an ordered list of TimeRange objects.
+        """
+
+        # The time range list must not be empty ..
+        if not time_range:
+            raise RateLimitError('time_range must not be empty')
+
+        # .. and the first entry must be the all-day fallback.
+        if not time_range[0].is_all_day:
+            raise RateLimitError('time_range[0] must be an all-day entry')
+
+        # Parse CIDR strings into entries ..
+        entries:'cidr_entry_list' = []
+
+        for value in cidr_list:
+            entry = CIDREntry.from_string(value)
+            entries.append(entry)
+
+        out = class_()
+        out.entries    = entries
+        out.time_range = time_range
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
