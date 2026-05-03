@@ -65,7 +65,7 @@
     // Generic dropdown - used by both CIDR pills and time range inputs
     // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.rate_limiting.show_dropdown = function(anchor_elem, grouped_items, filter_text, on_select, excluded) {
+    $.fn.zato.rate_limiting.show_dropdown = function(anchor_elem, grouped_items, filter_text, on_select, excluded, keep_open) {
 
         $.fn.zato.rate_limiting.hide_dropdown();
 
@@ -116,7 +116,7 @@
             // Items
             for(var match_idx = 0; match_idx < matching_items.length; match_idx++) {
                 var match = matching_items[match_idx];
-                var row = $.fn.zato.rate_limiting.make_dropdown_item(match, on_select);
+                var row = $.fn.zato.rate_limiting.make_dropdown_item(match, on_select, keep_open);
                 dropdown.appendChild(row);
                 total_items++;
             }
@@ -137,7 +137,7 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.rate_limiting.make_dropdown_item = function(item, on_select) {
+    $.fn.zato.rate_limiting.make_dropdown_item = function(item, on_select, keep_open) {
         var row = document.createElement('div');
         row.className = 'rate-limiting-suggestion-item';
 
@@ -153,7 +153,12 @@
 
         row.onclick = function() {
             on_select(item.value);
-            $.fn.zato.rate_limiting.hide_dropdown();
+            if(keep_open) {
+                row.parentNode.removeChild(row);
+            }
+            else {
+                $.fn.zato.rate_limiting.hide_dropdown();
+            }
         };
 
         return row;
@@ -303,14 +308,21 @@
             $.fn.zato.rate_limiting.show_dropdown(cidr_input, cidr_suggestions, cidr_input.value, function(selected_value) {
                 $.fn.zato.rate_limiting.add_pill(rule_elem, selected_value);
                 cidr_input.value = '';
-                cidr_input.focus();
-            }, excluded);
+            }, excluded, true);
         };
 
         cidr_input.onfocus = show_cidr_dropdown;
         cidr_input.oninput = show_cidr_dropdown;
 
+        var add_pill_button = document.createElement('span');
+        add_pill_button.className = 'rate-limiting-pill-add-button';
+        add_pill_button.textContent = '+';
+        add_pill_button.onclick = function() {
+            cidr_input.focus();
+        };
+
         pills.appendChild(cidr_input);
+        pills.appendChild(add_pill_button);
 
         header.appendChild(pills);
 
@@ -590,9 +602,23 @@
             }
         };
 
-        // Show dropdown for from input
+        var editing_finished = false;
+
+        var try_close = function() {
+            setTimeout(function() {
+                if(editing_finished) {
+                    return;
+                }
+                if(!time_area.querySelector('.rate-limiting-time-input:focus')) {
+                    editing_finished = true;
+                    finish_edit();
+                }
+            }, 200);
+        };
+
+        // Show full time list (no filter) so the user sees all options
         var show_from_dropdown = function() {
-            $.fn.zato.rate_limiting.show_dropdown(from_input, time_suggestions, from_input.value, function(selected_value) {
+            $.fn.zato.rate_limiting.show_dropdown(from_input, time_suggestions, '', function(selected_value) {
                 from_input.value = selected_value;
                 to_input.focus();
                 setTimeout(show_to_dropdown, 0);
@@ -600,29 +626,24 @@
         };
 
         var show_to_dropdown = function() {
-            $.fn.zato.rate_limiting.show_dropdown(to_input, time_suggestions, to_input.value, function(selected_value) {
+            $.fn.zato.rate_limiting.show_dropdown(to_input, time_suggestions, '', function(selected_value) {
                 to_input.value = selected_value;
+                editing_finished = true;
                 finish_edit();
             });
         };
 
         from_input.onfocus = show_from_dropdown;
-        from_input.oninput = show_from_dropdown;
         to_input.onfocus = show_to_dropdown;
-        to_input.oninput = show_to_dropdown;
 
         from_input.onblur = function() {
             $.fn.zato.rate_limiting.validate_time_input(from_input);
+            try_close();
         };
 
         to_input.onblur = function() {
             $.fn.zato.rate_limiting.validate_time_input(to_input);
-            // Finish editing after a small delay to allow dropdown clicks
-            setTimeout(function() {
-                if(!time_area.querySelector('.rate-limiting-time-input:focus')) {
-                    finish_edit();
-                }
-            }, 200);
+            try_close();
         };
 
         from_input.focus();

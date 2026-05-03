@@ -345,6 +345,11 @@
     transition: color 0.1s;
 }
 
+.rate-limiting-slot-toggle {
+    display: inline-block;
+    min-width: 37px;
+}
+
 .rate-limiting-slot-toggle:hover {
     color: var(--slot-accent);
 }
@@ -421,16 +426,18 @@
 .rate-limiting-time-input {
     width: 42px;
     text-align: center;
-    padding: 0 3px;
+    padding: 0 2px;
+    margin: 0;
     border: 1px solid #c0c8d0;
     border-radius: 2px;
-    font: 11px 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-    line-height: 1;
+    font: 11px/1 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
     box-sizing: border-box;
-    height: 16px;
+    height: 14px;
+    max-height: 14px;
     outline: none;
     background: #ffffff;
     transition: border-color 0.15s, box-shadow 0.15s;
+    -moz-appearance: textfield;
 }
 
 .rate-limiting-time-input:focus {
