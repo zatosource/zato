@@ -642,9 +642,11 @@ class RequestDispatcher:
             now_us = current_time_us()
             rate_limit_result = self.server.rate_limiting_manager.check(channel_item['id'], remote_addr, now_us)
 
-            if rate_limit_result is not None and not rate_limit_result.is_allowed:
-                out = self._handle_rate_limit_result(cid, rate_limit_result, wsgi_environ, remote_addr, channel_item)
-                return out
+            # .. if rate limiting applies, handle it and return immediately ..
+            if rate_limit_result:
+                if not rate_limit_result.is_allowed:
+                    out = self._handle_rate_limit_result(cid, rate_limit_result, wsgi_environ, remote_addr, channel_item)
+                    return out
 
             try:
 
@@ -696,17 +698,22 @@ class RequestDispatcher:
 
         # Disallowed traffic - silent TCP drop, as if a firewall discarded the packet ..
         if rate_limit_result.is_disallowed:
-            raw_socket = wsgi_environ.get('gunicorn.socket')
-            if raw_socket:
-                raw_socket.setsockopt(_socket_SOL_SOCKET, _socket_SO_LINGER, _so_linger_on)
-                raw_socket.close()
+            raw_socket = wsgi_environ['gunicorn.sock']
+            raw_socket.setsockopt(_socket_SOL_SOCKET, _socket_SO_LINGER, _so_linger_on)
+            raw_socket.close()
 
             out = b''
 
             return out
 
         # .. otherwise this is rate-limited traffic - return HTTP 429.
-        retry_after_seconds = -(-rate_limit_result.retry_after_us // _microseconds_per_second)
+        retry_after_us = rate_limit_result.retry_after_us
+        retry_after_seconds = retry_after_us // _microseconds_per_second
+
+        # Round up if there is any remainder
+        if retry_after_us % _microseconds_per_second:
+            retry_after_seconds += 1
+
         wsgi_environ['zato.http.response.status'] = _status_too_many_requests
         wsgi_environ['zato.http.response.headers']['Retry-After'] = str(retry_after_seconds)
 
