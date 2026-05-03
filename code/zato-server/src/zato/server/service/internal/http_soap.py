@@ -1036,3 +1036,28 @@ class RateLimitingSave(AdminService):
             session.commit()
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+class RateLimitingGet(AdminService):
+
+    name = 'zato.http-soap.rate-limiting.get'
+    input = 'id'
+
+    def handle(self):
+
+        channel_id = int(self.request.input['id'])
+
+        with closing(self.odb.session()) as session:
+
+            # Read the current row ..
+            item = session.query(HTTPSOAP).filter_by(id=channel_id).one()
+
+            # .. parse existing opaque1 ..
+            opaque = loads(item.opaque1) if item.opaque1 else {}
+
+            # .. extract rate_limiting, defaulting to an empty list ..
+            rate_limiting = opaque.get('rate_limiting', [])
+
+        self.response.payload = dumps(rate_limiting)
+
+# ################################################################################################################################

@@ -515,17 +515,10 @@
 
         var disallow_link = document.createElement('a');
         disallow_link.href = 'javascript:void(0)';
-        disallow_link.className = 'rate-limiting-slot-action-link';
+        disallow_link.className = 'rate-limiting-slot-disallow';
         disallow_link.textContent = 'Disallow traffic';
         disallow_link.onclick = function() {
-            if(slot.getAttribute('data-disallowed') === 'true') {
-                slot.removeAttribute('data-disallowed');
-                disallow_link.textContent = 'Disallow traffic';
-            }
-            else {
-                slot.setAttribute('data-disallowed', 'true');
-                disallow_link.textContent = 'Allow traffic';
-            }
+            $.fn.zato.rate_limiting.toggle_disallow(slot, disallow_link);
         };
         disallow_cell.appendChild(disallow_link);
         actions.appendChild(disallow_cell);
@@ -608,6 +601,21 @@
         else {
             slot.setAttribute('data-disabled', 'true');
             toggle_link.textContent = 'Enable rule';
+        }
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.rate_limiting.toggle_disallow = function(slot, disallow_link) {
+        var is_disallowed = slot.getAttribute('data-disallowed') === 'true';
+
+        if(is_disallowed) {
+            slot.removeAttribute('data-disallowed');
+            disallow_link.textContent = 'Disallow traffic';
+        }
+        else {
+            slot.setAttribute('data-disallowed', 'true');
+            disallow_link.textContent = 'Allow traffic';
         }
     };
 
@@ -1041,34 +1049,36 @@
                 cidr_list.push(text_span.textContent);
             }
 
-            // Collect time slots
+            // Collect time ranges
             var slot_elems = rule_elem.querySelectorAll('.rate-limiting-slot:not([data-slot-type="pending"])');
-            var slots = [];
+            var time_range = [];
 
             for(var slot_idx = 0; slot_idx < slot_elems.length; slot_idx++) {
                 var slot_elem = slot_elems[slot_idx];
                 var slot_type = slot_elem.getAttribute('data-slot-type');
+                var is_all_day = slot_type === 'default';
 
-                var slot_data = {
-                    type: slot_type,
+                var entry = {
+                    is_all_day: is_all_day,
                     disabled: slot_elem.getAttribute('data-disabled') === 'true',
+                    disallowed: slot_elem.getAttribute('data-disallowed') === 'true',
                     rate: slot_elem.querySelector('[data-field="rate"]').value,
                     burst: slot_elem.querySelector('[data-field="burst"]').value,
                     limit: slot_elem.querySelector('[data-field="limit"]').value,
-                    window_unit: slot_elem.querySelector('[data-field="window_unit"]').value
+                    limit_unit: slot_elem.querySelector('[data-field="window_unit"]').value
                 };
 
-                if(slot_type === 'range') {
-                    slot_data.time_from = slot_elem.getAttribute('data-time-from');
-                    slot_data.time_to = slot_elem.getAttribute('data-time-to');
+                if(!is_all_day) {
+                    entry.time_from = slot_elem.getAttribute('data-time-from');
+                    entry.time_to = slot_elem.getAttribute('data-time-to');
                 }
 
-                slots.push(slot_data);
+                time_range.push(entry);
             }
 
             rules.push({
                 cidr_list: cidr_list,
-                slots: slots
+                time_range: time_range
             });
         }
 
@@ -1108,43 +1118,53 @@
                 $.fn.zato.rate_limiting.add_pill(rule_elem, rule.cidr_list[cidr_idx]);
             }
 
-            // Restore slot config values
+            // Restore time range config values
             var slot_elems = rule_elem.querySelectorAll('.rate-limiting-slot');
 
-            if(rule.slots) {
-                // The first slot (all day) is already created by add_rule
+            if(rule.time_range) {
+                // The first entry (all day) is already created by add_rule
                 var default_slot = slot_elems[0];
 
-                if(rule.slots.length > 0 && rule.slots[0].type === 'default') {
-                    default_slot.querySelector('[data-field="rate"]').value = rule.slots[0].rate;
-                    default_slot.querySelector('[data-field="burst"]').value = rule.slots[0].burst;
-                    default_slot.querySelector('[data-field="limit"]').value = rule.slots[0].limit;
-                    default_slot.querySelector('[data-field="window_unit"]').value = rule.slots[0].window_unit;
+                if(rule.time_range.length > 0 && rule.time_range[0].is_all_day) {
+                    default_slot.querySelector('[data-field="rate"]').value = rule.time_range[0].rate;
+                    default_slot.querySelector('[data-field="burst"]').value = rule.time_range[0].burst;
+                    default_slot.querySelector('[data-field="limit"]').value = rule.time_range[0].limit;
+                    default_slot.querySelector('[data-field="window_unit"]').value = rule.time_range[0].limit_unit;
 
-                    if(rule.slots[0].disabled) {
+                    if(rule.time_range[0].disabled) {
                         var toggle_link = default_slot.querySelector('.rate-limiting-slot-toggle');
                         $.fn.zato.rate_limiting.toggle_slot(default_slot, toggle_link);
                     }
+
+                    if(rule.time_range[0].disallowed) {
+                        var disallow_link = default_slot.querySelector('.rate-limiting-slot-disallow');
+                        $.fn.zato.rate_limiting.toggle_disallow(default_slot, disallow_link);
+                    }
                 }
 
-                // Restore additional time-range slots
+                // Restore additional time-range entries
                 var slots_container = rule_elem.querySelector('.rate-limiting-slots');
 
-                for(var slot_idx = 1; slot_idx < rule.slots.length; slot_idx++) {
-                    var slot_data = rule.slots[slot_idx];
+                for(var slot_idx = 1; slot_idx < rule.time_range.length; slot_idx++) {
+                    var entry = rule.time_range[slot_idx];
 
-                    if(slot_data.type === 'range') {
-                        var label_text = slot_data.time_from + ' - ' + slot_data.time_to;
-                        var new_slot = $.fn.zato.rate_limiting.add_slot(slots_container, label_text, slot_data.time_from, slot_data.time_to, false);
+                    if(!entry.is_all_day) {
+                        var label_text = entry.time_from + ' - ' + entry.time_to;
+                        var new_slot = $.fn.zato.rate_limiting.add_slot(slots_container, label_text, entry.time_from, entry.time_to, false);
 
-                        new_slot.querySelector('[data-field="rate"]').value = slot_data.rate;
-                        new_slot.querySelector('[data-field="burst"]').value = slot_data.burst;
-                        new_slot.querySelector('[data-field="limit"]').value = slot_data.limit;
-                        new_slot.querySelector('[data-field="window_unit"]').value = slot_data.window_unit;
+                        new_slot.querySelector('[data-field="rate"]').value = entry.rate;
+                        new_slot.querySelector('[data-field="burst"]').value = entry.burst;
+                        new_slot.querySelector('[data-field="limit"]').value = entry.limit;
+                        new_slot.querySelector('[data-field="window_unit"]').value = entry.limit_unit;
 
-                        if(slot_data.disabled) {
+                        if(entry.disabled) {
                             var toggle_link = new_slot.querySelector('.rate-limiting-slot-toggle');
                             $.fn.zato.rate_limiting.toggle_slot(new_slot, toggle_link);
+                        }
+
+                        if(entry.disallowed) {
+                            var disallow_link = new_slot.querySelector('.rate-limiting-slot-disallow');
+                            $.fn.zato.rate_limiting.toggle_disallow(new_slot, disallow_link);
                         }
                     }
                 }
@@ -1160,7 +1180,7 @@
         $.ajax({
             url: '/zato/http-soap/rate-limiting/save/' + channel_id + '/',
             type: 'POST',
-            data: {rules: rules_json},
+            data: {rules_json: rules_json},
             headers: {'X-CSRFToken': $.cookie('csrftoken')},
             success: function() {
                 $.fn.zato.user_message(true, 'Rate limiting rules saved');
