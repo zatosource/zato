@@ -540,7 +540,7 @@
         var toggle_link = document.createElement('a');
         toggle_link.href = 'javascript:void(0)';
         toggle_link.className = 'rate-limiting-slot-toggle';
-        toggle_link.textContent = 'Disable';
+        toggle_link.textContent = 'Disable rule';
         toggle_link.onclick = function() {
             $.fn.zato.rate_limiting.toggle_slot(slot, toggle_link);
         };
@@ -601,11 +601,11 @@
 
         if(is_disabled) {
             slot.removeAttribute('data-disabled');
-            toggle_link.textContent = 'Disable';
+            toggle_link.textContent = 'Disable rule';
         }
         else {
             slot.setAttribute('data-disabled', 'true');
-            toggle_link.textContent = 'Enable';
+            toggle_link.textContent = 'Enable rule';
         }
     };
 

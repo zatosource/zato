@@ -340,38 +340,25 @@
 
 .rate-limiting-slot-actions {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: 4px;
     flex-shrink: 0;
 }
 
-.rate-limiting-slot-action-link,
-.rate-limiting-slot-toggle,
-.rate-limiting-slot-delete {
+.rate-limiting-slot-actions a.rate-limiting-slot-action-link,
+.rate-limiting-slot-actions a.rate-limiting-slot-toggle,
+.rate-limiting-slot-actions a.rate-limiting-slot-delete {
     font-size: 11px;
-    text-decoration: underline;
-    color: #999999;
     white-space: nowrap;
-    transition: color 0.1s;
 }
 
 .rate-limiting-slot-action-cell {
-    overflow: hidden;
-}
-
-.rate-limiting-slot-action-link:hover,
-.rate-limiting-slot-toggle:hover {
-    color: var(--slot-accent);
 }
 
 .rate-limiting-slot-action-pipe {
     font-size: 11px;
     color: #d0d0d0;
     user-select: none;
-}
-
-.rate-limiting-slot-delete:hover {
-    color: #c0392b;
 }
 
 .rate-limiting-slot[data-disabled="true"] .rate-limiting-slot-time,
