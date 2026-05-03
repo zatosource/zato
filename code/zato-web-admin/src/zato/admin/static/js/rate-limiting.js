@@ -354,7 +354,7 @@
         clear_link.href = 'javascript:void(0)';
         clear_link.textContent = 'Clear counters';
         clear_link.onclick = function() {
-            $.fn.zato.rate_limiting.clear_counters(container_id, rule_elem);
+            $.fn.zato.rate_limiting.clear_counters(container_id, rule_elem, clear_link);
         };
         header.appendChild(clear_link);
 
@@ -1195,12 +1195,9 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.rate_limiting.clear_counters = function(container_id, rule_elem) {
+    $.fn.zato.rate_limiting.clear_counters = function(container_id, rule_elem, clear_link) {
         var container = document.getElementById(container_id);
         var rule_index = Array.prototype.indexOf.call(container.children, rule_elem);
-        var status = $('#rate-limiting-status');
-
-        status.removeClass('show fade status-message-success status-message-error');
 
         $.ajax({
             url: '/zato/http-soap/rate-limiting/clear-counters/' + stored_channel_id + '/',
@@ -1208,13 +1205,24 @@
             data: {rule_index: rule_index},
             headers: {'X-CSRFToken': $.cookie('csrftoken')},
             success: function() {
-                status.text('Counters cleared').addClass('show status-message-success');
-                setTimeout(function() {
-                    status.addClass('fade');
+                var _tooltip = tippy(clear_link, {
+                    content: 'OK, cleared',
+                    allowHTML: false,
+                    theme: 'dark',
+                    trigger: 'manual',
+                    placement: 'left',
+                    arrow: true,
+                    interactive: false,
+                    inertia: true,
+                });
+                var instance = Array.isArray(_tooltip) ? _tooltip[0] : _tooltip;
+                if(instance) {
+                    instance.show();
                     setTimeout(function() {
-                        status.removeClass('show fade status-message-success');
-                    }, 500);
-                }, 750);
+                        instance.hide();
+                        setTimeout(function() { instance.destroy(); }, 300);
+                    }, 750);
+                }
             },
             error: function(jqXHR) {
                 var msg = 'Could not clear counters';
@@ -1227,7 +1235,24 @@
                 catch(e) {
                     msg = jqXHR.responseText || msg;
                 }
-                status.text(msg).addClass('show status-message-error');
+                var _tooltip = tippy(clear_link, {
+                    content: msg,
+                    allowHTML: false,
+                    theme: 'dark',
+                    trigger: 'manual',
+                    placement: 'left',
+                    arrow: true,
+                    interactive: false,
+                    inertia: true,
+                });
+                var instance = Array.isArray(_tooltip) ? _tooltip[0] : _tooltip;
+                if(instance) {
+                    instance.show();
+                    setTimeout(function() {
+                        instance.hide();
+                        setTimeout(function() { instance.destroy(); }, 300);
+                    }, 3000);
+                }
             }
         });
     };
