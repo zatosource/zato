@@ -511,6 +511,7 @@ class SlottedCIDRMatcher:
         token_bucket_registry:'TokenBucketRegistry',
         fixed_window_registry:'FixedWindowRegistry',
         now_us:'int',
+        key_prefix:'str' = '',
         ) -> 'SlottedCheckResult | None':
         """ Resolves the client IP to a rule and time range, then checks both limiters.
         """
@@ -528,7 +529,7 @@ class SlottedCIDRMatcher:
 
         # .. build a composite key so each time range has its own counters ..
         time_range_index = match.rule.time_range.index(time_range)
-        composite_key    = f'{cidr_key}:{time_range_index}'
+        composite_key    = f'{key_prefix}{cidr_key}:{time_range_index}'
 
         # Our response to produce
         out = SlottedCheckResult()

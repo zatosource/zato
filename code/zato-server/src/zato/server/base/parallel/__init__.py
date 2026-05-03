@@ -52,6 +52,7 @@ from zato.common.pubsub.matcher import PatternMatcher
 from zato.common.pubsub.redis_backend import RedisPubSubBackend
 from zato.common.pubsub.subscriptions_store import SubscriptionsStore
 from zato.common.rate_limiting.common import client_address_headers
+from zato.common.rate_limiting.manager import RateLimitingManager
 from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
@@ -159,6 +160,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
     groups_manager: 'GroupsManager'
     security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'
+    rate_limiting_manager: 'RateLimitingManager'
 
     pubsub_redis: 'RedisPubSubBackend'
     pubsub_push_delivery: 'RedisPushDelivery'
@@ -242,6 +244,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self.needs_x_zato_cid = False
         self._queue_bridge = None
         self._queue_bridge_started = False
+        self.rate_limiting_manager = RateLimitingManager()
 
         # Our arbiter may potentially call the cleanup procedure multiple times
         # and this will be set to True the first time around.

@@ -522,3 +522,7 @@
     align-items: center;
     gap: 6px;
 }
+
+.rate-limiting-actions input[type="submit"] {
+    font-size: 11px;
+}

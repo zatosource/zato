@@ -232,11 +232,7 @@
         $.fn.zato.rate_limiting.setup_drag(container_id);
         $.fn.zato.rate_limiting.close_dropdown_on_outside_click();
 
-        // Start with one empty row, all-day slot disabled by default
         $.fn.zato.rate_limiting.add_rule(container_id);
-        var default_slot = container.querySelector('.rate-limiting-slot');
-        var default_toggle = default_slot.querySelector('.rate-limiting-slot-toggle');
-        $.fn.zato.rate_limiting.toggle_slot(default_slot, default_toggle);
     };
 
     // ////////////////////////////////////////////////////////////////////////
@@ -538,7 +534,15 @@
         var toggle_link = document.createElement('a');
         toggle_link.href = 'javascript:void(0)';
         toggle_link.className = 'rate-limiting-slot-toggle';
-        toggle_link.textContent = 'Disable rule';
+
+        if(is_default) {
+            slot.setAttribute('data-disabled', 'true');
+            toggle_link.textContent = 'Enable rule';
+        }
+        else {
+            toggle_link.textContent = 'Disable rule';
+        }
+
         toggle_link.onclick = function() {
             $.fn.zato.rate_limiting.toggle_slot(slot, toggle_link);
         };
@@ -1134,7 +1138,7 @@
                     default_slot.querySelector('[data-field="limit"]').value = rule.time_range[0].limit;
                     default_slot.querySelector('[data-field="window_unit"]').value = rule.time_range[0].limit_unit;
 
-                    if(rule.time_range[0].disabled) {
+                    if(!rule.time_range[0].disabled) {
                         var toggle_link = default_slot.querySelector('.rate-limiting-slot-toggle');
                         $.fn.zato.rate_limiting.toggle_slot(default_slot, toggle_link);
                     }

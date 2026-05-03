@@ -9,9 +9,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
+import socket
+import struct
 from gzip import GzipFile
 from hashlib import sha256
-from http.client import INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND
+from http.client import INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, TOO_MANY_REQUESTS
 from io import StringIO
 from traceback import format_exc
 from typing import NamedTuple
@@ -27,6 +29,7 @@ from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, Servic
 from zato.common.json_ import dumps
 from zato.common.json_internal import loads
 from zato.common.marshal_.api import Model, ModelValidationError
+from zato.common.rate_limiting.common import current_time_us
 from zato.common.typing_ import cast_
 from zato.common.util.api import as_bool, utcnow
 from zato.common.util.auth import enrich_with_sec_data, extract_basic_auth
@@ -41,6 +44,7 @@ from zato.server.service.internal import AdminService
 
 if 0:
     from zato.common.config_dispatcher import ConfigDispatcher
+    from zato.common.rate_limiting.cidr import SlottedCheckResult
     from zato.common.typing_ import any_, anydict, anytuple, callable_, dictnone, stranydict, strlist, strstrdict
     from zato.server.service import Service
     from zato.server.base.parallel import ParallelServer
@@ -49,6 +53,7 @@ if 0:
     ConfigDispatcher = ConfigDispatcher
     ParallelServer = ParallelServer
     Service = Service
+    SlottedCheckResult = SlottedCheckResult
     URLData = URLData
 
 # ################################################################################################################################
@@ -72,6 +77,12 @@ accept_any_internal = HTTP_SOAP.ACCEPT.ANY_INTERNAL
 _status_internal_server_error = '{} {}'.format(INTERNAL_SERVER_ERROR, HTTP_RESPONSES[INTERNAL_SERVER_ERROR])
 _status_not_found = '{} {}'.format(NOT_FOUND, HTTP_RESPONSES[NOT_FOUND])
 _status_method_not_allowed = '{} {}'.format(METHOD_NOT_ALLOWED, HTTP_RESPONSES[METHOD_NOT_ALLOWED])
+_status_too_many_requests = '{} {}'.format(TOO_MANY_REQUESTS, HTTP_RESPONSES[TOO_MANY_REQUESTS])
+
+_socket_SOL_SOCKET = socket.SOL_SOCKET
+_socket_SO_LINGER = socket.SO_LINGER
+_so_linger_on = struct.pack('ii', 1, 0)
+_microseconds_per_second = 1_000_000
 _content_type_json = CONTENT_TYPE['JSON']
 _bad_request_types = (BadRequest, ModelValidationError, BackendInvocationError)
 _default_admin_channel = MISC.DefaultAdminInvokeChannel
@@ -624,8 +635,16 @@ class RequestDispatcher:
         if _has_log_info:
             self._log_incoming_request(cid, meta, channel_item, channel_name, payload, user_agent, remote_addr)
 
-        # .. we have a match and ee can possibly handle the incoming request ..
+        # .. we have a match and we can possibly handle the incoming request ..
         if url_match not in ModuleCtx.No_URL_Match: # type: ignore
+
+            # .. check rate limiting before any further processing ..
+            now_us = current_time_us()
+            rate_limit_result = self.server.rate_limiting_manager.check(channel_item['id'], remote_addr, now_us)
+
+            if rate_limit_result is not None and not rate_limit_result.is_allowed:
+                out = self._handle_rate_limit_result(cid, rate_limit_result, wsgi_environ, remote_addr, channel_item)
+                return out
 
             try:
 
@@ -659,6 +678,41 @@ class RequestDispatcher:
 
             # This is the payload for the caller
             return response
+
+# ################################################################################################################################
+
+    def _handle_rate_limit_result(
+        self,
+        cid:'str',
+        rate_limit_result:'SlottedCheckResult',
+        wsgi_environ:'stranydict',
+        remote_addr:'str',
+        channel_item:'stranydict',
+    ) -> 'any_':
+        """ Handles rate limiting outcomes - either a silent TCP drop for disallowed traffic
+        or an HTTP 429 for rate-limited traffic. Called from dispatch when the check result
+        indicates the request should not proceed.
+        """
+
+        # Disallowed traffic - silent TCP drop, as if a firewall discarded the packet ..
+        if rate_limit_result.is_disallowed:
+            raw_socket = wsgi_environ.get('gunicorn.socket')
+            if raw_socket:
+                raw_socket.setsockopt(_socket_SOL_SOCKET, _socket_SO_LINGER, _so_linger_on)
+                raw_socket.close()
+
+            out = b''
+
+            return out
+
+        # .. otherwise this is rate-limited traffic - return HTTP 429.
+        retry_after_seconds = -(-rate_limit_result.retry_after_us // _microseconds_per_second)
+        wsgi_environ['zato.http.response.status'] = _status_too_many_requests
+        wsgi_environ['zato.http.response.headers']['Retry-After'] = str(retry_after_seconds)
+
+        out = client_json_error(cid, 'Too many requests')
+
+        return out
 
 # ################################################################################################################################
 
