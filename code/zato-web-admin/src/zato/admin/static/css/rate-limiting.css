@@ -499,3 +499,9 @@
     margin-right: auto;
     margin-top: 4px;
 }
+
+.rate-limiting-save-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}

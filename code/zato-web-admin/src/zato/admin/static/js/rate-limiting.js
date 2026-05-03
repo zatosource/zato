@@ -232,8 +232,11 @@
         $.fn.zato.rate_limiting.setup_drag(container_id);
         $.fn.zato.rate_limiting.close_dropdown_on_outside_click();
 
-        // Start with one empty row
+        // Start with one empty row, all-day slot disabled by default
         $.fn.zato.rate_limiting.add_rule(container_id);
+        var default_slot = container.querySelector('.rate-limiting-slot');
+        var default_toggle = default_slot.querySelector('.rate-limiting-slot-toggle');
+        $.fn.zato.rate_limiting.toggle_slot(default_slot, default_toggle);
     };
 
     // ////////////////////////////////////////////////////////////////////////
@@ -1176,6 +1179,9 @@
 
     $.fn.zato.rate_limiting.save = function(container_id, channel_id) {
         var rules_json = $.fn.zato.rate_limiting.get_rules(container_id);
+        var status = $('#rate-limiting-status');
+
+        status.removeClass('show fade status-message-success status-message-error');
 
         $.ajax({
             url: '/zato/http-soap/rate-limiting/save/' + channel_id + '/',
@@ -1183,10 +1189,26 @@
             data: {rules_json: rules_json},
             headers: {'X-CSRFToken': $.cookie('csrftoken')},
             success: function() {
-                $.fn.zato.user_message(true, 'Rate limiting rules saved');
+                status.text('OK, saved').addClass('show status-message-success');
+                setTimeout(function() {
+                    status.addClass('fade');
+                    setTimeout(function() {
+                        status.removeClass('show fade status-message-success');
+                    }, 500);
+                }, 3000);
             },
             error: function(jqXHR) {
-                $.fn.zato.user_message(false, 'Could not save: ' + jqXHR.responseText);
+                var msg = 'Could not save';
+                try {
+                    var response = JSON.parse(jqXHR.responseText);
+                    if(response.error) {
+                        msg = response.error;
+                    }
+                }
+                catch(e) {
+                    msg = jqXHR.responseText || msg;
+                }
+                status.text(msg).addClass('show status-message-error');
             }
         });
     };

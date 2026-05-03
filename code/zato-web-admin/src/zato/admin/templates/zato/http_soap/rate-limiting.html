@@ -3,6 +3,7 @@
 {% block html_title %}Rate limiting - {{ channel_name }}{% endblock %}
 
 {% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/status-message.css">
     <link rel="stylesheet" type="text/css" href="/static/css/rate-limiting.css">
 {% endblock %}
 
@@ -24,8 +25,6 @@
 
 {% block "content" %}
 
-<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
-
 <div id="markup">
 <h2 class="zato">Rate limiting | <a href="{% url 'http-soap' %}?cluster={{ cluster_id }}&connection=channel&transport=plain_http">REST channels</a> | <a href="{% url 'http-soap' %}?cluster={{ cluster_id }}&query={{ channel_name }}&connection=channel&transport=plain_http">{{ channel_name }}</a> | {{ channel_url_path }}</h2>
 
@@ -34,7 +33,10 @@
 
 <div class="rate-limiting-actions">
     <span class="rate-limiting-button-add" onclick="$.fn.zato.rate_limiting.add_rule('rate-limiting-container')">+ Add row</span>
-    <input type="submit" value="Save" onclick="$.fn.zato.rate_limiting.save('rate-limiting-container', '{{ channel_id }}')" />
+    <span class="rate-limiting-save-group">
+        <span class="status-message" id="rate-limiting-status"></span>
+        <input type="submit" value="Save" onclick="$.fn.zato.rate_limiting.save('rate-limiting-container', '{{ channel_id }}')" />
+    </span>
 </div>
 
 </div>

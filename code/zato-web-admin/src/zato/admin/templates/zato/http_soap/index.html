@@ -139,6 +139,11 @@
                 'method',
             {% endif %}
 
+            // Rate limiting link (channel only)
+            {% if connection == 'channel' %}
+                '_rate_limiting',
+            {% endif %}
+
             // 31, 32
             '_edit',
             '_delete',

@@ -1058,6 +1058,6 @@ class RateLimitingGet(AdminService):
             # .. extract rate_limiting, defaulting to an empty list ..
             rate_limiting = opaque.get('rate_limiting', [])
 
-        self.response.payload = dumps(rate_limiting)
+        self.response.payload = {'rate_limiting': rate_limiting}
 
 # ################################################################################################################################
