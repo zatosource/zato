@@ -375,7 +375,10 @@
     background: #c0392b;
 }
 
-.rate-limiting-slot[data-disallowed="true"] .rate-limiting-slot-time-label,
+.rate-limiting-slot[data-disallowed="true"] .rate-limiting-slot-time-label {
+    color: #c0392b;
+}
+
 .rate-limiting-slot[data-disallowed="true"] .rate-limiting-config-label {
     text-decoration: line-through;
     text-decoration-color: #c0392b;

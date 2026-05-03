@@ -1422,6 +1422,13 @@ class WorkerStore(_WorkerStoreBase):
 
         self.request_dispatcher.url_data.on_config_event_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
 
+    def on_config_event_CHANNEL_HTTP_SOAP_RATE_LIMITING_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Updates rate limiting configuration for an HTTP/SOAP channel.
+        """
+        channel_id = msg['id']
+        rule_dicts = msg['rule_dicts']
+        self.server.rate_limiting_manager.set_channel_config(channel_id, rule_dicts)
+
     def on_config_event_CHANNEL_HTTP_SOAP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an HTTP/SOAP channel.
         """

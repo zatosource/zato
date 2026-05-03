@@ -1035,6 +1035,14 @@ class RateLimitingSave(AdminService):
             session.add(item)
             session.commit()
 
+        # After ODB commit, notify the config dispatcher so the in-process manager picks up the change
+        params = {
+            'action': CHANNEL.HTTP_SOAP_RATE_LIMITING_EDIT.value,
+            'id': channel_id,
+            'rule_dicts': rule_dicts,
+        }
+        self.config_dispatcher.publish(params)
+
 # ################################################################################################################################
 # ################################################################################################################################
 

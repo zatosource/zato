@@ -696,8 +696,11 @@ class RequestDispatcher:
         indicates the request should not proceed.
         """
 
+        channel_name = channel_item['name']
+
         # Disallowed traffic - silent TCP drop, as if a firewall discarded the packet ..
         if rate_limit_result.is_disallowed:
+
             raw_socket = wsgi_environ['gunicorn.sock']
             raw_socket.setsockopt(_socket_SOL_SOCKET, _socket_SO_LINGER, _so_linger_on)
             raw_socket.close()
@@ -713,6 +716,9 @@ class RequestDispatcher:
         # Round up if there is any remainder
         if retry_after_us % _microseconds_per_second:
             retry_after_seconds += 1
+
+        logger.info('Rate limiting 429; cid:%s, channel:%s, remote_addr:%s, retry_after:%s',
+            cid, channel_name, remote_addr, retry_after_seconds)
 
         wsgi_environ['zato.http.response.status'] = _status_too_many_requests
         wsgi_environ['zato.http.response.headers']['Retry-After'] = str(retry_after_seconds)

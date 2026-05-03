@@ -199,6 +199,13 @@ class ConfigLoader:
 
         self.config.http_soap = http_soap
 
+        # Load rate limiting configuration for each channel that has it
+        for hs_item in http_soap:
+            rate_limiting = hs_item.get('rate_limiting')
+            if rate_limiting:
+                channel_id = hs_item['id']
+                self.rate_limiting_manager.set_channel_config(channel_id, rate_limiting)
+
         # SimpleIO
         # In preparation for a SIO rewrite, we loaded SIO config from a file
         # but actual code paths require the pre-3.0 format so let's prepare it here.
