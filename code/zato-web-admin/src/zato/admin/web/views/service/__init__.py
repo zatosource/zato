@@ -47,6 +47,7 @@ DeploymentInfo = namedtuple('DeploymentInfo', ['server_name', 'details']) # type
 # ################################################################################################################################
 
 _to_ignore = {'demo.ping'}
+_prefixes_to_ignore = ('helpers.', 'pubsub.')
 
 # ################################################################################################################################
 
@@ -104,6 +105,7 @@ class Index(_Index):
         return_data['items'] = [
             item for item in self.items
             if item.name not in _to_ignore
+            and not item.name.startswith(_prefixes_to_ignore)
         ]
         return return_data
 
