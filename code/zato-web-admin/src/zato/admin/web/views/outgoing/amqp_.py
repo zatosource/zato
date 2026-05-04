@@ -21,7 +21,8 @@ from zato.admin.settings import delivery_friendly_name
 from zato.admin.web.forms.outgoing.amqp_ import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed
 from zato.common.json_internal import dumps
-from zato.common.odb.model import OutgoingAMQP
+# Bunch
+from bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,7 +71,7 @@ class Index(_Index):
     url_name = 'out-amqp'
     template = 'zato/outgoing/amqp.html'
     service_name = 'zato.outgoing.amqp.get-list'
-    output_class = OutgoingAMQP
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
@@ -115,7 +116,7 @@ def edit(req):
     try:
         request = _get_edit_create_message(req.POST, 'edit-')
         req.zato.client.invoke('zato.outgoing.amqp.edit', request)
-        delivery_mode_text = delivery_friendly_name[req.POST['edit-delivery_mode']]
+        delivery_mode_text = delivery_friendly_name[int(req.POST['edit-delivery_mode'])]
 
         return _edit_create_response('updated', req.POST['id'], req.POST['edit-name'], delivery_mode_text)
     except Exception:

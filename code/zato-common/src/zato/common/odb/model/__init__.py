@@ -1220,7 +1220,7 @@ class GenericConn(Base):
 
     version = Column(String(200), nullable=True)
     extra = Column(Text(), nullable=True)
-    pool_size = Column(Integer(), nullable=False)
+    pool_size = Column(Integer(), nullable=True)
 
     # This can be used if only one security definition should be assigned to the object
     username = Column(String(1000), nullable=True)

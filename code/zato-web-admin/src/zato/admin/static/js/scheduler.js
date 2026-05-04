@@ -1,6 +1,8 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.scheduler.dashboard_base_url = '/zato/scheduler/dashboard/';
+
 $.fn.zato.data_table.Job = new Class({
     toString: function() {
         var s = '<Job id:{0} name:{1} is_active:{2} job_type:{3} service:{4}>';
@@ -97,6 +99,18 @@ $(document).ready(function() {
         });
     });
 
+    $(document).on('click', '.ui-datepicker-current', function() {
+        var inst = $.datepicker._curInst;
+        if(inst) {
+            var tp = $.datepicker._get(inst, 'timepicker');
+            if(tp) {
+                tp._onTimeChange();
+                tp._updateDateTime(inst);
+            }
+            $.datepicker._hideDatepicker();
+        }
+    });
+
     var one_time_attrs = ['name', 'start_date', 'service'];
     var interval_based_attrs = ['name', 'start_date', 'service'];
 
@@ -128,6 +142,13 @@ $(document).ready(function() {
             });
         });
     });
+
+    $.each(job_types, function(ignored, job_type) {
+        $.each(['create', 'edit'], function(ignored, action) {
+            var field_id = String.format('#id_{0}-{1}-name', action, job_type);
+            $.fn.zato.validate_unique(field_id, 'scheduler', 'name');
+        });
+    });
 });
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -153,10 +174,14 @@ $.fn.zato.scheduler.data_table.on_submit_complete = function(data, status, actio
 
             $('#data-table').data('is_empty', false);
             $('#data-table > tbody:last').prepend(row);
+            var tr = $('#tr_' + json.id);
+            $.fn.zato.data_table._bounce_row(tr);
         }
         else {
             var tr = $.fn.zato.data_table.row_updated(json.id);
             tr.html(row);
+            tr.addClass('updated');
+            $.fn.zato.data_table._bounce_row(tr);
         }
     }
 
@@ -177,6 +202,8 @@ $.fn.zato.scheduler.data_table.on_submit = function(action, job_type) {
             return $.fn.zato.scheduler.data_table.on_submit_complete(data,
                 status, action, job_type);
         }
+    var label = action === 'create' ? 'Creating ...' : 'Saving ...';
+    $.fn.zato.show_action_overlay(label);
     return $.fn.zato.data_table._on_submit(form, callback);
 }
 
@@ -204,8 +231,20 @@ $.fn.zato.scheduler._create_edit = function(action, job_type, id) {
     var div_id = action +'-'+ job_type;
     var div = $('#'+ div_id);
 
-    div.prev().text(title); // prev() is a .ui-dialog-titlebar
+    div.prev().css('cursor', 'move');
+    div.prev().html('<span class="ui-dialog-title-text" style="user-select: text; cursor: text;">' + title + '</span>');
+    div.prev().find('.ui-dialog-title-text').on('mousedown selectstart dblclick', function(e) { e.stopPropagation(); });
     div.dialog('open');
+
+    if(action == 'create' && job_type == 'interval_based') {
+        var tz_select = $('#id_create-interval_based-timezone');
+        if(tz_select.length && !tz_select.val()) {
+            var browser_tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if(tz_select.find('option[value="' + browser_tz + '"]').length) {
+                tz_select.val(browser_tz);
+            }
+        }
+    }
 
     $.fn.zato.turn_selects_into_chosen("");
 }
@@ -225,24 +264,23 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', job.name);
     row += String.format('<td style="text-align:center">{0}</td>', job.is_active ? 'Yes' : 'No');
-    row += String.format('<td style="text-align:center">{0}</td>', friendly_names[job.job_type]);
     row += String.format('<td style="text-align:center">{0}</td>', data.definition_text);
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(job.service, cluster_id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.scheduler.execute({0})'>Execute</a>", job.id));
+    row += String.format('<td><a href="' + $.fn.zato.scheduler.dashboard_base_url + 'job/{0}/?cluster={1}&outcomes=all">Statistics</a></td>', job.id, cluster_id);
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.scheduler.execute('{0}', this)\">Execute</a>", job.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.edit('{0}', {1})\">Edit</a>", job.job_type, job.id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.scheduler.delete_({0});'>Delete</a>", job.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.delete_('{0}');\">Delete</a>", job.id));
     row += String.format("<td class='ignore job_id_{0}'>{0}</td>", job.id);
     row += String.format("<td class='ignore'>{0}</td>", job.is_active);
-    row += String.format("<td class='ignore'>{0}</td>", job.job_type);
     row += String.format("<td class='ignore'>{0}</td>", job.start_date);
     row += String.format("<td class='ignore'>{0}</td>", job.extra);
 
-    weeks = job.weeks ? 'weeks' in job : '';
-    days = job.days ? 'days' in job : '';
-    hours = job.hours ? 'hours' in job : '';
-    minutes = job.minutes ? 'minutes' in job : '';
-    seconds = job.seconds ? 'seconds' in job : '';
-    repeats = job.repeats ? 'repeats' in job : '';
+    weeks = job.weeks;
+    days = job.days;
+    hours = job.hours;
+    minutes = job.minutes;
+    seconds = job.seconds;
+    repeats = job.repeats;
 
     row += String.format("<td class='ignore'>{0}</td>", weeks);
     row += String.format("<td class='ignore'>{0}</td>", days);
@@ -250,6 +288,15 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", minutes);
     row += String.format("<td class='ignore'>{0}</td>", seconds);
     row += String.format("<td class='ignore'>{0}</td>", repeats);
+    row += "<td class='ignore'></td>";
+
+    var jitter_ms = job.jitter_ms || '';
+    var timezone = job.timezone || '';
+    var max_execution_time_ms = job.max_execution_time_ms || '';
+
+    row += String.format("<td class='ignore'>{0}</td>", jitter_ms);
+    row += String.format("<td class='ignore'>{0}</td>", timezone);
+    row += String.format("<td class='ignore'>{0}</td>", max_execution_time_ms);
 
     if(include_tr) {
         row += '</tr>';
@@ -290,22 +337,17 @@ $.fn.zato.scheduler.create = function(job_type) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.scheduler.execute = function(id) {
-
-    var callback = function(data, status) {
-        var success = (status == 'success' || status == 'parsererror');
-        if(success) {
-            msg = 'OK, request submitted';
-        }
-        else {
-            msg = data.responseText;
-        }
-        $.fn.zato.user_message(success, msg);
-    }
-
+$.fn.zato.scheduler.execute = function(id, link_elem) {
     var url = String.format('./execute/{0}/cluster/{1}/', id, $('#cluster_id').val());
-    $.fn.zato.post(url, callback);
-
+    $.fn.zato.action_runner.run({
+        link_elem: link_elem,
+        url: url,
+        details_modal_title: 'Execute response',
+        on_success: function(instance) {
+            instance.setContent('OK, job executed');
+            setTimeout(function() { instance.hide(); }, 1200);
+        }
+    });
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -321,6 +363,29 @@ $.fn.zato.scheduler.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.job_id_',
         'Job [{0}] deleted', 'Are you sure you want to delete job [{0}]?',
         true);
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.scheduler.import_demo_config = function() {
+    var cluster_id = $(document).getUrlParam('cluster') || '1';
+    var import_url = '/zato/scheduler/import-demo-config?cluster=' + cluster_id;
+
+    var spinner_html = '<div id="import-spinner" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid #ccc; border-radius: 5px; z-index: 9999;"><div style="display: inline-block; width: 16px; height: 16px; border: 2px solid #ccc; border-top: 2px solid #333; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"></div>Importing ...</div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>';
+    $('body').append(spinner_html);
+
+    $.ajax({
+        url: import_url,
+        method: 'GET',
+        success: function() {
+            $('#import-spinner').remove();
+            window.location.reload();
+        },
+        error: function() {
+            $('#import-spinner').remove();
+            alert('Import failed. Check server logs.');
+        }
+    });
 }
 
 // /////////////////////////////////////////////////////////////////////////////

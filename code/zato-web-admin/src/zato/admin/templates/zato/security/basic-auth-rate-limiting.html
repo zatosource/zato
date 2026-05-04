@@ -1,0 +1,44 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Rate limiting - {{ entity_name }}{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/status-message.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/rate-limiting.css">
+{% endblock %}
+
+{% block "extra_js" %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/sortable/Sortable.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/lucide/lucide.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/rate-limiting.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $(document).ready(function() {
+        $.fn.zato.rate_limiting.init('rate-limiting-container', 'edit', '{{ entity_id }}', '/zato/security/basic-auth/rate-limiting');
+        {% if rules_json and rules_json != '[]' %}
+        $.fn.zato.rate_limiting.load_rules('rate-limiting-container', {{ rules_json|safe }});
+        {% endif %}
+    });
+    </script>
+{% endblock %}
+
+{% block "content" %}
+
+<div id="markup">
+<h2 class="zato">Rate limiting | <a href="{% url 'security-basic-auth' %}?cluster={{ cluster_id }}">Basic Auth</a> | {{ entity_name }}</h2>
+
+<div class="rate-limiting-container" id="rate-limiting-container">
+</div>
+
+<div class="rate-limiting-actions">
+    <span class="rate-limiting-button-add" onclick="$.fn.zato.rate_limiting.add_rule('rate-limiting-container')">+ Add row</span>
+    <span class="rate-limiting-save-group">
+        <span class="status-message" id="rate-limiting-status"></span>
+        <input type="submit" value="Save" onclick="$.fn.zato.rate_limiting.save('rate-limiting-container')" />
+    </span>
+</div>
+
+</div>
+
+{% endblock %}

@@ -20,7 +20,8 @@ from zato.admin.web.forms.outgoing.odoo import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, id_only_service, \
      Index as _Index, method_allowed
 from zato.common.api import ODOO
-from zato.common.odb.model import OutgoingOdoo
+# Bunch
+from bunch import Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class Index(_Index):
     url_name = 'out-odoo'
     template = 'zato/outgoing/odoo.html'
     service_name = 'zato.outgoing.odoo.get-list'
-    output_class = OutgoingOdoo
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):

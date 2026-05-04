@@ -367,7 +367,6 @@ class Create(ZatoCommand):
         import random
         import stat
         from collections import OrderedDict
-        from contextlib import closing
         from itertools import count
         from uuid import uuid4
 
@@ -383,12 +382,9 @@ class Create(ZatoCommand):
         secret_key = getattr(args, 'secret_key', None) or Fernet.generate_key()
 
         # Zato
-        from zato.cli import create_cluster, create_odb, create_scheduler, create_server, create_web_admin
+        from zato.cli import create_cluster, create_odb, create_server, create_web_admin
         from zato.common.crypto.api import CryptoManager
         from zato.common.defaults import http_plain_server_port
-        from zato.common.odb.model import Cluster
-        from zato.common.util.api import get_engine, get_session
-
         random.seed()
 
         # Possibly used by startup scripts
@@ -545,26 +541,16 @@ class Create(ZatoCommand):
         # 6) Scheduler
         #
 
-        # Creation of a scheduler is optional
         if should_create_scheduler:
 
             scheduler_path = os.path.join(args_path, 'scheduler')
             os.mkdir(scheduler_path)
 
-            session = get_session(get_engine(args)) # type: ignore
+            from zato.cli import ZATO_INFO_FILE
+            from zato.common.json_internal import dumps
+            info = {'component': 'SCHEDULER', 'version': '4.1'}
+            open_w(os.path.join(scheduler_path, ZATO_INFO_FILE)).write(dumps(info))
 
-            with closing(session):
-                cluster_id:'int' = session.query(Cluster.id).filter(Cluster.name==cluster_name).one()[0] # type: ignore
-
-            create_scheduler_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
-            create_scheduler_args.path = scheduler_path
-            create_scheduler_args.cluster_id = cluster_id
-            create_scheduler_args.server_path = first_server_path
-            create_scheduler_args.scheduler_api_client_for_server_auth_required = scheduler_api_client_for_server_auth_required
-            create_scheduler_args.scheduler_api_client_for_server_username = scheduler_api_client_for_server_username
-            create_scheduler_args.scheduler_api_client_for_server_password = scheduler_api_client_for_server_password
-
-            _ = create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, True) # type: ignore
             self.logger.info('[{}/{}] Scheduler created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################

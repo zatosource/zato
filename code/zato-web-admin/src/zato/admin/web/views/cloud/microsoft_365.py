@@ -97,8 +97,7 @@ def reset_oauth2_scopes(req):
 
     data = {
         'id': req.POST['id'],
-        'password1': reset_oauth2_scopes_url_step_2,
-        'password2': reset_oauth2_scopes_url_step_2,
+        'password': reset_oauth2_scopes_url_step_2,
         'type_': GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365,
     }
 

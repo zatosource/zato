@@ -17,6 +17,15 @@ security:
     type: basic_auth
     username: enmasse.1
     password: Zato_Enmasse_Env.BasicAuth1
+    rate_limiting:
+      - cidr_list:
+          - 0.0.0.0/0
+        time_range:
+          - is_all_day: true
+            limit: 500
+            limit_unit: month
+            disabled: false
+            disallowed: false
 
   - name: enmasse.basic_auth.2
     type: basic_auth
@@ -84,12 +93,41 @@ channel_rest:
     service: demo.ping
     url_path: /enmasse.rest.2
     data_format: json
+    rate_limiting:
+      - cidr_list:
+          - 0.0.0.0/0
+        time_range:
+          - is_all_day: true
+            limit: 1000
+            limit_unit: day
+            disabled: false
+            disallowed: false
 
   - name: enmasse.channel.rest.3
     service: demo.ping
     url_path: /enmasse.rest.3
     security: enmasse.basic_auth.1
     data_format: json
+    rate_limiting:
+      - cidr_list:
+          - 10.0.0.0/8
+          - 192.168.0.0/16
+        time_range:
+          - is_all_day: false
+            time_from: '08:00'
+            time_to: '17:00'
+            limit: 100
+            limit_unit: minute
+            disabled: false
+            disallowed: false
+      - cidr_list:
+          - 0.0.0.0/0
+        time_range:
+          - is_all_day: true
+            limit: 50
+            limit_unit: hour
+            disabled: true
+            disallowed: true
 
   - name: enmasse.channel.rest.4
     service: demo.ping
@@ -155,6 +193,40 @@ scheduler:
     job_type: interval_based
     start_date: '2025-04-21 23:19:47'
     days: 10
+
+kafka_channel:
+
+  - name: enmasse.kafka.channel.1
+    is_active: true
+    address: localhost:9092
+    topic: enmasse-test-topic
+    group_id: enmasse-test-group
+    service: enmasse.kafka.test.service
+
+  - name: enmasse.kafka.channel.2
+    is_active: false
+    address: broker1:9093
+    topic: enmasse-test-topic-2
+    group_id: enmasse-test-group-2
+    service: enmasse.kafka.test.service.2
+    ssl: true
+    ssl_ca_file: /path/to/ca.pem
+    ssl_cert_file: /path/to/cert.pem
+    ssl_key_file: /path/to/key.pem
+
+kafka_outgoing:
+
+  - name: enmasse.kafka.outgoing.1
+    is_active: true
+    address: localhost:9092
+    topic: enmasse-test-out-topic
+
+  - name: enmasse.kafka.outgoing.2
+    is_active: true
+    address: broker2:9093
+    topic: enmasse-test-out-topic-2
+    ssl: true
+    ssl_ca_file: /path/to/ca.pem
 
 ldap:
 
@@ -306,7 +378,7 @@ pubsub_subscription:
 
   - security: enmasse.basic_auth.3
     delivery_type: push
-    push_service: demo.input-logger
+    push_service: demo.echo
     max_retry_time: 30m
     topic_list:
       - enmasse.topic.3

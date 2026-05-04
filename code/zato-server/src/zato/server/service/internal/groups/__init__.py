@@ -7,14 +7,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 from json import dumps
 from operator import itemgetter
 
 # Zato
 from zato.common.api import CONNECTION, Groups
-from zato.common.broker_message import Groups as Broker_Message_Groups
 from zato.common.odb.model import GenericObject as ModelGenericObject
 from zato.server.service import AsIs, Service
+
+logger_groups = logging.getLogger('zato.groups.service')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -78,23 +80,26 @@ class GetList(Service):
 class Create(Service):
     """ Creates a new group.
     """
-    input:'any_' = 'group_type', 'name', AsIs('-members')
+    input:'any_' = 'group_type', 'name', AsIs('-member_id_list')
     output:'any_' = 'id', 'name'
 
     def handle(self):
 
         # Local variables
         input = self.request.input
+        member_id_list = input.get('member_id_list') or []
+
+        logger_groups.info('Create.handle: group_type=%s, name=%s, member_id_list=%s', input.group_type, input.name, member_id_list)
 
         id = self.server.groups_manager.create_group(input.group_type, input.name)
 
-        self.invoke(
-            EditMemberList,
-            group_type=input.group_type,
-            group_action=Groups.Membership_Action.Add,
-            group_id=id,
-            members=input.members,
-        )
+        if member_id_list:
+            self.invoke(
+                EditMemberList,
+                group_action=Groups.Membership_Action.Add,
+                group_id=id,
+                member_id_list=member_id_list,
+            )
 
         self.response.payload.id = id
         self.response.payload.name = input.name
@@ -105,13 +110,17 @@ class Create(Service):
 class Edit(Service):
     """ Updates an existing group.
     """
-    input:'any_' = 'id', 'group_type', 'name', AsIs('-members')
+    input:'any_' = 'id', 'group_type', 'name', AsIs('-member_id_list')
     output:'any_' = 'id', 'name'
 
     def handle(self):
 
         # Local variables
         input = self.request.input
+        member_id_list = input.get('member_id_list') or []
+
+        logger_groups.info('Edit.handle: id=%s, group_type=%s, name=%s, member_id_list=%s',
+            input.id, input.group_type, input.name, member_id_list)
 
         # All the new members of this group
         to_add:'strlist' = []
@@ -121,53 +130,46 @@ class Edit(Service):
 
         self.server.groups_manager.edit_group(input.id, input.group_type, input.name)
 
-        if input.members:
+        if member_id_list:
 
             group_members = self.server.groups_manager.get_member_list(input.group_type, input.id)
 
-            input_member_names = {item['name'] for item in input.members}
-            group_member_names = {item['name'] for item in group_members}
+            logger_groups.info('Edit.handle: group_members=%s', group_members)
 
-            for group_member_name in group_member_names:
-                if not group_member_name in input_member_names:
-                    to_remove.append(group_member_name) # type: ignore
+            input_member_ids = set(member_id_list)
+            group_member_ids = {f'{m.sec_type}-{m.security_id}' for m in group_members}
 
-            for input_member_name in input_member_names:
-                if not input_member_name in group_member_names:
-                    to_add.append(input_member_name)
+            logger_groups.info('Edit.handle: input_member_ids=%s, group_member_ids=%s',
+                input_member_ids, group_member_ids)
 
-        #
-        # Add all the new members to the group
-        #
+            for gm_id in group_member_ids:
+                if gm_id not in input_member_ids:
+                    to_remove.append(gm_id)
+
+            for im_id in input_member_ids:
+                if im_id not in group_member_ids:
+                    to_add.append(im_id)
+
+        logger_groups.info('Edit.handle: to_add=%s, to_remove=%s', to_add, to_remove)
+
         if to_add:
             _ = self.invoke(
                 EditMemberList,
                 group_action=Groups.Membership_Action.Add,
                 group_id=input.id,
-                members=to_add,
+                member_id_list=to_add,
             )
 
-        #
-        # Remove all the members that should not belong to the group
-        #
         if to_remove:
             _ = self.invoke(
                 EditMemberList,
                 group_action=Groups.Membership_Action.Remove,
                 group_id=input.id,
-                members=to_remove,
+                member_id_list=to_remove,
             )
 
         self.response.payload.id = self.request.input.id
         self.response.payload.name = self.request.input.name
-
-        # .. enrich the message that is to be published ..
-        input.to_add = to_add
-        input.to_remove = to_remove
-
-        # .. now, let all the threads know about the update.
-        input.action = Broker_Message_Groups.Edit.value
-        self.broker_client.publish(input)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -182,6 +184,8 @@ class Delete(Service):
         # Local variables
         input = self.request.input
         group_id = int(input.id)
+
+        logger_groups.info('Delete.handle: group_id=%s', group_id)
 
         # Delete this group from the database ..
         self.server.groups_manager.delete_group(group_id)
@@ -199,10 +203,6 @@ class Delete(Service):
 
         for item in to_update: # type: ignore
             _= self.invoke('zato.http-soap.edit', item)
-
-        # .. now, let all the threads know about the update.
-        input.action = Broker_Message_Groups.Delete.value
-        self.broker_client.publish(input)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -282,11 +282,17 @@ class EditMemberList(Service):
         # Local variables
         input = self.request.input
 
+        logger_groups.info('EditMemberList.handle: group_action=%s, group_id=%s, member_id_list=%s, members=%s',
+            input.group_action, input.group_id, input.get('member_id_list'), input.get('members'))
+
         # We need to have member IDs in further steps so if we have names, they have to be turned into IDs here.
         if not (member_id_list := input.get('member_id_list')):
             member_id_list = self._get_member_id_list_from_name_list(input.members)
 
+        logger_groups.info('EditMemberList.handle: resolved member_id_list=%s', member_id_list)
+
         if not member_id_list:
+            logger_groups.info('EditMemberList.handle: empty member_id_list, returning early')
             return
 
         if input.group_action == Groups.Membership_Action.Add:
@@ -294,11 +300,10 @@ class EditMemberList(Service):
         else:
             func = self.server.groups_manager.remove_members_from_group
 
-        func(input.group_id, member_id_list)
+        logger_groups.info('EditMemberList.handle: calling %s with group_id=%s, member_id_list=%s',
+            func.__name__, input.group_id, member_id_list)
 
-        # .. now, let all the threads know about the update.
-        input.action = Broker_Message_Groups.Edit_Member_List.value
-        self.broker_client.publish(input)
+        func(input.group_id, member_id_list)
 
 # ################################################################################################################################
 # ################################################################################################################################

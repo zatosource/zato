@@ -5,13 +5,9 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
-    {% if items %}
-    <style type="text/css">
-        .ui-dialog-titlebar {
-            margin-bottom:-4px !important;
-        }
-    </style>
-    {% endif %}
+    <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -21,7 +17,11 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/cloud/salesforce.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
@@ -56,26 +56,26 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Salesforce connections</h2>
-
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
 {% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
+    {% if cluster_id %}
+        <div id="markup">
+<h2 class="zato">Salesforce connections</h2>
+
 {% with has_generic="1" generic_type="outconn-saleforce" %}
     {% include "zato/search-form.html" with page_prompt="Show connections"%}
 {% endwith %}
 
-    {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.cloud.salesforce.create()">Create a new connection</a>
         </div>
 
 
-        <div id="markup">
-            <table id="data-table">
+            <table class="zato-table" id="data-table">
                 <thead>
                     <tr class='ignore'>
                         <th>&nbsp;</th>
@@ -105,7 +105,7 @@
                 <tbody>
                 {% if items %}
                 {% for item in items %}
-                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                    <tr id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
 
@@ -126,7 +126,7 @@
                         {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.cloud.salesforce.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.cloud.salesforce.delete_('{{ item.id }}')">Delete</a></td>
-                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)">Ping</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
 
                         {% comment %} 4 {% endcomment %}
@@ -143,9 +143,10 @@
 
                 </tbody>
             </table>
-        </div>
 
 {% include "zato/paginate/action-panel.html" %}
+
+        </div>
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">

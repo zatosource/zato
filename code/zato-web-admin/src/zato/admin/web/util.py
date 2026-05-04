@@ -52,16 +52,17 @@ def get_template_response(req, template_name, return_data):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_user_profile(user, needs_logging=True):
+def get_user_profile(user, needs_logging=False):
+
     if needs_logging:
-        logger.info('Getting profile for user `%s`', user)
+        logger.debug('Getting profile for user `%s`', user)
 
     from zato.admin.web.models import UserProfile
 
     try:
         user_profile = UserProfile.objects.get(user=user)
         if needs_logging:
-            logger.info('Found an existing profile for user `%s`', user)
+            logger.debug('Found an existing profile for user `%s`', user)
     except UserProfile.DoesNotExist:
 
         if needs_logging:
@@ -75,7 +76,7 @@ def get_user_profile(user, needs_logging=True):
 
     finally:
         if needs_logging:
-            logger.info('Returning a user profile for `%s`', user)
+            logger.debug('Returning a user profile for `%s`', user)
         return user_profile
 
 # ################################################################################################################################

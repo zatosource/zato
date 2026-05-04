@@ -5,11 +5,7 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
-    <style type="text/css">
-        .ui-dialog-titlebar {
-            padding-bottom:10px !important;
-        }
-    </style>
+    <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -31,7 +27,6 @@
             // ------ 1 ------ //
             'name',
             '_members',
-            '_members_visit',
 
             // ------ 2 ------ //
             '_clone',
@@ -49,20 +44,22 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Groups : {{ group_type_name_title }}</h2>
-
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
 {% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
     {% if cluster_id %}
-        <div class='page_prompt' style="clear:left; padding-top:1rem">
-            <a href="javascript:$.fn.zato.groups.create()">Create a new group</a>
+        <div id="markup">
+<h2 class="zato">Groups : {{ group_type_name_title }}</h2>
+
+{% include "zato/search-form.html" with page_prompt="Search" show_search_form=True %}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.groups.create()">Create a security group</a>
         </div>
 
-        <div id="markup">
-            <table id="data-table">
+            <table class="zato-table" id="data-table">
                 <thead>
                     <tr class='ignore'>
                         <th>&nbsp;</th>
@@ -71,7 +68,6 @@
                         {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Members</a></th>
-                        <th>&nbsp;</th>
 
                         {% comment %} 2 {% endcomment %}
                         <th>&nbsp;</th>
@@ -87,14 +83,13 @@
                 <tbody>
                 {% if items %}
                 {% for item in items %}
-                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                    <tr id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
 
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
-                        <td id="group_member_count_{{ item.id }}">{{ member_count|bunchget:item.id }}</td>
-                        <td><a href="{% url "groups-members-manage" item.type item.id %}?cluster={{ cluster_id|default:"1" }}">Go to members</a></td>
+                        <td id="group_member_count_{{ item.id }}" class="text-center">{{ member_count|bunchget:item.id }}</td>
 
                         {% comment %} 2 {% endcomment %}
                         <td>
@@ -121,9 +116,8 @@
 
                 </tbody>
             </table>
-        </div>
 
-{% include "zato/paginate/action-panel.html" %}
+        </div>
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
@@ -136,6 +130,33 @@
                                 </label>
                             </td>
                             <td>{{ create_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:top;padding-top:8px">
+                                <label>Members</label>
+                            </td>
+                            <td>
+                                <div class="badge-picker-filter" id="badge-filter-create">
+                                    <select id="badge-security-type-create" class="noChosen">
+                                        <option value="">----------</option>
+                                        <option value="apikey">API Key</option>
+                                        <option value="basic_auth">Basic Auth</option>
+                                    </select>
+                                    <input type="text" id="badge-filter-text-create" placeholder="Filter definitions..." />
+                                    <button type="button" class="badge-filter-clear" id="badge-filter-clear-create">Clear</button>
+                                </div>
+                                <div class="badge-picker" id="badge-picker-create">
+                                    <div class="badge-zone" id="badge-zone-available-create">
+                                        <div class="badge-zone-header">Available (<span class="badge-zone-count">0</span>)</div>
+                                        <div class="badge-zone-body"></div>
+                                    </div>
+                                    <div class="badge-picker-resizer"></div>
+                                    <div class="badge-zone" id="badge-zone-assigned-create">
+                                        <div class="badge-zone-header">Assigned (<span class="badge-zone-count">0</span>)</div>
+                                        <div class="badge-zone-body"></div>
+                                    </div>
+                                </div>
+                            </td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
@@ -161,6 +182,33 @@
                                 </label>
                             </td>
                             <td>{{ edit_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:top;padding-top:8px">
+                                <label>Members</label>
+                            </td>
+                            <td>
+                                <div class="badge-picker-filter" id="badge-filter-edit">
+                                    <select id="badge-security-type-edit" class="noChosen">
+                                        <option value="">----------</option>
+                                        <option value="apikey">API Key</option>
+                                        <option value="basic_auth">Basic Auth</option>
+                                    </select>
+                                    <input type="text" id="badge-filter-text-edit" placeholder="Filter definitions..." />
+                                    <button type="button" class="badge-filter-clear" id="badge-filter-clear-edit">Clear</button>
+                                </div>
+                                <div class="badge-picker" id="badge-picker-edit">
+                                    <div class="badge-zone" id="badge-zone-available-edit">
+                                        <div class="badge-zone-header">Available (<span class="badge-zone-count">0</span>)</div>
+                                        <div class="badge-zone-body"></div>
+                                    </div>
+                                    <div class="badge-picker-resizer"></div>
+                                    <div class="badge-zone" id="badge-zone-assigned-edit">
+                                        <div class="badge-zone-header">Assigned (<span class="badge-zone-count">0</span>)</div>
+                                        <div class="badge-zone-body"></div>
+                                    </div>
+                                </div>
+                            </td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">

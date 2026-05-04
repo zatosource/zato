@@ -17,7 +17,8 @@ from django.views import View
 from zato.admin.web.forms.pubsub.permission import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.admin.web.util import get_pubsub_security_definitions
-from zato.common.odb.model import PubSubPermission
+# Bunch
+from bunch import Bunch
 
 # ################################################################################################################################
 
@@ -30,7 +31,7 @@ class Index(_Index):
     url_name = 'pubsub-permission'
     template = 'zato/pubsub/permission.html'
     service_name = 'zato.pubsub.permission.get-list'
-    output_class = PubSubPermission
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
@@ -65,7 +66,6 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     def get_form_kwargs(self):
-        # Get existing basic auth definitions for the dropdown
         response = self.req.zato.client.invoke('zato.security.basic-auth.get-list', {
             'cluster_id': self.req.zato.cluster_id,
         })
@@ -77,6 +77,28 @@ class _CreateEdit(CreateEdit):
 
         return {'sec_base_choices': choices}
 
+    def _parse_pattern_to_topics(self, pattern):
+        """ Parse 'pub=X\nsub=Y' pattern string into pub_topics and sub_topics lists.
+        """
+        pub_topics = []
+        sub_topics = []
+        for line in (pattern or '').splitlines():
+            line = line.strip()
+            if line.startswith('pub='):
+                pub_topics.append(line[4:])
+            elif line.startswith('sub='):
+                sub_topics.append(line[4:])
+        return pub_topics, sub_topics
+
+    def _get_input_dict(self):
+        input_dict = super()._get_input_dict()
+        pattern = input_dict.pop('pattern', '')
+        input_dict.pop('access_type', None)
+        pub_topics, sub_topics = self._parse_pattern_to_topics(pattern)
+        input_dict['pub_topics'] = pub_topics
+        input_dict['sub_topics'] = sub_topics
+        return input_dict
+
 # ################################################################################################################################
 
 class Create(_CreateEdit):
@@ -87,9 +109,9 @@ class Create(_CreateEdit):
     form_class = CreateForm
 
     class SimpleIO:
-        input_required = 'sec_base_id', 'pattern', 'access_type'
-        input_optional = 'cluster_id',
-        output_required = 'id', 'name'
+        input_required = 'sec_base_id',
+        input_optional = 'cluster_id', 'pub_topics', 'sub_topics'
+        output_required = 'id', 'security'
         output_optional = []
 
     def success_message(self, item):
@@ -106,9 +128,9 @@ class Edit(_CreateEdit):
     form_prefix = 'edit-'
 
     class SimpleIO:
-        input_required = 'id', 'sec_base_id', 'pattern', 'access_type'
-        input_optional = 'cluster_id',
-        output_required = 'id', 'name'
+        input_required = 'id', 'sec_base_id'
+        input_optional = 'cluster_id', 'pub_topics', 'sub_topics'
+        output_required = 'id', 'security'
         output_optional = []
 
     def success_message(self, item):

@@ -19,6 +19,13 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.ftp.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'host', 'port']);
+    var unique_constraints = [
+        {field: 'name', entity_type: 'outgoing_ftp', attr_name: 'name'}
+    ];
+    $.each(unique_constraints, function(i, c) {
+        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
+        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+    });
 })
 
 $.fn.zato.outgoing.ftp.create = function() {
@@ -55,11 +62,11 @@ $.fn.zato.outgoing.ftp.data_table.new_row = function(item, data, include_tr) {
     // 3
     row += String.format('<td>{0}</td>', item.port);
     row += String.format('<td>{0}</td>', item.default_directory || '<span class="form_hint">---</span>');
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change password</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}')\">Change password</a>", item.id));
 
     // 4
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.ftp.edit('{0}')\">Edit</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.ftp.delete_({0});'>Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.ftp.delete_('{0}');\">Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
 
     // 5

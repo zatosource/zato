@@ -16,7 +16,8 @@ from django.http import HttpResponse
 # Zato
 from zato.admin.web.forms.pubsub.topic import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common.odb.model import PubSubTopic
+# Bunch
+from bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,7 +32,7 @@ class Index(_Index):
     url_name = 'pubsub-topic'
     template = 'zato/pubsub/topic.html'
     service_name = 'zato.pubsub.topic.get-list'
-    output_class = PubSubTopic
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):

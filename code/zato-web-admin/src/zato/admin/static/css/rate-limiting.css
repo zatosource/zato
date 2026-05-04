@@ -1,0 +1,549 @@
+/* ------------------------------------------------------------ */
+/* Rate limiting - page heading                                 */
+/* ------------------------------------------------------------ */
+
+#markup > h2.zato {
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - container                                    */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-sizing: border-box;
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    min-width: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - rule card                                    */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-rule {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 10px 14px 10px 10px;
+    border: 1px solid #d8dce0;
+    border-radius: 5px;
+    background: #fdfefe;
+    font-size: 11px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.rate-limiting-rule:hover {
+    border-color: #b0b0b0;
+}
+
+.rate-limiting-rule.rate-limiting-dragging {
+    opacity: 0.5;
+    border-color: #5794d0;
+    box-shadow: 0 2px 8px #5794d033;
+}
+
+/* Top row: drag handle + number + CIDR pills + delete */
+.rate-limiting-rule-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - drag handle                                  */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-drag-handle {
+    cursor: grab;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 2px;
+    flex-shrink: 0;
+    opacity: 0.4;
+    transition: opacity 0.15s;
+}
+
+.rate-limiting-rule:hover .rate-limiting-drag-handle {
+    opacity: 0.7;
+}
+
+.rate-limiting-drag-handle-dot-row {
+    display: flex;
+    gap: 2px;
+}
+
+.rate-limiting-drag-handle-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #666666;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - rule number                                  */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-rule-number {
+    display: inline-block;
+    width: 18px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #999999;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - pills area                                   */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    min-width: 140px;
+    flex: 1;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - pill                                         */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: var(--zato-pill-radius);
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    background: #2563af14;
+    color: #1a56a8;
+    border: 1px solid #2563af38;
+    white-space: nowrap;
+    user-select: none;
+    transition: background 0.1s;
+}
+
+.rate-limiting-pill:hover {
+    background: #2563af24;
+}
+
+.rate-limiting-pill[data-editing="true"] {
+    border-color: var(--slot-accent);
+    background: color-mix(in srgb, var(--slot-accent) 12%, #ffffff);
+}
+
+.rate-limiting-pill-remove {
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    color: #1a56a8;
+    opacity: 0.5;
+    transition: opacity 0.1s;
+    margin-left: 2px;
+}
+
+.rate-limiting-pill-remove:hover {
+    opacity: 1;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - pill input                                   */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-pill-input,
+.rate-limiting-time-input {
+    border: 1px dashed #b0b0b0;
+    border-radius: var(--zato-pill-radius);
+    padding: 3px 8px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 11px;
+    width: 130px;
+    outline: none;
+    background: #ffffff;
+    transition: border-color 0.15s;
+}
+
+.rate-limiting-pill-input:focus,
+.rate-limiting-time-input:focus {
+    border-color: #5794d0;
+    box-shadow: 0 0 0 2px #5794d01a;
+}
+
+.rate-limiting-pill-add-button {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--zato-pill-radius);
+    border: 1px dashed #b0b0b0;
+    font-size: 14px;
+    color: #666666;
+    background: #f8f9fa;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.rate-limiting-pill-add-button:hover {
+    border-color: #5794d0;
+    color: #5794d0;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - suggestions dropdown                         */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-suggestions {
+    position: absolute;
+    z-index: 10000;
+    background: #ffffff;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px #00000026;
+    min-width: 220px;
+    max-height: 260px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.rate-limiting-suggestion-header {
+    padding: 4px 10px 2px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: #999999;
+    user-select: none;
+}
+
+.rate-limiting-suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.1s;
+}
+
+.rate-limiting-suggestion-item:hover {
+    background: #f0f4f8;
+}
+
+.rate-limiting-suggestion-cidr {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-weight: 500;
+    color: #1a56a8;
+}
+
+.rate-limiting-suggestion-label {
+    color: #666666;
+    font-size: 11px;
+    text-transform: capitalize;
+}
+
+.rate-limiting-suggestion-separator {
+    height: 1px;
+    background: #e9ecef;
+    margin: 4px 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - time slots                                   */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-slots {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 8px;
+    margin-left: 28px;
+    padding: 0;
+    border-left: 2px solid color-mix(in srgb, var(--slot-accent) 30%, #e2e6ea);
+}
+
+.rate-limiting-slot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 0 5px 14px;
+    position: relative;
+    transition: background 0.1s;
+}
+
+.rate-limiting-slot:hover {
+    background: #f8fafc;
+}
+
+.rate-limiting-slot::before {
+    content: '';
+    position: absolute;
+    left: -7px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid color-mix(in srgb, var(--slot-accent) 40%, #c0c8d0);
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.rate-limiting-slot:hover::before {
+    border-color: var(--slot-accent);
+}
+
+.rate-limiting-slot[data-slot-type="default"]::before {
+    background: var(--slot-accent);
+    border-color: var(--slot-accent);
+}
+
+.rate-limiting-slot[data-disabled="true"]::before {
+    border-color: #c0c8d0;
+}
+
+.rate-limiting-slot[data-slot-type="default"][data-disabled="true"]::before {
+    background: #c0c8d0;
+}
+
+.rate-limiting-slot-time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 120px;
+    min-height: 20px;
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #666666;
+}
+
+.rate-limiting-slot-time-label {
+    font-weight: 600;
+    color: #2c3e50;
+    white-space: nowrap;
+    letter-spacing: 0.2px;
+}
+
+.rate-limiting-slot-actions {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.rate-limiting-slot-actions a.rate-limiting-slot-action-link,
+.rate-limiting-slot-actions a.rate-limiting-slot-toggle,
+.rate-limiting-slot-actions a.rate-limiting-slot-delete {
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.rate-limiting-slot-action-cell {
+}
+
+.rate-limiting-slot-action-pipe {
+    font-size: 11px;
+    color: #d0d0d0;
+    user-select: none;
+}
+
+.rate-limiting-slot[data-disabled="true"] .rate-limiting-slot-time,
+.rate-limiting-slot[data-disabled="true"] .rate-limiting-config-group {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+.rate-limiting-slot[data-disallowed="true"]::before {
+    background: #ffffff;
+    border-color: #c0392b;
+}
+
+.rate-limiting-slot[data-slot-type="default"][data-disallowed="true"]::before {
+    background: #c0392b;
+}
+
+.rate-limiting-slot[data-disallowed="true"] .rate-limiting-slot-time-label {
+    color: #c0392b;
+}
+
+.rate-limiting-slot[data-disallowed="true"] .rate-limiting-config-label {
+    text-decoration: line-through;
+    text-decoration-color: #c0392b;
+    color: #c0392b;
+}
+
+.rate-limiting-slot[data-disallowed="true"] .rate-limiting-config-input {
+    text-decoration: line-through;
+}
+
+.rate-limiting-slot[data-disallowed="true"]::after {
+    content: '';
+    position: absolute;
+    left: -9px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 2px;
+    background: #c0392b;
+    border-radius: 1px;
+}
+
+.rate-limiting-slot[data-slot-type="default"][data-disallowed="true"][data-disabled="true"]::before {
+    background: color-mix(in srgb, #c0392b 40%, #c0c8d0);
+    border-color: color-mix(in srgb, #c0392b 40%, #c0c8d0);
+}
+
+.rate-limiting-slot:not([data-slot-type="default"])[data-disallowed="true"][data-disabled="true"]::before {
+    background: #ffffff;
+    border-color: color-mix(in srgb, #c0392b 40%, #c0c8d0);
+}
+
+.rate-limiting-slot[data-disallowed="true"][data-disabled="true"]::after {
+    content: '';
+    position: absolute;
+    left: -9px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 2px;
+    background: color-mix(in srgb, #c0392b 50%, transparent);
+    border-radius: 1px;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - config fields                                */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-config-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding-left: 8px;
+    border-left: 1px solid #e9ecef;
+    margin-left: 4px;
+}
+
+.rate-limiting-config-label {
+    font-size: 11px;
+    color: #666666;
+    white-space: nowrap;
+}
+
+.rate-limiting-config-input,
+.rate-limiting-config-select {
+    padding: 3px 4px;
+    border: 1px solid #d0d0d0;
+    border-radius: 3px;
+    font-size: 11px;
+    outline: none;
+    background: #ffffff;
+    transition: border-color 0.15s;
+}
+
+.rate-limiting-config-input:focus,
+.rate-limiting-config-select:focus {
+    border-color: #5794d0;
+    box-shadow: 0 0 0 2px #5794d01a;
+}
+
+.rate-limiting-slot .rate-limiting-config-input {
+    width: 60px;
+    text-align: right;
+    font: 11px sans-serif;
+    box-sizing: border-box;
+    height: 19.8px;
+}
+
+.rate-limiting-config-unit {
+    font-size: 11px;
+    color: #666666;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - time range inputs                            */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-time-dash {
+    font-size: 11px;
+    color: #666666;
+}
+
+.rate-limiting-slot-time .rate-limiting-time-input {
+    width: 48px;
+    text-align: center;
+    box-sizing: border-box;
+    height: 20px;
+    padding: 2px 6px;
+    font: 11px 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    line-height: 1;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - add buttons                                  */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-button-add {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 3px;
+    border: 1px dashed #b0b0b0;
+    font-size: 12px;
+    color: #666666;
+    background: #f8f9fa;
+    margin-top: 4px;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.rate-limiting-button-add:hover {
+    border-color: #5794d0;
+    color: #5794d0;
+}
+
+.rate-limiting-rule .rate-limiting-button-add {
+    align-self: flex-start;
+    margin-left: 28px;
+    margin-top: 6px;
+    margin-bottom: 2px;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - actions bar                                  */
+/* ------------------------------------------------------------ */
+
+.rate-limiting-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 4px;
+}
+
+.rate-limiting-save-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.rate-limiting-actions input[type="submit"] {
+    font-size: 11px;
+}

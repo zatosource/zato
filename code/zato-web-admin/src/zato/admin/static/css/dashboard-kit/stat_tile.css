@@ -1,0 +1,162 @@
+/* Dashboard kit - stat tile.
+   The velvet glass tile used across the hero strip; holds a big number,
+   an optional sublabel and a full-width sparkline, with a correlated
+   hover tooltip pinned above the tile. */
+
+.dashboard-tile {
+    flex: 1;
+    /* Tile body is rendered against its own navy backdrop so the velvet
+       box-shadow reads identically regardless of what colour the hero
+       strip behind it uses. The 0.06 white wash on top reproduces the
+       previous "glass over navy" look. */
+    background:
+        repeating-linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.015) 0px,
+            rgba(255, 255, 255, 0.015) 1px,
+            transparent 1px,
+            transparent 6px
+        ),
+        linear-gradient(rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.06)),
+        linear-gradient(180deg, var(--zato-tile-dark1) 0%, var(--zato-tile-dark2) 100%),
+        radial-gradient(ellipse at 30% 80%, var(--zato-tile-darkblue) 0%, transparent 70%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    padding: 18px 20px 14px;
+    min-width: 0;
+    /* Velvet: diffuse, layered shadow in the hero's own navy palette,
+       with a soft top highlight (pile catching light) and a deeper
+       bottom inset (pile crease) so the tile reads as pressed into fabric. */
+    box-shadow:
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.07),
+        inset 0 -18px 28px -16px rgba(0, 0, 0, 0.60),
+        0 1px 2px rgba(0, 0, 0, 0.20),
+        0 4px 8px rgba(0, 0, 0, 0.15),
+        0 8px 16px -4px rgba(0, 0, 0, 0.18);
+    transition:
+        box-shadow 260ms cubic-bezier(0.2, 0.9, 0.4, 1),
+        border-color 260ms cubic-bezier(0.2, 0.9, 0.4, 1);
+}
+
+.dashboard-tile:hover {
+    border-color: rgba(255, 255, 255, 0.10);
+    box-shadow:
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.09),
+        inset 0 -18px 28px -16px rgba(0, 0, 0, 0.60),
+        0 1px 2px rgba(0, 0, 0, 0.25),
+        0 4px 10px rgba(0, 0, 0, 0.18),
+        0 10px 20px -4px rgba(0, 0, 0, 0.22);
+}
+
+.dashboard-tile-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgb(191, 191, 191);
+    margin-bottom: 6px;
+}
+
+.dashboard-tile-sublabel {
+    margin-top: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgb(191, 191, 191);
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+}
+
+.dashboard-tile-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.dashboard-tile-value {
+    font-size: 36px;
+    font-weight: 700;
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: -0.02em;
+    color: #fff;
+    line-height: 1.1;
+    flex-shrink: 0;
+}
+
+.dashboard-tile-tooltip {
+    position: fixed;
+    background: #262630;
+    color: #fff;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    font-size: 12px;
+    padding: 6px 10px;
+    pointer-events: none;
+    z-index: 9999;
+    display: none;
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+    min-width: 140px;
+    white-space: nowrap;
+}
+
+.dashboard-tile-tooltip-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 0;
+    white-space: nowrap;
+}
+
+.dashboard-tile-tooltip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.dashboard-tile-tooltip-label {
+    color: rgba(255, 255, 255, 0.65);
+    flex: 1;
+    font-family: inherit;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.dashboard-tile-tooltip-value {
+    color: #fff;
+    font-weight: 700;
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+/* Shared tooltip header (used by the tile tooltip and the main chart
+   tooltip; kept with the tile because it is visually owned by the tile's
+   dark bubble). */
+
+.dashboard-tooltip-header {
+    padding-bottom: 5px;
+    margin-bottom: 5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.dashboard-tooltip-title {
+    color: #fff;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.01em;
+}
+
+.dashboard-tooltip-subtitle {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+}

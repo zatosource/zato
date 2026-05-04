@@ -11,42 +11,13 @@ import warnings
 warnings.filterwarnings('ignore', category=DeprecationWarning, message='.*multi-threaded.*fork.*')
 warnings.filterwarnings('ignore', category=UserWarning, message='.*pkg_resources is deprecated.*')
 
-# Monkey-patching modules individually can be about 20% faster,
-# or, in absolute terms, instead of 275 ms it may take 220 ms.
-from gevent.monkey import patch_builtins, patch_contextvars, patch_thread, patch_time, patch_os, patch_queue, patch_select, \
-     patch_selectors, patch_signal, patch_socket, patch_ssl, patch_subprocess, patch_sys
-
-# Note that the order of patching matters, just like in patch_all
-patch_os()
-patch_time()
-patch_thread()
-patch_sys()
-patch_socket()
-patch_select()
-patch_selectors()
-patch_ssl()
-patch_subprocess()
-patch_builtins()
-patch_signal()
-patch_queue()
-patch_contextvars()
-
-# ConcurrentLogHandler - updates stdlib's logging config on import so this needs to stay after gevent patches
-try:
-    import cloghandler # type: ignore
-except ImportError:
-    pass
-else:
-    cloghandler = cloghandler # For pyflakes
-
-# stdlib
-import logging
 import os
 
 # Reusable
 true_values = {'true', '1', 'y', 'yes'}
 
-# Datadog monitoring - read config from env vars set by start.py
+# Datadog monitoring - must be initialized before gevent monkey-patching
+# per ddtrace docs: "import ddtrace.auto before calling gevent.monkey.patch_all()"
 datadog_main_agent = os.environ.get('Zato_Datadog_Main_Agent')
 datadog_metrics_agent = os.environ.get('Zato_Datadog_Metrics_Agent')
 datadog_service_name = os.environ.get('Zato_Datadog_Service_Name') or 'zato.server'
@@ -81,9 +52,44 @@ if is_datadog_enabled:
     # .. set service name - always ensure it exists ..
     os.environ['DD_SERVICE'] = datadog_service_name
 
-    # .. now import and patch ddtrace after env vars are set ..
-    from ddtrace import patch as dd_patch
-    dd_patch(gevent=True)
+    # .. import ddtrace.auto before gevent patching ..
+    try:
+        import ddtrace.auto # noqa: F401
+    except ImportError as e:
+        from logging import getLogger
+        logger = getLogger('zato')
+        logger.warning(f'Datadog not available: {e}')
+
+# Monkey-patching modules individually can be about 20% faster,
+# or, in absolute terms, instead of 275 ms it may take 220 ms.
+from gevent.monkey import patch_builtins, patch_contextvars, patch_thread, patch_time, patch_os, patch_queue, patch_select, \
+     patch_selectors, patch_signal, patch_socket, patch_ssl, patch_subprocess, patch_sys
+
+# Note that the order of patching matters, just like in patch_all
+patch_os()
+patch_time()
+patch_thread()
+patch_sys()
+patch_socket()
+patch_select()
+patch_selectors()
+patch_ssl()
+patch_subprocess()
+patch_builtins()
+patch_signal()
+patch_queue()
+patch_contextvars()
+
+# ConcurrentLogHandler - updates stdlib's logging config on import so this needs to stay after gevent patches
+try:
+    import cloghandler # type: ignore
+except ImportError:
+    pass
+else:
+    cloghandler = cloghandler # For pyflakes
+
+# stdlib
+import logging
 
 # Grafana Cloud monitoring - values read later in run() after logging is configured
 grafana_cloud_instance_id = None
@@ -501,6 +507,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.user_config.update(server_config.user_config_items)
     server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']
+    server.with_test_data = asbool(options.get('with_test_data'))
     server.env_manager = env_manager
     server.startup_callable_tool = startup_callable_tool
     server.stop_after = stop_after # type: ignore

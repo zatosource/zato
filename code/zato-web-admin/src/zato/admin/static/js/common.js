@@ -55,6 +55,13 @@ $.namespace('zato.cache.builtin');
 $.namespace('zato.cache.builtin.entries');
 $.namespace('zato.channel');
 $.namespace('zato.channel.amqp');
+$.namespace('zato.channel.kafka');
+$.namespace('zato.channel.kafka.data_table');
+$.namespace('zato.channel.hl7');
+$.namespace('zato.channel.hl7.mllp');
+$.namespace('zato.channel.hl7.mllp.data_table');
+$.namespace('zato.channel.hl7.rest');
+$.namespace('zato.channel.hl7.rest.data_table');
 $.namespace('zato.channel.openapi');
 $.namespace('zato.channel.openapi.data_table');
 $.namespace('zato.cloud');
@@ -76,10 +83,12 @@ $.namespace('zato.email.imap');
 $.namespace('zato.email.smtp');
 $.namespace('zato.form');
 $.namespace('zato.groups');
+$.namespace('zato.groups.data_table');
 $.namespace('zato.groups.members');
 $.namespace('zato.http_soap');
 $.namespace('zato.http_soap.details');
 $.namespace('zato.http_soap.openapi');
+$.namespace('zato.live_form_updates');
 $.namespace('zato.data_table_widget');
 $.namespace('zato.ide');
 $.namespace('zato.invoker');
@@ -89,7 +98,14 @@ $.namespace('zato.monitoring.wizard');
 $.namespace('zato.outgoing');
 $.namespace('zato.outgoing.amqp');
 $.namespace('zato.outgoing.ftp');
+$.namespace('zato.outgoing.hl7');
+$.namespace('zato.outgoing.hl7.fhir');
+$.namespace('zato.outgoing.hl7.fhir.data_table');
+$.namespace('zato.outgoing.hl7.mllp');
+$.namespace('zato.outgoing.hl7.mllp.data_table');
 $.namespace('zato.outgoing.mongodb');
+$.namespace('zato.outgoing.kafka');
+$.namespace('zato.outgoing.kafka.data_table');
 $.namespace('zato.outgoing.ldap');
 $.namespace('zato.outgoing.odoo');
 $.namespace('zato.outgoing.redis');
@@ -97,10 +113,10 @@ $.namespace('zato.outgoing.sql');
 $.namespace('zato.outgoing.sap');
 $.namespace('zato.pubsub');
 $.namespace('zato.pubsub.topic');
-$.namespace('zato.pubsub.client');
 $.namespace('zato.pubsub.subscription');
 $.namespace('zato.pubsub.subscription.data_table');
 $.namespace('zato.query');
+$.namespace('zato.rate_limiting');
 $.namespace('zato.scheduler');
 $.namespace('zato.security');
 $.namespace('zato.security.apikey');
@@ -132,7 +148,7 @@ $.fn.zato.post = function(url, callback, data, data_type, suppress_user_message,
         data_type = 'json';
     }
 
-    if(!suppress_user_message) {
+    if(!suppress_user_message && !$('#zato-action-overlay').length) {
         $.fn.zato.user_message(false, '', true);
     }
 
@@ -158,6 +174,7 @@ $.fn.zato.user_message = function(is_success, msg, loading) {
     var new_css_class = ''
 
     if(!loading) {
+        $.fn.zato.hide_action_overlay();
         if(is_success) {
             css_class = 'user-message-success';
         }
@@ -179,6 +196,12 @@ $.fn.zato.user_message = function(is_success, msg, loading) {
     div.fadeOut(100, function() {
         div.fadeIn(250);
     });
+}
+
+$.fn.zato.show_action_overlay = function(label) {
+}
+
+$.fn.zato.hide_action_overlay = function() {
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -301,6 +324,9 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
                     }
                     else {
                         form_elem.val(value);
+                        if(name_prefix) {
+                            form_elem.data('zato-original-value', value);
+                        }
                     }
                 }
             }
@@ -382,6 +408,9 @@ $.fn.zato.data_table.parse = function() {
 $.fn.zato.data_table.reset_form = function(form_id) {
     var form = $(form_id);
 
+    form.find('.zato-unique-indicator').remove();
+    form.find('input[type="text"]').removeData('zato-original-value');
+
     form.each(function() {
         this.reset();
     });
@@ -446,7 +475,15 @@ $.fn.zato.data_table._on_submit_complete = function(data, status) {
     else {
         msg = data.responseText;
     }
-    $.fn.zato.user_message(success, msg);
+
+    $.fn.zato.hide_action_overlay();
+
+    if(!success) {
+        $.fn.zato.user_message(false, msg);
+    }
+    else {
+        $('#user-message-div').hide();
+    }
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -504,14 +541,41 @@ $.fn.zato.data_table._on_submit = function(form, callback) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.data_table.remove_row = function(td_prefix, instance_id) {
-    $(td_prefix + instance_id).parent().remove();
-    $.fn.zato.data_table.data[instance_id] = null;
+    var td = $(td_prefix + instance_id);
+    var tr = td.length ? td.parent() : $(document.getElementById('tr_' + instance_id));
+    tr.animate({opacity: 0}, 200, function() {
+        tr.remove();
+        $.fn.zato.data_table.data[instance_id] = null;
+        if($('#data-table tr').length == 1) {
+            var row = '<tr><td colspan="100">No results</td></tr>';
+            $('#data-table > tbody:last').prepend(row);
+            $('#data-table').data('is_empty', true);
+        }
+    });
+}
 
-    if($('#data-table tr').length == 1) {
-        var row = '<tr><td colspan="100">No results</td></tr>';
-        $('#data-table > tbody:last').prepend(row);
-        $('#data-table').data('is_empty', true);
-    }
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.data_table._bounce_row = function(tr) {
+    tr.find('td').each(function() {
+        var td = $(this);
+        if(!td.find('.zato-bounce-wrap').length) {
+            td.wrapInner('<span class="zato-bounce-wrap"></span>');
+        }
+    });
+    tr.removeClass('zato-row-bounce');
+    requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+            tr.addClass('zato-row-bounce');
+            tr.find('.zato-bounce-wrap:first').one('animationend', function() {
+                tr.removeClass('zato-row-bounce');
+                tr.find('.zato-bounce-wrap').each(function() {
+                    var wrap = $(this);
+                    wrap.replaceWith(wrap.contents());
+                });
+            });
+        });
+    });
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -538,6 +602,8 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
     var _callback = function(data, status) {
         var success = (status == 'success' || status == 'parsererror');
 
+        $.fn.zato.hide_action_overlay();
+
         if(success) {
             if(_remove_tr) {
                 $.fn.zato.data_table.remove_row(td_prefix, instance.id);
@@ -547,16 +613,17 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
                 on_success_callback();
             }
 
-            msg = String.format(success_pattern, name);
+            $('#user-message-div').hide();
         }
         else {
             msg = data.responseText;
+            $.fn.zato.user_message(false, msg);
         }
-        $.fn.zato.user_message(success, msg);
     }
 
     var callback = function(ok) {
         if(ok) {
+            $.fn.zato.show_action_overlay('Deleting ...');
             if(url_pattern) {
                 var url = String.format(url_pattern, id);
             }
@@ -592,12 +659,43 @@ $.fn.zato.data_table.on_change_password_submit = function() {
 
     var form = $('#change_password-form');
     if($.fn.zato.is_form_valid(form)) {
+
+        var _id = $('#id_change_password-id').val();
+        var _secret_type = $('#change_password-form').data('secret-type') || $('#secret_type_id').val() || 'password';
+
         var _callback = function(data, status) {
-            $.fn.zato.data_table.row_updated($('#id_change_password-id').val());
+            var tr = $.fn.zato.data_table.row_updated(_id);
             $.fn.zato.data_table._on_submit_complete(data, status);
+
+            var link = tr.find('a').filter(function() {
+                var text = $(this).text().toLowerCase();
+                return text.indexOf('change') !== -1 && (text.indexOf('password') !== -1 || text.indexOf('key') !== -1 || text.indexOf('secret') !== -1);
+            }).first();
+
+            if(link.length) {
+                var tooltip_text = 'OK, ' + _secret_type + ' changed';
+                var _tooltip = tippy(link[0], {
+                    content: tooltip_text,
+                    allowHTML: false,
+                    theme: 'dark',
+                    trigger: 'manual',
+                    placement: 'right',
+                    arrow: true,
+                    interactive: false,
+                    inertia: true,
+                });
+                var instance = Array.isArray(_tooltip) ? _tooltip[0] : _tooltip;
+                if(instance) {
+                    instance.show();
+                    setTimeout(function() {
+                        instance.hide();
+                        setTimeout(function() { instance.destroy(); }, 300);
+                    }, 1200);
+                }
+            }
         }
 
-        $.fn.zato.data_table._on_submit(form, _callback);
+        $.fn.zato.post(form.attr('action'), _callback, form.serialize(), null, true);
         $('#change_password-div').dialog('close');
 
         return false;
@@ -630,14 +728,16 @@ $.fn.zato.data_table.change_password = function(id, title, label, _label_lower) 
 
     $('#secret_type_id').val(_label_lower);
     $('#secret_label1').text(_label);
-    $('#secret_label2').text(_label_lower);
+    $('#change_password-form').data('secret-type', _label_lower);
 
     $('#change-password-name').text(name);
     $('#id_change_password-id').val(id);
 
     var div = $('#change_password-div');
 
-    div.prev().text(_title); // prev() is a .ui-dialog-titlebar
+    div.prev().css('cursor', 'move');
+    div.prev().html('<span class="ui-dialog-title-text" style="user-select: text; cursor: text;">' + _title + '</span>');
+    div.prev().find('.ui-dialog-title-text').on('mousedown selectstart dblclick', function(e) { e.stopPropagation(); });
     div.dialog('open');
 }
 
@@ -668,19 +768,8 @@ $.fn.zato.data_table.setup_change_password = function() {
     });
 
     if($.fn.zato.data_table.password_required) {
-        $("#id_password1").attr($.fn.zato.validate_required_attr, "required");
-        $("#id_password2").attr($.fn.zato.validate_required_attr, "required");
-
-        $('#id_password1').attr($.fn.zato.validate_required_msg_attr, $.fn.zato.validate_required_msg);
-        $('#id_password2').attr($.fn.zato.validate_required_msg_attr, $.fn.zato.validate_required_msg);
-    }
-
-    else {
-        $("#id_password1").attr($.fn.zato.validate_equals_attr, "equals-id_password2");
-        $("#id_password1").attr($.fn.zato.validate_equals_msg_attr, "Passwords" + $.fn.zato.validate_equals_msg_suffix);
-
-        $("#id_password2").attr($.fn.zato.validate_equals_attr, "equals-id_password1");
-        $("#id_password2").attr($.fn.zato.validate_equals_msg_attr, "Passwords" + $.fn.zato.validate_equals_msg_suffix);
+        $("#id_password").attr($.fn.zato.validate_required_attr, "required");
+        $('#id_password').attr($.fn.zato.validate_required_msg_attr, $.fn.zato.validate_required_msg);
     }
 }
 
@@ -721,11 +810,38 @@ $.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow,
     }
 
     div.prev().css('cursor', 'move');
-    div.prev().html('<span class="ui-dialog-title-text" style="user-select: text; cursor: text;">' + title + '</span>'); // prev() is a .ui-dialog-titlebar
-    div.prev().find('.ui-dialog-title-text').on('mousedown', function(e) { e.stopPropagation(); });
+    div.prev().html('<span class="ui-dialog-title-text" style="user-select: text; cursor: text;">' + title + '</span>');
+    div.prev().find('.ui-dialog-title-text').on('mousedown selectstart dblclick', function(e) { e.stopPropagation(); });
     div.dialog('open');
 
+    // Auto-focus the name field if one exists, placing the cursor at position 0
+    var name_field_id = (action == 'edit') ? '#id_edit-name' : '#id_name';
+    var name_field = div.find(name_field_id);
+    if(name_field.length) {
+        name_field.trigger('focus');
+        if(name_field[0].setSelectionRange) {
+            name_field[0].setSelectionRange(0, 0);
+        }
+    }
+
     $.fn.zato.turn_selects_into_chosen(div_id);
+
+    // Start live form updates SSE if any configs are registered for this action,
+    // but skip if all configs use badge_picker handler (those start SSE after their async load)
+    var _lfu_configs = $.fn.zato.live_form_updates._get_configs(action);
+    var _all_badge_picker = _lfu_configs.length > 0;
+    for(var _i = 0; _i < _lfu_configs.length; _i++) {
+        if(_lfu_configs[_i].handler !== 'badge_picker') {
+            _all_badge_picker = false;
+            break;
+        }
+    }
+    if(_all_badge_picker) {
+        console.log('[live_form_updates] _create_edit: skipping auto-start for action=' + action + ' (all configs are badge_picker, will start after load)');
+    } else {
+        console.log('[live_form_updates] _create_edit: calling start for action=' + action);
+        $.fn.zato.live_form_updates.start(action);
+    }
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -858,10 +974,9 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
         $(div_id).dialog({
             autoOpen: false,
             width: '40em',
-            height: '10em',
-            resizable: false,
             close: function(e, ui) {
                 $.fn.zato.data_table.reset_form(form_id);
+                $.fn.zato.live_form_updates.stop(action);
             }
         });
     });
@@ -1079,6 +1194,8 @@ $.fn.zato.data_table.on_submit = function(action) {
     }
 
     if($.fn.zato.is_form_valid(form)) {
+        var label = action === 'create' ? 'Creating ...' : 'Saving ...';
+        $.fn.zato.show_action_overlay(label);
         return $.fn.zato.data_table._on_submit(form, callback);
     }
 }
@@ -1118,12 +1235,14 @@ $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
         if(needs_create) {
             $('#data-table').data('is_empty', false);
             $('#data-table > tbody:last').prepend(row);
+            var new_tr = $('#data-table > tbody:last > tr:first');
+            $.fn.zato.data_table._bounce_row(new_tr);
         }
         else {
-            console.log('[DEBUG] on_submit_complete: Updating existing row with id=' + JSON.stringify(json.id));
-            var tr = $('#tr_'+ json.id).html(row);
-            console.log('[DEBUG] on_submit_complete: Updated row element=' + JSON.stringify(tr.length));
+            var tr = $(document.getElementById('tr_'+ json.id));
+            tr.html(row);
             tr.addClass('updated');
+            $.fn.zato.data_table._bounce_row(tr);
         }
     }
 
@@ -1142,7 +1261,7 @@ $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.data_table.service_text = function(service, cluster_id) {
-    return String.format('<a href="/zato/service/overview/{0}/?cluster={1}">{0}</a>', service, cluster_id);
+    return String.format('<a href="/zato/service/ide/service/{0}/?cluster={1}">{0}</a>', service, cluster_id);
 }
 
 $.fn.zato.data_table.topic_text = function(topic, cluster_id) {
@@ -1151,16 +1270,13 @@ $.fn.zato.data_table.topic_text = function(topic, cluster_id) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.data_table.ping = function(id) {
-
-    var callback = function(data, status) {
-        var success = status == 'success';
-        $.fn.zato.user_message(success, data.responseText);
-    }
-
+$.fn.zato.data_table.ping = function(id, link_elem) {
     var url = String.format('./ping/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
-    $.fn.zato.post(url, callback, '', 'text');
-
+    $.fn.zato.action_runner.run({
+        link_elem: link_elem,
+        url: url,
+        details_modal_title: 'Ping response'
+    });
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1422,7 +1538,7 @@ $.fn.zato.turn_selects_into_chosen = function(parent_id) {
     ]
 
     $.each(prefix_list, function(ignored, prefix) {
-        $(parent_id + ' select[id*="'+ prefix +'"]').chosen(chosen_options);
+        $(parent_id + ' select[id*="'+ prefix +'"]').not('.noChosen').chosen(chosen_options);
     })
 }
 
@@ -2165,9 +2281,11 @@ $.fn.zato.show_import_result_popup = function(result, is_success, file) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.pubsub.import_test_config = function() {
+if (typeof $.fn.zato.eda === 'undefined') { $.fn.zato.eda = {}; }
+
+$.fn.zato.eda.import_demo_config = function() {
     var cluster_id = $(document).getUrlParam('cluster') || '1';
-    var import_url = '/zato/pubsub/import-test-config?cluster=' + cluster_id;
+    var import_url = '/zato/eda/import-demo-config?cluster=' + cluster_id;
 
     var spinner_html = '<div id="import-spinner" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid #ccc; border-radius: 5px; z-index: 9999;"><div style="display: inline-block; width: 16px; height: 16px; border: 2px solid #ccc; border-top: 2px solid #333; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"></div>Importing ...</div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>';
     $('body').append(spinner_html);
@@ -2175,25 +2293,16 @@ $.fn.zato.pubsub.import_test_config = function() {
     $.ajax({
         url: import_url,
         method: 'GET',
-        success: function(data) {
+        success: function() {
             $('#import-spinner').remove();
-
-            var current_path = window.location.pathname;
-
-            if (current_path === '/zato/') {
-                window.location.href = '/zato/pubsub/topic/?cluster=' + cluster_id;
-            } else if (current_path.includes('zato/pubsub/')) {
-                window.location.reload();
-            } else {
-                alert('Import completed successfully.');
-            }
+            window.location.reload();
         },
         error: function() {
             $('#import-spinner').remove();
             alert('Import failed. Check server logs.');
         }
     });
-}
+};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -2352,3 +2461,502 @@ $.fn.zato.pubsub.download_openapi = function() {
         }
     });
 }
+
+$.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
+    var field = $(field_id);
+    if(!field.length) {
+        return;
+    }
+
+    var timer = null;
+    var is_edit = field_id.indexOf('edit-') !== -1;
+
+    field.on('input', function() {
+        field.siblings('.zato-unique-indicator').css('opacity', '0');
+        setTimeout(function() { field.siblings('.zato-unique-indicator').remove(); }, 200);
+
+        if(timer) {
+            clearTimeout(timer);
+        }
+
+        var value = field.val().trim();
+        if(!value) {
+            return;
+        }
+
+        if(is_edit) {
+            var original = field.data('zato-original-value');
+            if(original !== undefined && value === original) {
+                return;
+            }
+        }
+
+        timer = setTimeout(function() {
+            $.ajax({
+                type: 'POST',
+                url: '/zato/check-attr-exists/',
+                data: {
+                    'entity_type': entity_type,
+                    'attr_name': attr_name,
+                    'value': value
+                },
+                headers: {'X-CSRFToken': $.cookie('csrftoken')},
+                dataType: 'json',
+                success: function(data) {
+                    field.siblings('.zato-unique-indicator').remove();
+                    var current = field.val().trim();
+                    if(current !== value) {
+                        return;
+                    }
+                    var wrapper = field.parent();
+                    if(!wrapper.hasClass('zato-unique-wrapper')) {
+                        wrapper.css('position', 'relative');
+                        wrapper.addClass('zato-unique-wrapper');
+                    }
+                    var html;
+                    if(data.exists) {
+                        html = '<span class="zato-unique-indicator zato-unique-taken">Already taken</span>';
+                    }
+                    else {
+                        html = '<span class="zato-unique-indicator zato-unique-ok">&#10003;</span>';
+                    }
+                    field.after(html);
+                    var indicator = field.next('.zato-unique-indicator');
+                    var measure_span = $('<span>').css({
+                        'font': field.css('font'),
+                        'font-size': field.css('font-size'),
+                        'font-family': field.css('font-family'),
+                        'letter-spacing': field.css('letter-spacing'),
+                        'visibility': 'hidden',
+                        'position': 'absolute',
+                        'white-space': 'pre'
+                    }).text(value).appendTo('body');
+                    var text_width = measure_span.width();
+                    measure_span.remove();
+                    var field_left = field.position().left;
+                    var input_padding_left = parseInt(field.css('padding-left'), 10) || 2;
+                    indicator.css('left', (field_left + input_padding_left + text_width + 7) + 'px');
+                },
+                error: function(xhr, status, err) {
+                    console.log('[validate_unique] Error: status=' + JSON.stringify(status) + ', err=' + JSON.stringify(err));
+                }
+            });
+        }, 300);
+    });
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* Live Form Updates - Reusable SSE-based mechanism for pushing live data changes to open create/edit forms.                     */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+;(function() {
+
+    // Per-action (create/edit) registry of what object types each page cares about
+    var _registry = {};
+
+    // Active EventSource connections, keyed by action
+    var _connections = {};
+
+    // Close all SSE connections before page unload to prevent browser "interrupted" warnings
+    $(window).on('beforeunload', function() {
+        for(var action in _connections) {
+            if(_connections[action] && _connections[action].evtSource) {
+                _connections[action].evtSource.close();
+            }
+        }
+        _connections = {};
+    });
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates.register = function(action, configs) {
+        if(!_registry[action]) {
+            _registry[action] = [];
+        }
+        for(var i = 0; i < configs.length; i++) {
+            _registry[action].push(configs[i]);
+        }
+        console.log('[live_form_updates] register: action=' + action + ', total configs=' + _registry[action].length + ', object_types=' + JSON.stringify(configs.map(function(c) { return c.object_type; })));
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates.has_config = function(action) {
+        return _registry[action] && _registry[action].length > 0;
+    };
+
+    $.fn.zato.live_form_updates._get_configs = function(action) {
+        return _registry[action] || [];
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._snapshot_select = function(selector) {
+        var items = {};
+        $(selector).find('option').each(function() {
+            var $opt = $(this);
+            var val = $opt.val();
+            if(val && val !== 'ZATO_NONE') {
+                items[val] = {'name': $opt.text()};
+            }
+        });
+        return items;
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._snapshot_badge_picker = function(action) {
+        var items = {};
+        $('#badge-zone-available-' + action + ' .security-badge, #badge-zone-assigned-' + action + ' .security-badge').each(function() {
+            var $badge = $(this);
+            var id = $badge.attr('data-id');
+            if(id) {
+                items[id] = {
+                    'name': $badge.find('.security-badge-name').text().trim()
+                };
+            }
+        });
+        console.log('[live_form_updates] _snapshot_badge_picker: action=' + action + ', captured ' + Object.keys(items).length + ' badges, sample_ids=' + JSON.stringify(Object.keys(items).slice(0, 5)));
+        return items;
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._snapshot_multi_checkbox = function(container_selector) {
+        var items = {};
+        $(container_selector).find('input[type="checkbox"]').each(function() {
+            var $cb = $(this);
+            var id = $cb.attr('id') || '';
+            var name_cell = $cb.closest('tr').find('a');
+            var label = name_cell.length ? name_cell.text() : '';
+            if(id) {
+                items[id] = {'name': label};
+            }
+        });
+        return items;
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._build_request = function(action) {
+        var configs = _registry[action] || [];
+        var object_types = {};
+
+        console.log('[live_form_updates] _build_request: action=' + action + ', configs count=' + configs.length);
+
+        for(var i = 0; i < configs.length; i++) {
+            var config = configs[i];
+            var items = {};
+
+            if(config.handler === 'badge_picker') {
+                items = $.fn.zato.live_form_updates._snapshot_badge_picker(action);
+                console.log('[live_form_updates] _build_request: badge_picker snapshot for ' + config.object_type + ', item count=' + Object.keys(items).length);
+            }
+            else if(config.handler === 'multi_checkbox') {
+                items = $.fn.zato.live_form_updates._snapshot_multi_checkbox(config.container || '');
+                console.log('[live_form_updates] _build_request: multi_checkbox snapshot for ' + config.object_type + ', item count=' + Object.keys(items).length);
+            }
+            else {
+                var selector = config.target_select || '';
+                if(action === 'edit' && selector && selector.indexOf('edit') === -1) {
+                    selector = selector.replace('#id_', '#id_edit-');
+                }
+                items = $.fn.zato.live_form_updates._snapshot_select(selector);
+                console.log('[live_form_updates] _build_request: select snapshot for ' + config.object_type + ', selector=' + selector + ', item count=' + Object.keys(items).length);
+            }
+
+            object_types[config.object_type] = {
+                'items': items
+            };
+        }
+
+        return {'object_types': object_types};
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates.start = function(action) {
+
+        console.log('[live_form_updates] start: called for action=' + action);
+
+        // Do nothing if no configs registered for this action
+        if(!$.fn.zato.live_form_updates.has_config(action)) {
+            console.log('[live_form_updates] start: no config registered for action=' + action + ', skipping');
+            return;
+        }
+
+        // Close any existing connection for this action
+        $.fn.zato.live_form_updates.stop(action);
+
+        var request_data = $.fn.zato.live_form_updates._build_request(action);
+        var snapshot_json = JSON.stringify(request_data);
+        console.log('[live_form_updates] start: snapshot_json length=' + snapshot_json.length);
+
+        var url = '/zato/live-form-updates/?snapshot=' + encodeURIComponent(snapshot_json);
+
+        var evtSource = new EventSource(url);
+
+        _connections[action] = {
+            evtSource: evtSource,
+            is_first_message: true
+        };
+
+        evtSource.onopen = function() {
+            console.log('[live_form_updates] start: EventSource connected for action=' + action);
+        };
+
+        evtSource.onmessage = function(event) {
+            console.log('[live_form_updates] onmessage: action=' + action + ', data=' + event.data.substring(0, 200));
+            try {
+                var diffs = JSON.parse(event.data);
+                var conn = _connections[action];
+                var skip_puff = conn && conn.is_first_message;
+                if(skip_puff) {
+                    conn.is_first_message = false;
+                }
+                $.fn.zato.live_form_updates._apply_diffs(action, diffs, skip_puff);
+            }
+            catch(e) {
+                console.error('[live_form_updates] onmessage: JSON parse error', e);
+            }
+        };
+
+        evtSource.onerror = function(err) {
+            console.log('[live_form_updates] onerror: action=' + action + ', readyState=' + evtSource.readyState);
+            // readyState 2 = CLOSED; don't reconnect
+            if(evtSource.readyState === EventSource.CLOSED) {
+                console.log('[live_form_updates] onerror: EventSource closed for action=' + action);
+            }
+            // Prevent auto-reconnect by closing on error
+            evtSource.close();
+            delete _connections[action];
+        };
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates.stop = function(action) {
+        var conn = _connections[action];
+        if(conn) {
+            console.log('[live_form_updates] stop: closing EventSource for action=' + action);
+            if(conn.evtSource) {
+                conn.evtSource.close();
+            }
+            delete _connections[action];
+        } else {
+            console.log('[live_form_updates] stop: no connection to close for action=' + action);
+        }
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._apply_diffs = function(action, diffs, skip_puff) {
+        var configs = _registry[action] || [];
+        console.log('[live_form_updates] _apply_diffs: action=' + action + ', skip_puff=' + !!skip_puff + ', object_types in diff=' + JSON.stringify(Object.keys(diffs)));
+
+        for(var object_type in diffs) {
+            if(!diffs.hasOwnProperty(object_type)) continue;
+
+            var diff = diffs[object_type];
+            console.log('[live_form_updates] _apply_diffs: object_type=' + object_type + ', created=' + (diff.created ? diff.created.length : 0) + ', deleted=' + (diff.deleted ? diff.deleted.length : 0) + ', renamed=' + (diff.renamed ? diff.renamed.length : 0));
+
+            var config = null;
+            for(var i = 0; i < configs.length; i++) {
+                if(configs[i].object_type === object_type) {
+                    config = configs[i];
+                    break;
+                }
+            }
+            if(!config) {
+                console.log('[live_form_updates] _apply_diffs: no config found for object_type=' + object_type);
+                continue;
+            }
+
+            console.log('[live_form_updates] _apply_diffs: applying diff for object_type=' + object_type + ', handler=' + (config.handler || 'select'));
+
+            if(config.handler === 'badge_picker') {
+                $.fn.zato.live_form_updates._apply_badge_picker_diff(action, config, diff, skip_puff);
+            }
+            else if(config.handler === 'multi_checkbox') {
+                $.fn.zato.live_form_updates._apply_multi_checkbox_diff(action, config, diff, skip_puff);
+            }
+            else {
+                $.fn.zato.live_form_updates._apply_select_diff(action, config, diff, skip_puff);
+            }
+        }
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._puff = function($elem) {
+        $elem.addClass('zato-live-updated');
+        setTimeout(function() {
+            $elem.removeClass('zato-live-updated');
+        }, 1600);
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._apply_select_diff = function(action, config, diff, skip_puff) {
+        var selector = config.target_select || '';
+        if(action === 'edit' && selector && selector.indexOf('edit') === -1) {
+            selector = selector.replace('#id_', '#id_edit-');
+        }
+
+        var $select = $(selector);
+        if(!$select.length) return;
+
+        var changed = false;
+
+        // Handle deletions
+        if(diff.deleted && diff.deleted.length) {
+            for(var i = 0; i < diff.deleted.length; i++) {
+                var del_id = diff.deleted[i];
+                $select.find('option[value="' + del_id + '"]').remove();
+            }
+            changed = true;
+        }
+
+        // Handle renames
+        if(diff.renamed && diff.renamed.length) {
+            for(var i = 0; i < diff.renamed.length; i++) {
+                var rename = diff.renamed[i];
+                var $opt = $select.find('option[value="' + rename._id + '"]');
+                if($opt.length) {
+                    var new_label = config.label_format
+                        ? $.fn.zato.live_form_updates._format_label(config.label_format, rename.item || rename.new_labels)
+                        : (rename.new_labels.name || rename.item.name || '');
+                    $opt.text(new_label);
+                    if(!skip_puff) {
+                        $.fn.zato.live_form_updates._puff($opt);
+                    }
+                }
+            }
+            changed = true;
+        }
+
+        // Handle creations
+        if(diff.created && diff.created.length) {
+            for(var i = 0; i < diff.created.length; i++) {
+                var item = diff.created[i];
+                var value = item._id || '';
+                var label = config.label_format
+                    ? $.fn.zato.live_form_updates._format_label(config.label_format, item)
+                    : (item.name || item._id || '');
+                var $new_opt = $('<option/>').val(value).text(label);
+                $select.append($new_opt);
+                if(!skip_puff) {
+                    $.fn.zato.live_form_updates._puff($new_opt);
+                }
+            }
+            changed = true;
+        }
+
+        // Refresh Chosen if applicable
+        if(changed) {
+            $select.trigger('chosen:updated');
+            if(!skip_puff) {
+                $.fn.zato.live_form_updates._puff($select.closest('td'));
+            }
+        }
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._format_label = function(format, item) {
+        return format.replace(/\{(\w+)\}/g, function(match, key) {
+            return item[key] !== undefined ? item[key] : match;
+        });
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._apply_badge_picker_diff = function(action, config, diff, skip_puff) {
+
+        console.log('[live_form_updates] _apply_badge_picker_diff: action=' + action + ', skip_puff=' + !!skip_puff + ', created=' + JSON.stringify(diff.created) + ', deleted=' + JSON.stringify(diff.deleted) + ', renamed=' + JSON.stringify(diff.renamed));
+
+        // For badge picker, if there's a callback, call it with the full diff.
+        if(config.callback) {
+            config.callback(action, diff);
+            return;
+        }
+
+        // Default badge picker diff handling
+        var available_body = $('#badge-zone-available-' + action + ' .badge-zone-body');
+
+        // Handle deletions - remove badges from both zones
+        if(diff.deleted && diff.deleted.length) {
+            for(var i = 0; i < diff.deleted.length; i++) {
+                var del_id = diff.deleted[i];
+                available_body.find('.security-badge[data-id="' + del_id + '"]').remove();
+                $('#badge-zone-assigned-' + action + ' .badge-zone-body')
+                    .find('.security-badge[data-id="' + del_id + '"]').remove();
+            }
+            if(typeof $.fn.zato.groups !== 'undefined' &&
+               typeof $.fn.zato.groups.badge_picker !== 'undefined') {
+                $.fn.zato.groups.badge_picker.renumber(action);
+                $.fn.zato.groups.badge_picker.update_counts(action);
+            }
+        }
+
+        // Handle renames
+        if(diff.renamed && diff.renamed.length) {
+            for(var i = 0; i < diff.renamed.length; i++) {
+                var rename = diff.renamed[i];
+                var $badge = available_body.find('.security-badge[data-id="' + rename._id + '"]');
+                if(!$badge.length) {
+                    $badge = $('#badge-zone-assigned-' + action + ' .badge-zone-body')
+                        .find('.security-badge[data-id="' + rename._id + '"]');
+                }
+                if($badge.length) {
+                    var new_name = rename.new_labels.name || rename.item.name || '';
+                    $badge.find('.security-badge-name').text(new_name);
+                    if(!skip_puff) {
+                        $.fn.zato.live_form_updates._puff($badge);
+                    }
+                }
+            }
+        }
+
+        // Handle creations - add new badges to the available zone
+        if(diff.created && diff.created.length) {
+            for(var i = 0; i < diff.created.length; i++) {
+                var item = diff.created[i];
+                if(typeof $.fn.zato.groups !== 'undefined' &&
+                   typeof $.fn.zato.groups.badge_picker !== 'undefined' &&
+                   typeof $.fn.zato.groups.badge_picker._make_badge === 'function') {
+                    var $new_badge = $.fn.zato.groups.badge_picker._make_badge(item, 0);
+                    available_body.append($new_badge);
+                    if(!skip_puff) {
+                        $.fn.zato.live_form_updates._puff($new_badge);
+                    }
+                }
+            }
+
+            // Renumber and update counts after adding
+            if(typeof $.fn.zato.groups !== 'undefined' &&
+               typeof $.fn.zato.groups.badge_picker !== 'undefined' &&
+               typeof $.fn.zato.groups.badge_picker.renumber === 'function') {
+                $.fn.zato.groups.badge_picker.renumber(action);
+                $.fn.zato.groups.badge_picker.update_counts(action);
+            }
+        }
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._apply_multi_checkbox_diff = function(action, config, diff, skip_puff) {
+
+        if(config.reload_callback && (
+            (diff.created && diff.created.length) ||
+            (diff.deleted && diff.deleted.length) ||
+            (diff.renamed && diff.renamed.length)
+        )) {
+            config.reload_callback();
+        }
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+})();
+

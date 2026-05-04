@@ -15,7 +15,8 @@ import logging
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.ftp import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common.odb.model import OutgoingFTP
+# Bunch
+from bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,7 +31,7 @@ class Index(_Index):
     url_name = 'out-ftp'
     template = 'zato/outgoing/ftp.html'
     service_name = 'zato.outgoing.ftp.get-list'
-    output_class = OutgoingFTP
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
