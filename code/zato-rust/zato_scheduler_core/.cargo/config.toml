@@ -1,0 +1,14 @@
+[build]
+rustflags = [
+    "-F", "unsafe-code",
+    "-F", "warnings",
+    "-F", "future-incompatible",
+    "-F", "nonstandard-style",
+    "-F", "rust-2018-idioms",
+    "-F", "unused",
+    "-F", "let-underscore",
+    "-F", "keyword-idents",
+    "-C", "overflow-checks=on",
+]
+rustdocflags = ["-F", "warnings"]
+incremental = false

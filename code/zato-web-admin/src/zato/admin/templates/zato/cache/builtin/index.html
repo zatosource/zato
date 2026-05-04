@@ -48,7 +48,6 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Caches</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -56,17 +55,18 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/search-form.html" with page_prompt="Show caches"%}
-
-
     {% if cluster_id %}
+
+        <div id="markup">
+            <h2 class="zato">Caches</h2>
+
+{% include "zato/search-form.html" with page_prompt="Show caches"%}
 
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.cache.builtin.create()">Create a new cache</a>
         </div>
 
-        <div id="markup">
-            <table id="data-table">
+            <table class="zato-table" id="data-table">
                 <thead>
                     <tr class='ignore'>
                         <th>&nbsp;</th>
@@ -97,7 +97,7 @@
                 <tbody>
                 {% if items %}
                 {% for item in items %}
-                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                    <tr id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td><a href="{% url "cache-builtin-get-entries" item.id %}?cluster=1">{{ item.name }}</a></td>
@@ -131,9 +131,9 @@
 
                 </tbody>
             </table>
-        </div>
 
 {% include "zato/paginate/action-panel.html" %}
+        </div>
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">

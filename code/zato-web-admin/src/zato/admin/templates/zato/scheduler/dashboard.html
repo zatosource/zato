@@ -1,0 +1,189 @@
+{% extends "zato/dashboard_base.html" %}
+{% load extras %}
+
+{% block html_title %}Scheduler dashboard{% endblock %}
+
+{% block dashboard_extra_css %}
+<style>
+.dashboard-card-activity {
+    display: flex;
+    flex-direction: column;
+    overflow-anchor: none;
+}
+</style>
+{% endblock %}
+
+{% block dashboard_domain_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler/dashboard.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.scheduler.dashboard.config.base_url = '{{ dashboard_base_url }}';
+    $.fn.zato.scheduler.dashboard.init({{ dashboard_data|safe }});
+});
+</script>
+{% endblock %}
+
+{% block dashboard_header_pill %}
+                <div class="dashboard-hero-pill-group" id="dashboard-hero-pill-group"></div>
+{% endblock %}
+
+{% block dashboard_tiles %}
+
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">Total jobs</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-total-jobs">-</div>
+                        <div class="dashboard-tile-spark" id="spark-total-jobs"></div>
+                    </div>
+                </div>
+
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">Active</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-active">-</div>
+                        <div class="dashboard-tile-spark" id="spark-active"></div>
+                    </div>
+                </div>
+
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">Paused</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-paused">-</div>
+                        <div class="dashboard-tile-spark" id="spark-paused"></div>
+                    </div>
+                </div>
+
+                <div class="dashboard-tile dashboard-tile-runs">
+                    <div class="dashboard-tile-label">Runs in last hour</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-runs">-</div>
+                        <div class="dashboard-tile-spark" id="spark-runs"></div>
+                    </div>
+                    <div class="dashboard-tile-sublabel" id="stat-runs-sublabel"></div>
+                </div>
+
+                <div class="dashboard-tile dashboard-tile-recent">
+                    <div class="dashboard-tile-label">Failures in last hour</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-recent">-</div>
+                        <div class="dashboard-tile-spark" id="spark-recent"></div>
+                    </div>
+                    <div class="dashboard-tile-sublabel" id="stat-recent-sublabel"></div>
+                </div>
+
+{% endblock %}
+
+{% block dashboard_chart_header_class %}dashboard-card-header-tabs{% endblock %}
+{% block dashboard_chart_header_content %}
+                <div class="dashboard-tabs" role="tablist" aria-label="Run history">
+                    <button type="button"
+                            class="dashboard-tab dashboard-tab-active"
+                            data-tab="run-history"
+                            role="tab"
+                            aria-selected="true">
+                        <span class="dashboard-tab-label">Run history</span>
+                    </button>
+                </div>
+{% endblock %}
+
+{% block dashboard_time_range_options %}
+                        <div class="dashboard-time-range-option" data-minutes="5">Last 5 minutes</div>
+                        <div class="dashboard-time-range-option" data-minutes="15">Last 15 minutes</div>
+                        <div class="dashboard-time-range-option" data-minutes="30">Last 30 minutes</div>
+                        <div class="dashboard-time-range-option" data-minutes="60">Last 1 hour</div>
+                        <div class="dashboard-time-range-option" data-minutes="360">Last 6 hours</div>
+                        <div class="dashboard-time-range-option" data-minutes="1440">Today</div>
+                        <div class="dashboard-time-range-option" data-minutes="2880">Yesterday</div>
+                        <div class="dashboard-time-range-option" data-minutes="10080">This week</div>
+                        <div class="dashboard-time-range-option" data-minutes="43200">This month</div>
+                        <div class="dashboard-time-range-option" data-minutes="525600">This year</div>
+                        <div class="dashboard-time-range-option dashboard-time-range-active" data-minutes="0">All</div>
+{% endblock %}
+
+{% block dashboard_grid %}
+
+        <div class="dashboard-card dashboard-card-jobs">
+            <div class="dashboard-card-header dashboard-card-header-tabs">
+                <div class="dashboard-tabs" role="tablist" aria-label="Jobs">
+                    <button type="button"
+                            class="dashboard-tab dashboard-tab-active"
+                            data-tab="jobs"
+                            role="tab"
+                            aria-selected="true">
+                        <span class="dashboard-tab-label">Jobs</span>
+                        <span class="dashboard-pill" id="dashboard-jobs-count"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="dashboard-tab-panel"
+                 id="dashboard-tab-panel-jobs"
+                 role="tabpanel"
+                 aria-labelledby="dashboard-tab-jobs">
+                <div class="dashboard-card-scroll">
+                    <table class="zato-table" id="dashboard-job-table">
+                        <thead>
+                            <tr>
+                                <th class="dashboard-th-dot"></th>
+                                <th>Job name</th>
+                                <th>Service</th>
+                                <th style="width:9em">Next run</th>
+                                <th>Recent</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboard-job-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card dashboard-card-activity">
+            <div class="dashboard-card-header dashboard-card-header-tabs">
+                <div class="dashboard-tabs" role="tablist" aria-label="Activity">
+                    <button type="button"
+                            class="dashboard-tab"
+                            data-tab="recent"
+                            role="tab"
+                            aria-selected="false">
+                        <span class="dashboard-tab-label">Recent runs</span>
+                        <span class="dashboard-pill dashboard-pill-recent" id="dashboard-recent-count"></span>
+                    </button>
+                    <button type="button"
+                            class="dashboard-tab"
+                            data-tab="upcoming"
+                            role="tab"
+                            aria-selected="false">
+                        <span class="dashboard-tab-label">Upcoming runs</span>
+                        <span class="dashboard-pill" id="dashboard-upcoming-count"></span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="dashboard-tab-panel"
+                 id="dashboard-tab-panel-recent"
+                 role="tabpanel"
+                 aria-labelledby="dashboard-tab-recent"
+                 hidden>
+                <div class="dashboard-card-scroll" id="dashboard-recent-body"></div>
+            </div>
+
+            <div class="dashboard-tab-panel"
+                 id="dashboard-tab-panel-upcoming"
+                 role="tabpanel"
+                 aria-labelledby="dashboard-tab-upcoming"
+                 hidden>
+                <div class="dashboard-card-scroll">
+                    <table class="zato-table" id="dashboard-upcoming-table">
+                        <thead>
+                            <tr>
+                                <th style="width:9em">Time</th>
+                                <th>Job name</th>
+                                <th>Service</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboard-upcoming-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+{% endblock %}

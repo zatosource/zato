@@ -5,6 +5,9 @@
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.timepicker.addon.css">
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -16,31 +19,29 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.ui.slideraccess.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
 
+    {% comment %} Tippy {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
     {% comment %} Common JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
-    var friendly_names = new Object();
-
-    {% for name, friendly_name in friendly_names%}
-        friendly_names['{{ name }}'] = '{{ friendly_name }}';
-    {% endfor %}
-
     $.fn.zato.data_table.get_columns = function() {
         return [
             '_numbering',
             '_selection',
             'name',
             '_is_active',
-            '_job_type',
             '_definition_text',
             'service',
+            '_statistics',
             '_execute',
             '_edit',
             '_delete',
             'id',
             'is_active',
-            'job_type',
             'start_date',
             'extra',
             'weeks',
@@ -49,54 +50,58 @@
             'minutes',
             'seconds',
             'repeats',
-            'cron_definition'
+            'cron_definition',
+            'jitter_ms',
+            'timezone',
+            'max_execution_time_ms'
         ]
     }
     </script>
 
     {% comment %} Scheduler JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler.js"></script>
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.scheduler.dashboard_base_url = '{{ dashboard_base_url }}';
+    </script>
 
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Scheduler jobs</h2>
-
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
 {% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/search-form.html" with page_prompt="Show jobs"%}
-
     {% if cluster_id %}
+
+        <div id="markup">
+<h2 class="zato">Scheduler jobs</h2>
+
+{% include "zato/search-form.html" with page_prompt="Show jobs"%}
 
         <input type="hidden" id="cluster_id" value="{{ cluster_id }}" />
 
 
     <div class='page_prompt' style="clear:left">
-        Create a new job:
-            <a href="javascript:$.fn.zato.scheduler.create('one_time')" class="common">one-time</a> |
-            <a href="javascript:$.fn.zato.scheduler.create('interval_based')" class="common">interval-based</a>
+            <a href="javascript:$.fn.zato.scheduler.create('interval_based')">Create a new job</a> |
+            <a href="javascript:$.fn.zato.scheduler.import_demo_config()" class="common">Import demo config</a> |
+            <a href="{% url "scheduler-dashboard" %}?cluster={{ cluster_id }}" class="common">Go to dashboard</a>
     </div>
 
-
-        <div id="markup">
-            <table id="data-table">
+            <table class="zato-table" id="data-table">
                 <thead>
                     <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
                         <th style="text-align:center"><a href="#">Active</a></th>
-                        <th style="text-align:center"><a href="#">Job type</a></th>
                         <th>Definition</th>
                         <th><a href="#">Service</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -113,20 +118,19 @@
                 <tbody>
                 {% if items %}
                 {% for job in items %}
-                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ job.id }}'>
+                    <tr id='tr_{{ job.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ job.name }}</td>
                         <td style="text-align:center">{{ job.is_active|yesno:"Yes,No" }}</td>
-                        <td style="text-align:center">{{ job.job_type_friendly }}</td>
-                        <td>{{ job.definition_text|safe }}</td>
-                        <td><a href="{% url "service-overview" job.service_name %}?cluster={{ cluster_id }}">{{ job.service_name }}</a></td>
-                        <td><a href="javascript:$.fn.zato.scheduler.execute({{ job.id }})">Execute</a></td>
-                        <td><a href="javascript:$.fn.zato.scheduler.edit('{{ job.job_type }}', {{ job.id }})">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.scheduler.delete_({{ job.id }});">Delete</a></td>
+                        <td style="text-align:center">{{ job.definition_text|safe }}</td>
+                        <td><a href="{% url "service-ide" "service" job.service_name %}?cluster={{ cluster_id }}">{{ job.service_name }}</a></td>
+                        <td><a href="{% url "scheduler-job-detail" job.id %}?cluster={{ cluster_id }}&outcomes=all">Statistics</a></td>
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.execute('{{ job.id }}', this)">Execute</a></td>
+                        <td><a href="javascript:$.fn.zato.scheduler.edit('{{ job.job_type }}', '{{ job.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.scheduler.delete_('{{ job.id }}');">Delete</a></td>
                         <td class='ignore job_id_{{ job.id }}'>{{ job.id }}</td>
                         <td class='ignore'>{{ job.is_active }}</td>
-                        <td class='ignore'>{{ job.job_type }}</td>
                         <td class='ignore'>{{ job.start_date }}</td>
                         <td class='ignore'>{{ job.extra|default:"" }}</td>
                         <td class='ignore'>{{ job.interval_based.weeks|default:"" }}</td>
@@ -135,6 +139,10 @@
                         <td class='ignore'>{{ job.interval_based.minutes|default:"" }}</td>
                         <td class='ignore'>{{ job.interval_based.seconds|default:"" }}</td>
                         <td class='ignore'>{{ job.interval_based.repeats|default:"" }}</td>
+                        <td class='ignore'></td>
+                        <td class='ignore'>{{ job.jitter_ms|default:"" }}</td>
+                        <td class='ignore'>{{ job.timezone|default:"" }}</td>
+                        <td class='ignore'>{{ job.max_execution_time_ms|default:"" }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -145,9 +153,9 @@
 
                 </tbody>
             </table>
-        </div>
 
 {% include "zato/paginate/action-panel.html" %}
+        </div>
 
         <div id="create-one_time" class='data-popup ignore'>
             <div>
@@ -388,11 +396,37 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">
+                            More options
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.create-interval-more-options')">Toggle options</a>
+                            </td>
+                        </tr>
+
+                        <tr class="create-interval-more-options hidden">
+                            <td style="vertical-align:middle">
                                 <label for="id_create-interval_based-extra">
                                 Extra data
                                 </label>
                             </td>
                             <td>{{ create_interval_based_form.extra }}</td>
+                        </tr>
+
+                        <tr class="create-interval-more-options hidden">
+                            <td style="vertical-align:middle">Jitter (ms)</td>
+                            <td>
+                                {{ create_interval_based_form.jitter_ms }}
+                                |
+                                <label>
+                                Max exec. time (ms)
+                                {{ create_interval_based_form.max_execution_time_ms }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="create-interval-more-options hidden">
+                            <td style="vertical-align:middle">Timezone</td>
+                            <td>{{ create_interval_based_form.timezone }}</td>
                         </tr>
 
                         <tr>
@@ -510,11 +544,37 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">
+                            More options
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.edit-interval-more-options')">Toggle options</a>
+                            </td>
+                        </tr>
+
+                        <tr class="edit-interval-more-options hidden">
+                            <td style="vertical-align:middle">
                                 <label for="id_edit-interval_based-extra">
                                 Extra data
                                 </label>
                             </td>
                             <td>{{ edit_interval_based_form.extra }}</td>
+                        </tr>
+
+                        <tr class="edit-interval-more-options hidden">
+                            <td style="vertical-align:middle">Jitter (ms)</td>
+                            <td>
+                                {{ edit_interval_based_form.jitter_ms }}
+                                |
+                                <label>
+                                Max exec. time (ms)
+                                {{ edit_interval_based_form.max_execution_time_ms }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="edit-interval-more-options hidden">
+                            <td style="vertical-align:middle">Timezone</td>
+                            <td>{{ edit_interval_based_form.timezone }}</td>
                         </tr>
 
                         <tr>

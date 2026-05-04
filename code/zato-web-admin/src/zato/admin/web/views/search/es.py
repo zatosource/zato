@@ -15,7 +15,8 @@ import logging
 from zato.admin.web.forms.search.es import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common.api import SEARCH
-from zato.common.odb.model import ElasticSearch
+# Bunch
+from bunch import Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ class Index(_Index):
     url_name = 'search-es'
     template = 'zato/search/es.html'
     service_name = 'zato.search.es.get-list'
-    output_class = ElasticSearch
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):

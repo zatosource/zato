@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from base64 import b64decode
-from http.client import BAD_REQUEST, OK, UNAUTHORIZED
+from http.client import BAD_REQUEST, UNAUTHORIZED
 from logging import getLogger
 
 # Zato
@@ -37,6 +37,10 @@ _default_priority = PubSub.Message.Priority_Default
 _default_expiration = PubSub.Message.Default_Expiration
 _max_messages_default = 50
 _max_len_default = 5_000_000
+
+_status_ok = PubSub.Status.OK
+_status_bad_request = PubSub.Status.Bad_Request
+_status_unauthorized = PubSub.Status.Unauthorized
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -77,10 +81,10 @@ class PubSubRESTService(Service):
         username, password = extract_basic_auth_credentials(self.wsgi_environ)
 
         if not username:
-            return None, ('Authentication required', '401 Unauthorized')
+            return None, ('Authentication required', _status_unauthorized, UNAUTHORIZED)
 
         if not self._validate_credentials(username, password):
-            return None, ('Invalid credentials', '401 Unauthorized')
+            return None, ('Invalid credentials', _status_unauthorized, UNAUTHORIZED)
 
         return username, None
 
@@ -111,9 +115,8 @@ class Publish(PubSubRESTService):
     class SimpleIO:
         input_required = 'topic_name', AsIs('data')
         input_optional = 'priority', 'expiration', AsIs('correl_id'), AsIs('in_reply_to'), AsIs('ext_client_id'), 'pub_time'
-        output_optional = AsIs('msg_id'), 'is_ok', 'cid', 'status', 'details'
+        output_optional = AsIs('msg_id'), 'is_ok', 'cid', AsIs('status'), 'details'
         skip_empty_keys = True
-        response_elem = None
 
 # ################################################################################################################################
 
@@ -126,10 +129,9 @@ class Publish(PubSubRESTService):
         # Authenticate
         username, error = self.authenticate()
         if error:
-            self.response.status_code = UNAUTHORIZED
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
-            self.response.payload.details, self.response.payload.status = error
+            self.response.payload.details, self.response.payload.status, self.response.status_code = error
             return
 
         # Get topic name
@@ -139,33 +141,34 @@ class Publish(PubSubRESTService):
         try:
             validate_topic_name(topic_name)
         except Exception as e:
-            self.response.status_code = BAD_REQUEST
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
-            self.response.payload.status = '400 Bad Request'
+            self.response.payload.status = _status_bad_request
             self.response.payload.details = str(e)
+            self.response.status_code = BAD_REQUEST
             return
 
         # Check permissions
-        permission_result = self.server.pubsub_pattern_matcher.evaluate(username, topic_name, 'publish')
+        matcher = self.server.pubsub_pattern_matcher
+        permission_result = matcher.evaluate(username, topic_name, 'publish')
 
         if not permission_result.is_ok:
-            self.response.status_code = UNAUTHORIZED
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
-            self.response.payload.status = '401 Unauthorized'
+            self.response.payload.status = _status_unauthorized
             self.response.payload.details = 'Permission denied'
+            self.response.status_code = UNAUTHORIZED
             return
 
         # Get message data
         data = input.data
 
         if data is None:
-            self.response.status_code = BAD_REQUEST
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
-            self.response.payload.status = '400 Bad Request'
+            self.response.payload.status = _status_bad_request
             self.response.payload.details = "Invalid input: 'data' element missing"
+            self.response.status_code = BAD_REQUEST
             return
 
         # Get optional parameters with safe parsing
@@ -193,7 +196,7 @@ class Publish(PubSubRESTService):
             expiration = 1
 
         # Publish to Redis
-        msg_id = self.server.pubsub_redis.publish(
+        result = self.server.pubsub_redis.publish(
             topic_name,
             data,
             priority=priority,
@@ -208,8 +211,8 @@ class Publish(PubSubRESTService):
         # Build response
         self.response.payload.is_ok = True
         self.response.payload.cid = cid
-        self.response.payload.msg_id = msg_id
-        self.response.payload.status = '200 OK'
+        self.response.payload.msg_id = result.msg_id
+        self.response.payload.status = _status_ok
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -221,8 +224,7 @@ class GetMessages(PubSubRESTService):
 
     class SimpleIO:
         input_optional = Int('max_messages'), Int('max_len')
-        output_optional = AsIs('messages'), Int('message_count'), 'is_ok', 'cid', 'status', 'details'
-        response_elem = None
+        output_optional = AsIs('messages'), Int('message_count'), 'is_ok', 'cid', AsIs('status'), 'details'
 
 # ################################################################################################################################
 
@@ -235,10 +237,9 @@ class GetMessages(PubSubRESTService):
         # Authenticate
         username, error = self.authenticate()
         if error:
-            self.response.status_code = UNAUTHORIZED
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
-            self.response.payload.details, self.response.payload.status = error
+            self.response.payload.details, self.response.payload.status, self.response.status_code = error
             return
 
         # Get sub_key for this user
@@ -249,7 +250,7 @@ class GetMessages(PubSubRESTService):
             self.response.payload.cid = cid
             self.response.payload.messages = []
             self.response.payload.message_count = 0
-            self.response.payload.status = '200 OK'
+            self.response.payload.status = _status_ok
             return
 
         # Get optional parameters
@@ -268,15 +269,15 @@ class GetMessages(PubSubRESTService):
         self.response.payload.cid = cid
         self.response.payload.messages = messages
         self.response.payload.message_count = len(messages)
-        self.response.payload.status = '200 OK'
+        self.response.payload.status = _status_ok
 
 # ################################################################################################################################
 
     def _get_sub_key_for_user(self, username:'str') -> 'str':
         """ Get the subscription key for a user.
         """
-        sub_key = self.server.pubsub_subscriptions.get_sub_key_by_username(username)
-        return sub_key
+        # Look up in the subscriptions store
+        return self.server.pubsub_subscriptions.get_sub_key_by_username(username)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -288,8 +289,7 @@ class Subscribe(PubSubRESTService):
 
     class SimpleIO:
         input_required = 'topic_name'
-        output_optional = 'is_ok', 'cid', 'status', 'details', 'sub_key'
-        response_elem = None
+        output_optional = 'is_ok', 'cid', AsIs('status'), 'details', 'sub_key'
 
 # ################################################################################################################################
 
@@ -302,10 +302,9 @@ class Subscribe(PubSubRESTService):
         # Authenticate
         username, error = self.authenticate()
         if error:
-            self.response.status_code = UNAUTHORIZED
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
-            self.response.payload.details, self.response.payload.status = error
+            self.response.payload.details, self.response.payload.status, self.response.status_code = error
             return
 
         # Get topic name
@@ -315,22 +314,22 @@ class Subscribe(PubSubRESTService):
         try:
             validate_topic_name(topic_name)
         except Exception as e:
-            self.response.status_code = BAD_REQUEST
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
-            self.response.payload.status = '400 Bad Request'
+            self.response.payload.status = _status_bad_request
             self.response.payload.details = str(e)
+            self.response.status_code = BAD_REQUEST
             return
 
         # Check permissions
         permission_result = self.server.pubsub_pattern_matcher.evaluate(username, topic_name, 'subscribe')
 
         if not permission_result.is_ok:
-            self.response.status_code = UNAUTHORIZED
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
-            self.response.payload.status = '401 Unauthorized'
+            self.response.payload.status = _status_unauthorized
             self.response.payload.details = 'Permission denied'
+            self.response.status_code = UNAUTHORIZED
             return
 
         # Get or create sub_key for this user
@@ -346,7 +345,7 @@ class Subscribe(PubSubRESTService):
         self.response.payload.is_ok = True
         self.response.payload.cid = cid
         self.response.payload.sub_key = sub_key
-        self.response.payload.status = '200 OK'
+        self.response.payload.status = _status_ok
 
 # ################################################################################################################################
 
@@ -382,8 +381,7 @@ class Unsubscribe(PubSubRESTService):
 
     class SimpleIO:
         input_required = 'topic_name'
-        output_optional = 'is_ok', 'cid', 'status', 'details'
-        response_elem = None
+        output_optional = 'is_ok', 'cid', AsIs('status'), 'details'
 
 # ################################################################################################################################
 
@@ -396,10 +394,9 @@ class Unsubscribe(PubSubRESTService):
         # Authenticate
         username, error = self.authenticate()
         if error:
-            self.response.status_code = UNAUTHORIZED
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
-            self.response.payload.details, self.response.payload.status = error
+            self.response.payload.details, self.response.payload.status, self.response.status_code = error
             return
 
         # Get topic name
@@ -409,28 +406,29 @@ class Unsubscribe(PubSubRESTService):
         try:
             validate_topic_name(topic_name)
         except Exception as e:
-            self.response.status_code = BAD_REQUEST
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
-            self.response.payload.status = '400 Bad Request'
+            self.response.payload.status = _status_bad_request
             self.response.payload.details = str(e)
+            self.response.status_code = BAD_REQUEST
             return
 
         # Get sub_key for this user
         sub_key = self.server.pubsub_subscriptions.get_sub_key_by_username(username)
 
         if not sub_key:
-            # User has no subscriptions, return success (idempotent)
             self.response.payload.is_ok = True
             self.response.payload.cid = cid
-            self.response.payload.status = '200 OK'
+            self.response.payload.status = _status_ok
             return
 
         # Unsubscribe in Redis
         self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
 
-        # Clear sub_key so a new one is generated on next subscribe
-        self.server.pubsub_subscriptions.clear_sub_key(username)
+        # Only clear sub_key if no remaining subscriptions
+        remaining_topics = self.server.pubsub_redis.get_subscribed_topics(sub_key)
+        if not remaining_topics:
+            self.server.pubsub_subscriptions.clear_sub_key(username)
 
         # Remove subscription from ODB
         self._remove_subscription(username, topic_name)
@@ -438,7 +436,7 @@ class Unsubscribe(PubSubRESTService):
         # Build response
         self.response.payload.is_ok = True
         self.response.payload.cid = cid
-        self.response.payload.status = '200 OK'
+        self.response.payload.status = _status_ok
 
 # ################################################################################################################################
 

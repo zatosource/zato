@@ -451,7 +451,7 @@ class CreateEditMeta(AdminServiceMeta):
                         attrs.broker_message_hook(self, input, instance, attrs, 'create_edit')
 
                     if not has_integrity_error:
-                        self.broker_client.publish(input)
+                        self.config_dispatcher.publish(input)
 
                     to_rewrite = chain(
                         attrs.create_edit_rewrite,
@@ -563,7 +563,7 @@ class DeleteMeta(AdminServiceMeta):
                     if attrs.broker_message_hook:
                         attrs.broker_message_hook(self, input, instance, attrs, 'delete')
 
-                    self.broker_client.publish(input)
+                    self.config_dispatcher.publish(input)
 
                     if attrs.delete_hook:
                         attrs.delete_hook(self, input, instance, attrs)

@@ -122,8 +122,7 @@ class RESTClient:
         # .. wrap everything in a dict ..
         payload = {
             'name': sec_name,
-            'password1': self._api_invoke_password,
-            'password2': self._api_invoke_password,
+            'password': self._api_invoke_password,
         }
 
         # .. serialise to JSON, as expected by the CLI ..

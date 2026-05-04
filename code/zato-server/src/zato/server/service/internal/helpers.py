@@ -150,22 +150,6 @@ class Echo(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class PubInputLogger(Service):
-
-    name = 'demo.input-logger'
-
-    input = '-hello'
-    output = 'world'
-
-    def handle(self):
-        import logging
-        logger = logging.getLogger('zato')
-        logger.info(f'Received request: `{self.request.raw_request}`')
-        logger.info(f'Channel info: `{self.channel.to_dict()}`')
-        self.response.payload.world = f'{self.name} received your request.'
-
-# ################################################################################################################################
-
 class GetMetrics(Service):
     """ Returns metrics in Prometheus format.
     """

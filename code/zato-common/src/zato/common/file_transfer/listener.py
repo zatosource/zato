@@ -14,16 +14,17 @@ import logging
 import os
 import sys
 import time
+from base64 import b64encode
+from json import dumps, loads
+
+# requests
+import requests
 
 # Watchdog
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
 from watchdog.observers.inotify import InotifyObserver
-
-# Zato
-from zato.broker.client import BrokerClient
-from zato.common.util.api import new_cid, publish_file, publish_enmasse, publish_user_conf
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -229,12 +230,16 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
     def __init__(
         self,
         matching_dirs:'strlist',
+        session:'requests.Session',
+        invoke_url:'str',
         event_types:'strlistnone',
         file_patterns:'strlistnone',
     ) -> 'None':
         """ Initialize with matching directories and event types to track.
         """
         self.matching_dirs = matching_dirs
+        self.session = session
+        self.invoke_url = invoke_url
 
         # Include default events if none provided
         self.event_types = event_types or ['created', 'deleted', 'modified', 'closed', 'closed_no_write']
@@ -253,9 +258,10 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         # when a subsequent 'closed' event is received
         self.modified_files = set()
 
-        # Initialize broker client for publishing events
-        self.broker_client = BrokerClient()
-        self.broker_client.ping_connection()
+        # Debounce: maps file path to the last time it was deployed
+        self.last_deployed = {}
+        self.debounce_seconds = 2.0
+
         super().__init__()
 
 # ################################################################################################################################
@@ -363,22 +369,48 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
 # ################################################################################################################################
 
     def publish_file_ready_event(self, event_path:'str') -> 'None':
-        """ Publish file-ready event to the broker.
+        """ Deploy the file to the server via its REST API.
         """
-        try:
-            cid = new_cid()
-            is_enmasse = 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path)
-            is_static = event_path.endswith('.ini') or event_path.endswith('.zrules')
+        now = time.monotonic()
+        last = self.last_deployed.get(event_path, 0)
+        if (now - last) < self.debounce_seconds:
+            return
+        self.last_deployed[event_path] = now
 
-            if is_enmasse:
-                msg = publish_enmasse(self.broker_client, cid, event_path)
-            elif is_static:
-                msg = publish_user_conf(self.broker_client, cid, event_path)
+        try:
+            with open(event_path, 'rb') as f:
+                file_data = f.read()
+
+            inner_payload = dumps({
+                'payload': b64encode(file_data).decode('ascii'),
+                'payload_name': event_path,
+            })
+
+            request_body = dumps({
+                'name': 'zato.hot-deploy.create',
+                'payload': b64encode(inner_payload.encode('utf8')).decode('ascii'),
+                'channel': 'invoke',
+                'data_format': 'json',
+                'transport': None,
+                'is_async': False,
+                'expiration': 15,
+                'pid': None,
+                'all_pids': False,
+                'timeout': None,
+                'skip_response_elem': True,
+                'needs_response_time': True,
+                'needs_headers': True,
+            })
+
+            response = self.session.post(self.invoke_url, data=request_body)
+
+            if response.ok:
+                logger.info('Deployed -> %s', event_path)
             else:
-                msg = publish_file(self.broker_client, cid, event_path)
-            logger.info('Sent msg -> %s', msg)
+                logger.warning('Deploy failed (%s) -> %s: %s', response.status_code, event_path, response.text)
+
         except Exception as e:
-            logger.warning('Could not publish event to broker: %s -> %s', e, event_path)
+            logger.warning('Could not deploy file: %s -> %s', e, event_path)
 
 # ################################################################################################################################
 
@@ -452,6 +484,8 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
 def watch_directory(
     directory_path:'str',
     matching_items:'strlist',
+    session:'requests.Session',
+    invoke_url:'str',
     event_types:'strlistnone',
     file_patterns:'strlistnone',
     observer_type:'str'='inotify',
@@ -467,20 +501,54 @@ def watch_directory(
         except Exception as e:
             logger.warning('Could not create InotifyObserver, falling back to default: %s', e)
             observer = Observer()
-    else: # 'auto' or any other value defaults to the system-specific observer
+    else:
         observer = Observer()
 
-    # Find the deepest common directory to watch
-    # This optimizes the observer to watch from the appropriate level
-    watch_directory = find_deepest_common_directory(matching_items)
+    # Find the deepest common directory to watch ..
+    watch_dir = find_deepest_common_directory(matching_items)
 
-    # Create event handler
-    event_handler = ZatoFileSystemEventHandler(matching_items, event_types, file_patterns)
+    # .. create the event handler ..
+    event_handler = ZatoFileSystemEventHandler(matching_items, session, invoke_url, event_types, file_patterns)
 
-    # Schedule the observer
-    _ = observer.schedule(event_handler, watch_directory, recursive=True)
+    # .. and schedule the observer.
+    _ = observer.schedule(event_handler, watch_dir, recursive=True)
 
     return observer
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _build_session() -> 'tuple':
+    """ Reads web-admin credentials and returns a requests session with basic auth
+    and the invoke URL for the server's REST API.
+    """
+    # Zato
+    from zato.common.crypto.api import WebAdminCryptoManager
+
+    repo_dir = os.path.expanduser('~/env/qs-1/web-admin/config/repo')
+
+    # Read the web-admin config ..
+    conf_path = os.path.join(repo_dir, 'web-admin.conf')
+    with open(conf_path) as f:
+        config = loads(f.read())
+
+    # .. set up crypto ..
+    cm = WebAdminCryptoManager(repo_dir=repo_dir)
+
+    # .. extract and decrypt credentials ..
+    username = config['ADMIN_INVOKE_NAME']
+    password = cm.decrypt(config['ADMIN_INVOKE_PASSWORD'])
+
+    if isinstance(password, bytes):
+        password = password.decode('utf8')
+
+    # .. build the session ..
+    session = requests.Session()
+    session.auth = (username, password)
+
+    invoke_url = 'http://localhost:17010' + config['ADMIN_INVOKE_PATH']
+
+    return session, invoke_url
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -548,14 +616,19 @@ if __name__ == '__main__':
             logger.info('Using file patterns: %s', file_patterns)
             logger.info('Using observer type: %s', observer_type)
 
+            # Build the authenticated session for the server's REST API
+            session, invoke_url = _build_session()
+
             # Automatically watch for changes
             try:
                 observer = watch_directory(
                     base_dir,
                     matching_items,
+                    session=session,
+                    invoke_url=invoke_url,
                     event_types=None,
                     file_patterns=file_patterns,
-                    observer_type=observer_type
+                    observer_type=observer_type,
                 )
                 observer.start()
                 logger.info('Watching for changes, press Ctrl+C to stop...')

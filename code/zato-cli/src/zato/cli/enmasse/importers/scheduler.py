@@ -153,9 +153,11 @@ class SchedulerImporter:
         service_name = job_def['service']
         service = session.query(Service).filter(Service.name==service_name).filter(Service.cluster_id==cluster.id).one() # type: ignore
 
-        # Parse the start_date from string to datetime object
-        start_date_value = job_def['start_date']
-        if isinstance(start_date_value, datetime):
+        # Parse the start_date from string to datetime object, defaulting to now
+        start_date_value = job_def.get('start_date')
+        if not start_date_value:
+            original_start_date = datetime.utcnow()
+        elif isinstance(start_date_value, datetime):
             original_start_date = start_date_value
         else:
             original_start_date = parse_datetime(start_date_value)

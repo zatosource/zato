@@ -26,6 +26,7 @@ class CreateForm(forms.Form):
 
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:60%'}))
     username = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
+    secret = forms.CharField(required=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
 
     auth_server_url = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.Auth_Server_URL)
     scopes = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:30px'}), initial='\n'.join(_default.Scopes))

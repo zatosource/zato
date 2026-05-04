@@ -17,7 +17,8 @@ from django.http import HttpResponse, HttpResponseServerError
 from zato.admin.web.forms.channel.amqp_ import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, Index as _Index, method_allowed
 from zato.common.json_internal import dumps
-from zato.common.odb.model import ChannelAMQP
+# Bunch
+from bunch import Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ class Index(_Index):
     url_name = 'channel-amqp'
     template = 'zato/channel/amqp.html'
     service_name = 'zato.channel.amqp.get-list'
-    output_class = ChannelAMQP
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):

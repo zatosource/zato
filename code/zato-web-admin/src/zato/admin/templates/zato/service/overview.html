@@ -34,15 +34,14 @@
 
 <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-<h2 class="zato">Services : <a href="{% url "service" %}?cluster={{ cluster_id }}&amp;highlight={{ service.id }}" class="common">{{ service.name }}</a> : Overview</h2>
-
 <div class='page_prompt'>
     <a href="{% url "service-overview" service.name %}?cluster={{ cluster_id }}" class="common current">Overview</a>
     <a href="{% url "service-ide" "service" service.name %}?cluster={{ cluster_id }}" class="common">IDE</a>
 </div>
 
 <div id="markup">
-    <table id="data-table">
+    <h2 class="zato">Services : <a href="{% url "service" %}?cluster={{ cluster_id }}&amp;highlight={{ service.id }}" class="common">{{ service.name }}</a> : Overview</h2>
+    <table class="zato-table" id="data-table">
         <tr>
             <td class='inline_header'>Deployment info</td>
         </tr>

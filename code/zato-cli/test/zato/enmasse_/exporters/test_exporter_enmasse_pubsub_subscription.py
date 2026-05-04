@@ -290,7 +290,7 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
                 self.assertIn('push_service', auth3_sub)
 
                 auth3_push_service = auth3_sub['push_service'] # type: ignore
-                expected_auth3_service = 'demo.input-logger'
+                expected_auth3_service = 'demo.echo'
                 self.assertEqual(auth3_push_service, expected_auth3_service)
 
                 self.assertNotIn('push_rest_endpoint', auth3_sub)

@@ -1,16 +1,16 @@
 .settings-container {
     background: linear-gradient(135deg, var(--white) 0%, var(--background-light) 50%, var(--border-light) 100%);
     min-height: 100vh;
-    padding: 40px;
+    padding: 30px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .settings-panel {
+    --settings-panel-border: 3px;
     max-width: 957px;
     margin: 0 auto;
     background: var(--white);
-    border: 3px solid var(--primary-dark);
-    box-shadow: 8px 8px 0px var(--shadow-dark);
+    border: var(--settings-panel-border) solid var(--primary-dark);
 }
 
 .settings-content {
@@ -21,20 +21,22 @@
     flex: 1;
     padding: 24px 40px 40px 40px;
     padding-bottom: 11px;
+    padding-top: 15px;
 }
 
 .settings-sidebar {
     background: var(--background-light);
     border-left: 3px solid var(--primary-dark);
     padding: 24px 32px 40px 32px;
+    padding-top: 15px;
 }
 
 .settings-main h3, .settings-sidebar h3 {
     font-size: 16px;
     font-weight: 600;
     color: var(--primary-dark);
-    margin: 0 0 12px 0;
     letter-spacing: 0.5px;
+    padding-bottom: 0.7rem;
 }
 
 .progress-panel {
@@ -134,22 +136,7 @@
     filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);
 }
 
-.status-message {
-    display: none;
-    color: #067f39;
-    font-weight: 600;
-    font-size: 12px;
-    opacity: 1;
-    transition: opacity 0.5s ease;
-}
-
-.status-message.show {
-    display: inline-block;
-}
-
-.status-message.fade {
-    opacity: 0;
-}
+/* .status-message rules moved to status-message.css */
 
 .info-message {
     cursor: pointer;

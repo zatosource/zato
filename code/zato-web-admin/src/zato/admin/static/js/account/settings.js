@@ -23,7 +23,7 @@ $(document).ready(function() {
                 var span = $('#color_picker_span_' + id);
 
                 $('#previev_a_'+id).remove();
-                span.append(String.format('<a id="previev_a_{0}" href="javascript:$.fn.zato.account.basic_settings.preview({0})">(preview)</a>', id));
+                span.append(String.format('<a id="previev_a_{0}" href="javascript:$.fn.zato.account.basic_settings.preview(\'{0}\')">(preview)</a>', id));
                 return false;
             },
             onChange: function(hsb, hex, rgb) {

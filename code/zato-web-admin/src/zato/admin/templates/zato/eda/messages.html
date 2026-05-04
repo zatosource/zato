@@ -1,0 +1,58 @@
+{% extends "zato/detail_base.html" %}
+
+{% block page_title %}Message browser{% endblock %}
+
+{% block detail_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/eda.css">
+{% endblock %}
+
+{% block section_title %}Message browser{% endblock %}
+{% block help_icon_id %}eda-messages-help{% endblock %}
+
+{% block detail_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/utils.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/messages.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.eda.messages.init(
+        {{ messages|safe }},
+        {{ total }},
+        {{ page }},
+        {{ total_pages }},
+        {{ topics_json|safe }},
+        '{{ topic_name_filter }}'
+    );
+});
+</script>
+{% endblock %}
+
+{% block tabs %}{% endblock %}
+
+{% block tab_panels %}
+<form class="detail-filter-bar" method="get" action="{% url 'eda-messages' %}" id="messages-filter-form">
+    <input type="hidden" name="cluster" value="{{ cluster_id }}" />
+    <div>
+        <label>Topic</label>
+        <select id="messages-topic-select" name="topic_name" data-placeholder="All topics" style="width:300px">
+            <option value=""></option>
+        </select>
+    </div>
+</form>
+
+<div class="total-info">Total: <strong id="msg-total">{{ total }}</strong> <span id="msg-total-label">{% if total == 1 %}message{% else %}messages{% endif %}</span></div>
+
+<table class="detail-table">
+    <thead><tr><th>Message ID</th><th>Topic</th><th>Data</th><th>Size</th><th>Published</th></tr></thead>
+    <tbody id="messages-body"></tbody>
+</table>
+
+<div class="detail-pagination-bar">
+    {% if page > 1 %}
+        <a href="?cluster={{ cluster_id }}&topic_name={{ topic_name_filter }}&page={{ page|add:"-1" }}">Previous</a>
+    {% endif %}
+    <span class="current-page">Page {{ page }} of {{ total_pages }}</span>
+    {% if page < total_pages %}
+        <a href="?cluster={{ cluster_id }}&topic_name={{ topic_name_filter }}&page={{ page|add:"1" }}">Next</a>
+    {% endif %}
+</div>
+{% endblock %}

@@ -186,14 +186,29 @@ python_packages_page_config['show_restart_steps'] = True
 python_packages_page_config['panel_width'] = '55%'
 python_packages_page_config['restart_step_id'] = 'install'
 python_packages_page_config['restart_step_label'] = python_packages_page_config['step2_label']
+python_packages_page_config['textarea_id'] = 'requirements'
+python_packages_page_config['textarea_label'] = 'Requirements'
+python_packages_page_config['textarea_placeholder'] = 'One package per line, e.g.:\natlassian-python-api\nazure-storage-blob'
 python_packages_page_config['content_rows'] = []
 
-content_rows = python_packages_page_config['content_rows']
-
-row = ContentRow(
-    label='Requirements',
-    widget='textarea',
-    value_key='requirements',
-    element_id='requirements'
-)
-content_rows.append(row)
+env_variables_page_config = {}
+env_variables_page_config['title'] = 'Environment variables'
+env_variables_page_config['api_prefix'] = '/zato/env-variables/'
+env_variables_page_config['step1_label'] = 'Saving'
+env_variables_page_config['step2_label'] = ''
+env_variables_page_config['check_button_label'] = 'Test'
+env_variables_page_config['action_button_label'] = 'Save'
+env_variables_page_config['version_section_title'] = 'Environment variables'
+env_variables_page_config['config_section_title'] = ''
+env_variables_page_config['logs_section_title'] = ''
+env_variables_page_config['save_button_label'] = 'Save'
+env_variables_page_config['download_logs_label'] = ''
+env_variables_page_config['show_sidebar'] = False
+env_variables_page_config['show_restart_steps'] = False
+env_variables_page_config['panel_width'] = '55%'
+env_variables_page_config['restart_step_id'] = ''
+env_variables_page_config['restart_step_label'] = ''
+env_variables_page_config['textarea_id'] = 'env-variables'
+env_variables_page_config['textarea_label'] = 'Variables'
+env_variables_page_config['textarea_placeholder'] = 'KEY=value, one per line, e.g.:\nMY_API_KEY=abc123\nDEBUG=1'
+env_variables_page_config['content_rows'] = []

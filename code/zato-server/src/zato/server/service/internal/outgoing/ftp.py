@@ -36,7 +36,7 @@ class _FTPService(AdminService):
         """ Notify worker threads of new or updated parameters.
         """
         params['action'] = action
-        self.broker_client.publish(params)
+        self.config_dispatcher.publish(params)
 
 # ################################################################################################################################
 # ################################################################################################################################

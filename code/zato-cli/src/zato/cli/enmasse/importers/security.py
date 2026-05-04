@@ -143,7 +143,7 @@ class SecurityImporter:
 
                 needs_update = False
                 for key, value in item.items():
-                    if key in ('type', 'name', 'password'):
+                    if key in ('type', 'name', 'password', 'rate_limiting'):
                         continue
                     if key == 'username' and sec_type == 'apikey':
                         continue

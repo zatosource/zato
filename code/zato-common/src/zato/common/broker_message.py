@@ -83,6 +83,9 @@ class SECURITY(Constants):
     APIKEY_DELETE = ValueConstant('')
     APIKEY_CHANGE_PASSWORD = ValueConstant('')
 
+    BASIC_AUTH_RATE_LIMITING_EDIT = ValueConstant('')
+    APIKEY_RATE_LIMITING_EDIT = ValueConstant('')
+
 class OUTGOING(Constants):
 
     AMQP_CREATE = ValueConstant('')
@@ -122,6 +125,7 @@ class CHANNEL(Constants):
 
     HTTP_SOAP_CREATE_EDIT = ValueConstant('') # Same for creating and updating
     HTTP_SOAP_DELETE = ValueConstant('')
+    HTTP_SOAP_RATE_LIMITING_EDIT = ValueConstant('')
 
     FTP_CREATE = ValueConstant('')
     FTP_EDIT = ValueConstant('')

@@ -1,0 +1,78 @@
+[package]
+name = "zato_server_core-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+tempfile = "3.27.0"
+
+[dependencies.zato_server_core]
+path = ".."
+
+[[bin]]
+name = "fuzz_parse_content_length"
+path = "fuzz_targets/fuzz_parse_content_length.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_header_value_eq"
+path = "fuzz_targets/fuzz_header_value_eq.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_trim_ows"
+path = "fuzz_targets/fuzz_trim_ows.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_parse_status_code"
+path = "fuzz_targets/fuzz_parse_status_code.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_make_cid_public"
+path = "fuzz_targets/fuzz_make_cid_public.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_transform_header_key"
+path = "fuzz_targets/fuzz_transform_header_key.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_log_writer"
+path = "fuzz_targets/fuzz_log_writer.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_format_rest_line"
+path = "fuzz_targets/fuzz_format_rest_line.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_format_access_line"
+path = "fuzz_targets/fuzz_format_access_line.rs"
+test = false
+doc = false
+bench = false

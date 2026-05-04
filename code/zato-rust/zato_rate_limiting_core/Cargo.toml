@@ -1,0 +1,44 @@
+[package]
+name = "zato_rate_limiting_core"
+version = "4.1.0"
+edition = "2024"
+license = "AGPL-3.0-only"
+description = "Rate limiting engine for Zato REST channels - token bucket and fixed-window counter"
+repository = "https://github.com/zatosource/zato"
+readme = "README.md"
+keywords = ["zato", "api", "integration-platform", "ipaas", "rule-engine"]
+categories = ["development-tools"]
+
+[lib]
+name = "zato_rate_limiting_core"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+extension-module = ["pyo3/extension-module"]
+
+[dependencies]
+chrono = { version = "0.4.44", default-features = false, features = ["std"] }
+parking_lot = "0.12"
+pyo3 = "0.28.3"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "deny", priority = -1 }
+nursery = { level = "deny", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+indexing_slicing = "deny"
+as_conversions = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+option_if_let_else = "allow"
+
+[profile.release]
+overflow-checks = true

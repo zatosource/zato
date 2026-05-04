@@ -1,0 +1,31 @@
+[package]
+name = "zato_common_core"
+version = "4.1.0"
+edition = "2024"
+license = "AGPL-3.0-only"
+description = "Core utilities shared across all Zato Rust crates - API, ESB, SOA, iPaaS, integration platform, middleware, rule engine"
+repository = "https://github.com/zatosource/zato"
+readme = "README.md"
+keywords = ["zato", "api", "integration-platform", "ipaas", "rule-engine"]
+categories = ["development-tools"]
+
+[lib]
+name = "zato_common_core"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+extension-module = ["pyo3/extension-module"]
+
+[dependencies]
+pyo3 = { version = "0.28.3", features = ["extension-module"] }
+chrono = "0.4.44"
+
+[dev-dependencies]
+proptest = "1.11.0"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[profile.release]
+overflow-checks = true

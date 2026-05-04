@@ -16,6 +16,13 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.channel.amqp.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'address', 'username', 'password', 'queue', 'pool_size', 'service', 'prefetch_count']);
+    var unique_constraints = [
+        {field: 'name', entity_type: 'channel_amqp', attr_name: 'name'}
+    ];
+    $.each(unique_constraints, function(i, c) {
+        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
+        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+    });
 })
 
 $.fn.zato.channel.amqp.create = function() {
@@ -45,7 +52,7 @@ $.fn.zato.channel.amqp.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td style="text-align:center">{0}</td>', item.queue);
     row += String.format('<td style="text-align:center">{0}</td>', $.fn.zato.data_table.service_text(item.service, cluster_id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.amqp.edit('{0}')\">", item.id) + "Edit</a>");
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.channel.amqp.delete_({0});'>Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.amqp.delete_('{0}');\">Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
 
@@ -62,3 +69,15 @@ $.fn.zato.channel.amqp.delete_ = function(id) {
         'Are you sure you want to delete AMQP channel [{0}]?',
         true);
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Live form updates registration
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.live_form_updates.register('create', [
+    {object_type: 'service', target_select: '#id_service'}
+]);
+
+$.fn.zato.live_form_updates.register('edit', [
+    {object_type: 'service', target_select: '#id_edit-service'}
+]);

@@ -270,26 +270,6 @@ class CheckConfig(ManageCommand):
 # ################################################################################################################################
 
     def _on_scheduler(self, args, *ignored_args, **ignored_kwargs):
-
-        # stdlib
-        from os.path import join
-
-        # Zato
-        from zato.common.crypto.api import SchedulerCryptoManager
-        from zato.common.ext.configobj_ import ConfigObj
-
-        repo_dir = join(self.component_dir, 'config', 'repo')
-        server_conf_path = join(repo_dir, 'scheduler.conf')
-
-        cm = self.get_crypto_manager(getattr(args, 'secret_key', None), getattr(args, 'stdin_data', None), SchedulerCryptoManager)
-
-        secrets_conf_path = ConfigObj(join(repo_dir, 'secrets.conf'), use_zato=False)
-        server_conf = ConfigObj(server_conf_path, zato_secrets_conf=secrets_conf_path, zato_crypto_manager=cm, use_zato=True)
-
-        # ODB is optional for schedulers
-        if 'odb' in server_conf:
-            fs_sql_config = self.get_sql_ini('sql.conf')
-            self.check_sql_odb_server_scheduler(cm, server_conf, fs_sql_config)
-            self.ensure_no_pidfile('scheduler')
+        self.ensure_no_pidfile('scheduler')
 
 # ################################################################################################################################
