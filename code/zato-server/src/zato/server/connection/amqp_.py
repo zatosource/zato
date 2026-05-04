@@ -731,8 +731,11 @@ class ConnectorAMQP(Connector):
 
     def _add_auth_placeholders(self, address:'str') -> 'str':
 
-        protocol_part, server_part = address.split('://', 1)
-        return f'{protocol_part}://' + '{username}:{password}@' + server_part
+        if '://' in address:
+            protocol_part, server_part = address.split('://', 1)
+            return f'{protocol_part}://' + '{username}:{password}@' + server_part
+        else:
+            return '{username}:{password}@' + address
 
 # ################################################################################################################################
 

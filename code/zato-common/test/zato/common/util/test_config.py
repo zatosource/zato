@@ -14,15 +14,10 @@ from zato.common.api import Secret_Shadow
 from zato.common.typing_ import cast_
 from zato.common.util.config import replace_query_string_items
 
-# Zato - Cython
-from zato.simpleio import SecretConfig
-from zato.simpleio import SIOServerConfig
-
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
     from zato.server.base.parallel import ParallelServer
     ParallelServer = ParallelServer
 
@@ -34,24 +29,9 @@ class ConfigTestCase(TestCase):
     def test_replace_query_string_items(self):
 
         class _Server:
-            sio_config = None
-
-        # Prepare individual pieces of the secrets configuration
-        exact = {'xApiKey', 'token'}
-        prefixes = {'secret_prefix_', 'password_prefix_'}
-        suffixes = {'_secret_suffix', '_password_suffix'}
-
-        # Build the configuration of secrets first
-        secret_config:'any_' = SecretConfig()
-        secret_config.exact = exact
-        secret_config.prefixes = prefixes
-        secret_config.suffixes = suffixes
-
-        sio_config:'any_' = SIOServerConfig()
-        sio_config.secret_config = secret_config
+            pass
 
         _server = cast_('ParallelServer', _Server())
-        _server.sio_config = sio_config
 
         data01 = 'wss://hello?xApiKey=123'
         data02 = 'wss://hello?xApiKey=123&token=456'

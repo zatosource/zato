@@ -1,0 +1,12 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+test_data = b'MSH|^~\\&|MegaReg|XYZHospC|SuperOE|XYZImgCtr|20060529090131-0500||ADT^A01^ADT_A01|01052901|P|2.5\r' \
+    b'EVN||200605290901||||200605290900\r' \
+    b'PID|||56782445^^^UAReg^PI||KLEBN^BARRY^Q^JR||19620910|M||2028-9^^HL70005^RA99113^^XYZ|260 GOODWIN CREST DRIVE^^BIRMINGHAM^AL^35209^^M~NICKELL\'S PICKING COTT^## BOX 195^Cdistribution^OH^44302^^BDL||^PRN^PH^^^205^5551212|||S||0105I30001^^^99DEF^AN\r' \
+    b'PV1||I|W^389^1^UABH^^^^3||||12345^MORGAN^REX^J^^^MD^0010^UAMC^L||67890^GRAINGER^LUCY^X^^^MD^0010^UAMC^L|MED|||||A0||13579^POTTER^SHERMAN^T^^^MD^0010^UAMC^L|||||||||||||||||||||||||||200605290900\r'

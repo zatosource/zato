@@ -1,0 +1,2 @@
+[non_local_effect_before_error_return]
+work_limit = 10_000_000

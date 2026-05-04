@@ -17,7 +17,8 @@ from zato.admin.web.forms.security.oauth import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, \
      CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.api import NONCE_STORE
-from zato.common.odb.model import OAuth
+# Bunch
+from bunch import Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ class Index(_Index):
     url_name = 'security-oauth'
     template = 'zato/security/oauth.html'
     service_name = 'zato.security.oauth.get-list'
-    output_class = OAuth
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):

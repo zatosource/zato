@@ -5,13 +5,6 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
-    {% if items %}
-    <style type="text/css">
-        .ui-dialog-titlebar {
-            margin-bottom:-4px !important;
-        }
-    </style>
-    {% endif %}
 {% endblock %}
 
 {% block "extra_js" %}
@@ -64,26 +57,25 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Salesforce outgoing connections</h2>
-
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
 {% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
+    {% if cluster_id %}
+        <div id="markup">
+            <h2 class="zato">Salesforce outgoing connections</h2>
+
 {% with has_generic="1" generic_type="outconn-saleforce" %}
     {% include "zato/search-form.html" with page_prompt="Show connections"%}
 {% endwith %}
 
-    {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.outgoing.salesforce.create()">Create a new connection</a>
         </div>
 
-
-        <div id="markup">
-            <table id="data-table">
+            <table class="zato-table" id="data-table">
                 <thead>
                     <tr class='ignore'>
                         <th>&nbsp;</th>
@@ -122,7 +114,7 @@
                 <tbody>
                 {% if items %}
                 {% for item in items %}
-                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                    <tr id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
 
@@ -165,9 +157,9 @@
 
                 </tbody>
             </table>
-        </div>
 
 {% include "zato/paginate/action-panel.html" %}
+        </div>
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">

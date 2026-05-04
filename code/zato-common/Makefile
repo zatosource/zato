@@ -1,25 +1,23 @@
-Zato_Python_Dir=$(CURDIR)/../bin
-Zato_Package_Name=zato-common
+.PHONY: default build test clippy ruff
+MAKEFLAGS += --silent
 
-rules-perf-tests:
-	cd $(CURDIR) && PYTHONPATH=$(CURDIR)/.. python test/zato/common/rules/test_perf.py
+CRATE_DIR = $(CURDIR)/../zato-rust/zato_sio
+PY = $(CURDIR)/../bin/python
+export VIRTUAL_ENV = $(CURDIR)/..
 
-flake8:
-	echo "Running flake8 checks in $(Zato_Package_Name)"
-	$(Zato_Python_Dir)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+default: build
 
-static-check:
-	echo "Running static checks in $(Zato_Package_Name)"
-	$(MAKE) flake8
+build:
+	. $$HOME/.cargo/env && cd $(CRATE_DIR) && $(PY) -m maturin develop --release
 
-run-tests:
-	$(Zato_Python_Dir)/pytest test/zato/common \
-		-v \
-		-W ignore::DeprecationWarning \
-		-W ignore::gevent.monkey.MonkeyPatchWarning \
-		--ignore=test/zato/common/matcher \
-		--ignore=test/zato/common/pubsub
+test:
+	@$(PY) -c "import zato_sio" 2>/dev/null || \
+		{ echo "SIO not built yet, run 'make build' first"; exit 1; }
+	. $$HOME/.cargo/env && cd $(CRATE_DIR) && cargo clippy -- -D warnings
+	. $$HOME/.cargo/env && cd $(CRATE_DIR) && cargo test
 
-generate-enmasse:
-	echo "Perftest called"
-	py $(CURDIR)/src/zato/common/pubsub/perftest/python_/generate_enmasse.py $(if $(USERS),--users $(USERS)) $(if $(TOPICS_MULTIPLIER),--topics-multiplier $(TOPICS_MULTIPLIER))
+clippy:
+	. $$HOME/.cargo/env && cd $(CRATE_DIR) && cargo clippy -- -D warnings
+
+ruff:
+	$(CURDIR)/../bin/ruff check $(CURDIR)/

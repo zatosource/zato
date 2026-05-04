@@ -50,6 +50,50 @@ user_requirements_path = '/tmp/zato-user-packages.txt'
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _get_installed_packages():
+    """ Returns a set of lowercase package names currently installed. """
+    try:
+        curdir = os.path.dirname(os.path.abspath(__file__))
+        code_dir = os.path.abspath(os.path.join(curdir, '..', '..', '..', '..', '..', '..'))
+        uv_bin = os.path.join(code_dir, 'support-linux', 'bin', 'uv')
+        result = subprocess.run(
+            [uv_bin, 'pip', 'list', '--format=columns'],
+            cwd=code_dir,
+            capture_output=True,
+            text=True
+        )
+        packages = set()
+        for line in result.stdout.strip().split('\n')[2:]:
+            parts = line.split()
+            if parts:
+                packages.add(parts[0].lower())
+        return packages
+    except Exception:
+        logger.error('_get_installed_packages: %s', format_exc())
+        return set()
+
+# ################################################################################################################################
+
+def _get_managed_package_names():
+    """ Returns a set of lowercase package names from the previously saved requirements files. """
+    names = set()
+    for path in (hot_deploy_requirements_path, user_requirements_path):
+        if os.path.exists(path):
+            try:
+                with open(path, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and _is_pypi_package(line):
+                            name = _extract_package_name(line)
+                            if name:
+                                names.add(name.lower())
+            except Exception:
+                logger.error('_get_managed_package_names: %s', format_exc())
+    return names
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def json_response(data, success=True):
     response_json = dumps(data)
     response_class = HttpResponse if success else HttpResponseServerError
@@ -183,6 +227,7 @@ def test_packages(req):
         config_data = loads(body)
 
         requirements_text = config_data.get('requirements', '')
+        allow_delete = config_data.get('allow_delete', False)
         logger.info('test_packages: requirements_text length=%d', len(requirements_text))
 
         if not requirements_text.strip():
@@ -192,6 +237,7 @@ def test_packages(req):
         lines = requirements_text.strip().split('\n')
         results = []
         has_errors = False
+        submitted_packages = set()
 
         for line in lines:
             line = line.strip()
@@ -214,6 +260,8 @@ def test_packages(req):
                     'message': 'Could not extract package name'
                 })
                 continue
+
+            submitted_packages.add(package_name.lower())
 
             try:
                 pypi_url = 'https://pypi.org/pypi/{}/json'.format(package_name)
@@ -248,7 +296,21 @@ def test_packages(req):
                     'message': str(e)
                 })
 
+        delete_count = 0
+        if allow_delete:
+            installed = _get_installed_packages()
+            previously_managed = _get_managed_package_names()
+            to_delete = sorted(previously_managed - submitted_packages)
+            delete_count = len(to_delete)
+            for pkg in to_delete:
+                results.append({
+                    'package': pkg,
+                    'status': 'delete',
+                    'message': 'Will be uninstalled'
+                })
+
         response_data['results'] = results
+        response_data['delete_count'] = delete_count
         response_data['success'] = not has_errors
 
         if has_errors:
@@ -277,11 +339,7 @@ def save_config(req):
         logger.info('save_config: config_data keys=%s', list(config_data.keys()))
 
         requirements_text = config_data.get('requirements', '')
-
-        with open(user_requirements_path, 'w') as f:
-            f.write(requirements_text)
-
-        logger.info('save_config: saved requirements to %s', user_requirements_path)
+        allow_delete = config_data.get('allow_delete', False)
 
         curdir = os.path.dirname(os.path.abspath(__file__))
         code_dir = os.path.abspath(os.path.join(curdir, '..', '..', '..', '..', '..', '..'))
@@ -293,6 +351,35 @@ def save_config(req):
         if not os.path.exists(uv_bin):
             response_data['error'] = 'uv binary not found at {}'.format(uv_bin)
             return json_response(response_data, success=False)
+
+        if allow_delete:
+            submitted_packages = set()
+            for line in requirements_text.strip().split('\n'):
+                line = line.strip()
+                if line and _is_pypi_package(line):
+                    name = _extract_package_name(line)
+                    if name:
+                        submitted_packages.add(name.lower())
+
+            previously_managed = _get_managed_package_names()
+            to_uninstall = sorted(previously_managed - submitted_packages)
+
+            if to_uninstall:
+                logger.info('save_config: uninstalling %d packages: %s', len(to_uninstall), to_uninstall)
+                result = subprocess.run(
+                    [uv_bin, 'pip', 'uninstall'] + to_uninstall,
+                    cwd=code_dir,
+                    capture_output=True,
+                    text=True
+                )
+                logger.info('save_config: uv uninstall returncode=%s', result.returncode)
+                if result.stderr:
+                    logger.info('save_config: uv uninstall stderr=%s', result.stderr)
+
+        with open(user_requirements_path, 'w') as f:
+            f.write(requirements_text)
+
+        logger.info('save_config: saved requirements to %s', user_requirements_path)
 
         result = subprocess.run(
             [uv_bin, 'pip', 'install', '-r', user_requirements_path],
@@ -351,7 +438,7 @@ def index(req):
 
     return TemplateResponse(req, 'zato/settings/python-packages/index.html', {
         'page_config': python_packages_page_config,
-        'requirements': requirements,
+        'textarea_content': requirements,
     })
 
 # ################################################################################################################################

@@ -1,0 +1,309 @@
+@import url("../syntax_monokai.css");
+
+/* Dashboard kit - foundation.
+   Page-level primitives shared by every dashboard: top nav override,
+   hero strip, section wrappers, responsive breakpoints, skeleton
+   shimmer. Nothing in here is specific to scheduler or EDA. */
+
+.dashboard-page {
+    min-height: calc(100vh - 60px);
+}
+
+/* Hide the top nav border-bottom on pages that host a dashboard */
+
+.pure-css-nav {
+    border-bottom: none;
+}
+
+/* Hero metrics strip */
+
+.dashboard-hero {
+    background: var(--zato-hero-bg);
+    padding: 28px 0;
+    position: relative;
+}
+
+.dashboard-hero-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+}
+
+.dashboard-hero-tiles {
+    display: flex;
+    gap: 16px;
+    position: relative;
+}
+
+.dashboard-hero-pill-group {
+    position: absolute;
+    right: calc(100% + 16px);
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dashboard-hero-pill-name,
+.dashboard-hero-pill-link {
+    display: block;
+    padding: 5px 14px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow:
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.09),
+        inset 0 -20px 30px -16px rgba(0, 0, 0, 0.70),
+        0 0.5px 1px rgba(0, 0, 0, 0.40),
+        0 2px 4px rgba(0, 0, 0, 0.30),
+        0 4px 10px -2px rgba(0, 0, 0, 0.35),
+        0 8px 20px -4px rgba(0, 0, 0, 0.45),
+        0 16px 36px -8px rgba(0, 0, 0, 0.50),
+        0 28px 56px -12px rgba(0, 0, 0, 0.55),
+        0 48px 80px -18px rgba(0, 0, 0, 0.60);
+}
+
+.dashboard-hero-pill-name {
+    font-size: 12px;
+}
+
+.dashboard-hero-pill-link {
+    font-size: 10px;
+    line-height: 10px;
+    padding-bottom: 5px !important;
+    text-decoration: none;
+    transition: color 150ms ease;
+}
+
+a.dashboard-hero-pill-link:not(.menu-link):not(.chosen-single):hover {
+    color: #fff !important;
+    text-decoration: none;
+}
+
+/* Sections */
+
+.dashboard-section {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+}
+
+.dashboard-chart-section {
+    margin-top: 28px;
+}
+
+.dashboard-grid-section {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 20px;
+    align-items: stretch;
+}
+
+.dashboard-grid-section .dashboard-card {
+    display: flex;
+    flex-direction: column;
+    max-height: 560px;
+    min-height: 320px;
+}
+
+/* Cards */
+
+.dashboard-card {
+    background: #fff;
+    border-radius: 3px;
+    padding: 1.9rem;
+    padding-top: 1.3rem;
+    padding-left: 1.3rem;
+    border: 2px solid rgb(69, 84, 96);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding-bottom: 1.3rem;
+}
+
+
+.dashboard-card-header h3 {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgb(17, 17, 17);
+    margin: 0;
+    padding: 0;
+}
+
+.dashboard-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: var(--zato-pill-radius);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.15;
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+    font-variant-numeric: tabular-nums lining-nums;
+    background: #e8f4ff;
+    color: var(--zato-seablue);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.dashboard-pill-recent {
+    background: rgba(224, 34, 110, 0.12);
+    color: #e0226e;
+}
+
+.dashboard-card-scroll {
+    flex: 1 1 auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    margin: 0 -24px 0;
+    padding: 0 24px 0;
+}
+
+.dashboard-card-scroll > table {
+    margin: 0;
+}
+
+.dashboard-card-scroll > table thead th {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 1;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+}
+
+.dashboard-card .zato-table {
+    table-layout: fixed;
+    box-shadow: none;
+    border-radius: 0;
+}
+
+/* Alternating row striping, consistent with the main #data-table style */
+.dashboard-card .zato-table tbody tr:nth-child(even) {
+    background-color: rgba(6, 60, 101, 0.025);
+}
+
+.dashboard-th-dot {
+    width: 28px;
+}
+
+.dashboard-no-data {
+    padding: 20px 0;
+    text-align: center;
+    color: #a0a0a5;
+    font-size: 13px;
+}
+
+.dashboard-all-clear {
+    padding: 28px 0;
+    text-align: center;
+    color: #1b855e;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.dashboard-all-clear svg {
+    vertical-align: middle;
+    margin-right: 6px;
+}
+
+.dashboard-error-cell {
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-size: 11px;
+    color: #a0a0a5;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: help;
+}
+
+.dashboard-footer {
+    height: 40px;
+}
+
+/* Skeleton loading shimmer */
+
+@keyframes dashboard-skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.dashboard-skeleton {
+    background: linear-gradient(90deg, #eaecee 25%, #f5f6f8 50%, #eaecee 75%);
+    background-size: 200% 100%;
+    animation: dashboard-skeleton-loading 1.5s ease-in-out infinite;
+    border-radius: 4px;
+}
+
+/* Responsive */
+
+@media (max-width: 960px) {
+    .dashboard-hero-tiles {
+        flex-wrap: wrap;
+    }
+    .dashboard-tile {
+        min-width: 140px;
+    }
+    .dashboard-grid-section {
+        grid-template-columns: 1fr;
+    }
+    .dashboard-grid-section .dashboard-card {
+        max-height: none;
+    }
+}
+
+.dashboard-panel-action-badge {
+    display: inline-block;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+    margin-left: 6px;
+    cursor: pointer;
+    vertical-align: middle;
+    min-width: 42px;
+    text-align: center;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+.badge-running-spinner {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    padding: 0.2px;
+    background: conic-gradient(#0000 10%, #888) content-box;
+    -webkit-mask: repeating-conic-gradient(#0000 0deg, #000 1deg 20deg, #0000 21deg 36deg),
+        radial-gradient(farthest-side, #0000 calc(100% - 2px), #000 calc(100% - 2px));
+    -webkit-mask-composite: destination-in;
+    mask-composite: intersect;
+    animation: badge-running-spin 0.5s infinite steps(10);
+    margin-right: 4px;
+    vertical-align: -1px;
+}
+
+@keyframes badge-running-spin {
+    to { transform: rotate(1turn); }
+}
+
+.countdown-now {
+    animation: countdown-now-pulse 1.17s ease-in-out 1 forwards;
+}
+
+@keyframes countdown-now-pulse {
+    0% { opacity: 0.3; }
+    50% { opacity: 1; }
+    100% { opacity: 1; }
+}

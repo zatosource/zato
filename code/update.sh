@@ -43,4 +43,19 @@ source $CURDIR/bin/activate
 echo Updating environment in $CURDIR
 PIP_DISABLE_PIP_VERSION_CHECK=1 $CURDIR/bin/python $CURDIR/util/zato_environment.py update
 
+if ! [ -x "$(command -v cargo)" ] && ! [ -f "$HOME/.cargo/env" ]; then
+    echo Installing Rust
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+fi
+
+if [ -f "$HOME/.cargo/env" ]; then
+    . "$HOME/.cargo/env"
+fi
+
+echo Installing maturin
+$CURDIR/support-linux/bin/uv pip install maturin
+
+echo Building Rust components
+make -C "$CURDIR/.." build
+
 echo ⭐ Installation updated to `zato --version`

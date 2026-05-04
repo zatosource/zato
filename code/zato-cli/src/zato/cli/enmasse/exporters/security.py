@@ -12,7 +12,6 @@ import logging
 from zato.common.json_internal import loads
 from zato.common.odb.model import to_json
 from zato.common.odb.query import basic_auth_list, apikey_security_list, ntlm_list, oauth_list
-from zato.common.util.sql import parse_instance_opaque_attr
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,8 +74,8 @@ class SecurityExporter:
                 security_entry['is_active'] = item['is_active']
 
             # Handle opaque attributes
-            if 'opaque_attr' in item and item['opaque_attr']:
-                opaque = parse_instance_opaque_attr(item)
+            if opaque1 := item.get('opaque1'):
+                opaque = loads(opaque1)
                 security_entry.update(opaque)
 
             result.append(security_entry)

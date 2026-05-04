@@ -16,7 +16,7 @@ echo "*** Zato installation using $PY_BINARY ***"
 if [[ "$SKIP_OS" != "y" ]]; then
     # Always run an update so there are no surprises later on when it actually
     # comes to fetching the packages from repositories.
-    sudo apt-get update
+    #sudo apt-get update
 
     if ! [ -x "$(command -v lsb_release)" ]; then
       sudo apt-get install -y lsb-release
@@ -57,4 +57,27 @@ source $CURDIR/bin/activate
 
 echo Setting up environment in $CURDIR
 $CURDIR/bin/python $CURDIR/util/zato_environment.py install
+
+echo Adding support-linux to Python path
+SITE_PACKAGES=$($CURDIR/bin/python -c "import site; print(site.getsitepackages()[0])")
+echo "$CURDIR/support-linux" > "$SITE_PACKAGES/zato_hl7v2.pth"
+
+mkdir -p "$CURDIR/zato-libs"
+cp "$CURDIR/zato-libs.pth" "$SITE_PACKAGES/zato-libs.pth"
+
+if ! [ -x "$(command -v cargo)" ] && ! [ -f "$HOME/.cargo/env" ]; then
+    echo Installing Rust
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+fi
+
+if [ -f "$HOME/.cargo/env" ]; then
+    . "$HOME/.cargo/env"
+fi
+
+echo Installing maturin
+$UV_BIN pip install maturin
+
+echo Building Rust components
+make -C "$CURDIR/.." build
+
 echo ⭐ Successfully installed `zato --version`

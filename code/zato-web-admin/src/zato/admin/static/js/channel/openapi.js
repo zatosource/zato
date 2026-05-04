@@ -21,6 +21,14 @@ $(document).ready(function() {
         'name',
     ]);
 
+    var unique_constraints = [
+        {field: 'name', entity_type: 'channel_openapi', attr_name: 'name'}
+    ];
+    $.each(unique_constraints, function(i, c) {
+        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
+        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+    });
+
     $('#create-div').dialog('option', 'open', function() {
         $.fn.zato.channel.openapi.loadRestChannels('rest-channels-div');
         $.fn.zato.channel.openapi.updateSlug('id_name', 'id_url_path', 'id_url_path_display');
@@ -119,7 +127,7 @@ $.fn.zato.channel.openapi.data_table.new_row = function(item, data, include_tr) 
     row += String.format('<td><a href="/zato/channel/openapi/generate/?cluster_id={0}&channel_id={1}">Download OpenAPI</a></td>', $('#cluster_id').val(), item.id);
 
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.openapi.edit('{0}')\">Edit</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.channel.openapi.delete_({0});'>Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.openapi.delete_('{0}');\">Delete</a>", item.id));
 
     var rest_channel_list_for_storage = data.rest_channel_list || item.rest_channel_list || '[]';
 
@@ -268,5 +276,32 @@ $.fn.zato.channel.openapi.loadRestChannelsForEdit = function(containerId, channe
     }
     $.fn.zato.channel.openapi.loadRestChannels(containerId, channelStates);
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Live form updates registration
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.live_form_updates.register('create', [
+    {
+        object_type: 'rest_channel',
+        handler: 'multi_checkbox',
+        container: '#rest-channels-div',
+        reload_callback: function() {
+            $.fn.zato.channel.openapi.loadRestChannels('rest-channels-div');
+        }
+    }
+]);
+
+$.fn.zato.live_form_updates.register('edit', [
+    {
+        object_type: 'rest_channel',
+        handler: 'multi_checkbox',
+        container: '#id_edit-rest-channels-div',
+        reload_callback: function() {
+            var id = $('#id_edit-id').val();
+            $.fn.zato.channel.openapi.loadRestChannelsForEdit('id_edit-rest-channels-div', id);
+        }
+    }
+]);
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
