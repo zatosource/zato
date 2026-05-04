@@ -17,6 +17,14 @@ security:
     type: basic_auth
     username: enmasse.1
     password: Zato_Enmasse_Env.BasicAuth1
+    rate_limiting:
+      - cidr_list:
+          - 0.0.0.0/0
+        is_all_day: true
+        limit: 500
+        limit_unit: month
+        disabled: false
+        disallowed: false
 
   - name: enmasse.basic_auth.2
     type: basic_auth
@@ -84,12 +92,38 @@ channel_rest:
     service: demo.ping
     url_path: /enmasse.rest.2
     data_format: json
+    rate_limiting:
+      - cidr_list:
+          - 0.0.0.0/0
+        is_all_day: true
+        limit: 1000
+        limit_unit: day
+        disabled: false
+        disallowed: false
 
   - name: enmasse.channel.rest.3
     service: demo.ping
     url_path: /enmasse.rest.3
     security: enmasse.basic_auth.1
     data_format: json
+    rate_limiting:
+      - cidr_list:
+          - 10.0.0.0/8
+          - 192.168.0.0/16
+        is_all_day: false
+        time_from: '08:00'
+        time_to: '17:00'
+        limit: 100
+        limit_unit: minute
+        disabled: false
+        disallowed: false
+      - cidr_list:
+          - 0.0.0.0/0
+        is_all_day: true
+        limit: 50
+        limit_unit: hour
+        disabled: true
+        disallowed: true
 
   - name: enmasse.channel.rest.4
     service: demo.ping

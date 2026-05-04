@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import json
 import os
 import tempfile
 from unittest import TestCase, main
@@ -184,6 +185,52 @@ class TestEnmasseSecurity(TestCase):
         self.assertIn('bearer_token', security_types)
         self.assertIn('ntlm', security_types)
         self.assertIn('apikey', security_types)
+
+    def test_security_rate_limiting(self) -> 'None':
+        """ Test that rate_limiting is correctly stored in opaque1 for security definitions.
+        """
+        self._setup_test_environment()
+
+        # Process all security definitions
+        security_list = self.yaml_config['security']
+        sec_created, _ = self.security_importer.sync_security_definitions(security_list, self.session)
+
+        # Find enmasse.basic_auth.1 which has rate_limiting in the template
+        basic_auth_1 = cast_('any_', None)
+
+        for instance in sec_created:
+            if instance.name == 'enmasse.basic_auth.1':
+                basic_auth_1 = instance
+                break
+
+        self.assertIsNotNone(basic_auth_1, 'enmasse.basic_auth.1 not found')
+        self.assertIsNotNone(basic_auth_1.opaque1, 'basic_auth.1 should have opaque1')
+
+        opaque = json.loads(basic_auth_1.opaque1)
+        self.assertIn('rate_limiting', opaque)
+
+        rules = opaque['rate_limiting']
+        self.assertEqual(len(rules), 1)
+        self.assertEqual(rules[0]['limit'], 500)
+        self.assertEqual(rules[0]['limit_unit'], 'month')
+        self.assertTrue(rules[0]['is_all_day'])
+        self.assertFalse(rules[0]['disabled'])
+        self.assertFalse(rules[0]['disallowed'])
+
+# ################################################################################################################################
+
+    def test_security_rate_limiting_update(self) -> 'None':
+        """ Test that rate_limiting is preserved during security definition update.
+        """
+        self._setup_test_environment()
+
+        # Process all security definitions - first pass creates them
+        security_list = self.yaml_config['security']
+        _, _ = self.security_importer.sync_security_definitions(security_list, self.session)
+
+        # Second pass - should not trigger updates since nothing changed
+        _, updated = self.security_importer.sync_security_definitions(security_list, self.session)
+        self.assertEqual(len(updated), 0, 'No updates expected when reimporting same data')
 
 # ################################################################################################################################
 # ################################################################################################################################

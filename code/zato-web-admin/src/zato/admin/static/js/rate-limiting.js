@@ -551,13 +551,7 @@
         toggle_link.href = 'javascript:void(0)';
         toggle_link.className = 'rate-limiting-slot-toggle';
 
-        if(is_default) {
-            slot.setAttribute('data-disabled', 'true');
-            toggle_link.textContent = 'Enable rule';
-        }
-        else {
-            toggle_link.textContent = 'Disable rule';
-        }
+        toggle_link.textContent = 'Disable rule';
 
         toggle_link.onclick = function() {
             $.fn.zato.rate_limiting.toggle_slot(slot, toggle_link);

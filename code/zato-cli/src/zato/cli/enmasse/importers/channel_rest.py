@@ -82,7 +82,7 @@ class ChannelImporter:
 
                 # Compare standard attributes (excluding security and groups)
                 for key, value in item.items():
-                    if key not in ['security', 'groups', 'gateway_service_list'] and key in db_def and db_def[key] != value:
+                    if key not in ['security', 'groups', 'gateway_service_list', 'rate_limiting'] and key in db_def and db_def[key] != value:
                         logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_def[key])
                         needs_update = True
                         break
@@ -97,6 +97,10 @@ class ChannelImporter:
 
                 # Check gateway_service_list
                 if self._gateway_service_list_needs_update(item, db_def):
+                    needs_update = True
+
+                # Check rate_limiting
+                if self._rate_limiting_needs_update(item, db_def):
                     needs_update = True
 
                 if needs_update:
@@ -167,6 +171,28 @@ class ChannelImporter:
 
 # ################################################################################################################################
 
+    def _rate_limiting_needs_update(self, item:'anydict', db_def:'anydict') -> 'bool':
+        """ Check if rate_limiting needs update.
+        """
+        yaml_rate_limiting = item.get('rate_limiting', [])
+
+        db_rate_limiting = []
+        try:
+            opaque1 = db_def.get('opaque1')
+            if opaque1:
+                opaque = loads(opaque1)
+                db_rate_limiting = opaque.get('rate_limiting', [])
+        except Exception as exception:
+            logger.warning('Error parsing opaque for channel %s: %s', item['name'], exception)
+
+        if yaml_rate_limiting != db_rate_limiting:
+            logger.info('rate_limiting changed for channel %s', item['name'])
+            return True
+
+        return False
+
+# ################################################################################################################################
+
     def _preprocess_security_groups(self, channel_def:'anydict') -> 'list':
         """ Convert security group names to IDs.
         """
@@ -224,7 +250,7 @@ class ChannelImporter:
 
         # Process standard attributes
         for key, value in channel_def.items():
-            if key not in ['service', 'security', 'groups', 'gateway_service_list']:
+            if key not in ['service', 'security', 'groups', 'gateway_service_list', 'rate_limiting']:
                 setattr(channel, key, value)
 
         if security_item:
@@ -244,6 +270,10 @@ class ChannelImporter:
         # Handle gateway_service_list
         if gateway_service_list := channel_def.get('gateway_service_list'):
             opaque_attrs['gateway_service_list'] = '\n'.join(gateway_service_list)
+
+        # Handle rate limiting
+        if rate_limiting := channel_def.get('rate_limiting'):
+            opaque_attrs['rate_limiting'] = rate_limiting
 
         if opaque_attrs:
             set_instance_opaque_attrs(channel, opaque_attrs)
@@ -272,7 +302,7 @@ class ChannelImporter:
 
         # Process standard attributes
         for key, value in channel_def.items():
-            if key not in ['id', 'service', 'security', 'groups', 'gateway_service_list']:
+            if key not in ['id', 'service', 'security', 'groups', 'gateway_service_list', 'rate_limiting']:
                 setattr(channel, key, value)
 
         # Handle security definition
@@ -304,6 +334,10 @@ class ChannelImporter:
         # Handle gateway_service_list
         if gateway_service_list := channel_def.get('gateway_service_list'):
             opaque_attrs['gateway_service_list'] = '\n'.join(gateway_service_list)
+
+        # Handle rate limiting
+        if rate_limiting := channel_def.get('rate_limiting'):
+            opaque_attrs['rate_limiting'] = rate_limiting
 
         if opaque_attrs:
             set_instance_opaque_attrs(channel, opaque_attrs)

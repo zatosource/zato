@@ -145,6 +145,9 @@ class ChannelExporter:
                 if gateway_service_list.strip():
                     exported_channel['gateway_service_list'] = gateway_service_list.strip().split('\n')
 
+            if rate_limiting := channel_row.get('rate_limiting'):
+                exported_channel['rate_limiting'] = rate_limiting
+
             exported_channels.append(exported_channel)
 
         logger.info('Successfully prepared %d REST Channel definitions for export', len(exported_channels))

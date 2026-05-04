@@ -22,7 +22,7 @@ if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.cli.enmasse.importer import EnmasseYAMLImporter
     from zato.common.odb.model import HTTPSOAP
-    from zato.common.typing_ import any_, anydict, bool_, strdict
+    from zato.common.typing_ import any_, anydict, bool_, strdict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -203,10 +203,10 @@ def get_object_order(object_type:'str') -> 'strlist':
     order = {}
 
     order['security'] = 'name', 'is_active', 'type', 'username', 'auth_endpoint', 'client_id_field', 'client_secret_field', 'grant_type', \
-        'data_format', 'extra_fields:list',
+        'data_format', 'extra_fields:list', 'rate_limiting:list',
 
     order['groups'] = 'name', 'is_active', 'members:list',
-    order['channel_rest'] = 'name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'groups:list',
+    order['channel_rest'] = 'name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'groups:list', 'rate_limiting:list',
     order['outgoing_rest'] = 'name', 'is_active', 'host', 'url_path', 'security', 'data_format', 'timeout', 'ping_method', 'tls_verify',
     order['scheduler'] = 'name', 'is_active', 'service', 'job_type', 'start_date', 'seconds', 'minutes', 'hours', 'days', 'extra:list',
     order['ldap'] = 'name', 'is_active', 'username', 'auth_type', 'server_list:list',
@@ -228,6 +228,37 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['channel_openapi'] = 'name', 'is_active', 'url_path', 'rest_channel_list:list'
 
     return order[object_type]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _write_dict_list_item(file_handle:'any_', item:'anydict', indent:'int'=6) -> 'None':
+    """ Writes a dict as a YAML list item with nested keys.
+    """
+    prefix = ' ' * indent
+    is_first = True
+
+    for key, value in item.items():
+
+        # The first key gets the dash prefix ..
+        if is_first:
+            line_prefix = f'{prefix}- '
+            is_first = False
+
+        # .. subsequent keys are indented to align with the first.
+        else:
+            line_prefix = f'{prefix}  '
+
+        # Nested lists (e.g. cidr_list, time_range) get their own sub-items
+        if isinstance(value, list):
+            _ = file_handle.write(f'{line_prefix}{key}:\n')
+            for sub_item in value:
+                if isinstance(sub_item, dict):
+                    _write_dict_list_item(file_handle, sub_item, indent + 4)
+                else:
+                    _ = file_handle.write(f'{prefix}    - {sub_item}\n')
+        else:
+            _ = file_handle.write(f'{line_prefix}{key}: {value}\n')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -292,13 +323,16 @@ class FileWriter:
 
                                         # Write each list item with proper indentation
                                         for list_item in field_value:
-                                            cleaned_item = str(list_item)
-                                            if element == 'pubsub_permission' and actual_field in ['pub', 'sub']:
-                                                for prefix in prefixes_to_remove:
-                                                    if cleaned_item.startswith(prefix):
-                                                        cleaned_item = cleaned_item[len(prefix):]
-                                                        break
-                                            _ = f.write(f'      - {cleaned_item}\n')
+                                            if isinstance(list_item, dict):
+                                                _write_dict_list_item(f, list_item, indent=6)
+                                            else:
+                                                cleaned_item = str(list_item)
+                                                if element == 'pubsub_permission' and actual_field in ['pub', 'sub']:
+                                                    for prefix in prefixes_to_remove:
+                                                        if cleaned_item.startswith(prefix):
+                                                            cleaned_item = cleaned_item[len(prefix):]
+                                                            break
+                                                _ = f.write(f'      - {cleaned_item}\n')
                                     else:
                                         _ = f.write(f'    {actual_field}: {field_value}\n')
 

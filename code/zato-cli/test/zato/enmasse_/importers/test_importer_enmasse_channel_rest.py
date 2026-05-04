@@ -177,6 +177,95 @@ class TestEnmasseChannelRESTImporter(TestCase):
         self.assertEqual(len(opaque_attrs['security_groups']), expected_group_count,
                          f'Expected {expected_group_count} security groups, found {len(opaque_attrs["security_groups"])}')
 
+    def test_channel_rest_rate_limiting(self) -> 'None':
+        """ Test that rate_limiting is correctly stored in opaque1 during REST channel import.
+        """
+        self._setup_test_environment()
+
+        # First process security definitions which channels depend on
+        _ = self.security_importer.sync_security_definitions(self.yaml_config['security'], self.session)
+
+        # Process security groups
+        _ = self.importer.sync_groups(self.yaml_config['groups'], self.session)
+
+        # Process channel definitions
+        channel_defs = self.yaml_config['channel_rest']
+        channels_created, _ = self.channel_importer.sync_channel_rest(channel_defs, self.session)
+
+        # Find channels with rate_limiting
+        channel_rest_2 = cast_('any_', None)
+        channel_rest_3 = cast_('any_', None)
+
+        for channel in channels_created:
+            if channel.name == 'enmasse.channel.rest.2':
+                channel_rest_2 = channel
+            elif channel.name == 'enmasse.channel.rest.3':
+                channel_rest_3 = channel
+
+        # Verify channel_rest_2 has a simple rate limiting rule
+        self.assertIsNotNone(channel_rest_2, 'Channel enmasse.channel.rest.2 not found')
+        self.assertIsNotNone(channel_rest_2.opaque1, 'Channel rest.2 should have opaque1')
+
+        opaque_2 = json.loads(channel_rest_2.opaque1)
+        self.assertIn('rate_limiting', opaque_2)
+
+        rules_2 = opaque_2['rate_limiting']
+        self.assertEqual(len(rules_2), 1)
+        self.assertEqual(rules_2[0]['limit'], 1000)
+        self.assertEqual(rules_2[0]['limit_unit'], 'day')
+        self.assertTrue(rules_2[0]['is_all_day'])
+
+        # Verify channel_rest_3 has two rate limiting rules
+        self.assertIsNotNone(channel_rest_3, 'Channel enmasse.channel.rest.3 not found')
+        self.assertIsNotNone(channel_rest_3.opaque1, 'Channel rest.3 should have opaque1')
+
+        opaque_3 = json.loads(channel_rest_3.opaque1)
+        self.assertIn('rate_limiting', opaque_3)
+
+        rules_3 = opaque_3['rate_limiting']
+        self.assertEqual(len(rules_3), 2)
+
+        # First rule - time range with two CIDR entries
+        self.assertEqual(rules_3[0]['limit'], 100)
+        self.assertEqual(rules_3[0]['limit_unit'], 'minute')
+        self.assertFalse(rules_3[0]['is_all_day'])
+        self.assertEqual(rules_3[0]['time_from'], '08:00')
+        self.assertEqual(rules_3[0]['time_to'], '17:00')
+        self.assertEqual(len(rules_3[0]['cidr_list']), 2)
+
+        # Second rule - all-day, disabled, disallowed
+        self.assertEqual(rules_3[1]['limit'], 50)
+        self.assertEqual(rules_3[1]['limit_unit'], 'hour')
+        self.assertTrue(rules_3[1]['disabled'])
+        self.assertTrue(rules_3[1]['disallowed'])
+
+# ################################################################################################################################
+
+    def test_channel_rest_rate_limiting_update(self) -> 'None':
+        """ Test that rate_limiting is correctly updated on an existing channel.
+        """
+        self._setup_test_environment()
+
+        # First process security definitions which channels depend on
+        _ = self.security_importer.sync_security_definitions(self.yaml_config['security'], self.session)
+
+        # Process security groups
+        _ = self.importer.sync_groups(self.yaml_config['groups'], self.session)
+
+        # Create channels first
+        channel_defs = self.yaml_config['channel_rest']
+        channels_created, _ = self.channel_importer.sync_channel_rest(channel_defs, self.session)
+        self.assertTrue(len(channels_created) > 0)
+
+        # Run sync again - channels should be updated, not created
+        _, channels_updated = self.channel_importer.sync_channel_rest(channel_defs, self.session)
+
+        # No updates should be needed since nothing changed
+        self.assertEqual(len(channels_updated), 0, 'No updates expected when reimporting same data')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 if __name__ == '__main__':
 
     # stdlib
