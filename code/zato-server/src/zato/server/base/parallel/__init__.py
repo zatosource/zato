@@ -40,7 +40,7 @@ from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, HotDeplo
     SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.bearer_token import BearerTokenManager
-from zato.common.broker_message import HOT_DEPLOY
+from zato.common.broker_message import HOT_DEPLOY, PUBSUB
 from zato.common.const import SECRETS
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import loads
