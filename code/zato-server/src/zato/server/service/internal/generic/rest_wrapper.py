@@ -191,7 +191,7 @@ class ChangePassword(_WrapperBase):
         id = request['id']
 
         # This is optional
-        password = request.get('password') or request.get('password1') or ''
+        password = request.get('password') or ''
         password = self.server.encrypt(password)
 
         with closing(self.odb.session()) as session:
@@ -207,7 +207,7 @@ class ChangePassword(_WrapperBase):
             session.commit()
 
         # Notify all the members of the cluster of the change
-        self.broker_client.publish({
+        self.config_dispatcher.publish({
             'action': OUTGOING.REST_WRAPPER_CHANGE_PASSWORD.value,
             'id': id,
             'password': password,

@@ -17,6 +17,16 @@ from zato.common.odb.query import out_amqp_list
 from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
+_delivery_mode_map = {
+    'non_persistent': 1,
+    'persistent': 2,
+}
+
+def _resolve_delivery_mode(value):
+    if isinstance(value, str) and value in _delivery_mode_map:
+        return _delivery_mode_map[value]
+    return int(value)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -60,7 +70,7 @@ class Create(AdminService):
 
         input = self.request.input
 
-        input.delivery_mode = int(input.delivery_mode)
+        input.delivery_mode = _resolve_delivery_mode(input.delivery_mode)
         input.priority = int(input.priority)
         input.expiration = int(input.expiration) if input.expiration else None
 
@@ -103,7 +113,7 @@ class Create(AdminService):
                 session.commit()
 
                 input.action = OUTGOING.AMQP_CREATE.value
-                self.broker_client.publish(input)
+                self.config_dispatcher.publish(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
@@ -134,7 +144,7 @@ class Edit(AdminService):
 
         input = self.request.input
 
-        input.delivery_mode = int(input.delivery_mode)
+        input.delivery_mode = _resolve_delivery_mode(input.delivery_mode)
         input.priority = int(input.priority)
         input.expiration = int(input.expiration) if input.expiration else None
 
@@ -175,7 +185,7 @@ class Edit(AdminService):
 
                 input.action = OUTGOING.AMQP_EDIT.value
                 input.old_name = old_name
-                self.broker_client.publish(input)
+                self.config_dispatcher.publish(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
@@ -211,7 +221,7 @@ class Delete(AdminService):
                 session.delete(item)
                 session.commit()
 
-                self.broker_client.publish({
+                self.config_dispatcher.publish({
                     'action': OUTGOING.AMQP_DELETE.value,
                     'name': item.name,
                     'id':item_id,

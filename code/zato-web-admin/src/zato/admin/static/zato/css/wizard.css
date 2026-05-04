@@ -1,13 +1,7 @@
 :root {
-    --primary-dark: #012845;
     --accent-light: #82ccff;
-    --background-light: #f8f9fa;
-    --white: #ffffff;
-    --border-light: #e9ecef;
-    --text-muted: #6c757d;
     --yellow-highlight: rgba(254, 219, 136, 0.95);
     --light-blue: #e8f4ff;
-    --shadow-dark: #063c65;
 }
 
 body {

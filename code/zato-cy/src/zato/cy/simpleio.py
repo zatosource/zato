@@ -38,7 +38,7 @@ from sqlalchemy.engine.row import Row as SQLAlchemyRow
 # Zato
 from zato.common.api import DATA_FORMAT, ZATO_NONE
 from zato.common.marshal_.api import ElementMissing
-from zato.common.odb.api import SQLRow
+from zato.common.sql_pool import SQLRow
 from zato.util_convert import to_bool
 
 # Zato - Cython
@@ -1529,10 +1529,6 @@ class CySimpleIO:
         response_elem = getattr(self.user_declaration, 'response_elem', InternalNotGiven)
 
         if response_elem is InternalNotGiven:
-            if getattr(class_, '_zato_needs_response_wrapper', None) is False:
-                response_elem = None
-
-        if response_elem is InternalNotGiven:
             response_elem = getattr(self.server_config, 'response_elem', InternalNotGiven)
 
         if (not response_elem) or (response_elem is InternalNotGiven):
@@ -2093,6 +2089,8 @@ class CySimpleIO:
     @cy.returns(object)
     def _convert_to_dicts(self, data:object, data_format:object) -> object:
 
+
+
         # No reason to continue if no SimpleIO output is declared
         if not (self.definition.has_output_required or self.definition.has_output_optional):
             return ''
@@ -2163,9 +2161,6 @@ class CySimpleIO:
         elif data_format in (DATA_FORMAT_DICT, DATA_FORMAT_FORM):
             out = self._convert_to_dicts(data, DATA_FORMAT_DICT)
             return out
-
-        #elif data_format == '':
-        #    return self._get_output_json(data, serialise)
 
         else:
             raise ValueError('Unrecognised output data format `{}`'.format(data_format))

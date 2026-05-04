@@ -213,6 +213,10 @@ class SimpleIOPayload:
             if force_dict_serialisation:
                 serialize = True
 
+        # No data format means no serialization is possible
+        if not self.data_format:
+            serialize = False
+
         value = self.user_attrs_list if self.output_repeated else self.user_attrs_dict
 
         # Special-case internal services that return metadata (e.g GetList-like ones)
@@ -238,7 +242,18 @@ class SimpleIOPayload:
             return out
 
     def append(self, value):
-        self.user_attrs_list.append(value)
+
+        if isinstance(value, dict):
+            to_append = value
+        elif hasattr(value, '_asdict'):
+            to_append = value._asdict()
+        elif hasattr(value, 'keys'):
+            keys = value.keys()
+            to_append = dict(zip(keys, value))
+        else:
+            to_append = self._extract_payload_attrs(value)
+
+        self.user_attrs_list.append(to_append)
         self.output_repeated = True
 
 # ################################################################################################################################

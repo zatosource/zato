@@ -57,6 +57,10 @@ except ValueError:
 Access_Log_Date_Time_Format = '%d/%b/%Y:%H:%M:%S %z'
 _has_log_info = logger.isEnabledFor(INFO)
 
+# Sentinel used by the async worker to skip all response writing.
+# Must be the exact same object instance that the worker checks against.
+from zato.server.ext.zunicorn.workers.base_async import ALREADY_HANDLED as _already_handled
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -134,6 +138,12 @@ class HTTPHandler:
             wsgi_environ['zato.http.response.status'] = b'500 Internal Server Error'
             payload = error_msg if self.return_tracebacks else self.default_error_message
             raise
+
+        # If the connection was silently dropped by rate limiting,
+        # the socket is already closed. Return the sentinel that tells
+        # the worker to skip all response writing and cleanup.
+        if wsgi_environ.get('zato.http.rate_limit.dropped'):
+            return _already_handled
 
         channel_item = wsgi_environ.get('zato.channel_item')
 

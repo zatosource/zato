@@ -110,7 +110,6 @@ class CommandStore:
              component_version   as component_version_mod,   \
              create_cluster      as create_cluster_mod,      \
              create_odb          as create_odb_mod,          \
-             create_scheduler    as create_scheduler_mod,    \
              create_server       as create_server_mod,       \
              create_web_admin    as create_web_admin_mod,    \
              crypto              as crypto_mod,              \
@@ -212,12 +211,6 @@ class CommandStore:
         create_odb = create_subs.add_parser('odb', description=create_odb_mod.Create.__doc__, parents=[base_parser])
         create_odb.set_defaults(command='create_odb')
         self.add_opts(create_odb, create_odb_mod.Create.opts)
-
-        create_scheduler = create_subs.add_parser(
-            'scheduler', description=create_scheduler_mod.Create.__doc__, parents=[base_parser])
-        create_scheduler.add_argument('path', help='Path to an empty directory to install the scheduler in')
-        create_scheduler.set_defaults(command='create_scheduler')
-        self.add_opts(create_scheduler, create_scheduler_mod.Create.opts)
 
         create_key = create_subs.add_parser('secret-key', description=crypto_mod.CreateSecretKey.__doc__, parents=[base_parser])
         create_key.set_defaults(command='create_secret_key')
@@ -629,9 +622,20 @@ def main() -> 'any_':
     # .. otherwise, try to run the command now ..
     else:
 
-        # Now that we are here, we also need to check if non-SQLite databases
-        # have all their required options on input. We do it here rather than in create_odb.py
-        # because we want to report it as soon as possible, before actual commands execute.
+        # Populate ODB args from Zato_Database_* env vars if not provided via CLI
+        _odb_env_map = {
+            'odb_host': 'Zato_Database_Host',
+            'odb_port': 'Zato_Database_Port',
+            'odb_user': 'Zato_Database_Username',
+            'odb_db_name': 'Zato_Database_Name',
+            'odb_password': 'Zato_Database_Password',
+        }
+        for _attr, _env in _odb_env_map.items():
+            if not getattr(args, _attr, None):
+                _env_value = os.environ.get(_env)
+                if _env_value:
+                    setattr(args, _attr, _env_value)
+
         odb_type = getattr(args, 'odb_type', None)
         if odb_type and odb_type != 'sqlite':
             missing = []

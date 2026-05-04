@@ -19,7 +19,8 @@ from zato.admin.web.forms.pubsub.subscription import CreateForm, EditForm
 from zato.admin.web.util import get_pubsub_security_definitions, get_service_list as util_get_service_list
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, get_outconn_rest_list
 from zato.common.api import CONNECTION, PubSub, URL_TYPE
-from zato.common.odb.model import PubSubSubscription
+# Bunch
+from bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,12 +35,12 @@ class Index(_Index):
     url_name = 'pubsub-subscription'
     template = 'zato/pubsub/subscription.html'
     service_name = 'zato.pubsub.subscription.get-list'
-    output_class = PubSubSubscription
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
-        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_base_id', 'sec_name', 'delivery_type', \
+        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_base_id', 'security', 'delivery_type', \
             'push_type', 'rest_push_endpoint_id', 'rest_push_endpoint_name', 'push_service_name', 'topic_name_list', \
             'topic_link_list'
         output_repeated = True
@@ -130,7 +131,7 @@ class Create(_CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'cluster_id', 'topic_name', 'sec_base_id', 'delivery_type'
         input_optional = 'is_delivery_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_required = 'id', 'sub_key', 'is_delivery_active', 'created', 'sec_name', 'delivery_type', \
+        output_required = 'id', 'sub_key', 'is_delivery_active', 'created', 'security', 'delivery_type', \
             'topic_name_list', 'topic_link_list',
 
     def _get_input_dict(self):
@@ -162,7 +163,7 @@ class Edit(_CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'sub_key', 'cluster_id', 'topic_id_list', 'sec_base_id', 'delivery_type'
         input_optional = 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_required = 'id', 'sub_key', 'sec_name', 'delivery_type', 'is_delivery_active', 'topic_name_list', 'topic_link_list'
+        output_required = 'id', 'sub_key', 'security', 'delivery_type', 'is_delivery_active', 'topic_name_list', 'topic_link_list'
 
     def _get_input_dict(self):
         return self._get_input_dict_common('topic_name')
@@ -311,6 +312,7 @@ def _get_subscriber_patterns_for_sec_def(req, sec_base_id, cluster_id):
     logger.info('Got %d permissions', len(permissions_response.data))
 
     subscriber_patterns = []
+    sec_base_id = int(sec_base_id)
     for perm in permissions_response.data:
         if perm.sec_base_id == sec_base_id and _is_subscriber_access(perm.access_type):
             logger.info('Found subscriber permission with pattern: %s', perm.pattern)

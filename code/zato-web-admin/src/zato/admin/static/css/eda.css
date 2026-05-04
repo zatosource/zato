@@ -1,0 +1,17 @@
+@import url("detail-kit/detail.css");
+
+.detail-status-badge.status-delivered {
+    background: linear-gradient(135deg, #0a7a3e 0%, #10a858 100%);
+}
+
+.detail-status-badge.status-pending {
+    background: linear-gradient(135deg, #c47f17 0%, #e8a830 100%);
+}
+
+.detail-status-badge.status-not_reached {
+    background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%);
+}
+
+.detail-status-badge.status-error {
+    background: linear-gradient(135deg, #b91c1c 0%, #e53e3e 100%);
+}

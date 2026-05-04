@@ -42,7 +42,7 @@ def _create_edit(req, action, id, cluster_id, _KV_DATATYPE=CACHE.BUILTIN_KV_DATA
                 'cluster_id': req.zato.cluster_id,
                 'id': id,
                 'key': key
-            }).data.response)
+            }).data)
 
         if isinstance(entry.value, Bunch):
             entry.value = entry.value.toDict()
@@ -66,7 +66,7 @@ def _create_edit(req, action, id, cluster_id, _KV_DATATYPE=CACHE.BUILTIN_KV_DATA
         'cache': req.zato.client.invoke('zato.cache.builtin.get', {
                 'cluster_id': req.zato.cluster_id,
                 'id': id,
-            }).data.response
+            }).data
     })
 
     return TemplateResponse(req, 'zato/cache/builtin/entry.html', out)

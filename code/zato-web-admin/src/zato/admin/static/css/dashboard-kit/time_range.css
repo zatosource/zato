@@ -1,0 +1,46 @@
+/* Dashboard kit - time-range pill menu. */
+
+.dashboard-time-range-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.dashboard-time-range-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 4px);
+    background: #fff;
+    border-radius: 8px;
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.06),
+        0 4px 12px rgba(0, 0, 0, 0.12);
+    padding: 4px 0;
+    z-index: 100;
+    min-width: 160px;
+}
+
+.dashboard-time-range-menu-open {
+    display: block;
+}
+
+.dashboard-time-range-option {
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #1a1a1a;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 80ms ease;
+}
+
+.dashboard-time-range-option:hover {
+    background: #f0f4f8;
+}
+
+.dashboard-time-range-active {
+    color: var(--zato-link-hover);
+    font-weight: 700;
+    background: rgba(0, 111, 191, 0.06);
+}

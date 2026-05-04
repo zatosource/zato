@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 import json
 from logging import getLogger
@@ -28,6 +29,13 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=True, repr=True, eq=True)
+class PublishResult:
+    msg_id: 'str'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -77,7 +85,7 @@ class RedisPubSubBackend:
         ext_client_id:'strnone'=None,
         publisher:'strnone'=None,
         pub_time:'strnone'=None,
-    ) -> 'str':
+    ) -> 'PublishResult':
         """ Publish a message to a topic stream.
         """
         # Normalize topic name to lowercase for case-insensitivity
@@ -120,7 +128,7 @@ class RedisPubSubBackend:
         stream_key = self._get_stream_key(topic_name)
         _ = self.redis.xadd(stream_key, message, maxlen=ModuleCtx.Default_Max_Len)
 
-        return msg_id
+        return PublishResult(msg_id=msg_id)
 
 # ################################################################################################################################
 
@@ -266,21 +274,37 @@ class RedisPubSubBackend:
         messages.sort(key=lambda m: (-m['priority'], m.get('pub_time_iso', '')))
 
         # Format messages according to documentation: {data, meta}
+        now = utcnow()
         formatted_messages = []
+
         for msg in messages[:max_messages]:
             _ = msg.pop('_redis_msg_id', None)
             _ = msg.pop('_stream_name', None)
 
-            data = msg.pop('data', '')
+            data_raw = msg.pop('data', '')
+
+            # Deserialize JSON data if possible
+            try:
+                data = json.loads(data_raw)
+            except (json.JSONDecodeError, TypeError):
+                data = data_raw
+
+            data_size = len(data_raw) if isinstance(data_raw, str) else 0
+
+            pub_time_iso = msg.get('pub_time_iso', '')
+            recv_time_iso = msg.get('recv_time_iso', '')
+
             meta = {
                 'topic_name': msg.get('topic_name', ''),
-                'size': len(data) if isinstance(data, str) else 0,
+                'size': data_size,
                 'priority': msg.get('priority', 5),
                 'expiration': int(msg.get('expiration', 31536000)),
                 'msg_id': msg.get('msg_id', ''),
-                'pub_time_iso': msg.get('pub_time_iso', ''),
-                'recv_time_iso': msg.get('recv_time_iso', ''),
+                'pub_time_iso': pub_time_iso,
+                'recv_time_iso': recv_time_iso,
                 'expiration_time_iso': msg.get('expiration_time_iso', ''),
+                'time_since_pub': self._compute_time_since(pub_time_iso, now),
+                'time_since_recv': self._compute_time_since(recv_time_iso, now),
             }
 
             if msg.get('correl_id'):
@@ -296,6 +320,26 @@ class RedisPubSubBackend:
             })
 
         return formatted_messages
+
+# ################################################################################################################################
+
+    @staticmethod
+    def _compute_time_since(iso_timestamp:'str', now:'datetime') -> 'str':
+        if not iso_timestamp:
+            return ''
+        try:
+            ts = datetime.fromisoformat(iso_timestamp.replace('Z', '+00:00'))
+
+            # Strip tzinfo from both sides so subtraction always works
+            ts_naive = ts.replace(tzinfo=None) if ts.tzinfo else ts
+            now_naive = now.replace(tzinfo=None) if now.tzinfo else now
+
+            delta = now_naive - ts_naive
+            if delta.total_seconds() < 0:
+                delta = timedelta(0)
+            return str(delta)
+        except (ValueError, TypeError):
+            return ''
 
 # ################################################################################################################################
 

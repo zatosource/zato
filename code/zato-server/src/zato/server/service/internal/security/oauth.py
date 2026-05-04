@@ -103,7 +103,7 @@ class Create(AdminService):
                 input.id = definition.id
                 input.action = SECURITY.OAUTH_CREATE.value
                 input.sec_type = SEC_DEF_TYPE.OAUTH
-                self.broker_client.publish(input)
+                self.config_dispatcher.publish(input)
 
             self.response.payload.id = definition.id
             self.response.payload.name = definition.name
@@ -160,7 +160,7 @@ class Edit(AdminService):
                 input.action = SECURITY.OAUTH_EDIT.value
                 input.old_name = old_name
                 input.sec_type = SEC_DEF_TYPE.OAUTH
-                self.broker_client.publish(input)
+                self.config_dispatcher.publish(input)
 
                 self.response.payload.id = definition.id
                 self.response.payload.name = definition.name
@@ -212,7 +212,7 @@ class Delete(AdminService):
             else:
                 self.request.input.action = SECURITY.OAUTH_DELETE.value
                 self.request.input.name = auth.name
-                self.broker_client.publish(self.request.input)
+                self.config_dispatcher.publish(self.request.input)
 
 # ################################################################################################################################
 # ################################################################################################################################

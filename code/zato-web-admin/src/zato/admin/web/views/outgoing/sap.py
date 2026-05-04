@@ -20,7 +20,8 @@ from zato.admin.web.forms.outgoing.sap import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, id_only_service, \
      Index as _Index, method_allowed
 from zato.common.api import SAP
-from zato.common.odb.model import OutgoingSAP
+# Bunch
+from bunch import Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class Index(_Index):
     url_name = 'out-sap'
     template = 'zato/outgoing/sap.html'
     service_name = 'zato.outgoing.sap.get-list'
-    output_class = OutgoingSAP
+    output_class = Bunch
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

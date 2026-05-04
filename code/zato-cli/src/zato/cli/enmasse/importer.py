@@ -29,6 +29,7 @@ from zato.cli.enmasse.importers.scheduler import SchedulerImporter
 from zato.cli.enmasse.importers.sql import SQLImporter
 from zato.cli.enmasse.importers.confluence import ConfluenceImporter
 from zato.cli.enmasse.importers.jira import JiraImporter
+from zato.cli.enmasse.importers.kafka import KafkaChannelImporter, KafkaOutgoingImporter
 from zato.cli.enmasse.importers.ldap import LDAPImporter
 from zato.cli.enmasse.importers.microsoft_365 import Microsoft365Importer
 from zato.cli.enmasse.importers.outgoing_rest import OutgoingRESTImporter
@@ -63,6 +64,7 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.es', 'zato.cli.enmasse.importers.odoo',
                         'zato.cli.enmasse.importers.scheduler', 'zato.cli.enmasse.importers.sql',
                         'zato.cli.enmasse.importers.confluence', 'zato.cli.enmasse.importers.jira',
+                        'zato.cli.enmasse.importers.kafka',
                         'zato.cli.enmasse.importers.ldap', 'zato.cli.enmasse.importers.microsoft_365',
                         'zato.cli.enmasse.importers.outgoing_rest', 'zato.cli.enmasse.importers.outgoing_soap',
                         'zato.cli.enmasse.importers.pubsub_topic', 'zato.cli.enmasse.importers.pubsub_permission',
@@ -96,6 +98,8 @@ class EnmasseYAMLImporter:
         self.job_defs = {}
         self.confluence_defs = {}
         self.jira_defs = {}
+        self.kafka_channel_defs = {}
+        self.kafka_outgoing_defs = {}
         self.ldap_defs = {}
         self.microsoft_365_defs = {}
         self.outgoing_rest_defs = {}
@@ -124,6 +128,8 @@ class EnmasseYAMLImporter:
         self.scheduler_importer = SchedulerImporter(self)
         self.confluence_importer = ConfluenceImporter(self)
         self.jira_importer = JiraImporter(self)
+        self.kafka_channel_importer = KafkaChannelImporter(self)
+        self.kafka_outgoing_importer = KafkaOutgoingImporter(self)
         self.ldap_importer = LDAPImporter(self)
         self.microsoft_365_importer = Microsoft365Importer(self)
         self.outgoing_rest_importer = OutgoingRESTImporter(self)
@@ -554,6 +560,44 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_kafka_channel(self, kafka_channel_list:'list', session:'SASession') -> 'tuple':
+        if not kafka_channel_list:
+            return [], []
+
+        count = len(kafka_channel_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} Kafka channel {noun}')
+
+        for idx, item in enumerate(kafka_channel_list):
+            logger.info('Kafka channel item %d: %s', idx, item)
+
+        created, updated = self.kafka_channel_importer.sync_definitions(kafka_channel_list, session)
+        self.kafka_channel_defs = self.kafka_channel_importer.connection_defs
+        logger.info('Processed Kafka channel definitions: created=%d updated=%d', len(created), len(updated))
+
+        return created, updated
+
+# ################################################################################################################################
+
+    def sync_kafka_outgoing(self, kafka_outgoing_list:'list', session:'SASession') -> 'tuple':
+        if not kafka_outgoing_list:
+            return [], []
+
+        count = len(kafka_outgoing_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} Kafka outgoing {noun}')
+
+        for idx, item in enumerate(kafka_outgoing_list):
+            logger.info('Kafka outgoing item %d: %s', idx, item)
+
+        created, updated = self.kafka_outgoing_importer.sync_definitions(kafka_outgoing_list, session)
+        self.kafka_outgoing_defs = self.kafka_outgoing_importer.connection_defs
+        logger.info('Processed Kafka outgoing definitions: created=%d updated=%d', len(created), len(updated))
+
+        return created, updated
+
+# ################################################################################################################################
+
     def sync_microsoft_365(self, microsoft_365_list:'list', session:'SASession') -> 'tuple':
         """ Synchronizes Microsoft 365 connection definitions from a YAML configuration with the database.
         """
@@ -821,6 +865,22 @@ class EnmasseYAMLImporter:
             self.created_objects['ldap'] = ldap_created
         if ldap_updated:
             self.updated_objects['ldap'] = ldap_updated
+
+        # Process Kafka channel definitions
+        kafka_channel_list = yaml_config.get('kafka_channel', [])
+        kafka_channel_created, kafka_channel_updated = self.sync_kafka_channel(kafka_channel_list, session)
+        if kafka_channel_created:
+            self.created_objects['kafka_channel'] = kafka_channel_created
+        if kafka_channel_updated:
+            self.updated_objects['kafka_channel'] = kafka_channel_updated
+
+        # Process Kafka outgoing definitions
+        kafka_outgoing_list = yaml_config.get('kafka_outgoing', [])
+        kafka_outgoing_created, kafka_outgoing_updated = self.sync_kafka_outgoing(kafka_outgoing_list, session)
+        if kafka_outgoing_created:
+            self.created_objects['kafka_outgoing'] = kafka_outgoing_created
+        if kafka_outgoing_updated:
+            self.updated_objects['kafka_outgoing'] = kafka_outgoing_updated
 
         # Process Microsoft 365 connection definitions
         ms365_list = yaml_config.get('microsoft_365', [])

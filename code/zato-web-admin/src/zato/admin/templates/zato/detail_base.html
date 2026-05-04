@@ -1,0 +1,34 @@
+{% extends "zato/settings-base.html" %}
+
+{% block extra_page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/detail-kit/detail.css">
+{% block detail_css %}{% endblock %}
+{% endblock %}
+
+{% block extra_page_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/kit.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/sparkline.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/detail-kit/tooltip.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/detail-kit/pagination.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/detail-kit/url_state.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/auto_refresh.js"></script>
+{% block detail_js %}{% endblock %}
+{% endblock %}
+
+{% block left_content %}
+{% block stat_cards %}{% endblock %}
+<h3>{% block section_title %}{% endblock %} <img src="/static/gfx/info.svg" class="help-icon" id="{% block help_icon_id %}{% endblock %}" alt="info" /></h3>
+<div class="progress-panel">
+{% block content_rows %}
+<div class="{% block detail_page_class %}{% endblock %}">
+{% block actions %}{% endblock %}
+
+<div class="dashboard-tabs" role="tablist">
+{% block tabs %}{% endblock %}
+</div>
+
+{% block tab_panels %}{% endblock %}
+</div>
+{% endblock %}
+</div>
+{% endblock %}

@@ -105,7 +105,7 @@ class Create(AdminService):
             else:
                 input.id = permission.id
                 input.action = PUBSUB.PERMISSION_CREATE.value
-                self.broker_client.publish(input)
+                self.config_dispatcher.publish(input)
 
                 self.response.payload.id = permission.id
 
@@ -154,7 +154,7 @@ class Edit(AdminService):
                 raise
             else:
                 input.action = PUBSUB.PERMISSION_EDIT.value
-                self.broker_client.publish(input)
+                self.config_dispatcher.publish(input)
 
                 self.response.payload.id = permission.id
                 self.response.payload.name = permission.sec_base.name
@@ -183,6 +183,6 @@ class Delete(AdminService):
                 raise
             else:
                 self.request.input.action = PUBSUB.PERMISSION_DELETE.value
-                self.broker_client.publish(self.request.input)
+                self.config_dispatcher.publish(self.request.input)
 
 # ################################################################################################################################

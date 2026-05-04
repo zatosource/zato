@@ -18,7 +18,8 @@ from zato.admin.web.forms.email.imap import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, id_only_service, \
      Index as _Index, method_allowed
 from zato.common.api import EMAIL
-from zato.common.odb.model import IMAP
+# Bunch
+from bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,7 +34,7 @@ class Index(_Index):
     url_name = 'email-imap'
     template = 'zato/email/imap.html'
     service_name = 'zato.email.imap.get-list'
-    output_class = IMAP
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):

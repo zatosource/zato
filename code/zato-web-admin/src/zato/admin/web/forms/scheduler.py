@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
+from zato.admin.web.common import tz_names
 from zato.admin.web.forms import add_services
 
 class _Base(forms.Form):
@@ -27,8 +28,9 @@ class _Base(forms.Form):
 class OneTimeSchedulerJobForm(_Base):
     pass
 
+_tz_choices = [('', '--- Same as server ---')] + [(tz, tz) for tz in tz_names]
+
 class IntervalBasedSchedulerJobForm(_Base):
-    # Attributes specific to interval-based jobs.
     weeks = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
     days = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
     hours = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
@@ -36,3 +38,7 @@ class IntervalBasedSchedulerJobForm(_Base):
     seconds = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
     start_date = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:30%; height:19px'}))
     repeats = forms.CharField(widget=forms.TextInput(attrs={'style':'width:8%'}))
+    jitter_ms = forms.CharField(required=False, initial='500', widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:12%'}))
+    timezone = forms.ChoiceField(required=False, choices=_tz_choices, widget=forms.Select(attrs={'style':'width:100%'}))
+    max_execution_time_ms = forms.CharField(required=False, widget=forms.TextInput(
+        attrs={'class':'validate-digits', 'style':'width:12%'}))
