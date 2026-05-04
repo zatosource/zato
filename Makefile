@@ -26,6 +26,7 @@ scheduler-build:
 	@echo ">>> Building scheduler"
 	$(LOAD_CARGO_ENV) && \
 	cargo build --release --manifest-path $(ZATO_RUST)/zato_scheduler_core/Cargo.toml --bin _zato_scheduler && \
+	rm -f $(CURDIR)/code/bin/_zato_scheduler && \
 	cp $(ZATO_RUST)/zato_scheduler_core/target/release/_zato_scheduler $(CURDIR)/code/bin/_zato_scheduler
 
 scheduler:
@@ -47,6 +48,7 @@ queue-bridge-build:
 	@echo ">>> Building queue-bridge"
 	$(LOAD_CARGO_ENV) && \
 	cargo build --release --manifest-path $(ZATO_RUST)/zato_queue_bridge/Cargo.toml --bin _zato_queue_bridge && \
+	rm -f $(CURDIR)/code/bin/_zato_queue_bridge && \
 	cp $(ZATO_RUST)/zato_queue_bridge/target/release/_zato_queue_bridge $(CURDIR)/code/bin/_zato_queue_bridge
 
 queue-bridge:
