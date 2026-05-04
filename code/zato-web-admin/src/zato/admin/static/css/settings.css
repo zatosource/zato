@@ -36,6 +36,7 @@
     font-weight: 600;
     color: var(--primary-dark);
     letter-spacing: 0.5px;
+    padding-bottom: 0.7rem;
 }
 
 .progress-panel {

@@ -977,7 +977,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
     // ////////////////////////////////////////////////////////////////////////
 
     dash.render = function(data) {
-        if (!data) return;
+        if (!data || !data.outcome_counts) return;
 
         var total_jobs = data.total_jobs;
         var active_jobs = data.active_jobs;

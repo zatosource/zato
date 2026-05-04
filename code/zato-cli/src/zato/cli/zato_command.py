@@ -110,7 +110,6 @@ class CommandStore:
              component_version   as component_version_mod,   \
              create_cluster      as create_cluster_mod,      \
              create_odb          as create_odb_mod,          \
-             create_scheduler    as create_scheduler_mod,    \
              create_server       as create_server_mod,       \
              create_web_admin    as create_web_admin_mod,    \
              crypto              as crypto_mod,              \
@@ -212,12 +211,6 @@ class CommandStore:
         create_odb = create_subs.add_parser('odb', description=create_odb_mod.Create.__doc__, parents=[base_parser])
         create_odb.set_defaults(command='create_odb')
         self.add_opts(create_odb, create_odb_mod.Create.opts)
-
-        create_scheduler = create_subs.add_parser(
-            'scheduler', description=create_scheduler_mod.Create.__doc__, parents=[base_parser])
-        create_scheduler.add_argument('path', help='Path to an empty directory to install the scheduler in')
-        create_scheduler.set_defaults(command='create_scheduler')
-        self.add_opts(create_scheduler, create_scheduler_mod.Create.opts)
 
         create_key = create_subs.add_parser('secret-key', description=crypto_mod.CreateSecretKey.__doc__, parents=[base_parser])
         create_key.set_defaults(command='create_secret_key')

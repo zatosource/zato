@@ -154,7 +154,6 @@ command_imports = (
     ('create_cluster', 'zato.cli.create_cluster.Create'),
     ('create_odb', 'zato.cli.create_odb.Create'),
     ('create_rest_channel', 'zato.cli.rest.channel.CreateChannel'),
-    ('create_scheduler', 'zato.cli.create_scheduler.Create'),
     ('create_server', 'zato.cli.create_server.Create'),
     ('create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
     ('create_user', 'zato.cli.web_admin_auth.CreateUser'),
