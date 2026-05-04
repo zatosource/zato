@@ -62,7 +62,8 @@ Examples:
         {'name':'--secret-key', 'help':"Component's secret key", 'action':'store'},
         {'name':'--env-file', 'help':'Path to a file with environment variables to use', 'action':'store'},
         {'name':'--stop-after', 'help':'After how many seconds to stop all the Zato components in the system', 'action':'store'},
-        {'name':'--stderr-path', 'help':'Where to redirect stderr', 'action':'store'}
+        {'name':'--stderr-path', 'help':'Where to redirect stderr', 'action':'store'},
+        {'name':'--with-test-data', 'help':'If given, test data will be used', 'action':'store_true'},
     ]
 
 # ################################################################################################################################
@@ -163,6 +164,7 @@ Examples:
             'stderr_path': self.args.stderr_path,
             'env_file': env_file,
             'stop_after': self.args.stop_after,
+            'with_test_data': self.args.with_test_data,
         }
 
         if extra_options:
@@ -554,16 +556,81 @@ Examples:
 # ################################################################################################################################
 
     def _on_scheduler(self, *ignored:'any_') -> 'None':
+
+        # stdlib
+        import subprocess
+
+        # Zato
+        from zato.common.util.open_ import open_w
         from zato.common.util.updates import setup_update_file_logger
+
         setup_update_file_logger(component_name='scheduler')
 
-        env_vars = {
-            'Zato_Component_Dir': self.component_dir,
-            'ZATO_SCHEDULER_BASE_DIR': self.component_dir
-        }
-        self.run_check_config()
-        _ = self.check_pidfile()
-        _ = self.start_component('zato.scheduler.main', 'scheduler', '', self.delete_pidfile, env_vars=env_vars)
+        pidfile = os.path.join(self.component_dir, 'pidfile')
+        exit_code = self.check_pidfile(pidfile)
+        if exit_code:
+            return
+
+        scheduler_binary = self._find_scheduler_binary()
+
+        env = os.environ.copy()
+        env['Zato_Scheduler_Redis_Host'] = env.get('Zato_Scheduler_Redis_Host', 'localhost')
+        env['Zato_Scheduler_Redis_Port'] = env.get('Zato_Scheduler_Redis_Port', '6379')
+        env['Zato_Scheduler_Redis_Password'] = env.get('Zato_Scheduler_Redis_Password', '')
+        env['Zato_Scheduler_Log_Level'] = env.get('Zato_Scheduler_Log_Level', 'info')
+
+        logs_dir = os.path.join(self.component_dir, 'logs')
+        os.makedirs(logs_dir, exist_ok=True)
+        stderr_path = os.path.join(logs_dir, 'scheduler-stderr.log')
+
+        if self.args.fg:
+            process = subprocess.Popen([scheduler_binary], env=env)
+            open_w(pidfile).write(str(process.pid))
+            try:
+                process.wait()
+            except KeyboardInterrupt:
+                process.terminate()
+            finally:
+                try:
+                    os.remove(pidfile)
+                except OSError:
+                    pass
+        else:
+            with open(stderr_path, 'a') as stderr_file:
+                process = subprocess.Popen(
+                    [scheduler_binary],
+                    env=env,
+                    stdout=subprocess.DEVNULL,
+                    stderr=stderr_file,
+                    start_new_session=True,
+                )
+            open_w(pidfile).write(str(process.pid))
+            if self.show_output:
+                self.logger.info('OK')
+
+# ################################################################################################################################
+
+    def _find_scheduler_binary(self) -> 'str':
+        """ Locates the Rust scheduler binary relative to sys.executable (the "py" script).
+        """
+        import sys
+
+        bin_dir = os.path.dirname(sys.executable)
+        zato_code_dir = os.path.dirname(bin_dir)
+
+        candidates = [
+            os.path.join(zato_code_dir, 'zato-rust', 'zato_scheduler_core', 'target', 'release', '_zato_scheduler'),
+            os.path.join(zato_code_dir, 'zato-rust', 'zato_scheduler_core', 'target', 'debug', '_zato_scheduler'),
+        ]
+
+        for path in candidates:
+            if os.path.isfile(path) and os.access(path, os.X_OK):
+                return path
+
+        raise FileNotFoundError(
+            'Could not find the Rust scheduler binary (_zato_scheduler). '
+            'Looked in: {}'.format(', '.join(candidates))
+        )
 
 # ################################################################################################################################
 # ################################################################################################################################

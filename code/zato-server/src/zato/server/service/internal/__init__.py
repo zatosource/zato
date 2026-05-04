@@ -213,6 +213,17 @@ class ServerInvoker(AdminService):
             file_content = self.request.raw_request.get('file_content', '')
             file_name = self.request.raw_request.get('file_name', 'enmasse.yaml')
             response = func(file_content, file_name)
+        elif func_name == 'check_attr_exists':
+            entity_type = self.request.raw_request['entity_type']
+            attr_name = self.request.raw_request['attr_name']
+            value = self.request.raw_request['value']
+            response = func(entity_type, attr_name, value)
+        elif func_name == 'get_bearer_token':
+            from json import loads as json_loads
+            security_id = self.request.raw_request.get('security_id', '')
+            raw_params_json = self.request.raw_request.get('raw_params_json', '')
+            raw_params = json_loads(raw_params_json) if raw_params_json else None
+            response = func(security_id, raw_params)
         else:
             response = func()
 
@@ -227,7 +238,7 @@ class ChangePasswordBase(AdminService):
     password_required = True
 
     class SimpleIO(AdminSIO):
-        input_required = 'password1', 'password2'
+        input_required = 'password',
         input_optional = Int('id'), 'name', 'type_'
         output_required = AsIs('id')
 
@@ -238,22 +249,14 @@ class ChangePasswordBase(AdminService):
         instance_name = self.request.input.name
 
         with closing(self.odb.session()) as session:
-            password1 = self.request.input.get('password1', '')
-            password2 = self.request.input.get('password2', '')
+            password = self.request.input.get('password', '')
 
-            password1_decrypted = self.server.decrypt(password1) if password1 else password1
-            password2_decrypted = self.server.decrypt(password2) if password2 else password2
+            password_decrypted = self.server.decrypt(password) if password else password
 
             try:
                 if self.password_required:
-                    if not password1_decrypted:
+                    if not password_decrypted:
                         raise Exception('Password must not be empty')
-
-                    if not password2_decrypted:
-                        raise Exception('Password must be repeated')
-
-                if password1_decrypted != password2_decrypted:
-                    raise Exception('Passwords need to be the same')
 
                 # Construct a basic query ..
                 query = session.query(class_)
@@ -277,7 +280,7 @@ class ChangePasswordBase(AdminService):
                     raise Exception('Could not find instance with id:`{}` and name:`{}` ({})'.format(
                         instance_id, instance_name, class_))
 
-                auth_func(instance, password1_decrypted)
+                auth_func(instance, password_decrypted)
 
                 session.add(instance)
                 session.commit()
@@ -288,7 +291,7 @@ class ChangePasswordBase(AdminService):
                     self.request.input.id = instance_id
                     self.request.input.action = action
                     self.request.input.name = name
-                    self.request.input.password = password1_decrypted
+                    self.request.input.password = password_decrypted
                     self.request.input.salt = kwargs.get('salt')
 
                     # Always return ID of the object whose password we changed
@@ -297,13 +300,7 @@ class ChangePasswordBase(AdminService):
                     for attr in kwargs.get('publish_instance_attrs', []):
                         self.request.input[attr] = getattr(instance, attr, ZATO_NONE)
 
-                    self.broker_client.publish(self.request.input)
-
-                    if action == SECURITY.BASIC_AUTH_CHANGE_PASSWORD.value:
-                        self.request.input.cid = self.cid
-                        self.request.input.username = instance.username
-
-                        self.broker_client.publish_to_pubsub(self.request.input)
+                    self.config_dispatcher.publish(self.request.input)
 
             except Exception:
                 self.logger.error('Could not update password, e:`%s`', format_exc())

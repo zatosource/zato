@@ -4,6 +4,9 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -13,8 +16,13 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
+    {% comment %} Tippy {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
     {% comment %} Common JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
 
     {% comment %} Odoo {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/odoo.js"></script>
@@ -46,24 +54,23 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Outgoing Odoo connections</h2>
-
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
 {% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
+    {% if cluster_id %}
+        <div id="markup">
+            <h2 class="zato">Outgoing Odoo connections</h2>
+
 {% include "zato/search-form.html" with page_prompt="Show Odoo connections"%}
 
-
-    {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.outgoing.odoo.create()">Create a new outgoing Odoo connection</a>
         </div>
 
-        <div id="markup">
-            <table id="data-table">
+            <table class="zato-table" id="data-table">
                 <thead>
                     <tr class='ignore'>
                         <th>&nbsp;</th>
@@ -88,7 +95,7 @@
                 <tbody>
                 {% if items %}
                 {% for item in items %}
-                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                    <tr id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
@@ -101,7 +108,7 @@
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.odoo.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.odoo.delete_('{{ item.id }}')">Delete</a></td>
-                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)">Ping</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.pool_size }}</td>
@@ -116,9 +123,9 @@
 
                 </tbody>
             </table>
-        </div>
 
 {% include "zato/paginate/action-panel.html" %}
+        </div>
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
@@ -251,11 +258,7 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Password</td>
-                            <td>{{ change_password_form.password1 }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Confirm password</td>
-                            <td>{{ change_password_form.password2 }}
+                            <td>{{ change_password_form.password }}
                                 <input type="hidden" id="id_change_password-id" name="id" />
                                 <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
                             </td>

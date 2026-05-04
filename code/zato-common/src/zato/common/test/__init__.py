@@ -272,7 +272,7 @@ class Expected:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestBrokerClient:
+class TestConfigDispatcher:
 
     def __init__(self):
         self.publish_args = []
@@ -486,10 +486,10 @@ class ServiceTestCase(TestCase):
                     new_path = '.return_value.'.join(elem for elem in split) + '.return_value'
                     attr.configure_mock(**{new_path:value})
 
-        broker_client_publish = getattr(self, 'broker_client_publish', None)
-        if broker_client_publish:
-            instance.broker_client = TestBrokerClient()
-            instance.broker_client.publish = broker_client_publish
+        config_dispatcher_publish = getattr(self, 'config_dispatcher_publish', None)
+        if config_dispatcher_publish:
+            instance.config_dispatcher = TestConfigDispatcher()
+            instance.config_dispatcher.publish = config_dispatcher_publish
 
         def set_response_func(*args, **kwargs):
             pass

@@ -134,13 +134,16 @@ class ZatoMiddleware:
 
     def __call__(self, req):
         self.process_request(req)
-        response = self.get_response(req)
-        response.headers['Server'] = 'Apache'
-        if req.user.is_authenticated:
-            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
-            response.headers['Pragma'] = 'no-cache'
-            response.headers['Expires'] = '0'
-        return response
+        try:
+            response = self.get_response(req)
+            response.headers['Server'] = 'Apache'
+            if req.user.is_authenticated:
+                response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+                response.headers['Pragma'] = 'no-cache'
+                response.headers['Expires'] = '0'
+            return response
+        finally:
+            req.zato.odb.close()
 
     def process_request(self, req):
 

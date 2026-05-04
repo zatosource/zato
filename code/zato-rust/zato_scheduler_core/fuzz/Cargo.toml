@@ -1,0 +1,46 @@
+[package]
+name = "zato_scheduler_core-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+chrono = "0.4"
+
+[dependencies.zato_scheduler_core]
+path = ".."
+
+[dependencies.zato_server_core]
+path = "../../zato_server_core"
+
+[[bin]]
+name = "fuzz_job_type_from_str"
+path = "fuzz_targets/fuzz_job_type_from_str.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_is_excluded"
+path = "fuzz_targets/fuzz_is_excluded.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_compute_interval_ms"
+path = "fuzz_targets/fuzz_compute_interval_ms.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_create_edit_delete"
+path = "fuzz_targets/fuzz_create_edit_delete.rs"
+test = false
+doc = false
+bench = false

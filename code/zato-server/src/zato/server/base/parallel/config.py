@@ -13,6 +13,7 @@ from logging import getLogger
 # Zato
 from zato.bunch import Bunch
 from zato.common.const import SECRETS, ServiceConst
+from zato.common.json_internal import loads
 from zato.common.util.config import resolve_name
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
@@ -24,7 +25,6 @@ from zato.url_dispatcher import Matcher
 
 if 0:
     from zato.common.odb.model import Server as ServerModel
-    from zato.common.typing_ import anydict, anydictnone, anyset
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -65,8 +65,43 @@ class ConfigLoader:
         query = self.odb.get_oauth_list(cluster_id, True)
         self.config.oauth = ConfigDict.from_query('oauth', query, decrypt_func=self.decrypt)
 
+        # Load rate limiting for security definitions
+        self._load_sec_def_rate_limiting(self.config.basic_auth)
+        self._load_sec_def_rate_limiting(self.config.apikey)
+
         # Encrypt all secrets
         self._encrypt_secrets()
+
+# ################################################################################################################################
+
+    def _load_sec_def_rate_limiting(self:'ParallelServer', config_dict:'ConfigDict') -> 'None': # pyright: ignore[reportSelfClsParameterName]
+
+        # Go through each security definition in this config dict ..
+        for item in config_dict.values():
+
+            # .. extract the inner configuration ..
+            config = item['config']
+            sec_def_id = config['id']
+            sec_def_name = config.get('name', '<unknown>')
+            opaque1 = config.get('opaque1')
+
+            # .. skip entries without opaque data ..
+            if not opaque1:
+                logger.info('Startup rate limiting; sec_def_id:%s (type:%s), name:%s, no opaque1',
+                    sec_def_id, type(sec_def_id).__name__, sec_def_name)
+                continue
+
+            # .. parse the JSON ..
+            opaque = loads(opaque1)
+
+            # .. and if rate limiting rules are configured, load them.
+            if rate_limiting := opaque.get('rate_limiting'):
+                logger.info('Startup rate limiting; sec_def_id:%s (type:%s), name:%s, loading %s rules: %s',
+                    sec_def_id, type(sec_def_id).__name__, sec_def_name, len(rate_limiting), rate_limiting)
+                self.rate_limiting_manager.set_sec_def_config(sec_def_id, rate_limiting)
+            else:
+                logger.info('Startup rate limiting; sec_def_id:%s, name:%s, no rate_limiting in opaque',
+                    sec_def_id, sec_def_name)
 
 # ################################################################################################################################
 
@@ -142,7 +177,7 @@ class ConfigLoader:
 
         # Pub/sub
         query = self.odb.get_pubsub_subscription_list(server.cluster.id, True)
-        self.config.pubsub_subs = ConfigDict.from_query('pubsub_subs', query, decrypt_func=self.decrypt)
+        self.config.pubsub_subs = ConfigDict.from_query('pubsub_subs', query, decrypt_func=self.decrypt, list_config=True)
 
         #
         # Outgoing connections - end
@@ -198,6 +233,18 @@ class ConfigLoader:
             http_soap.append(hs_item)
 
         self.config.http_soap = http_soap
+
+        # Load rate limiting configuration for each channel that has it
+        for item in http_soap:
+            channel_id = item['id']
+            channel_name = item.get('name', '<unknown>')
+
+            if rate_limiting := item.get('rate_limiting'):
+                logger.info('Startup rate limiting; channel_id:%s, name:%s, loading %s rules: %s',
+                    channel_id, channel_name, len(rate_limiting), rate_limiting)
+                self.rate_limiting_manager.set_channel_config(channel_id, rate_limiting)
+            else:
+                logger.info('Startup rate limiting; channel_id:%s, name:%s, no rate_limiting', channel_id, channel_name)
 
         # SimpleIO
         # In preparation for a SIO rewrite, we loaded SIO config from a file

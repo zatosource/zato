@@ -23,6 +23,7 @@ code/extlib
 code/get-pip.py
 code/include/*
 code/lib/*
+code/zato-libs/
 code/lib64
 code/local/*
 code/man/*
@@ -39,7 +40,10 @@ code/Scripts/*
 code/sec-wall-trunk-src/*
 code/share/*
 code/src/*
+code/support-linux/zato_fhir
 code/tests/*
+code/util/extra/
+code/uv.lock
 code/windows-bin/zato.py
 code/zato-common/src/zato/common/pubsub/server/*.multi.yaml
 code/zato-cy/src/zato/cy/*.c
@@ -67,6 +71,18 @@ vscode
 !code/bundle-ext/**/*.pyd
 *.pyo
 *.so
+!code/support-linux/zato_hl7v2/*.so
+!code/support-linux/zato_broker_core/*.so
 *.swp
 *.*~
 ~
+
+# Rust build artifacts
+**/mutants*
+**/target/
+**/corpus/
+**/artifacts/
+**/coverage/
+
+# Cosmic-ray mutation testing
+*.py.meta

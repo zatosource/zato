@@ -19,7 +19,7 @@ from zato.admin.web.forms import add_select
 
 class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
-    key = forms.CharField(widget=forms.Textarea(attrs={'class':'required', 'style':'width:100%; height:70px'}))
+    key = forms.CharField(widget=forms.Textarea(attrs={'class':'required', 'style':'width:100%; height:70px', 'autofocus': 'autofocus'}))
     value = forms.CharField(widget=forms.Textarea(attrs={'class':'required', 'style':'width:100%%; height:70px'}))
     expiry = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}), initial=0)
     replace_existing = forms.BooleanField(required=False, widget=forms.CheckboxInput())

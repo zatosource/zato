@@ -28,7 +28,29 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.HTTPSOAP;
     $.fn.zato.data_table.new_row_func = $.fn.zato.http_soap.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'url_path', 'service', 'security', 'validate_tls']);
+
+    var _connection = $('input[name="connection"]').val();
+    var _transport = $('input[name="transport"]').val();
+    var _is_channel = (_connection === 'channel');
+    var _entity_type = (_is_channel ? 'channel' : 'outgoing') + '_' + (_transport === 'plain_http' ? 'rest' : 'soap');
+
+    var _required_fields = ['name', 'service', 'security', 'validate_tls'];
+    if(_is_channel) {
+        _required_fields.splice(1, 0, 'url_path');
+    }
+    $.fn.zato.data_table.setup_forms(_required_fields);
+
+    var unique_constraints = [
+        {field: 'name', entity_type: _entity_type, attr_name: 'name'}
+    ];
+    if(_is_channel) {
+        unique_constraints.push({field: 'url_path', entity_type: _entity_type, attr_name: 'url_path'});
+    }
+    $.each(unique_constraints, function(i, c) {
+        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
+        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+    });
+
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.http_soap.data_table.before_submit_hook;
     $.fn.zato.http_soap.update_gateway_badges();
 
@@ -279,18 +301,24 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.security_id);
 
     /* 17, 18, 19 */
-    row += String.format("<td class='ignore'>{0}</td>", item.cache_id);
-    row += String.format("<td class='ignore'>{0}</td>", item.cache_type);
-    row += String.format("<td class='ignore'>{0}</td>", item.cache_expiry);
+    if(is_channel) {
+        row += String.format("<td class='ignore'>{0}</td>", item.cache_id);
+        row += String.format("<td class='ignore'>{0}</td>", item.cache_type);
+        row += String.format("<td class='ignore'>{0}</td>", item.cache_expiry);
+    }
 
     /* 20 */
     row += String.format("<td class='ignore'>{0}</td>", item.data_format);
 
-    /* 22, 23a, 23b */
+    /* 22, 23a, 23b, 23c */
     row += String.format("<td class='ignore'>{0}</td>", item.timeout);
-    row += String.format("<td class='ignore'>{0}</td>", item.validate_tls);
-    row += String.format("<td class='ignore'>{0}</td>", item.match_slash);
-    row += String.format("<td class='ignore'>{0}</td>", item.http_accept);
+    if(is_outgoing) {
+        row += String.format("<td class='ignore'>{0}</td>", item.validate_tls);
+    }
+    if(is_channel) {
+        row += String.format("<td class='ignore'>{0}</td>", item.match_slash);
+        row += String.format("<td class='ignore'>{0}</td>", item.http_accept);
+    }
 
     /* 24, 25, 26, 27 */
     if(is_outgoing) {
@@ -308,13 +336,22 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += String.format("<td class='ignore'>{0}</td>", item.method || '');
     }
 
+    if(is_channel) {
+        row += String.format('<td><a href="/zato/http-soap/rate-limiting/{0}/?cluster={1}">Rate limiting</a></td>', item.id, cluster_id);
+    }
+
     /* 31, 32 */
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.http_soap.edit('{0}')\">Edit</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.delete_({0});'>Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.http_soap.delete_('{0}');\">Delete</a>", item.id));
 
     if(is_outgoing) {
         /* 33 */
-        row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.ping({0});'>Ping</a>", item.id));
+        row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.data_table.ping('{0}', this)\" class=\"ping-link\">Ping</a>", item.id));
+    }
+
+    /* Invoke (REST only) */
+    if(!is_soap) {
+        row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.http_soap.invoke('{0}')\">Invoke</a>", item.id));
     }
 
     /* 38a */
@@ -414,5 +451,93 @@ $.fn.zato.http_soap.data_table.on_serialization_change = function() {
     var suffix = is_edit ? 'edit-' : '';
     $.fn.zato.http_soap.data_table.toggle_validate_tls(suffix, this.value == 'suds');
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.get_invoke_url = function(id) {
+    var connection = $(document).getUrlParam('connection');
+    if (connection === 'channel') {
+        return '/zato/http-soap/invoke-channel/' + id + '/';
+    }
+    return '/zato/http-soap/invoke-outconn/' + id + '/';
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.invoke = function(id) {
+    var item = $.fn.zato.data_table.data[id];
+    if (!item) {
+        return;
+    }
+
+    var connection = $(document).getUrlParam('connection');
+    var history_key = 'zato.invoke-history.' + (connection === 'channel' ? 'channel' : 'outconn') + '.' + id;
+
+    $.fn.zato.invoker.open_overlay({
+        id: id,
+        name: item.name,
+        connection: connection,
+        history_key: history_key,
+        get_invoke_url_func: $.fn.zato.http_soap.get_invoke_url
+    });
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Live form updates registration
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+;(function() {
+    var connection = $(document).getUrlParam('connection');
+    var is_channel = connection === 'channel';
+
+    var create_configs = [
+        {
+            object_type: 'security',
+            target_select: '#id_security',
+            label_format: '{sec_type_name}/{name}'
+        }
+    ];
+
+    var edit_configs = [
+        {
+            object_type: 'security',
+            target_select: '#id_edit-security',
+            label_format: '{sec_type_name}/{name}'
+        }
+    ];
+
+    if(is_channel) {
+        create_configs.push({
+            object_type: 'service',
+            target_select: '#id_service'
+        });
+        create_configs.push({
+            object_type: 'security_group',
+            handler: 'multi_checkbox',
+            container: '#multi-select-div-create',
+            reload_callback: function() {
+                var url = '/zato/http-soap/get-security-groups/zato-api-creds/';
+                $.fn.zato.post(url, $.fn.zato.http_soap.create_populate_groups_callback, '', '', true);
+            }
+        });
+
+        edit_configs.push({
+            object_type: 'service',
+            target_select: '#id_edit-service'
+        });
+        edit_configs.push({
+            object_type: 'security_group',
+            handler: 'multi_checkbox',
+            container: '#multi-select-div-edit',
+            reload_callback: function() {
+                var url = '/zato/http-soap/get-security-groups/zato-api-creds/';
+                $.fn.zato.post(url, $.fn.zato.http_soap.edit_populate_groups_callback, '', '', true);
+            }
+        });
+    }
+
+    $.fn.zato.live_form_updates.register('create', create_configs);
+    $.fn.zato.live_form_updates.register('edit', edit_configs);
+})();
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

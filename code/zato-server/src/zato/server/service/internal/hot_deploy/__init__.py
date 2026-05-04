@@ -172,7 +172,7 @@ class Create(AdminService):
             for item in file_name_list:
 
                 # Publish the file to the broker
-                _ = publish_file(self.server.broker_client, self.cid, item)
+                _ = publish_file(self.server.config_dispatcher, self.cid, item)
 
 # ################################################################################################################################
 
@@ -354,10 +354,10 @@ class Create(AdminService):
         ttl = self.server.deployment_lock_expires
         block = self.server.deployment_lock_timeout
 
-        # Now, it's possible we don't have the broker_client yet - this will happen if we are deploying
+        # Now, it's possible we don't have the config_dispatcher yet - this will happen if we are deploying
         # missing services found on other servers during our own server's startup. In that case we just
         # need to wait a moment for the server we are on to fully initialize.
-        while not self.server.broker_client:
+        while not self.server.config_dispatcher:
             sleep(0.2)
 
         with self.lock(lock_name, ttl, block):

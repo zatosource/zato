@@ -154,7 +154,6 @@ command_imports = (
     ('create_cluster', 'zato.cli.create_cluster.Create'),
     ('create_odb', 'zato.cli.create_odb.Create'),
     ('create_rest_channel', 'zato.cli.rest.channel.CreateChannel'),
-    ('create_scheduler', 'zato.cli.create_scheduler.Create'),
     ('create_server', 'zato.cli.create_server.Create'),
     ('create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
     ('create_user', 'zato.cli.web_admin_auth.CreateUser'),
@@ -552,6 +551,56 @@ class ZatoCommand:
 
 # ################################################################################################################################
 
+    def _force_drop_odb(self, args):
+        """ When --force is used with postgresql, drop and recreate the database.
+        """
+        odb_type = getattr(args, 'odb_type', None)
+        if not odb_type or not odb_type.startswith('postgresql'):
+            return
+
+        odb_host = getattr(args, 'odb_host', None)
+        odb_port = getattr(args, 'odb_port', None)
+        odb_db_name = getattr(args, 'odb_db_name', None)
+
+        if not (odb_host and odb_port and odb_db_name):
+            return
+
+        import sqlalchemy
+
+        from zato.common.util import api as util_api
+
+        connect_args = {'application_name': util_api.get_component_name('enmasse')}
+        maint_url = 'postgresql://{}:{}@{}:{}/postgres'.format(
+            args.odb_user, args.odb_password, odb_host, odb_port)
+
+        create_sql = sqlalchemy.text("CREATE DATABASE {} ENCODING 'UTF-8' TEMPLATE template0".format(odb_db_name))
+
+        try:
+            engine = sqlalchemy.create_engine(maint_url, connect_args=connect_args, isolation_level='AUTOCOMMIT')
+            with engine.connect() as conn:
+
+                # Check if the database exists
+                result = conn.execute(sqlalchemy.text(
+                    "SELECT 1 FROM pg_database WHERE datname = '{}'".format(odb_db_name)))
+                db_exists = result.scalar() is not None
+
+                if db_exists:
+                    conn.execute(sqlalchemy.text(
+                        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                        "WHERE datname = '{}' AND pid <> pg_backend_pid()".format(odb_db_name)))
+                    conn.execute(sqlalchemy.text('DROP DATABASE {}'.format(odb_db_name)))
+                    conn.execute(create_sql)
+                    self.logger.info('Database `%s` dropped and recreated (--force)', odb_db_name)
+                else:
+                    conn.execute(create_sql)
+                    self.logger.info('Database `%s` did not exist, created (--force)', odb_db_name)
+
+            engine.dispose()
+        except Exception as e:
+            self.logger.warning('Could not reset database `%s`: %s', odb_db_name, e)
+
+# ################################################################################################################################
+
     def _get_session(self, engine):
 
         # Zato
@@ -607,13 +656,16 @@ class ZatoCommand:
                 work_dir = os.path.abspath(args.path)
 
                 # Handle --force flag
-                if getattr(args, 'force', False) and os.path.exists(work_dir):
-                    import shutil
-                    shutil.rmtree(work_dir)
+                if getattr(args, 'force', False):
+                    if os.path.exists(work_dir):
+                        import shutil
+                        shutil.rmtree(work_dir)
+                    self._force_drop_odb(args)
 
                 if not os.path.exists(work_dir):
                     self.logger.info('Creating directory `%s`', work_dir)
                     os.makedirs(work_dir)
+                    os.chdir(work_dir)
 
                 for elem in os.listdir(work_dir):
                     if elem.startswith('zato') and elem.endswith('config'):

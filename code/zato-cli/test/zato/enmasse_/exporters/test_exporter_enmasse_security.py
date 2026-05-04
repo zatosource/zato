@@ -121,6 +121,11 @@ class TestEnmasseSecurityExporter(TestCase):
                 if 'extra_fields' in yaml_def:
                     self.assertEqual(exported_def.get('extra_fields'), yaml_def.get('extra_fields'), f'Extra fields mismatch for security definition "{name}"')
 
+            # Check rate_limiting if present in the YAML definition
+            if rate_limiting := yaml_def.get('rate_limiting'):
+                self.assertIn('rate_limiting', exported_def, f'rate_limiting missing from export of "{name}"')
+                self.assertEqual(exported_def['rate_limiting'], rate_limiting, f'rate_limiting mismatch for "{name}"')
+
 # ################################################################################################################################
 # ################################################################################################################################
 

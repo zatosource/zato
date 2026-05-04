@@ -13,7 +13,8 @@ from zato.admin.web.forms.cache.builtin import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_service_with_json_response, \
      method_allowed
 from zato.common.api import CACHE
-from zato.common.odb.model import CacheBuiltin
+# Bunch
+from bunch import Bunch
 
 # ################################################################################################################################
 
@@ -22,7 +23,7 @@ class Index(_Index):
     url_name = 'cache-builtin'
     template = 'zato/cache/builtin/index.html'
     service_name = 'zato.cache.builtin.get-list'
-    output_class = CacheBuiltin
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):

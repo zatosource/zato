@@ -1,117 +1,116 @@
-.PHONY: build install
+.PHONY: build install clean server-build scheduler-build sio-build common-core-build queue-bridge-build \
+	server-clean scheduler-clean sio-clean common-core-clean queue-bridge-clean \
+	server-install scheduler-install sio-install common-core-install queue-bridge-install \
+	ruff qa-reqs-install unify \
+	update cron-update stop-server restart-server restart-server-with-scheduler \
+	stop-dashboard restart-dashboard scheduler queue-bridge file-listener
+
 MAKEFLAGS += --silent
 
-default: run-tests
+CARGO_ENV := $(HOME)/.cargo/env
+LOAD_CARGO_ENV := if [ -f $(CARGO_ENV) ]; then . $(CARGO_ENV); fi
+
+ZATO_RUST := $(CURDIR)/code/zato-rust
+
+default: build
+
+build: common-core-build server-build scheduler-build sio-build queue-bridge-build
+
+server-build:
+	@echo ">>> Building server"
+	$(LOAD_CARGO_ENV) && \
+	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
+	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_server_core/Cargo.toml
+
+scheduler-build:
+	@echo ">>> Building scheduler"
+	$(LOAD_CARGO_ENV) && \
+	cargo build --release --manifest-path $(ZATO_RUST)/zato_scheduler_core/Cargo.toml --bin _zato_scheduler && \
+	cp $(ZATO_RUST)/zato_scheduler_core/target/release/_zato_scheduler $(CURDIR)/code/bin/_zato_scheduler
+
+scheduler:
+	$(CURDIR)/code/bin/_zato_scheduler
+
+sio-build:
+	@echo ">>> Building sio"
+	$(LOAD_CARGO_ENV) && \
+	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
+	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_sio/Cargo.toml
+
+common-core-build:
+	@echo ">>> Building common-core"
+	$(LOAD_CARGO_ENV) && \
+	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
+	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_common_core/Cargo.toml
+
+queue-bridge-build:
+	@echo ">>> Building queue-bridge"
+	$(LOAD_CARGO_ENV) && \
+	cargo build --release --manifest-path $(ZATO_RUST)/zato_queue_bridge/Cargo.toml --bin _zato_queue_bridge && \
+	cp $(ZATO_RUST)/zato_queue_bridge/target/release/_zato_queue_bridge $(CURDIR)/code/bin/_zato_queue_bridge
+
+queue-bridge:
+	$(CURDIR)/code/bin/_zato_queue_bridge
+
+file-listener:
+	$(CURDIR)/code/bin/py $(CURDIR)/code/zato-common/src/zato/common/file_transfer/listener.py
 
 install:
-	$(CURDIR)/code/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python $(filter-out $@,$(MAKECMDGOALS))
-PY_DIR=$(CURDIR)/../bin
-
-static-check:
-	cd $(CURDIR)/code/zato-broker    && $(MAKE) static-check
-	cd $(CURDIR)/code/zato-cli       && $(MAKE) static-check
-	cd $(CURDIR)/code/zato-client    && $(MAKE) static-check
-	cd $(CURDIR)/code/zato-common    && $(MAKE) static-check
-	cd $(CURDIR)/code/zato-distlock  && $(MAKE) static-check
-	cd $(CURDIR)/code/zato-cy        && $(MAKE) static-check
-	cd $(CURDIR)/code/zato-scheduler && $(MAKE) static-check
-	cd $(CURDIR)/code/zato-server    && $(MAKE) static-check
-	cd $(CURDIR)/code/zato-testing   && $(MAKE) static-check
-	cd $(CURDIR)/code/zato-web-admin && $(MAKE) static-check
-	echo "Static checks OK"
-
-type-check:
-	cd $(CURDIR)/code/zato-common && $(MAKE) type-check
-	cd $(CURDIR)/code/zato-server && $(MAKE) type-check
-	echo "Type checks OK"
-
-web-admin-tests:
-	cd $(CURDIR)/code/zato-web-admin && PYTHONWARNINGS='ignore:X509Extension support in pyOpenSSL is deprecated.:DeprecationWarning' make run-tests
-
-common-tests:
-	cd $(CURDIR)/code/zato-common && make run-tests
-
-server-tests:
-	cd $(CURDIR)/code/zato-server && PYTHONWARNINGS=ignore make run-tests
-
-cy-tests:
-	cd $(CURDIR)/code/zato-cy && make PYTHONWARNINGS='ignore:X509Extension support in pyOpenSSL is deprecated.:DeprecationWarning' run-tests
-
-cli-tests:
-	cd $(CURDIR)/code/zato-cli && make run-tests
-
-enmasse-tests:
-	cd $(CURDIR)/code/zato-cli && make run-tests
-
-openapi-tests:
-	cd $(CURDIR)/code/zato-openapi && $(CURDIR)/code/bin/py -m unittest discover -s test/zato/openapi_ -p 'test_*.py' -v
+	@if [ "$(filter-out install,$(MAKECMDGOALS))" = "" ]; then \
+		$(CURDIR)/code/install.sh; \
+	else \
+		$(CURDIR)/code/support-linux/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python $(filter-out install,$(MAKECMDGOALS)); \
+	fi
 
 %:
 	@:
 
+clean:
+	$(CURDIR)/code/clean.sh
+
+server-clean:
+	rm -rf $(ZATO_RUST)/zato_server_core/target
+
+scheduler-clean:
+	rm -rf $(ZATO_RUST)/zato_scheduler_core/target
+
+sio-clean:
+	rm -rf $(ZATO_RUST)/zato_sio/target
+
+common-core-clean:
+	rm -rf $(ZATO_RUST)/zato_common_core/target
+
+queue-bridge-clean:
+	rm -rf $(ZATO_RUST)/zato_queue_bridge/target
+
+server-install: server-build
+
+scheduler-install: scheduler-build
+
+sio-install: sio-build
+
+common-core-install: common-core-build
+
+queue-bridge-install: queue-bridge-build
+
 qa-reqs-install:
-	$(CURDIR)/code/bin/pip install --upgrade -r $(CURDIR)/code/qa-requirements.txt
-	npx playwright install
+	$(CURDIR)/code/support-linux/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python -r $(CURDIR)/code/qa-requirements.txt
+	npx --yes playwright install chromium
 	mkdir -p $(CURDIR)/code/eggs/requests/ || true
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
 	sudo snap install k6
 
-run-tests:
-#	$(MAKE) web-admin-tests
-	$(MAKE) common-tests
-#	$(MAKE) server-tests
-	$(MAKE) cli-tests
-#	$(MAKE) cy-tests
-
-all-tests:
-	$(MAKE) run-tests
+SITE_PACKAGES := $(shell $(CURDIR)/code/bin/python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])" 2>/dev/null)
 
 unify:
-	mkdir -p $(CURDIR)/code/lib/python3.12/site-packages/lib2to3/pgen2
-	printf 'def detect_encoding(readline):\n    return ("utf-8", [])\n' > $(CURDIR)/code/lib/python3.12/site-packages/lib2to3/pgen2/tokenize.py
-	touch $(CURDIR)/code/lib/python3.12/site-packages/lib2to3/__init__.py
-	touch $(CURDIR)/code/lib/python3.12/site-packages/lib2to3/pgen2/__init__.py
+	mkdir -p $(SITE_PACKAGES)/lib2to3/pgen2
+	printf 'def detect_encoding(readline):\n    return ("utf-8", [])\n' > $(SITE_PACKAGES)/lib2to3/pgen2/tokenize.py
+	touch $(SITE_PACKAGES)/lib2to3/__init__.py
+	touch $(SITE_PACKAGES)/lib2to3/pgen2/__init__.py
 	python3 $(CURDIR)/code/util/unify.py
 
-generate-enmasse:
-	cd $(CURDIR)/code/zato-common && $(MAKE) generate-enmasse USERS=$(word 2,$(MAKECMDGOALS)) TOPICS_MULTIPLIER=$(word 3,$(MAKECMDGOALS))
-
-run-producers:
-	py code/zato-common/src/zato/common/pubsub/perftest/python_/app.py \
-		--num-producers $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),1) \
-		--reqs-per-producer $(if $(word 3,$(MAKECMDGOALS)),$(word 3,$(MAKECMDGOALS)),1) \
-		--reqs-per-second $(if $(word 4,$(MAKECMDGOALS)),$(word 4,$(MAKECMDGOALS)),1.0) \
-		--topics $(if $(word 5,$(MAKECMDGOALS)),$(word 5,$(MAKECMDGOALS)),3) \
-		--burst-multiplier $(if $(word 6,$(MAKECMDGOALS)),$(word 6,$(MAKECMDGOALS)),10) \
-		--burst-interval $(if $(word 7,$(MAKECMDGOALS)),$(word 7,$(MAKECMDGOALS)),60) \
-		--burst-duration $(if $(word 8,$(MAKECMDGOALS)),$(word 8,$(MAKECMDGOALS)),10) \
-		$(if $(word 9,$(MAKECMDGOALS)),--cpu-num $(word 9,$(MAKECMDGOALS)),) \
-		$(if $(word 10,$(MAKECMDGOALS)),--use-new-requests,)
-
-run-consumers:
-	py code/zato-common/src/zato/common/pubsub/perftest/python_/app.py \
-		--num-consumers $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),1) \
-		--pull-interval $(if $(word 3,$(MAKECMDGOALS)),$(word 3,$(MAKECMDGOALS)),1.0) \
-		--max-messages $(if $(word 4,$(MAKECMDGOALS)),$(word 4,$(MAKECMDGOALS)),100) \
-		$(if $(word 5,$(MAKECMDGOALS)),--cpu-num $(word 5,$(MAKECMDGOALS)),) \
-		$(if $(word 6,$(MAKECMDGOALS)),--use-new-requests,)
-
-prometheus:
-	prometheus --config.file=$(CURDIR)/code/zato-common/src/zato/common/pubsub/perftest/prometheus_/prometheus.yml
-
-test-var:
-	@echo "Zato_Grafana_Password is: $$Zato_Grafana_Password"
-
-grafana:
-	env GF_SECURITY_ADMIN_PASSWORD=$$Zato_Grafana_Password \
-	Zato_Grafana_Base_Path=$(CURDIR)/code/zato-common/src/zato/common/pubsub/perftest/grafana_ \
-	grafana-server \
-		--homepath=/usr/share/grafana \
-		--config=/dev/null \
-		cfg:default.paths.data=/tmp/grafana-data \
-		cfg:default.paths.logs=/tmp/grafana-logs \
-		cfg:default.paths.plugins=/tmp/grafana-plugins \
-		cfg:default.paths.provisioning=$(CURDIR)/code/zato-common/src/zato/common/pubsub/perftest/grafana_
+ruff:
+	$(CURDIR)/code/bin/ruff check $(CURDIR)/code
 
 update:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/updates_cli.py
@@ -123,19 +122,13 @@ stop-server:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py stop-server
 
 restart-server-with-scheduler:
-	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-server-with-scheduler
+	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-server
 
-stop-scheduler:
-	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py stop-scheduler
-
-restart-scheduler:
-	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-scheduler
+restart-server:
+	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-server
 
 stop-dashboard:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py stop-dashboard
 
 restart-dashboard:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-dashboard
-
-pubsub-tests:
-	cd $(CURDIR)/code/zato-server/test/zato/pubsub/rest_tests && $(CURDIR)/code/bin/py -m unittest discover -v -p 'test_*.py'

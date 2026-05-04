@@ -88,7 +88,7 @@ class _Updater(Service):
     def handle(self) -> 'None':
         raw_request = cast_('stranydict', self.request.raw_request)
 
-        self.broker_client.publish({
+        self.config_dispatcher.publish({
             'action': self.pickup_action.value,
             'msg_type': MESSAGE_TYPE.TO_PARALLEL_ALL,
             'full_path': raw_request['full_path'],

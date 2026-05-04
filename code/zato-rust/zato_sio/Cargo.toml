@@ -1,0 +1,23 @@
+[package]
+name = "zato_sio"
+version = "4.1.0"
+edition = "2024"
+license = "AGPL-3.0-only"
+description = "SimpleIO serialization layer for Zato - API, ESB, SOA, iPaaS, integration platform, middleware, rule engine"
+repository = "https://github.com/zatosource/zato"
+readme = "README.md"
+keywords = ["zato", "api", "integration-platform", "ipaas", "rule-engine"]
+categories = ["development-tools"]
+
+[lib]
+name = "zato_sio"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.28.3", features = ["extension-module"] }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[profile.release]
+overflow-checks = true
