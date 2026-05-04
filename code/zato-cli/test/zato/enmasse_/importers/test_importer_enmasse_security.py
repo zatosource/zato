@@ -211,11 +211,15 @@ class TestEnmasseSecurity(TestCase):
 
         rules = opaque['rate_limiting']
         self.assertEqual(len(rules), 1)
-        self.assertEqual(rules[0]['limit'], 500)
-        self.assertEqual(rules[0]['limit_unit'], 'month')
-        self.assertTrue(rules[0]['is_all_day'])
-        self.assertFalse(rules[0]['disabled'])
-        self.assertFalse(rules[0]['disallowed'])
+        self.assertIn('time_range', rules[0])
+
+        time_range = rules[0]['time_range']
+        self.assertEqual(len(time_range), 1)
+        self.assertEqual(time_range[0]['limit'], 500)
+        self.assertEqual(time_range[0]['limit_unit'], 'month')
+        self.assertTrue(time_range[0]['is_all_day'])
+        self.assertFalse(time_range[0]['disabled'])
+        self.assertFalse(time_range[0]['disallowed'])
 
 # ################################################################################################################################
 

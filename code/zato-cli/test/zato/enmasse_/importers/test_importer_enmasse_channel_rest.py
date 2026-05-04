@@ -211,9 +211,13 @@ class TestEnmasseChannelRESTImporter(TestCase):
 
         rules_2 = opaque_2['rate_limiting']
         self.assertEqual(len(rules_2), 1)
-        self.assertEqual(rules_2[0]['limit'], 1000)
-        self.assertEqual(rules_2[0]['limit_unit'], 'day')
-        self.assertTrue(rules_2[0]['is_all_day'])
+        self.assertIn('time_range', rules_2[0])
+
+        time_range_2 = rules_2[0]['time_range']
+        self.assertEqual(len(time_range_2), 1)
+        self.assertEqual(time_range_2[0]['limit'], 1000)
+        self.assertEqual(time_range_2[0]['limit_unit'], 'day')
+        self.assertTrue(time_range_2[0]['is_all_day'])
 
         # Verify channel_rest_3 has two rate limiting rules
         self.assertIsNotNone(channel_rest_3, 'Channel enmasse.channel.rest.3 not found')
@@ -226,18 +230,21 @@ class TestEnmasseChannelRESTImporter(TestCase):
         self.assertEqual(len(rules_3), 2)
 
         # First rule - time range with two CIDR entries
-        self.assertEqual(rules_3[0]['limit'], 100)
-        self.assertEqual(rules_3[0]['limit_unit'], 'minute')
-        self.assertFalse(rules_3[0]['is_all_day'])
-        self.assertEqual(rules_3[0]['time_from'], '08:00')
-        self.assertEqual(rules_3[0]['time_to'], '17:00')
         self.assertEqual(len(rules_3[0]['cidr_list']), 2)
 
+        time_range_3_first = rules_3[0]['time_range'][0]
+        self.assertEqual(time_range_3_first['limit'], 100)
+        self.assertEqual(time_range_3_first['limit_unit'], 'minute')
+        self.assertFalse(time_range_3_first['is_all_day'])
+        self.assertEqual(time_range_3_first['time_from'], '08:00')
+        self.assertEqual(time_range_3_first['time_to'], '17:00')
+
         # Second rule - all-day, disabled, disallowed
-        self.assertEqual(rules_3[1]['limit'], 50)
-        self.assertEqual(rules_3[1]['limit_unit'], 'hour')
-        self.assertTrue(rules_3[1]['disabled'])
-        self.assertTrue(rules_3[1]['disallowed'])
+        time_range_3_second = rules_3[1]['time_range'][0]
+        self.assertEqual(time_range_3_second['limit'], 50)
+        self.assertEqual(time_range_3_second['limit_unit'], 'hour')
+        self.assertTrue(time_range_3_second['disabled'])
+        self.assertTrue(time_range_3_second['disallowed'])
 
 # ################################################################################################################################
 
