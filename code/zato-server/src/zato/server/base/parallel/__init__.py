@@ -1061,7 +1061,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
                     for stream_name, messages in result:
                         for msg_id, fields in messages:
-                            logger.info('Fire listener received: stream=%s msg_id=%s fields=%s', stream_name, msg_id, fields)
+                            # logger.info('Fire listener received: stream=%s msg_id=%s fields=%s', stream_name, msg_id, fields)
                             if stream_name == fire_stream:
                                 spawn(self._handle_fire_event, fields)
                             elif stream_name == timeout_stream:
@@ -1121,7 +1121,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         logger.info('Scheduler request listener greenlet started')
 
     def _handle_fire_event(self, fields:'dict') -> 'None':
-        """ Processes a fire event from the scheduler - invokes the target service. """
+        """ Processes a fire event from the scheduler - invokes the target service.
+        """
         import time as _time
         from json import loads as json_loads
         from bunch import Bunch
@@ -1129,7 +1130,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 
         payload_json = fields['payload']
-        logger.info('Fire event payload: %s', payload_json)
         ctx = json_loads(payload_json)
 
         job_id = ctx['job_id']
@@ -1176,7 +1176,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             logger.warning('Scheduler mark_complete failed; job_id=%s; name=%s; traceback=%s', job_id, job_name, format_exc())
 
     def _handle_timeout_event(self, fields:'dict') -> 'None':
-        """ Processes a timeout event from the scheduler. """
+        """ Processes a timeout event from the scheduler.
+        """
         job_id = fields['job_id']
         current_run = fields['current_run']
         elapsed_ms = fields['elapsed_ms']
