@@ -106,7 +106,7 @@ class Create(AdminService):
                 input.action = CHANNEL.AMQP_CREATE.value
                 input.id = item.id
                 input.service_name = service.name
-                self.broker_client.publish(input)
+                self.config_dispatcher.publish(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
@@ -181,7 +181,7 @@ class Edit(AdminService):
                 input.id = item.id
                 input.old_name = old_name
                 input.service_name = service.name
-                self.broker_client.publish(input)
+                self.config_dispatcher.publish(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
@@ -216,7 +216,7 @@ class Delete(AdminService):
                 session.delete(item)
                 session.commit()
 
-                self.broker_client.publish({
+                self.config_dispatcher.publish({
                     'action': CHANNEL.AMQP_DELETE.value,
                     'name': item.name,
                     'id':item_id,

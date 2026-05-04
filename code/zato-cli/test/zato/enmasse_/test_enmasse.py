@@ -130,7 +130,35 @@ class EnmasseTestCase(BaseEnmasseTestCase):
                 export_data = f.read()
 
             _ = yaml.safe_load(import_data)
-            _ = yaml.safe_load(export_data)
+            exported_dict = yaml.safe_load(export_data)
+
+            # Verify that rate_limiting survived the round trip for channels
+            if exported_dict and 'channel_rest' in exported_dict:
+                exported_channels_by_name = {}
+
+                for channel in exported_dict['channel_rest']:
+                    exported_channels_by_name[channel['name']] = channel
+
+                # enmasse.channel.rest.2 should have rate_limiting
+                channel_2_name = f'enmasse.channel.rest.2.{test_suffix}'
+                if channel_2_name in exported_channels_by_name:
+                    channel_2 = exported_channels_by_name[channel_2_name]
+                    self.assertIn('rate_limiting', channel_2, f'rate_limiting missing from exported {channel_2_name}')
+                    self.assertEqual(len(channel_2['rate_limiting']), 1)
+
+            # Verify that rate_limiting survived the round trip for security
+            if exported_dict and 'security' in exported_dict:
+                exported_security_by_name = {}
+
+                for sec_def in exported_dict['security']:
+                    exported_security_by_name[sec_def['name']] = sec_def
+
+                # enmasse.basic_auth.1 should have rate_limiting
+                basic_auth_1_name = f'enmasse.basic_auth.1.{test_suffix}'
+                if basic_auth_1_name in exported_security_by_name:
+                    basic_auth_1 = exported_security_by_name[basic_auth_1_name]
+                    self.assertIn('rate_limiting', basic_auth_1, f'rate_limiting missing from exported {basic_auth_1_name}')
+                    self.assertEqual(len(basic_auth_1['rate_limiting']), 1)
 
         except ErrorReturnCode as e:
             stdout = e.stdout.decode('utf8')

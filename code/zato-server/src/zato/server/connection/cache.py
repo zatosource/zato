@@ -872,7 +872,7 @@ class CacheAPI:
             else:
                 data['is_value_pickled'] = False
 
-            self.server.broker_client.publish(data)
+            self.server.config_dispatcher.publish(data)
         except Exception:
             logger.warning('Could not run `%s` after_state_changed in cache `%s`, data:`%s`, e:`%s`',
                 op, cache_name, data, format_exc())

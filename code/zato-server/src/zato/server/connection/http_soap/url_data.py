@@ -47,7 +47,7 @@ class URLData(PyURLData):
     """ Performs URL matching and security checks.
     """
     def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, \
-                 oauth_config=None, apikey_config=None, broker_client=None, odb=None):
+                 oauth_config=None, apikey_config=None, config_dispatcher=None, odb=None):
         super(URLData, self).__init__(channel_data)
 
         self.worker = worker
@@ -56,7 +56,7 @@ class URLData(PyURLData):
         self.ntlm_config = ntlm_config
         self.oauth_config = oauth_config
         self.apikey_config = apikey_config
-        self.broker_client = broker_client
+        self.config_dispatcher = config_dispatcher
         self.odb = odb
 
         self.sec_config_getter = Bunch()
@@ -85,7 +85,7 @@ class URLData(PyURLData):
 # ################################################################################################################################
 
     def dispatcher_callback(self, event, ctx, **opaque):
-        getattr(self, 'on_broker_msg_{}'.format(code_to_name[event]))(ctx)
+        getattr(self, 'on_config_event_{}'.format(code_to_name[event]))(ctx)
 
 # ################################################################################################################################
 
@@ -214,13 +214,13 @@ class URLData(PyURLData):
         with self.url_sec_lock:
             return self._get_sec_def_by_id(self.apikey_config, def_id)
 
-    def on_broker_msg_SECURITY_APIKEY_CREATE(self, msg, *args):
+    def on_config_event_SECURITY_APIKEY_CREATE(self, msg, *args):
         """ Creates a new API key security definition.
         """
         with self.url_sec_lock:
             self._update_apikey(msg.name, msg)
 
-    def on_broker_msg_SECURITY_APIKEY_EDIT(self, msg, *args):
+    def on_config_event_SECURITY_APIKEY_EDIT(self, msg, *args):
         """ Updates an existing API key security definition.
         """
         with self.url_sec_lock:
@@ -228,7 +228,7 @@ class URLData(PyURLData):
             self._update_apikey(msg.name, msg)
             self._update_url_sec(msg, SEC_DEF_TYPE.APIKEY)
 
-    def on_broker_msg_SECURITY_APIKEY_DELETE(self, msg, *args):
+    def on_config_event_SECURITY_APIKEY_DELETE(self, msg, *args):
         """ Deletes an API key security definition.
         """
         with self.url_sec_lock:
@@ -236,7 +236,7 @@ class URLData(PyURLData):
             del self.apikey_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.APIKEY, True)
 
-    def on_broker_msg_SECURITY_APIKEY_CHANGE_PASSWORD(self, msg, *args):
+    def on_config_event_SECURITY_APIKEY_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an API key security definition.
         """
         wait_for_dict_key(self.apikey_config, msg.name)
@@ -271,13 +271,13 @@ class URLData(PyURLData):
         with self.url_sec_lock:
             return self._get_sec_def_by_id(self.basic_auth_config, def_id)
 
-    def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
+    def on_config_event_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition.
         """
         with self.url_sec_lock:
             self._update_basic_auth(msg.name, msg)
 
-    def on_broker_msg_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
+    def on_config_event_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
         """ Updates an existing HTTP Basic Auth security definition.
         """
         with self.url_sec_lock:
@@ -287,7 +287,7 @@ class URLData(PyURLData):
             self._update_basic_auth(msg.name, msg)
             self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH)
 
-    def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
+    def on_config_event_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
         """ Deletes an HTTP Basic Auth security definition.
         """
         with self.url_sec_lock:
@@ -295,7 +295,7 @@ class URLData(PyURLData):
             del self.basic_auth_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH, True)
 
-    def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
+    def on_config_event_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
         """
         wait_for_dict_key(self.basic_auth_config, msg.name)
@@ -316,13 +316,13 @@ class URLData(PyURLData):
         with self.url_sec_lock:
             return self.ntlm_config.get(name)
 
-    def on_broker_msg_SECURITY_NTLM_CREATE(self, msg, *args):
+    def on_config_event_SECURITY_NTLM_CREATE(self, msg, *args):
         """ Creates a new NTLM security definition.
         """
         with self.url_sec_lock:
             self._update_ntlm(msg.name, msg)
 
-    def on_broker_msg_SECURITY_NTLM_EDIT(self, msg, *args):
+    def on_config_event_SECURITY_NTLM_EDIT(self, msg, *args):
         """ Updates an existing NTLM security definition.
         """
         with self.url_sec_lock:
@@ -332,7 +332,7 @@ class URLData(PyURLData):
             self._update_ntlm(msg.name, msg)
             self._update_url_sec(msg, SEC_DEF_TYPE.NTLM)
 
-    def on_broker_msg_SECURITY_NTLM_DELETE(self, msg, *args):
+    def on_config_event_SECURITY_NTLM_DELETE(self, msg, *args):
         """ Deletes an NTLM security definition.
         """
         with self.url_sec_lock:
@@ -340,7 +340,7 @@ class URLData(PyURLData):
             del self.ntlm_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.NTLM, True)
 
-    def on_broker_msg_SECURITY_NTLM_CHANGE_PASSWORD(self, msg, *args):
+    def on_config_event_SECURITY_NTLM_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an NTLM security definition.
         """
         wait_for_dict_key(self.ntlm_config, msg.name)
@@ -367,13 +367,13 @@ class URLData(PyURLData):
         with self.url_sec_lock:
             return self._get_sec_def_by_id(self.oauth_config, def_id)
 
-    def on_broker_msg_SECURITY_OAUTH_CREATE(self, msg, *args):
+    def on_config_event_SECURITY_OAUTH_CREATE(self, msg, *args):
         """ Creates a new OAuth account.
         """
         with self.url_sec_lock:
             self._update_oauth(msg.name, msg)
 
-    def on_broker_msg_SECURITY_OAUTH_EDIT(self, msg, *args):
+    def on_config_event_SECURITY_OAUTH_EDIT(self, msg, *args):
         """ Updates an existing OAuth account.
         """
         with self.url_sec_lock:
@@ -383,7 +383,7 @@ class URLData(PyURLData):
             self._update_oauth(msg.name, msg)
             self._update_url_sec(msg, SEC_DEF_TYPE.OAUTH)
 
-    def on_broker_msg_SECURITY_OAUTH_DELETE(self, msg, *args):
+    def on_config_event_SECURITY_OAUTH_DELETE(self, msg, *args):
         """ Deletes an OAuth account.
         """
         with self.url_sec_lock:
@@ -391,7 +391,7 @@ class URLData(PyURLData):
             del self.oauth_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.OAUTH, True)
 
-    def on_broker_msg_SECURITY_OAUTH_CHANGE_PASSWORD(self, msg, *args):
+    def on_config_event_SECURITY_OAUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of an OAuth account.
         """
         wait_for_dict_key(self.oauth_config, msg.name)
@@ -544,7 +544,7 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
-    def on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
+    def on_config_event_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an HTTP/SOAP channel.
         """
         with self.url_sec_lock:
@@ -557,7 +557,7 @@ class URLData(PyURLData):
 
             self._create_channel(msg, old_data)
 
-    def on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
+    def on_config_event_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP channel.
         """
         with self.url_sec_lock:

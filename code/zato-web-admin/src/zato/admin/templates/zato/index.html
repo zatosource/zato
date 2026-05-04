@@ -9,7 +9,9 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/hide-show-password.js"></script>
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.custom.css">
     <link rel="stylesheet" media="screen" href="/static/css/formalize.css" />
+    <link rel="stylesheet" media="screen" href="/static/chosen/chosen.css" />
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/table.css">
 
     {% if user.is_authenticated %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery-ui-1.13.2/jquery-ui.js"></script>
@@ -24,65 +26,21 @@
     {% comment %} This is needed for its Class object {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/mootools/mootools.js"></script>
 
+    <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/log_streaming.js"></script>
 
 
-    <link rel="stylesheet" media="screen" href="/static/chosen/chosen.css" />
     <link rel="stylesheet" media="screen" href="/static/css/navigation/pure-css-navigation.css" />
 
     {% endif %}
 
-    {% if items %}
-        {% include "zato/css-titlebar-padding.html" %}
-    {% endif %}
+    {% include "zato/css-titlebar-padding.html" %}
 
     <link rel="stylesheet" media="screen" href="/static/css/hide-show-password.css" />
-
-    {% if zato_template_name == "zato/scheduler.html" %}
-
-        <style type="text/css">
-            .ui-dialog-titlebar {
-                padding-bottom:-4px !important;
-            }
-        </style>
-
-    {% elif zato_template_name == "zato/outgoing/amqp.html" %}
-
-        <style type="text/css">
-            .ui-dialog-titlebar {
-                margin-bottom:-25px !important;
-            }
-        </style>
-
-    {% elif zato_template_name == "zato/groups/index.html" %}
-
-        <style type="text/css">
-        .ui-dialog-titlebar {
-            margin-bottom:0px !important;
-        }
-        </style>
-
-
-    {% elif zato_template_name == "zato/http_soap/index.html" %}
-
-        <style type="text/css">
-        .ui-dialog-titlebar {
-            margin-bottom:-25px !important;
-        }
-        </style>
-
-    {% else %}
-
-        {% if not items %}
-            <style type="text/css">
-                .ui-dialog-titlebar {
-                    padding-bottom:10px !important;
-                }
-            </style>
-        {% endif %}
-
-    {% endif %}
 
     {% block "extra_css" %}
     {% if not zato_template_name %}
@@ -97,6 +55,16 @@
 
         $(document).ready(function() {
             $('input[type="password"]').hidePassword(true);
+
+            $(document).on('passwordShown passwordHidden', 'input', function(e) {
+                var show = (e.type === 'passwordShown');
+                $(this).closest('form').find('input.hideShowPassword-field').not(this).each(function() {
+                    var current = ($(this).attr('type') === 'text');
+                    if(current !== show) {
+                        $(this).hideShowPassword(show, true);
+                    }
+                });
+            });
         });
 
         {% if user.is_authenticated %}
@@ -328,6 +296,16 @@
                                         <a class="menu-link" href="#">Channels &rarr;</a>
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "channel-amqp" %}?cluster={{ cluster_id|default:"1" }}">AMQP</a></li>
+                                            {% if False %}
+                                            <li class="child">
+                                                <a class="menu-link" href="#">HL7 &rarr;</a>
+                                                <ul>
+                                                    <li class="child"><a class="menu-link" href="{% url "channel-hl7-mllp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-hl7-mllp">MLLP</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "channel-hl7-rest" %}?cluster={{ cluster_id|default:"1" }}">REST</a></li>
+                                                </ul>
+                                            </li>
+                                            {% endif %}
+                                            <li class="child"><a class="menu-link" href="{% url "channel-kafka" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-kafka">Kafka</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "channel-openapi" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-openapi">OpenAPI</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=channel&amp;transport=plain_http">REST</a></li>
                                         </ul>
@@ -339,6 +317,16 @@
                                             {% if False %}
                                             <li class="child"><a class="menu-link" href="{% url "out-ftp" %}?cluster={{ cluster_id|default:"1" }}">FTP</a></li>
                                             {% endif %}
+                                            {% if False %}
+                                            <li class="child">
+                                                <a class="menu-link" href="#">HL7 &rarr;</a>
+                                                <ul>
+                                                    <li class="child"><a class="menu-link" href="{% url "outgoing-hl7-fhir" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-hl7-fhir">FHIR</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "outgoing-hl7-mllp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-hl7-mllp">MLLP</a></li>
+                                                </ul>
+                                            </li>
+                                            {% endif %}
+                                            <li class="child"><a class="menu-link" href="{% url "out-kafka" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-kafka">Kafka</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-ldap" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ldap">LDAP</a></li>
                                             {% if 0%}
                                             <li class="child"><a class="menu-link" href="{% url "out-mongodb" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-mongodb">MongoDB</a></li>
@@ -384,8 +372,6 @@
                                             </li>
                                         </ul>
                                     </li>
-                                    <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-aws">AWS</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-aws">Google</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-365">Microsoft 365</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-salesforce" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-salesforce">Salesforce</a></li>
                                 </ul>
@@ -448,12 +434,26 @@
                                     <li class="child"><a class="menu-link" href="{% url "pubsub-topic" %}?cluster={{ cluster_id|default:"1" }}">Topics</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "pubsub-permission" %}?cluster={{ cluster_id|default:"1" }}">Permissions</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "pubsub-subscription" %}?cluster={{ cluster_id|default:"1" }}">Subscriptions</a></li>
-                                    <li class="child" style="border-top: 1px solid #246291"><a class="menu-link" href="javascript:$.fn.zato.pubsub.import_test_config()">Import test config</a></li>
-                                    <li class="child"><a class="menu-link" href="javascript:$.fn.zato.pubsub.download_openapi()">Download OpenAPI</a></li>
+
+                                    {% if 0 %}
+                                    <li class="child" style="border-top: 1px solid #246291"><a class="menu-link" href="{% url "eda-dashboard" %}?cluster={{ cluster_id|default:"1" }}">Activity</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "eda-messages" %}?cluster={{ cluster_id|default:"1" }}">Message browser</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "eda-publish" %}?cluster={{ cluster_id|default:"1" }}">Publish</a></li>
+                                    {% endif %}
+
+                                    {% if 0 %}
+                                    <li class="child" style="border-top: 1px solid #246291"><a class="menu-link" href="javascript:$.fn.zato.pubsub.download_openapi()">Download OpenAPI</a></li>
+                                    {% endif %}
                                 </ul>
                             </li>
 
-                            <li class="first-level"><a class="menu-link" href="{% url "scheduler" %}?cluster={{ cluster_id|default:"1" }}">Scheduler</a></li>
+                            <li class="first-level">
+                                <a class="menu-link" href="#">Scheduler &darr;</a>
+                                <ul>
+                                    <li class="child"><a class="menu-link" href="{% url "scheduler" %}?cluster={{ cluster_id|default:"1" }}">Config</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "scheduler-dashboard" %}?cluster={{ cluster_id|default:"1" }}">Dashboard</a></li>
+                                </ul>
+                            </li>
 
                             <li class="first-level">
                                 <a class="menu-link" href="#">Monitoring &darr;</a>
@@ -475,6 +475,7 @@
                                     </li>
                                     <li class="child"><a class="menu-link" href="/zato/updates/">Install updates</a></li>
                                     <li class="child"><a class="menu-link" href="/zato/python-packages/">Python packages</a></li>
+                                    <li class="child"><a class="menu-link" href="/zato/env-variables/">Env. variables</a></li>
                                     {% if 0 %}
                                     <li class="child">
                                         <a class="menu-link" href="#">Log streaming &rarr;</a>

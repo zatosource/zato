@@ -1,0 +1,15 @@
+# Default objects that every Zato server registers at startup.
+
+channel_rest:
+  - name: zato.ping
+    url_path: /zato/ping
+    service: demo.ping
+    is_active: true
+    is_internal: true
+
+  - name: zato.api.invoke
+    url_path: /zato/api/invoke/{service_name}
+    service: pub.zato.service.service-invoker
+    is_active: true
+    is_internal: true
+    security_name: admin.invoke

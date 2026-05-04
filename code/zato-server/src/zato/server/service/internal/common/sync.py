@@ -60,7 +60,7 @@ class SyncObjects(Service):
         msg['action'] = BrokerMessageCommon.Sync_Objects.value
 
         # .. and do publish the request now.
-        self.broker_client.publish(msg)
+        self.config_dispatcher.publish(msg)
 
 # ################################################################################################################################
 # ################################################################################################################################

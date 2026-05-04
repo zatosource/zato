@@ -1,0 +1,102 @@
+{% extends "zato/detail_base.html" %}
+{% load extras %}
+
+{% block page_title %}Run detail{% endblock %}
+
+{% block detail_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/scheduler/job_detail.css">
+{% endblock %}
+
+{% block section_title %}
+<div class="detail-header-row-1">
+    <span id="detail-section-title">
+        <a href="{{ dashboard_base_url }}?cluster={{ cluster_id }}" class="detail-component-pill menu-link">Scheduler</a>
+        <a href="{{ dashboard_base_url }}job/{{ job_id }}/?cluster={{ cluster_id }}&amp;outcomes=all" class="detail-component-pill menu-link" id="run-detail-job-link"></a>
+        <span id="record-detail-title"></span>
+    </span>
+</div>
+{% endblock %}
+{% block help_icon_id %}{% endblock %}
+
+{% block detail_page_class %}detail-page-scheduler detail-page-run{% endblock %}
+
+{% block detail_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/outcome.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/record_detail.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler/dashboard.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler/job_detail.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+
+    var kit = $.fn.zato.dashboard_kit;
+    var detail = $.fn.zato.scheduler.job_detail;
+    var dash = $.fn.zato.scheduler.dashboard;
+    dash.config.base_url = '{{ dashboard_base_url }}';
+    kit.urls.init({
+        base_url: dash.config.base_url,
+        cluster_id: '{{ cluster_id }}',
+        object_path: 'job/{id}/',
+        run_path: 'job/{id}/run/{run_id}/'
+    });
+    var panel_cfg = detail.config.detail_panel;
+    var tag_defs = detail.config.detail_tags;
+    var job_data = {{ job_data|safe }};
+
+    var job_name = job_data.name;
+    $('#run-detail-job-link').text(job_name);
+    $('#record-detail-title').text('Run ' + kit.format_number_full({{ run_number }}));
+
+    kit.record_detail.init({
+        container: '#record-detail-log',
+        cluster_id: '{{ cluster_id }}',
+        record_id: {{ job_id }},
+        run_number: {{ run_number }},
+        poll_url: '{{ poll_url }}',
+        run_action: 'get-run-detail',
+        log_action: 'get-log-entries',
+        object_id_field: 'job_id',
+        run_id_field: 'current_run',
+        poll_interval_ms: 5000,
+        panel: panel_cfg,
+        tag_defs: tag_defs,
+        nav_container_top: '#run-nav-top',
+        nav_container_bottom: '#run-nav-bottom',
+        build_run_url: function(run_number) {
+            return kit.urls.run_detail({{ job_id }}, run_number);
+        },
+
+        render_mirror: function(record) {
+            var run_number = kit.format_number_full(record.current_run);
+            var outcome_html = kit.outcome.badge(record.outcome, panel_cfg.outcome_palette, record);
+            var tag_html = kit.record_detail.render_dark_tags(record, tag_defs);
+            var accent = panel_cfg.mirror_accent;
+
+            var html = '<div class="detail-log-line detail-log-mirror" style="border-bottom:1px solid ' + panel_cfg.row_border + '">';
+            html += '<div class="detail-log-stripe" style="background:' + accent + '"></div>';
+            html += '<div class="detail-log-ts"><span class="detail-log-level" style="color:' + accent + ';background:rgba(255,255,255,0.08)">Run #' + run_number + '</span></div>';
+            html += '<div class="detail-log-level-col">' + outcome_html + '</div>';
+            var action_style = 'color:#aaa;background:rgba(255,255,255,0.08)';
+            html += '<div class="detail-log-msg" style="color:' + panel_cfg.owner_color + '">' + tag_html + '</div>';
+            if (record.outcome.indexOf('skipped') !== 0) {
+                html += '<div class="detail-log-actions">';
+                html += '<span class="dashboard-panel-action-badge detail-action-toggle-all" style="' + action_style + '">Toggle all</span>';
+                html += '<span class="dashboard-panel-action-badge detail-action-copy-all" style="' + action_style + '">Copy</span>';
+                html += '</div>';
+            }
+            html += '</div>';
+            return html;
+        }
+    });
+
+});
+</script>
+{% endblock %}
+
+{% block tab_panels %}
+<div class="detail-pagination-controls" id="run-nav-top"></div>
+<div id="record-detail-log">
+    <div class="detail-panel-log" data-since-idx="0">
+    </div>
+</div>
+<div class="detail-pagination-controls" id="run-nav-bottom"></div>
+{% endblock %}

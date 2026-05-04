@@ -27,13 +27,14 @@ from pytz import UTC
 
 # Zato
 from zato.admin.web import from_user_to_utc, from_utc_to_user
-from zato.admin.web.views import get_js_dt_format, method_allowed, Delete as _Delete, parse_response_data
+from zato.admin.web.views import get_js_dt_format, method_allowed, Delete as _Delete
 from zato.admin.settings import job_type_friendly_names
 from zato.admin.web.forms.scheduler import IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
 from zato.common.api import SCHEDULER, TRACE1
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
-from zato.common.odb.model import IntervalBasedJob, Job
+# Bunch
+from bunch import Bunch
 from zato.common.util.api import pprint
 
 # Python 2/3 compatibility
@@ -43,6 +44,10 @@ from zato.common.py23_.past.builtins import unicode
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+default_jitter_ms = ''
+default_timezone = ''
+default_max_execution_time_ms = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -179,6 +184,11 @@ def _get_create_edit_interval_based_message(user_profile, cluster, params, form_
     input_dict['minutes'] = params.get(form_prefix + 'minutes', '')
     input_dict['repeats'] = params.get(form_prefix + 'repeats', '')
 
+    for param in ('jitter_ms', 'timezone', 'max_execution_time_ms'):
+        val = params.get(form_prefix + param, '')
+        if val:
+            input_dict[param] = val
+
     return input_dict
 
 # ################################################################################################################################
@@ -208,9 +218,7 @@ def _create_interval_based(client, user_profile, cluster, params):
     response = client.invoke('zato.scheduler.job.create', input_dict)
     logger.debug('Successfully created an interval_based job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
-    start_date = input_dict.get('start_date')
-    if start_date:
-        start_date = _get_start_date(start_date)
+    start_date = _get_start_date(input_dict['start_date'])
 
     repeats = params.get('create-interval_based-repeats')
     repeats = int(repeats) if repeats else None
@@ -251,9 +259,7 @@ def _edit_interval_based(client, user_profile, cluster, params):
     client.invoke('zato.scheduler.job.edit', input_dict)
     logger.debug('Successfully updated an interval_based job, cluster.id:`%s`, params:`%s`', cluster.id, params)
 
-    start_date = input_dict.get('start_date')
-    if start_date:
-        start_date = _get_start_date(start_date)
+    start_date = _get_start_date(input_dict['start_date'])
 
     repeats = params.get('edit-interval_based-repeats')
     repeats = int(repeats) if repeats else None
@@ -289,9 +295,9 @@ def index(req):
                 'query': req.GET.get('query', '')
             }
 
-            data, meta = parse_response_data(req.zato.client.invoke('zato.scheduler.job.get-list', request))
+            response = req.zato.client.invoke('zato.scheduler.job.get-list', request)
 
-            for job_elem in data:
+            for job_elem in response.data:
 
                 id = job_elem.id
                 name = job_elem.name
@@ -302,10 +308,15 @@ def index(req):
                 extra = job_elem.extra
                 job_type_friendly = job_type_friendly_names[job_type]
 
-                job = Job(id, name, is_active, job_type,
-                          from_utc_to_user(start_date+'+00:00', req.zato.user_profile),
-                          extra, service_name=service_name,
-                          job_type_friendly=job_type_friendly)
+                job = Bunch()
+                job.id = id
+                job.name = name
+                job.is_active = is_active
+                job.job_type = job_type
+                job.start_date = from_utc_to_user(start_date+'+00:00', req.zato.user_profile) if start_date else ''
+                job.extra = extra
+                job.service_name = service_name
+                job.job_type_friendly = job_type_friendly
 
                 if job_type == SCHEDULER.JOB_TYPE.ONE_TIME:
                     definition_text=_one_time_job_def(req.zato.user_profile, start_date)
@@ -316,15 +327,25 @@ def index(req):
                         job_elem.repeats, job_elem.weeks, job_elem.days,
                         job_elem.hours, job_elem.minutes, job_elem.seconds)
 
-                    weeks = job_elem.weeks or ''
-                    days = job_elem.days or ''
-                    hours = job_elem.hours or ''
-                    minutes = job_elem.minutes or ''
-                    seconds = job_elem.seconds or ''
-                    repeats = job_elem.repeats or ''
+                    weeks = job_elem.weeks
+                    days = job_elem.days
+                    hours = job_elem.hours
+                    minutes = job_elem.minutes
+                    seconds = job_elem.seconds
+                    repeats = job_elem.repeats
 
-                    ib_job = IntervalBasedJob(None, None, weeks, days, hours, minutes, seconds, repeats)
+                    ib_job = Bunch()
+                    ib_job.weeks = weeks
+                    ib_job.days = days
+                    ib_job.hours = hours
+                    ib_job.minutes = minutes
+                    ib_job.seconds = seconds
+                    ib_job.repeats = repeats
                     job.interval_based = ib_job
+
+                    job.jitter_ms = getattr(job_elem, 'jitter_ms', default_jitter_ms)
+                    job.timezone = getattr(job_elem, 'timezone', default_timezone)
+                    job.max_execution_time_ms = getattr(job_elem, 'max_execution_time_ms', default_max_execution_time_ms)
 
                 else:
                     msg = 'Unrecognized job type, name:`{}`, type:`{}`'.format(name, job_type)
@@ -380,6 +401,8 @@ def index(req):
 
         template_name = 'zato/scheduler.html'
 
+        from zato.admin.web.views.scheduler_dashboard import dashboard_base_url
+
         return_data = {'zato_clusters':req.zato.clusters,
             'cluster_id':req.zato.cluster_id,
             'search_form':req.zato.search_form,
@@ -389,7 +412,9 @@ def index(req):
             'create_interval_based_form':IntervalBasedSchedulerJobForm(create_interval_based_prefix, req),
             'edit_one_time_form':OneTimeSchedulerJobForm(edit_one_time_prefix, req),
             'edit_interval_based_form':IntervalBasedSchedulerJobForm(edit_interval_based_prefix, req),
+            'dashboard_base_url': dashboard_base_url,
             'paginate':True,
+            'show_search_form':True,
             'meta': meta,
             'req': req,
             'zato_template_name': template_name,
@@ -419,7 +444,7 @@ def execute(req, job_id, cluster_id):
     """ Executes a scheduler's job.
     """
     try:
-        req.zato.client.invoke('zato.scheduler.job.execute', {'id':job_id})
+        req.zato.client.invoke('zato.scheduler.job.execute', {'job_id':job_id})
     except Exception:
         msg = 'Job could not be executed. job_id:`{}`, cluster_id:`{}`, e:`{}`'.format(job_id, cluster_id, format_exc())
         logger.error(msg)

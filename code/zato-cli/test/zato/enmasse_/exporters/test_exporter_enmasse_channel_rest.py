@@ -154,6 +154,10 @@ class TestEnmasseChannelRESTExporter(TestCase):
                 if 'groups' in channel_def and channel_def['groups']:
                     channel_required['groups'] = channel_def['groups']
 
+                # Add rate_limiting if present
+                if rate_limiting := channel_def.get('rate_limiting'):
+                    channel_required['rate_limiting'] = rate_limiting
+
                 # Add this channel's requirements to our dictionary
                 required_channel_fields[channel_name] = channel_required
 

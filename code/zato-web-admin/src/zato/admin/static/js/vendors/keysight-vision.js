@@ -24,6 +24,14 @@ $(document).ready(function() {
         'password',
         'validate_tls',
     ]);
+
+    var unique_constraints = [
+        {field: 'name', entity_type: 'generic_connection', attr_name: 'name'}
+    ];
+    $.each(unique_constraints, function(i, c) {
+        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
+        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+    });
 })
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -65,8 +73,8 @@ $.fn.zato.vendors.keysight.vision.data_table.new_row = function(item, data, incl
     row += String.format('<td>{0}</td>',
         String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Change password')\">Change password</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.vendors.keysight.vision.edit('{0}')\">Edit</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.vendors.keysight.vision.delete_({0});'>Delete</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.ping({0});'>Ping</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.vendors.keysight.vision.delete_('{0}');\">Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.data_table.ping('{0}', this)\">Ping</a>", item.id));
 
     // 4
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);

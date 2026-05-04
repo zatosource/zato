@@ -89,7 +89,7 @@ class Create(AdminService):
                 input.id = auth.id
                 input.action = SECURITY.NTLM_CREATE.value
                 input.sec_type = SEC_DEF_TYPE.NTLM
-                self.broker_client.publish(input)
+                self.config_dispatcher.publish(input)
 
             self.response.payload.id = auth.id
             self.response.payload.name = auth.name
@@ -142,7 +142,7 @@ class Edit(AdminService):
                 input.action = SECURITY.NTLM_EDIT.value
                 input.old_name = old_name
                 input.sec_type = SEC_DEF_TYPE.NTLM
-                self.broker_client.publish(input)
+                self.config_dispatcher.publish(input)
 
                 self.response.payload.id = definition.id
                 self.response.payload.name = definition.name
@@ -194,7 +194,7 @@ class Delete(AdminService):
             else:
                 self.request.input.action = SECURITY.NTLM_DELETE.value
                 self.request.input.name = auth.name
-                self.broker_client.publish(self.request.input)
+                self.config_dispatcher.publish(self.request.input)
 
 # ################################################################################################################################
 # ################################################################################################################################

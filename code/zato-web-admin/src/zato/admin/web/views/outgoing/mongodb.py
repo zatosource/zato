@@ -17,7 +17,8 @@ from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.mongodb import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
      method_allowed, ping_connection
-from zato.common.odb.model import GenericConn
+# Bunch
+from bunch import Bunch
 
 # ################################################################################################################################
 
@@ -30,7 +31,7 @@ class Index(_Index):
     url_name = 'out-mongodb'
     template = 'zato/outgoing/mongodb.html'
     service_name = 'zato.generic.connection.get-list'
-    output_class = GenericConn
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):

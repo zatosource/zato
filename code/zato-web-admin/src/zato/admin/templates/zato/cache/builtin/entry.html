@@ -19,12 +19,12 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Cache definitions : built-in : <a href="{% url "cache-builtin" %}?cluster={{ cluster_id }}&amp;highlight={{ id }}">{{ cache.name }}</a></h2>
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
 <div id="markup">
-    <table id="data-table">
+    <h2 class="zato">Cache definitions : built-in : <a href="{% url "cache-builtin" %}?cluster={{ cluster_id }}&amp;highlight={{ id }}">{{ cache.name }}</a></h2>
+    <table class="zato-table" id="data-table">
         <tr>
             <td class='inline_header'>{% if action == "create" %} Add a new entry {% endif %}</td>
         </tr>

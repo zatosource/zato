@@ -156,7 +156,7 @@ class ChangePassword(ChangePasswordBase):
         input = self.request.input
 
         # Encryption requires bytes
-        password = (input.password1 or '').encode('utf8')
+        password = (input.password or '').encode('utf8')
 
         # Now, encrypt the input password
         password = self.crypto.encrypt(password, needs_str=True)

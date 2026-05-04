@@ -1,0 +1,80 @@
+/* Shared tab styles — reused across dashboards and detail pages. */
+
+.dashboard-tabs {
+    display: inline-flex;
+    gap: 6px;
+    margin-bottom: 0.7rem;
+    padding: 3px;
+    background: linear-gradient(
+        135deg,
+        rgba(0, 0, 0, 0.025) 0%,
+        rgba(0, 0, 0, 0.015) 100%
+    );
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 6px;
+}
+
+.dashboard-tabs:empty {
+    display: none;
+}
+
+.dashboard-tab {
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent none;
+    background-image: none;
+    border: 1px solid transparent;
+    border-bottom: 2px solid transparent;
+    border-radius: 6px 6px 3px 3px;
+    box-shadow: none;
+    text-shadow: none;
+    outline: 0;
+    padding: 7px 22px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: rgba(0, 0, 0, 0.36);
+    transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dashboard-tab:hover,
+.dashboard-tab:focus,
+.dashboard-tab:active {
+    background: transparent none;
+    background-image: none;
+    border: 1px solid transparent;
+    border-bottom: 2px solid transparent;
+    box-shadow: none;
+    text-shadow: none;
+    outline: 0;
+}
+
+.dashboard-tab:hover {
+    color: rgba(0, 0, 0, 0.58);
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.dashboard-tab:focus-visible {
+    outline: 2px solid var(--primary-dark);
+    outline-offset: 1px;
+}
+
+.dashboard-tab-active,
+.dashboard-tab-active:hover,
+.dashboard-tab-active:focus,
+.dashboard-tab-active:active {
+    color: var(--primary-dark);
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-bottom: 2px solid var(--primary-dark);
+    box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.04),
+        0 1px 1px rgba(0, 0, 0, 0.03);
+}
+
+.dashboard-tab-panel[hidden] {
+    display: none;
+}
