@@ -725,35 +725,26 @@ class RequestDispatcher:
         sec_def_info = wsgi_environ.get('zato.sec_def')
 
         if not sec_def_info:
-            logger.info('_check_sec_def_rate_limiting; no zato.sec_def in wsgi_environ')
             return None
 
         # .. extract the sec_def type and ID ..
         sec_def_type = sec_def_info['type']
         sec_def_id = sec_def_info['id']
 
-        logger.info('_check_sec_def_rate_limiting; sec_def_type:%s, sec_def_id:%s (type:%s)', sec_def_type, sec_def_id, type(sec_def_id).__name__)
-
         # .. look up the key prefix template for this sec_def type ..
         prefix_template = _sec_def_key_prefix_map.get(sec_def_type)
 
         if not prefix_template:
-            logger.info('_check_sec_def_rate_limiting; no prefix_template for sec_def_type:%s', sec_def_type)
             return None
 
         # .. build the key prefix ..
         key_prefix = prefix_template.format(sec_def_id)
 
-        logger.info('_check_sec_def_rate_limiting; key_prefix:%s, remote_addr:%s', key_prefix, remote_addr)
-
         # .. log the known sec_def IDs before the check ..
         known_ids = list(self.server.rate_limiting_manager._sec_def_matchers.keys())
-        logger.info('_check_sec_def_rate_limiting; sec_def_id:%s, known_sec_def_ids:%s', sec_def_id, known_ids)
 
         # .. and check rate limiting.
         out = self.server.rate_limiting_manager.check_sec_def(sec_def_id, remote_addr, now_us, key_prefix)
-
-        logger.info('_check_sec_def_rate_limiting; sec_def_id:%s, result:%s', sec_def_id, out)
 
         return out
 

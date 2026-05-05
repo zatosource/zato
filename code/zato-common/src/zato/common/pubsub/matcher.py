@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from dataclasses import dataclass
+from logging import getLogger
 from typing import Dict, List, Optional
 import re
 
@@ -17,6 +18,11 @@ from gevent.lock import RLock
 # Zato
 from zato.common.api import PubSub
 from zato.common.pubsub.util import validate_pattern, validate_topic_name
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################

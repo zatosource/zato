@@ -1148,7 +1148,7 @@
                     default_slot.querySelector('[data-field="limit"]').value = rule.time_range[0].limit;
                     default_slot.querySelector('[data-field="window_unit"]').value = rule.time_range[0].limit_unit;
 
-                    if(!rule.time_range[0].disabled) {
+                    if(rule.time_range[0].disabled) {
                         var toggle_link = default_slot.querySelector('.rate-limiting-slot-toggle');
                         $.fn.zato.rate_limiting.toggle_slot(default_slot, toggle_link);
                     }

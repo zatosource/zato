@@ -40,7 +40,7 @@ from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, HotDeplo
     SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.bearer_token import BearerTokenManager
-from zato.common.broker_message import HOT_DEPLOY
+from zato.common.broker_message import HOT_DEPLOY, PUBSUB
 from zato.common.const import SECRETS
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import loads
@@ -1061,7 +1061,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
                     for stream_name, messages in result:
                         for msg_id, fields in messages:
-                            logger.info('Fire listener received: stream=%s msg_id=%s fields=%s', stream_name, msg_id, fields)
+                            # logger.info('Fire listener received: stream=%s msg_id=%s fields=%s', stream_name, msg_id, fields)
                             if stream_name == fire_stream:
                                 spawn(self._handle_fire_event, fields)
                             elif stream_name == timeout_stream:
@@ -1121,7 +1121,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         logger.info('Scheduler request listener greenlet started')
 
     def _handle_fire_event(self, fields:'dict') -> 'None':
-        """ Processes a fire event from the scheduler - invokes the target service. """
+        """ Processes a fire event from the scheduler - invokes the target service.
+        """
         import time as _time
         from json import loads as json_loads
         from bunch import Bunch
@@ -1129,7 +1130,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 
         payload_json = fields['payload']
-        logger.info('Fire event payload: %s', payload_json)
         ctx = json_loads(payload_json)
 
         job_id = ctx['job_id']
@@ -1176,7 +1176,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             logger.warning('Scheduler mark_complete failed; job_id=%s; name=%s; traceback=%s', job_id, job_name, format_exc())
 
     def _handle_timeout_event(self, fields:'dict') -> 'None':
-        """ Processes a timeout event from the scheduler. """
+        """ Processes a timeout event from the scheduler.
+        """
         job_id = fields['job_id']
         current_run = fields['current_run']
         elapsed_ms = fields['elapsed_ms']
@@ -1433,24 +1434,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
         # Zato
         from zato.common.api import PubSub
-        from zato.common.odb.model import PubSubPermission, SecurityBase
-
-        logger.debug('_load_pubsub_permissions: starting, cluster_id=%s', self.cluster_id)
+        from zato.common.odb.model import PubSubPermission, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 
         with closing(self.odb.session()) as session:
-
-            # First log all SecurityBase entries
-            all_sec = session.query(SecurityBase).all()
-            logger.debug('_load_pubsub_permissions: found %d SecurityBase entries in DB', len(all_sec))
-            for sec in all_sec:
-                logger.debug('_load_pubsub_permissions: SecurityBase id=%s, name=%s, username=%s', sec.id, sec.name, sec.username)
-
-            # Log all PubSubPermission entries
-            all_perms = session.query(PubSubPermission).filter(PubSubPermission.cluster_id == self.cluster_id).all()
-            logger.debug('_load_pubsub_permissions: found %d PubSubPermission entries in DB', len(all_perms))
-            for perm in all_perms:
-                logger.debug('_load_pubsub_permissions: PubSubPermission id=%s, sec_base_id=%s, pattern=%s',
-                    perm.id, perm.sec_base_id, perm.pattern)
 
             permissions = session.query(
                 PubSubPermission.pattern,
@@ -1463,14 +1449,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                 PubSubPermission.cluster_id == self.cluster_id
             ).all()
 
-            logger.debug('_load_pubsub_permissions: joined query returned %d rows', len(permissions))
+
 
             client_permissions = {}
             username_to_sec_name = {}
 
             for pattern_str, access_type, username, sec_name in permissions:
-                logger.debug('_load_pubsub_permissions: processing row - pattern=%s, access_type=%s, username=%s, sec_name=%s',
-                    pattern_str, access_type, username, sec_name)
 
                 if username not in client_permissions:
                     client_permissions[username] = []
@@ -1490,21 +1474,41 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                             'access_type': PubSub.API_Client.Subscriber
                         })
 
-            logger.debug('_load_pubsub_permissions: processed %d unique users: %s', len(client_permissions), list(client_permissions.keys()))
-            logger.debug('_load_pubsub_permissions: username_to_sec_name=%s', username_to_sec_name)
-
             for username, perms in client_permissions.items():
-                logger.debug('Loading permissions for user %s: %s', username, perms)
                 self.pubsub_pattern_matcher.add_client(username, perms)
 
                 sec_name = username_to_sec_name.get(username)
                 if sec_name:
                     self.pubsub_subscriptions.register_user(username, sec_name)
-                    logger.debug('Registered user %s with sec_name %s', username, sec_name)
 
-                logger.debug('Loaded pub/sub permissions for user: %s (%d patterns)', username, len(perms))
+            # Load subscriptions with sub_keys and their topics
+            subscriptions = session.query(
+                PubSubSubscription.sub_key,
+                SecurityBase.username,
+                SecurityBase.name
+            ).join(
+                SecurityBase, PubSubSubscription.sec_base_id == SecurityBase.id
+            ).filter(
+                PubSubSubscription.cluster_id == self.cluster_id
+            ).all()
 
-        logger.debug('_load_pubsub_permissions: completed')
+            for sub_key, username, sec_name in subscriptions:
+                self.pubsub_subscriptions.register_user(username, sec_name, sub_key)
+
+            # Load subscription topics and set up Redis consumer groups
+            subscription_topics = session.query(
+                PubSubSubscription.sub_key,
+                PubSubTopic.name
+            ).join(
+                PubSubSubscriptionTopic, PubSubSubscription.id == PubSubSubscriptionTopic.subscription_id
+            ).join(
+                PubSubTopic, PubSubSubscriptionTopic.topic_id == PubSubTopic.id
+            ).filter(
+                PubSubSubscription.cluster_id == self.cluster_id
+            ).all()
+
+            for sub_key, topic_name in subscription_topics:
+                self.pubsub_redis.subscribe(sub_key, topic_name)
 
 # ################################################################################################################################
 
@@ -1520,6 +1524,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         # .. now reload it ..
         self.worker_store.init()
         self.worker_store.init_pubsub()
+
+        # .. reload pub/sub permissions from database ..
+        self._load_pubsub_permissions()
+
+        # .. notify the pub/sub server too ..
+        pubsub_msg = Bunch()
+        pubsub_msg.cid = new_cid_server()
+        pubsub_msg.action = PUBSUB.RELOAD_CONFIG.value
 
         # .. reload the scheduler if it was started ..
         if getattr(self, '_scheduler_started', False):
