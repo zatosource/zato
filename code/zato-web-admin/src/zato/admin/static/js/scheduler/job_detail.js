@@ -1719,9 +1719,64 @@ $.fn.zato.scheduler.job_detail.render = function(job, job_id, cluster_id) {
 // Init
 // ////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.scheduler.job_detail._generate_fake_job = function() {
+    var now = Date.now();
+    return {
+        name: "etl.salesforce.ingest",
+        service: "etl.services.SalesforceIngest",
+        is_active: true,
+        is_running: true,
+        next_fire_utc: new Date(now + 47000).toISOString(),
+        start_date: "2024-03-10T06:00:00Z",
+        interval_ms: 60000,
+        minutes: 1,
+        repeats: 0,
+        jitter_ms: 2000,
+        timezone: "Europe/Berlin",
+        max_execution_time_ms: 120000,
+        extra: '{"source": "salesforce", "batch_size": 500, "endpoint": "https://api.salesforce.com/v2/contacts", "retry_policy": {"max_retries": 3, "backoff_ms": 1000}}',
+        recent_outcomes: ["ok","ok","ok","ok","ok","ok","skipped_already_in_flight","ok","ok","ok"]
+    };
+};
+
+$.fn.zato.scheduler.job_detail._generate_fake_history = function() {
+    var now = Date.now();
+    var oc_pool = ["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","skipped_already_in_flight"];
+    var rows = [];
+    var run_id = 349500;
+    for (var i = 0; i < 500; i++) {
+        var outcome = oc_pool[Math.floor(Math.random() * oc_pool.length)];
+        var duration = outcome === "ok" ? Math.floor(Math.random() * 3000) + 200 : 0;
+        var delay = 0;
+        var ago = i * 60000 + Math.floor(Math.random() * 5000);
+        var log_summary = outcome === "skipped_already_in_flight"
+            ? {error: 0, warn: 0, info: 0, system: 2}
+            : {error: 0, warn: 0, info: Math.floor(Math.random() * 5) + 1, system: 2};
+        rows.push({
+            job_id: 1053,
+            job_name: "etl.salesforce.ingest",
+            current_run: run_id--,
+            actual_fire_time_iso: new Date(now - ago).toISOString(),
+            planned_fire_time_iso: new Date(now - ago + delay).toISOString(),
+            outcome: outcome,
+            duration_ms: outcome === "skipped_already_in_flight" ? null : duration,
+            delay_ms: delay,
+            error: null,
+            log_summary: log_summary
+        });
+    }
+    return rows;
+};
+
 $.fn.zato.scheduler.job_detail.init = function(job_data, job_id, cluster_id, poll_config) {
     var kit = $.fn.zato.dashboard_kit;
     var dash = $.fn.zato.scheduler.dashboard;
+    var detail = $.fn.zato.scheduler.job_detail;
+
+    if (kit.needsTestData) {
+        job_data = detail._generate_fake_job();
+    }
+
     if (typeof job_data === 'string') {
         try { job_data = JSON.parse(job_data); } catch(parse_error) { job_data = {}; }
     }
@@ -1731,8 +1786,106 @@ $.fn.zato.scheduler.job_detail.init = function(job_data, job_id, cluster_id, pol
         object_path: 'job/{id}/',
         run_path: 'job/{id}/run/{run_id}/'
     });
-    $.fn.zato.scheduler.job_detail._job_data = job_data;
-    $.fn.zato.scheduler.job_detail._object_id = Number(job_id);
-    $.fn.zato.scheduler.job_detail._poll_config = poll_config;
-    $.fn.zato.scheduler.job_detail.render(job_data, job_id, cluster_id);
+    detail._job_data = job_data;
+    detail._object_id = Number(job_id);
+    detail._poll_config = poll_config;
+
+    if (kit.needsTestData) {
+        detail._runs_rendered = true;
+    }
+
+    detail.render(job_data, job_id, cluster_id);
+
+    if (kit.needsTestData) {
+        detail._poll_in_flight = true;
+        var fakeHistory = detail._generate_fake_history();
+        detail._chart_history = fakeHistory;
+        detail.render_timeline(fakeHistory);
+
+        var $body = $('#detail-history-table-body');
+        $body.empty();
+        detail._new_row_count = 50;
+        var page = fakeHistory.slice(0, 50);
+        for (var rowIndex = 0; rowIndex < page.length; rowIndex++) {
+            var record = page[rowIndex];
+            $body.append(detail._render_single_row(record, ''));
+            var $row = $body.find('tr[data-run="' + record.current_run + '"]').not('.detail-panel-row');
+            $row.data('record', record);
+            $body.append(detail._render_panel_row(record.current_run));
+        }
+        detail._init_outcome_tooltips($body);
+        detail._bind_panel_toggles($body);
+        detail._apply_recency_gradient($body);
+        detail._update_filtered_stats(fakeHistory, fakeHistory.length);
+    }
 };
+
+(function() {
+    var kit = $.fn.zato.dashboard_kit;
+
+    if (!kit.needsTestData) {
+        return;
+    }
+
+    var now = Date.now();
+    var messages = {
+        'INFO': [
+            'Processing batch: {"batch_id": "batch-2026-05-05-0041", "source": "s3://data-lake-prod/incoming/contacts/2026/05/05/", "files": 847, "total_size_mb": 2341.7}',
+            'Synced 142 records to CRM: {"endpoint": "https://crm.internal:8443/api/v2/contacts", "created": 38, "updated": 97, "skipped": 7, "duration_ms": 3841}',
+            'Cache refreshed: evicted 24,817 stale entries, loaded 31,204 new entries from PostgreSQL materialized view "mv_product_catalog"',
+            'Checkpoint saved: {"checkpoint_id": "ckpt-0041", "offset": 847293, "partition": 7, "consumer_group": "etl-pipeline-v3", "topic": "events.enriched"}',
+            'Heartbeat OK: cluster=zato-prod-east-1, node=worker-07, pid=48291, uptime=847291s, cpu=12.4%, rss=2841MiB, open_fds=847'
+        ],
+        'SYSTEM': [
+            'Job started: scheduler_tick=2026-05-05T07:03:14.001Z, planned_fire=2026-05-05T07:03:14.000Z, drift_ms=1, cid=zc8f3a2b, server=zato-prod-east-1/worker-07',
+            'Job finished: duration_ms=2841, outcome=ok, next_run=2026-05-05T07:04:14.000Z, items_processed=142, peak_memory_mb=284'
+        ]
+    };
+    var entries = [];
+    var base = now - 3000;
+    var levels = ['SYSTEM','INFO','INFO','INFO','INFO','INFO','INFO','SYSTEM'];
+    for (var entryIndex = 0; entryIndex < levels.length; entryIndex++) {
+        var level = levels[entryIndex];
+        var pool = messages[level];
+        var timestamp = new Date(base + entryIndex * 400);
+        entries.push({
+            timestamp_iso: timestamp.toISOString(),
+            level: level,
+            message: pool[entryIndex % pool.length]
+        });
+    }
+    kit.record_detail._fake_run_data = {
+        record: {
+            job_id: 1053,
+            job_name: "etl.salesforce.ingest",
+            current_run: 349454,
+            actual_fire_time_iso: new Date(now - 3000).toISOString(),
+            planned_fire_time_iso: new Date(now - 3120).toISOString(),
+            outcome: "ok",
+            duration_ms: 2841,
+            delay_ms: 0,
+            error: null,
+            log_summary: {error: 0, warn: 0, info: 6, system: 2}
+        },
+        prev_run: 349453,
+        next_run: 349455,
+        entries: entries
+    };
+    kit.record_detail._orig_fetch_logs = kit.record_detail._fetch_logs;
+    kit.record_detail._fetch_logs = function($panel_log, params, config) {
+        if (!kit.record_detail._fake_run_data) {
+            kit.record_detail._orig_fetch_logs($panel_log, params, config);
+            return;
+        }
+        var fakeEntries = kit.record_detail._fake_run_data.entries;
+        var since = params.since_idx;
+        if (since >= fakeEntries.length) return;
+        var toRender = fakeEntries.slice(since);
+        for (var renderIndex = 0; renderIndex < toRender.length; renderIndex++) {
+            var isLast = (since + renderIndex + 1) >= fakeEntries.length;
+            var html = kit.record_detail.render_log_entry(toRender[renderIndex], isLast, config.panel);
+            $panel_log.append(html);
+        }
+        $panel_log.attr('data-since-idx', fakeEntries.length);
+    };
+})();

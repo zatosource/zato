@@ -118,7 +118,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         });
     };
 
-    kit.record_detail._fetch_run = function(config, run_number, callback) {
+    kit.record_detail._orig_fetch_run = function(config, run_number, callback) {
         $.ajax({
             type: 'POST',
             url: config.poll_url,
@@ -137,6 +137,16 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 callback(data);
             }
         });
+    };
+
+    kit.record_detail._fake_run_data = null;
+
+    kit.record_detail._fetch_run = function(config, run_number, callback) {
+        if (kit.record_detail._fake_run_data) {
+            callback(kit.record_detail._fake_run_data);
+            return;
+        }
+        kit.record_detail._orig_fetch_run(config, run_number, callback);
     };
 
     function render_run_nav($container, prev_run, next_run, navigate_fn) {
