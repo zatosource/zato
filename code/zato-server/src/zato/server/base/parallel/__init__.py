@@ -1507,8 +1507,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                 PubSubSubscription.cluster_id == self.cluster_id
             ).all()
 
-            for sub_key, topic_name in subscription_topics:
-                self.pubsub_redis.subscribe(sub_key, topic_name)
+            if self._has_pubsub_redis:
+                for sub_key, topic_name in subscription_topics:
+                    self.pubsub_redis.subscribe(sub_key, topic_name)
 
 # ################################################################################################################################
 
