@@ -55,6 +55,7 @@ from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.sap import SAPWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
 from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
+from zato.server.generic.api.channel_mcp import ChannelMCPWrapper
 from zato.server.generic.api.channel_openapi import ChannelOpenAPIWrapper
 from zato.server.generic.api.cloud_confluence import CloudConfluenceWrapper
 from zato.server.generic.api.cloud_jira import CloudJiraWrapper
@@ -167,6 +168,9 @@ class WorkerStore(_WorkerStoreBase):
         # To expedite look-ups
         self._simple_types = simple_types
 
+        # Generic connections - Channel - MCP
+        self.channel_mcp = {}
+
         # Generic connections - Channel - OpenAPI
         self.channel_openapi = {}
 
@@ -217,6 +221,7 @@ class WorkerStore(_WorkerStoreBase):
 
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP: self.channel_mcp,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI: self.channel_openapi,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: self.cloud_confluence,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: self.cloud_jira,
@@ -229,6 +234,7 @@ class WorkerStore(_WorkerStoreBase):
         }
 
         self._generic_conn_handler = {
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP: ChannelMCPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI: ChannelOpenAPIWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: CloudConfluenceWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: CloudJiraWrapper,
@@ -735,6 +741,7 @@ class WorkerStore(_WorkerStoreBase):
 
         # Local aliases
         channel_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, {})
+        channel_mcp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP, {})
         channel_openapi_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI, {})
         cloud_confluence_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE, {})
         cloud_jira_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA, {})
@@ -747,6 +754,7 @@ class WorkerStore(_WorkerStoreBase):
         # These generic connections are regular - they use common API methods for such connections
         regular_maps = [
             channel_kafka_map,
+            channel_mcp_map,
             channel_openapi_map,
             cloud_confluence_map,
             cloud_jira_map,
