@@ -12,6 +12,7 @@ from logging import getLogger
 # Zato
 from zato.server.connection.mcp.handler import MCPHandler
 from zato.server.connection.mcp.registry import ToolRegistry
+from zato.server.connection.mcp.session import MCPSessionManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,10 +51,15 @@ class ChannelMCPWrapper:
         # .. build the tool registry ..
         tool_registry = ToolRegistry(self.server.service_store, allowed_services)
 
-        # .. build the handler with an invoke function that calls services through the server.
-        self.handler = MCPHandler(tool_registry, self._invoke_service)
+        # .. build the session manager ..
+        session_manager = MCPSessionManager()
 
-        logger.info('MCP channel `%s` built with %d allowed services', self.config.name, len(allowed_services))
+        # .. build the handler with an invoke function that calls services through the server.
+        self.handler = MCPHandler(tool_registry, self._invoke_service, session_manager)
+
+        service_suffix = 'service' if len(allowed_services) == 1 else 'services'
+        sorted_services = sorted(allowed_services)
+        logger.info('MCP channel `%s` built with %d allowed %s: %s', self.config.name, len(allowed_services), service_suffix, sorted_services)
 
 # ################################################################################################################################
 
