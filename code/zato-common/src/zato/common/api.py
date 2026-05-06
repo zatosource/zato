@@ -750,6 +750,7 @@ class GENERIC:
 
     class CONNECTION:
         class TYPE:
+            CHANNEL_MCP = 'channel-mcp'
             CHANNEL_OPENAPI = 'channel-openapi'
             CHANNEL_KAFKA = 'channel-kafka'
             CLOUD_CONFLUENCE = 'cloud-confluence'
