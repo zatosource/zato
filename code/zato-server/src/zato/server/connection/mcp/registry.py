@@ -40,18 +40,13 @@ class ToolRegistry:
     def __init__(self, service_store:'ServiceStore', allowed_services:'strlist') -> 'None':
         self.service_store = service_store
         self.allowed_services = allowed_services
-
-        # Cached tools/list response, built lazily on first access or on rebuild
         self._cached_tools:'strdictlist' = []
-        self._is_built = False
 
 # ################################################################################################################################
 
     def get_tools(self) -> 'strdictlist':
-        """ Returns the cached tools list. Builds it on first call.
+        """ Returns the cached tools list.
         """
-        if not self._is_built:
-            self.rebuild()
 
         out = self._cached_tools
         return out
@@ -104,9 +99,9 @@ class ToolRegistry:
             tools.append(tool)
 
         self._cached_tools = tools
-        self._is_built = True
 
-        logger.info('MCP tool registry rebuilt with %d tools', len(tools))
+        tool_suffix = 'tool' if len(tools) == 1 else 'tools'
+        logger.info('MCP tool registry built with %d %s', len(tools), tool_suffix)
 
 # ################################################################################################################################
 

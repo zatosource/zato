@@ -972,6 +972,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                 'payload_name': item['full_path']
             })
 
+        # All services are deployed, build MCP tool registries now ..
+        self._build_mcp_tool_registries()
+
         # The server is started so we can deploy what we were told to handle on startup.
         if self.deploy_auto_from:
             self.handle_enmasse_auto_from()
@@ -989,6 +992,18 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self.log_environment_details()
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
+
+# ################################################################################################################################
+
+    def _build_mcp_tool_registries(self) -> 'None':
+        """ Builds tool registries for all MCP channels.
+        Called after all services (internal and user-defined) are deployed.
+        """
+        for channel_config in self.worker_store.channel_mcp.values():
+            wrapper = channel_config.conn
+            if wrapper:
+                if wrapper.handler:
+                    wrapper.handler.tool_registry.rebuild()
 
 # ################################################################################################################################
 

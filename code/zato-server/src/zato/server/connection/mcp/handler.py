@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import dataclasses
-from http.client import NO_CONTENT, OK
+from http.client import NO_CONTENT, NOT_FOUND, OK
 from logging import getLogger
 
 # Zato
@@ -18,10 +18,12 @@ from zato.common.json_internal import dumps, loads
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, strdictlist, stranydict
+    from zato.common.typing_ import any_, anydict, strdictlist, stranydict, strnone
     from zato.server.connection.mcp.registry import ToolRegistry
+    from zato.server.connection.mcp.session import MCPSessionManager
     from zato.server.service.store import ServiceStore
 
+    MCPSessionManager = MCPSessionManager
     ServiceStore = ServiceStore
     strdictlist = strdictlist
 
@@ -49,15 +51,19 @@ _mcp_protocol_version = '2025-11-05'
 _server_name = 'Apache'
 _server_version = '2.4'
 
+# HTTP status code for invalid/unknown session
+_http_not_found = NOT_FOUND
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 @dataclasses.dataclass(init=False)
 class MCPResponse:
-    """ Wraps a JSON-RPC response body and its HTTP status code.
+    """ Wraps a JSON-RPC response body, HTTP status code, and optional session ID.
     """
-    body: 'any_'
+    body:        'any_'
     status_code: 'int'
+    session_id:  'strnone' = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,13 +105,15 @@ class MCPHandler:
     """ Handles MCP JSON-RPC 2.0 dispatch for a single MCP channel.
     Routes initialize, tools/list, tools/call, and ping methods.
     """
-    def __init__(self, tool_registry:'ToolRegistry', invoke_func:'any_') -> 'None':
+    def __init__(self, tool_registry:'ToolRegistry', invoke_func:'any_', session_manager:'MCPSessionManager') -> 'None':
         self.tool_registry = tool_registry
         self.invoke_func = invoke_func
+        self.session_manager = session_manager
+        self._pending_session_id:'strnone' = None
 
 # ################################################################################################################################
 
-    def handle_raw_request(self, raw_data:'bytes') -> 'MCPResponse':
+    def handle_raw_request(self, raw_data:'bytes', session_id:'strnone'=None, remote_address:'str'='') -> 'MCPResponse':
         """ Parses raw bytes into JSON and dispatches.
         """
 
@@ -122,16 +130,31 @@ class MCPHandler:
             out.status_code = OK
             return out
 
+        # .. if a session ID was provided, validate it ..
+        if session_id:
+            if not self.session_manager.validate(session_id):
+
+                out.body = _make_error_response(None, _error_invalid_req, 'Invalid or expired session')
+                out.status_code = _http_not_found
+                return out
+
+        # .. clear any pending session ID from a previous request
+        # and store the remote address for session creation logging ..
+        self._pending_session_id = None
+        self._remote_address = remote_address
+
         # .. handle batch (array) vs single (object) ..
         if isinstance(parsed, list):
 
             out = self._handle_batch(parsed)
+            out.session_id = self._pending_session_id
             return out
 
         if isinstance(parsed, dict):
 
             out.body = self._dispatch_single(parsed)
             out.status_code = OK
+            out.session_id = self._pending_session_id
             return out
 
         # .. anything else is an invalid request.
@@ -252,9 +275,12 @@ class MCPHandler:
     def _handle_initialize(self, request_id:'any_', params:'anydict') -> 'stranydict':
         """ Handles the MCP initialize request.
         Returns server capabilities and negotiated protocol version.
+        Creates a new session and stores its ID on _pending_session_id
+        for handle_raw_request to pick up and set as a response header.
         """
 
-        _ = params
+        # Create a new session for this client ..
+        self._pending_session_id = self.session_manager.create(_mcp_protocol_version, self._remote_address)
 
         result:'stranydict' = {
             'protocolVersion': _mcp_protocol_version,
@@ -376,6 +402,33 @@ class MCPHandler:
         """
 
         out = _make_success_response(request_id, {})
+        return out
+
+# ################################################################################################################################
+
+    def handle_delete_session(self, session_id:'strnone') -> 'MCPResponse':
+        """ Handles an HTTP DELETE request to terminate an MCP session.
+        """
+
+        # Our response to produce
+        out = MCPResponse()
+        out.session_id = None
+
+        if not session_id:
+            out.body = None
+            out.status_code = _http_not_found
+            return out
+
+        was_deleted = self.session_manager.delete(session_id)
+
+        if was_deleted:
+            out.body = None
+            out.status_code = OK
+            return out
+
+        # .. the session did not exist.
+        out.body = None
+        out.status_code = _http_not_found
         return out
 
 # ################################################################################################################################

@@ -161,7 +161,7 @@ def ensure_mcp_channel_exists(session, cluster_id):
 
         channel = HTTPSOAP(
             None, mcp_channel_name, True, True, CONNECTION.CHANNEL,
-            URL_TYPE.PLAIN_HTTP, None, mcp_channel_url_path, 'POST', '', None, DATA_FORMAT.JSON,
+            URL_TYPE.PLAIN_HTTP, None, mcp_channel_url_path, None, '', None, DATA_FORMAT.JSON,
             service=service, cluster=cluster)
         session.add(channel)
 
@@ -176,7 +176,7 @@ def ensure_mcp_channel_exists(session, cluster_id):
         generic_conn.is_channel = True
         generic_conn.is_outconn = False
         generic_conn.cluster_id = cluster_id
-        generic_conn.opaque1 = {'services': ['helpers.echo']}
+        generic_conn.opaque1 = '{"services": ["helpers.echo"]}'
 
         session.add(generic_conn)
 
