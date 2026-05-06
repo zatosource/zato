@@ -1067,7 +1067,14 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
     // Poll
     // ////////////////////////////////////////////////////////////////////////
 
+    dash._fake_data = null;
+
     dash.poll = function() {
+        if (dash._fake_data) {
+            dash.render(dash._fake_data);
+            return;
+        }
+
         var old_run_ts = {};
         $('#dashboard-recent-body tr[data-ts]').each(function() {
             var ts = $(this).attr('data-ts');
@@ -1113,9 +1120,126 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
     // Init
     // ////////////////////////////////////////////////////////////////////////
 
+    dash._generate_fake_data = function() {
+        var job_names = [
+            "billing.invoice.generate", "billing.payment.reconcile", "billing.dunning.notify",
+            "crm.contacts.sync", "crm.leads.score", "crm.deals.update", "crm.activity.aggregate",
+            "erp.inventory.reorder", "erp.shipment.track", "erp.warehouse.sync",
+            "reporting.daily.summary", "reporting.weekly.kpi", "reporting.monthly.revenue",
+            "reporting.executive.brief", "reporting.compliance.audit",
+            "monitoring.health.check", "monitoring.uptime.ping", "monitoring.latency.measure",
+            "monitoring.disk.usage", "monitoring.memory.alert",
+            "etl.salesforce.ingest", "etl.hubspot.sync", "etl.snowflake.load",
+            "etl.postgres.replicate", "etl.redis.warmup", "etl.s3.archive",
+            "notifications.email.digest", "notifications.slack.alert", "notifications.sms.reminder",
+            "notifications.webhook.retry", "notifications.push.campaign",
+            "security.cert.expiry.check", "security.token.rotate", "security.audit.log.export",
+            "security.ip.blocklist.refresh", "security.vulnerability.scan",
+            "cache.invalidate.stale", "cache.warmup.popular", "cache.redis.compact",
+            "integration.sap.orders", "integration.oracle.sync", "integration.jira.issues",
+            "integration.confluence.pages", "integration.github.webhooks",
+            "data.cleanup.expired", "data.archive.old.records", "data.gdpr.anonymize",
+            "data.backup.incremental", "data.index.rebuild",
+            "scheduler.self.check", "scheduler.queue.drain", "scheduler.metrics.export",
+            "api.rate.limit.reset", "api.quota.recalculate", "api.usage.aggregate",
+            "workflow.approval.escalate", "workflow.sla.check", "workflow.timeout.sweep",
+            "ml.model.retrain", "ml.predictions.batch", "ml.features.compute",
+            "geo.coordinates.geocode", "geo.timezone.update", "geo.address.validate",
+            "messaging.queue.dlq.retry", "messaging.topic.compact", "messaging.consumer.rebalance",
+            "file.transfer.outbound", "file.transfer.inbound", "file.cleanup.temp",
+            "auth.session.purge", "auth.mfa.sync"
+        ];
+        var svc = [
+            "billing.services.InvoiceGenerator", "billing.services.PaymentReconciler", "billing.services.DunningNotifier",
+            "crm.services.ContactSync", "crm.services.LeadScorer", "crm.services.DealUpdater", "crm.services.ActivityAggregator",
+            "erp.services.InventoryReorder", "erp.services.ShipmentTracker", "erp.services.WarehouseSync",
+            "reporting.services.DailySummary", "reporting.services.WeeklyKPI", "reporting.services.MonthlyRevenue",
+            "reporting.services.ExecutiveBrief", "reporting.services.ComplianceAudit",
+            "monitoring.services.HealthCheck", "monitoring.services.UptimePing", "monitoring.services.LatencyMeasure",
+            "monitoring.services.DiskUsage", "monitoring.services.MemoryAlert",
+            "etl.services.SalesforceIngest", "etl.services.HubspotSync", "etl.services.SnowflakeLoad",
+            "etl.services.PostgresReplicate", "etl.services.RedisWarmup", "etl.services.S3Archive",
+            "notifications.services.EmailDigest", "notifications.services.SlackAlert", "notifications.services.SMSReminder",
+            "notifications.services.WebhookRetry", "notifications.services.PushCampaign",
+            "security.services.CertExpiryCheck", "security.services.TokenRotator", "security.services.AuditLogExport",
+            "security.services.IPBlocklistRefresh", "security.services.VulnerabilityScan",
+            "cache.services.InvalidateStale", "cache.services.WarmupPopular", "cache.services.RedisCompact",
+            "integration.services.SAPOrders", "integration.services.OracleSync", "integration.services.JiraIssues",
+            "integration.services.ConfluencePages", "integration.services.GitHubWebhooks",
+            "data.services.CleanupExpired", "data.services.ArchiveOldRecords", "data.services.GDPRAnonymize",
+            "data.services.BackupIncremental", "data.services.IndexRebuild",
+            "scheduler.services.SelfCheck", "scheduler.services.QueueDrain", "scheduler.services.MetricsExport",
+            "api.services.RateLimitReset", "api.services.QuotaRecalculate", "api.services.UsageAggregate",
+            "workflow.services.ApprovalEscalate", "workflow.services.SLACheck", "workflow.services.TimeoutSweep",
+            "ml.services.ModelRetrain", "ml.services.PredictionsBatch", "ml.services.FeaturesCompute",
+            "geo.services.Geocoder", "geo.services.TimezoneUpdate", "geo.services.AddressValidator",
+            "messaging.services.DLQRetry", "messaging.services.TopicCompact", "messaging.services.ConsumerRebalance",
+            "file.services.TransferOutbound", "file.services.TransferInbound", "file.services.CleanupTemp",
+            "auth.services.SessionPurge", "auth.services.MFASync"
+        ];
+        var oc_pool = ["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","skipped_already_in_flight"];
+        var now = Date.now();
+        var job_count = 79;
+        var extra_names = [
+            "payment.gateway.sync", "payment.refund.process", "payment.ledger.balance",
+            "inventory.forecast.run", "inventory.recount.trigger",
+            "compliance.pci.scan", "compliance.sox.report", "compliance.gdpr.check"
+        ];
+        var extra_svc = [
+            "payment.services.GatewaySync", "payment.services.RefundProcessor", "payment.services.LedgerBalance",
+            "inventory.services.ForecastRunner", "inventory.services.RecountTrigger",
+            "compliance.services.PCIScan", "compliance.services.SOXReport", "compliance.services.GDPRCheck"
+        ];
+        var all_names = job_names.concat(extra_names);
+        var all_svc = svc.concat(extra_svc);
+        var jobs = [];
+        for (var i = 0; i < job_count; i++) {
+            var recent = [];
+            for (var r = 0; r < Math.floor(Math.random() * 8) + 3; r++) {
+                recent.push(oc_pool[Math.floor(Math.random() * oc_pool.length)]);
+            }
+            var is_running = i < 75;
+            jobs.push({
+                id: 1000 + i, name: all_names[i], service: all_svc[i],
+                is_active: true, is_running: is_running,
+                next_fire_utc: new Date(now + Math.floor(Math.random() * 600000) + 5000).toISOString(),
+                interval_ms: (Math.floor(Math.random() * 12) + 1) * 30000,
+                last_outcome: recent[0], recent_outcomes: recent
+            });
+        }
+        var timeline = [];
+        var run_id = 351000;
+        for (var t = 0; t < 3700; t++) {
+            var ji = Math.floor(Math.random() * job_count);
+            var outcome = oc_pool[Math.floor(Math.random() * oc_pool.length)];
+            var ago = Math.floor(Math.random() * 3600000);
+            timeline.push({
+                job_id: 1000 + ji, job_name: all_names[ji], current_run: run_id--,
+                actual_fire_time_iso: new Date(now - ago).toISOString(),
+                outcome: outcome, duration_ms: Math.floor(Math.random() * 2000) + 50,
+                error: null
+            });
+        }
+        timeline.sort(function(a, b) { return b.actual_fire_time_iso.localeCompare(a.actual_fire_time_iso); });
+        var oc_counts = {ok: 0, error: 0, timeout: 0, running: 0, skipped_already_in_flight: 0};
+        for (var c = 0; c < timeline.length; c++) {
+            if (oc_counts[timeline[c].outcome] !== undefined) oc_counts[timeline[c].outcome]++;
+        }
+        return {total_jobs: 79, active_jobs: 75, paused_jobs: 4, outcome_counts: oc_counts, jobs: jobs, history_timeline: timeline};
+    };
+
     dash.init = function(initial_data) {
         if (typeof initial_data === 'string') {
             try { initial_data = JSON.parse(initial_data); } catch(parse_error) { initial_data = {}; }
+        }
+        if (kit.needsTestData) {
+            dash._fake_data = dash._generate_fake_data();
+            initial_data = dash._fake_data;
+            var _orig_render = dash.render;
+            dash.render = function(data) {
+                _orig_render(data);
+                $('#stat-runs-sublabel').text('793k total').attr('title', '793,000 total');
+            };
         }
 
         kit.urls.init({

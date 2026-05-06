@@ -172,6 +172,8 @@ tbody tr[data-run]:not(.detail-panel-row) {
     background: #232336;
     border: 1px solid #3a3a52;
     font-size: 12px;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .detail-page-run .detail-panel-log {

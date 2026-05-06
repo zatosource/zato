@@ -87,12 +87,29 @@ pub fn humanize_ms(millis: u64) -> String {
 }
 
 /// Reconciles the running-job map with a freshly loaded list of scheduler jobs.
+/// A reload means the server (re)started, so any previously in-flight jobs
+/// will never receive completion callbacks - clear their in_flight state.
 pub fn reload_jobs(state: &mut scheduler::SchedulerState, new_jobs: &[crate::model::SchedulerJob]) {
     let new_ids: std::collections::HashSet<i64> = new_jobs.iter().map(|job| job.id).collect();
     let old_ids: std::collections::HashSet<i64> = state.jobs.keys().copied().collect();
 
     for removed_id in old_ids.difference(&new_ids) {
         state.jobs.remove(removed_id);
+    }
+
+    // A reload implies the server restarted; all previous in-flight
+    // invocations are lost and will never complete.
+    for running_job in state.jobs.values_mut() {
+        if running_job.in_flight {
+            tracing::info!(
+                "Clearing stale in_flight for job id={} name={} (server reloaded)",
+                running_job.id,
+                running_job.name,
+            );
+            running_job.in_flight = false;
+            running_job.in_flight_since = None;
+            running_job.in_flight_run = None;
+        }
     }
 
     for scheduler_job in new_jobs {
