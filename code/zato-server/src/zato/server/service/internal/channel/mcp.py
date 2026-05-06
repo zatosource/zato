@@ -36,8 +36,10 @@ class MCPEndpoint(AdminService):
         """ Processes an incoming MCP request.
         """
 
-        # Look up the MCP channel wrapper from the worker store ..
-        wrapper = self.server.worker_store.channel_mcp[self.channel.name]
+        # Look up the MCP channel config from the worker store,
+        # then reach the ChannelMCPWrapper through its .conn attribute ..
+        channel_config = self.server.worker_store.channel_mcp[self.channel.name]
+        wrapper = channel_config.conn
 
         # .. get the raw request body ..
         raw_request = self.request.raw_request
