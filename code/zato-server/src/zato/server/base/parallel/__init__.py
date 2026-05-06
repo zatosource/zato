@@ -1409,13 +1409,15 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
     def _pre_initialize(self) -> 'None':
 
         from contextlib import closing
-        from zato.common.util.channel import ensure_django_channel_exists, ensure_openapi_channel_exists
+        from zato.common.util.channel import ensure_django_channel_exists, ensure_mcp_channel_exists, \
+            ensure_openapi_channel_exists
 
         with closing(self.odb.session()) as session:
             openapi_created = ensure_openapi_channel_exists(session, self.cluster_id)
             django_created = ensure_django_channel_exists(session, self.cluster_id)
+            mcp_created = ensure_mcp_channel_exists(session, self.cluster_id)
 
-            if openapi_created or django_created:
+            if openapi_created or django_created or mcp_created:
                 session.commit()
 
             if openapi_created:
@@ -1423,6 +1425,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
             if django_created:
                 logger.info('Created Django handler channel')
+
+            if mcp_created:
+                logger.info('Created MCP handler channel')
 
 # ################################################################################################################################
 
