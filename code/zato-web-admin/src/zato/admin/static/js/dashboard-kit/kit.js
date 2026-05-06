@@ -10,6 +10,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
 (function() {
     var kit = $.fn.zato.dashboard_kit;
 
+    kit.needsTestData = false;
+
     kit.labels = {
         ready: 'Now'
     };

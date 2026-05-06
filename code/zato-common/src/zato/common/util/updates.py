@@ -1435,11 +1435,10 @@ class Updater:
                     component_path, current_user))
                 return {'success': True, 'message': 'Proxy component not installed, skipped'}
 
-            if check_changes:
+            if check_changes and component_name != 'scheduler':
                 changed_files = self.get_stored_changed_files()
                 if changed_files:
                     component_dirs = {
-                        'scheduler': 'code/zato-scheduler/',
                         'server': 'code/zato-server/',
                         'dashboard': 'code/zato-web-admin/'
                     }
@@ -1517,7 +1516,7 @@ class Updater:
         changed_files = changed_files or []
 
         component_dirs = {
-            'scheduler': 'code/zato-scheduler/',
+            'scheduler': 'code/zato-rust/zato_scheduler_core/',
             'server': 'code/zato-server/',
             'dashboard': 'code/zato-web-admin/'
         }
