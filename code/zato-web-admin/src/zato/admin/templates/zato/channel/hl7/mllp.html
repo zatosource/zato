@@ -216,56 +216,40 @@
                         </tr>
 
                         <tr class="routing-block hidden">
-                            <td></td>
-                            <td><label>Sending app {{ create_form.msh3_sending_app }}</label></td>
+                            <td><label for="id_is_default">Default</label></td>
+                            <td>{{ create_form.is_default }}</td>
                         </tr>
                         <tr class="routing-block hidden">
-                            <td></td>
-                            <td><label>Sending facility {{ create_form.msh4_sending_facility }}</label></td>
+                            <td><label for="id_msh3_sending_app">Sending app</label></td>
+                            <td>{{ create_form.msh3_sending_app }} <span class="form_hint">MSH-3</span></td>
                         </tr>
                         <tr class="routing-block hidden">
-                            <td></td>
-                            <td><label>Receiving app {{ create_form.msh5_receiving_app }}</label></td>
+                            <td><label for="id_msh4_sending_facility">Sending facility</label></td>
+                            <td>{{ create_form.msh4_sending_facility }} <span class="form_hint">MSH-4</span></td>
                         </tr>
                         <tr class="routing-block hidden">
-                            <td></td>
-                            <td><label>Receiving facility {{ create_form.msh6_receiving_facility }}</label></td>
+                            <td><label for="id_msh5_receiving_app">Receiving app</label></td>
+                            <td>{{ create_form.msh5_receiving_app }} <span class="form_hint">MSH-5</span></td>
                         </tr>
                         <tr class="routing-block hidden">
-                            <td></td>
-                            <td><label>Message type {{ create_form.msh9_message_type }}</label></td>
+                            <td><label for="id_msh6_receiving_facility">Receiving facility</label></td>
+                            <td>{{ create_form.msh6_receiving_facility }} <span class="form_hint">MSH-6</span></td>
                         </tr>
                         <tr class="routing-block hidden">
-                            <td></td>
-                            <td><label>Trigger event {{ create_form.msh9_trigger_event }}</label></td>
+                            <td><label for="id_msh9_message_type">Message type</label></td>
+                            <td>{{ create_form.msh9_message_type }} <span class="form_hint">MSH-9.1</span></td>
                         </tr>
                         <tr class="routing-block hidden">
-                            <td></td>
-                            <td><label>Processing ID {{ create_form.msh11_processing_id }}</label></td>
+                            <td><label for="id_msh9_trigger_event">Trigger event</label></td>
+                            <td>{{ create_form.msh9_trigger_event }} <span class="form_hint">MSH-9.2</span></td>
                         </tr>
                         <tr class="routing-block hidden">
-                            <td></td>
-                            <td><label>Version {{ create_form.msh12_version_id }}</label></td>
+                            <td><label for="id_msh11_processing_id">Processing ID</label></td>
+                            <td>{{ create_form.msh11_processing_id }} <span class="form_hint">MSH-11</span></td>
                         </tr>
                         <tr class="routing-block hidden">
-                            <td></td>
-                            <td><label>{{ create_form.is_default }} Default</label></td>
-                        </tr>
-
-                        {% comment %} Deduplication window {% endcomment %}
-
-                        <tr>
-                            <td>Deduplication window</td>
-                            <td><a href="javascript:$.fn.zato.toggle_visibility('.dedup-block')">Toggle</a></td>
-                        </tr>
-
-                        <tr class="dedup-block hidden">
-                            <td></td>
-                            <td>
-                                <label>TTL {{ create_form.dedup_ttl_value }}</label>
-                                |
-                                <label>Unit {{ create_form.dedup_ttl_unit }}</label>
-                            </td>
+                            <td><label for="id_msh12_version_id">Version</label></td>
+                            <td>{{ create_form.msh12_version_id }} <span class="form_hint">MSH-12</span></td>
                         </tr>
 
                         {% comment %} Message tolerance {% endcomment %}
@@ -296,32 +280,48 @@
                             <td><label>{{ create_form.use_msh18_encoding }} Use MSH-18 encoding</label></td>
                         </tr>
 
-                        {% comment %} Protocol {% endcomment %}
+                        {% comment %} Logging {% endcomment %}
 
                         <tr>
-                            <td>Protocol</td>
-                            <td><a href="javascript:$.fn.zato.toggle_visibility('.protocol-block')">Toggle</a></td>
+                            <td>Logging</td>
+                            <td><a href="javascript:$.fn.zato.toggle_visibility('.logging-block')">Toggle</a></td>
                         </tr>
 
-                        <tr class="protocol-block hidden">
+                        <tr class="logging-block hidden">
                             <td></td>
                             <td>
                                 <label>Return errors {{ create_form.should_return_errors }}</label>
                                 |
                                 <label>Log I/O {{ create_form.should_log_messages }}</label>
+                                |
+                                <label>Log level {{ create_form.logging_level }}</label>
                             </td>
                         </tr>
-                        <tr class="protocol-block hidden">
+
+                        {% comment %} Encoding {% endcomment %}
+
+                        <tr>
+                            <td>Encoding</td>
+                            <td><a href="javascript:$.fn.zato.toggle_visibility('.encoding-block')">Toggle</a></td>
+                        </tr>
+
+                        <tr class="encoding-block hidden">
                             <td></td>
                             <td>
-                                <label>Log level {{ create_form.logging_level }}</label>
+                                <label>Data {{ create_form.data_encoding }}</label>
                                 |
-                                <label>Encoding {{ create_form.data_encoding }}</label>
-                                |
-                                <label>Default encoding {{ create_form.default_character_encoding }}</label>
+                                <label>Default {{ create_form.default_character_encoding }}</label>
                             </td>
                         </tr>
-                        <tr class="protocol-block hidden">
+
+                        {% comment %} Limits {% endcomment %}
+
+                        <tr>
+                            <td>Limits</td>
+                            <td><a href="javascript:$.fn.zato.toggle_visibility('.limits-block')">Toggle</a></td>
+                        </tr>
+
+                        <tr class="limits-block hidden">
                             <td></td>
                             <td>
                                 <label>Recv. timeout {{ create_form.recv_timeout }}</label>
@@ -331,12 +331,36 @@
                                 <label>Read buffer {{ create_form.read_buffer_size }}</label>
                             </td>
                         </tr>
-                        <tr class="protocol-block hidden">
+
+                        {% comment %} Separator {% endcomment %}
+
+                        <tr>
                             <td>Separator</td>
+                            <td><a href="javascript:$.fn.zato.toggle_visibility('.separator-block')">Toggle</a></td>
+                        </tr>
+
+                        <tr class="separator-block hidden">
+                            <td></td>
                             <td>
                                 <label>Start {{ create_form.start_seq }}</label>
                                 |
                                 <label>End {{ create_form.end_seq }}</label>
+                            </td>
+                        </tr>
+
+                        {% comment %} Dedup. window {% endcomment %}
+
+                        <tr>
+                            <td>Dedup. window</td>
+                            <td><a href="javascript:$.fn.zato.toggle_visibility('.dedup-block')">Toggle</a></td>
+                        </tr>
+
+                        <tr class="dedup-block hidden">
+                            <td></td>
+                            <td>
+                                <label>TTL {{ create_form.dedup_ttl_value }}</label>
+                                |
+                                <label>Unit {{ create_form.dedup_ttl_unit }}</label>
                             </td>
                         </tr>
 
@@ -384,56 +408,40 @@
                         </tr>
 
                         <tr class="routing-block hidden">
-                            <td></td>
-                            <td><label>Sending app {{ edit_form.msh3_sending_app }}</label></td>
+                            <td><label for="id_edit-is_default">Default</label></td>
+                            <td>{{ edit_form.is_default }}</td>
                         </tr>
                         <tr class="routing-block hidden">
-                            <td></td>
-                            <td><label>Sending facility {{ edit_form.msh4_sending_facility }}</label></td>
+                            <td><label for="id_edit-msh3_sending_app">Sending app</label></td>
+                            <td>{{ edit_form.msh3_sending_app }} <span class="form_hint">MSH-3</span></td>
                         </tr>
                         <tr class="routing-block hidden">
-                            <td></td>
-                            <td><label>Receiving app {{ edit_form.msh5_receiving_app }}</label></td>
+                            <td><label for="id_edit-msh4_sending_facility">Sending facility</label></td>
+                            <td>{{ edit_form.msh4_sending_facility }} <span class="form_hint">MSH-4</span></td>
                         </tr>
                         <tr class="routing-block hidden">
-                            <td></td>
-                            <td><label>Receiving facility {{ edit_form.msh6_receiving_facility }}</label></td>
+                            <td><label for="id_edit-msh5_receiving_app">Receiving app</label></td>
+                            <td>{{ edit_form.msh5_receiving_app }} <span class="form_hint">MSH-5</span></td>
                         </tr>
                         <tr class="routing-block hidden">
-                            <td></td>
-                            <td><label>Message type {{ edit_form.msh9_message_type }}</label></td>
+                            <td><label for="id_edit-msh6_receiving_facility">Receiving facility</label></td>
+                            <td>{{ edit_form.msh6_receiving_facility }} <span class="form_hint">MSH-6</span></td>
                         </tr>
                         <tr class="routing-block hidden">
-                            <td></td>
-                            <td><label>Trigger event {{ edit_form.msh9_trigger_event }}</label></td>
+                            <td><label for="id_edit-msh9_message_type">Message type</label></td>
+                            <td>{{ edit_form.msh9_message_type }} <span class="form_hint">MSH-9.1</span></td>
                         </tr>
                         <tr class="routing-block hidden">
-                            <td></td>
-                            <td><label>Processing ID {{ edit_form.msh11_processing_id }}</label></td>
+                            <td><label for="id_edit-msh9_trigger_event">Trigger event</label></td>
+                            <td>{{ edit_form.msh9_trigger_event }} <span class="form_hint">MSH-9.2</span></td>
                         </tr>
                         <tr class="routing-block hidden">
-                            <td></td>
-                            <td><label>Version {{ edit_form.msh12_version_id }}</label></td>
+                            <td><label for="id_edit-msh11_processing_id">Processing ID</label></td>
+                            <td>{{ edit_form.msh11_processing_id }} <span class="form_hint">MSH-11</span></td>
                         </tr>
                         <tr class="routing-block hidden">
-                            <td></td>
-                            <td><label>{{ edit_form.is_default }} Default</label></td>
-                        </tr>
-
-                        {% comment %} Deduplication window {% endcomment %}
-
-                        <tr>
-                            <td>Deduplication window</td>
-                            <td><a href="javascript:$.fn.zato.toggle_visibility('.dedup-block')">Toggle</a></td>
-                        </tr>
-
-                        <tr class="dedup-block hidden">
-                            <td></td>
-                            <td>
-                                <label>TTL {{ edit_form.dedup_ttl_value }}</label>
-                                |
-                                <label>Unit {{ edit_form.dedup_ttl_unit }}</label>
-                            </td>
+                            <td><label for="id_edit-msh12_version_id">Version</label></td>
+                            <td>{{ edit_form.msh12_version_id }} <span class="form_hint">MSH-12</span></td>
                         </tr>
 
                         {% comment %} Message tolerance {% endcomment %}
@@ -464,32 +472,48 @@
                             <td><label>{{ edit_form.use_msh18_encoding }} Use MSH-18 encoding</label></td>
                         </tr>
 
-                        {% comment %} Protocol {% endcomment %}
+                        {% comment %} Logging {% endcomment %}
 
                         <tr>
-                            <td>Protocol</td>
-                            <td><a href="javascript:$.fn.zato.toggle_visibility('.protocol-block')">Toggle</a></td>
+                            <td>Logging</td>
+                            <td><a href="javascript:$.fn.zato.toggle_visibility('.logging-block')">Toggle</a></td>
                         </tr>
 
-                        <tr class="protocol-block hidden">
+                        <tr class="logging-block hidden">
                             <td></td>
                             <td>
                                 <label>Return errors {{ edit_form.should_return_errors }}</label>
                                 |
                                 <label>Log I/O {{ edit_form.should_log_messages }}</label>
+                                |
+                                <label>Log level {{ edit_form.logging_level }}</label>
                             </td>
                         </tr>
-                        <tr class="protocol-block hidden">
+
+                        {% comment %} Encoding {% endcomment %}
+
+                        <tr>
+                            <td>Encoding</td>
+                            <td><a href="javascript:$.fn.zato.toggle_visibility('.encoding-block')">Toggle</a></td>
+                        </tr>
+
+                        <tr class="encoding-block hidden">
                             <td></td>
                             <td>
-                                <label>Log level {{ edit_form.logging_level }}</label>
+                                <label>Data {{ edit_form.data_encoding }}</label>
                                 |
-                                <label>Encoding {{ edit_form.data_encoding }}</label>
-                                |
-                                <label>Default encoding {{ edit_form.default_character_encoding }}</label>
+                                <label>Default {{ edit_form.default_character_encoding }}</label>
                             </td>
                         </tr>
-                        <tr class="protocol-block hidden">
+
+                        {% comment %} Limits {% endcomment %}
+
+                        <tr>
+                            <td>Limits</td>
+                            <td><a href="javascript:$.fn.zato.toggle_visibility('.limits-block')">Toggle</a></td>
+                        </tr>
+
+                        <tr class="limits-block hidden">
                             <td></td>
                             <td>
                                 <label>Recv. timeout {{ edit_form.recv_timeout }}</label>
@@ -499,12 +523,36 @@
                                 <label>Read buffer {{ edit_form.read_buffer_size }}</label>
                             </td>
                         </tr>
-                        <tr class="protocol-block hidden">
+
+                        {% comment %} Separator {% endcomment %}
+
+                        <tr>
                             <td>Separator</td>
+                            <td><a href="javascript:$.fn.zato.toggle_visibility('.separator-block')">Toggle</a></td>
+                        </tr>
+
+                        <tr class="separator-block hidden">
+                            <td></td>
                             <td>
                                 <label>Start {{ edit_form.start_seq }}</label>
                                 |
                                 <label>End {{ edit_form.end_seq }}</label>
+                            </td>
+                        </tr>
+
+                        {% comment %} Dedup. window {% endcomment %}
+
+                        <tr>
+                            <td>Dedup. window</td>
+                            <td><a href="javascript:$.fn.zato.toggle_visibility('.dedup-block')">Toggle</a></td>
+                        </tr>
+
+                        <tr class="dedup-block hidden">
+                            <td></td>
+                            <td>
+                                <label>TTL {{ edit_form.dedup_ttl_value }}</label>
+                                |
+                                <label>Unit {{ edit_form.dedup_ttl_unit }}</label>
                             </td>
                         </tr>
 
