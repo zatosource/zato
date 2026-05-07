@@ -6,6 +6,7 @@
 use std::sync::OnceLock;
 
 use chrono::{Datelike, FixedOffset, Timelike, Utc};
+use pyo3::intern;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDateTime, PyDict, PyString, PyTuple, PyTzInfo};
 
@@ -53,9 +54,9 @@ fn get_cached_attrs(server: &Bound<'_, PyAny>) -> PyResult<&'static CachedServer
         },
     };
     let _already_set = CACHED_ATTRS.set(attrs);
-    CACHED_ATTRS.get().ok_or_else(|| {
-        pyo3::exceptions::PyRuntimeError::new_err("failed to initialize cached server attrs")
-    })
+    CACHED_ATTRS
+        .get()
+        .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("failed to initialize cached server attrs"))
 }
 
 /// Truncates an internal correlation ID for external visibility.
@@ -124,7 +125,6 @@ pub fn handle_http_request(
     local_tz_offset_secs: i32,
     kwargs: Option<&Bound<'_, PyDict>>,
 ) -> PyResult<Py<PyTuple>> {
-
     let cached = get_cached_attrs(server)?;
 
     let user_agent: String = http_environ
@@ -136,18 +136,13 @@ pub fn handle_http_request(
         .map_or_else(|| new_cid_func.call0()?.extract(), |val| val.extract())?;
 
     let request_ts_utc = Utc::now();
-    let local_offset = FixedOffset::east_opt(local_tz_offset_secs)
-        .ok_or_else(|| pyo3::exceptions::PyValueError::new_err("invalid timezone offset"))?;
+    let local_offset =
+        FixedOffset::east_opt(local_tz_offset_secs).ok_or_else(|| pyo3::exceptions::PyValueError::new_err("invalid timezone offset"))?;
     let request_ts_local = request_ts_utc.with_timezone(&local_offset);
 
-    let tz_utc: Bound<'_, PyTzInfo> = py
-        .import("datetime")?
-        .getattr("timezone")?
-        .getattr("utc")?
-        .cast_into()?;
+    let tz_utc: Bound<'_, PyTzInfo> = py.import("datetime")?.getattr("timezone")?.getattr("utc")?.cast_into()?;
 
-    let zero_offset = FixedOffset::east_opt(0)
-        .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("cannot create UTC offset"))?;
+    let zero_offset = FixedOffset::east_opt(0).ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("cannot create UTC offset"))?;
 
     let py_ts_utc = chrono_to_py_datetime(py, &request_ts_utc.with_timezone(&zero_offset), &tz_utc)?;
     let py_ts_local = chrono_to_py_datetime(py, &request_ts_local, &tz_utc)?;
@@ -184,38 +179,51 @@ pub fn handle_http_request(
         (&cid, &py_ts_utc, http_environ, &worker_store, &user_agent, &remote_addr),
     );
 
-    let payload_bytes: Py<PyBytes> = match &payload_result {
-        Ok(payload) => {
-            if payload.is_none() {
-                PyBytes::new(py, b"").unbind()
-            } else if payload.is_instance_of::<PyBytes>() {
-                payload.extract::<Py<PyBytes>>()?
-            } else if payload.is_instance_of::<PyString>() {
-                let text: String = payload.extract()?;
-                PyBytes::new(py, text.as_bytes()).unbind()
-            } else {
-                payload.call_method1("encode", ("utf-8",))?.extract::<Py<PyBytes>>()?
+    // Check whether the dispatch returned a streaming iterator or a regular payload ..
+    let is_streaming = match &payload_result {
+        Ok(payload) => payload.hasattr(intern!(py, "__next__"))?,
+        Err(_) => false,
+    };
+
+    // .. for streaming responses, pass the iterator object through as-is ..
+    let payload_obj: Py<PyAny> = if is_streaming {
+        payload_result?.unbind()
+    } else {
+        // .. for regular responses, convert to PyBytes.
+        let payload_bytes: Py<PyBytes> = match &payload_result {
+            Ok(payload) => {
+                if payload.is_none() {
+                    PyBytes::new(py, b"").unbind()
+                } else if payload.is_instance_of::<PyBytes>() {
+                    payload.extract::<Py<PyBytes>>()?
+                } else if payload.is_instance_of::<PyString>() {
+                    let text: String = payload.extract()?;
+                    PyBytes::new(py, text.as_bytes()).unbind()
+                } else {
+                    payload.call_method1("encode", ("utf-8",))?.extract::<Py<PyBytes>>()?
+                }
             }
-        }
-        Err(err) => {
-            let traceback = err.traceback(py).map_or_else(String::new, |trace| {
-                trace.format().unwrap_or_default()
-            });
-            let error_msg = format!("`{cid}` Exception caught `{err}{traceback}`");
+            Err(err) => {
+                let traceback = err
+                    .traceback(py)
+                    .map_or_else(String::new, |trace| trace.format().unwrap_or_default());
+                let error_msg = format!("`{cid}` Exception caught `{err}{traceback}`");
 
-            let logger = py.import("logging")?.call_method1("getLogger", ("zato_rest",))?;
-            logger.call_method1("error", (&error_msg,))?;
+                let logger = py.import("logging")?.call_method1("getLogger", ("zato_rest",))?;
+                logger.call_method1("error", (&error_msg,))?;
 
-            http_environ.set_item("zato.http.response.status", "500 Internal Server Error")?;
+                http_environ.set_item("zato.http.response.status", "500 Internal Server Error")?;
 
-            let return_tracebacks: bool = server.getattr("return_tracebacks")?.extract()?;
-            let payload_str = if return_tracebacks {
-                error_msg
-            } else {
-                server.getattr("default_error_message")?.extract()?
-            };
-            PyBytes::new(py, payload_str.as_bytes()).unbind()
-        }
+                let return_tracebacks: bool = server.getattr("return_tracebacks")?.extract()?;
+                let payload_str = if return_tracebacks {
+                    error_msg
+                } else {
+                    server.getattr("default_error_message")?.extract()?
+                };
+                PyBytes::new(py, payload_str.as_bytes()).unbind()
+            }
+        };
+        payload_bytes.into_any()
     };
 
     let channel_item = http_environ.get_item("zato.channel_item")?;
@@ -238,9 +246,16 @@ pub fn handle_http_request(
     }
 
     let status_code: &str = status.split_whitespace().next().map_or("200", |code| code);
-    let response_size: usize = payload_bytes.bind(py).as_bytes().len();
 
-    let path_info: String = http_environ.get_item("PATH_INFO")?
+    // Streaming responses have unknown size at this point ..
+    let response_size: usize = if is_streaming {
+        0
+    } else {
+        payload_obj.bind(py).cast::<PyBytes>().map_or(0, |bytes| bytes.as_bytes().len())
+    };
+
+    let path_info: String = http_environ
+        .get_item("PATH_INFO")?
         .map_or_else(|| Ok(String::new()), |val| val.extract())?;
 
     if cached.needs_access_log {
@@ -252,16 +267,19 @@ pub fn handle_http_request(
         if should_log {
             let access_now = Utc::now();
             let access_delta = access_now - request_ts_utc;
-            let resp_time = format!("{}.{:06}",
+            let resp_time = format!(
+                "{}.{:06}",
                 access_delta.num_seconds(),
                 (access_delta.num_microseconds().unwrap_or(0) % 1_000_000).unsigned_abs(),
             );
 
             let req_ts_str = request_ts_local.format("%d/%b/%Y:%H:%M:%S %z").to_string();
 
-            let method: String = http_environ.get_item("REQUEST_METHOD")?
+            let method: String = http_environ
+                .get_item("REQUEST_METHOD")?
                 .map_or_else(|| Ok(String::new()), |val| val.extract())?;
-            let http_version: String = http_environ.get_item("SERVER_PROTOCOL")?
+            let http_version: String = http_environ
+                .get_item("SERVER_PROTOCOL")?
                 .map_or_else(|| Ok(String::new()), |val| val.extract())?;
 
             log_access(&AccessLogEntry {
@@ -295,7 +313,8 @@ pub fn handle_http_request(
         counter.call_method("labels", (), Some(&labels_kwargs))?.call_method0("inc")?;
         let hist_kwargs = PyDict::new(py);
         hist_kwargs.set_item("channel_name", &channel_name)?;
-        hist.call_method("labels", (), Some(&hist_kwargs))?.call_method1("observe", (response_time_secs,))?;
+        hist.call_method("labels", (), Some(&hist_kwargs))?
+            .call_method1("observe", (response_time_secs,))?;
     }
 
     let rest_log_ignore_obj = server.getattr("rest_log_ignore")?;
@@ -321,9 +340,13 @@ pub fn handle_http_request(
         });
     }
 
-    Ok(PyTuple::new(py, &[
-        PyString::new(py, &status).into_any(),
-        final_headers.into_any(),
-        payload_bytes.into_bound(py).into_any(),
-    ])?.unbind())
+    Ok(PyTuple::new(
+        py,
+        &[
+            PyString::new(py, &status).into_any(),
+            final_headers.into_any(),
+            payload_obj.into_bound(py).into_any(),
+        ],
+    )?
+    .unbind())
 }

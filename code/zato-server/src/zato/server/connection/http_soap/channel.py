@@ -90,6 +90,8 @@ _utc = _timezone.utc
 def _datetime_utcnow():
     return _datetime_class.now(_utc)
 _content_type_json = CONTENT_TYPE['JSON']
+_content_type_sse = 'text/event-stream'
+_streaming_flag = 'zato.mcp.is_streaming'
 _bad_request_types = (BadRequest, ModelValidationError, BackendInvocationError)
 _default_admin_channel = MISC.DefaultAdminInvokeChannel
 
@@ -399,6 +401,11 @@ class RequestDispatcher:
         wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
         wsgi_environ['zato.http.response.headers'].update(response.headers)
         wsgi_environ['zato.http.response.status'] = status_response[response.status_code]
+
+        # SSE streaming responses bypass gzip and serialization entirely ..
+        if response.content_type == _content_type_sse:
+            out = response.payload
+            return out
 
         if channel_item['content_encoding'] == 'gzip':
 
@@ -1040,9 +1047,11 @@ class RequestHandler:
             params_priority=channel_item.params_pri,
             zato_response_headers_container=zato_response_headers_container)
 
-        # Cache the response if needed (cache_key was already created on return from get_response_from_cache)
+        # Cache the response if needed (cache_key was already created on return from get_response_from_cache),
+        # .. but streaming responses must not be cached because they are iterators, not serializable.
         if channel_item['cache_type']:
-            self.set_response_in_cache(channel_item, cache_key, response)
+            if not wsgi_environ.get(_streaming_flag):
+                self.set_response_in_cache(channel_item, cache_key, response)
 
         # Having used the cache or not, we can return the response now
         return response

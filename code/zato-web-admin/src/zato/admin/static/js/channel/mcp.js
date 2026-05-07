@@ -244,6 +244,16 @@ $.fn.zato.channel.mcp.edit = function(id) {
     $.fn.zato.channel.mcp.badge_picker.load('edit', instance.id);
     $.fn.zato.channel.mcp.security_badge_picker.load('edit', instance.id);
     $.fn.zato.data_table._create_edit('edit', 'Update the MCP channel', id);
+
+    // .. the form was populated with the full path including the /mcp/ prefix,
+    // .. but the prefix is displayed as a separate non-editable span,
+    // .. so strip it from the input value.
+    var url_field = $('#id_edit-url_path');
+    var current_value = url_field.val();
+    if (current_value.indexOf('/mcp/') === 0) {
+        url_field.val(current_value.substring(5));
+    }
+
     $('#edit-div').dialog('option', 'width', '45em');
 };
 
@@ -259,10 +269,7 @@ $.fn.zato.channel.mcp.data_table.new_row = function(item, data, include_tr) {
     var is_active = item.is_active == true;
     var service_count = data.service_count !== undefined ? data.service_count : ($("#service_count_"+item.id).text() || 0);
     var security_count = data.security_count !== undefined ? data.security_count : ($("#security_count_"+item.id).text() || 0);
-    var url_path = item.url_path || '';
-    if (url_path && url_path.charAt(0) !== '/') {
-        url_path = '/' + url_path;
-    }
+    var url_path = item.url_path;
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
