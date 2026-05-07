@@ -438,3 +438,48 @@ class KafkaFacade:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class HL7MLLPInvoker:
+    """ Wraps a single HL7 MLLP outgoing connection for use from services.
+    """
+    _conn_name: 'str'
+    _outconn_hl7_mllp: 'anydict'
+
+    def __init__(self, conn_name:'str', outconn_hl7_mllp:'anydict') -> 'None':
+        self._conn_name = conn_name
+        self._outconn_hl7_mllp = outconn_hl7_mllp
+
+    def __repr__(self) -> 'str':
+        return f'HL7MLLPInvoker({self._conn_name} at {hex(id(self))})'
+
+    def to_dict(self) -> 'anydict':
+        return {'conn_name': self._conn_name}
+
+# ################################################################################################################################
+
+    def send(self, data:'str | bytes') -> 'object':
+        """ Sends an HL7 message through the named outgoing connection and returns an AckResult.
+        """
+        conn = self._outconn_hl7_mllp[self._conn_name].conn
+        out = conn.invoke(data)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MLLPFacade:
+    """ Provides dict-like access to HL7 MLLP outgoing connections from services via self.mllp.
+    """
+    _outconn_hl7_mllp: 'anydict'
+
+    def init(self, worker_store:'WorkerStore') -> 'None':
+        self._outconn_hl7_mllp = worker_store.outconn_hl7_mllp
+
+# ################################################################################################################################
+
+    def __getitem__(self, name:'str') -> 'HL7MLLPInvoker':
+        self._outconn_hl7_mllp[name]
+        return HL7MLLPInvoker(name, self._outconn_hl7_mllp)
+
+# ################################################################################################################################
+# ################################################################################################################################

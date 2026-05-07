@@ -497,6 +497,126 @@
                         </tr>
 
                         <tr>
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Recv. tmt.
+                                {{ edit_form.recv_timeout }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Log level
+                                {{ edit_form.logging_level }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Retry</td>
+                            <td>
+
+                                <label>
+                                Max retries
+                                {{ edit_form.max_retries }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Backoff base
+                                <span class="form_hint">(s)</span>
+                                {{ edit_form.backoff_base_seconds }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Backoff cap
+                                <span class="form_hint">(s)</span>
+                                {{ edit_form.backoff_cap_seconds }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Jitter
+                                <span class="form_hint">(%)</span>
+                                {{ edit_form.backoff_jitter_percent }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Circuit breaker</td>
+                            <td>
+
+                                <label>
+                                Threshold
+                                <span class="form_hint">(%)</span>
+                                {{ edit_form.circuit_breaker_threshold_percent }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Window
+                                <span class="form_hint">(s)</span>
+                                {{ edit_form.circuit_breaker_window_seconds }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Reset
+                                <span class="form_hint">(s)</span>
+                                {{ edit_form.circuit_breaker_reset_seconds }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>TLS</td>
+                            <td>
+
+                                <label>
+                                Cert
+                                {{ edit_form.tls_cert_path }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Key
+                                {{ edit_form.tls_key_path }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td></td>
+                            <td>
+
+                                <label>
+                                CA
+                                {{ edit_form.tls_ca_path }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
