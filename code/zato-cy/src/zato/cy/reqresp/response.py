@@ -124,7 +124,14 @@ class Response:
     def _set_payload(self, value, _json=DATA_FORMAT.JSON):
         """ Strings, lists and tuples are assigned as-is. Dicts as well if SIO is not used. However, if SIO is used
         the dicts are matched and transformed according to the SIO definition.
+        Generators/iterators (used for SSE streaming) are stored directly without serialization.
         """
+        # 0)
+        # Streaming iterators (e.g. SSE generators) bypass all serialization ..
+        if hasattr(value, '__next__'):
+            self._payload = value
+            return
+
         # 1)
         # This covers dict and subclasses, e.g. Bunch
         if isinstance(value, dict):

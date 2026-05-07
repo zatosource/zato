@@ -18,14 +18,19 @@ from zato.common.json_internal import dumps, loads
 # ################################################################################################################################
 
 if 0:
+    from collections.abc import Generator
     from zato.common.typing_ import any_, anydict, strdictlist, stranydict, strnone
     from zato.server.connection.mcp.registry import ToolRegistry
     from zato.server.connection.mcp.session import MCPSessionManager
     from zato.server.service.store import ServiceStore
 
+    Generator = Generator
     MCPSessionManager = MCPSessionManager
     ServiceStore = ServiceStore
     strdictlist = strdictlist
+
+# Type alias for the SSE bytes generator
+sse_bytes_gen = 'Generator[bytes, None, None]'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,6 +59,12 @@ _server_version = '2.4'
 # HTTP status code for invalid/unknown session
 _http_not_found = NOT_FOUND
 
+# SSE data line prefix
+_sse_data_prefix = b'data: '
+
+# SSE line terminator
+_sse_line_end = b'\n\n'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -61,9 +72,10 @@ _http_not_found = NOT_FOUND
 class MCPResponse:
     """ Wraps a JSON-RPC response body, HTTP status code, and optional session ID.
     """
-    body:        'any_'
-    status_code: 'int'
-    session_id:  'strnone' = None
+    body:         'any_'
+    status_code:  'int'
+    session_id:   'strnone'  = None
+    is_streaming: 'bool'     = False
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -381,6 +393,53 @@ class MCPHandler:
 
         out = _make_success_response(request_id, result)
         return out
+
+# ################################################################################################################################
+
+    def _handle_tools_call_streaming(self, request_id:'any_', params:'anydict') -> sse_bytes_gen:
+        """ Handles tools/call as an SSE stream, yielding bytes chunks.
+        Each yielded value is a complete SSE data frame containing a JSON-RPC message.
+        The final frame contains the tools/call result.
+        """
+
+        # Extract tool name from the params ..
+        tool_name = params.get('name')
+
+        if not tool_name:
+            error_response = _make_error_response(request_id, _error_invalid_params, 'Missing required parameter: name')
+            yield _sse_data_prefix + dumps(error_response).encode('utf8') + _sse_line_end
+            return
+
+        # .. check if the tool is allowed on this channel ..
+        if not self.tool_registry.is_tool_allowed(tool_name):
+            error_response = _make_error_response(request_id, _error_method_not_found, f'Tool not found: `{tool_name}`')
+            yield _sse_data_prefix + dumps(error_response).encode('utf8') + _sse_line_end
+            return
+
+        # .. extract arguments ..
+        arguments = params.get('arguments', {})
+
+        # .. invoke the service ..
+        try:
+            service_response = self.invoke_func(tool_name, arguments)
+        except Exception as error:
+            logger.warning('MCP: Service `%s` raised an exception during streaming', tool_name, exc_info=True)
+            result:'stranydict' = {
+                'content': [{'type': 'text', 'text': str(error)}],
+                'isError': True,
+            }
+            final_response = _make_success_response(request_id, result)
+            yield _sse_data_prefix + dumps(final_response).encode('utf8') + _sse_line_end
+            return
+
+        # .. wrap the successful response in MCP content format and yield the final SSE frame.
+        response_text = self._serialize_service_response(service_response)
+        result:'stranydict' = { # pyright: ignore[reportRedefinedVariable]
+            'content': [{'type': 'text', 'text': response_text}],
+        }
+        final_response = _make_success_response(request_id, result)
+
+        yield _sse_data_prefix + dumps(final_response).encode('utf8') + _sse_line_end
 
 # ################################################################################################################################
 

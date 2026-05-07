@@ -3,9 +3,9 @@
 use pyo3::prelude::*;
 use std::sync::atomic::Ordering::Relaxed;
 
-use super::{LISTEN_FD, ACCEPT_WATCHER, PyObject};
 use super::accept::accept_loop;
 use super::socket::create_listen_socket;
+use super::{ACCEPT_WATCHER, LISTEN_FD, PyObject};
 
 /// Main Python-visible HTTP server class.
 ///
@@ -28,7 +28,12 @@ impl HTTPServer {
     #[new]
     #[expect(clippy::missing_const_for_fn, reason = "PyO3 #[new] methods cannot be const")]
     fn new(host: String, port: u16, request_handler: PyObject, server_software: String) -> Self {
-        Self { request_handler, server_software, host, port }
+        Self {
+            request_handler,
+            server_software,
+            host,
+            port,
+        }
     }
 
     /// Binds the socket and enters the accept loop, blocking the current greenlet until stopped.
@@ -43,7 +48,11 @@ impl HTTPServer {
     }
 
     /// Closes the listener and stops the accept watcher to break the accept loop.
-    #[expect(clippy::unused_self, clippy::unnecessary_wraps, reason = "PyO3 method signature requires &self and PyResult return")]
+    #[expect(
+        clippy::unused_self,
+        clippy::unnecessary_wraps,
+        reason = "PyO3 method signature requires &self and PyResult return"
+    )]
     fn stop<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         close_listen_fd();
         stop_accept_watcher(py);
@@ -68,7 +77,9 @@ pub(super) fn close_listen_fd() {
     if fd >= 0 {
         // SAFETY: fd was a valid socket obtained from libc::socket/accept4 and
         // the atomic swap guarantees only one thread closes it.
-        unsafe { libc::close(fd); }
+        unsafe {
+            libc::close(fd);
+        }
     }
 }
 

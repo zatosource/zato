@@ -19,11 +19,20 @@ from zato.server.service.internal import AdminService
 # Content type for JSON-RPC responses
 _content_type_json = 'application/json'
 
+# Content type for SSE streaming responses
+_content_type_sse = 'text/event-stream'
+
 # MCP session header name (lowercase, as stored by HTTPRequestData._extract_headers)
 _session_header = 'mcp-session-id'
 
 # MCP session response header name (original casing for the HTTP response)
 _session_response_header = 'Mcp-Session-Id'
+
+# Accept header name (lowercase)
+_accept_header = 'accept'
+
+# WSGI environ key signaling that the response payload is a streaming iterator
+_streaming_flag = 'zato.mcp.is_streaming'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -80,6 +89,10 @@ class MCPEndpoint(AdminService):
         if isinstance(raw_request, str):
             raw_request = raw_request.encode('utf8')
 
+        # .. check whether the client accepts SSE streaming ..
+        accept_header = self.request.http.headers.get(_accept_header, '')
+        wants_streaming = _content_type_sse in accept_header
+
         # .. dispatch through the MCP handler ..
         mcp_response = wrapper.handler.handle_raw_request(raw_request, session_id, remote_address)
 
@@ -92,6 +105,21 @@ class MCPEndpoint(AdminService):
 
         if mcp_response.status_code == NO_CONTENT:
             self.response.payload = ''
+
+        elif mcp_response.is_streaming:
+            if wants_streaming:
+                # .. the handler produced a streaming generator and the client accepts SSE ..
+                self.response.content_type = _content_type_sse
+                self.response.payload = mcp_response.body
+                self.wsgi_environ[_streaming_flag] = True
+            else:
+                # .. the handler produced a streaming generator but the client wants JSON,
+                # .. so drain the generator and return the last frame as a regular response.
+                last_chunk = b''
+                for chunk in mcp_response.body:
+                    last_chunk = chunk
+                self.response.payload = last_chunk
+                self.response.data_format = _content_type_json
 
         else:
             self.response.payload = dumps(mcp_response.body)
