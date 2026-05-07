@@ -51,16 +51,16 @@
  * <style> block or on a specific .data-popup element to adjust
  * the appearance without editing this file.
  *
- * Variable                   Default         Purpose
- * --form-tab-bg              #052238         Tab strip background
- * --form-tab-color           #ffffffb3       Inactive tab text
- * --form-tab-color-bright    #ffffffe6       Active / hovered tab text
- * --form-tab-hover-bg        #ffffff14       Hovered tab background
- * --form-tab-active-bg       #ffffff33       Active tab background
- * --form-tab-active-border   #ccc            Active tab bottom border
- * --form-tab-glow            #d4af3733       Active tab text glow
- * --form-tab-font-size       10.5px          Tab label font size
- * --form-tab-border-width    3px             Bottom border thickness
+ * Variable                   Purpose
+ * --form-tab-bg              Tab strip background
+ * --form-tab-color           Inactive tab text
+ * --form-tab-color-bright    Active / hovered tab text
+ * --form-tab-hover-bg        Hovered tab background
+ * --form-tab-active-bg       Active tab background
+ * --form-tab-active-border   Active tab bottom border
+ * --form-tab-glow            Active tab text glow
+ * --form-tab-font-size       Tab label font size
+ * --form-tab-border-width    Bottom border thickness
  */
 
 /* Default variable values, scoped to .data-popup so they only
@@ -73,7 +73,7 @@
     --form-tab-active-bg: #ffffff33;
     --form-tab-active-border: #ccc;
     --form-tab-glow: #d4af3733;
-    --form-tab-font-size: 10.5px;
+    --form-tab-font-size: 0.59rem;
     --form-tab-border-width: 3px;
 }
 
