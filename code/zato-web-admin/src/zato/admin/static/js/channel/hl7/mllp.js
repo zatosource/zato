@@ -52,27 +52,12 @@ $(document).ready(function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.channel.hl7.mllp._reset_tabs = function(action) {
-    var div_id = action === 'edit' ? '#edit-div' : '#create-div';
-    var prefix = action === 'edit' ? 'mllp-edit-tab-panel-' : 'mllp-create-tab-panel-';
-    var tab_names = ['main', 'routing', 'protocol', 'logging', 'dedup'];
-
-    $(div_id + ' .dashboard-tab').each(function() {
-        var is_main = $(this).data('tab') === 'main';
-        $(this).toggleClass('dashboard-tab-active', is_main);
-        $(this).attr('aria-selected', is_main ? 'true' : 'false');
-    });
-
-    for (var i = 0; i < tab_names.length; i++) {
-        var panel = document.getElementById(prefix + tab_names[i]);
-        if (panel) {
-            panel.hidden = tab_names[i] !== 'main';
-        }
-    }
-
-    $.fn.zato.dashboard_kit.tabs.init({
-        tab_selector: div_id + ' .dashboard-tab',
-        panel_prefix: prefix,
-        default_tab: 'main'
+    var is_edit = action === 'edit';
+    $.fn.zato.form_tabs.reset({
+        div_id:       is_edit ? '#edit-div' : '#create-div',
+        panel_prefix: is_edit ? 'mllp-edit-tab-panel-' : 'mllp-create-tab-panel-',
+        tab_names:    ['main', 'routing', 'protocol', 'logging', 'deduplication'],
+        default_tab:  'main'
     });
 }
 
