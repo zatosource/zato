@@ -19,7 +19,6 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms([
         'name',
-        'address',
         'service',
         'logging_level',
         'data_encoding',
@@ -28,10 +27,11 @@ $(document).ready(function() {
         'recv_timeout',
         'start_seq',
         'end_seq',
-        'tls_cert_path',
-        'tls_key_path',
-        'tls_ca_path',
-        'tls_verify',
+        'msh3_sending_app',
+        'msh4_sending_facility',
+        'msh5_receiving_app',
+        'msh6_receiving_facility',
+        'msh9_message_type',
         'dedup_ttl_value',
         'dedup_ttl_unit',
         'default_character_encoding',
@@ -77,7 +77,6 @@ $.fn.zato.channel.hl7.mllp.data_table.new_row = function(item, data, include_tr)
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
 
-    row += String.format('<td>{0}</td>', item.address);
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service, cluster_id));
 
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.hl7.mllp.edit('{0}')\">Edit</a>", item.id));
@@ -103,10 +102,11 @@ $.fn.zato.channel.hl7.mllp.data_table.new_row = function(item, data, include_tr)
     row += String.format("<td class='ignore'>{0}</td>", item.start_seq);
     row += String.format("<td class='ignore'>{0}</td>", item.end_seq);
 
-    row += String.format("<td class='ignore'>{0}</td>", item.tls_cert_path);
-    row += String.format("<td class='ignore'>{0}</td>", item.tls_key_path);
-    row += String.format("<td class='ignore'>{0}</td>", item.tls_ca_path);
-    row += String.format("<td class='ignore'>{0}</td>", item.tls_verify);
+    row += String.format("<td class='ignore'>{0}</td>", item.msh3_sending_app);
+    row += String.format("<td class='ignore'>{0}</td>", item.msh4_sending_facility);
+    row += String.format("<td class='ignore'>{0}</td>", item.msh5_receiving_app);
+    row += String.format("<td class='ignore'>{0}</td>", item.msh6_receiving_facility);
+    row += String.format("<td class='ignore'>{0}</td>", item.msh9_message_type);
 
     row += String.format("<td class='ignore'>{0}</td>", item.dedup_ttl_value);
     row += String.format("<td class='ignore'>{0}</td>", item.dedup_ttl_unit);
