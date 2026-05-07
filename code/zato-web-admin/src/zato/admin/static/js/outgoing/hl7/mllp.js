@@ -21,12 +21,23 @@ $(document).ready(function() {
         'name',
         'address',
         'pool_size',
-        'timeout',
+        'max_wait_time',
         'max_msg_size',
         'read_buffer_size',
         'recv_timeout',
         'start_seq',
         'end_seq',
+        'logging_level',
+        'max_retries',
+        'backoff_base_seconds',
+        'backoff_cap_seconds',
+        'backoff_jitter_percent',
+        'circuit_breaker_threshold_percent',
+        'circuit_breaker_window_seconds',
+        'circuit_breaker_reset_seconds',
+        'tls_cert_path',
+        'tls_key_path',
+        'tls_ca_path',
     ]);
     var unique_constraints = [
         {field: 'name', entity_type: 'generic_connection', attr_name: 'name'}
@@ -78,6 +89,31 @@ $.fn.zato.outgoing.hl7.mllp.data_table.new_row = function(item, data, include_tr
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
 
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.should_log_messages);
+    row += String.format("<td class='ignore'>{0}</td>", item.logging_level);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.max_msg_size);
+    row += String.format("<td class='ignore'>{0}</td>", item.read_buffer_size);
+    row += String.format("<td class='ignore'>{0}</td>", item.recv_timeout);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.start_seq);
+    row += String.format("<td class='ignore'>{0}</td>", item.end_seq);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.max_wait_time);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.max_retries);
+    row += String.format("<td class='ignore'>{0}</td>", item.backoff_base_seconds);
+    row += String.format("<td class='ignore'>{0}</td>", item.backoff_cap_seconds);
+    row += String.format("<td class='ignore'>{0}</td>", item.backoff_jitter_percent);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.circuit_breaker_threshold_percent);
+    row += String.format("<td class='ignore'>{0}</td>", item.circuit_breaker_window_seconds);
+    row += String.format("<td class='ignore'>{0}</td>", item.circuit_breaker_reset_seconds);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.tls_cert_path);
+    row += String.format("<td class='ignore'>{0}</td>", item.tls_key_path);
+    row += String.format("<td class='ignore'>{0}</td>", item.tls_ca_path);
 
     if(include_tr) {
         row += '</tr>';

@@ -45,7 +45,7 @@ from zato.common.util.time_ import utcnow
 from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
-from zato.server.connection.facade import KafkaFacade, KeysightContainer, RESTFacade, SchedulerFacade
+from zato.server.connection.facade import KafkaFacade, KeysightContainer, MLLPFacade, RESTFacade, SchedulerFacade
 from zato.server.connection.http_soap.outgoing import current_datadog_cid, current_datadog_context, \
     current_datadog_env_name, current_datadog_process_name, current_datadog_service_name
 from zato.server.connection.search import SearchAPI
@@ -473,6 +473,9 @@ class Service:
         # Kafka facade for outgoing connections
         self.kafka = KafkaFacade()
 
+        # MLLP facade for outgoing connections
+        self.mllp = MLLPFacade()
+
 # ################################################################################################################################
 
     @staticmethod
@@ -582,6 +585,9 @@ class Service:
 
         # Kafka facade
         self.kafka.init(self._worker_store)
+
+        # MLLP facade
+        self.mllp.init(self._worker_store)
 
         # Vendors - Keysight
         self.keysight = KeysightContainer()
