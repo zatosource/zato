@@ -34,7 +34,12 @@
  *   div_id       - jQuery selector for the dialog wrapper, e.g. '#create-div'
  *   panel_prefix - ID prefix for tab panels, e.g. 'my-create-tab-panel-'
  *                  Each panel must have id="<prefix><tab_name>"
- *   tab_names    - Array of tab name strings matching data-tab attributes
+ *   tab_labels   - Object mapping data-tab names to display labels,
+ *                  e.g. {main: 'Main', dedup: 'Deduplication'}.
+ *                  Keys define the tab order, values set button text.
+ *                  This is the single source of truth for tab names.
+ *   tab_names    - Optional array override; derived from tab_labels keys
+ *                  when omitted.
  *   default_tab  - Which tab to activate on open (must be in tab_names)
  *
  * The function:
@@ -50,13 +55,18 @@ $.fn.zato.form_tabs.reset = function(config) {
 
     var div_id = config.div_id;
     var panel_prefix = config.panel_prefix;
-    var tab_names = config.tab_names;
+    var tab_labels = config.tab_labels;
+    var tab_names = config.tab_names || Object.keys(tab_labels);
     var default_tab = config.default_tab;
 
     $(div_id + ' .dashboard-tab').each(function() {
-        var is_default = $(this).data('tab') === default_tab;
+        var tab_name = $(this).data('tab');
+        var is_default = tab_name === default_tab;
         $(this).toggleClass('dashboard-tab-active', is_default);
         $(this).attr('aria-selected', is_default ? 'true' : 'false');
+        if (tab_labels && tab_labels[tab_name]) {
+            $(this).text(tab_labels[tab_name]);
+        }
     });
 
     for (var i = 0; i < tab_names.length; i++) {

@@ -51,13 +51,21 @@ $(document).ready(function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.channel.hl7.mllp.tab_labels = {
+    main:     'Main',
+    routing:  'Routing',
+    protocol: 'Protocol',
+    logging:  'Logging',
+    dedup:    'Deduplication'
+};
+
 $.fn.zato.channel.hl7.mllp._reset_tabs = function(action) {
     var is_edit = action === 'edit';
     $.fn.zato.form_tabs.reset({
         div_id:       is_edit ? '#edit-div' : '#create-div',
         panel_prefix: is_edit ? 'mllp-edit-tab-panel-' : 'mllp-create-tab-panel-',
-        tab_names:    ['main', 'routing', 'protocol', 'logging', 'deduplication'],
-        default_tab:  'main'
+        default_tab:  'main',
+        tab_labels:   $.fn.zato.channel.hl7.mllp.tab_labels
     });
 }
 
