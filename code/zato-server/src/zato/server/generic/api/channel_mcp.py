@@ -72,6 +72,19 @@ class ChannelMCPWrapper:
 
 # ################################################################################################################################
 
+    def on_services_deployed(self) -> 'None':
+        """ Called after hot-deploy deploys new services.
+        Rebuilds the tool registry and queues list_changed notifications.
+        """
+
+        if self.handler:
+            count = self.handler.notify_tools_changed()
+
+            session_suffix = 'session' if count == 1 else 'sessions'
+            logger.info('MCP channel `%s`: tools changed, notified %d %s', self.config.name, count, session_suffix)
+
+# ################################################################################################################################
+
     def delete(self) -> 'None':
         """ Cleans up when the channel is being removed.
         """

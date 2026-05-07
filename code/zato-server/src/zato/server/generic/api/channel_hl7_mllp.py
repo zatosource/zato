@@ -1,39 +1,26 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 from logging import getLogger
 
-# Bunch
-from bunch import bunchify
-
 # Zato
-from zato.common.api import GENERIC
-from zato.common.util.api import spawn_greenlet
+from zato.common.hl7.mllp.server import HL7MLLPServer
+from zato.common.util.api import hex_sequence_to_bytes, spawn_greenlet
 from zato.server.connection.wrapper import Wrapper
 
-try:
-    from zato.hl7.mllp.server import HL7MLLPServer
-except ImportError:
-    HL7MLLPServer = None  # type: ignore[assignment,misc]
-
-# ###############################################################################################################################
-# ###############################################################################################################################
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger = getLogger(__name__)
 
-if HL7MLLPServer is None:
-    logger.warning('HL7 is not available (channel_hl7_mllp)')
-
-# ###############################################################################################################################
-# ###############################################################################################################################
+# ################################################################################################################################
+# ################################################################################################################################
 
 class ChannelHL7MLLPWrapper(Wrapper):
     """ Represents an HL7 MLLP channel.
@@ -42,42 +29,32 @@ class ChannelHL7MLLPWrapper(Wrapper):
     wrapper_type = 'HL7 MLLP channel'
     build_if_not_active = True
 
-    def __init__(self, *args, **kwargs):
-        super(ChannelHL7MLLPWrapper, self).__init__(*args, **kwargs)
-        self._impl = None # type: HL7MLLPServer
+    def __init__(self, *args:'object', **kwargs:'object') -> 'None':
+        super().__init__(*args, **kwargs)
+        self._impl:'HL7MLLPServer | None' = None
 
 # ################################################################################################################################
 
-    def _init_impl(self):
-
-        # Zato
-        from zato.common.util.api import hex_sequence_to_bytes
+    def _init_impl(self) -> 'None':
 
         with self.update_lock:
 
-            # Unwrap the expected bytes sequences
+            start_sequence = hex_sequence_to_bytes(self.config.start_seq)
+            end_sequence   = hex_sequence_to_bytes(self.config.end_seq)
 
-            config = bunchify({
-                'id': self.config.id,
-                'name': self.config.name,
-                'address': self.config.address,
-                'service_name': self.config.service,
+            # Convert recv_timeout from milliseconds to seconds
+            receive_timeout = self.config.recv_timeout / 1000.0
 
-                'max_msg_size': self.config.max_msg_size,
-                'read_buffer_size': self.config.read_buffer_size,
-
-                # Convert to seconds from milliseconds
-                'recv_timeout': self.config.recv_timeout / 100.0,
-
-                'logging_level': self.config.logging_level,
-                'should_log_messages': self.config.should_log_messages,
-
-                'start_seq': hex_sequence_to_bytes(self.config.start_seq),
-                'end_seq': hex_sequence_to_bytes(self.config.end_seq),
-
-            })
-
-            self._impl = HL7MLLPServer(config, self.server.invoke)
+            self._impl = HL7MLLPServer(
+                self.config.address,
+                self.server.invoke, # pyright: ignore[reportOptionalMemberAccess]
+                start_sequence,
+                end_sequence,
+                receive_timeout=receive_timeout,
+                max_message_size=int(self.config.max_msg_size),
+                read_buffer_size=int(self.config.read_buffer_size),
+                should_log_messages=self.config.should_log_messages,
+            )
 
             spawn_greenlet(self._impl.start)
 
@@ -85,13 +62,13 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
 # ################################################################################################################################
 
-    def _delete(self):
+    def _delete(self) -> 'None':
         if self._impl:
             self._impl.stop()
 
 # ################################################################################################################################
 
-    def _ping(self):
+    def _ping(self) -> 'None':
         pass
 
 # ################################################################################################################################

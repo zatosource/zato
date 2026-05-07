@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -18,6 +18,19 @@ from zato.common.api import HL7
 
 _default = HL7.Default
 _address = f'{_default.channel_host}:{_default.channel_port}'
+
+_dedup_ttl_unit_choices = [
+    ('minutes', 'Minutes'),
+    ('hours',   'Hours'),
+    ('days',    'Days'),
+]
+
+_encoding_choices = [
+    ('utf-8',        'UTF-8'),
+    ('iso-8859-1',   'ISO-8859-1'),
+    ('windows-1252', 'Windows-1252'),
+    ('us-ascii',     'US-ASCII'),
+]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,6 +56,44 @@ class CreateForm(forms.Form):
     recv_timeout = forms.CharField(initial=_default.recv_timeout, widget=forms.TextInput(attrs={'style':'width:8%'}))
     start_seq = forms.CharField(initial=_default.start_seq, widget=forms.TextInput(attrs={'style':'width:35%'}))
     end_seq = forms.CharField(initial=_default.end_seq, widget=forms.TextInput(attrs={'style':'width:26%'}))
+
+    # TLS
+    tls_cert_path = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    tls_key_path  = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    tls_ca_path   = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    tls_verify    = forms.ChoiceField(
+        required=False,
+        choices=[('none', 'None'), ('optional', 'Optional'), ('required', 'Required')],
+        initial='none',
+        widget=forms.Select(attrs={'style':'width:20%'}),
+    )
+
+    # Dedup
+    dedup_ttl_value = forms.CharField(
+        initial=_default.dedup_ttl_value, required=False,
+        widget=forms.TextInput(attrs={'style':'width:8%'}),
+    )
+    dedup_ttl_unit = forms.ChoiceField(
+        required=False,
+        choices=_dedup_ttl_unit_choices,
+        initial=_default.dedup_ttl_unit,
+        widget=forms.Select(attrs={'style':'width:15%'}),
+    )
+
+    # Default character encoding (when MSH-18 is missing or toggle is off)
+    default_character_encoding = forms.ChoiceField(
+        required=False,
+        choices=_encoding_choices,
+        initial='utf-8',
+        widget=forms.Select(attrs={'style':'width:20%'}),
+    )
+
+    # Message tolerance toggles
+    normalize_line_endings        = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    force_standard_delimiters     = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    repair_truncated_msh          = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    split_concatenated_messages   = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    use_msh18_encoding            = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
