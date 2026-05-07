@@ -188,26 +188,14 @@
         </div>
 
         <div id="create-div" class='data-popup ignore'>
-            <div class="bd">
+            <div class="bd" style="background:#fff">
                 <form novalidate action="{% url "channel-hl7-mllp-create" %}" method="post" id="create-form">
 
-                    <table class="form-data">
-                        <tr>
-                            <td style="vertical-align:middle;width:21%">Name</td>
-                            <td>{{ create_form.name }}</td>
-                        </tr>
-                        <tr>
-                            <td></td>
-                            <td><label>Active {{ create_form.is_active }}</label></td>
-                        </tr>
-                        <tr>
-                            <td>Service</td>
-                            <td>{{ create_form.service }}</td>
-                        </tr>
-                    </table>
-
-                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
-                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="routing" role="tab" aria-selected="true">
+                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings" style="--tabs-bg:#eef1f5; --tabs-border:rgba(0,0,0,0.1)">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">
+                            <span class="dashboard-tab-label">Main</span>
+                        </button>
+                        <button type="button" class="dashboard-tab" data-tab="routing" role="tab" aria-selected="false">
                             <span class="dashboard-tab-label">Routing</span>
                         </button>
                         <button type="button" class="dashboard-tab" data-tab="protocol" role="tab" aria-selected="false">
@@ -221,7 +209,24 @@
                         </button>
                     </div>
 
-                    <div class="dashboard-tab-panel" id="mllp-create-tab-panel-routing" role="tabpanel">
+                    <div class="dashboard-tab-panel" id="mllp-create-tab-panel-main" role="tabpanel">
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:21%">Name</td>
+                                <td>{{ create_form.name }}</td>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td><label>Active {{ create_form.is_active }}</label></td>
+                            </tr>
+                            <tr>
+                                <td>Service</td>
+                                <td>{{ create_form.service }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mllp-create-tab-panel-routing" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
                                 <td style="width:21%"><label for="id_is_default">Default</label></td>
@@ -362,26 +367,14 @@
         </div>
 
         <div id="edit-div" class='data-popup ignore'>
-            <div class="bd">
+            <div class="bd" style="background:#fff">
                 <form novalidate action="{% url "channel-hl7-mllp-edit" %}" method="post" id="edit-form">
 
-                    <table class="form-data">
-                        <tr>
-                            <td style="vertical-align:middle;width:21%">Name</td>
-                            <td>{{ edit_form.name }}</td>
-                        </tr>
-                        <tr>
-                            <td></td>
-                            <td><label>Active {{ edit_form.is_active }}</label></td>
-                        </tr>
-                        <tr>
-                            <td>Service</td>
-                            <td>{{ edit_form.service }}</td>
-                        </tr>
-                    </table>
-
-                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
-                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="routing" role="tab" aria-selected="true">
+                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings" style="--tabs-bg:#eef1f5; --tabs-border:rgba(0,0,0,0.1)">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">
+                            <span class="dashboard-tab-label">Main</span>
+                        </button>
+                        <button type="button" class="dashboard-tab" data-tab="routing" role="tab" aria-selected="false">
                             <span class="dashboard-tab-label">Routing</span>
                         </button>
                         <button type="button" class="dashboard-tab" data-tab="protocol" role="tab" aria-selected="false">
@@ -395,7 +388,24 @@
                         </button>
                     </div>
 
-                    <div class="dashboard-tab-panel" id="mllp-edit-tab-panel-routing" role="tabpanel">
+                    <div class="dashboard-tab-panel" id="mllp-edit-tab-panel-main" role="tabpanel">
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:21%">Name</td>
+                                <td>{{ edit_form.name }}</td>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td><label>Active {{ edit_form.is_active }}</label></td>
+                            </tr>
+                            <tr>
+                                <td>Service</td>
+                                <td>{{ edit_form.service }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mllp-edit-tab-panel-routing" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
                                 <td style="width:21%"><label for="id_edit-is_default">Default</label></td>

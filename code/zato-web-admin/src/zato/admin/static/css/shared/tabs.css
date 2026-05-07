@@ -5,12 +5,12 @@
     gap: 6px;
     margin-bottom: 0.7rem;
     padding: 3px;
-    background: linear-gradient(
+    background: var(--tabs-bg, linear-gradient(
         135deg,
         rgba(0, 0, 0, 0.025) 0%,
         rgba(0, 0, 0, 0.015) 100%
-    );
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    ));
+    border: 1px solid var(--tabs-border, rgba(0, 0, 0, 0.06));
     border-radius: 6px;
 }
 
