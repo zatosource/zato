@@ -46,6 +46,10 @@
             'msh5_receiving_app',
             'msh6_receiving_facility',
             'msh9_message_type',
+            'msh9_trigger_event',
+            'msh11_processing_id',
+            'msh12_version_id',
+            'is_default',
             'dedup_ttl_value',
             'dedup_ttl_unit',
             'default_character_encoding',
@@ -150,6 +154,10 @@
                         <td class='ignore'>{{ item.msh5_receiving_app }}</td>
                         <td class='ignore'>{{ item.msh6_receiving_facility }}</td>
                         <td class='ignore'>{{ item.msh9_message_type }}</td>
+                        <td class='ignore'>{{ item.msh9_trigger_event }}</td>
+                        <td class='ignore'>{{ item.msh11_processing_id }}</td>
+                        <td class='ignore'>{{ item.msh12_version_id }}</td>
+                        <td class='ignore'>{{ item.is_default }}</td>
 
                         <td class='ignore'>{{ item.dedup_ttl_value }}</td>
                         <td class='ignore'>{{ item.dedup_ttl_unit }}</td>
@@ -226,6 +234,22 @@
                         <tr class="routing-block hidden">
                             <td></td>
                             <td><label>Message type {{ create_form.msh9_message_type }}</label></td>
+                        </tr>
+                        <tr class="routing-block hidden">
+                            <td></td>
+                            <td><label>Trigger event {{ create_form.msh9_trigger_event }}</label></td>
+                        </tr>
+                        <tr class="routing-block hidden">
+                            <td></td>
+                            <td><label>Processing ID {{ create_form.msh11_processing_id }}</label></td>
+                        </tr>
+                        <tr class="routing-block hidden">
+                            <td></td>
+                            <td><label>Version {{ create_form.msh12_version_id }}</label></td>
+                        </tr>
+                        <tr class="routing-block hidden">
+                            <td></td>
+                            <td><label>{{ create_form.is_default }} Default</label></td>
                         </tr>
 
                         {% comment %} Deduplication window {% endcomment %}
@@ -378,6 +402,22 @@
                         <tr class="routing-block hidden">
                             <td></td>
                             <td><label>Message type {{ edit_form.msh9_message_type }}</label></td>
+                        </tr>
+                        <tr class="routing-block hidden">
+                            <td></td>
+                            <td><label>Trigger event {{ edit_form.msh9_trigger_event }}</label></td>
+                        </tr>
+                        <tr class="routing-block hidden">
+                            <td></td>
+                            <td><label>Processing ID {{ edit_form.msh11_processing_id }}</label></td>
+                        </tr>
+                        <tr class="routing-block hidden">
+                            <td></td>
+                            <td><label>Version {{ edit_form.msh12_version_id }}</label></td>
+                        </tr>
+                        <tr class="routing-block hidden">
+                            <td></td>
+                            <td><label>{{ edit_form.is_default }} Default</label></td>
                         </tr>
 
                         {% comment %} Deduplication window {% endcomment %}
