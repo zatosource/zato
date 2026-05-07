@@ -77,6 +77,7 @@ class ChannelMCPWrapper:
         Rebuilds the tool registry and queues list_changed notifications.
         """
 
+        # Rebuild and notify only if the handler has been initialized ..
         if self.handler:
             count = self.handler.notify_tools_changed()
 

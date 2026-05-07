@@ -60,6 +60,8 @@ class ToolRegistry:
         """ Rebuilds the cached tools list by scanning the service store
         for each service in the allowlist.
         """
+
+        # Walk through each allowed service name and try to resolve it ..
         tools:'strdictlist' = []
 
         for service_name in self.allowed_services:
@@ -73,7 +75,7 @@ class ToolRegistry:
             impl_name = self.service_store.name_to_impl_name.get(service_name)
 
             if impl_name is None:
-                logger.warning('MCP allowlist contains unknown service `%s`, skipping', service_name)
+                logger.info('MCP allowlist contains service `%s` not yet deployed, will retry on hot-deploy', service_name)
                 continue
 
             service_info = self.service_store.services.get(impl_name)
@@ -92,7 +94,7 @@ class ToolRegistry:
             description = description.strip()
             input_schema = sio_to_json_schema(service_class)
 
-            # .. build the MCP tool definition.
+            # .. build the MCP tool definition ..
             tool:'stranydict' = {
                 'name': service_name,
                 'description': description,
@@ -101,6 +103,7 @@ class ToolRegistry:
 
             tools.append(tool)
 
+        # .. replace the cached tools list with the newly built one.
         self._cached_tools = tools
 
         tool_suffix = 'tool' if len(tools) == 1 else 'tools'
@@ -122,6 +125,7 @@ class ToolRegistry:
         if cursor:
             start = int(cursor)
 
+        # .. slice out the current page ..
         end = start + _default_page_size
         page = all_tools[start:end]
 
@@ -131,6 +135,7 @@ class ToolRegistry:
         else:
             next_cursor = None
 
+        # .. and return both the page and the cursor for the next one.
         out = (page, next_cursor)
         return out
 
@@ -139,9 +144,12 @@ class ToolRegistry:
     def is_tool_allowed(self, service_name:'str') -> 'bool':
         """ Checks whether a service name is in the allowlist and is not internal.
         """
+
+        # Internal services are never exposed as MCP tools ..
         if service_name.startswith(_internal_prefix):
             return False
 
+        # .. otherwise check membership in the allowlist.
         out = service_name in self.allowed_services
         return out
 

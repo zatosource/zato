@@ -210,7 +210,11 @@ class MCPHandler:
         """ Processes a JSON-RPC notification (no response expected).
         """
 
-        method = message['method']
+        method = message.get('method')
+
+        if not method:
+            logger.info('MCP: Received notification without a method, ignoring')
+            return
 
         # notifications/initialized is a no-op acknowledgment
         if method == 'notifications/initialized':
@@ -417,13 +421,16 @@ class MCPHandler:
         Returns the number of sessions notified.
         """
 
+        # Rebuild the registry so new or removed services are reflected ..
         self.tool_registry.rebuild()
 
+        # .. build the notification message ..
         notification:'stranydict' = {
             'jsonrpc': _jsonrpc_version,
             'method': 'notifications/tools/list_changed',
         }
 
+        # .. and queue it for every active session.
         out = self.session_manager.queue_notification_for_all(notification)
         return out
 
@@ -438,23 +445,28 @@ class MCPHandler:
         out = MCPResponse()
         out.session_id = None
 
+        # A session ID is required for notification polling ..
         if not session_id:
             out.body = None
             out.status_code = _http_not_found
             return out
 
+        # .. the session must exist and be valid ..
         if not self.session_manager.validate(session_id):
             out.body = None
             out.status_code = _http_not_found
             return out
 
+        # .. drain all pending notifications for this session ..
         notifications = self.session_manager.drain_notifications(session_id)
 
+        # .. if there are none, return 204 No Content ..
         if not notifications:
             out.body = None
             out.status_code = NO_CONTENT
             return out
 
+        # .. otherwise return them as a JSON-RPC batch.
         out.body = notifications
         out.status_code = OK
         return out
@@ -469,19 +481,22 @@ class MCPHandler:
         out = MCPResponse()
         out.session_id = None
 
+        # A session ID is required for deletion ..
         if not session_id:
             out.body = None
             out.status_code = _http_not_found
             return out
 
+        # .. try to delete it ..
         was_deleted = self.session_manager.delete(session_id)
 
+        # .. if it existed, confirm with 200 ..
         if was_deleted:
             out.body = None
             out.status_code = OK
             return out
 
-        # .. the session did not exist.
+        # .. otherwise the session was not found.
         out.body = None
         out.status_code = _http_not_found
         return out

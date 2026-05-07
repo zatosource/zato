@@ -94,10 +94,12 @@ class MCPSessionManager:
         Touching the session updates its last_seen_at timestamp.
         """
 
+        # If the session exists, touch its timestamp and confirm ..
         if session := self._sessions.get(session_id):
             session.last_seen_at = monotonic()
             return True
 
+        # .. otherwise the session is unknown.
         return False
 
 # ################################################################################################################################
@@ -106,11 +108,13 @@ class MCPSessionManager:
         """ Deletes a session. Returns True if it existed, False otherwise.
         """
 
+        # If the session exists, remove it from the store ..
         if session_id in self._sessions:
             del self._sessions[session_id]
             logger.info('MCP: Deleted session `%s`', session_id)
             return True
 
+        # .. otherwise there is nothing to delete.
         return False
 
 # ################################################################################################################################
@@ -120,6 +124,7 @@ class MCPSessionManager:
         Returns the number of sessions removed.
         """
 
+        # Collect session IDs that have exceeded the TTL ..
         now = monotonic()
         expired:'strlist' = []
 
@@ -129,10 +134,12 @@ class MCPSessionManager:
             if age > self.ttl:
                 expired.append(session_id)
 
+        # .. remove each expired session from the store ..
         for session_id in expired:
             del self._sessions[session_id]
             logger.info('MCP: Expired session `%s`', session_id)
 
+        # .. and return how many were cleaned up.
         out = len(expired)
         return out
 
@@ -143,9 +150,11 @@ class MCPSessionManager:
         Returns the number of sessions notified.
         """
 
+        # Append the notification to each session's pending queue ..
         for session in self._sessions.values():
             session.pending_notifications.append(notification)
 
+        # .. and return how many sessions were notified.
         out = len(self._sessions)
         return out
 
@@ -156,13 +165,18 @@ class MCPSessionManager:
         Returns an empty list if the session does not exist.
         """
 
+        # Look up the session ..
         session = self._sessions.get(session_id)
 
+        # .. if it does not exist, there is nothing to drain ..
         if session is None:
             return []
 
+        # .. otherwise, take the pending notifications
+        # and replace the queue with an empty list.
         out = session.pending_notifications
         session.pending_notifications = []
+
         return out
 
 # ################################################################################################################################
