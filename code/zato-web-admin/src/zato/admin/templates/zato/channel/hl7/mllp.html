@@ -10,11 +10,25 @@
         .data-popup .form-data {
             border: none;
         }
-        .data-popup .bd {
-            background: #b8b8b8;
-        }
         .data-popup .dashboard-tabs {
             display: flex;
+            background: linear-gradient(180deg, #0a2a3f 0%, #063c65 100%);
+            border-bottom: 1px solid #d4af37;
+        }
+        .data-popup .dashboard-tabs > .dashboard-tab {
+            color: rgba(212, 175, 55, 0.5);
+            font-family: Georgia, "Times New Roman", serif;
+            letter-spacing: 0.5px;
+        }
+        .data-popup .dashboard-tabs > .dashboard-tab:hover {
+            color: #d4af37;
+            background: rgba(212, 175, 55, 0.06);
+        }
+        .data-popup .dashboard-tabs > .dashboard-tab-active,
+        .data-popup .dashboard-tabs > .dashboard-tab-active:hover {
+            color: #d4af37;
+            border-bottom-color: #d4af37;
+            text-shadow: 0 0 8px rgba(212, 175, 55, 0.2);
         }
     </style>
 {% endblock %}
@@ -202,7 +216,7 @@
             <div class="bd">
                 <form novalidate action="{% url "channel-hl7-mllp-create" %}" method="post" id="create-form">
 
-                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings" style="--tabs-bg:#c0c0c0; --tabs-border:transparent; --tabs-padding:0; --tabs-gap:0; --tabs-radius:0; --tab-font-size:12px; --tab-font-weight:400; --tab-text-transform:none; --tab-letter-spacing:normal; --tab-padding:5px 14px; --tab-radius:0; --tab-color:#666; --tab-hover-color:#222; --tab-hover-bg:transparent; --tab-hover-border:#333; --tab-active-color:#222; --tab-active-bg:transparent; --tab-active-border-color:#012845; --tab-active-shadow:none; margin-bottom:0; border-bottom:1px solid #b0b0b0">
+                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings" style="--tabs-padding:0; --tabs-gap:0; --tabs-radius:0; --tab-font-size:11.5px; --tab-font-weight:500; --tab-text-transform:uppercase; --tab-letter-spacing:1.5px; --tab-padding:8px 20px; --tab-radius:0; --tab-active-shadow:none; margin-bottom:0">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
                         <button type="button" class="dashboard-tab" data-tab="routing" role="tab" aria-selected="false">Routing</button>
                         <button type="button" class="dashboard-tab" data-tab="protocol" role="tab" aria-selected="false">Protocol</button>
@@ -371,7 +385,7 @@
             <div class="bd">
                 <form novalidate action="{% url "channel-hl7-mllp-edit" %}" method="post" id="edit-form">
 
-                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings" style="--tabs-bg:#a0a0a0; --tabs-border:transparent; --tabs-padding:0; --tabs-gap:0; --tabs-radius:0; --tab-font-size:12px; --tab-font-weight:400; --tab-text-transform:none; --tab-letter-spacing:normal; --tab-padding:5px 14px; --tab-radius:0; --tab-color:#ddd; --tab-active-color:#fff; --tab-active-bg:transparent; --tab-active-border-color:#fff; --tab-active-shadow:none; margin-bottom:0; border-bottom:1px solid #888">
+                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings" style="--tabs-bg:#ddd; --tabs-border:transparent; --tabs-padding:0; --tabs-gap:0; --tabs-radius:0; --tab-font-size:12px; --tab-font-weight:500; --tab-text-transform:none; --tab-letter-spacing:normal; --tab-padding:6px 16px; --tab-radius:0; --tab-color:#777; --tab-hover-color:#333; --tab-hover-bg:transparent; --tab-hover-border:transparent; --tab-active-color:#222; --tab-active-bg:transparent; --tab-active-border-color:#063c65; --tab-active-shadow:none; margin-bottom:0">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
                         <button type="button" class="dashboard-tab" data-tab="routing" role="tab" aria-selected="false">Routing</button>
                         <button type="button" class="dashboard-tab" data-tab="protocol" role="tab" aria-selected="false">Protocol</button>
