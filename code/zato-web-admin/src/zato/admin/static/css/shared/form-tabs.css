@@ -63,8 +63,7 @@
  * --form-tab-border-width    Bottom border thickness
  */
 
-/* Default variable values, scoped to .data-popup so they only
-   apply inside dialog popups and never leak to the dashboard. */
+/* Variables scoped to .data-popup so they never leak to the dashboard. */
 .data-popup {
     --form-tab-bg: #052238;
     --form-tab-color: #ffffffb3;
@@ -77,8 +76,7 @@
     --form-tab-border-width: 3px;
 }
 
-/* Remove the default form-data border and the dialog content
-   box-shadow so the tab strip flows cleanly into the form. */
+/* Reset form-data border and dialog box-shadow for a clean join. */
 .data-popup .form-data {
     border: none;
 }
@@ -87,7 +85,7 @@
     box-shadow: none;
 }
 
-/* Tab strip container - full-width flex row with the dark background. */
+/* Tab strip container. */
 .data-popup .dashboard-tabs {
     display: flex;
     background: var(--form-tab-bg);
@@ -99,10 +97,8 @@
     margin-bottom: 0;
 }
 
-/* Individual tab buttons - light muted text against the dark strip,
-   with a bottom border that matches the strip background so it
-   occupies the same space as the active border (prevents layout
-   shift when switching tabs). */
+/* Inactive tab buttons. The bottom border matches the strip
+   background to reserve space and prevent layout shift. */
 .data-popup .dashboard-tabs > .dashboard-tab {
     color: var(--form-tab-color);
     font-size: var(--form-tab-font-size);
@@ -114,16 +110,15 @@
     letter-spacing: 1.5px;
 }
 
-/* Hover state - text brightens, faint white overlay, bottom border
-   goes transparent so the overlay covers the full tab area. */
+/* Hover state. Border goes transparent so the overlay is seamless. */
 .data-popup .dashboard-tabs > .dashboard-tab:hover {
     color: var(--form-tab-color-bright);
     background: var(--form-tab-hover-bg);
     border-bottom-color: transparent;
 }
 
-/* Active tab - bright text, lighter background overlay, solid
-   bottom border in a contrasting color, and a subtle text glow. */
+/* Active tab. All four pseudo-states covered to prevent
+   browser defaults from overriding the selected appearance. */
 .data-popup .dashboard-tabs > .dashboard-tab-active,
 .data-popup .dashboard-tabs > .dashboard-tab-active:hover,
 .data-popup .dashboard-tabs > .dashboard-tab-active:focus,

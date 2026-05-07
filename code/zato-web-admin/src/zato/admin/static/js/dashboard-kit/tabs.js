@@ -74,7 +74,13 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                a single scrollTo is not enough. */
             var scroll_x = window.pageXOffset || document.documentElement.scrollLeft || 0;
             var scroll_y = window.pageYOffset || document.documentElement.scrollTop || 0;
-            try { this.blur(); } catch(e) {}
+            try {
+                this.blur();
+                var dialog = $(this).closest('.ui-dialog');
+                if (dialog.length) {
+                    dialog[0].focus();
+                }
+            } catch(e) {}
 
             var locking = true;
             var snap_back = function() {
