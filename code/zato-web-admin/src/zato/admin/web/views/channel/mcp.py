@@ -53,6 +53,22 @@ class Index(_Index):
         output_optional = ('url_path', 'services', 'security_groups')
         output_repeated = True
 
+    def on_before_append_item(self, item:'any_') -> 'any_':
+
+        # Resolve the security member count from the auto-created group ..
+        security_groups = getattr(item, 'security_groups', None) or []
+        if security_groups:
+            group_id = security_groups[0]
+            member_response = self.req.zato.client.invoke('zato.groups.get-member-list', {
+                'group_type': Groups.Type.API_Clients,
+                'group_id': group_id,
+            })
+            item.security_member_count = len(member_response.data) if member_response.ok and member_response.data else 0
+        else:
+            item.security_member_count = 0
+
+        return item
+
     def handle(self) -> 'strdict':
         out = {
             'create_form': CreateForm(),
@@ -85,6 +101,11 @@ class _CreateEdit(CreateEdit):
 
         # .. and store them so they end up in opaque data.
         input_dict['services'] = service_names
+
+        # .. ensure url_path starts with a slash ..
+        url_path = input_dict.get('url_path', '')
+        if url_path and not url_path.startswith('/'):
+            input_dict['url_path'] = '/' + url_path
 
         # Collect security definitions from the security badge picker ..
         security_keys = [key for key in self.req.POST if key.startswith(_security_input_prefix)]
@@ -187,12 +208,29 @@ def get_service_list(req:'any_') -> 'HttpResponse':
     # .. build the current assigned set if editing ..
     assigned_names:'set[str]' = set()
     if channel_id:
-        channel_response = req.zato.client.invoke('zato.generic.connection.get-by-id', {
-            'id': channel_id,
+        channel_response = req.zato.client.invoke('zato.generic.connection.get-list', {
+            'cluster_id': req.zato.cluster_id,
             'type_': GENERIC.CONNECTION.TYPE.CHANNEL_MCP,
+            'id': channel_id,
+            'paginate': False,
         })
+        logger.info('MCP get_service_list: channel_id=%s, response.ok=%s, data_count=%s',
+            channel_id, channel_response.ok, len(channel_response.data) if channel_response.data else 0)
+
         if channel_response.ok and channel_response.data:
-            assigned_names = set(channel_response.data.get('services', []))
+            for channel_item in channel_response.data:
+                item_id = channel_item['id']
+                item_services = channel_item.get('services')
+                logger.info('MCP get_service_list: item id=%s (%s) vs channel_id=%s (%s), services=%s',
+                    item_id, type(item_id).__name__, channel_id, type(channel_id).__name__, item_services)
+                if str(item_id) == str(channel_id):
+                    assigned_names = set(item_services or [])
+                    logger.info('MCP get_service_list: matched, assigned_names=%s', assigned_names)
+                    break
+        else:
+            logger.info('MCP get_service_list: no data or not ok')
+
+    logger.info('MCP get_service_list: final assigned_names=%s', assigned_names)
 
     # .. build the output list, skipping internal services ..
     items = []
@@ -257,26 +295,52 @@ def get_security_list(req:'any_') -> 'HttpResponse':
     # .. if editing, figure out which definitions are already assigned ..
     if channel_id:
 
+        logger.info('MCP get_security_list: channel_id=%s', channel_id)
+
         # .. look up the channel's security_groups field ..
-        channel_response = req.zato.client.invoke('zato.generic.connection.get-by-id', {
-            'id': channel_id,
+        channel_response = req.zato.client.invoke('zato.generic.connection.get-list', {
+            'cluster_id': req.zato.cluster_id,
             'type_': GENERIC.CONNECTION.TYPE.CHANNEL_MCP,
+            'paginate': False,
         })
 
+        logger.info('MCP get_security_list: channel_response.ok=%s, data_count=%s',
+            channel_response.ok, len(channel_response.data) if channel_response.data else 0)
+
         if channel_response.ok and channel_response.data:
-            security_groups = channel_response.data.get('security_groups', [])
-            if security_groups:
-                # .. get the member list for the first (auto-created) group ..
-                group_id = security_groups[0]
-                member_response = req.zato.client.invoke('zato.groups.get-member-list', {
-                    'group_type': Groups.Type.API_Clients,
-                    'group_id': group_id,
-                })
-                if member_response.ok and member_response.data:
-                    member_security_ids = {m['security_id'] for m in member_response.data}
-                    for item in items:
-                        if item['id'] in member_security_ids:
-                            item['is_member'] = True
+            for channel_item in channel_response.data:
+                item_id = channel_item['id']
+                logger.info('MCP get_security_list: item id=%s (%s) vs channel_id=%s (%s), keys=%s',
+                    item_id, type(item_id).__name__, channel_id, type(channel_id).__name__,
+                    list(channel_item.keys()))
+
+                if str(item_id) == str(channel_id):
+                    security_groups = channel_item.get('security_groups', [])
+                    logger.info('MCP get_security_list: matched, security_groups=%s', security_groups)
+
+                    if security_groups:
+                        group_id = security_groups[0]
+                        logger.info('MCP get_security_list: fetching members for group_id=%s', group_id)
+
+                        member_response = req.zato.client.invoke('zato.groups.get-member-list', {
+                            'group_type': Groups.Type.API_Clients,
+                            'group_id': group_id,
+                        })
+
+                        logger.info('MCP get_security_list: member_response.ok=%s, data=%s',
+                            member_response.ok, member_response.data)
+
+                        if member_response.ok and member_response.data:
+                            member_security_ids = {m['security_id'] for m in member_response.data}
+                            logger.info('MCP get_security_list: member_security_ids=%s', member_security_ids)
+                            for item in items:
+                                if item['id'] in member_security_ids:
+                                    item['is_member'] = True
+                                    logger.info('MCP get_security_list: marked as assigned: id=%s name=%s', item['id'], item['name'])
+                    break
+
+    logger.info('MCP get_security_list: returning %d items, %d assigned',
+        len(items), sum(1 for item in items if item['is_member']))
 
     # .. and return the JSON response.
     out = dumps(items)

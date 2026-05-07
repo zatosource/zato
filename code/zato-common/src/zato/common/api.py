@@ -1168,6 +1168,10 @@ _default_sleep_jitter = 1.5
 # ################################################################################################################################
 
 class Echo(Service):
+    \"\"\" Echoes back any JSON payload sent to it. Accepts arbitrary key-value pairs
+    and returns them unchanged under the 'echo' key. Use this service to verify
+    connectivity and to inspect how Zato processes and returns request data.
+    \"\"\"
 
     name = 'demo.echo'
 

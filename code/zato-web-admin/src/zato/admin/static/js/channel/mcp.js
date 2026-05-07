@@ -19,7 +19,8 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'url_path']);
     var unique_constraints = [
-        {field: 'name', entity_type: 'generic_connection', attr_name: 'name'}
+        {field: 'name', entity_type: 'generic_connection', attr_name: 'name'},
+        {field: 'url_path', entity_type: 'http_soap', attr_name: 'url_path'}
     ];
     $.each(unique_constraints, function(constraint_idx, constraint) {
         $.fn.zato.validate_unique('#id_' + constraint.field, constraint.entity_type, constraint.attr_name);
@@ -29,9 +30,16 @@ $(document).ready(function() {
     $.fn.zato.data_table.before_submit_hook = function(form) {
         var action = form.attr('id').replace('-form', '');
 
-        // Inject hidden inputs for both badge pickers before submit
+        // Inject hidden inputs for both badge pickers into the same form
         $.fn.zato.badge_picker.inject_hidden_inputs(action, $.fn.zato.channel.mcp.badge_picker_config);
-        $.fn.zato.badge_picker.inject_hidden_inputs('sec-' + action, $.fn.zato.channel.mcp.security_badge_picker_config);
+
+        // The security picker uses 'sec-' prefixed zone IDs but must inject into the same form
+        form.find('input.badge-member-input[name^="mcp_security_"]').remove();
+        var sec_assigned = $('#badge-zone-assigned-sec-' + action + ' .badge-zone-body .security-badge');
+        sec_assigned.each(function() {
+            $.fn.zato.channel.mcp.security_badge_picker_config.inject_hidden_input(form, $(this));
+        });
+
         return true;
     };
 })
@@ -153,6 +161,8 @@ $.fn.zato.channel.mcp.badge_picker.load = function(action, channel_id) {
         url += '?channel_id=' + channel_id;
     }
 
+    console.log('[mcp.badge_picker.load] action=' + action + ' channel_id=' + channel_id + ' url=' + url);
+
     var available_body = $('#badge-zone-available-' + action + ' .badge-zone-body');
     available_body.html('<span class="badge-zone-empty">Loading...</span>');
 
@@ -162,9 +172,18 @@ $.fn.zato.channel.mcp.badge_picker.load = function(action, channel_id) {
         headers: { 'X-CSRFToken': $.cookie('csrftoken') },
         success: function(data) {
             var items = (typeof data === 'string') ? $.parseJSON(data) : data;
+            console.log('[mcp.badge_picker.load] success, total=' + (items ? items.length : 0) + ' assigned=' + (items ? items.filter(function(x){return x.is_member}).length : 0));
+            if (items) {
+                for (var item_idx = 0; item_idx < items.length; item_idx++) {
+                    if (items[item_idx].is_member) {
+                        console.log('[mcp.badge_picker.load] assigned item: ' + JSON.stringify(items[item_idx]));
+                    }
+                }
+            }
             $.fn.zato.badge_picker.init(action, items, $.fn.zato.channel.mcp.badge_picker_config);
         },
-        error: function() {
+        error: function(xhr, status, err) {
+            console.log('[mcp.badge_picker.load] error: status=' + status + ' err=' + err + ' response=' + xhr.responseText);
             available_body.html('<span class="badge-zone-empty">Failed to load</span>');
         }
     });
@@ -179,6 +198,8 @@ $.fn.zato.channel.mcp.security_badge_picker.load = function(action, channel_id) 
         url += '?channel_id=' + channel_id;
     }
 
+    console.log('[mcp.security_badge_picker.load] action=' + action + ' sec_action=' + sec_action + ' channel_id=' + channel_id + ' url=' + url);
+
     var available_body = $('#badge-zone-available-' + sec_action + ' .badge-zone-body');
     available_body.html('<span class="badge-zone-empty">Loading...</span>');
 
@@ -188,9 +209,20 @@ $.fn.zato.channel.mcp.security_badge_picker.load = function(action, channel_id) 
         headers: { 'X-CSRFToken': $.cookie('csrftoken') },
         success: function(data) {
             var items = (typeof data === 'string') ? $.parseJSON(data) : data;
+            var assigned_count = 0;
+            if (items) {
+                for (var item_idx = 0; item_idx < items.length; item_idx++) {
+                    if (items[item_idx].is_member) {
+                        assigned_count++;
+                        console.log('[mcp.security_badge_picker.load] assigned: ' + JSON.stringify(items[item_idx]));
+                    }
+                }
+            }
+            console.log('[mcp.security_badge_picker.load] success, total=' + (items ? items.length : 0) + ' assigned=' + assigned_count);
             $.fn.zato.badge_picker.init(sec_action, items, $.fn.zato.channel.mcp.security_badge_picker_config);
         },
-        error: function() {
+        error: function(xhr, status, err) {
+            console.log('[mcp.security_badge_picker.load] error: status=' + status + ' err=' + err + ' response=' + xhr.responseText);
             available_body.html('<span class="badge-zone-empty">Failed to load</span>');
         }
     });
@@ -227,13 +259,17 @@ $.fn.zato.channel.mcp.data_table.new_row = function(item, data, include_tr) {
     var is_active = item.is_active == true;
     var service_count = data.service_count !== undefined ? data.service_count : ($("#service_count_"+item.id).text() || 0);
     var security_count = data.security_count !== undefined ? data.security_count : ($("#security_count_"+item.id).text() || 0);
+    var url_path = item.url_path || '';
+    if (url_path && url_path.charAt(0) !== '/') {
+        url_path = '/' + url_path;
+    }
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
 
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td class="text-center">{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', item.url_path);
+    row += String.format('<td>{0}</td>', url_path);
     row += String.format('<td class="text-center" id="service_count_{0}">{1}</td>', item.id, service_count);
     row += String.format('<td class="text-center" id="security_count_{0}">{1}</td>', item.id, security_count);
 

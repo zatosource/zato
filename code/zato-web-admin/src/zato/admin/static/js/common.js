@@ -1603,6 +1603,8 @@ $.fn.zato.is_form_valid = function(form) {
     });
 
     // Confirm that all the required elements are provided
+    var first_invalid = null;
+
     form.find($.fn.zato.jquery_pattern_required).each(function(idx, elem) {
 
         var elem = $(elem)
@@ -1625,6 +1627,11 @@ $.fn.zato.is_form_valid = function(form) {
 
             $.fn.zato.add_elem_placeholder(elem, msg);
 
+            // Track the first invalid field so we can focus it later
+            if (!first_invalid) {
+                first_invalid = elem;
+            }
+
             // If we are here, it means that the form is not valid
             is_valid = false;
         }
@@ -1632,6 +1639,11 @@ $.fn.zato.is_form_valid = function(form) {
             $.fn.zato.cleanup_elem_css_attention(elem);
         }
     })
+
+    // Focus the first invalid field so the user sees what needs fixing
+    if (first_invalid) {
+        first_invalid.focus();
+    }
 
     // Now, we can return the result to our caller
     return is_valid;
