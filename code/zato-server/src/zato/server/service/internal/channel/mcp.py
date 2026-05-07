@@ -51,10 +51,21 @@ class MCPEndpoint(AdminService):
         # .. read the session ID from the request header if present ..
         session_id = self.request.http.headers.get(_session_header)
 
-        # .. build the remote address string for session logging ..
-        remote_addr = self.wsgi_environ.get('REMOTE_ADDR', '')
-        remote_port = self.wsgi_environ.get('REMOTE_PORT', '')
-        remote_address = f'{remote_addr}:{remote_port}'
+        # .. get the remote address for session logging ..
+        remote_address = self.wsgi_environ.get('REMOTE_ADDR', '')
+
+        # .. handle GET requests for server-to-client notifications ..
+        if self.request.http.method == 'GET':
+            mcp_response = wrapper.handler.get_pending_notifications(session_id)
+            self.response.status_code = mcp_response.status_code
+
+            if mcp_response.body:
+                self.response.payload = dumps(mcp_response.body)
+                self.response.data_format = _content_type_json
+            else:
+                self.response.payload = ''
+
+            return
 
         # .. handle DELETE requests for session termination ..
         if self.request.http.method == 'DELETE':
