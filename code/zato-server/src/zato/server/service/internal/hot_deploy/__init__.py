@@ -382,6 +382,10 @@ class Create(AdminService):
 
                 self.response.payload.services_deployed = services_deployed
 
+                # Notify MCP channels that tools may have changed
+                if services_deployed:
+                    self.server.notify_mcp_tools_changed()
+
             except OSError as e:
                 if e.errno == ENOENT:
                     self.logger.debug('Caught ENOENT e:`%s`', format_exc())

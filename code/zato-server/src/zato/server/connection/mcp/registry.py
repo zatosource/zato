@@ -16,7 +16,7 @@ from zato.server.connection.mcp.schema import sio_to_json_schema
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict, strdictlist, strlist
+    from zato.common.typing_ import stranydict, strdictlist, strnone, strlist
     from zato.server.service.store import ServiceStore
 
 # ################################################################################################################################
@@ -29,6 +29,9 @@ logger = getLogger(__name__)
 
 # Internal service namespace - services under this prefix are never exposed as MCP tools
 _internal_prefix = 'zato.'
+
+# Default page size for tools/list pagination
+_default_page_size = 100
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -102,6 +105,34 @@ class ToolRegistry:
 
         tool_suffix = 'tool' if len(tools) == 1 else 'tools'
         logger.info('MCP tool registry built with %d %s', len(tools), tool_suffix)
+
+# ################################################################################################################################
+
+    def get_tools_page(self, cursor:'strnone'=None) -> 'tuple[strdictlist, strnone]':
+        """ Returns a page of tools starting from the given cursor.
+        The cursor is an opaque string representing the start index.
+        Returns (tools_page, next_cursor) where next_cursor is None if no more pages.
+        """
+
+        all_tools = self._cached_tools
+
+        # Decode the cursor into a start index ..
+        start = 0
+
+        if cursor:
+            start = int(cursor)
+
+        end = start + _default_page_size
+        page = all_tools[start:end]
+
+        # .. if there are more tools beyond this page, produce a next cursor ..
+        if end < len(all_tools):
+            next_cursor = str(end)
+        else:
+            next_cursor = None
+
+        out = (page, next_cursor)
+        return out
 
 # ################################################################################################################################
 

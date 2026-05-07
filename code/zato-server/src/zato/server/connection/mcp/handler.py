@@ -253,7 +253,7 @@ class MCPHandler:
 
         if method == 'tools/list':
 
-            out = self._handle_tools_list(request_id)
+            out = self._handle_tools_list(request_id, params)
             return out
 
         if method == 'tools/call':
@@ -300,16 +300,21 @@ class MCPHandler:
 
 # ################################################################################################################################
 
-    def _handle_tools_list(self, request_id:'any_') -> 'stranydict':
+    def _handle_tools_list(self, request_id:'any_', params:'anydict') -> 'stranydict':
         """ Handles the MCP tools/list request.
-        Returns the list of available tools from the tool registry.
+        Supports cursor-based pagination - the client may pass a `cursor` in params
+        to continue listing from a previous position.
         """
 
-        tools = self.tool_registry.get_tools()
+        cursor = params.get('cursor')
+        tools, next_cursor = self.tool_registry.get_tools_page(cursor)
 
         result:'stranydict' = {
             'tools': tools,
         }
+
+        if next_cursor:
+            result['nextCursor'] = next_cursor
 
         out = _make_success_response(request_id, result)
         return out
@@ -402,6 +407,56 @@ class MCPHandler:
         """
 
         out = _make_success_response(request_id, {})
+        return out
+
+# ################################################################################################################################
+
+    def notify_tools_changed(self) -> 'int':
+        """ Rebuilds the tool registry and queues a notifications/tools/list_changed
+        notification to all active sessions.
+        Returns the number of sessions notified.
+        """
+
+        self.tool_registry.rebuild()
+
+        notification:'stranydict' = {
+            'jsonrpc': _jsonrpc_version,
+            'method': 'notifications/tools/list_changed',
+        }
+
+        out = self.session_manager.queue_notification_for_all(notification)
+        return out
+
+# ################################################################################################################################
+
+    def get_pending_notifications(self, session_id:'strnone') -> 'MCPResponse':
+        """ Returns pending notifications for a session as a JSON-RPC batch.
+        Used by GET requests for server-to-client notifications.
+        """
+
+        # Our response to produce
+        out = MCPResponse()
+        out.session_id = None
+
+        if not session_id:
+            out.body = None
+            out.status_code = _http_not_found
+            return out
+
+        if not self.session_manager.validate(session_id):
+            out.body = None
+            out.status_code = _http_not_found
+            return out
+
+        notifications = self.session_manager.drain_notifications(session_id)
+
+        if not notifications:
+            out.body = None
+            out.status_code = NO_CONTENT
+            return out
+
+        out.body = notifications
+        out.status_code = OK
         return out
 
 # ################################################################################################################################
