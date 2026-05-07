@@ -1,17 +1,19 @@
-/* Shared tab styles — reused across dashboards and detail pages. */
+/* Shared tab styles — reused across dashboards and detail pages.
+   All visual properties are configurable via CSS custom properties
+   set on the .dashboard-tabs container. Defaults match the dashboard look. */
 
 .dashboard-tabs {
     display: inline-flex;
-    gap: 6px;
+    gap: var(--tabs-gap, 6px);
     margin-bottom: 0.7rem;
-    padding: 3px;
+    padding: var(--tabs-padding, 3px);
     background: var(--tabs-bg, linear-gradient(
         135deg,
         rgba(0, 0, 0, 0.025) 0%,
         rgba(0, 0, 0, 0.015) 100%
     ));
     border: 1px solid var(--tabs-border, rgba(0, 0, 0, 0.06));
-    border-radius: 6px;
+    border-radius: var(--tabs-radius, 6px);
 }
 
 .dashboard-tabs:empty {
@@ -25,18 +27,18 @@
     background-image: none;
     border: 1px solid transparent;
     border-bottom: 2px solid transparent;
-    border-radius: 6px 6px 3px 3px;
+    border-radius: var(--tab-radius, 6px 6px 3px 3px);
     box-shadow: none;
     text-shadow: none;
     outline: 0;
-    padding: 7px 22px;
+    padding: var(--tab-padding, 7px 22px);
     cursor: pointer;
     font-family: inherit;
-    font-size: 11.5px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: rgba(0, 0, 0, 0.36);
+    font-size: var(--tab-font-size, 11.5px);
+    font-weight: var(--tab-font-weight, 600);
+    text-transform: var(--tab-text-transform, uppercase);
+    letter-spacing: var(--tab-letter-spacing, 0.8px);
+    color: var(--tab-color, rgba(0, 0, 0, 0.36));
     transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -66,13 +68,13 @@
 .dashboard-tab-active:hover,
 .dashboard-tab-active:focus,
 .dashboard-tab-active:active {
-    color: var(--primary-dark);
-    background: #fff;
+    color: var(--tab-active-color, var(--primary-dark));
+    background: var(--tab-active-bg, #fff);
     border: 1px solid rgba(0, 0, 0, 0.08);
-    border-bottom: 2px solid var(--primary-dark);
-    box-shadow:
+    border-bottom: 2px solid var(--tab-active-border-color, var(--primary-dark));
+    box-shadow: var(--tab-active-shadow,
         0 1px 3px rgba(0, 0, 0, 0.04),
-        0 1px 1px rgba(0, 0, 0, 0.03);
+        0 1px 1px rgba(0, 0, 0, 0.03));
 }
 
 .dashboard-tab-panel[hidden] {
