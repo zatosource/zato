@@ -16,6 +16,7 @@ import sys
 import time
 from base64 import b64encode
 from json import dumps, loads
+from traceback import format_exc
 
 # requests
 import requests
@@ -641,11 +642,11 @@ if __name__ == '__main__':
 
                 observer.join()
                 logger.info('\nWatching stopped.')
-            except Exception as e:
-                logger.info(f'\nError setting up file watching: {e}')
+            except Exception:
+                logger.info(f'\nListener error: While setting up file watching: {format_exc()}')
 
-    except Exception as e:
-        logger.info(f'Error: {e}')
+    except Exception:
+        logger.info(f'Listener error: {format_exc()}')
         sys.exit(1)
 
 # ################################################################################################################################
