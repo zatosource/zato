@@ -758,6 +758,8 @@ class GENERIC:
             CLOUD_MICROSOFT_365 = 'cloud-microsoft-365'
             CLOUD_SALESFORCE = 'cloud-salesforce'
             OUTCONN_LDAP = 'outconn-ldap'
+            CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
+            OUTCONN_HL7_MLLP = 'outconn-hl7-mllp'
             OUTCONN_KAFKA = 'outconn-kafka'
             OUTCONN_MONGODB = 'outconn-mongodb'
 
@@ -1285,6 +1287,24 @@ class HL7:
         read_buffer_size = 2048
         recv_timeout = 250
         start_seq = '0b'
+
+        # Retry engine defaults (outbound)
+        max_retries                      = 5
+        backoff_base_seconds             = 1
+        backoff_cap_seconds              = 300
+        backoff_jitter_percent           = 10
+
+        # Circuit breaker defaults (outbound)
+        circuit_breaker_threshold_percent = 50
+        circuit_breaker_window_seconds    = 60
+        circuit_breaker_reset_seconds     = 60
+
+        # Dedup defaults (inbound)
+        dedup_ttl_value = 14
+        dedup_ttl_unit  = 'days'
+
+        # TLS defaults
+        tls_version_min = 'TLSv1.2'
 
     class Const:
 
