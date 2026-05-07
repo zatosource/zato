@@ -6,6 +6,17 @@
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+    <style>
+        .data-popup .form-data {
+            border: none;
+        }
+        .data-popup .bd {
+            background: #b8b8b8;
+        }
+        .data-popup .dashboard-tabs {
+            display: flex;
+        }
+    </style>
 {% endblock %}
 
 {% block "extra_js" %}
@@ -188,25 +199,15 @@
         </div>
 
         <div id="create-div" class='data-popup ignore'>
-            <div class="bd" style="background:#fff">
+            <div class="bd">
                 <form novalidate action="{% url "channel-hl7-mllp-create" %}" method="post" id="create-form">
 
-                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings" style="--tabs-bg:#eef1f5; --tabs-border:rgba(0,0,0,0.1); --tabs-padding:2px; --tabs-gap:3px; --tab-font-size:11px; --tab-font-weight:600; --tab-text-transform:none; --tab-letter-spacing:normal; --tab-padding:4px 12px; --tab-color:rgba(0,0,0,0.5); --tab-active-color:#012845">
-                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">
-                            <span class="dashboard-tab-label">Main</span>
-                        </button>
-                        <button type="button" class="dashboard-tab" data-tab="routing" role="tab" aria-selected="false">
-                            <span class="dashboard-tab-label">Routing</span>
-                        </button>
-                        <button type="button" class="dashboard-tab" data-tab="protocol" role="tab" aria-selected="false">
-                            <span class="dashboard-tab-label">Protocol</span>
-                        </button>
-                        <button type="button" class="dashboard-tab" data-tab="logging" role="tab" aria-selected="false">
-                            <span class="dashboard-tab-label">Logging</span>
-                        </button>
-                        <button type="button" class="dashboard-tab" data-tab="dedup" role="tab" aria-selected="false">
-                            <span class="dashboard-tab-label">Dedup</span>
-                        </button>
+                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings" style="--tabs-bg:#c0c0c0; --tabs-border:transparent; --tabs-padding:0; --tabs-gap:0; --tabs-radius:0; --tab-font-size:12px; --tab-font-weight:400; --tab-text-transform:none; --tab-letter-spacing:normal; --tab-padding:5px 14px; --tab-radius:0; --tab-color:#666; --tab-hover-color:#222; --tab-hover-bg:transparent; --tab-hover-border:#333; --tab-active-color:#222; --tab-active-bg:transparent; --tab-active-border-color:#012845; --tab-active-shadow:none; margin-bottom:0; border-bottom:1px solid #b0b0b0">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="routing" role="tab" aria-selected="false">Routing</button>
+                        <button type="button" class="dashboard-tab" data-tab="protocol" role="tab" aria-selected="false">Protocol</button>
+                        <button type="button" class="dashboard-tab" data-tab="logging" role="tab" aria-selected="false">Logging</button>
+                        <button type="button" class="dashboard-tab" data-tab="dedup" role="tab" aria-selected="false">Dedup</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="mllp-create-tab-panel-main" role="tabpanel">
@@ -367,25 +368,15 @@
         </div>
 
         <div id="edit-div" class='data-popup ignore'>
-            <div class="bd" style="background:#fff">
+            <div class="bd">
                 <form novalidate action="{% url "channel-hl7-mllp-edit" %}" method="post" id="edit-form">
 
-                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings" style="--tabs-bg:#eef1f5; --tabs-border:rgba(0,0,0,0.1); --tabs-padding:2px; --tabs-gap:3px; --tab-font-size:11px; --tab-font-weight:600; --tab-text-transform:none; --tab-letter-spacing:normal; --tab-padding:4px 12px; --tab-color:rgba(0,0,0,0.5); --tab-active-color:#012845">
-                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">
-                            <span class="dashboard-tab-label">Main</span>
-                        </button>
-                        <button type="button" class="dashboard-tab" data-tab="routing" role="tab" aria-selected="false">
-                            <span class="dashboard-tab-label">Routing</span>
-                        </button>
-                        <button type="button" class="dashboard-tab" data-tab="protocol" role="tab" aria-selected="false">
-                            <span class="dashboard-tab-label">Protocol</span>
-                        </button>
-                        <button type="button" class="dashboard-tab" data-tab="logging" role="tab" aria-selected="false">
-                            <span class="dashboard-tab-label">Logging</span>
-                        </button>
-                        <button type="button" class="dashboard-tab" data-tab="dedup" role="tab" aria-selected="false">
-                            <span class="dashboard-tab-label">Dedup</span>
-                        </button>
+                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings" style="--tabs-bg:#a0a0a0; --tabs-border:transparent; --tabs-padding:0; --tabs-gap:0; --tabs-radius:0; --tab-font-size:12px; --tab-font-weight:400; --tab-text-transform:none; --tab-letter-spacing:normal; --tab-padding:5px 14px; --tab-radius:0; --tab-color:#ddd; --tab-active-color:#fff; --tab-active-bg:transparent; --tab-active-border-color:#fff; --tab-active-shadow:none; margin-bottom:0; border-bottom:1px solid #888">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="routing" role="tab" aria-selected="false">Routing</button>
+                        <button type="button" class="dashboard-tab" data-tab="protocol" role="tab" aria-selected="false">Protocol</button>
+                        <button type="button" class="dashboard-tab" data-tab="logging" role="tab" aria-selected="false">Logging</button>
+                        <button type="button" class="dashboard-tab" data-tab="dedup" role="tab" aria-selected="false">Dedup</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="mllp-edit-tab-panel-main" role="tabpanel">
