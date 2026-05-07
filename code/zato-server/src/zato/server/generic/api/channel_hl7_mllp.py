@@ -141,11 +141,15 @@ class ChannelHL7MLLPWrapper(Wrapper):
                 channel_name=self.config.name,
                 service_name=self.config.service,
                 callback=self._invoke_service,
-                msh3_sending_application=self.config.get('msh3_sending_app', ''),     # pyright: ignore[reportAttributeAccessIssue]
-                msh4_sending_facility=self.config.get('msh4_sending_facility', ''),    # pyright: ignore[reportAttributeAccessIssue]
-                msh5_receiving_application=self.config.get('msh5_receiving_app', ''),   # pyright: ignore[reportAttributeAccessIssue]
-                msh6_receiving_facility=self.config.get('msh6_receiving_facility', ''), # pyright: ignore[reportAttributeAccessIssue]
-                msh9_message_type=self.config.get('msh9_message_type', ''),            # pyright: ignore[reportAttributeAccessIssue]
+                msh3_sending_application=self.config.get('msh3_sending_app', ''),      # pyright: ignore[reportAttributeAccessIssue]
+                msh4_sending_facility=self.config.get('msh4_sending_facility', ''),     # pyright: ignore[reportAttributeAccessIssue]
+                msh5_receiving_application=self.config.get('msh5_receiving_app', ''),    # pyright: ignore[reportAttributeAccessIssue]
+                msh6_receiving_facility=self.config.get('msh6_receiving_facility', ''),  # pyright: ignore[reportAttributeAccessIssue]
+                msh9_message_type=self.config.get('msh9_message_type', ''),             # pyright: ignore[reportAttributeAccessIssue]
+                msh9_trigger_event=self.config.get('msh9_trigger_event', ''),           # pyright: ignore[reportAttributeAccessIssue]
+                msh11_processing_id=self.config.get('msh11_processing_id', ''),         # pyright: ignore[reportAttributeAccessIssue]
+                msh12_version_id=self.config.get('msh12_version_id', ''),               # pyright: ignore[reportAttributeAccessIssue]
+                is_default=self.config.get('is_default', False),                        # pyright: ignore[reportAttributeAccessIssue]
             )
 
             _shared_state.channel_count += 1

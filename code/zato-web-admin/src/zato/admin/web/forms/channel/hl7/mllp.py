@@ -56,11 +56,15 @@ class CreateForm(forms.Form):
     end_seq = forms.CharField(initial=_default.end_seq, widget=forms.TextInput(attrs={'style':'width:15%'}))
 
     # Routing fields
-    msh3_sending_app      = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:50%'}))
-    msh4_sending_facility = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:50%'}))
-    msh5_receiving_app    = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:50%'}))
+    msh3_sending_app        = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:50%'}))
+    msh4_sending_facility   = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:50%'}))
+    msh5_receiving_app      = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:50%'}))
     msh6_receiving_facility = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:50%'}))
-    msh9_message_type     = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:50%'}))
+    msh9_message_type       = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:30%'}))
+    msh9_trigger_event      = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:30%'}))
+    msh11_processing_id     = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:15%'}))
+    msh12_version_id        = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:15%'}))
+    is_default              = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     # Dedup
     dedup_ttl_value = forms.CharField(

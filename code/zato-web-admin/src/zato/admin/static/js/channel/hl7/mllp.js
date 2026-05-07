@@ -32,6 +32,9 @@ $(document).ready(function() {
         'msh5_receiving_app',
         'msh6_receiving_facility',
         'msh9_message_type',
+        'msh9_trigger_event',
+        'msh11_processing_id',
+        'msh12_version_id',
         'dedup_ttl_value',
         'dedup_ttl_unit',
         'default_character_encoding',
@@ -107,6 +110,10 @@ $.fn.zato.channel.hl7.mllp.data_table.new_row = function(item, data, include_tr)
     row += String.format("<td class='ignore'>{0}</td>", item.msh5_receiving_app);
     row += String.format("<td class='ignore'>{0}</td>", item.msh6_receiving_facility);
     row += String.format("<td class='ignore'>{0}</td>", item.msh9_message_type);
+    row += String.format("<td class='ignore'>{0}</td>", item.msh9_trigger_event);
+    row += String.format("<td class='ignore'>{0}</td>", item.msh11_processing_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.msh12_version_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.is_default);
 
     row += String.format("<td class='ignore'>{0}</td>", item.dedup_ttl_value);
     row += String.format("<td class='ignore'>{0}</td>", item.dedup_ttl_unit);
