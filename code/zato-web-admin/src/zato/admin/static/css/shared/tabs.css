@@ -20,7 +20,7 @@
     display: none;
 }
 
-.dashboard-tab {
+.dashboard-tabs > .dashboard-tab {
     appearance: none;
     -webkit-appearance: none;
     background: transparent none;
@@ -42,9 +42,9 @@
     transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.dashboard-tab:hover,
-.dashboard-tab:focus,
-.dashboard-tab:active {
+.dashboard-tabs > .dashboard-tab:hover,
+.dashboard-tabs > .dashboard-tab:focus,
+.dashboard-tabs > .dashboard-tab:active {
     background: transparent none;
     background-image: none;
     border: 1px solid transparent;
@@ -54,20 +54,21 @@
     outline: 0;
 }
 
-.dashboard-tab:hover {
-    color: rgba(0, 0, 0, 0.58);
-    background: rgba(255, 255, 255, 0.5);
+.dashboard-tabs > .dashboard-tab:hover {
+    color: var(--tab-hover-color, rgba(0, 0, 0, 0.58));
+    background: var(--tab-hover-bg, rgba(255, 255, 255, 0.5));
+    border-bottom-color: var(--tab-hover-border, transparent);
 }
 
-.dashboard-tab:focus-visible {
+.dashboard-tabs > .dashboard-tab:focus-visible {
     outline: 2px solid var(--primary-dark);
     outline-offset: 1px;
 }
 
-.dashboard-tab-active,
-.dashboard-tab-active:hover,
-.dashboard-tab-active:focus,
-.dashboard-tab-active:active {
+.dashboard-tabs > .dashboard-tab-active,
+.dashboard-tabs > .dashboard-tab-active:hover,
+.dashboard-tabs > .dashboard-tab-active:focus,
+.dashboard-tabs > .dashboard-tab-active:active {
     color: var(--tab-active-color, var(--primary-dark));
     background: var(--tab-active-bg, #fff);
     border: 1px solid rgba(0, 0, 0, 0.08);
