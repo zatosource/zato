@@ -14,7 +14,7 @@ from django import forms
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    url_path = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial='/mcp')
+    url_path = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
 
 # ################################################################################################################################
 

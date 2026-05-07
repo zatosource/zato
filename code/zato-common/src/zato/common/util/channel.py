@@ -18,7 +18,7 @@ django_channel_url_path = '/django'
 django_service_name = 'zato.server.service.internal.helpers.DjangoServiceGateway'
 
 mcp_channel_name = 'zato.channel.mcp'
-mcp_channel_url_path = '/mcp'
+mcp_channel_url_path = '/mcp/demo'
 mcp_service_name = 'zato.server.service.internal.channel.mcp.MCPEndpoint'
 
 # ################################################################################################################################
@@ -176,7 +176,7 @@ def ensure_mcp_channel_exists(session, cluster_id):
         generic_conn.is_channel = True
         generic_conn.is_outconn = False
         generic_conn.cluster_id = cluster_id
-        generic_conn.opaque1 = '{"services": ["helpers.echo"]}'
+        generic_conn.opaque1 = '{"services": ["demo.echo"], "url_path": "/mcp/demo"}'
 
         session.add(generic_conn)
 
@@ -199,7 +199,7 @@ def on_mcp_channel_create_edit(service, data, model, old_name):
     with closing(service.server.odb.session()) as session:
 
         channel_name = data['name']
-        url_path = data.get('url_path', mcp_channel_url_path)
+        url_path = data['url_path']
         cluster_id = model.cluster_id
         security_groups = data.get('security_groups', [])
 
