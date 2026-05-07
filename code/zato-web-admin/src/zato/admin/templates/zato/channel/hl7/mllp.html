@@ -6,43 +6,7 @@
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
-    <style>
-        .data-popup .form-data {
-            border: none;
-        }
-        .data-popup .bd {
-            box-shadow: none;
-        }
-        #create-div .dashboard-tabs,
-        #edit-div .dashboard-tabs {
-            display: flex;
-            background: #052238;
-            border: 0;
-            outline: 0;
-        }
-        .data-popup .dashboard-tabs > .dashboard-tab {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 10.5px;
-            border-bottom: 3px solid #052238;
-        }
-        .data-popup .dashboard-tabs > .dashboard-tab:hover {
-            color: rgba(255, 255, 255, 0.9);
-            background: rgba(255, 255, 255, 0.08);
-            border-bottom-color: transparent;
-        }
-        .data-popup .dashboard-tabs > .dashboard-tab-active,
-        .data-popup .dashboard-tabs > .dashboard-tab-active:hover,
-        .data-popup .dashboard-tabs > .dashboard-tab-active:focus,
-        .data-popup .dashboard-tabs > .dashboard-tab-active:active {
-            color: rgba(255, 255, 255, 0.9);
-            background: rgba(255, 255, 255, 0.20);
-            border: 1px solid transparent;
-            border-bottom: 3px solid #ccc;
-            border-radius: 0;
-            box-shadow: none;
-            text-shadow: 0 0 8px rgba(212, 175, 55, 0.2);
-        }
-    </style>
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -54,6 +18,7 @@
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
@@ -228,12 +193,12 @@
             <div class="bd">
                 <form novalidate action="{% url "channel-hl7-mllp-create" %}" method="post" id="create-form">
 
-                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings" style="--tabs-padding:0; --tabs-gap:0; --tabs-radius:0; --tab-font-size:11.5px; --tab-font-weight:500; --tab-text-transform:uppercase; --tab-letter-spacing:1.5px; --tab-padding:8px 20px; --tab-radius:0; --tab-active-shadow:none; margin-bottom:0">
+                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
                         <button type="button" class="dashboard-tab" data-tab="routing" role="tab" aria-selected="false">Routing</button>
                         <button type="button" class="dashboard-tab" data-tab="protocol" role="tab" aria-selected="false">Protocol</button>
                         <button type="button" class="dashboard-tab" data-tab="logging" role="tab" aria-selected="false">Logging</button>
-                        <button type="button" class="dashboard-tab" data-tab="dedup" role="tab" aria-selected="false">Dedup</button>
+                        <button type="button" class="dashboard-tab" data-tab="dedup" role="tab" aria-selected="false">Deduplication</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="mllp-create-tab-panel-main" role="tabpanel">
@@ -397,12 +362,12 @@
             <div class="bd">
                 <form novalidate action="{% url "channel-hl7-mllp-edit" %}" method="post" id="edit-form">
 
-                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings" style="--tabs-bg:#ddd; --tabs-border:transparent; --tabs-padding:0; --tabs-gap:0; --tabs-radius:0; --tab-font-size:12px; --tab-font-weight:500; --tab-text-transform:none; --tab-letter-spacing:normal; --tab-padding:6px 16px; --tab-radius:0; --tab-color:#777; --tab-hover-color:#333; --tab-hover-bg:transparent; --tab-hover-border:transparent; --tab-active-color:#222; --tab-active-bg:transparent; --tab-active-border-color:#063c65; --tab-active-shadow:none; margin-bottom:0">
+                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
                         <button type="button" class="dashboard-tab" data-tab="routing" role="tab" aria-selected="false">Routing</button>
                         <button type="button" class="dashboard-tab" data-tab="protocol" role="tab" aria-selected="false">Protocol</button>
                         <button type="button" class="dashboard-tab" data-tab="logging" role="tab" aria-selected="false">Logging</button>
-                        <button type="button" class="dashboard-tab" data-tab="dedup" role="tab" aria-selected="false">Dedup</button>
+                        <button type="button" class="dashboard-tab" data-tab="dedup" role="tab" aria-selected="false">Deduplication</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="mllp-edit-tab-panel-main" role="tabpanel">
