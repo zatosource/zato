@@ -25,13 +25,14 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name', 'is_active', 'is_internal', 'service', 'security_name', 'address'
+        output_required = 'id', 'name', 'is_active', 'is_internal', 'service', 'security_name'
         output_optional = (
             'should_parse_on_input', 'should_validate', 'should_return_errors',
             'should_log_messages', 'logging_level', 'data_encoding',
             'max_msg_size', 'read_buffer_size', 'recv_timeout',
             'start_seq', 'end_seq',
-            'tls_cert_path', 'tls_key_path', 'tls_ca_path', 'tls_verify',
+            'msh3_sending_app', 'msh4_sending_facility',
+            'msh5_receiving_app', 'msh6_receiving_facility', 'msh9_message_type',
             'dedup_ttl_value', 'dedup_ttl_unit',
             'default_character_encoding',
             'normalize_line_endings', 'force_standard_delimiters',
@@ -54,13 +55,14 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_internal', 'service', 'address'
+        input_required = 'name', 'is_internal', 'service'
         input_optional = (
             'is_active', 'should_parse_on_input', 'should_validate', 'should_return_errors',
             'should_log_messages', 'logging_level', 'data_encoding',
             'max_msg_size', 'read_buffer_size', 'recv_timeout',
             'start_seq', 'end_seq',
-            'tls_cert_path', 'tls_key_path', 'tls_ca_path', 'tls_verify',
+            'msh3_sending_app', 'msh4_sending_facility',
+            'msh5_receiving_app', 'msh6_receiving_facility', 'msh9_message_type',
             'dedup_ttl_value', 'dedup_ttl_unit',
             'default_character_encoding',
             'normalize_line_endings', 'force_standard_delimiters',

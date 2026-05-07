@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import socket
-import ssl
 from logging import getLogger
 from traceback import format_exc
 
@@ -17,12 +16,7 @@ from zato.common.hl7.exception import HL7Exception
 from zato.common.hl7.mllp.ack import build_ack
 from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
 from zato.common.hl7.mllp.preprocess import preprocess_message
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import callable_
+from zato.common.hl7.mllp.router import HL7MessageRouter
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,13 +50,14 @@ class ConnectionContext:
 class HL7MLLPServer:
     """ A gevent-based HL7 MLLP TCP server.
     Accepts connections, reads MLLP-framed messages, runs them through
-    the pre-processing pipeline, invokes a callback, and sends back MLLP-framed ACKs.
+    the pre-processing pipeline, routes them to the appropriate service via the message router,
+    and sends back MLLP-framed ACKs.
     """
 
     def __init__(
         self,
         address:'str',
-        callback_func:'callable_',
+        router:'HL7MessageRouter',
         start_sequence:'bytes',
         end_sequence:'bytes',
         *,
@@ -71,7 +66,6 @@ class HL7MLLPServer:
         read_buffer_size:'int' = _Default_Read_Buffer_Size,
         should_log_messages:'bool' = False,
         should_parse_on_input:'bool' = True,
-        ssl_context:'ssl.SSLContext | None' = None,
         keepalive_idle:'int' = _Default_Keepalive_Idle_Seconds,
         keepalive_interval:'int' = _Default_Keepalive_Interval_Seconds,
         keepalive_probe_count:'int' = _Default_Keepalive_Probe_Count,
@@ -83,17 +77,16 @@ class HL7MLLPServer:
         default_character_encoding:'str' = 'utf-8',
         ) -> 'None':
 
-        self.address        = address
-        self.callback_func  = callback_func
+        self.address = address
+        self.router  = router
         self.start_sequence = start_sequence
         self.end_sequence   = end_sequence
 
         self.receive_timeout  = receive_timeout
         self.max_message_size = max_message_size
         self.read_buffer_size = read_buffer_size
-        self.should_log_messages    = should_log_messages
-        self.should_parse_on_input  = should_parse_on_input
-        self.ssl_context = ssl_context
+        self.should_log_messages   = should_log_messages
+        self.should_parse_on_input = should_parse_on_input
 
         self.keepalive_idle        = keepalive_idle
         self.keepalive_interval    = keepalive_interval
@@ -137,10 +130,8 @@ class HL7MLLPServer:
             except socket.timeout:
                 continue
             except OSError:
-                # Socket was closed during shutdown
                 break
 
-            # Handle the connection (in a real Zato deployment this would be a greenlet)
             try:
                 self._handle_connection(client_socket, peer_address)
             except Exception:
@@ -173,14 +164,8 @@ class HL7MLLPServer:
         client_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, self.keepalive_interval)
         client_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, self.keepalive_probe_count)
 
-        # .. wrap with TLS if configured ..
-        if self.ssl_context:
-            active_socket = self.ssl_context.wrap_socket(client_socket, server_side=True)
-        else:
-            active_socket = client_socket
-
         # .. set receive timeout ..
-        active_socket.settimeout(self.receive_timeout)
+        client_socket.settimeout(self.receive_timeout)
 
         logger.info('HL7 MLLP connection from %s:%d', connection_context.peer_ip, connection_context.peer_port)
 
@@ -192,7 +177,7 @@ class HL7MLLPServer:
 
                 # Read a chunk of data ..
                 try:
-                    chunk = active_socket.recv(self.read_buffer_size)
+                    chunk = client_socket.recv(self.read_buffer_size)
                 except socket.timeout:
                     continue
                 except (ConnectionResetError, BrokenPipeError):
@@ -218,16 +203,16 @@ class HL7MLLPServer:
                         break
 
                     # .. process each extracted message ..
-                    self._handle_message(active_socket, message_bytes, connection_context)
+                    self._handle_message(client_socket, message_bytes, connection_context)
 
         finally:
 
             try:
-                active_socket.shutdown(socket.SHUT_WR)
+                client_socket.shutdown(socket.SHUT_WR)
             except OSError:
                 pass
 
-            active_socket.close()
+            client_socket.close()
             logger.info('HL7 MLLP connection closed from %s:%d (messages: %d)',
                 connection_context.peer_ip, connection_context.peer_port,
                 connection_context.total_messages_received)
@@ -240,7 +225,7 @@ class HL7MLLPServer:
         raw_message_bytes:'bytes',
         connection_context:'ConnectionContext',
         ) -> 'None':
-        """ Processes a single unframed HL7 message: pre-process, invoke callback, send ACK.
+        """ Processes a single unframed HL7 message: pre-process, route to service, send ACK.
         """
 
         connection_context.total_messages_received += 1
@@ -264,7 +249,7 @@ class HL7MLLPServer:
         # .. process each message (usually just one, unless concatenated) ..
         for message_text in cleaned_messages:
 
-            # .. extract the MSH line for ACK building ..
+            # .. extract the MSH line for routing and ACK building ..
             first_cr = message_text.find('\r')
 
             if first_cr == -1:
@@ -272,23 +257,38 @@ class HL7MLLPServer:
             else:
                 msh_line = message_text[:first_cr]
 
-            # .. invoke the callback and build an ACK based on the outcome ..
-            try:
-                _ = self.callback_func(message_text)
-                ack_code = 'AA'
-                error_text = ''
-            except Exception:
-                logger.warning('Service callback error for message from %s:%d; e:`%s`',
-                    connection_context.peer_ip, connection_context.peer_port, format_exc())
-                ack_code = 'AE'
-                error_text = 'Internal processing error'
+            # .. find the matching route for this message ..
+            matched_route = self.router.match(msh_line)
+
+            if matched_route is None:
+                logger.warning('No matching MLLP channel for message from %s:%d (MSH: %s)',
+                    connection_context.peer_ip, connection_context.peer_port, msh_line[:80])
+                ack_code = 'AR'
+                error_text = 'No matching channel for this message'
+
+            # .. invoke the matched route's callback ..
+            else:
+
+                if self.should_log_messages:
+                    logger.info('Routing message to channel `%s` (service `%s`)',
+                        matched_route.channel_name, matched_route.service_name)
+
+                try:
+                    _ = matched_route.callback(message_text)
+                    ack_code = 'AA'
+                    error_text = ''
+                except Exception:
+                    logger.warning('Service callback error for channel `%s` from %s:%d; e:`%s`',
+                        matched_route.channel_name, connection_context.peer_ip, connection_context.peer_port, format_exc())
+                    ack_code = 'AE'
+                    error_text = 'Internal processing error'
 
             # .. build and frame the ACK ..
             ack_string = build_ack(msh_line, ack_code, error_text=error_text)
             ack_bytes = ack_string.encode('utf-8')
             framed_ack = frame_encode(ack_bytes, self.start_sequence, self.end_sequence)
 
-            # .. send the framed ACK back (sendall prevents partial writes) ..
+            # .. send the framed ACK back.
             try:
                 active_socket.sendall(framed_ack)
             except (BrokenPipeError, ConnectionResetError):
