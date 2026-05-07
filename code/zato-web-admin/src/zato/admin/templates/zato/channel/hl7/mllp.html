@@ -35,6 +35,25 @@
             'should_validate',
             'data_encoding',
             'should_return_errors',
+            'should_log_messages',
+            'logging_level',
+            'max_msg_size',
+            'read_buffer_size',
+            'recv_timeout',
+            'start_seq',
+            'end_seq',
+            'tls_cert_path',
+            'tls_key_path',
+            'tls_ca_path',
+            'tls_verify',
+            'dedup_ttl_value',
+            'dedup_ttl_unit',
+            'default_character_encoding',
+            'normalize_line_endings',
+            'force_standard_delimiters',
+            'repair_truncated_msh',
+            'split_concatenated_messages',
+            'use_msh18_encoding',
         ]
     }
     </script>
@@ -117,6 +136,32 @@
 
                         <td class='ignore'>{{ item.data_encoding }}</td>
                         <td class='ignore'>{{ item.should_return_errors }}</td>
+
+                        <td class='ignore'>{{ item.should_log_messages }}</td>
+                        <td class='ignore'>{{ item.logging_level }}</td>
+
+                        <td class='ignore'>{{ item.max_msg_size }}</td>
+                        <td class='ignore'>{{ item.read_buffer_size }}</td>
+                        <td class='ignore'>{{ item.recv_timeout }}</td>
+
+                        <td class='ignore'>{{ item.start_seq }}</td>
+                        <td class='ignore'>{{ item.end_seq }}</td>
+
+                        <td class='ignore'>{{ item.tls_cert_path }}</td>
+                        <td class='ignore'>{{ item.tls_key_path }}</td>
+                        <td class='ignore'>{{ item.tls_ca_path }}</td>
+                        <td class='ignore'>{{ item.tls_verify }}</td>
+
+                        <td class='ignore'>{{ item.dedup_ttl_value }}</td>
+                        <td class='ignore'>{{ item.dedup_ttl_unit }}</td>
+
+                        <td class='ignore'>{{ item.default_character_encoding }}</td>
+
+                        <td class='ignore'>{{ item.normalize_line_endings }}</td>
+                        <td class='ignore'>{{ item.force_standard_delimiters }}</td>
+                        <td class='ignore'>{{ item.repair_truncated_msh }}</td>
+                        <td class='ignore'>{{ item.split_concatenated_messages }}</td>
+                        <td class='ignore'>{{ item.use_msh18_encoding }}</td>
 
                     </tr>
                 {% endfor %}
@@ -268,6 +313,130 @@
                             </td>
                         </tr>
 
+                        <tr class="more-options-block hidden">
+                            <td>TLS</td>
+                            <td>
+
+                                <label>
+                                Verify
+                                {{ create_form.tls_verify }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Cert
+                                {{ create_form.tls_cert_path }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Key
+                                {{ create_form.tls_key_path }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td></td>
+                            <td>
+
+                                <label>
+                                CA
+                                {{ create_form.tls_ca_path }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td>Dedup</td>
+                            <td>
+
+                                <label>
+                                TTL
+                                {{ create_form.dedup_ttl_value }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Unit
+                                {{ create_form.dedup_ttl_unit }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td>Encoding</td>
+                            <td>
+
+                                <label>
+                                Default
+                                {{ create_form.default_character_encoding }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td>Tolerance</td>
+                            <td>
+
+                                <label>
+                                Normalize line endings
+                                {{ create_form.normalize_line_endings }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Force standard delimiters
+                                {{ create_form.force_standard_delimiters }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Repair truncated MSH
+                                {{ create_form.repair_truncated_msh }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Split concatenated messages
+                                {{ create_form.split_concatenated_messages }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Use MSH-18 encoding
+                                {{ create_form.use_msh18_encoding }}
+                                </label>
+
+                            </td>
+                        </tr>
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -412,6 +581,130 @@
                                 <label>
                                 End
                                 {{ edit_form.end_seq }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td>TLS</td>
+                            <td>
+
+                                <label>
+                                Verify
+                                {{ edit_form.tls_verify }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Cert
+                                {{ edit_form.tls_cert_path }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Key
+                                {{ edit_form.tls_key_path }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td></td>
+                            <td>
+
+                                <label>
+                                CA
+                                {{ edit_form.tls_ca_path }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td>Dedup</td>
+                            <td>
+
+                                <label>
+                                TTL
+                                {{ edit_form.dedup_ttl_value }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Unit
+                                {{ edit_form.dedup_ttl_unit }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td>Encoding</td>
+                            <td>
+
+                                <label>
+                                Default
+                                {{ edit_form.default_character_encoding }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td>Tolerance</td>
+                            <td>
+
+                                <label>
+                                Normalize line endings
+                                {{ edit_form.normalize_line_endings }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Force standard delimiters
+                                {{ edit_form.force_standard_delimiters }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Repair truncated MSH
+                                {{ edit_form.repair_truncated_msh }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Split concatenated messages
+                                {{ edit_form.split_concatenated_messages }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Use MSH-18 encoding
+                                {{ edit_form.use_msh18_encoding }}
                                 </label>
 
                             </td>

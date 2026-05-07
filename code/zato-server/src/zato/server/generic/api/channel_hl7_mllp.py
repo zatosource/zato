@@ -35,6 +35,14 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
 # ################################################################################################################################
 
+    def _invoke_service(self, data:'str') -> 'object':
+        """ Invokes the service configured for this channel, passing the HL7 message as the request payload.
+        """
+        out = self.server.invoke(self.config.service, data) # pyright: ignore[reportOptionalMemberAccess]
+        return out
+
+# ################################################################################################################################
+
     def _init_impl(self) -> 'None':
 
         with self.update_lock:
@@ -47,7 +55,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
             self._impl = HL7MLLPServer(
                 self.config.address,
-                self.server.invoke, # pyright: ignore[reportOptionalMemberAccess]
+                self._invoke_service,
                 start_sequence,
                 end_sequence,
                 receive_timeout=receive_timeout,

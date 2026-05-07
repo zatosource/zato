@@ -23,8 +23,8 @@ class CircuitState(str, Enum):
 # ################################################################################################################################
 
 _Default_Failure_Threshold_Percent = 50
-_Default_Window_Seconds            = 60
-_Default_Reset_Seconds             = 60
+_Default_Window_Seconds            = 60.0
+_Default_Reset_Seconds             = 60.0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,8 +37,8 @@ class CircuitBreaker:
     def __init__(
         self,
         failure_threshold_percent:'int' = _Default_Failure_Threshold_Percent,
-        window_seconds:'int' = _Default_Window_Seconds,
-        reset_seconds:'int' = _Default_Reset_Seconds,
+        window_seconds:'float' = _Default_Window_Seconds,
+        reset_seconds:'float' = _Default_Reset_Seconds,
         ) -> 'None':
 
         self.failure_threshold_percent = failure_threshold_percent

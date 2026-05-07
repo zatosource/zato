@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
+from zato.admin.web.forms import add_select
 from zato.common.api import HL7
 
 # ################################################################################################################################
@@ -70,6 +71,10 @@ class CreateForm(forms.Form):
     tls_cert_path = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
     tls_key_path  = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
     tls_ca_path   = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+
+    def __init__(self, prefix=None, post_data=None):
+        super(CreateForm, self).__init__(post_data, prefix=prefix)
+        add_select(self, 'logging_level', HL7.Const.LoggingLevel(), needs_initial_select=False)
 
 # ################################################################################################################################
 # ################################################################################################################################
