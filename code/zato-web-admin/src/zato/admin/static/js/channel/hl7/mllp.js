@@ -28,6 +28,13 @@ $(document).ready(function() {
         'recv_timeout',
         'start_seq',
         'end_seq',
+        'tls_cert_path',
+        'tls_key_path',
+        'tls_ca_path',
+        'tls_verify',
+        'dedup_ttl_value',
+        'dedup_ttl_unit',
+        'default_character_encoding',
     ]);
 
     var unique_constraints = [
@@ -85,6 +92,32 @@ $.fn.zato.channel.hl7.mllp.data_table.new_row = function(item, data, include_tr)
 
     row += String.format("<td class='ignore'>{0}</td>", item.data_encoding);
     row += String.format("<td class='ignore'>{0}</td>", item.should_return_errors);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.should_log_messages);
+    row += String.format("<td class='ignore'>{0}</td>", item.logging_level);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.max_msg_size);
+    row += String.format("<td class='ignore'>{0}</td>", item.read_buffer_size);
+    row += String.format("<td class='ignore'>{0}</td>", item.recv_timeout);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.start_seq);
+    row += String.format("<td class='ignore'>{0}</td>", item.end_seq);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.tls_cert_path);
+    row += String.format("<td class='ignore'>{0}</td>", item.tls_key_path);
+    row += String.format("<td class='ignore'>{0}</td>", item.tls_ca_path);
+    row += String.format("<td class='ignore'>{0}</td>", item.tls_verify);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.dedup_ttl_value);
+    row += String.format("<td class='ignore'>{0}</td>", item.dedup_ttl_unit);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.default_character_encoding);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.normalize_line_endings);
+    row += String.format("<td class='ignore'>{0}</td>", item.force_standard_delimiters);
+    row += String.format("<td class='ignore'>{0}</td>", item.repair_truncated_msh);
+    row += String.format("<td class='ignore'>{0}</td>", item.split_concatenated_messages);
+    row += String.format("<td class='ignore'>{0}</td>", item.use_msh18_encoding);
 
     if(include_tr) {
         row += '</tr>';

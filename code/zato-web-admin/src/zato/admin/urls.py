@@ -33,6 +33,7 @@ from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing.hl7 import fhir as out_hl7_fhir
 from zato.admin.web.views.outgoing.hl7 import mllp as out_hl7_mllp
 from zato.admin.web.views.channel import kafka as channel_kafka
+from zato.admin.web.views.channel import mcp as channel_mcp
 from zato.admin.web.views.outgoing import kafka as out_kafka
 from zato.admin.web.views.outgoing import ldap as out_ldap
 from zato.admin.web.views.outgoing import mongodb as out_mongodb
@@ -363,6 +364,22 @@ urlpatterns += [
         login_required(channel_kafka.Delete()), name=channel_kafka.Delete.url_name),
     url(r'^zato/channel/kafka/import-demo-config$',
         login_required(channel_kafka.import_demo_config), name='channel-kafka-import-demo-config'),
+
+    # .. MCP
+
+    url(r'^zato/channel/mcp/$',
+        login_required(channel_mcp.Index()), name=channel_mcp.Index.url_name),
+    url(r'^zato/channel/mcp/create/$',
+        login_required(channel_mcp.Create()), name=channel_mcp.Create.url_name),
+    url(r'^zato/channel/mcp/edit/$',
+        login_required(channel_mcp.Edit()), name=channel_mcp.Edit.url_name),
+    url(r'^zato/channel/mcp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(channel_mcp.Delete()), name=channel_mcp.Delete.url_name),
+    url(r'^zato/channel/mcp/get-service-list/$',
+        login_required(channel_mcp.get_service_list), name='channel-mcp-get-service-list'),
+
+    url(r'^zato/channel/mcp/get-security-list/$',
+        login_required(channel_mcp.get_security_list), name='channel-mcp-get-security-list'),
     ]
 
 # ################################################################################################################################

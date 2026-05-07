@@ -57,6 +57,8 @@ $.namespace('zato.channel');
 $.namespace('zato.channel.amqp');
 $.namespace('zato.channel.kafka');
 $.namespace('zato.channel.kafka.data_table');
+$.namespace('zato.channel.mcp');
+$.namespace('zato.channel.mcp.data_table');
 $.namespace('zato.channel.hl7');
 $.namespace('zato.channel.hl7.mllp');
 $.namespace('zato.channel.hl7.mllp.data_table');

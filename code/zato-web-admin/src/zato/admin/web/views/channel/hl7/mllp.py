@@ -26,7 +26,17 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_'
         output_required = 'id', 'name', 'is_active', 'is_internal', 'service', 'security_name', 'address'
-        output_optional = ('should_parse_on_input', 'should_validate', 'should_return_errors') + generic_attrs
+        output_optional = (
+            'should_parse_on_input', 'should_validate', 'should_return_errors',
+            'should_log_messages', 'logging_level', 'data_encoding',
+            'max_msg_size', 'read_buffer_size', 'recv_timeout',
+            'start_seq', 'end_seq',
+            'tls_cert_path', 'tls_key_path', 'tls_ca_path', 'tls_verify',
+            'dedup_ttl_value', 'dedup_ttl_unit',
+            'default_character_encoding',
+            'normalize_line_endings', 'force_standard_delimiters',
+            'repair_truncated_msh', 'split_concatenated_messages', 'use_msh18_encoding',
+        ) + generic_attrs
         output_repeated = True
 
 # ################################################################################################################################
@@ -45,7 +55,17 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'name', 'is_internal', 'service', 'address'
-        input_optional = ('is_active', 'should_parse_on_input', 'should_validate', 'should_return_errors') + generic_attrs
+        input_optional = (
+            'is_active', 'should_parse_on_input', 'should_validate', 'should_return_errors',
+            'should_log_messages', 'logging_level', 'data_encoding',
+            'max_msg_size', 'read_buffer_size', 'recv_timeout',
+            'start_seq', 'end_seq',
+            'tls_cert_path', 'tls_key_path', 'tls_ca_path', 'tls_verify',
+            'dedup_ttl_value', 'dedup_ttl_unit',
+            'default_character_encoding',
+            'normalize_line_endings', 'force_standard_delimiters',
+            'repair_truncated_msh', 'split_concatenated_messages', 'use_msh18_encoding',
+        ) + generic_attrs
         output_required = 'id', 'name'
 
 # ################################################################################################################################
