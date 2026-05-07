@@ -13,7 +13,8 @@ from time import monotonic
 from uuid import uuid4
 
 # Zato
-from zato.common.typing_ import strlist
+if 0:
+    from zato.common.typing_ import stranydict, strdictlist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,10 +37,11 @@ _session_id_prefix = 'mcp'
 class MCPSession:
     """ Holds state for a single MCP session.
     """
-    session_id:     'str'
-    created_at:     'float'
-    last_seen_at:   'float'
+    session_id:       'str'
+    created_at:       'float'
+    last_seen_at:     'float'
     protocol_version: 'str'
+    pending_notifications: 'strdictlist'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,18 +67,23 @@ class MCPSessionManager:
         """ Creates a new session and returns its ID.
         """
 
+        # Build a new session object with a unique prefixed ID ..
         session = MCPSession()
         session.session_id = f'{_session_id_prefix}{uuid4().hex}'
         session.protocol_version = protocol_version
+        session.pending_notifications = []
 
+        # .. record the creation time ..
         now = monotonic()
         session.created_at   = now
         session.last_seen_at = now
 
+        # .. register it in the session store ..
         self._sessions[session.session_id] = session
 
         logger.info('MCP: Created session `%s` (remote_addr: %s)', session.session_id, remote_address)
 
+        # .. and return the session ID to the caller.
         out = session.session_id
         return out
 
@@ -127,6 +134,35 @@ class MCPSessionManager:
             logger.info('MCP: Expired session `%s`', session_id)
 
         out = len(expired)
+        return out
+
+# ################################################################################################################################
+
+    def queue_notification_for_all(self, notification:'stranydict') -> 'int':
+        """ Appends a JSON-RPC notification to every active session's pending queue.
+        Returns the number of sessions notified.
+        """
+
+        for session in self._sessions.values():
+            session.pending_notifications.append(notification)
+
+        out = len(self._sessions)
+        return out
+
+# ################################################################################################################################
+
+    def drain_notifications(self, session_id:'str') -> 'strdictlist':
+        """ Returns and clears all pending notifications for a session.
+        Returns an empty list if the session does not exist.
+        """
+
+        session = self._sessions.get(session_id)
+
+        if session is None:
+            return []
+
+        out = session.pending_notifications
+        session.pending_notifications = []
         return out
 
 # ################################################################################################################################
