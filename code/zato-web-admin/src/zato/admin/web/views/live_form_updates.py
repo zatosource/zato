@@ -127,7 +127,7 @@ def _fetch_list(client, cluster_id, object_type):
     params = {'cluster_id': cluster_id}
     params.update(config.get('extra_params') or {})
 
-    logger.info('live_form_updates._fetch_list: invoking %s with params=%s for object_type=%s',
+    logger.debug('live_form_updates._fetch_list: invoking %s with params=%s for object_type=%s',
         config['service_name'], params, object_type)
 
     try:
@@ -140,7 +140,7 @@ def _fetch_list(client, cluster_id, object_type):
     id_field = config['id_field']
     label_fields = config['label_fields']
 
-    logger.info('live_form_updates._fetch_list: got response for %s, has_data=%s, data_type=%s',
+    logger.debug('live_form_updates._fetch_list: got response for %s, has_data=%s, data_type=%s',
         object_type, hasattr(response, 'data'), type(getattr(response, 'data', None)).__name__)
 
     data = getattr(response, 'data', None)
@@ -181,7 +181,7 @@ def _fetch_list(client, cluster_id, object_type):
 
         out.append(entry)
 
-    logger.info('live_form_updates._fetch_list: object_type=%s, returned %d items, sample_ids=%s',
+    logger.debug('live_form_updates._fetch_list: object_type=%s, returned %d items, sample_ids=%s',
         object_type, len(out), [x['_id'] for x in out[:3]])
 
     return out
