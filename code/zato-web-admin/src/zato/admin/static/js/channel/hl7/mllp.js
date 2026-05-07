@@ -47,6 +47,18 @@ $(document).ready(function() {
         $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
         $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
     });
+
+    $.fn.zato.dashboard_kit.tabs.init({
+        tab_selector: '#create-div .dashboard-tab',
+        panel_prefix: 'mllp-create-tab-panel-',
+        default_tab: 'routing'
+    });
+
+    $.fn.zato.dashboard_kit.tabs.init({
+        tab_selector: '#edit-div .dashboard-tab',
+        panel_prefix: 'mllp-edit-tab-panel-',
+        default_tab: 'routing'
+    });
 })
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
