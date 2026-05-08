@@ -125,14 +125,14 @@ $.fn.zato.channel.hl7.mllp.field_descriptions = {
 
     // Routing tab
     'id_is_default': 'When enabled, this channel receives all messages<br>that no other channel claimed. Only one channel<br>can be the default at a time.',
-    'id_msh3_sending_app': 'Routes messages whose MSH-3 field<br>(sending application) equals this value.<br>Comparison is case-insensitive.',
-    'id_msh4_sending_facility': 'Routes messages whose MSH-4 field<br>(sending facility) equals this value.<br>Comparison is case-insensitive.',
-    'id_msh5_receiving_app': 'Routes messages whose MSH-5 field<br>(receiving application) equals this value.<br>Comparison is case-insensitive.',
-    'id_msh6_receiving_facility': 'Routes messages whose MSH-6 field<br>(receiving facility) equals this value.<br>Comparison is case-insensitive.',
-    'id_msh9_message_type': 'Routes messages whose MSH-9.1 field<br>(message type, e.g. ADT, ORM) equals this value.<br>Comparison is case-insensitive.',
-    'id_msh9_trigger_event': 'Routes messages whose MSH-9.2 field<br>(trigger event, e.g. A01, O01) equals this value.<br>Comparison is case-insensitive.',
-    'id_msh11_processing_id': 'Routes messages whose MSH-11 field<br>(P=production, T=training, D=debugging)<br>equals this value. Comparison is case-insensitive.',
-    'id_msh12_version_id': 'Routes messages whose MSH-12 field<br>(HL7 version, e.g. 2.5) equals this value.<br>Comparison is case-insensitive.',
+    'id_msh3_sending_app': 'Only accept messages where MSH-3<br>(sending application) equals this value.<br>Empty means any. Case-insensitive.',
+    'id_msh4_sending_facility': 'Only accept messages where MSH-4<br>(sending facility) equals this value.<br>Empty means any. Case-insensitive.',
+    'id_msh5_receiving_app': 'Only accept messages where MSH-5<br>(receiving application) equals this value.<br>Empty means any. Case-insensitive.',
+    'id_msh6_receiving_facility': 'Only accept messages where MSH-6<br>(receiving facility) equals this value.<br>Empty means any. Case-insensitive.',
+    'id_msh9_message_type': 'Only accept messages where MSH-9.1<br>(message type, e.g. ADT, ORM) equals this value.<br>Empty means any. Case-insensitive.',
+    'id_msh9_trigger_event': 'Only accept messages where MSH-9.2<br>(trigger event, e.g. A01, O01) equals this value.<br>Empty means any. Case-insensitive.',
+    'id_msh11_processing_id': 'Only accept messages where MSH-11<br>(P=production, T=training, D=debugging)<br>equals this value. Empty means any. Case-insensitive.',
+    'id_msh12_version_id': 'Only accept messages where MSH-12<br>(HL7 version, e.g. 2.5) equals this value.<br>Empty means any. Case-insensitive.',
 
     // Protocol tab
     'id_use_msh18_encoding': 'When on, the server reads the character encoding<br>from the MSH-18 field of each incoming message.<br>When off, or if MSH-18 is empty, the Encoding<br>setting below is used instead.',
