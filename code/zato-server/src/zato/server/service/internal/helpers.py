@@ -272,6 +272,9 @@ class DjangoServiceGateway(BaseServiceGateway, Service):
 
         service = self.request.http.params.get('service')
         request = self.request.raw_request
+        channel_id = self.channel.id
+
+        self._check_service_allowed(service, channel_id)
 
         django_user = self.wsgi_environ.get('HTTP_X_ZATO_USER', '')
         correlation_id = self.wsgi_environ.get('HTTP_X_ZATO_CORRELATION_ID', '')

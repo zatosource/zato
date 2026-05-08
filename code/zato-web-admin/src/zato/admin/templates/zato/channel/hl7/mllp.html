@@ -266,7 +266,11 @@
                     <div class="dashboard-tab-panel" id="mllp-create-tab-panel-protocol" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:16%"><label for="id_default_character_encoding">Encoding</label></td>
+                                <td style="width:16%"><label for="id_use_msh18_encoding">Use MSH-18 encoding</label></td>
+                                <td><label class="toggle-switch">{{ create_form.use_msh18_encoding }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_default_character_encoding">Encoding</label></td>
                                 <td>{{ create_form.default_character_encoding }}</td>
                             </tr>
                             <tr>
@@ -305,10 +309,6 @@
                             <tr>
                                 <td><label for="id_split_concatenated_messages">Split concatenated messages</label></td>
                                 <td><label class="toggle-switch">{{ create_form.split_concatenated_messages }}<span class="toggle-slider"></span></label></td>
-                            </tr>
-                            <tr>
-                                <td><label for="id_use_msh18_encoding">Use MSH-18 encoding</label></td>
-                                <td><label class="toggle-switch">{{ create_form.use_msh18_encoding }}<span class="toggle-slider"></span></label></td>
                             </tr>
                         </table>
                     </div>

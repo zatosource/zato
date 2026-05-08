@@ -116,6 +116,10 @@ class ChannelHL7MLLPWrapper(Wrapper):
         # .. resolve max message size to bytes ..
         max_msg_size_bytes = self._resolve_max_msg_size()
 
+        # .. resolve dedup config ..
+        dedup_ttl_value = self.config.dedup_ttl_value
+        dedup_ttl_unit = self.config.dedup_ttl_unit
+
         # .. create and start the shared server ..
         _shared_state.server = HL7MLLPServer(
             address,
@@ -132,6 +136,8 @@ class ChannelHL7MLLPWrapper(Wrapper):
             should_split_concatenated_messages=self.config.split_concatenated_messages,
             should_force_standard_delimiters=self.config.force_standard_delimiters,
             should_use_msh18_encoding=self.config.use_msh18_encoding,
+            dedup_ttl_value=dedup_ttl_value,
+            dedup_ttl_unit=dedup_ttl_unit,
         )
 
         spawn_greenlet(_shared_state.server.start)
