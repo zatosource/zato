@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_select, add_services
+from zato.admin.web.forms import add_security_select, add_select, add_services
 from zato.common.api import HL7
 
 # ################################################################################################################################
@@ -102,11 +102,18 @@ class CreateForm(forms.Form):
     split_concatenated_messages   = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     use_msh18_encoding            = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
-    def __init__(self, prefix=None, post_data=None, req=None):
+    # REST bridge
+    use_rest         = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    rest_only        = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    rest_url_path    = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    rest_security_id = forms.ChoiceField(required=False, widget=forms.Select(attrs={'style':'width:100%'}))
+
+    def __init__(self, prefix=None, post_data=None, req=None, security_list=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
         add_select(self, 'hl7_version', HL7.Const.Version(), needs_initial_select=False)
         add_select(self, 'logging_level', HL7.Const.LoggingLevel(), needs_initial_select=False)
         add_services(self, req)
+        add_security_select(self, security_list or [], field_name='rest_security_id')
 
 # ################################################################################################################################
 # ################################################################################################################################

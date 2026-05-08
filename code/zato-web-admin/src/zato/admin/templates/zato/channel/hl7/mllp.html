@@ -8,6 +8,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 {% endblock %}
 
@@ -31,6 +32,7 @@
             '_selection',
             'name',
             '_is_active',
+            '_use_rest',
             '_service',
             '_edit',
             '_delete',
@@ -65,6 +67,9 @@
             'repair_truncated_msh',
             'split_concatenated_messages',
             'use_msh18_encoding',
+            'use_rest',
+            'rest_only',
+            'rest_channel_id',
         ]
     }
     </script>
@@ -102,6 +107,7 @@
                         {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
+                        <th><a href="#">REST</a></th>
 
                         <th><a href="#">Service</a></th>
 
@@ -130,6 +136,7 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.use_rest|yesno:'Yes,No' }}</td>
 
                         <td><a href="{% url "service-overview" item.service %}?cluster={{ cluster_id }}">{{ item.service }}</a></td>
 
@@ -177,6 +184,10 @@
                         <td class='ignore'>{{ item.split_concatenated_messages }}</td>
                         <td class='ignore'>{{ item.use_msh18_encoding }}</td>
 
+                        <td class='ignore'>{{ item.use_rest }}</td>
+                        <td class='ignore'>{{ item.rest_only }}</td>
+                        <td class='ignore'>{{ item.rest_channel_id }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -208,7 +219,7 @@
                     <div class="dashboard-tab-panel" id="mllp-create-tab-panel-main" role="tabpanel">
                         <table class="form-data">
                             <tr>
-                                <td style="width:9%"><label for="id_name">Name</label></td>
+                                <td style="width:11%"><label for="id_name">Name</label></td>
                                 <td>{{ create_form.name }}</td>
                             </tr>
                             <tr>
@@ -218,6 +229,34 @@
                             <tr>
                                 <td><label for="id_service">Service</label></td>
                                 <td>{{ create_form.service }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_use_rest">Use REST</label></td>
+                                <td><label class="toggle-switch">{{ create_form.use_rest }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr class="rest-field" style="display:none">
+                                <td><label for="id_rest_only">REST only?</label></td>
+                                <td><label class="toggle-switch">{{ create_form.rest_only }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr class="rest-field" style="display:none">
+                                <td><label for="id_rest_url_path">URL path</label></td>
+                                <td>{{ create_form.rest_url_path }}</td>
+                            </tr>
+                            <tr class="rest-field" style="display:none">
+                                <td><label for="id_rest_security_id">Security</label></td>
+                                <td>{{ create_form.rest_security_id }}</td>
+                            </tr>
+                            <tr class="rest-field" style="display:none">
+                                <td style="vertical-align:middle"><label for="id_rest_security_groups">Security groups</label></td>
+                                <td>
+                                    <a id="id_rest_security_groups" href="javascript:$.fn.zato.channel.hl7.mllp._toggle_groups('.mllp-create-groups-block')">Toggle options</a>
+                                </td>
+                            </tr>
+                            <tr class="mllp-create-groups-block" style="display:none">
+                                <td class="to-ignore"></td>
+                                <td>
+                                    <div class="multi-select-div" id="mllp-multi-select-div-create"></div>
+                                </td>
                             </tr>
                         </table>
                     </div>
@@ -386,6 +425,34 @@
                             <tr>
                                 <td><label for="id_edit-service">Service</label></td>
                                 <td>{{ edit_form.service }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-use_rest">Use REST</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.use_rest }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr class="rest-field" style="display:none">
+                                <td><label for="id_edit-rest_only">REST only?</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.rest_only }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr class="rest-field" style="display:none">
+                                <td><label for="id_edit-rest_url_path">URL path</label></td>
+                                <td>{{ edit_form.rest_url_path }}</td>
+                            </tr>
+                            <tr class="rest-field" style="display:none">
+                                <td><label for="id_edit-rest_security_id">Security</label></td>
+                                <td>{{ edit_form.rest_security_id }}</td>
+                            </tr>
+                            <tr class="rest-field" style="display:none">
+                                <td style="vertical-align:middle"><label for="id_edit-rest_security_groups">Security groups</label></td>
+                                <td>
+                                    <a id="id_edit-rest_security_groups" href="javascript:$.fn.zato.channel.hl7.mllp._toggle_groups('.mllp-edit-groups-block')">Toggle options</a>
+                                </td>
+                            </tr>
+                            <tr class="mllp-edit-groups-block" style="display:none">
+                                <td class="to-ignore"></td>
+                                <td>
+                                    <div class="multi-select-div" id="mllp-multi-select-div-edit"></div>
+                                </td>
                             </tr>
                         </table>
                     </div>
