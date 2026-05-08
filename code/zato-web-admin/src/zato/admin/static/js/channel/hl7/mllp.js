@@ -27,16 +27,6 @@ $(document).ready(function() {
         'recv_timeout',
         'start_seq',
         'end_seq',
-        'msh3_sending_app',
-        'msh4_sending_facility',
-        'msh5_receiving_app',
-        'msh6_receiving_facility',
-        'msh9_message_type',
-        'msh9_trigger_event',
-        'msh11_processing_id',
-        'msh12_version_id',
-        'dedup_ttl_value',
-        'dedup_ttl_unit',
         'default_character_encoding',
     ]);
 
