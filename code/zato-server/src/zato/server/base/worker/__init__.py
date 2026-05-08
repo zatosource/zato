@@ -752,6 +752,7 @@ class WorkerStore(_WorkerStoreBase):
     def init_generic_connections_config(self) -> 'None':
 
         # Local aliases
+        channel_hl7_mllp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP, {})
         channel_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, {})
         channel_mcp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP, {})
         channel_openapi_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI, {})
@@ -765,6 +766,7 @@ class WorkerStore(_WorkerStoreBase):
 
         # These generic connections are regular - they use common API methods for such connections
         regular_maps = [
+            channel_hl7_mllp_map,
             channel_kafka_map,
             channel_mcp_map,
             channel_openapi_map,
