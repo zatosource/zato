@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from logging import getLogger
 from threading import Lock
 
@@ -147,8 +148,11 @@ class ChannelHL7MLLPWrapper(Wrapper):
         haproxy_config_path = find_haproxy_config(server_base_directory)
         _shared_state.haproxy_config_path = haproxy_config_path
 
-        update_mllp_backend_port(haproxy_config_path, internal_port)
-        reload_haproxy()
+        if os.path.exists(haproxy_config_path):
+            update_mllp_backend_port(haproxy_config_path, internal_port)
+            reload_haproxy()
+        else:
+            logger.info('HAProxy config not found at %s, skipping HAProxy integration', haproxy_config_path)
 
         logger.info('Started shared MLLP server on %s', address)
 

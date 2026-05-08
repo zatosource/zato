@@ -19,8 +19,6 @@ from django.utils._os import safe_join
 from django.utils.http import http_date, parse_http_date
 
 # Zato
-from zato.common.crypto.api import CryptoManager
-from zato.common.json_internal import loads
 from zato.common.util.platform_ import is_windows
 
 # ################################################################################################################################
@@ -81,25 +79,6 @@ def get_user_profile(user, needs_logging=False):
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-def set_user_profile_totp_key(user_profile, zato_secret_key, totp_key, totp_key_label=None, opaque_attrs=None):
-
-    if not opaque_attrs:
-        opaque_attrs = user_profile.opaque1
-        opaque_attrs = loads(opaque_attrs) if opaque_attrs else {}
-
-    cm = CryptoManager(secret_key=zato_secret_key)
-
-    # TOTP key is always encrypted
-    totp_key = cm.encrypt(totp_key.encode('utf8'))
-    opaque_attrs['totp_key'] = totp_key
-
-    # .. and so is its label
-    if totp_key_label:
-        totp_key_label = cm.encrypt(totp_key_label.encode('utf8'))
-        opaque_attrs['totp_key_label'] = totp_key_label
-
-    return opaque_attrs
 
 # ################################################################################################################################
 # ################################################################################################################################
