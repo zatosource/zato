@@ -1,0 +1,17 @@
+/*
+ * "How does it work?" badge - a subtle pill that sits in the
+ * bottom-left of dialog forms, next to OK / Cancel.
+ */
+
+.data-popup .how-it-works-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 9px;
+    font-weight: 400;
+    color: #2d6940;
+    background: rgba(58, 122, 79, 0.18);
+    border-radius: 3px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
