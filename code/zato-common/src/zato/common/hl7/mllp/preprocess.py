@@ -26,6 +26,10 @@ _Minimum_Encoding_Characters_Length = 4
 # MSH field separator position in MSH|...|
 _MSH_Prefix = 'MSH|'
 
+# Batch/File header prefixes
+_BHS_Prefix = 'BHS|'
+_FHS_Prefix = 'FHS|'
+
 # Encoding map from MSH-18 values to Python codec names
 _encoding_map:'dict[str, str]' = {
     '':          'utf-8',
@@ -40,6 +44,26 @@ _encoding_map:'dict[str, str]' = {
     'ISO IR127': 'iso-8859-6',
     'ISO IR126': 'iso-8859-7',
 }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class BatchPayload:
+    """ Wraps a raw batch/file payload that starts with BHS| or FHS|.
+    The MLLP server uses this to distinguish batch payloads from regular message lists.
+    """
+    __slots__ = ('raw',)
+
+    def __init__(self, raw:'str') -> 'None':
+        self.raw = raw
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def is_batch_payload(data:'str') -> 'bool':
+    """ Returns True if the data starts with a batch header (BHS|) or file header (FHS|).
+    """
+    return data.startswith(_BHS_Prefix) or data.startswith(_FHS_Prefix)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -224,9 +248,10 @@ def preprocess_message(
     should_force_standard_delimiters:'bool' = True,
     should_use_msh18_encoding:'bool' = True,
     default_character_encoding:'str' = 'utf-8',
-    ) -> 'list[str]':
+    ) -> 'BatchPayload | list[str]':
     """ Runs the full pre-processing pipeline on raw MLLP payload bytes.
-    Returns a list of cleaned ER7 strings (one per message, usually just one).
+    Returns a BatchPayload if the frame starts with BHS| or FHS|,
+    otherwise returns a list of cleaned ER7 strings (one per message, usually just one).
     """
 
     # Decode the raw bytes to a string ..
@@ -238,6 +263,12 @@ def preprocess_message(
     # .. normalize line endings ..
     if should_normalize_line_endings:
         data = normalize_line_endings(data)
+
+    # .. if the payload is a batch (BHS|...) or file (FHS|...),
+    # .. return it as-is for the caller to handle via parse_batch_or_file.
+    if is_batch_payload(data):
+        logger.info('Detected batch/file payload (starts with %s)', data[:3])
+        return BatchPayload(data)
 
     # .. repair truncated MSH ..
     if should_repair_truncated_msh:

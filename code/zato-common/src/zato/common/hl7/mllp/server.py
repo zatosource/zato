@@ -16,8 +16,9 @@ from zato.common.hl7.exception import HL7Exception
 from zato.common.hl7.mllp.ack import build_ack
 from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
 from zato.common.hl7.mllp.dedup import MessageDeduplicator, extract_control_id
-from zato.common.hl7.mllp.preprocess import preprocess_message
+from zato.common.hl7.mllp.preprocess import BatchPayload, preprocess_message
 from zato.common.hl7.mllp.router import HL7MessageRouter
+from zato_hl7v2 import parse_message as hl7_parse_message
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,6 +84,7 @@ class HL7MLLPServer:
         should_force_standard_delimiters:'bool' = True,
         should_use_msh18_encoding:'bool' = True,
         default_character_encoding:'str' = 'utf-8',
+        should_validate:'bool' = False,
         dedup_ttl_value:'int' = 0,
         dedup_ttl_unit:'str' = '',
         ) -> 'None':
@@ -98,6 +100,7 @@ class HL7MLLPServer:
         self.should_log_messages   = should_log_messages
         self.should_return_errors  = should_return_errors
         self.should_parse_on_input = should_parse_on_input
+        self.should_validate       = should_validate
 
         self.keepalive_idle        = keepalive_idle
         self.keepalive_interval    = keepalive_interval
@@ -238,6 +241,83 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
+    def _extract_first_msh_line(self, data:'str') -> 'str':
+        """ Finds the first MSH segment line inside a batch/file payload.
+        Used for routing and ACK building when the frame is a batch.
+        """
+        for line in data.split('\r'):
+            if line.startswith('MSH|'):
+                return line
+        return ''
+
+# ################################################################################################################################
+
+    def _handle_batch_payload(
+        self,
+        active_socket:'socket.socket',
+        batch_payload:'BatchPayload',
+        connection_context:'ConnectionContext',
+        ) -> 'None':
+        """ Processes a batch/file payload (BHS|... or FHS|...) as a single unit.
+        Routes using the first MSH found inside the batch, then passes the entire
+        raw batch string to the matched service callback.
+        """
+
+        raw = batch_payload.raw
+
+        # .. extract the first MSH line for routing and ACK building ..
+        msh_line = self._extract_first_msh_line(raw)
+
+        if not msh_line:
+            logger.warning('Batch payload from %s:%d contains no MSH segment',
+                connection_context.peer_ip, connection_context.peer_port)
+            return
+
+        if self.should_log_messages:
+            logger.info('Processing batch payload (%d bytes) from %s:%d',
+                len(raw), connection_context.peer_ip, connection_context.peer_port)
+
+        # .. find the matching route ..
+        matched_route = self.router.match(msh_line)
+
+        if matched_route is None:
+            logger.warning('No matching MLLP channel for batch from %s:%d (MSH: %s)',
+                connection_context.peer_ip, connection_context.peer_port, msh_line[:80])
+            ack_code = 'AR'
+            error_text = 'No matching channel for this batch'
+        else:
+
+            if self.should_log_messages:
+                logger.info('Routing batch to channel `%s` (service `%s`)',
+                    matched_route.channel_name, matched_route.service_name)
+
+            try:
+                _ = matched_route.callback(raw)
+                ack_code = 'AA'
+                error_text = ''
+            except Exception:
+                logger.warning('Service callback error for batch on channel `%s` from %s:%d; e:`%s`',
+                    matched_route.channel_name, connection_context.peer_ip, connection_context.peer_port, format_exc())
+                ack_code = 'AE'
+                error_text = 'Internal processing error'
+
+        # .. suppress error details if configured ..
+        if not self.should_return_errors:
+            error_text = ''
+
+        # .. build and send the ACK based on the first MSH ..
+        ack_string = build_ack(msh_line, ack_code, error_text=error_text)
+        ack_bytes = ack_string.encode(self.default_character_encoding)
+        framed_ack = frame_encode(ack_bytes, self.start_sequence, self.end_sequence)
+
+        try:
+            active_socket.sendall(framed_ack)
+        except (BrokenPipeError, ConnectionResetError):
+            logger.warning('Could not send ACK to %s:%d - connection lost',
+                connection_context.peer_ip, connection_context.peer_port)
+
+# ################################################################################################################################
+
     def _handle_message(
         self,
         active_socket:'socket.socket',
@@ -255,7 +335,7 @@ class HL7MLLPServer:
                 connection_context.peer_ip, connection_context.peer_port)
 
         # Run the pre-processing pipeline ..
-        cleaned_messages = preprocess_message(
+        preprocessed = preprocess_message(
             raw_message_bytes,
             should_normalize_line_endings=self.should_normalize_line_endings,
             should_repair_truncated_msh=self.should_repair_truncated_msh,
@@ -265,8 +345,13 @@ class HL7MLLPServer:
             default_character_encoding=self.default_character_encoding,
         )
 
+        # .. if the payload is a batch/file, handle it as a single unit ..
+        if isinstance(preprocessed, BatchPayload):
+            self._handle_batch_payload(active_socket, preprocessed, connection_context)
+            return
+
         # .. process each message (usually just one, unless concatenated) ..
-        for message_text in cleaned_messages:
+        for message_text in preprocessed:
 
             # .. extract the MSH line for routing and ACK building ..
             first_cr = message_text.find('\r')
@@ -329,8 +414,35 @@ class HL7MLLPServer:
                     logger.info('Routing message to channel `%s` (service `%s`)',
                         matched_route.channel_name, matched_route.service_name)
 
+                # .. optionally parse the raw ER7 into an HL7Message object before
+                # .. passing it to the callback, with optional validation.
+                if self.should_parse_on_input:
+                    try:
+                        callback_data = hl7_parse_message(message_text, validate=self.should_validate)
+                    except ValueError:
+                        logger.warning('Parse/validation error for channel `%s` from %s:%d; e:`%s`',
+                            matched_route.channel_name, connection_context.peer_ip, connection_context.peer_port, format_exc())
+                        ack_code = 'AE'
+                        error_text = 'Message parsing or validation failed'
+
+                        if not self.should_return_errors:
+                            error_text = ''
+
+                        ack_string = build_ack(msh_line, ack_code, error_text=error_text)
+                        ack_bytes = ack_string.encode(self.default_character_encoding)
+                        framed_ack = frame_encode(ack_bytes, self.start_sequence, self.end_sequence)
+
+                        try:
+                            active_socket.sendall(framed_ack)
+                        except (BrokenPipeError, ConnectionResetError):
+                            pass
+
+                        continue
+                else:
+                    callback_data = message_text
+
                 try:
-                    _ = matched_route.callback(message_text)
+                    _ = matched_route.callback(callback_data)
                     ack_code = 'AA'
                     error_text = ''
                 except Exception:
