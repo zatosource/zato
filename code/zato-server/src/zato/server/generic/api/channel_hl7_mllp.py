@@ -29,6 +29,11 @@ logger = getLogger(__name__)
 _Default_Start_Sequence = '0b'
 _Default_End_Sequence   = '1c0d'
 
+_Max_Msg_Size_Multipliers = {
+    'kb': 1024,
+    'mb': 1048576,
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -74,6 +79,18 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
 # ################################################################################################################################
 
+    def _resolve_max_msg_size(self) -> 'int':
+        """ Converts max_msg_size and max_msg_size_unit from config into bytes.
+        """
+        raw_value = self.config.max_msg_size
+        unit = self.config.max_msg_size_unit
+        multiplier = _Max_Msg_Size_Multipliers[unit]
+
+        out = raw_value * multiplier
+        return out
+
+# ################################################################################################################################
+
     def _ensure_shared_server_started(self) -> 'None':
         """ Starts the shared MLLP server if this is the first channel being created.
         Updates the mllp_backend port in haproxy.cfg and reloads HAProxy.
@@ -89,9 +106,15 @@ class ChannelHL7MLLPWrapper(Wrapper):
         # .. build the bind address ..
         address = f'127.0.0.1:{internal_port}'
 
-        # .. use default MLLP framing sequences ..
-        start_sequence = hex_sequence_to_bytes(_Default_Start_Sequence)
-        end_sequence   = hex_sequence_to_bytes(_Default_End_Sequence)
+        # .. read framing sequences from config ..
+        start_sequence = hex_sequence_to_bytes(self.config.start_seq)
+        end_sequence   = hex_sequence_to_bytes(self.config.end_seq)
+
+        # .. convert recv_timeout from milliseconds to seconds ..
+        recv_timeout_seconds = self.config.recv_timeout / 1000.0
+
+        # .. resolve max message size to bytes ..
+        max_msg_size_bytes = self._resolve_max_msg_size()
 
         # .. create and start the shared server ..
         _shared_state.server = HL7MLLPServer(
@@ -99,6 +122,16 @@ class ChannelHL7MLLPWrapper(Wrapper):
             _shared_state.router,
             start_sequence,
             end_sequence,
+            receive_timeout=recv_timeout_seconds,
+            max_message_size=max_msg_size_bytes,
+            should_log_messages=self.config.should_log_messages,
+            should_return_errors=self.config.should_return_errors,
+            default_character_encoding=self.config.default_character_encoding,
+            should_normalize_line_endings=self.config.normalize_line_endings,
+            should_repair_truncated_msh=self.config.repair_truncated_msh,
+            should_split_concatenated_messages=self.config.split_concatenated_messages,
+            should_force_standard_delimiters=self.config.force_standard_delimiters,
+            should_use_msh18_encoding=self.config.use_msh18_encoding,
         )
 
         spawn_greenlet(_shared_state.server.start)
@@ -136,21 +169,22 @@ class ChannelHL7MLLPWrapper(Wrapper):
             # Start the shared server if needed ..
             self._ensure_shared_server_started()
 
-            # .. register this channel's routing rule ..
-            _shared_state.router.add_route(
-                channel_name=self.config.name,
-                service_name=self.config.service,
-                callback=self._invoke_service,
-                msh3_sending_application=self.config.get('msh3_sending_app', ''),      # pyright: ignore[reportAttributeAccessIssue]
-                msh4_sending_facility=self.config.get('msh4_sending_facility', ''),     # pyright: ignore[reportAttributeAccessIssue]
-                msh5_receiving_application=self.config.get('msh5_receiving_app', ''),    # pyright: ignore[reportAttributeAccessIssue]
-                msh6_receiving_facility=self.config.get('msh6_receiving_facility', ''),  # pyright: ignore[reportAttributeAccessIssue]
-                msh9_message_type=self.config.get('msh9_message_type', ''),             # pyright: ignore[reportAttributeAccessIssue]
-                msh9_trigger_event=self.config.get('msh9_trigger_event', ''),           # pyright: ignore[reportAttributeAccessIssue]
-                msh11_processing_id=self.config.get('msh11_processing_id', ''),         # pyright: ignore[reportAttributeAccessIssue]
-                msh12_version_id=self.config.get('msh12_version_id', ''),               # pyright: ignore[reportAttributeAccessIssue]
-                is_default=self.config.get('is_default', False),                        # pyright: ignore[reportAttributeAccessIssue]
-            )
+            # .. register this channel's routing rule only if the channel is active ..
+            if self.config.is_active:
+                _shared_state.router.add_route(
+                    channel_name=self.config.name,
+                    service_name=self.config.service,
+                    callback=self._invoke_service,
+                    msh3_sending_application=self.config.msh3_sending_app,
+                    msh4_sending_facility=self.config.msh4_sending_facility,
+                    msh5_receiving_application=self.config.msh5_receiving_app,
+                    msh6_receiving_facility=self.config.msh6_receiving_facility,
+                    msh9_message_type=self.config.msh9_message_type,
+                    msh9_trigger_event=self.config.msh9_trigger_event,
+                    msh11_processing_id=self.config.msh11_processing_id,
+                    msh12_version_id=self.config.msh12_version_id,
+                    is_default=self.config.is_default,
+                )
 
             _shared_state.channel_count += 1
             self.is_connected = True
