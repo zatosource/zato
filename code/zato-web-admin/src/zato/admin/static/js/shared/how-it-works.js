@@ -102,10 +102,15 @@ $.fn.zato.how_it_works._activate = function(badge) {
     // .. show first field ..
     $.fn.zato.how_it_works._show_field_tooltip(state, 0);
 
-    // .. bind keyboard ..
-    $(document).on('keydown.how_it_works', function(event) {
+    // .. suppress dialog closeOnEscape while help mode is active ..
+    $(config.div_id).dialog('option', 'closeOnEscape', false);
+
+    // .. bind keyboard on the dialog element in capture phase
+    // .. so it fires before jQuery UI's own handler ..
+    state._keydown_handler = function(event) {
         $.fn.zato.how_it_works._on_keydown(event);
-    });
+    };
+    dialog.addEventListener('keydown', state._keydown_handler, true);
 
     // .. bind click on labels to switch field ..
     $(div).on('click.how_it_works_label', 'label[for]', function(event) {
@@ -151,8 +156,11 @@ $.fn.zato.how_it_works._deactivate = function() {
     // .. remove depressed look ..
     state.badge.classList.remove('how-it-works-active');
 
+    // .. restore dialog closeOnEscape ..
+    $(state.config.div_id).dialog('option', 'closeOnEscape', true);
+
     // .. unbind ..
-    $(document).off('keydown.how_it_works');
+    state.dialog.removeEventListener('keydown', state._keydown_handler, true);
     $(document).off('mousedown.how_it_works_outside');
     $(state.div).off('click.how_it_works_label');
     $(state.div).off('mousedown.how_it_works_select');
