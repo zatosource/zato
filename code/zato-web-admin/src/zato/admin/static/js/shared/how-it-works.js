@@ -4,7 +4,9 @@
  * On hover, shows a tippy explaining what the badge does.
  * On click, enters help mode: walks through form fields one by one,
  * showing a descriptive tooltip for each. Arrow keys navigate,
- * Esc or clicking the form background exits help mode.
+ * Esc deactivates help mode (does not close the form).
+ * Clicking a label switches to that field's tooltip.
+ * Clicking outside the form deactivates help mode.
  */
 
 if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
@@ -38,13 +40,19 @@ $.fn.zato.how_it_works.init = function(config) {
         interactive: false,
         inertia: true,
         appendTo: function() { return badge.closest('.ui-dialog') || document.body; },
+        onShow: function() {
+            if ($.fn.zato.how_it_works._state) {
+                return false;
+            }
+        },
     });
 
     // .. store config for click handler ..
     badge._how_it_works_config = config;
 
     // .. bind click ..
-    $(badge).off('click.how_it_works').on('click.how_it_works', function() {
+    $(badge).off('click.how_it_works').on('click.how_it_works', function(event) {
+        event.stopPropagation();
         var current_state = $.fn.zato.how_it_works._state;
         if (current_state) {
             $.fn.zato.how_it_works._deactivate();
@@ -99,15 +107,28 @@ $.fn.zato.how_it_works._activate = function(badge) {
         $.fn.zato.how_it_works._on_keydown(event);
     });
 
-    // .. bind click on form background to dismiss ..
-    $(div).on('click.how_it_works', function(event) {
-        var target = event.target;
-        var is_input = target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA';
-        var is_label = target.tagName === 'LABEL';
-        var is_badge = target.closest('.how-it-works-badge');
-        var is_toggle = target.closest('.toggle-switch');
+    // .. bind click on labels to switch field ..
+    $(div).on('click.how_it_works_label', 'label[for]', function(event) {
+        event.stopPropagation();
+        var field_id = $(this).attr('for');
+        var field_index = $.fn.zato.how_it_works._find_field_index(state, field_id);
+        if (field_index >= 0) {
+            $.fn.zato.how_it_works._show_field_tooltip(state, field_index);
+        }
+    });
 
-        if (!is_input && !is_label && !is_badge && !is_toggle) {
+    // .. bind click on selects to switch field ..
+    $(div).on('mousedown.how_it_works_select', 'select', function(event) {
+        var field_id = this.id;
+        var field_index = $.fn.zato.how_it_works._find_field_index_by_input(state, field_id);
+        if (field_index >= 0 && field_index !== state.current_index) {
+            $.fn.zato.how_it_works._show_field_tooltip(state, field_index);
+        }
+    });
+
+    // .. clicking outside the dialog closes help mode ..
+    $(document).on('mousedown.how_it_works_outside', function(event) {
+        if (!dialog.contains(event.target)) {
             $.fn.zato.how_it_works._deactivate();
         }
     });
@@ -132,7 +153,9 @@ $.fn.zato.how_it_works._deactivate = function() {
 
     // .. unbind ..
     $(document).off('keydown.how_it_works');
-    $(state.div).off('click.how_it_works');
+    $(document).off('mousedown.how_it_works_outside');
+    $(state.div).off('click.how_it_works_label');
+    $(state.div).off('mousedown.how_it_works_select');
 
     $.fn.zato.how_it_works._state = null;
 };
@@ -176,6 +199,11 @@ $.fn.zato.how_it_works._on_keydown = function(event) {
 
 $.fn.zato.how_it_works._show_field_tooltip = function(state, index) {
 
+    // .. skip if already showing this field ..
+    if (state.field_tippy && state.current_index === index) {
+        return;
+    }
+
     // .. destroy previous tooltip ..
     if (state.field_tippy) {
         state.field_tippy.destroy();
@@ -183,12 +211,14 @@ $.fn.zato.how_it_works._show_field_tooltip = function(state, index) {
 
     state.current_index = index;
     var field = state.fields[index];
-
-    // .. find the target element to anchor the tooltip to ..
     var target = field.element;
 
+    var tooltip_content = field.description +
+        '<div style="text-align:right;font-size:9px;font-family:monospace;opacity:0.7;margin-top:6px">' +
+        'Esc, left arrow, right arrow</div>';
+
     var result = tippy(target, {
-        content: field.description,
+        content: tooltip_content,
         allowHTML: true,
         placement: 'left',
         theme: 'dark',
@@ -200,9 +230,36 @@ $.fn.zato.how_it_works._show_field_tooltip = function(state, index) {
         appendTo: function() { return state.dialog || document.body; },
     });
 
-    // .. tippy returns an instance for a single element, an array for multiple ..
     state.field_tippy = Array.isArray(result) ? result[0] : result;
     state.field_tippy.show();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.how_it_works._find_field_index = function(state, field_id) {
+
+    for (var index = 0; index < state.fields.length; index++) {
+        if (state.fields[index].element.getAttribute('for') === field_id) {
+            return index;
+        }
+    }
+
+    return -1;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.how_it_works._find_field_index_by_input = function(state, input_id) {
+
+    // .. find which label points to this input ..
+    for (var index = 0; index < state.fields.length; index++) {
+        var label_for = state.fields[index].element.getAttribute('for');
+        if (label_for === input_id) {
+            return index;
+        }
+    }
+
+    return -1;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -242,10 +299,8 @@ $.fn.zato.how_it_works._collect_fields = function(div, config) {
             continue;
         }
 
-        var target = label;
-
         fields.push({
-            element: target,
+            element: label,
             description: description,
         });
     }
