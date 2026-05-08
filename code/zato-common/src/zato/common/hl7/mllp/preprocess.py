@@ -26,9 +26,8 @@ _Minimum_Encoding_Characters_Length = 4
 # MSH field separator position in MSH|...|
 _MSH_Prefix = 'MSH|'
 
-# Batch/File header prefixes
-_BHS_Prefix = 'BHS|'
-_FHS_Prefix = 'FHS|'
+# Batch/File header prefixes - used as a tuple for startswith matching
+_Batch_Prefixes = ('BHS|', 'FHS|')
 
 # Encoding map from MSH-18 values to Python codec names
 _encoding_map:'dict[str, str]' = {
@@ -63,7 +62,7 @@ class BatchPayload:
 def is_batch_payload(data:'str') -> 'bool':
     """ Returns True if the data starts with a batch header (BHS|) or file header (FHS|).
     """
-    return data.startswith(_BHS_Prefix) or data.startswith(_FHS_Prefix)
+    return data.startswith(_Batch_Prefixes)
 
 # ################################################################################################################################
 # ################################################################################################################################
