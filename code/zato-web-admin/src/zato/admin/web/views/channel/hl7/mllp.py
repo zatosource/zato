@@ -28,8 +28,8 @@ class Index(_Index):
         output_required = 'id', 'name', 'is_active', 'is_internal', 'service', 'security_name'
         output_optional = (
             'should_parse_on_input', 'should_validate', 'should_return_errors',
-            'should_log_messages', 'logging_level', 'data_encoding',
-            'max_msg_size', 'read_buffer_size', 'recv_timeout',
+            'should_log_messages', 'logging_level',
+            'max_msg_size', 'max_msg_size_unit', 'read_buffer_size', 'recv_timeout',
             'start_seq', 'end_seq',
             'msh3_sending_app', 'msh4_sending_facility',
             'msh5_receiving_app', 'msh6_receiving_facility', 'msh9_message_type',
@@ -59,8 +59,8 @@ class _CreateEdit(CreateEdit):
         input_required = 'name', 'is_internal', 'service'
         input_optional = (
             'is_active', 'should_parse_on_input', 'should_validate', 'should_return_errors',
-            'should_log_messages', 'logging_level', 'data_encoding',
-            'max_msg_size', 'read_buffer_size', 'recv_timeout',
+            'should_log_messages', 'logging_level',
+            'max_msg_size', 'max_msg_size_unit', 'read_buffer_size', 'recv_timeout',
             'start_seq', 'end_seq',
             'msh3_sending_app', 'msh4_sending_facility',
             'msh5_receiving_app', 'msh6_receiving_facility', 'msh9_message_type',
@@ -85,7 +85,6 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['should_parse_on_input'] = True
         initial_input_dict['data_format'] = HL7.Const.Version.v2.id
         initial_input_dict['hl7_version'] = HL7.Const.Version.v2.id
-        initial_input_dict['data_encoding'] = 'utf-8'
 
 # ################################################################################################################################
 

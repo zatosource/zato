@@ -105,16 +105,16 @@
     font-weight: 500;
     padding: 8px 20px;
     border-radius: 0;
-    border-bottom: var(--form-tab-border-width) solid var(--form-tab-bg);
+    border: 1px solid transparent;
     text-transform: uppercase;
     letter-spacing: 1.5px;
 }
 
-/* Hover state. Border goes transparent so the overlay is seamless. */
+/* Hover state. */
 .data-popup .dashboard-tabs > .dashboard-tab:hover {
     color: var(--form-tab-color-bright);
     background: var(--form-tab-hover-bg);
-    border-bottom-color: transparent;
+    border: 1px solid transparent;
 }
 
 /* Active tab. All four pseudo-states covered to prevent
@@ -126,7 +126,6 @@
     color: var(--form-tab-color-bright);
     background: var(--form-tab-active-bg);
     border: 1px solid transparent;
-    border-bottom: var(--form-tab-border-width) solid var(--form-tab-active-border);
     border-radius: 0;
     box-shadow: none;
     text-shadow: 0 0 8px var(--form-tab-glow);

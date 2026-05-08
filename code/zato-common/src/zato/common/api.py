@@ -1288,7 +1288,7 @@ class HL7:
         max_msg_size = 2_000_000
         max_wait_time = 5
         pool_size = 10
-        read_buffer_size = 2048
+        read_buffer_size = 32768
         recv_timeout = 250
         start_seq = '0b'
 

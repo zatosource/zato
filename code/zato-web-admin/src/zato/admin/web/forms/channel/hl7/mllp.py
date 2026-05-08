@@ -31,6 +31,11 @@ _encoding_choices = [
     ('us-ascii',     'US-ASCII'),
 ]
 
+_max_msg_size_unit_choices = [
+    ('kb', 'kB'),
+    ('mb', 'MB'),
+]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -48,8 +53,12 @@ class CreateForm(forms.Form):
 
     logging_level = forms.ChoiceField(widget=forms.Select())
 
-    data_encoding = forms.CharField(initial=_default.data_encoding, widget=forms.TextInput(attrs={'style':'width:10%'}))
-    max_msg_size = forms.CharField(initial=_default.max_msg_size, widget=forms.TextInput(attrs={'style':'width:15%'}))
+    max_msg_size = forms.CharField(initial='2', widget=forms.TextInput(attrs={'style':'width:8%'}))
+    max_msg_size_unit = forms.ChoiceField(
+        choices=_max_msg_size_unit_choices,
+        initial='mb',
+        widget=forms.Select(attrs={'style':'width:60px'}),
+    )
     read_buffer_size = forms.CharField(initial=_default.read_buffer_size, widget=forms.TextInput(attrs={'style':'width:10%'}))
     recv_timeout = forms.CharField(initial=_default.recv_timeout, widget=forms.TextInput(attrs={'style':'width:8%'}))
     start_seq = forms.CharField(initial=_default.start_seq, widget=forms.TextInput(attrs={'style':'width:15%'}))
