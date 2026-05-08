@@ -341,15 +341,6 @@ class CommandStore:
         self.add_opts(info, info_mod.Info.opts)
 
         #
-        # reset-totp-key
-        #
-        reset_totp_key = subs.add_parser('reset-totp-key',
-            description=web_admin_auth_mod.ResetTOTPKey.__doc__, parents=[base_parser])
-        reset_totp_key.add_argument('path', help='Path to web-admin')
-        reset_totp_key.set_defaults(command='reset_totp_key')
-        self.add_opts(reset_totp_key, web_admin_auth_mod.ResetTOTPKey.opts)
-
-        #
         # set-admin-invoke-password
         #
         set_admin_invoke_password = subs.add_parser('set-admin-invoke-password',

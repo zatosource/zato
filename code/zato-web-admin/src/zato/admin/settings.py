@@ -239,4 +239,3 @@ else:
     SECRET_KEY = uuid4().hex
 
     settings_db = None
-    is_totp_enabled = False

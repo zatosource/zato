@@ -76,12 +76,6 @@ common_ca_create_opts = [
     {'name':'--common-name', 'help':'Common name (defaults to {default})'.format(default=default_common_name)},
 ]
 
-common_totp_opts = [
-    {'name': 'username', 'help': 'Username to reset the TOTP secret key of'},
-    {'name': '--key', 'help': 'Key to use'},
-    {'name': '--key-label', 'help': 'Label to apply to the key'},
-]
-
 common_scheduler_server_address_opts = [
     {'name':'--scheduler-address-for-server', 'help':'Address of the scheduler for servers to invoke'},
     {'name':'--server-address-for-scheduler', 'help':'Address of the server for a scheduler to invoke'},
@@ -169,7 +163,6 @@ command_imports = (
     ('from_config', 'zato.cli.FromConfig'),
     ('hash_get_rounds', 'zato.cli.crypto.GetHashRounds'),
     ('info', 'zato.cli.info.Info'),
-    ('reset_totp_key', 'zato.cli.web_admin_auth.ResetTOTPKey'),
     ('quickstart_create', 'zato.cli.quickstart.Create'),
     ('service_invoke', 'zato.cli.service.Invoke'),
     ('set_ide_password', 'zato.cli.ide.SetIDEPassword'),
