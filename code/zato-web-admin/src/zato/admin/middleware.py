@@ -212,12 +212,13 @@ class ZatoMiddleware:
         else:
             resp.context_data = {'zato_version':version}
 
-        try:
-            ccm = ClusterColorMarker.objects.get(cluster_id=req.zato.cluster_id, user_profile=req.zato.user_profile)
-        except ClusterColorMarker.DoesNotExist:
-            pass
-        else:
-            resp.context_data['cluster_color'] = ccm.color
+        if req.path not in _Auth_Paths:
+            try:
+                ccm = ClusterColorMarker.objects.get(cluster_id=1, user_profile=req.zato.user_profile)
+            except ClusterColorMarker.DoesNotExist:
+                pass
+            else:
+                resp.context_data['cluster_color'] = ccm.color
 
         resp.render()
 

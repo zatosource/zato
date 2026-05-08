@@ -176,11 +176,16 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
         with _shared_state.lock:
 
-            # Start the shared server if needed ..
-            self._ensure_shared_server_started()
+            # .. if rest_only is set, the MLLP listener is not started ..
+            rest_only = getattr(self.config, 'rest_only', False)
+
+            if not rest_only:
+
+                # Start the shared server if needed ..
+                self._ensure_shared_server_started()
 
             # .. register this channel's routing rule only if the channel is active ..
-            if self.config.is_active:
+            if self.config.is_active and not rest_only:
                 _shared_state.router.add_route(
                     channel_name=self.config.name,
                     service_name=self.config.service,
@@ -209,10 +214,22 @@ class ChannelHL7MLLPWrapper(Wrapper):
             _shared_state.router.remove_route(self.config.name)
             _shared_state.channel_count -= 1
 
-            # .. stop the shared server if no channels remain.
+            # .. stop the shared server if no channels remain ..
             if _shared_state.channel_count <= 0:
                 self._stop_shared_server()
                 _shared_state.channel_count = 0
+
+            # .. clean up the backing REST channel if one exists ..
+            rest_channel_id = getattr(self.config, 'rest_channel_id', 0)
+            if rest_channel_id:
+                try:
+                    self.server.invoke('zato.http-soap.delete', { # pyright: ignore[reportOptionalMemberAccess]
+                        'id': rest_channel_id,
+                        'cluster_id': 1,
+                    })
+                    logger.info('Deleted backing REST channel id=%s for MLLP channel `%s`', rest_channel_id, self.config.name)
+                except Exception:
+                    logger.warning('Could not delete backing REST channel id=%s', rest_channel_id)
 
 # ################################################################################################################################
 
