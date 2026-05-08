@@ -8,15 +8,15 @@ from zato_hl7v2.v2_9.messages import *
 
 from zato_hl7v2.base import HL7Message
 from zato_hl7v2_rs import parse as _rust_parse, validate as _rust_validate, serialize as _rust_serialize, ValidationResult, ValidationError
-from zato_hl7v2_rs import apply_parser_quirks as _apply_quirks, ParserQuirks
+from zato_hl7v2_rs import apply_tolerance as _apply_tolerance, ToleranceConfig
 from zato_hl7v2.batch import parse_batch, parse_file, parse_batch_or_file
 
 
-def parse_message(raw:'str', validate:'bool' = True, quirks:'ParserQuirks | None' = None) -> 'HL7Message':
+def parse_message(raw:'str', validate:'bool' = True, tolerance:'ToleranceConfig | None' = None) -> 'HL7Message':
 
-    # .. apply parser quirks (e.g. OBX-2 normalization) before parsing ..
-    if quirks is not None:
-        raw = _apply_quirks(raw, quirks)
+    # .. apply tolerance rules (e.g. OBX-2 normalization) before parsing ..
+    if tolerance is not None:
+        raw = _apply_tolerance(raw, tolerance)
 
     # .. parse the raw ER7 string through the Rust tokenizer and structure parser ..
     raw_msg = _rust_parse(raw)

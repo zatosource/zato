@@ -46,7 +46,7 @@ $.fn.zato.channel.hl7.mllp.tab_labels = {
     main:     'Main',
     routing:  'Routing',
     protocol: 'Protocol',
-    quirks:   'Quirks mode',
+    tolerance: 'Tolerance',
     dedup:    'Deduplication',
     logging:  'Logging'
 };
@@ -229,7 +229,7 @@ $.fn.zato.channel.hl7.mllp.field_descriptions = {
     'id_start_seq': 'MLLP start-of-block byte in hex.<br>Standard: 0b.',
     'id_end_seq': 'MLLP end-of-block bytes in hex.<br>Standard: 1c 0d.',
 
-    // Quirks mode tab
+    // Tolerance tab
     'id_normalize_line_endings': 'Converts CRLF and LF to CR<br>as required by HL7 v2.',
     'id_force_standard_delimiters': 'Rewrites MSH-2 to standard delimiters<br>(^~\\&amp;).',
     'id_repair_truncated_msh': 'Recovers messages with a corrupted<br>or malformed MSH segment.',
