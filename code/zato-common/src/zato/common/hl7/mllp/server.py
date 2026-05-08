@@ -65,6 +65,7 @@ class HL7MLLPServer:
         max_message_size:'int' = _Default_Max_Message_Size,
         read_buffer_size:'int' = _Default_Read_Buffer_Size,
         should_log_messages:'bool' = False,
+        should_return_errors:'bool' = False,
         should_parse_on_input:'bool' = True,
         keepalive_idle:'int' = _Default_Keepalive_Idle_Seconds,
         keepalive_interval:'int' = _Default_Keepalive_Interval_Seconds,
@@ -86,6 +87,7 @@ class HL7MLLPServer:
         self.max_message_size = max_message_size
         self.read_buffer_size = read_buffer_size
         self.should_log_messages   = should_log_messages
+        self.should_return_errors  = should_return_errors
         self.should_parse_on_input = should_parse_on_input
 
         self.keepalive_idle        = keepalive_idle
@@ -282,6 +284,10 @@ class HL7MLLPServer:
                         matched_route.channel_name, connection_context.peer_ip, connection_context.peer_port, format_exc())
                     ack_code = 'AE'
                     error_text = 'Internal processing error'
+
+            # .. suppress error details if configured to not return errors ..
+            if not self.should_return_errors:
+                error_text = ''
 
             # .. build and frame the ACK ..
             ack_string = build_ack(msh_line, ack_code, error_text=error_text)

@@ -92,6 +92,8 @@ $.fn.zato.how_it_works._activate = function(badge) {
         fields: fields,
         current_index: 0,
         field_tippy: null,
+        last_index_per_tab: {},
+        tab_observer: null,
     };
 
     $.fn.zato.how_it_works._state = state;
@@ -148,12 +150,85 @@ $.fn.zato.how_it_works._activate = function(badge) {
     };
     div.addEventListener('focusin', state._focusin_handler, true);
 
+    // .. watch for tab switches via hidden attribute changes on panels ..
+    var panels_container = div.querySelector('.dashboard-tab-panel');
+    if (panels_container) {
+        var parent_of_panels = panels_container.parentNode;
+        state.tab_observer = new MutationObserver(function(mutation_list) {
+            $.fn.zato.how_it_works._on_tab_switch(state);
+        });
+        state.tab_observer.observe(parent_of_panels, {
+            attributes: true,
+            attributeFilter: ['hidden'],
+            subtree: true,
+        });
+    }
+
     // .. clicking outside the dialog closes help mode ..
     $(document).on('mousedown.how_it_works_outside', function(event) {
         if (!dialog.contains(event.target)) {
             $.fn.zato.how_it_works._deactivate();
         }
     });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.how_it_works._on_tab_switch = function(state) {
+
+    // .. save current index for the old tab ..
+    var old_tab_name = $.fn.zato.how_it_works._get_active_tab_name(state.div);
+
+    // .. re-collect fields from the newly active tab ..
+    var new_fields = $.fn.zato.how_it_works._collect_fields(state.div, state.config);
+
+    if (!new_fields.length) {
+        if (state.field_tippy) {
+            state.field_tippy.destroy();
+            state.field_tippy = null;
+        }
+        state.fields = new_fields;
+        return;
+    }
+
+    // .. destroy old tooltip ..
+    if (state.field_tippy) {
+        state.field_tippy.destroy();
+        state.field_tippy = null;
+    }
+
+    state.fields = new_fields;
+
+    // .. find the new active tab name ..
+    var new_tab_name = $.fn.zato.how_it_works._get_active_tab_name(state.div);
+
+    // .. restore last index for this tab, or start at 0 ..
+    var restored_index = state.last_index_per_tab[new_tab_name];
+
+    if (restored_index === undefined) {
+        restored_index = 0;
+    }
+
+    if (restored_index >= new_fields.length) {
+        restored_index = 0;
+    }
+
+    $.fn.zato.how_it_works._show_field_tooltip(state, restored_index);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.how_it_works._get_active_tab_name = function(div) {
+
+    var buttons = div.querySelectorAll('.dashboard-tab-button');
+
+    for (var button_index = 0; button_index < buttons.length; button_index++) {
+        if (buttons[button_index].classList.contains('active')) {
+            return buttons[button_index].textContent.trim();
+        }
+    }
+
+    return '';
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -168,6 +243,11 @@ $.fn.zato.how_it_works._deactivate = function() {
     // .. destroy current field tooltip ..
     if (state.field_tippy) {
         state.field_tippy.destroy();
+    }
+
+    // .. disconnect tab observer ..
+    if (state.tab_observer) {
+        state.tab_observer.disconnect();
     }
 
     // .. remove depressed look ..
@@ -236,6 +316,11 @@ $.fn.zato.how_it_works._show_field_tooltip = function(state, index) {
     }
 
     state.current_index = index;
+
+    // .. remember this index for the current tab ..
+    var tab_name = $.fn.zato.how_it_works._get_active_tab_name(state.div);
+    state.last_index_per_tab[tab_name] = index;
+
     var field = state.fields[index];
     var target = field.element;
 

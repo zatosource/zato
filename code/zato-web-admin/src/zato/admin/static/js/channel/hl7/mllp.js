@@ -117,9 +117,45 @@ $.fn.zato.channel.hl7.mllp.create = function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.channel.hl7.mllp.field_descriptions = {
+
+    // Main tab
     'id_name': 'A unique name for this MLLP channel.<br>Used to identify it in logs and the dashboard.',
-    'id_is_active': 'Whether this channel accepts connections.<br>Inactive channels are ignored at runtime.',
-    'id_service': 'The service that will handle<br>each incoming HL7 message.',
+    'id_is_active': 'Whether this channel accepts connections.<br>Inactive channels do not route messages.',
+    'id_service': 'The service invoked for each<br>incoming HL7 message.',
+
+    // Routing tab
+    'id_is_default': 'Catch-all route. Only one channel can be default.<br>Routing fields are ignored when active.',
+    'id_msh3_sending_app': 'Matches MSH-3 (sending application),<br>case-insensitive.',
+    'id_msh4_sending_facility': 'Matches MSH-4 (sending facility),<br>case-insensitive.',
+    'id_msh5_receiving_app': 'Matches MSH-5 (receiving application),<br>case-insensitive.',
+    'id_msh6_receiving_facility': 'Matches MSH-6 (receiving facility),<br>case-insensitive.',
+    'id_msh9_message_type': 'Matches MSH-9.1 (message type, e.g. ADT, ORM),<br>case-insensitive.',
+    'id_msh9_trigger_event': 'Matches MSH-9.2 (trigger event, e.g. A01, O01),<br>case-insensitive.',
+    'id_msh11_processing_id': 'Matches MSH-11<br>(P=production, T=training, D=debugging),<br>case-insensitive.',
+    'id_msh12_version_id': 'Matches MSH-12 (HL7 version, e.g. 2.5),<br>case-insensitive.',
+
+    // Protocol tab
+    'id_default_character_encoding': 'Encoding for decoding raw bytes<br>when MSH-18 is absent or the MSH-18 toggle is off.',
+    'id_recv_timeout': 'Per-recv timeout in milliseconds.<br>The connection stays open between messages.',
+    'id_max_msg_size': 'Maximum message size.<br>Frames exceeding this are rejected.',
+    'id_start_seq': 'MLLP start-of-block byte in hex.<br>Standard: 0b.',
+    'id_end_seq': 'MLLP end-of-block bytes in hex.<br>Standard: 1c 0d.',
+
+    // Quirks tab
+    'id_normalize_line_endings': 'Converts CRLF and LF to CR<br>as required by HL7 v2.',
+    'id_force_standard_delimiters': 'Rewrites MSH-2 to standard delimiters<br>(^~\\&amp;).',
+    'id_repair_truncated_msh': 'Recovers messages with a truncated<br>or junk-prefixed MSH segment.',
+    'id_split_concatenated_messages': 'Splits a TCP payload containing multiple<br>MSH segments into separate messages.',
+    'id_use_msh18_encoding': 'Reads encoding from MSH-18. Falls back<br>to default encoding when MSH-18 is missing.',
+
+    // Deduplication tab
+    'id_dedup_ttl_value': 'How long to remember message control IDs.<br>Reserved, not yet implemented.',
+    'id_dedup_ttl_unit': 'Time unit for the dedup window.<br>Reserved, not yet implemented.',
+
+    // Logging tab
+    'id_should_return_errors': 'Includes error details in NAK responses<br>(ERR segment).',
+    'id_should_log_messages': 'Logs incoming message content<br>and routing decisions.',
+    'id_logging_level': 'Verbosity level for this<br>channel\'s log entries.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
