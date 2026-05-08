@@ -134,6 +134,7 @@
             let sessionSeconds = sessionDuration;
             const sessionTimerEl = document.getElementById('session-timer');
             let lastMouseReset = 0;
+            let lastKeepalive = 0;
 
             function resetSessionTimer() {
                 sessionSeconds = sessionDuration;
@@ -164,6 +165,10 @@
                 if (now - lastMouseReset >= 1000) {
                     lastMouseReset = now;
                     sessionSeconds = sessionDuration;
+                }
+                if (now - lastKeepalive >= 60000) {
+                    lastKeepalive = now;
+                    fetch('{% url "session-keepalive" %}', {method: 'GET', keepalive: true, credentials: 'same-origin'});
                 }
             }, {passive: true});
 

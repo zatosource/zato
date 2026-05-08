@@ -127,6 +127,8 @@ class Client(AnyServiceInvoker):
 # ################################################################################################################################
 # ################################################################################################################################
 
+_Auth_Paths = {'/accounts/login/', '/accounts/login/callback/', '/logout/', '/zato/session-keepalive/'}
+
 class ZatoMiddleware:
 
     def __init__(self, get_response):
@@ -153,6 +155,10 @@ class ZatoMiddleware:
         req.zato.odb = SASession()
         req.zato.settings_db = settings_db
         req.zato.args = Bunch() # Arguments read from URL
+
+        # Auth-related paths do not need the cluster query or invoke client
+        if req.path in _Auth_Paths:
+            return
 
         # Whether this request to web-admin was served over TLS
         req.zato.is_tls = req.META.get('HTTP_X_FORWARDED_PROTO', '').lower() == 'https'

@@ -11,7 +11,8 @@ from logging import getLogger
 
 # Django
 from django.contrib.auth import authenticate, login as django_login, logout as django_logout
-from django.http import HttpResponseRedirect
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import resolve_url
 from django.template.response import TemplateResponse
 from django.utils.http import url_has_allowed_host_and_scheme as is_safe_url
@@ -120,6 +121,13 @@ def login(req):
     # Here, we know that we need to return the form, either because it is a GET request
     # or because it was POST but credentials were invalid
     return get_login_response(req, needs_post_form_data, has_errors)
+
+# ################################################################################################################################
+
+@login_required
+@method_allowed('GET')
+def session_keepalive(req):
+    return HttpResponse(status=204)
 
 # ################################################################################################################################
 
