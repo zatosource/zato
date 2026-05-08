@@ -153,14 +153,19 @@ class HL7Field:
         if not components:
             return None
 
-        # For primitive string types (ST, FT, TX), join all components with '^'
-        # to reconstruct the original value that the tokenizer split apart.
+        # .. for primitive string types (ST, FT, TX), the tokenizer split
+        # .. the value on '^' but the value is an opaque string, so we
+        # .. re-join all components to reconstruct the original content ..
         if self.datatype in _Primitive_String_Datatypes:
             joined = '^'.join(comp[0] if comp else '' for comp in components)
             return joined if joined else None
 
+        # .. single scalar - return it directly without wrapping ..
         if len(components) == 1 and len(components[0]) == 1:
             return components[0][0] if components[0][0] else None
+
+        # .. composite datatype - instantiate the datatype class and attach
+        # .. the raw components so that sub-component accessors work ..
         dt_class = _datatype_classes.get(self.datatype)
         if dt_class is not None:
             obj = dt_class.__new__(dt_class)  # type: ignore[call-overload]
@@ -171,6 +176,8 @@ class HL7Field:
                 obj._parent_field_idx = self.position - 1
                 obj._parent_rep_idx = rep_idx
             return obj
+
+        # .. fallback for unknown datatypes - return the first component value ..
         if components and components[0]:
             return components[0][0] if components[0][0] else None
         return None
@@ -359,7 +366,12 @@ class HL7DataType:
         return json.dumps(self.to_dict(), indent=indent)
 
     def serialize(self) -> str:
+        """ Serializes this composite datatype back to ER7 by joining
+        its sub-components with '^', escaping delimiter characters.
+        """
         delimiters = ('|', '^', '~', '\\', '&')
+
+        # .. collect all HL7Component descriptors declared on this class ..
         components: list[HL7Component] = []
         for name in dir(self.__class__):
             attr = getattr(self.__class__, name)
@@ -367,8 +379,12 @@ class HL7DataType:
                 components.append(attr)
         if not components:
             return ""
+
+        # .. sort by position to ensure correct field order ..
         components.sort(key=lambda c: c.position)
         max_pos = components[-1].position
+
+        # .. build the output list, one entry per position ..
         parts: list[str] = []
         for pos in range(1, max_pos + 1):
             val = None
@@ -377,8 +393,11 @@ class HL7DataType:
                     val = getattr(self, comp.attr_name, None)
                     break
             parts.append(encode_er7(str(val), delimiters) if val is not None else "")
+
+        # .. strip trailing empty components ..
         while parts and parts[-1] == "":
             parts.pop()
+
         return "^".join(parts)
 
 
@@ -401,6 +420,13 @@ class HL7Segment:
         raise NotImplementedError
 
     def serialize(self) -> str:
+        """ Serializes the segment back to ER7 format.
+        When _raw_segment is available (Rust-parsed), it serializes directly
+        from the raw token structure. Otherwise it falls back to
+        _serialize_from_dict which uses the Python descriptor values.
+        """
+
+        # .. fast path - serialize from the raw Rust-parsed segment tokens ..
         if self._raw_segment:
             field_sep = '|'
             comp_sep = '^'
@@ -409,12 +435,20 @@ class HL7Segment:
             subcomp_sep = '&'
             delimiters = (field_sep, comp_sep, rep_sep, esc_char, subcomp_sep)
 
+            # .. start with the segment ID (e.g. "MSH", "PID") ..
             result = self._segment_id
+
             for field_idx, field in enumerate(self._raw_segment.fields):
                 result += field_sep
+
+                # .. MSH-1 is the field separator itself and MSH-2 is the
+                # .. encoding characters - they are not escaped ..
                 if self._segment_id == "MSH" and field_idx == 0:
                     result += f"{comp_sep}{rep_sep}{esc_char}{subcomp_sep}"
                     continue
+
+                # .. rebuild each repetition -> component -> subcomponent layer,
+                # .. escaping each leaf value to protect delimiter characters ..
                 rep_strs = []
                 for rep in field:
                     comp_strs = []
@@ -423,21 +457,35 @@ class HL7Segment:
                         comp_strs.append(subcomp_sep.join(subcomp_strs))
                     rep_strs.append(comp_sep.join(comp_strs))
                 result += rep_sep.join(rep_strs)
+
             return result
+
+        # .. slow path - serialize from Python descriptor values ..
         return self._serialize_from_dict()
 
     def _serialize_from_dict(self) -> str:
+        """ Fallback serialization that builds the ER7 string from Python
+        descriptor values when no raw Rust segment is available.
+        """
         delimiters = ('|', '^', '~', '\\', '&')
+
+        # .. scan all HL7Field descriptors on the class and collect their values ..
         fields_by_pos: dict[int, str] = {}
         for name in dir(self.__class__):
             attr = getattr(self.__class__, name)
             if isinstance(attr, HL7Field):
                 val = self.__dict__.get(attr.attr_name)
                 if val is not None:
+
+                    # .. composite datatype - delegate serialization to the datatype ..
                     if isinstance(val, HL7DataType):
                         fields_by_pos[attr.position] = val.serialize()
+
+                    # .. plain string - escape delimiter characters ..
                     elif isinstance(val, str):
                         fields_by_pos[attr.position] = encode_er7(val, delimiters)
+
+                    # .. repeating field - serialize each repetition and join with '~' ..
                     elif isinstance(val, list):
                         parts_list:'list[str]' = []
                         for v in val:
@@ -446,16 +494,26 @@ class HL7Segment:
                             else:
                                 parts_list.append(encode_er7(str(v), delimiters))
                         fields_by_pos[attr.position] = "~".join(parts_list)
+
+                    # .. any other type - convert to string and escape ..
                     else:
                         fields_by_pos[attr.position] = encode_er7(str(val), delimiters)
+
         if not fields_by_pos:
             return ""
+
+        # .. build the pipe-delimited output, starting with the segment ID ..
         max_pos = max(fields_by_pos.keys())
         parts = [self._segment_id]
+
+        # .. MSH is special: MSH-2 is the encoding characters literal ..
         if self._segment_id == "MSH":
             parts.append("^~\\&")
+
+        # .. fill in each field position, using empty string for gaps ..
         for pos in range(1 if self._segment_id != "MSH" else 2, max_pos + 1):
             parts.append(fields_by_pos.get(pos, ""))
+
         return "|".join(parts)
 
     to_hl7 = serialize

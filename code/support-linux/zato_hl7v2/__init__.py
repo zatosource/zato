@@ -17,6 +17,10 @@ from zato_hl7v2_rs import ParserQuirks
 
 
 def parse_message(raw:'str', validate:'bool' = True, quirks:'ParserQuirks | None' = None) -> 'HL7Message':
+    """ Top-level entry point for parsing an HL7v2 ER7 message.
+    Delegates to the version-specific parser, passing through the
+    validate flag and any parser quirks.
+    """
     from zato_hl7v2.v2_9 import parse_message as parse_v2_9
     return parse_v2_9(raw, validate=validate, quirks=quirks or ParserQuirks())
 

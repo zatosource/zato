@@ -245,9 +245,12 @@ class HL7MLLPServer:
         """ Finds the first MSH segment line inside a batch/file payload.
         Used for routing and ACK building when the frame is a batch.
         """
+
+        # .. scan through CR-delimited segments looking for the first MSH ..
         for line in data.split('\r'):
             if line.startswith('MSH|'):
                 return line
+
         return ''
 
 # ################################################################################################################################
@@ -265,9 +268,11 @@ class HL7MLLPServer:
 
         raw = batch_payload.raw
 
-        # .. extract the first MSH line for routing and ACK building ..
+        # .. extract the first MSH line inside the batch for routing and ACK building,
+        # .. because routing is always keyed off MSH fields even for batches ..
         msh_line = self._extract_first_msh_line(raw)
 
+        # .. if the batch contains no MSH at all, there is nothing to route or ACK ..
         if not msh_line:
             logger.warning('Batch payload from %s:%d contains no MSH segment',
                 connection_context.peer_ip, connection_context.peer_port)
@@ -277,20 +282,25 @@ class HL7MLLPServer:
             logger.info('Processing batch payload (%d bytes) from %s:%d',
                 len(raw), connection_context.peer_ip, connection_context.peer_port)
 
-        # .. find the matching route ..
+        # .. find the matching route using the first MSH ..
         matched_route = self.router.match(msh_line)
 
+        # .. no route found - reject the entire batch ..
         if matched_route is None:
             logger.warning('No matching MLLP channel for batch from %s:%d (MSH: %s)',
                 connection_context.peer_ip, connection_context.peer_port, msh_line[:80])
             ack_code = 'AR'
             error_text = 'No matching channel for this batch'
+
+        # .. route found - pass the entire raw batch to the service callback,
+        # .. the service is responsible for calling parse_batch_or_file on it ..
         else:
 
             if self.should_log_messages:
                 logger.info('Routing batch to channel `%s` (service `%s`)',
                     matched_route.channel_name, matched_route.service_name)
 
+            # .. invoke the callback with the raw batch string ..
             try:
                 _ = matched_route.callback(raw)
                 ack_code = 'AA'
@@ -301,15 +311,18 @@ class HL7MLLPServer:
                 ack_code = 'AE'
                 error_text = 'Internal processing error'
 
-        # .. suppress error details if configured ..
+        # .. suppress error details if the channel is configured to hide them ..
         if not self.should_return_errors:
             error_text = ''
 
-        # .. build and send the ACK based on the first MSH ..
+        # .. build the ACK using the first MSH from the batch ..
         ack_string = build_ack(msh_line, ack_code, error_text=error_text)
+
+        # .. encode and frame the ACK for MLLP transport ..
         ack_bytes = ack_string.encode(self.default_character_encoding)
         framed_ack = frame_encode(ack_bytes, self.start_sequence, self.end_sequence)
 
+        # .. send the framed ACK back to the sender ..
         try:
             active_socket.sendall(framed_ack)
         except (BrokenPipeError, ConnectionResetError):
@@ -414,20 +427,30 @@ class HL7MLLPServer:
                     logger.info('Routing message to channel `%s` (service `%s`)',
                         matched_route.channel_name, matched_route.service_name)
 
-                # .. optionally parse the raw ER7 into an HL7Message object before
-                # .. passing it to the callback, with optional validation.
+                # .. when should_parse_on_input is enabled, parse the raw ER7 text
+                # .. into a structured HL7Message object. If should_validate is also
+                # .. enabled, the parser runs validation and raises on errors.
+                # .. On success the callback receives the parsed object, otherwise
+                # .. it receives the raw ER7 string.
                 if self.should_parse_on_input:
+
+                    # .. attempt to parse (and optionally validate) the message ..
                     try:
                         callback_data = hl7_parse_message(message_text, validate=self.should_validate)
+
+                    # .. parsing or validation failed - send an AE reject ACK
+                    # .. back to the sender and skip this message ..
                     except ValueError:
                         logger.warning('Parse/validation error for channel `%s` from %s:%d; e:`%s`',
                             matched_route.channel_name, connection_context.peer_ip, connection_context.peer_port, format_exc())
                         ack_code = 'AE'
                         error_text = 'Message parsing or validation failed'
 
+                        # .. suppress error details if the channel hides them ..
                         if not self.should_return_errors:
                             error_text = ''
 
+                        # .. build, frame and send the reject ACK ..
                         ack_string = build_ack(msh_line, ack_code, error_text=error_text)
                         ack_bytes = ack_string.encode(self.default_character_encoding)
                         framed_ack = frame_encode(ack_bytes, self.start_sequence, self.end_sequence)
@@ -437,14 +460,20 @@ class HL7MLLPServer:
                         except (BrokenPipeError, ConnectionResetError):
                             pass
 
+                        # .. skip to the next message in the batch ..
                         continue
+
+                # .. parsing not enabled - pass the raw ER7 string to the callback ..
                 else:
                     callback_data = message_text
 
+                # .. invoke the matched route's service callback ..
                 try:
                     _ = matched_route.callback(callback_data)
                     ack_code = 'AA'
                     error_text = ''
+
+                # .. service raised an exception - report it as an application error ..
                 except Exception:
                     logger.warning('Service callback error for channel `%s` from %s:%d; e:`%s`',
                         matched_route.channel_name, connection_context.peer_ip, connection_context.peer_port, format_exc())
