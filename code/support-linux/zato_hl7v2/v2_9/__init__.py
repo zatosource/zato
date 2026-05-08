@@ -12,7 +12,7 @@ from zato_hl7v2_rs import apply_parser_quirks as _apply_quirks, ParserQuirks
 from zato_hl7v2.batch import parse_batch, parse_file, parse_batch_or_file
 
 
-def parse_message(raw: str, validate: bool = True, quirks: 'ParserQuirks | None' = None) -> HL7Message:
+def parse_message(raw:'str', validate:'bool' = True, quirks:'ParserQuirks | None' = None) -> 'HL7Message':
     if quirks is not None:
         raw = _apply_quirks(raw, quirks)
     raw_msg = _rust_parse(raw)
@@ -21,6 +21,13 @@ def parse_message(raw: str, validate: bool = True, quirks: 'ParserQuirks | None'
         raise ValueError(f"Unknown structure: {raw_msg.structure_id}")
     msg = msg_class.__new__(msg_class)
     msg._raw_message = raw_msg
+
+    if validate:
+        result = _rust_validate(raw)
+        if result.errors:
+            error_lines = [f"{e.path}: {e.message}" for e in result.errors]
+            raise ValueError(f"Validation failed:\n" + "\n".join(error_lines))
+
     return msg
 
 

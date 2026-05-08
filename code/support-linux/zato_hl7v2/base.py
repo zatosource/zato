@@ -4,6 +4,7 @@ import json
 from enum import Enum
 from typing import Any, Optional, TypeVar
 
+from zato_hl7v2.encoding import encode_er7
 from zato_hl7v2.registry import (
     register_segment,
     register_field,
@@ -16,6 +17,10 @@ T = TypeVar("T")
 
 _datatype_classes: dict[str, type] = {}
 _segment_classes: dict[str, type] = {}
+
+# Primitive string datatypes whose values must be reconstructed by joining
+# components with '^' because the tokenizer splits on that delimiter.
+_Primitive_String_Datatypes = frozenset({'ST', 'FT', 'TX'})
 
 
 class Usage(str, Enum):
@@ -147,6 +152,13 @@ class HL7Field:
     def _build_value(self, components: list[list[str]], instance: Any = None, rep_idx: int = 0) -> Any:
         if not components:
             return None
+
+        # For primitive string types (ST, FT, TX), join all components with '^'
+        # to reconstruct the original value that the tokenizer split apart.
+        if self.datatype in _Primitive_String_Datatypes:
+            joined = '^'.join(comp[0] if comp else '' for comp in components)
+            return joined if joined else None
+
         if len(components) == 1 and len(components[0]) == 1:
             return components[0][0] if components[0][0] else None
         dt_class = _datatype_classes.get(self.datatype)
@@ -347,6 +359,7 @@ class HL7DataType:
         return json.dumps(self.to_dict(), indent=indent)
 
     def serialize(self) -> str:
+        delimiters = ('|', '^', '~', '\\', '&')
         components: list[HL7Component] = []
         for name in dir(self.__class__):
             attr = getattr(self.__class__, name)
@@ -363,7 +376,7 @@ class HL7DataType:
                 if comp.position == pos:
                     val = getattr(self, comp.attr_name, None)
                     break
-            parts.append(str(val) if val is not None else "")
+            parts.append(encode_er7(str(val), delimiters) if val is not None else "")
         while parts and parts[-1] == "":
             parts.pop()
         return "^".join(parts)
@@ -394,6 +407,7 @@ class HL7Segment:
             rep_sep = '~'
             esc_char = '\\'
             subcomp_sep = '&'
+            delimiters = (field_sep, comp_sep, rep_sep, esc_char, subcomp_sep)
 
             result = self._segment_id
             for field_idx, field in enumerate(self._raw_segment.fields):
@@ -405,7 +419,7 @@ class HL7Segment:
                 for rep in field:
                     comp_strs = []
                     for comp in rep:
-                        subcomp_strs = [s for s in comp]
+                        subcomp_strs = [encode_er7(s, delimiters) for s in comp]
                         comp_strs.append(subcomp_sep.join(subcomp_strs))
                     rep_strs.append(comp_sep.join(comp_strs))
                 result += rep_sep.join(rep_strs)
@@ -413,6 +427,7 @@ class HL7Segment:
         return self._serialize_from_dict()
 
     def _serialize_from_dict(self) -> str:
+        delimiters = ('|', '^', '~', '\\', '&')
         fields_by_pos: dict[int, str] = {}
         for name in dir(self.__class__):
             attr = getattr(self.__class__, name)
@@ -422,17 +437,17 @@ class HL7Segment:
                     if isinstance(val, HL7DataType):
                         fields_by_pos[attr.position] = val.serialize()
                     elif isinstance(val, str):
-                        fields_by_pos[attr.position] = val
+                        fields_by_pos[attr.position] = encode_er7(val, delimiters)
                     elif isinstance(val, list):
-                        parts = []
+                        parts_list:'list[str]' = []
                         for v in val:
                             if isinstance(v, HL7DataType):
-                                parts.append(v.serialize())
+                                parts_list.append(v.serialize())
                             else:
-                                parts.append(str(v))
-                        fields_by_pos[attr.position] = "~".join(parts)
+                                parts_list.append(encode_er7(str(v), delimiters))
+                        fields_by_pos[attr.position] = "~".join(parts_list)
                     else:
-                        fields_by_pos[attr.position] = str(val)
+                        fields_by_pos[attr.position] = encode_er7(str(val), delimiters)
         if not fields_by_pos:
             return ""
         max_pos = max(fields_by_pos.keys())

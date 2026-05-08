@@ -16,9 +16,9 @@ from zato_hl7v2.batch import HL7Batch, HL7File, parse_batch, parse_file, parse_b
 from zato_hl7v2_rs import ParserQuirks
 
 
-def parse_message(raw:'str', validate:'bool'=True, quirks:'ParserQuirks'=None) -> 'HL7Message':
+def parse_message(raw:'str', validate:'bool' = True, quirks:'ParserQuirks | None' = None) -> 'HL7Message':
     from zato_hl7v2.v2_9 import parse_message as parse_v2_9
-    return parse_v2_9(raw, quirks=quirks or ParserQuirks())
+    return parse_v2_9(raw, validate=validate, quirks=quirks or ParserQuirks())
 
 
 __all__ = [
