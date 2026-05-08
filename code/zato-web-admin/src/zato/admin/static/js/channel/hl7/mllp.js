@@ -107,6 +107,7 @@ $.fn.zato.channel.hl7.mllp.create = function() {
     $.fn.zato.channel.hl7.mllp._reset_tabs('create');
     $.fn.zato.data_table._create_edit('create', 'Create a new HL7 MLLP channel', null);
     $.fn.zato.channel.hl7.mllp._bind_default_toggle('id_');
+    $.fn.zato.how_it_works.init('create-how-it-works');
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
