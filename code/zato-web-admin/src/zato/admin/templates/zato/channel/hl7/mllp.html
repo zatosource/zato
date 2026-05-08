@@ -7,6 +7,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -197,22 +198,23 @@
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
                         <button type="button" class="dashboard-tab" data-tab="routing" role="tab" aria-selected="false">Routing</button>
                         <button type="button" class="dashboard-tab" data-tab="protocol" role="tab" aria-selected="false">Protocol</button>
-                        <button type="button" class="dashboard-tab" data-tab="logging" role="tab" aria-selected="false">Logging</button>
+                        <button type="button" class="dashboard-tab" data-tab="quirks" role="tab" aria-selected="false">Quirks</button>
                         <button type="button" class="dashboard-tab" data-tab="dedup" role="tab" aria-selected="false">Deduplication</button>
+                        <button type="button" class="dashboard-tab" data-tab="logging" role="tab" aria-selected="false">Logging</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="mllp-create-tab-panel-main" role="tabpanel">
                         <table class="form-data">
                             <tr>
-                                <td style="width:9%">Name</td>
+                                <td style="width:9%"><label for="id_name">Name</label></td>
                                 <td>{{ create_form.name }}</td>
                             </tr>
                             <tr>
-                                <td style="vertical-align:middle"><label for="id_is_active">Active</label></td>
-                                <td><div style="display:flex;align-items:center;min-height:19px">{{ create_form.is_active }}</div></td>
+                                <td><label for="id_is_active">Active</label></td>
+                                <td><label class="toggle-switch">{{ create_form.is_active }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
-                                <td>Service</td>
+                                <td><label for="id_service">Service</label></td>
                                 <td>{{ create_form.service }}</td>
                             </tr>
                         </table>
@@ -221,8 +223,8 @@
                     <div class="dashboard-tab-panel" id="mllp-create-tab-panel-routing" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:21%"><label for="id_is_default">Default</label></td>
-                                <td>{{ create_form.is_default }}</td>
+                                <td style="width:16%"><label for="id_is_default">Default</label></td>
+                                <td><label class="toggle-switch">{{ create_form.is_default }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
                                 <td><label for="id_msh3_sending_app">Sending app</label></td>
@@ -262,71 +264,57 @@
                     <div class="dashboard-tab-panel" id="mllp-create-tab-panel-protocol" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:21%"></td>
-                                <td><label>{{ create_form.normalize_line_endings }} Normalize line endings</label></td>
+                                <td style="width:16%"><label for="id_data_encoding">Data encoding</label></td>
+                                <td>{{ create_form.data_encoding }}</td>
                             </tr>
                             <tr>
-                                <td></td>
-                                <td><label>{{ create_form.force_standard_delimiters }} Force standard delimiters</label></td>
+                                <td><label for="id_default_character_encoding">Default encoding</label></td>
+                                <td>{{ create_form.default_character_encoding }}</td>
                             </tr>
                             <tr>
-                                <td></td>
-                                <td><label>{{ create_form.repair_truncated_msh }} Repair truncated MSH</label></td>
+                                <td><label for="id_recv_timeout">Recv. timeout</label></td>
+                                <td>{{ create_form.recv_timeout }}</td>
                             </tr>
                             <tr>
-                                <td></td>
-                                <td><label>{{ create_form.split_concatenated_messages }} Split concatenated messages</label></td>
+                                <td><label for="id_max_msg_size">Max. msg. size</label></td>
+                                <td>{{ create_form.max_msg_size }}</td>
                             </tr>
                             <tr>
-                                <td></td>
-                                <td><label>{{ create_form.use_msh18_encoding }} Use MSH-18 encoding</label></td>
+                                <td><label for="id_read_buffer_size">Read buffer</label></td>
+                                <td>{{ create_form.read_buffer_size }}</td>
                             </tr>
                             <tr>
-                                <td>Encoding</td>
-                                <td>
-                                    <label>Data {{ create_form.data_encoding }}</label>
-                                    |
-                                    <label>Default {{ create_form.default_character_encoding }}</label>
-                                </td>
+                                <td><label for="id_start_seq">Start separator</label></td>
+                                <td>{{ create_form.start_seq }}</td>
                             </tr>
                             <tr>
-                                <td>Limits</td>
-                                <td>
-                                    <label>Recv. timeout {{ create_form.recv_timeout }}</label>
-                                    |
-                                    <label>Max. msg. size {{ create_form.max_msg_size }}</label>
-                                    |
-                                    <label>Read buffer {{ create_form.read_buffer_size }}</label>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Separator</td>
-                                <td>
-                                    <label>Start {{ create_form.start_seq }}</label>
-                                    |
-                                    <label>End {{ create_form.end_seq }}</label>
-                                </td>
+                                <td><label for="id_end_seq">End separator</label></td>
+                                <td>{{ create_form.end_seq }}</td>
                             </tr>
                         </table>
                     </div>
 
-                    <div class="dashboard-tab-panel" id="mllp-create-tab-panel-logging" role="tabpanel" hidden>
+                    <div class="dashboard-tab-panel" id="mllp-create-tab-panel-quirks" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:21%"></td>
-                                <td>
-                                    <label>Return errors {{ create_form.should_return_errors }}</label>
-                                </td>
+                                <td style="width:21%"><label for="id_normalize_line_endings">Normalize line endings</label></td>
+                                <td><label class="toggle-switch">{{ create_form.normalize_line_endings }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
-                                <td></td>
-                                <td>
-                                    <label>Log I/O {{ create_form.should_log_messages }}</label>
-                                </td>
+                                <td><label for="id_force_standard_delimiters">Force standard delimiters</label></td>
+                                <td><label class="toggle-switch">{{ create_form.force_standard_delimiters }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
-                                <td>Log level</td>
-                                <td>{{ create_form.logging_level }}</td>
+                                <td><label for="id_repair_truncated_msh">Repair truncated MSH</label></td>
+                                <td><label class="toggle-switch">{{ create_form.repair_truncated_msh }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_split_concatenated_messages">Split concatenated messages</label></td>
+                                <td><label class="toggle-switch">{{ create_form.split_concatenated_messages }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_use_msh18_encoding">Use MSH-18 encoding</label></td>
+                                <td><label class="toggle-switch">{{ create_form.use_msh18_encoding }}<span class="toggle-slider"></span></label></td>
                             </tr>
                         </table>
                     </div>
@@ -334,12 +322,29 @@
                     <div class="dashboard-tab-panel" id="mllp-create-tab-panel-dedup" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:21%">TTL</td>
+                                <td style="width:6%"><label for="id_dedup_ttl_value">TTL</label></td>
                                 <td>{{ create_form.dedup_ttl_value }}</td>
                             </tr>
                             <tr>
-                                <td>Unit</td>
+                                <td><label for="id_dedup_ttl_unit">Unit</label></td>
                                 <td>{{ create_form.dedup_ttl_unit }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mllp-create-tab-panel-logging" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:9%"><label for="id_should_return_errors">Return errors</label></td>
+                                <td><label class="toggle-switch">{{ create_form.should_return_errors }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_should_log_messages">Log I/O</label></td>
+                                <td><label class="toggle-switch">{{ create_form.should_log_messages }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_logging_level">Log level</label></td>
+                                <td>{{ create_form.logging_level }}</td>
                             </tr>
                         </table>
                     </div>
@@ -373,15 +378,15 @@
                     <div class="dashboard-tab-panel" id="mllp-edit-tab-panel-main" role="tabpanel">
                         <table class="form-data">
                             <tr>
-                                <td style="width:11%">Name</td>
+                                <td style="width:9%"><label for="id_edit-name">Name</label></td>
                                 <td>{{ edit_form.name }}</td>
                             </tr>
                             <tr>
-                                <td style="vertical-align:middle"><label for="id_edit-is_active">Active</label></td>
-                                <td><div style="display:flex;align-items:center;min-height:23px">{{ edit_form.is_active }}</div></td>
+                                <td><label for="id_edit-is_active">Active</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.is_active }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
-                                <td>Service</td>
+                                <td><label for="id_edit-service">Service</label></td>
                                 <td>{{ edit_form.service }}</td>
                             </tr>
                         </table>
@@ -390,8 +395,8 @@
                     <div class="dashboard-tab-panel" id="mllp-edit-tab-panel-routing" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:21%"><label for="id_edit-is_default">Default</label></td>
-                                <td>{{ edit_form.is_default }}</td>
+                                <td style="width:9%"><label for="id_edit-is_default">Default</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.is_default }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-msh3_sending_app">Sending app</label></td>
@@ -431,50 +436,52 @@
                     <div class="dashboard-tab-panel" id="mllp-edit-tab-panel-protocol" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:21%"></td>
-                                <td><label>{{ edit_form.normalize_line_endings }} Normalize line endings</label></td>
+                                <td style="width:9%"><label for="id_edit-normalize_line_endings">Normalize line endings</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.normalize_line_endings }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
-                                <td></td>
-                                <td><label>{{ edit_form.force_standard_delimiters }} Force standard delimiters</label></td>
+                                <td><label for="id_edit-force_standard_delimiters">Force standard delimiters</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.force_standard_delimiters }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
-                                <td></td>
-                                <td><label>{{ edit_form.repair_truncated_msh }} Repair truncated MSH</label></td>
+                                <td><label for="id_edit-repair_truncated_msh">Repair truncated MSH</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.repair_truncated_msh }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
-                                <td></td>
-                                <td><label>{{ edit_form.split_concatenated_messages }} Split concatenated messages</label></td>
+                                <td><label for="id_edit-split_concatenated_messages">Split concatenated messages</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.split_concatenated_messages }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
-                                <td></td>
-                                <td><label>{{ edit_form.use_msh18_encoding }} Use MSH-18 encoding</label></td>
+                                <td><label for="id_edit-use_msh18_encoding">Use MSH-18 encoding</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.use_msh18_encoding }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
-                                <td>Encoding</td>
-                                <td>
-                                    <label>Data {{ edit_form.data_encoding }}</label>
-                                    |
-                                    <label>Default {{ edit_form.default_character_encoding }}</label>
-                                </td>
+                                <td><label for="id_edit-data_encoding">Data encoding</label></td>
+                                <td>{{ edit_form.data_encoding }}</td>
                             </tr>
                             <tr>
-                                <td>Limits</td>
-                                <td>
-                                    <label>Recv. timeout {{ edit_form.recv_timeout }}</label>
-                                    |
-                                    <label>Max. msg. size {{ edit_form.max_msg_size }}</label>
-                                    |
-                                    <label>Read buffer {{ edit_form.read_buffer_size }}</label>
-                                </td>
+                                <td><label for="id_edit-default_character_encoding">Default encoding</label></td>
+                                <td>{{ edit_form.default_character_encoding }}</td>
                             </tr>
                             <tr>
-                                <td>Separator</td>
-                                <td>
-                                    <label>Start {{ edit_form.start_seq }}</label>
-                                    |
-                                    <label>End {{ edit_form.end_seq }}</label>
-                                </td>
+                                <td><label for="id_edit-recv_timeout">Recv. timeout</label></td>
+                                <td>{{ edit_form.recv_timeout }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-max_msg_size">Max. msg. size</label></td>
+                                <td>{{ edit_form.max_msg_size }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-read_buffer_size">Read buffer</label></td>
+                                <td>{{ edit_form.read_buffer_size }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-start_seq">Start separator</label></td>
+                                <td>{{ edit_form.start_seq }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-end_seq">End separator</label></td>
+                                <td>{{ edit_form.end_seq }}</td>
                             </tr>
                         </table>
                     </div>
@@ -482,19 +489,15 @@
                     <div class="dashboard-tab-panel" id="mllp-edit-tab-panel-logging" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:21%"></td>
-                                <td>
-                                    <label>Return errors {{ edit_form.should_return_errors }}</label>
-                                </td>
+                                <td style="width:9%"><label for="id_edit-should_return_errors">Return errors</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.should_return_errors }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
-                                <td></td>
-                                <td>
-                                    <label>Log I/O {{ edit_form.should_log_messages }}</label>
-                                </td>
+                                <td><label for="id_edit-should_log_messages">Log I/O</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.should_log_messages }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
-                                <td>Log level</td>
+                                <td><label for="id_edit-logging_level">Log level</label></td>
                                 <td>{{ edit_form.logging_level }}</td>
                             </tr>
                         </table>
@@ -503,11 +506,11 @@
                     <div class="dashboard-tab-panel" id="mllp-edit-tab-panel-dedup" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:21%">TTL</td>
+                                <td style="width:9%"><label for="id_edit-dedup_ttl_value">TTL</label></td>
                                 <td>{{ edit_form.dedup_ttl_value }}</td>
                             </tr>
                             <tr>
-                                <td>Unit</td>
+                                <td><label for="id_edit-dedup_ttl_unit">Unit</label></td>
                                 <td>{{ edit_form.dedup_ttl_unit }}</td>
                             </tr>
                         </table>
