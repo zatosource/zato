@@ -1640,8 +1640,21 @@ $.fn.zato.is_form_valid = function(form) {
         }
     })
 
-    // Focus the first invalid field so the user sees what needs fixing
+    // If the first invalid field is inside a hidden tab panel, switch to that tab first
     if (first_invalid) {
+        var hidden_panel = first_invalid.closest('.dashboard-tab-panel[hidden]');
+        if (hidden_panel.length) {
+            var panel_id = hidden_panel.attr('id');
+            var tab_container = hidden_panel.closest('.ui-dialog-content, form').first();
+            var tab_buttons = tab_container.find('.dashboard-tab');
+            tab_buttons.each(function() {
+                var panel_suffix = $(this).data('tab');
+                if (panel_id && panel_id.endsWith(panel_suffix)) {
+                    $(this).trigger('click');
+                    return false;
+                }
+            });
+        }
         first_invalid.focus();
     }
 
