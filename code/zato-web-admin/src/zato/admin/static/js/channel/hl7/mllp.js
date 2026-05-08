@@ -107,8 +107,20 @@ $.fn.zato.channel.hl7.mllp.create = function() {
     $.fn.zato.channel.hl7.mllp._reset_tabs('create');
     $.fn.zato.data_table._create_edit('create', 'Create a new HL7 MLLP channel', null);
     $.fn.zato.channel.hl7.mllp._bind_default_toggle('id_');
-    $.fn.zato.how_it_works.init('create-how-it-works');
+    $.fn.zato.how_it_works.init({
+        badge_id: 'create-how-it-works',
+        div_id: '#create-div',
+        descriptions: $.fn.zato.channel.hl7.mllp.field_descriptions
+    });
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.hl7.mllp.field_descriptions = {
+    'id_name': 'A unique name for this MLLP channel.<br>Used to identify it in logs and the dashboard.',
+    'id_is_active': 'Whether this channel accepts connections.<br>Inactive channels are ignored at runtime.',
+    'id_service': 'The service that will handle<br>each incoming HL7 message.',
+};
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
