@@ -153,6 +153,12 @@ $.fn.zato.channel.hl7.mllp.field_descriptions = {
 $.fn.zato.channel.hl7.mllp.edit = function(id) {
     $.fn.zato.channel.hl7.mllp._reset_tabs('edit');
     $.fn.zato.data_table._create_edit('edit', 'Update the HL7 MLLP channel', id);
+    $.fn.zato.channel.hl7.mllp._bind_default_toggle('id_edit-');
+    $.fn.zato.how_it_works.init({
+        badge_id: 'edit-how-it-works',
+        div_id: '#edit-div',
+        descriptions: $.fn.zato.channel.hl7.mllp.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
