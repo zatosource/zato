@@ -131,6 +131,23 @@ $.fn.zato.how_it_works._activate = function(badge) {
         }
     });
 
+    // .. follow focus to switch tooltip ..
+    state._focusin_handler = function(event) {
+        var row = event.target.closest('tr');
+        if (!row) {
+            return;
+        }
+        var label = row.querySelector('label[for]');
+        if (!label) {
+            return;
+        }
+        var field_index = $.fn.zato.how_it_works._find_field_index(state, label.getAttribute('for'));
+        if (field_index >= 0 && field_index !== state.current_index) {
+            $.fn.zato.how_it_works._show_field_tooltip(state, field_index);
+        }
+    };
+    div.addEventListener('focusin', state._focusin_handler, true);
+
     // .. clicking outside the dialog closes help mode ..
     $(document).on('mousedown.how_it_works_outside', function(event) {
         if (!dialog.contains(event.target)) {
@@ -161,6 +178,7 @@ $.fn.zato.how_it_works._deactivate = function() {
 
     // .. unbind ..
     state.dialog.removeEventListener('keydown', state._keydown_handler, true);
+    state.div.removeEventListener('focusin', state._focusin_handler, true);
     $(document).off('mousedown.how_it_works_outside');
     $(state.div).off('click.how_it_works_label');
     $(state.div).off('mousedown.how_it_works_select');
