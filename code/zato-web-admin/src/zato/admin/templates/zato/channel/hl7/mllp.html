@@ -37,11 +37,11 @@
             'service',
             'should_parse_on_input',
             'should_validate',
-            'data_encoding',
             'should_return_errors',
             'should_log_messages',
             'logging_level',
             'max_msg_size',
+            'max_msg_size_unit',
             'read_buffer_size',
             'recv_timeout',
             'start_seq',
@@ -141,13 +141,13 @@
                         <td class='ignore'>{{ item.should_parse_on_input }}</td>
                         <td class='ignore'>{{ item.should_validate }}</td>
 
-                        <td class='ignore'>{{ item.data_encoding }}</td>
                         <td class='ignore'>{{ item.should_return_errors }}</td>
 
                         <td class='ignore'>{{ item.should_log_messages }}</td>
                         <td class='ignore'>{{ item.logging_level }}</td>
 
                         <td class='ignore'>{{ item.max_msg_size }}</td>
+                        <td class='ignore'>{{ item.max_msg_size_unit }}</td>
                         <td class='ignore'>{{ item.read_buffer_size }}</td>
                         <td class='ignore'>{{ item.recv_timeout }}</td>
 
@@ -264,11 +264,7 @@
                     <div class="dashboard-tab-panel" id="mllp-create-tab-panel-protocol" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:16%"><label for="id_data_encoding">Data encoding</label></td>
-                                <td>{{ create_form.data_encoding }}</td>
-                            </tr>
-                            <tr>
-                                <td><label for="id_default_character_encoding">Default encoding</label></td>
+                                <td style="width:16%"><label for="id_default_character_encoding">Encoding</label></td>
                                 <td>{{ create_form.default_character_encoding }}</td>
                             </tr>
                             <tr>
@@ -277,11 +273,7 @@
                             </tr>
                             <tr>
                                 <td><label for="id_max_msg_size">Max. msg. size</label></td>
-                                <td>{{ create_form.max_msg_size }}</td>
-                            </tr>
-                            <tr>
-                                <td><label for="id_read_buffer_size">Read buffer</label></td>
-                                <td>{{ create_form.read_buffer_size }}</td>
+                                <td>{{ create_form.max_msg_size }} {{ create_form.max_msg_size_unit }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_start_seq">Start separator</label></td>

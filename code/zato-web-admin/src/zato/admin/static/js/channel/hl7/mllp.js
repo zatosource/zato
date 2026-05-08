@@ -21,8 +21,8 @@ $(document).ready(function() {
         'name',
         'service',
         'logging_level',
-        'data_encoding',
         'max_msg_size',
+        'max_msg_size_unit',
         'read_buffer_size',
         'recv_timeout',
         'start_seq',
@@ -147,13 +147,13 @@ $.fn.zato.channel.hl7.mllp.data_table.new_row = function(item, data, include_tr)
     row += String.format("<td class='ignore'>{0}</td>", item.should_parse_on_input);
     row += String.format("<td class='ignore'>{0}</td>", item.should_validate);
 
-    row += String.format("<td class='ignore'>{0}</td>", item.data_encoding);
     row += String.format("<td class='ignore'>{0}</td>", item.should_return_errors);
 
     row += String.format("<td class='ignore'>{0}</td>", item.should_log_messages);
     row += String.format("<td class='ignore'>{0}</td>", item.logging_level);
 
     row += String.format("<td class='ignore'>{0}</td>", item.max_msg_size);
+    row += String.format("<td class='ignore'>{0}</td>", item.max_msg_size_unit);
     row += String.format("<td class='ignore'>{0}</td>", item.read_buffer_size);
     row += String.format("<td class='ignore'>{0}</td>", item.recv_timeout);
 
