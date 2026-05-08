@@ -1393,6 +1393,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                 SecurityBase, SecurityBase.id == PubSubSubscription.sec_base_id
             ).filter(
                 PubSubSubscription.cluster_id == self.cluster_id
+            ).filter(
+                SecurityBase.is_active == True
             ).all()
 
             synced = 0
@@ -1478,6 +1480,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                 SecurityBase, PubSubPermission.sec_base_id == SecurityBase.id
             ).filter(
                 PubSubPermission.cluster_id == self.cluster_id
+            ).filter(
+                SecurityBase.is_active == True
             ).all()
 
 
@@ -1521,6 +1525,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                 SecurityBase, PubSubSubscription.sec_base_id == SecurityBase.id
             ).filter(
                 PubSubSubscription.cluster_id == self.cluster_id
+            ).filter(
+                SecurityBase.is_active == True
             ).all()
 
             for sub_key, username, sec_name in subscriptions:

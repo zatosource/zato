@@ -95,9 +95,11 @@ class PubSubRESTService(Service):
         auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
 
         for sec_def in basic_auth_config.values():
-            config = sec_def.get('config', {})
-            expected_username = config.get('username')
-            expected_password = config.get('password')
+            config = sec_def['config']
+            if not config['is_active']:
+                continue
+            expected_username = config['username']
+            expected_password = config['password']
             if expected_username and expected_password:
                 result = check_basic_auth(self.cid, auth_header, expected_username, expected_password)
                 if result is True:
