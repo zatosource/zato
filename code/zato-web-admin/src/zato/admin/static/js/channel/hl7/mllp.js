@@ -55,7 +55,7 @@ $.fn.zato.channel.hl7.mllp.tab_labels = {
     main:     'Main',
     routing:  'Routing',
     protocol: 'Protocol',
-    quirks:   'Quirks',
+    quirks:   'Quirks mode',
     dedup:    'Deduplication',
     logging:  'Logging'
 };
@@ -124,38 +124,38 @@ $.fn.zato.channel.hl7.mllp.field_descriptions = {
     'id_service': 'The service invoked for each<br>incoming HL7 message.',
 
     // Routing tab
-    'id_is_default': 'Catch-all route. Only one channel can be default.<br>Routing fields are ignored when active.',
-    'id_msh3_sending_app': 'Matches MSH-3 (sending application),<br>case-insensitive.',
-    'id_msh4_sending_facility': 'Matches MSH-4 (sending facility),<br>case-insensitive.',
-    'id_msh5_receiving_app': 'Matches MSH-5 (receiving application),<br>case-insensitive.',
-    'id_msh6_receiving_facility': 'Matches MSH-6 (receiving facility),<br>case-insensitive.',
-    'id_msh9_message_type': 'Matches MSH-9.1 (message type, e.g. ADT, ORM),<br>case-insensitive.',
-    'id_msh9_trigger_event': 'Matches MSH-9.2 (trigger event, e.g. A01, O01),<br>case-insensitive.',
-    'id_msh11_processing_id': 'Matches MSH-11<br>(P=production, T=training, D=debugging),<br>case-insensitive.',
-    'id_msh12_version_id': 'Matches MSH-12 (HL7 version, e.g. 2.5),<br>case-insensitive.',
+    'id_is_default': 'When enabled, this channel receives all messages<br>that no other channel claimed. Only one channel<br>can be the default at a time.',
+    'id_msh3_sending_app': 'Routes messages whose MSH-3 field<br>(sending application) equals this value.<br>Comparison is case-insensitive.',
+    'id_msh4_sending_facility': 'Routes messages whose MSH-4 field<br>(sending facility) equals this value.<br>Comparison is case-insensitive.',
+    'id_msh5_receiving_app': 'Routes messages whose MSH-5 field<br>(receiving application) equals this value.<br>Comparison is case-insensitive.',
+    'id_msh6_receiving_facility': 'Routes messages whose MSH-6 field<br>(receiving facility) equals this value.<br>Comparison is case-insensitive.',
+    'id_msh9_message_type': 'Routes messages whose MSH-9.1 field<br>(message type, e.g. ADT, ORM) equals this value.<br>Comparison is case-insensitive.',
+    'id_msh9_trigger_event': 'Routes messages whose MSH-9.2 field<br>(trigger event, e.g. A01, O01) equals this value.<br>Comparison is case-insensitive.',
+    'id_msh11_processing_id': 'Routes messages whose MSH-11 field<br>(P=production, T=training, D=debugging)<br>equals this value. Comparison is case-insensitive.',
+    'id_msh12_version_id': 'Routes messages whose MSH-12 field<br>(HL7 version, e.g. 2.5) equals this value.<br>Comparison is case-insensitive.',
 
     // Protocol tab
-    'id_default_character_encoding': 'Encoding for decoding raw bytes<br>when MSH-18 is absent or the MSH-18 toggle is off.',
+    'id_use_msh18_encoding': 'When on, the server reads the character encoding<br>from the MSH-18 field of each incoming message.<br>When off, or if MSH-18 is empty, the Encoding<br>setting below is used instead.',
+    'id_default_character_encoding': 'Character encoding used to decode raw bytes<br>when MSH-18 is absent or the MSH-18 toggle is off.',
     'id_recv_timeout': 'Per-recv timeout in milliseconds.<br>The connection stays open between messages.',
-    'id_max_msg_size': 'Maximum message size.<br>Frames exceeding this are rejected.',
+    'id_max_msg_size': 'Maximum allowed message size.<br>Frames exceeding this are rejected.',
     'id_start_seq': 'MLLP start-of-block byte in hex.<br>Standard: 0b.',
     'id_end_seq': 'MLLP end-of-block bytes in hex.<br>Standard: 1c 0d.',
 
-    // Quirks tab
+    // Quirks mode tab
     'id_normalize_line_endings': 'Converts CRLF and LF to CR<br>as required by HL7 v2.',
     'id_force_standard_delimiters': 'Rewrites MSH-2 to standard delimiters<br>(^~\\&amp;).',
-    'id_repair_truncated_msh': 'Recovers messages with a truncated<br>or junk-prefixed MSH segment.',
+    'id_repair_truncated_msh': 'Recovers messages with a corrupted<br>or malformed MSH segment.',
     'id_split_concatenated_messages': 'Splits a TCP payload containing multiple<br>MSH segments into separate messages.',
-    'id_use_msh18_encoding': 'Reads encoding from MSH-18. Falls back<br>to default encoding when MSH-18 is missing.',
 
     // Deduplication tab
-    'id_dedup_ttl_value': 'How long to remember message control IDs.<br>Reserved, not yet implemented.',
-    'id_dedup_ttl_unit': 'Time unit for the dedup window.<br>Reserved, not yet implemented.',
+    'id_dedup_ttl_value': 'How long to remember message control IDs (MSH-10).<br>Duplicates within this window are acknowledged<br>but not delivered to the service.',
+    'id_dedup_ttl_unit': 'Time unit for the dedup window<br>(minutes, hours, or days).',
 
     // Logging tab
-    'id_should_return_errors': 'Includes error details in NAK responses<br>(ERR segment).',
-    'id_should_log_messages': 'Logs incoming message content<br>and routing decisions.',
-    'id_logging_level': 'Verbosity level for this<br>channel\'s log entries.',
+    'id_should_return_errors': 'When on, error details are included<br>in NAK responses sent to the sender (ERR segment).<br>When off, the NAK code is sent without details.',
+    'id_should_log_messages': 'When on, each incoming message body and<br>routing decision is written to the server log<br>(server.log in the server directory).',
+    'id_logging_level': 'Verbosity level for this channel\'s entries<br>in the server log (server.log).',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -15,6 +15,7 @@ from traceback import format_exc
 from zato.common.hl7.exception import HL7Exception
 from zato.common.hl7.mllp.ack import build_ack
 from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
+from zato.common.hl7.mllp.dedup import MessageDeduplicator, extract_control_id
 from zato.common.hl7.mllp.preprocess import preprocess_message
 from zato.common.hl7.mllp.router import HL7MessageRouter
 
@@ -25,6 +26,12 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+TTL_Multipliers = {
+    'minutes': 60,
+    'hours':   3600,
+    'days':    86400,
+}
 
 _Default_Receive_Timeout_Seconds    = 30.0
 _Default_Max_Message_Size           = 2_000_000
@@ -76,6 +83,8 @@ class HL7MLLPServer:
         should_force_standard_delimiters:'bool' = True,
         should_use_msh18_encoding:'bool' = True,
         default_character_encoding:'str' = 'utf-8',
+        dedup_ttl_value:'int' = 0,
+        dedup_ttl_unit:'str' = '',
         ) -> 'None':
 
         self.address = address
@@ -101,6 +110,14 @@ class HL7MLLPServer:
         self.should_force_standard_delimiters   = should_force_standard_delimiters
         self.should_use_msh18_encoding          = should_use_msh18_encoding
         self.default_character_encoding         = default_character_encoding
+
+        # Deduplication - only active when both ttl_value and ttl_unit are provided
+        if dedup_ttl_value and dedup_ttl_unit:
+            multiplier = TTL_Multipliers[dedup_ttl_unit]
+            ttl_seconds = dedup_ttl_value * multiplier
+            self._deduplicator = MessageDeduplicator(ttl_seconds)
+        else:
+            self._deduplicator:'MessageDeduplicator | None' = None
 
         self._keep_running    = True
         self._server_socket:'socket.socket | None' = None
@@ -259,6 +276,43 @@ class HL7MLLPServer:
             else:
                 msh_line = message_text[:first_cr]
 
+            # .. if deduplication is enabled, check whether this message was already seen
+            # .. within the configured TTL window. Duplicates are acknowledged with AA
+            # .. but the service callback is not invoked.
+            if self._deduplicator:
+
+                # .. extract the message control ID (MSH-10) which serves as the dedup key ..
+                control_id = extract_control_id(msh_line)
+
+                # .. only deduplicate if the message actually has a control ID ..
+                if control_id:
+
+                    # .. check the cache - returns True if this control ID was seen before ..
+                    if self._deduplicator.is_duplicate(control_id):
+
+                        # .. log the duplicate if message logging is on ..
+                        if self.should_log_messages:
+                            logger.info('Duplicate message (MSH-10: %s) from %s:%d, skipping',
+                                control_id, connection_context.peer_ip, connection_context.peer_port)
+
+                        # .. build an AA ACK so the sender knows we received it ..
+                        ack_string = build_ack(msh_line, 'AA')
+
+                        # .. encode using the channel's configured character encoding ..
+                        ack_bytes = ack_string.encode(self.default_character_encoding)
+
+                        # .. wrap in MLLP framing before sending ..
+                        framed_ack = frame_encode(ack_bytes, self.start_sequence, self.end_sequence)
+
+                        # .. send the ACK back to the sender, ignoring broken connections ..
+                        try:
+                            active_socket.sendall(framed_ack)
+                        except (BrokenPipeError, ConnectionResetError):
+                            pass
+
+                        # .. skip routing and service invocation for this duplicate ..
+                        continue
+
             # .. find the matching route for this message ..
             matched_route = self.router.match(msh_line)
 
@@ -291,7 +345,7 @@ class HL7MLLPServer:
 
             # .. build and frame the ACK ..
             ack_string = build_ack(msh_line, ack_code, error_text=error_text)
-            ack_bytes = ack_string.encode('utf-8')
+            ack_bytes = ack_string.encode(self.default_character_encoding)
             framed_ack = frame_encode(ack_bytes, self.start_sequence, self.end_sequence)
 
             # .. send the framed ACK back.
