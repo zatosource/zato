@@ -31,7 +31,8 @@ $(document).ready(function() {
     ]);
 
     var unique_constraints = [
-        {field: 'name', entity_type: 'generic_connection', attr_name: 'name'}
+        {field: 'name', entity_type: 'generic_connection', attr_name: 'name'},
+        {field: 'rest_url_path', entity_type: 'channel_rest', attr_name: 'url_path'},
     ];
     $.each(unique_constraints, function(i, c) {
         $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
@@ -93,10 +94,101 @@ $.fn.zato.channel.hl7.mllp._bind_default_toggle = function(prefix) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.channel.hl7.mllp._toggle_groups = function(selector) {
+    var elem = $(selector);
+    if(elem.is(':visible')) {
+        elem.hide();
+    }
+    else {
+        elem.css('display', '');
+        elem.show();
+    }
+};
+
+$.fn.zato.channel.hl7.mllp._toggle_rest_fields = function(form_selector) {
+    var checkbox = $(form_selector).find('input[name="use_rest"]');
+    var rows = $(form_selector).find('tr.rest-field');
+    if(checkbox.is(':checked')) {
+        rows.css('display', 'table-row');
+    }
+    else {
+        rows.css('display', 'none');
+        $(form_selector).find('.mllp-create-groups-block, .mllp-edit-groups-block').hide();
+    }
+};
+
+$.fn.zato.channel.hl7.mllp._bind_rest_toggle = function(form_selector) {
+    var checkbox = $(form_selector).find('input[name="use_rest"]');
+    checkbox.off('change.rest').on('change.rest', function() {
+        $.fn.zato.channel.hl7.mllp._toggle_rest_fields(form_selector);
+    });
+    $.fn.zato.channel.hl7.mllp._toggle_rest_fields(form_selector);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.hl7.mllp._populate_groups = function(item_list, item_html_prefix, html_elem_id_selector) {
+    $.fn.zato.populate_multi_checkbox(
+        item_list,
+        item_html_prefix,
+        'id',
+        'name',
+        'is_assigned',
+        "/zato/groups/group/zato-api-creds/?cluster=1&query={1}&highlight={2}",
+        'multi-select-table',
+        html_elem_id_selector,
+        'id',
+        false
+    );
+};
+
+$.fn.zato.channel.hl7.mllp._create_populate_groups = function(item_list) {
+    $.fn.zato.channel.hl7.mllp._populate_groups(
+        item_list, 'mllp_security_group_checkbox_', '#mllp-multi-select-div-create');
+};
+
+$.fn.zato.channel.hl7.mllp._edit_populate_groups = function(item_list) {
+    $.fn.zato.channel.hl7.mllp._populate_groups(
+        item_list, 'edit-mllp_security_group_checkbox_', '#mllp-multi-select-div-edit');
+};
+
+$.fn.zato.channel.hl7.mllp._create_populate_groups_callback = function(data, status) {
+    if(status == 'success') {
+        var item_list = $.parseJSON(data.responseText);
+        if(item_list && item_list.length) {
+            $.fn.zato.channel.hl7.mllp._create_populate_groups(item_list);
+        }
+        else {
+            var elem = $('#mllp-multi-select-div-create');
+            elem.removeClass('multi-select-div');
+            elem.html("No security groups found. Click to <a href='/zato/groups/group/zato-api-creds/?cluster=1' target='_blank'>create one</a>.");
+        }
+    }
+};
+
+$.fn.zato.channel.hl7.mllp._edit_populate_groups_callback = function(data, status) {
+    if(status == 'success') {
+        var item_list = $.parseJSON(data.responseText);
+        if(item_list && item_list.length) {
+            $.fn.zato.channel.hl7.mllp._edit_populate_groups(item_list);
+        }
+        else {
+            var elem = $('#mllp-multi-select-div-edit');
+            elem.removeClass('multi-select-div');
+            elem.html("No security groups found. Click to <a href='/zato/groups/group/zato-api-creds/?cluster=1' target='_blank'>create one</a>.");
+        }
+    }
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.channel.hl7.mllp.create = function() {
     $.fn.zato.channel.hl7.mllp._reset_tabs('create');
+    $.fn.zato.post('/zato/http-soap/get-security-groups/zato-api-creds/',
+        $.fn.zato.channel.hl7.mllp._create_populate_groups_callback, '', '', true);
     $.fn.zato.data_table._create_edit('create', 'Create a new HL7 MLLP channel', null);
     $.fn.zato.channel.hl7.mllp._bind_default_toggle('id_');
+    $.fn.zato.channel.hl7.mllp._bind_rest_toggle('#create-form');
     $.fn.zato.how_it_works.init({
         badge_id: 'create-how-it-works',
         div_id: '#create-div',
@@ -112,6 +204,11 @@ $.fn.zato.channel.hl7.mllp.field_descriptions = {
     'id_name': 'A unique name for this MLLP channel.<br>Used to identify it in logs and the dashboard.',
     'id_is_active': 'Whether this channel accepts connections.<br>Inactive channels do not route messages.',
     'id_service': 'The service invoked for each<br>incoming HL7 message.',
+    'id_use_rest': 'When on, HL7 messages can also be received<br>over REST in addition to MLLP.',
+    'id_rest_only': 'When on, messages are received only over REST.<br>When off, messages are received over both<br>MLLP and REST.',
+    'id_rest_url_path': 'URL path for the REST channel,<br>e.g. /api/hl7/v2.',
+    'id_rest_security_id': 'Security definition used to authenticate<br>incoming REST requests.',
+    'id_rest_security_groups': 'Security groups that can access<br>the REST channel.',
 
     // Routing tab
     'id_is_default': 'When enabled, this channel receives all messages<br>that no other channel claimed. Only one channel<br>can be the default at a time.',
@@ -152,8 +249,11 @@ $.fn.zato.channel.hl7.mllp.field_descriptions = {
 
 $.fn.zato.channel.hl7.mllp.edit = function(id) {
     $.fn.zato.channel.hl7.mllp._reset_tabs('edit');
+    $.fn.zato.post('/zato/http-soap/get-security-groups/zato-api-creds/',
+        $.fn.zato.channel.hl7.mllp._edit_populate_groups_callback, '', '', true);
     $.fn.zato.data_table._create_edit('edit', 'Update the HL7 MLLP channel', id);
     $.fn.zato.channel.hl7.mllp._bind_default_toggle('id_edit-');
+    $.fn.zato.channel.hl7.mllp._bind_rest_toggle('#edit-form');
     $.fn.zato.how_it_works.init({
         badge_id: 'edit-how-it-works',
         div_id: '#edit-div',
@@ -176,9 +276,12 @@ $.fn.zato.channel.hl7.mllp.data_table.new_row = function(item, data, include_tr)
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
 
+    let use_rest = item.use_rest == true;
+
     // 1
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>', use_rest ? 'Yes' : 'No');
 
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service, cluster_id));
 
@@ -226,6 +329,10 @@ $.fn.zato.channel.hl7.mllp.data_table.new_row = function(item, data, include_tr)
     row += String.format("<td class='ignore'>{0}</td>", item.split_concatenated_messages);
     row += String.format("<td class='ignore'>{0}</td>", item.use_msh18_encoding);
 
+    row += String.format("<td class='ignore'>{0}</td>", item.use_rest);
+    row += String.format("<td class='ignore'>{0}</td>", item.rest_only);
+    row += String.format("<td class='ignore'>{0}</td>", item.rest_channel_id);
+
     if(include_tr) {
         row += '</tr>';
     }
@@ -247,11 +354,39 @@ $.fn.zato.channel.hl7.mllp.delete_ = function(id) {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.live_form_updates.register('create', [
-    {object_type: 'service', target_select: '#id_service'}
+    {object_type: 'service', target_select: '#id_service'},
+    {
+        object_type: 'security',
+        target_select: '#id_rest_security_id',
+        label_format: '{sec_type_name}/{name}'
+    },
+    {
+        object_type: 'security_group',
+        handler: 'multi_checkbox',
+        container: '#mllp-multi-select-div-create',
+        reload_callback: function() {
+            $.fn.zato.post('/zato/http-soap/get-security-groups/zato-api-creds/',
+                $.fn.zato.channel.hl7.mllp._create_populate_groups_callback, '', '', true);
+        }
+    }
 ]);
 
 $.fn.zato.live_form_updates.register('edit', [
-    {object_type: 'service', target_select: '#id_edit-service'}
+    {object_type: 'service', target_select: '#id_edit-service'},
+    {
+        object_type: 'security',
+        target_select: '#id_edit-rest_security_id',
+        label_format: '{sec_type_name}/{name}'
+    },
+    {
+        object_type: 'security_group',
+        handler: 'multi_checkbox',
+        container: '#mllp-multi-select-div-edit',
+        reload_callback: function() {
+            $.fn.zato.post('/zato/http-soap/get-security-groups/zato-api-creds/',
+                $.fn.zato.channel.hl7.mllp._edit_populate_groups_callback, '', '', true);
+        }
+    }
 ]);
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.admin.web.forms.channel.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
-from zato.common.api import GENERIC, generic_attrs, HL7
+from zato.common.api import GENERIC, generic_attrs, HL7, SEC_DEF_TYPE
 from zato.common.model.hl7 import HL7MLLPConfigObject
 
 # ################################################################################################################################
@@ -38,15 +38,17 @@ class Index(_Index):
             'default_character_encoding',
             'normalize_line_endings', 'force_standard_delimiters',
             'repair_truncated_msh', 'split_concatenated_messages', 'use_msh18_encoding',
+            'use_rest', 'rest_only', 'rest_channel_id',
         ) + generic_attrs
         output_repeated = True
 
 # ################################################################################################################################
 
     def handle(self):
+        security_list = self.get_sec_def_list(SEC_DEF_TYPE.BASIC_AUTH)
         return {
-            'create_form': CreateForm(req=self.req),
-            'edit_form': EditForm(prefix='edit', req=self.req),
+            'create_form': CreateForm(req=self.req, security_list=security_list),
+            'edit_form': EditForm(prefix='edit', req=self.req, security_list=security_list),
         }
 
 # ################################################################################################################################
@@ -69,6 +71,7 @@ class _CreateEdit(CreateEdit):
             'default_character_encoding',
             'normalize_line_endings', 'force_standard_delimiters',
             'repair_truncated_msh', 'split_concatenated_messages', 'use_msh18_encoding',
+            'use_rest', 'rest_only', 'rest_channel_id', 'rest_url_path', 'rest_security_id',
         ) + generic_attrs
         output_required = 'id', 'name'
 

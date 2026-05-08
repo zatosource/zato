@@ -30,23 +30,6 @@ $.fn.zato.how_it_works.init = function(config) {
         badge._tippy.destroy();
     }
 
-    // .. attach hover tooltip ..
-    tippy(badge, {
-        content: 'Click to see a description<br>of each field in this form',
-        allowHTML: true,
-        placement: 'left',
-        theme: 'dark',
-        arrow: true,
-        interactive: false,
-        inertia: true,
-        appendTo: function() { return badge.closest('.ui-dialog') || document.body; },
-        onShow: function() {
-            if ($.fn.zato.how_it_works._state) {
-                return false;
-            }
-        },
-    });
-
     // .. store config for click handler ..
     badge._how_it_works_config = config;
 
@@ -164,11 +147,21 @@ $.fn.zato.how_it_works._activate = function(badge) {
         });
     }
 
-    // .. clicking outside the dialog closes help mode ..
+    // .. clicking anywhere except inputs/selects/labels deactivates help mode ..
     $(document).on('mousedown.how_it_works_outside', function(event) {
-        if (!dialog.contains(event.target)) {
+        var target = event.target;
+        if (!dialog.contains(target)) {
             $.fn.zato.how_it_works._deactivate();
+            return;
         }
+        var tag = target.tagName;
+        if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || tag === 'LABEL' || tag === 'A' || tag === 'BUTTON') {
+            return;
+        }
+        if ($(target).closest('.how-it-works-badge').length) {
+            return;
+        }
+        $.fn.zato.how_it_works._deactivate();
     });
 };
 
