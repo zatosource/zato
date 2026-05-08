@@ -55,8 +55,9 @@ $.fn.zato.channel.hl7.mllp.tab_labels = {
     main:     'Main',
     routing:  'Routing',
     protocol: 'Protocol',
-    logging:  'Logging',
-    dedup:    'Deduplication'
+    quirks:   'Quirks',
+    dedup:    'Deduplication',
+    logging:  'Logging'
 };
 
 $.fn.zato.channel.hl7.mllp._reset_tabs = function(action) {
@@ -71,9 +72,41 @@ $.fn.zato.channel.hl7.mllp._reset_tabs = function(action) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.channel.hl7.mllp._routing_fields = [
+    'msh3_sending_app',
+    'msh4_sending_facility',
+    'msh5_receiving_app',
+    'msh6_receiving_facility',
+    'msh9_message_type',
+    'msh9_trigger_event',
+    'msh11_processing_id',
+    'msh12_version_id'
+];
+
+$.fn.zato.channel.hl7.mllp._toggle_routing_fields = function(prefix) {
+    var is_default = $('#' + prefix + 'is_default').is(':checked');
+    var fields = $.fn.zato.channel.hl7.mllp._routing_fields;
+    for (var i = 0; i < fields.length; i++) {
+        var input = $('#' + prefix + fields[i]);
+        input.prop('readonly', is_default);
+        input.toggleClass('routing-disabled', is_default);
+    }
+};
+
+$.fn.zato.channel.hl7.mllp._bind_default_toggle = function(prefix) {
+    var checkbox = $('#' + prefix + 'is_default');
+    checkbox.off('change.routing').on('change.routing', function() {
+        $.fn.zato.channel.hl7.mllp._toggle_routing_fields(prefix);
+    });
+    $.fn.zato.channel.hl7.mllp._toggle_routing_fields(prefix);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.channel.hl7.mllp.create = function() {
     $.fn.zato.channel.hl7.mllp._reset_tabs('create');
     $.fn.zato.data_table._create_edit('create', 'Create a new HL7 MLLP channel', null);
+    $.fn.zato.channel.hl7.mllp._bind_default_toggle('id_');
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

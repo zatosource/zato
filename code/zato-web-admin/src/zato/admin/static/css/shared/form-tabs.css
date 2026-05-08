@@ -131,3 +131,22 @@
     box-shadow: none;
     text-shadow: 0 0 8px var(--form-tab-glow);
 }
+
+/* Smaller toggle switch inside dialog forms. The off-state track
+   uses a darker shade so it stands out against the form background. */
+.data-popup {
+    --toggle-width: 32px;
+    --toggle-height: 16px;
+    --toggle-knob-size: 12px;
+    --toggle-knob-offset: 2px;
+    --toggle-travel: 16px;
+    --toggle-off-bg: #999;
+    --toggle-on-bg: #2d6392;
+}
+
+/* Read-only inputs in the routing tab when "Default" is active. */
+.data-popup input.routing-disabled {
+    background-color: #e8e8e8;
+    color: #888;
+    cursor: not-allowed;
+}
