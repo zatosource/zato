@@ -405,7 +405,8 @@ $.fn.zato.how_it_works._collect_fields = function(div, config) {
         }
 
         var field_id = label.getAttribute('for');
-        var description = descriptions[field_id];
+        var lookup_id = field_id.replace('id_edit-', 'id_');
+        var description = descriptions[lookup_id];
         if (!description) {
             continue;
         }
