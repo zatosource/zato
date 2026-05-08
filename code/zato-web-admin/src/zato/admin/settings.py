@@ -63,8 +63,10 @@ else:
 
 # Session timeout
 _session_timeout_env_key = 'Zato_Dashboard_Session_Timeout'
-_session_timeout_default = 60 * 60 * 24 * 1 # In seconds, default = one day
+_session_timeout_default = 60 * 60 * 2 # In seconds, default = two hours
 SESSION_COOKIE_AGE = os.environ.get(_session_timeout_env_key) or _session_timeout_default
+SESSION_SAVE_EVERY_REQUEST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
 
