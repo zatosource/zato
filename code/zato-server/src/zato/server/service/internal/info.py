@@ -7,12 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from base64 import b64decode
 from contextlib import closing
 
 # Zato
-from zato.client import AnyServiceInvoker
-from zato.common.api import INFO_FORMAT, MISC, SERVER_JOIN_STATUS, SERVER_UP_STATUS
+from zato.client import ZatoClient
+from zato.common.api import INFO_FORMAT, SERVER_JOIN_STATUS, SERVER_UP_STATUS
 from zato.common.component_info import format_info, get_info, get_server_pids
 from zato.common.const import ServiceConst
 from zato.common.json_internal import dumps, loads
@@ -36,7 +35,6 @@ class GetInfo(Service):
 
         # Let's prepare as much as we can upfront.
         sec_def:'any_' = self.server.config_manager.basic_auth_get(ServiceConst.API_Admin_Invoke_Username).config
-        channel:'any_' = self.server.config_manager.get_channel_rest(MISC.DefaultAdminInvokeChannel)
         out = {}
 
         # We assume that if the current server uses TLS or not,
@@ -62,14 +60,11 @@ class GetInfo(Service):
                     address = f'{api_protocol}://{item.bind_host}:{item.bind_port}'
                     auth = (sec_def.username, sec_def.password) # type: ignore
 
-                    client = AnyServiceInvoker(address, channel.url_path, auth=auth)
+                    client = ZatoClient(address, ServiceConst.API_Invoke_Url_Path, auth=auth)
 
                     response = client.invoke('zato.info.get-server-info')
                     if response.ok:
-                        response = loads(response.inner.text)['zato_service_invoke_response']['response']
-                        response = b64decode(response)
-                        response = loads(response)['response']
-                        server_info['info'] = loads(response['info'])
+                        server_info['info'] = loads(response.data['info'])
                     else:
                         self.logger.warning(response)
 
@@ -81,8 +76,7 @@ class GetInfo(Service):
 class GetServerInfo(Service):
     """ Collects information about a server it's invoked on.
     """
-    class SimpleIO:
-        output_required = ('info',)
+    output = 'info',
 
     def handle(self):
         self.response.content_type = 'application/json'

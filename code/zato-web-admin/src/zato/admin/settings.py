@@ -221,7 +221,6 @@ if 'DATABASES' in globals():
 else:
     ADMIN_INVOKE_NAME = 'dummy'
     ADMIN_INVOKE_PASSWORD = 'dummy'
-    ADMIN_INVOKE_PATH = '/zato/admin/invoke'
     DATABASES = {} # type: ignore
     DATABASES['default'] = {}
     DATABASES['default']['ENGINE'] = 'django.db.backends.sqlite3'

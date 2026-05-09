@@ -39,8 +39,7 @@ config_template = """{{
   "SECRET_KEY": "{SECRET_KEY}",
 
   "ADMIN_INVOKE_NAME": "{ADMIN_INVOKE_NAME}",
-  "ADMIN_INVOKE_PASSWORD": "{ADMIN_INVOKE_PASSWORD}",
-  "ADMIN_INVOKE_PATH": "/zato/admin/invoke"
+  "ADMIN_INVOKE_PASSWORD": "{ADMIN_INVOKE_PASSWORD}"
 }}
 """ # noqa
 

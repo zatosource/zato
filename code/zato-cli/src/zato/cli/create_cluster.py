@@ -102,10 +102,6 @@ class Create(ZatoCommand):
             session.flush()
 
             # Create services
-            admin_invoke_service_name = 'zato.server.service.internal.service.Invoke'
-            admin_invoke_service = Service(None, admin_invoke_service_name, True, admin_invoke_service_name, True, cluster)
-            session.add(admin_invoke_service)
-
             ide_publisher_service_name = 'zato.server.service.internal.hot_deploy.Create'
             ide_publisher_service = Service(None, ide_publisher_service_name, True, ide_publisher_service_name, True, cluster)
             session.add(ide_publisher_service)
@@ -120,13 +116,14 @@ class Create(ZatoCommand):
 
             ping_service = self.add_ping_service(session, cluster)
 
-            django_gateway_service_name = 'zato.server.service.internal.helpers.DjangoServiceGateway'
-            django_gateway_service = Service(None, django_gateway_service_name, True, django_gateway_service_name, True, cluster)
-            session.add(django_gateway_service)
+            # Create Django security definition
+            django_password = os.environ.get('Zato_Django_Password') or self.generate_password()
+            django_sec = HTTPBasicAuth(
+                None, 'django', True, 'django', 'Django plugin', django_password, cluster)
+            session.add(django_sec)
 
             # Create channels
-            self.add_admin_invoke(session, cluster, admin_invoke_service, admin_invoke_sec)
-            self.add_django_channel(session, cluster, django_gateway_service)
+            self.add_django_channel(session, cluster, admin_invoke_sec, django_sec)
             self.add_ide_publisher_channel(session, cluster, ide_publisher_service, ide_publisher_sec)
             self.add_metrics_channel(session, cluster, metrics_service)
             self.add_streaming_channels(session, cluster, ping_service, streaming_sec)
@@ -228,19 +225,27 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def add_admin_invoke(self, session, cluster, service, security):
-        """ Adds an admin channel for invoking services from web admin and CLI.
+    def add_django_channel(self, session, cluster, admin_invoke_sec, django_sec):
+        """ Adds the Django invoke channel pointing at ServiceInvoker with its own security.
         """
 
         # Zato
-        from zato.common.api import MISC, SIMPLE_IO
-        from zato.common.odb.model import HTTPSOAP
+        from zato.common.api import DATA_FORMAT
+        from zato.common.const import ServiceConst
+        from zato.common.odb.model import HTTPSOAP, Service as ODBService
+
+        # Look up the ServiceInvoker service - it may already exist from default-objects
+        service_impl = 'zato.server.service.internal.service.ServiceInvoker'
+        existing = session.query(ODBService).filter_by(impl_name=service_impl, cluster=cluster).first()
+        if not existing:
+            existing = ODBService(None, ServiceConst.ServiceInvokerName, True, service_impl, True, cluster)
+            session.add(existing)
+            session.flush()
 
         channel = HTTPSOAP(
-            None, MISC.DefaultAdminInvokeChannel, True, True, 'channel', 'plain_http',
-            None, ServiceConst.API_Admin_Invoke_Url_Path, None, '', None,
-            SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster,
-            security=security)
+            None, 'zato.django', True, True, 'channel',
+            'plain_http', None, '/zato/api/invoke/django/{service_name}', None, '', None, DATA_FORMAT.JSON,
+            service=existing, cluster=cluster, security=django_sec)
         session.add(channel)
 
 # ################################################################################################################################
@@ -335,22 +340,6 @@ class Create(ZatoCommand):
             'plain_http', None, '/api/log/streaming/status', None, '', None, DATA_FORMAT.JSON,
             service=service, cluster=cluster, security=security)
         session.add(status_channel)
-
-# ################################################################################################################################
-
-    def add_django_channel(self, session, cluster, service):
-        """ Adds a channel for Django gateway.
-        """
-
-        # Zato
-        from zato.common.api import DATA_FORMAT
-        from zato.common.odb.model import HTTPSOAP
-
-        channel = HTTPSOAP(
-            None, 'zato.django', True, True, 'channel',
-            'plain_http', None, '/django', None, '', None, DATA_FORMAT.JSON,
-            service=service, cluster=cluster)
-        session.add(channel)
 
 # ################################################################################################################################
 

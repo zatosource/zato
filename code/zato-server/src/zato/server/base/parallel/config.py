@@ -242,14 +242,14 @@ class ConfigLoader:
             else:
                 logger.info('Startup rate limiting; channel_id:%s, name:%s, no rate_limiting', channel_id, channel_name)
 
-        # SimpleIO
-        # In preparation for a SIO rewrite, we loaded SIO config from a file
+        # I/O
+        # In preparation for an I/O rewrite, we loaded I/O config from a file
         # but actual code paths require the pre-3.0 format so let's prepare it here.
         self.config.simple_io = ConfigDict('simple_io', Bunch())
 
-        int_exact = self.sio_config.int_config.exact
-        int_suffixes = self.sio_config.int_config.suffixes
-        bool_prefixes = self.sio_config.bool_config.prefixes
+        int_exact = self.io_config.int_config.exact
+        int_suffixes = self.io_config.int_config.suffixes
+        bool_prefixes = self.io_config.bool_config.prefixes
 
         self.config.simple_io['int_parameters'] = int_exact
         self.config.simple_io['int_parameter_suffixes'] = int_suffixes
@@ -281,7 +281,7 @@ class ConfigLoader:
         _has_rest_log_ignore = 'rest_log_ignore' in _logging_stanza
 
         if not _has_rest_log_ignore:
-            rest_log_ignore = [ServiceConst.API_Admin_Invoke_Url_Path, '/metrics', '/zato/ping']
+            rest_log_ignore = ['/zato/api/invoke', '/metrics', '/zato/ping']
         else:
             rest_log_ignore = _logging_stanza['rest_log_ignore']
             rest_log_ignore = rest_log_ignore if isinstance(rest_log_ignore, list) else [rest_log_ignore]

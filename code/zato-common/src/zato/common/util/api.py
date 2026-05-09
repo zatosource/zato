@@ -1276,53 +1276,25 @@ def get_server_client_auth(
     *,
     url_path=None,
 ) -> 'any_':
-    """ Returns credentials to authenticate with against Zato's own inocation channels.
+    """ Returns credentials to authenticate with against Zato's own invocation channels.
     """
-    # This is optional on input
-    url_path = url_path or ServiceConst.API_Admin_Invoke_Url_Path
-
     session = get_odb_session_from_server_config(config, cm, odb_password_encrypted)
 
     with closing(session) as session:
 
-        # This will exist if config is read from server.conf,
-        # otherwise, it means that it is based on scheduler.conf.
-        token = config.get('main', {}).get('token')
+        security = session.query(HTTPBasicAuth).\
+            filter(HTTPBasicAuth.username == ServiceConst.API_Admin_Invoke_Username).\
+            first()
 
-        # This is server.conf ..
-        if token:
-            cluster = session.query(Server).\
-                filter(Server.token == config.main.token).\
-                one().cluster
-
-        # .. this will be scheduler.conf.
-        else:
-            cluster_id = config.get('cluster', {}).get('id')
-            cluster_id = cluster_id or 1
-            cluster = session.query(Cluster).\
-                filter(Cluster.id == cluster_id).\
-                one()
-
-        channel = session.query(HTTPSOAP).\
-            filter(HTTPSOAP.cluster_id == cluster.id).\
-            filter(HTTPSOAP.url_path == url_path).\
-            filter(HTTPSOAP.connection== 'channel').\
-            one()
-
-        if channel.security_id:
-            security = session.query(HTTPBasicAuth).\
-                filter(HTTPBasicAuth.id == channel.security_id).\
-                first()
-
-            if security:
-                if password:= security.password:
-                    password = security.password.replace(SECRETS.PREFIX, '')
-                    if password.startswith(SECRETS.Encrypted_Indicator):
-                        if cm:
-                            password = cm.decrypt(password)
-                else:
-                    password = ''
-                return (security.username, password)
+        if security:
+            if password := security.password:
+                password = security.password.replace(SECRETS.PREFIX, '')
+                if password.startswith(SECRETS.Encrypted_Indicator):
+                    if cm:
+                        password = cm.decrypt(password)
+            else:
+                password = ''
+            return (security.username, password)
 
 # ################################################################################################################################
 

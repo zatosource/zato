@@ -243,12 +243,8 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
     }
 
     try:
-        input_dict = {}
-        input_dict['payload'] = req.POST.get('data-request', '')
-        input_dict['to_json'] = True
-        input_dict['needs_response_time'] = True
-
-        response = req.zato.client.invoke(name, **input_dict) # type: ignore
+        payload = req.POST.get('data-request', '')
+        response = req.zato.client.invoke(name, payload) # type: ignore
 
     except HeadersEnrichedException as enriched_exc:
         content['response_time_human'] = enriched_exc.headers.get('X-Zato-Response-Time-Human') # type: ignore
@@ -263,12 +259,8 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
         try:
             content['response_time_human'] = response.inner.headers.get('X-Zato-Response-Time-Human')
             if response.ok:
-                if data := response.inner_service_response:
-                    try:
-                        data = loads(data)
-                    except ValueError:
-                        pass
-                else:
+                data = response.data
+                if data is None:
                     data = '(None)'
                 status_code = HTTPStatus.OK
             else:

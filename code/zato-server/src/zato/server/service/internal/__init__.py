@@ -96,10 +96,6 @@ class AdminService(Service):
         if self.skip_before_handle:
             return
 
-        # Do not log BASE64-encoded messages
-        if self.name == 'zato.service.invoke':
-            return
-
         if self.server.is_admin_enabled_for_info:
 
             # Prefer that first because it may be a generic connection
@@ -147,10 +143,6 @@ class AdminService(Service):
 # ################################################################################################################################
 
     def after_handle(self):
-
-        # Do not log BASE64-encoded messages
-        if self.name == 'zato.service.invoke':
-            return
 
         if self.server.is_admin_enabled_for_info:
             logger.info('Response; service:`%s`, data:`%s` cid:`%s`, ',
