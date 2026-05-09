@@ -1,0 +1,218 @@
+# InterSystems Ensemble/HealthShare - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - Inpatient admission routed through HealthShare
+
+```
+MSH|^~\&|ENSEMBLE|DIGNITYHEALTH_SM|HEALTHSHARE|CALHIE|20260508091000||ADT^A01^ADT_A01|HSM00001|P|2.5
+EVN|A01|20260508091000
+PID|1||MRN44556677^^^DIGNITY_SM^MR||Villarreal^Marco^Alejandro^^Mr.||19690322|M||2106-3^White^HL70005|1482 Hillside Blvd^^Daly City^CA^94014||^PRN^PH^^1^650^5551234||||M|||614-28-7953
+PV1||I|3SOUTH^3S04^01^DIGNITY_SM^^^^3 South||||3456789^Orozco^Rafael^M^^^MD|4567890^Watanabe^Kenji^Q^^^MD|||MED||||ADM|A0||||||||||||||||||||||||||20260508091000
+IN1|1|UHC001|UHC334455|UnitedHealthcare of California|5995 Plaza Dr^^Cypress^CA^90630||^PRN^PH^^1^800^3285979|GRPUHC001|||||||Villarreal^Marco^Alejandro|01|19690322|1482 Hillside Blvd^^Daly City^CA^94014
+```
+
+## 2. ADT^A03 - Discharge notification via Ensemble
+
+```
+MSH|^~\&|ENSEMBLE|HOAG_MEM|HEALTHSHARE|CALHIE|20260507154500||ADT^A03^ADT_A03|HSM00002|P|2.5
+EVN|A03|20260507154500
+PID|1||MRN55667788^^^HOAG_MEM^MR||Ochoa^Patricia^Renee^^Mrs.||19770818|F||2106-3^White^HL70005|22014 Garden View Ln^^Hayward^CA^94541||^PRN^PH^^1^510^5556789||||M|||529-61-3847
+PV1||I|5NORTH^5N11^01^HOAG_MEM^^^^5 North||||6789012^Blackwell^Jonathan^R^^^MD|||ORT||||ADM|A0||||||||||||||||||||||||||20260504101000|20260507154500
+DG1|1||M17.11^Primary osteoarthritis, right knee^I10||20260504|A
+```
+
+## 3. ADT^A08 - Patient update routed via HealthShare
+
+```
+MSH|^~\&|HEALTHSHARE|PROVSTJOSEPH|HSROUTER|CALHIE|20260508103000||ADT^A08^ADT_A01|HSM00003|P|2.5
+EVN|A08|20260508103000
+PID|1||MRN66778899^^^PROVSTJOSEPH^MR||Fujimoto^Yuki^Harumi^^Ms.||19850906|F||2028-9^Asian^HL70005|3780 Clayton Rd^^Concord^CA^94521||^PRN^PH^^1^925^5553456~^PRN^CP^^1^925^5559876||||S|||483-70-2615
+PV1||O|GASTRO^GI02^01^PROVSTJOSEPH^^^^Gastroenterology||||7890123^Stafford^Gregory^S^^^MD
+```
+
+## 4. ORU^R01 - Lab results routed through Ensemble
+
+```
+MSH|^~\&|ENSEMBLE|QUEST_CA|HEALTHSHARE|CALHIE|20260508121500||ORU^R01^ORU_R01|HSM00004|P|2.5
+PID|1||MRN77889900^^^QUEST_CA^MR||Yeung^Raymond^Kwok^^Mr.||19580413|M||2028-9^Asian^HL70005|2150 N Broadway^^Walnut Creek^CA^94596||^PRN^PH^^1^925^5554567
+ORC|RE|QST89012345||||||^^^20260508080000^^R||20260508121500|LAB010^Watson^Derek||8901234^Nair^Priya^A^^^MD
+OBR|1|QST89012345||24323-8^Comprehensive Metabolic Panel^LN|||20260508080000|||||||20260508090000|B^Blood|8901234^Nair^Priya^A^^^MD||||||20260508121500|||F
+OBX|1|NM|2345-7^Glucose^LN||112|mg/dL|74-106|H|||F|||20260508120000
+OBX|2|NM|3094-0^BUN^LN||22|mg/dL|6-20|H|||F|||20260508120000
+OBX|3|NM|2160-0^Creatinine^LN||1.4|mg/dL|0.7-1.3|H|||F|||20260508120000
+OBX|4|NM|2951-2^Sodium^LN||138|mmol/L|136-145|N|||F|||20260508120000
+OBX|5|NM|2823-3^Potassium^LN||4.8|mmol/L|3.5-5.1|N|||F|||20260508120000
+OBX|6|NM|17861-6^Calcium^LN||9.4|mg/dL|8.5-10.5|N|||F|||20260508120000
+```
+
+## 5. ORU^R01 - CDA document via HealthShare with encapsulated data
+
+```
+MSH|^~\&|HEALTHSHARE|SHARP_MEM|HSROUTER|CALHIE|20260507091500||ORU^R01^ORU_R01|HSM00005|P|2.5
+PID|1||MRN88990011^^^SHARP_MEM^MR||Kowalski^Anna^Elise^^Mrs.||19730225|F||2106-3^White^HL70005|841 Redwood St^^Vallejo^CA^94590||^PRN^PH^^1^707^5557890
+PV1||I|4WEST^4W08^01^SHARP_MEM||||9012345^Johal^Manpreet^J^^^MD
+ORC|RE|SHP89012345||||||^^^20260506140000^^R||20260507091500|DOC001^Reyes^Ana||9012345^Johal^Manpreet^J^^^MD
+OBR|1|SHP89012345||34133-9^Summarization of Episode Note^LN|||20260506140000|||||||20260507091500||9012345^Johal^Manpreet^J^^^MD||||||20260507091500|||F
+OBX|1|ED|34133-9^Summarization of Episode Note^LN||^application^xml^Base64^PENsaW5pY2FsRG9jdW1lbnQgeG1sbnM9InVybjpobDctb3JnOnYzIiB4bWxuczp2b2M9InVybjpobDctb3JnOnYzL3ZvYyIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSI+PC9DbGluaWNhbERvY3VtZW50Pg==||||||F|||20260507091500
+```
+
+## 6. ORU^R01 - Continuity of care document with base64 CDA
+
+```
+MSH|^~\&|ENSEMBLE|ADVENTIST_GL|HEALTHSHARE|CALHIE|20260506160000||ORU^R01^ORU_R01|HSM00006|P|2.5
+PID|1||MRN99001122^^^ADVENTIST_GL^MR||Jefferson^Tamara^Denise^^Ms.||19810714|F||2054-5^Black or African American^HL70005|503 Soscol Ave^^Napa^CA^94559||^PRN^PH^^1^707^5551234
+PV1||O|PRIM^PC01^01^ADVENTIST_GL^^^^Primary Care||||0123456^Chung^David^L^^^MD
+ORC|RE|ADV89012345||||||^^^20260506100000^^R||20260506160000|DOC002^Mitchell^David||0123456^Chung^David^L^^^MD
+OBR|1|ADV89012345||34133-9^Summarization of Episode Note^LN|||20260506100000|||||||20260506160000||0123456^Chung^David^L^^^MD||||||20260506160000|||F
+OBX|1|ED|34133-9^Summarization of Episode Note^LN||^application^xml^Base64^PENsaW5pY2FsRG9jdW1lbnQgeG1sbnM9InVybjpobDctb3JnOnYzIj48dGl0bGU+Q29udGludWl0eSBvZiBDYXJlIERvY3VtZW50PC90aXRsZT48ZWZmZWN0aXZlVGltZSB2YWx1ZT0iMjAyNjA1MDYiLz48L0NsaW5pY2FsRG9jdW1lbnQ+||||||F|||20260506160000
+```
+
+## 7. ORM^O01 - Lab order routed through Ensemble
+
+```
+MSH|^~\&|ENSEMBLE|KAISER_OAK|LABCORP_CA|LABCORP|20260508074500||ORM^O01^ORM_O01|HSM00007|P|2.5
+PID|1||MRN11223355^^^KAISER_OAK^MR||McBride^Sean^Thomas^^Mr.||19760830|M||2106-3^White^HL70005|305 Petaluma Blvd N^^Petaluma^CA^94952||^PRN^PH^^1^707^5552345
+PV1||O|INTMED^IM03^01^KAISER_OAK||||2345678^Nair^Priya^C^^^MD
+ORC|NW|ORD89013100|||||^^^20260508074500^^R||20260508074500|NURSE004^Davis^Jennifer||2345678^Nair^Priya^C^^^MD|INTMED
+OBR|1|ORD89013100||83036^Hemoglobin A1c^CPT|||20260508074500||||A|||||2345678^Nair^Priya^C^^^MD||||||20260508074500|||F
+OBR|2|ORD89013101||80061^Lipid Panel^CPT|||20260508074500||||A|||||2345678^Nair^Priya^C^^^MD||||||20260508074500|||F
+```
+
+## 8. MDM^T02 - Document notification routed via HealthShare
+
+```
+MSH|^~\&|HEALTHSHARE|DIGNITY_MERCY|HSROUTER|CALHIE|20260507143000||MDM^T02^MDM_T02|HSM00008|P|2.5
+EVN|T02|20260507143000
+PID|1||MRN22334466^^^DIGNITY_MERCY^MR||Chambers^Lorraine^Victoria^^Mrs.||19620519|F||2054-5^Black or African American^HL70005|8924 Greenback Ln^^Elk Grove^CA^95624||^PRN^PH^^1^916^5556789
+PV1||I|2EAST^2E06^01^DIGNITY_MERCY||||3456789^Orozco^Rafael^A^^^MD
+TXA|1|OP^Operative Note^HL70270|TX|20260507143000|3456789^Orozco^Rafael^A^^^MD||20260507143000|||||DOC20260507001|||AU||AV||||3456789^Orozco^Rafael^A^^^MD
+OBX|1|TX|28570-0^Procedure Note^LN||PROCEDURE: Total knee arthroplasty, right. INDICATION: Severe osteoarthritis right knee, failed conservative management. FINDINGS: Grade IV chondromalacia of medial and lateral compartments.||||||F
+OBX|2|TX|28570-0^Procedure Note^LN||TECHNIQUE: Midline incision, medial parapatellar approach. Cemented posterior-stabilized total knee prosthesis implanted. Good alignment confirmed by intraoperative fluoroscopy.||||||F
+```
+
+## 9. DFT^P03 - Charge posting from Hoag Memorial
+
+```
+MSH|^~\&|ENSEMBLE|HOAG_MEM|BILLING|HOAG_MEM|20260507161500||DFT^P03^DFT_P03|HSM00009|P|2.5
+EVN|P03|20260507161500
+PID|1||MRN55667788^^^HOAG_MEM^MR||Ochoa^Patricia^Renee^^Mrs.||19770818|F||2106-3^White^HL70005|22014 Garden View Ln^^Hayward^CA^94541||^PRN^PH^^1^510^5556789
+PV1||I|5NORTH^5N11^01^HOAG_MEM||||6789012^Blackwell^Jonathan^R^^^MD
+FT1|1|CHG20260507001||20260507|20260507|CG|27447^Total knee arthroplasty^CPT||||1||||||6789012^Blackwell^Jonathan^R^^^MD||27447^Total knee arthroplasty^CPT
+FT1|2|CHG20260507002||20260507|20260507|CG|99232^Subsequent hospital care^CPT||||1||||||6789012^Blackwell^Jonathan^R^^^MD||99232^Subsequent hospital care^CPT
+```
+
+## 10. RDE^O11 - Pharmacy order from Providence St. Joseph
+
+```
+MSH|^~\&|ENSEMBLE|PROVSTJOSEPH|PHARMACY|PROVSTJOSEPH|20260508063000||RDE^O11^RDE_O11|HSM00010|P|2.5
+PID|1||MRN66778899^^^PROVSTJOSEPH^MR||Fujimoto^Yuki^Harumi^^Ms.||19850906|F||2028-9^Asian^HL70005|3780 Clayton Rd^^Concord^CA^94521||^PRN^PH^^1^925^5553456
+PV1||I|3EAST^3E07^01^PROVSTJOSEPH||||7890123^Stafford^Gregory^S^^^MD
+ORC|NW|ORD89013200|||||^^^20260508063000^^R||20260508063000|NURSE005^Miller^Sarah||7890123^Stafford^Gregory^S^^^MD|3EAST
+RXE|^^^20260508070000^^Q8H^20260511063000|PANTOPRAZOLE^Pantoprazole 40mg^RXNORM|40||mg|TAB^Tablet^HL70292|||||||||||||||||PO^Oral^HL70162
+RXR|PO^Oral^HL70162
+```
+
+## 11. ACK - Acknowledgment for ADT message
+
+```
+MSH|^~\&|HEALTHSHARE|CALHIE|ENSEMBLE|DIGNITYHEALTH_SM|20260508091005||ACK^A01^ACK|HSM00011|P|2.5
+MSA|AA|HSM00001|Message accepted
+```
+
+## 12. ACK - Negative acknowledgment for malformed message
+
+```
+MSH|^~\&|HEALTHSHARE|CALHIE|ENSEMBLE|SHARP_MEM|20260507092000||ACK^A01^ACK|HSM00012|P|2.5
+MSA|AE|SHP89010000|Message rejected - PID segment missing required patient identifier
+ERR||PID^1^3|101^Required field missing^HL70357|E||||Patient identifier (PID-3) is required
+```
+
+## 13. ADT^A04 - Outpatient registration from Sharp Memorial
+
+```
+MSH|^~\&|ENSEMBLE|SHARP_MEM|HEALTHSHARE|CALHIE|20260508080000||ADT^A04^ADT_A01|HSM00013|P|2.5
+EVN|A04|20260508080000
+PID|1||MRN33445566^^^SHARP_MEM^MR||Huynh^Linh^Bao^^Mrs.||19830911|F||2028-9^Asian^HL70005|1017 Grant Ave^^Novato^CA^94945||^PRN^PH^^1^415^5551234||||M|||738-42-1596
+PV1||O|CARDCLN^CR01^01^SHARP_MEM^^^^Cardiology||||4567890^Watanabe^Kenji^T^^^MD|||CAR||||REF|A0||||||||||||||||||||||||||20260508080000
+```
+
+## 14. ORU^R01 - Lipid panel results from Quest via Ensemble
+
+```
+MSH|^~\&|ENSEMBLE|QUEST_CA|HEALTHSHARE|CALHIE|20260507141000||ORU^R01^ORU_R01|HSM00014|P|2.5
+PID|1||MRN11223355^^^KAISER_OAK^MR||McBride^Sean^Thomas^^Mr.||19760830|M||2106-3^White^HL70005|305 Petaluma Blvd N^^Petaluma^CA^94952||^PRN^PH^^1^707^5552345
+ORC|RE|QST89013300||||||^^^20260507080000^^R||20260507141000|LAB011^Torres^Maria||2345678^Nair^Priya^C^^^MD
+OBR|1|QST89013300||80061^Lipid Panel^CPT|||20260507080000|||||||20260507090000|B^Blood|2345678^Nair^Priya^C^^^MD||||||20260507141000|||F
+OBX|1|NM|2093-3^Total Cholesterol^LN||218|mg/dL|<200|H|||F|||20260507140000
+OBX|2|NM|2571-8^Triglycerides^LN||165|mg/dL|<150|H|||F|||20260507140000
+OBX|3|NM|2085-9^HDL Cholesterol^LN||42|mg/dL|>40|N|||F|||20260507140000
+OBX|4|NM|13457-7^LDL Cholesterol Calc^LN||143|mg/dL|<100|H|||F|||20260507140000
+```
+
+## 15. ORM^O01 - Imaging order from Adventist Health Glendale
+
+```
+MSH|^~\&|ENSEMBLE|ADVENTIST_GL|RADIS|ADVENTIST_GL|20260508110000||ORM^O01^ORM_O01|HSM00015|P|2.5
+PID|1||MRN99001122^^^ADVENTIST_GL^MR||Jefferson^Tamara^Denise^^Ms.||19810714|F||2054-5^Black or African American^HL70005|503 Soscol Ave^^Napa^CA^94559||^PRN^PH^^1^707^5551234
+PV1||O|PRIM^PC01^01^ADVENTIST_GL||||0123456^Chung^David^L^^^MD
+ORC|NW|ORD89013400|||||^^^20260508110000^^R||20260508110000|NURSE006^Young^Patricia||0123456^Chung^David^L^^^MD|PRIM
+OBR|1|ORD89013400||73721^MRI Lower Extremity without contrast^CPT|||20260508110000||||A|||||0123456^Chung^David^L^^^MD||||||20260508110000|||F
+```
+
+## 16. ADT^A01 - Admission to Dignity Health Sacramento
+
+```
+MSH|^~\&|ENSEMBLE|DIGNITY_MERCY|HEALTHSHARE|CALHIE|20260506183000||ADT^A01^ADT_A01|HSM00016|P|2.5
+EVN|A01|20260506183000
+PID|1||MRN22334466^^^DIGNITY_MERCY^MR||Chambers^Lorraine^Victoria^^Mrs.||19620519|F||2054-5^Black or African American^HL70005|8924 Greenback Ln^^Elk Grove^CA^95624||^PRN^PH^^1^916^5556789||||M|||371-84-9203
+PV1||I|2EAST^2E06^01^DIGNITY_MERCY^^^^2 East||||3456789^Orozco^Rafael^A^^^MD|4567891^Blackwell^Sandra^M^^^MD|||ORT||||ADM|A0||||||||||||||||||||||||||20260506183000
+IN1|1|MEDICARE001|MC123456|Medicare Part A|PO Box 100000^^San Francisco^CA^94100||^PRN^PH^^1^800^6334227|||||||||Chambers^Lorraine^Victoria|01|19620519|8924 Greenback Ln^^Elk Grove^CA^95624
+```
+
+## 17. RDE^O11 - Antibiotic order from Sharp HealthCare
+
+```
+MSH|^~\&|ENSEMBLE|SHARP_MEM|PHARMACY|SHARP_MEM|20260508054500||RDE^O11^RDE_O11|HSM00017|P|2.5
+PID|1||MRN88990011^^^SHARP_MEM^MR||Kowalski^Anna^Elise^^Mrs.||19730225|F||2106-3^White^HL70005|841 Redwood St^^Vallejo^CA^94590||^PRN^PH^^1^707^5557890
+PV1||I|4WEST^4W08^01^SHARP_MEM||||9012345^Johal^Manpreet^J^^^MD
+ORC|NW|ORD89013500|||||^^^20260508054500^^R||20260508054500|NURSE007^Lopez^Maria||9012345^Johal^Manpreet^J^^^MD|4WEST
+RXE|^^^20260508060000^^Q6H^20260515054500|VANCOMYCIN^Vancomycin 1g^RXNORM|1000||mg|IVPB^IV Piggyback^HL70292|||||||||||||||||IV^Intravenous^HL70162
+RXR|IV^Intravenous^HL70162
+```
+
+## 18. ORU^R01 - Microbiology result from Providence
+
+```
+MSH|^~\&|ENSEMBLE|PROVSTJOSEPH|HEALTHSHARE|CALHIE|20260507180000||ORU^R01^ORU_R01|HSM00018|P|2.5
+PID|1||MRN66778899^^^PROVSTJOSEPH^MR||Fujimoto^Yuki^Harumi^^Ms.||19850906|F||2028-9^Asian^HL70005|3780 Clayton Rd^^Concord^CA^94521||^PRN^PH^^1^925^5553456
+PV1||I|3EAST^3E07^01^PROVSTJOSEPH||||7890123^Stafford^Gregory^S^^^MD
+ORC|RE|ORD89013600||||||^^^20260505100000^^R||20260507180000|MICRO001^Barnes^Patricia||7890123^Stafford^Gregory^S^^^MD
+OBR|1|ORD89013600||87070^Culture, Bacterial^CPT|||20260505100000|||||||20260505110000|URINE^Urine|7890123^Stafford^Gregory^S^^^MD||||||20260507180000|||F
+OBX|1|ST|87070^Culture, Bacterial^CPT||Escherichia coli >100,000 CFU/mL||||||F|||20260507170000
+OBX|2|ST|18907-4^Ampicillin Susceptibility^LN||Resistant||||||F|||20260507170000
+OBX|3|ST|18932-2^Ciprofloxacin Susceptibility^LN||Susceptible||||||F|||20260507170000
+OBX|4|ST|18996-7^Nitrofurantoin Susceptibility^LN||Susceptible||||||F|||20260507170000
+```
+
+## 19. MDM^T02 - Progress note via HealthShare
+
+```
+MSH|^~\&|HEALTHSHARE|KAISER_OAK|HSROUTER|CALHIE|20260508140000||MDM^T02^MDM_T02|HSM00019|P|2.5
+EVN|T02|20260508140000
+PID|1||MRN11223355^^^KAISER_OAK^MR||McBride^Sean^Thomas^^Mr.||19760830|M||2106-3^White^HL70005|305 Petaluma Blvd N^^Petaluma^CA^94952||^PRN^PH^^1^707^5552345
+PV1||O|INTMED^IM03^01^KAISER_OAK||||2345678^Nair^Priya^C^^^MD
+TXA|1|PN^Progress Note^HL70270|TX|20260508140000|2345678^Nair^Priya^C^^^MD||20260508140000|||||DOC20260508002|||AU||AV||||2345678^Nair^Priya^C^^^MD
+OBX|1|TX|11506-3^Progress Note^LN||Diabetes management follow-up. A1c improved from 8.2% to 7.4% on current regimen. Continue metformin 1000mg BID, added empagliflozin 10mg daily. Lipid panel shows elevated LDL, starting atorvastatin 20mg.||||||F
+```
+
+## 20. DFT^P03 - Charge transaction from Adventist Health
+
+```
+MSH|^~\&|ENSEMBLE|ADVENTIST_GL|BILLING|ADVENTIST_GL|20260508170000||DFT^P03^DFT_P03|HSM00020|P|2.5
+EVN|P03|20260508170000
+PID|1||MRN99001122^^^ADVENTIST_GL^MR||Jefferson^Tamara^Denise^^Ms.||19810714|F||2054-5^Black or African American^HL70005|503 Soscol Ave^^Napa^CA^94559||^PRN^PH^^1^707^5551234
+PV1||O|PRIM^PC01^01^ADVENTIST_GL||||0123456^Chung^David^L^^^MD
+FT1|1|CHG20260508001||20260508|20260508|CG|99214^Office visit, established patient^CPT||||1||||||0123456^Chung^David^L^^^MD||99214^Office visit, established patient^CPT
+FT1|2|CHG20260508002||20260508|20260508|CG|36415^Routine venipuncture^CPT||||1||||||0123456^Chung^David^L^^^MD||36415^Routine venipuncture^CPT
+```

@@ -1,0 +1,270 @@
+# Apotti (Epic) - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - Inpatient admission (sisäänkirjaus)
+
+```
+MSH|^~\&|APOTTI|HUS_HELSINKI|KANTA|THL|20260509083000||ADT^A01^ADT_A01|APOTTI000001|P|2.5|||AL|NE||FIN|UTF-8
+EVN|A01|20260509083000
+PID|||PT100001^^^HUS^MR||Virtanen^Matti^Johannes^^Herra||19780315|M|||Mannerheimintie 42^^Helsinki^^00100^FIN||^^PH^0912345678~^^CP^0401234567
+PV1||I|MEIL^OS10^Huone 401^Vuode 1^HUS||||DR100^Korhonen^Päivi^^^LKT^Lääkäri||||||||||||HOITO100001|||||||||||||||||||||||20260509083000
+PV2|||^Lonkkamurtuma, vasen|||||||||||||||||||||||A
+IN1|1|KELA|100001|KELA - Kansaneläkelaitos|Nordenskiöldinkatu 12^^Helsinki^^00250^FIN
+```
+
+---
+
+## 2. ADT^A02 - Patient transfer (siirto osastolta toiselle)
+
+```
+MSH|^~\&|APOTTI|HUS_HELSINKI|KANTA|THL|20260510091500||ADT^A02^ADT_A02|APOTTI000002|P|2.5|||AL|NE||FIN|UTF-8
+EVN|A02|20260510091500
+PID|||PT100001^^^HUS^MR||Virtanen^Matti^Johannes^^Herra||19780315|M|||Mannerheimintie 42^^Helsinki^^00100^FIN||^^PH^0912345678~^^CP^0401234567
+PV1||I|MEIL^KIR3^Huone 205^Vuode 2^HUS||||DR100^Korhonen^Päivi^^^LKT^Lääkäri||||||||||||HOITO100001|||||||||||||||||||||||20260509083000
+PV2|||^Lonkkamurtuma, vasen
+```
+
+---
+
+## 3. ADT^A03 - Patient discharge (uloskirjaus)
+
+```
+MSH|^~\&|APOTTI|HUS_HELSINKI|KANTA|THL|20260515140000||ADT^A03^ADT_A03|APOTTI000003|P|2.5|||AL|NE||FIN|UTF-8
+EVN|A03|20260515140000
+PID|||PT100001^^^HUS^MR||Virtanen^Matti^Johannes^^Herra||19780315|M|||Mannerheimintie 42^^Helsinki^^00100^FIN||^^PH^0912345678~^^CP^0401234567
+PV1||I|MEIL^KIR3^Huone 205^Vuode 2^HUS||||DR100^Korhonen^Päivi^^^LKT^Lääkäri||||||||||||HOITO100001|||||||||||||||||||||||20260509083000|20260515140000
+```
+
+---
+
+## 4. ADT^A04 - Outpatient registration (poliklinikkarekisteröinti)
+
+```
+MSH|^~\&|APOTTI|HUS_JORVI|KANTA|THL|20260509100000||ADT^A04^ADT_A01|APOTTI000004|P|2.5|||AL|NE||FIN|UTF-8
+EVN|A04|20260509100000
+PID|||PT200002^^^HUS^MR||Nieminen^Anna^Kristiina^^Rouva||19850622|F|||Leppävaarankatu 15^^Espoo^^02600^FIN||^^CP^0509876543
+PV1||O|JORV^POLI2^Vastaanottohuone 3^^HUS||||DR201^Mäkinen^Juha^^^LKT^Lääkäri||||||||||||KÄYNTI200001|||||||||||||||||||||||20260509100000
+IN1|1|LAHITAPIOLA|200002|LähiTapiola Vakuutus|Revontulenkuja 1^^Espoo^^02100^FIN
+```
+
+---
+
+## 5. ADT^A08 - Update patient information (potilastietojen päivitys)
+
+```
+MSH|^~\&|APOTTI|HUS_HELSINKI|KANTA|THL|20260509110000||ADT^A08^ADT_A01|APOTTI000005|P|2.5|||AL|NE||FIN|UTF-8
+EVN|A08|20260509110000
+PID|||PT300003^^^HUS^MR||Hämäläinen^Liisa^Marjatta^^Rouva||19600418|F|||Aleksanterinkatu 7^^Helsinki^^00100^FIN||^^PH^0913579246~^^CP^0441357924
+PV1||I|MEIL^SIS1^Huone 112^Vuode 1^HUS||||DR102^Lehtonen^Markku^^^LKT^Lääkäri||||||||||||HOITO300001|||||||||||||||||||||||20260507080000
+NK1|1|Hämäläinen^Kalle||^^PH^0913579247~^^CP^0441357925||EC
+```
+
+---
+
+## 6. ADT^A31 - Update person information (henkilötietojen päivitys)
+
+```
+MSH|^~\&|APOTTI|HUS_HELSINKI|VRK|DVV|20260509120000||ADT^A31^ADT_A05|APOTTI000006|P|2.5|||AL|NE||FIN|UTF-8
+EVN|A31|20260509120000
+PID|||PT400004^^^HUS^MR~150465-123A^^^DVV^NNFIN||Koskinen^Eero^Tapani^^Herra||19650415|M|||Hämeenkatu 33^^Tampere^^33100^FIN||^^CP^0507654321
+PV1||N
+```
+
+---
+
+## 7. ADT^A40 - Merge patient (potilastietojen yhdistäminen)
+
+```
+MSH|^~\&|APOTTI|HUS_HELSINKI|KANTA|THL|20260509130000||ADT^A40^ADT_A39|APOTTI000007|P|2.5|||AL|NE||FIN|UTF-8
+EVN|A40|20260509130000
+PID|||PT500005^^^HUS^MR||Järvinen^Sari^Helena^^Rouva||19750830|F|||Fredrikinkatu 60^^Helsinki^^00100^FIN||^^CP^0401122334
+MRG|PT500099^^^HUS^MR
+PV1||N
+```
+
+---
+
+## 8. ORM^O01 - Laboratory order (laboratoriotilaus)
+
+```
+MSH|^~\&|APOTTI|HUS_HELSINKI|HUSLAB|HUS|20260509090000||ORM^O01^ORM_O01|APOTTI000008|P|2.5|||AL|NE||FIN|UTF-8
+PID|||PT600006^^^HUS^MR~010382-456B^^^DVV^NNFIN||Laine^Mikko^Antero^^Herra||19820301|M|||Bulevardi 22^^Helsinki^^00120^FIN||^^CP^0401223344
+PV1||O|MEIL^POLI1^Vastaanottohuone 5^^HUS||||DR103^Heikkinen^Tuula^^^LKT^Lääkäri||||||||||||KÄYNTI600001
+ORC|NW|ORD600001^APOTTI|||||^^^20260509090000^^R||20260509090000|DR103^Heikkinen^Tuula^^^LKT^Lääkäri
+OBR|1|ORD600001^APOTTI||2741^B-PVK+T^HUSLAB|||20260509090000||||||||DR103^Heikkinen^Tuula^^^LKT^Lääkäri
+OBR|2|ORD600001^APOTTI||4587^fP-Gluk^HUSLAB|||20260509090000||||||||DR103^Heikkinen^Tuula^^^LKT^Lääkäri
+OBR|3|ORD600001^APOTTI||4520^P-CRP^HUSLAB|||20260509090000||||||||DR103^Heikkinen^Tuula^^^LKT^Lääkäri
+```
+
+---
+
+## 9. ORU^R01 - Laboratory result (laboratoriovastaus)
+
+```
+MSH|^~\&|HUSLAB|HUS|APOTTI|HUS_HELSINKI|20260509143000||ORU^R01^ORU_R01|HUSLAB000001|P|2.5|||AL|NE||FIN|UTF-8
+PID|||PT600006^^^HUS^MR~010382-456B^^^DVV^NNFIN||Laine^Mikko^Antero^^Herra||19820301|M|||Bulevardi 22^^Helsinki^^00120^FIN||^^CP^0401223344
+PV1||O|MEIL^POLI1^Vastaanottohuone 5^^HUS||||DR103^Heikkinen^Tuula^^^LKT^Lääkäri||||||||||||KÄYNTI600001
+ORC|RE|ORD600001^APOTTI|RES600001^HUSLAB||||^^^20260509090000^^R||20260509143000
+OBR|1|ORD600001^APOTTI|RES600001^HUSLAB|2741^B-PVK+T^HUSLAB|||20260509091500|||||||20260509091500|^^B|DR103^Heikkinen^Tuula^^^LKT^Lääkäri||||||20260509143000|||F
+OBX|1|NM|6768^B-Leuk^HUSLAB||7.2|10E9/l|3.4-8.2||||F|||20260509143000
+OBX|2|NM|2171^B-Eryt^HUSLAB||4.85|10E12/l|4.25-5.70||||F|||20260509143000
+OBX|3|NM|1552^B-Hb^HUSLAB||148|g/l|134-167||||F|||20260509143000
+OBX|4|NM|2798^B-Trom^HUSLAB||245|10E9/l|150-360||||F|||20260509143000
+```
+
+---
+
+## 10. ORU^R01 - CRP result with abnormal flag (poikkeava CRP-tulos)
+
+```
+MSH|^~\&|HUSLAB|HUS|APOTTI|HUS_HELSINKI|20260509150000||ORU^R01^ORU_R01|HUSLAB000002|P|2.5|||AL|NE||FIN|UTF-8
+PID|||PT700007^^^HUS^MR~230955-789C^^^DVV^NNFIN||Korhonen^Aino^Elina^^Rouva||19550923|F|||Töölönkatu 18^^Helsinki^^00260^FIN||^^PH^0912233445
+PV1||I|MEIL^INF1^Huone 308^Vuode 2^HUS||||DR104^Salonen^Pekka^^^LKT^Lääkäri||||||||||||HOITO700001
+ORC|RE|ORD700001^APOTTI|RES700001^HUSLAB||||^^^20260509080000^^R||20260509150000
+OBR|1|ORD700001^APOTTI|RES700001^HUSLAB|4520^P-CRP^HUSLAB|||20260509082000|||||||20260509082000|^^B|DR104^Salonen^Pekka^^^LKT^Lääkäri||||||20260509150000|||F
+OBX|1|NM|4520^P-CRP^HUSLAB||125|mg/l|<3|HH|||F|||20260509150000
+```
+
+---
+
+## 11. SIU^S12 - New appointment (ajanvaraus)
+
+```
+MSH|^~\&|APOTTI|HUS_HELSINKI|APOTTI_SCHED|HUS|20260509100000||SIU^S12^SIU_S12|APOTTI000009|P|2.5|||AL|NE||FIN|UTF-8
+SCH|APT800001|APT800001||||ROUTINE^Normaali^HL70276|FOLLOWUP^Kontrollikäynti^HL70277|DOCTOR^Lääkärin vastaanotto|30|min|^^^20260520093000^20260520100000
+PID|||PT800008^^^HUS^MR~120790-234D^^^DVV^NNFIN||Mäkelä^Tuomas^Petteri^^Herra||19900712|M|||Kaivokatu 8^^Helsinki^^00100^FIN||^^CP^0451234567
+PV1||O|MEIL^POLI3^Vastaanottohuone 7^^HUS||||DR105^Rantanen^Kirsi^^^LKT^Lääkäri
+RGS|1
+AIS|1||ORTPOLI^Ortopedian poliklinikka^APOTTI|20260520093000|30|min
+AIP|1||DR105^Rantanen^Kirsi^^^LKT^Lääkäri
+```
+
+---
+
+## 12. SIU^S14 - Appointment modification (ajanvarauksen muutos)
+
+```
+MSH|^~\&|APOTTI|HUS_HELSINKI|APOTTI_SCHED|HUS|20260512080000||SIU^S14^SIU_S12|APOTTI000010|P|2.5|||AL|NE||FIN|UTF-8
+SCH|APT800001|APT800001||||ROUTINE^Normaali^HL70276|FOLLOWUP^Kontrollikäynti^HL70277|DOCTOR^Lääkärin vastaanotto|30|min|^^^20260522093000^20260522100000
+PID|||PT800008^^^HUS^MR~120790-234D^^^DVV^NNFIN||Mäkelä^Tuomas^Petteri^^Herra||19900712|M|||Kaivokatu 8^^Helsinki^^00100^FIN||^^CP^0451234567
+PV1||O|MEIL^POLI3^Vastaanottohuone 7^^HUS||||DR105^Rantanen^Kirsi^^^LKT^Lääkäri
+RGS|1
+AIS|1||ORTPOLI^Ortopedian poliklinikka^APOTTI|20260522093000|30|min
+AIP|1||DR105^Rantanen^Kirsi^^^LKT^Lääkäri
+```
+
+---
+
+## 13. MDM^T02 - Document notification with content (asiakirjailmoitus)
+
+```
+MSH|^~\&|APOTTI|HUS_HELSINKI|KANTA|THL|20260509160000||MDM^T02^MDM_T02|APOTTI000011|P|2.5|||AL|NE||FIN|UTF-8
+EVN|T02|20260509160000
+PID|||PT900009^^^HUS^MR~050575-567E^^^DVV^NNFIN||Heikkinen^Raija^Anneli^^Rouva||19750505|F|||Runeberginkatu 25^^Helsinki^^00100^FIN||^^CP^0409876543
+PV1||I|MEIL^KIR2^Huone 310^Vuode 1^HUS||||DR106^Virtanen^Jarkko^^^LKT^Lääkäri||||||||||||HOITO900001
+TXA|1|OP^Leikkauskertomus|TX|||20260509160000||||||DOC900001||||AU
+OBX|1|TX|11504-8^Surgical operation note^LN||Potilaalle suoritettiin vasemman lonkan tekonivelleikkaus. Toimenpide sujui komplikaatioitta.||||||F
+```
+
+---
+
+## 14. ORU^R01 - Microbiology result (mikrobiologinen tulos)
+
+```
+MSH|^~\&|HUSLAB|HUS|APOTTI|HUS_HELSINKI|20260509170000||ORU^R01^ORU_R01|HUSLAB000003|P|2.5|||AL|NE||FIN|UTF-8
+PID|||PT101010^^^HUS^MR~281060+345F^^^DVV^NNFIN||Lehtonen^Veikko^Kalevi^^Herra||19601028|M|||Kirkkokatu 14^^Turku^^20100^FIN||^^PH^0221234567
+PV1||I|MEIL^INF2^Huone 415^Vuode 1^HUS||||DR107^Ahonen^Minna^^^LKT^Lääkäri||||||||||||HOITO101001
+ORC|RE|ORD101001^APOTTI|RES101001^HUSLAB||||^^^20260507090000^^R||20260509170000
+OBR|1|ORD101001^APOTTI|RES101001^HUSLAB|1155^Pu-BaktVi^HUSLAB|||20260507091000|||||||20260507091000|^^PU|DR107^Ahonen^Minna^^^LKT^Lääkäri||||||20260509170000|||F
+OBX|1|CE|1155^Pu-BaktVi^HUSLAB||SAUR^Staphylococcus aureus^HUSLAB||||||F|||20260509170000
+OBX|2|ST|ABRES^Herkkyys^HUSLAB|1|Oksasilliini S, Klindamysiini S, Vankomysiini S||||||F|||20260509170000
+```
+
+---
+
+## 15. ORU^R01 - Pathology report with base64 PDF (patologian lausunto PDF-liitteellä)
+
+```
+MSH|^~\&|HUSLAB_PAT|HUS|APOTTI|HUS_HELSINKI|20260509180000||ORU^R01^ORU_R01|HUSLAB000004|P|2.5|||AL|NE||FIN|UTF-8
+PID|||PT111011^^^HUS^MR~150385-678G^^^DVV^NNFIN||Salminen^Kaarina^Irene^^Rouva||19850315|F|||Mechelininkatu 10^^Helsinki^^00100^FIN||^^CP^0407654321
+PV1||O|MEIL^POLI4^Vastaanottohuone 2^^HUS||||DR108^Laaksonen^Ville^^^LKT^Lääkäri||||||||||||KÄYNTI111001
+ORC|RE|ORD111001^APOTTI|RES111001^HUSLAB_PAT||||^^^20260505100000^^R||20260509180000
+OBR|1|ORD111001^APOTTI|RES111001^HUSLAB_PAT|60570-9^Pathology report^LN|||20260505101500|||||||20260505101500|^^Biopsia|DR108^Laaksonen^Ville^^^LKT^Lääkäri||||||20260509180000|||F
+OBX|1|TX|22634-0^Pathology report text^LN||Histologinen diagnoosi: Fibroadenooma mammae sin. Ei maligniteettia.||||||F|||20260509180000
+OBX|2|ED|PDF^Patologian lausunto^L||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UK||||||F|||20260509180000
+```
+
+---
+
+## 16. ORM^O01 - Radiology order (röntgentilaus)
+
+```
+MSH|^~\&|APOTTI|HUS_JORVI|SECTRA_RIS|HUS_RAD|20260509113000||ORM^O01^ORM_O01|APOTTI000012|P|2.5|||AL|NE||FIN|UTF-8
+PID|||PT121012^^^HUS^MR~220498-901H^^^DVV^NNFIN||Lahtinen^Ville^Oskari^^Herra||19980422|M|||Itäkatu 1^^Helsinki^^00930^FIN||^^CP^0401122335
+PV1||E|JORV^PPKL^Tutkimushuone 1^^HUS||||DR109^Nurmi^Sanna^^^LKT^Lääkäri||||||||||||KÄYNTI121001
+ORC|NW|ORD121001^APOTTI|||||^^^20260509113000^^S||20260509113000|DR109^Nurmi^Sanna^^^LKT^Lääkäri
+OBR|1|ORD121001^APOTTI||71020^Thorax AP+LAT^RADLEX|||20260509113000||||||||DR109^Nurmi^Sanna^^^LKT^Lääkäri||||||||||TRAUMA^Vammamekanismi
+```
+
+---
+
+## 17. ORU^R01 - Radiology report with base64 PDF (radiologinen lausunto PDF-liitteellä)
+
+```
+MSH|^~\&|SECTRA_RIS|HUS_RAD|APOTTI|HUS_JORVI|20260509153000||ORU^R01^ORU_R01|SECTRA000001|P|2.5|||AL|NE||FIN|UTF-8
+PID|||PT121012^^^HUS^MR~220498-901H^^^DVV^NNFIN||Lahtinen^Ville^Oskari^^Herra||19980422|M|||Itäkatu 1^^Helsinki^^00930^FIN||^^CP^0401122335
+PV1||E|JORV^PPKL^Tutkimushuone 1^^HUS||||DR109^Nurmi^Sanna^^^LKT^Lääkäri||||||||||||KÄYNTI121001
+ORC|RE|ORD121001^APOTTI|RES121001^SECTRA_RIS||||^^^20260509113000^^S||20260509153000
+OBR|1|ORD121001^APOTTI|RES121001^SECTRA_RIS|71020^Thorax AP+LAT^RADLEX|||20260509120000|||||||20260509120000|^^Thorax|DR110^Kallio^Risto^^^RAD^Radiologi||||||20260509153000|||F
+OBX|1|TX|18748-4^Diagnostic imaging study^LN||Keuhkokuvassa ei havaita infiltraatteja. Sydämen koko normaali. Ei pleuranestettä.||||||F|||20260509153000
+OBX|2|ED|PDF^Radiologinen lausunto^L||^application^pdf^Base64^JVBERi0xLjUKJeLjz9MKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKL01hcmtJbmZvIDw8Ci9NYXJrZWQgdHJ1ZQo+PgovTGFuZyAoZmkpCj4+CmVuZG9iagoyIDAgb2JqCjw8Ci9UeXBlIC9QYWdlcwo+PgplbmRvYmoK||||||F|||20260509153000
+```
+
+---
+
+## 18. ORU^R01 - Blood gas results (verikaasut)
+
+```
+MSH|^~\&|HUSLAB|HUS|APOTTI|HUS_HELSINKI|20260509162000||ORU^R01^ORU_R01|HUSLAB000005|P|2.5|||AL|NE||FIN|UTF-8
+PID|||PT131013^^^HUS^MR~090840+012J^^^DVV^NNFIN||Mäkinen^Erkki^Olavi^^Herra||19400809|M|||Porthaninkatu 5^^Helsinki^^00530^FIN||^^PH^0914567890
+PV1||E|MEIL^TEHO^Paikka 3^^HUS||||DR111^Tuominen^Elina^^^LKT^Lääkäri||||||||||||HOITO131001
+ORC|RE|ORD131001^APOTTI|RES131001^HUSLAB||||^^^20260509155000^^S||20260509162000
+OBR|1|ORD131001^APOTTI|RES131001^HUSLAB|24338-6^aB-Verikaasuanalyysi^LN|||20260509155500|||||||20260509155500|^^aB|DR111^Tuominen^Elina^^^LKT^Lääkäri||||||20260509162000|||F
+OBX|1|NM|2744-1^aB-pH^LN||7.38||7.35-7.45||||F|||20260509162000
+OBX|2|NM|2019-8^aB-pCO2^LN||5.1|kPa|4.7-6.0||||F|||20260509162000
+OBX|3|NM|2703-7^aB-pO2^LN||11.2|kPa|11.0-14.4||||F|||20260509162000
+OBX|4|NM|1959-6^aB-HCO3^LN||23.5|mmol/l|22.0-26.0||||F|||20260509162000
+OBX|5|NM|1925-7^aB-BE^LN||-1.2|mmol/l|-2.5-2.5||||F|||20260509162000
+```
+
+---
+
+## 19. ORM^O01 - Medication order (lääketilaus)
+
+```
+MSH|^~\&|APOTTI|HUS_HELSINKI|APTEEKKI|HUS_SAIRAALA_APT|20260509141000||ORM^O01^ORM_O01|APOTTI000013|P|2.5|||AL|NE||FIN|UTF-8
+PID|||PT141014^^^HUS^MR~170295-345K^^^DVV^NNFIN||Rantala^Katri^Johanna^^Rouva||19950217|F|||Unioninkatu 39^^Helsinki^^00170^FIN||^^CP^0401234568
+PV1||I|MEIL^SIS2^Huone 218^Vuode 2^HUS||||DR112^Leppänen^Antti^^^LKT^Lääkäri||||||||||||HOITO141001
+ORC|NW|ORD141001^APOTTI|||||^^^20260509141000^^R||20260509141000|DR112^Leppänen^Antti^^^LKT^Lääkäri
+OBR|1|ORD141001^APOTTI||LAAKE^Lääketilaus^APOTTI|||20260509141000||||||||DR112^Leppänen^Antti^^^LKT^Lääkäri
+RXO|R06AA02^Doksylamiini^ATC||10|mg||PO^Suun kautta^HL70162|^^^20260509180000^^R|10|mg
+```
+
+---
+
+## 20. ORU^R01 - Comprehensive metabolic panel (laaja metabolinen paneeli)
+
+```
+MSH|^~\&|HUSLAB|HUS|APOTTI|HUS_HELSINKI|20260509173000||ORU^R01^ORU_R01|HUSLAB000006|P|2.5|||AL|NE||FIN|UTF-8
+PID|||PT151015^^^HUS^MR~030578-890L^^^DVV^NNFIN||Rinne^Johanna^Elisa^^Rouva||19780503|F|||Tehtaankatu 12^^Helsinki^^00140^FIN||^^CP^0409988776
+PV1||O|MEIL^POLI5^Vastaanottohuone 9^^HUS||||DR113^Kinnunen^Harri^^^LKT^Lääkäri||||||||||||KÄYNTI151001
+ORC|RE|ORD151001^APOTTI|RES151001^HUSLAB||||^^^20260509090000^^R||20260509173000
+OBR|1|ORD151001^APOTTI|RES151001^HUSLAB|24323-8^Laaja metabolinen paneeli^LN|||20260509092000|||||||20260509092000|^^S|DR113^Kinnunen^Harri^^^LKT^Lääkäri||||||20260509173000|||F
+OBX|1|NM|2947-0^fP-Na^LN||141|mmol/l|137-145||||F|||20260509173000
+OBX|2|NM|6298-4^fP-K^LN||4.2|mmol/l|3.5-5.0||||F|||20260509173000
+OBX|3|NM|2160-0^fP-Krea^LN||72|umol/l|50-90||||F|||20260509173000
+OBX|4|NM|1742-6^fP-ALAT^LN||28|U/l|<40||||F|||20260509173000
+OBX|5|NM|1920-8^fP-ASAT^LN||24|U/l|<35||||F|||20260509173000
+OBX|6|NM|14879-1^fP-Gluk^LN||5.4|mmol/l|4.0-6.0||||F|||20260509173000
+```

@@ -1,0 +1,263 @@
+# Fujitsu HOPE LifeMark-MX - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - inpatient admission (入院登録)
+
+```
+MSH|^~\&|LifeMark-MX|金沢大学附属病院|SS-MIX2|地域連携|20260401090000||ADT^A01^ADT_A01|LM20260401090000001|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A01|20260401090000
+PID|||PAT100234^^^金沢大学病院^PI||池田^裕子^^^^^L||19720308|F|||石川県金沢市宝町13-1^^金沢市^石川県^920-8641^JPN^H||^PRN^PH^^81^76^2658000||JPN|M|||||||||||||||||||N
+PV1||I|6W^601^1^金沢大学病院^^^^N||||D100234^宮本^誠一^^^^^L^^^DR|||INT||||A|||V100234|||||||||||||||||||||||||||20260401090000
+IN1|1||23456789|全国健康保険協会|石川県金沢市広岡3-1-1||||||||||||||||||||||||||||||||||||||||8
+```
+
+---
+
+## 2. ADT^A03 - discharge (退院)
+
+```
+MSH|^~\&|LifeMark-MX|金沢大学附属病院|SS-MIX2|地域連携|20260415140000||ADT^A03^ADT_A03|LM20260415140000002|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A03|20260415140000
+PID|||PAT100234^^^金沢大学病院^PI||池田^裕子^^^^^L||19720308|F|||石川県金沢市宝町13-1^^金沢市^石川県^920-8641^JPN^H||^PRN^PH^^81^76^2658000||JPN|M
+PV1||I|6W^601^1^金沢大学病院^^^^N||||D100234^宮本^誠一^^^^^L^^^DR|||INT||||||||V100234|||||||||||||||||||||||||||20260415140000
+```
+
+---
+
+## 3. ORM^O01 - pharmacy order (処方オーダ)
+
+```
+MSH|^~\&|LifeMark-MX|金沢大学附属病院|薬剤部|金沢大学病院|20260402080000||ORM^O01^ORM_O01|LM20260402080000003|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT100234^^^金沢大学病院^PI||池田^裕子^^^^^L||19720308|F
+PV1||I|6W^601^1^金沢大学病院^^^^N||||D100234^宮本^誠一^^^^^L^^^DR
+ORC|NW|ORD20260402001^LifeMark-MX||||||||||D100234^宮本^誠一^^^^^L^^^DR
+RXO|610418029^ロキソプロフェンNa錠60mg^HOT9|||60||mg||PO^経口^HL70162|||||||||||||||D100234^宮本^誠一^^^^^L^^^DR
+TQ1|||1^^D&日&JAHIS0001~1^^D&日&JAHIS0001~1^^D&日&JAHIS0001|||||20260402|||7^日^JAHIS0002
+```
+
+---
+
+## 4. OML^O33 - laboratory order (検体検査オーダ)
+
+```
+MSH|^~\&|LifeMark-MX|金沢大学附属病院|検査部|金沢大学病院|20260402090000||OML^O33^OML_O33|LM20260402090000004|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT100234^^^金沢大学病院^PI||池田^裕子^^^^^L||19720308|F
+PV1||I|6W^601^1^金沢大学病院^^^^N||||D100234^宮本^誠一^^^^^L^^^DR
+SPM|1|||SER^血清^HL70487|||||||||||20260402090000
+ORC|NW|LAB20260402001^LifeMark-MX||||||||||D100234^宮本^誠一^^^^^L^^^DR
+OBR|1|LAB20260402001^LifeMark-MX||3B035000002327201^CRP定量^JC10|R||20260402090000
+OBR|2|LAB20260402002^LifeMark-MX||3A010000002327101^HbA1c(NGSP)^JC10|R||20260402090000
+```
+
+---
+
+## 5. ORU^R01 - laboratory result (検査結果)
+
+```
+MSH|^~\&|検査部|金沢大学病院|LifeMark-MX|金沢大学病院|20260402160000||ORU^R01^ORU_R01|LAB20260402160000005|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT100234^^^金沢大学病院^PI||池田^裕子^^^^^L||19720308|F
+PV1||I|6W^601^1^金沢大学病院^^^^N||||D100234^宮本^誠一^^^^^L^^^DR
+ORC|RE|LAB20260402001^LifeMark-MX||||||||||D100234^宮本^誠一^^^^^L^^^DR
+OBR|1|LAB20260402001^LifeMark-MX||3B035000002327201^CRP定量^JC10|R||20260402090000|||||||20260402090000||D100234^宮本^誠一^^^^^L^^^DR||||||||20260402160000|||F
+OBX|1|NM|3B035000002327201^CRP定量^JC10||0.85|mg/dL|0.00-0.30|H|||F|||20260402160000
+OBX|2|NM|3A010000002327101^HbA1c(NGSP)^JC10||5.8|%|4.6-6.2|N|||F|||20260402160000
+OBX|3|NM|2A020000001930101^AST(GOT)^JC10||28|U/L|13-30|N|||F|||20260402160000
+OBX|4|NM|2A030000001930101^ALT(GPT)^JC10||22|U/L|10-42|N|||F|||20260402160000
+```
+
+---
+
+## 6. ORU^R01 - ECG report with embedded PDF (心電図レポート)
+
+```
+MSH|^~\&|生理検査部|金沢大学病院|LifeMark-MX|金沢大学病院|20260403110000||ORU^R01^ORU_R01|ECG20260403110000006|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT100234^^^金沢大学病院^PI||池田^裕子^^^^^L||19720308|F
+PV1||I|6W^601^1^金沢大学病院^^^^N||||D100234^宮本^誠一^^^^^L^^^DR
+ORC|RE|ECG20260403001^LifeMark-MX
+OBR|1|ECG20260403001^LifeMark-MX||93000^心電図12誘導^CPT|R||20260403100000|||||||20260403100000||D100234^宮本^誠一^^^^^L^^^DR||||||||20260403110000|||F
+OBX|1|TX|93000^心電図12誘導^CPT|1|洞調律、心拍数72/分。ST-T変化なし。正常心電図。||||||F|||20260403110000
+OBX|2|ED|PDF^心電図レポートPDF^L|1|^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA4NDIgNTk1XSAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA0NCA+PgpzdHJlYW0KQlQKL0YxIDEyIFRmCjEwMCA3MDAgVGQKKEVDRyBSZXBvcnQpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKeHJlZgowIDUKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjA2IDAwMDAwIG4gCnRyYWlsZXIKPDwgL1NpemUgNSAvUm9vdCAxIDAgUiA+PgpzdGFydHhyZWYKMzAwCiUlRU9GCg==||||||F|||20260403110000
+```
+
+---
+
+## 7. ADT^A08 - patient information update (患者情報更新)
+
+```
+MSH|^~\&|LifeMark-MX|金沢大学附属病院|SS-MIX2|地域連携|20260405090000||ADT^A08^ADT_A01|LM20260405090000007|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A08|20260405090000
+PID|||PAT100234^^^金沢大学病院^PI||池田^裕子^^^^^L||19720308|F|||富山県富山市新総曲輪1-7^^富山市^富山県^930-8501^JPN^H||^PRN^PH^^81^76^4318111||JPN|M|||||||||||||||||||N
+PV1||I|6W^601^1^金沢大学病院^^^^N||||D100234^宮本^誠一^^^^^L^^^DR|||INT||||||||V100234|||||||||||||||||||||||||||20260401090000
+IN1|1||23456789|全国健康保険協会|石川県金沢市広岡3-1-1||||||||||||||||||||||||||||||||||||||||8
+```
+
+---
+
+## 8. ORM^O01 - radiology order CT (CT検査オーダ)
+
+```
+MSH|^~\&|LifeMark-MX|金沢大学附属病院|放射線部|金沢大学病院|20260404080000||ORM^O01^ORM_O01|LM20260404080000008|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT100234^^^金沢大学病院^PI||池田^裕子^^^^^L||19720308|F
+PV1||I|6W^601^1^金沢大学病院^^^^N||||D100234^宮本^誠一^^^^^L^^^DR
+ORC|NW|RAD20260404001^LifeMark-MX||||||||||D100234^宮本^誠一^^^^^L^^^DR
+OBR|1|RAD20260404001^LifeMark-MX||74177^腹部CT造影^CPT|R||20260404080000|||||||20260404080000||D100234^宮本^誠一^^^^^L^^^DR
+```
+
+---
+
+## 9. ORU^R01 - CT report (CT検査レポート)
+
+```
+MSH|^~\&|放射線部|金沢大学病院|LifeMark-MX|金沢大学病院|20260404160000||ORU^R01^ORU_R01|RAD20260404160000009|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT100234^^^金沢大学病院^PI||池田^裕子^^^^^L||19720308|F
+PV1||I|6W^601^1^金沢大学病院^^^^N||||D100234^宮本^誠一^^^^^L^^^DR
+ORC|RE|RAD20260404001^LifeMark-MX
+OBR|1|RAD20260404001^LifeMark-MX||74177^腹部CT造影^CPT|R||20260404090000|||||||20260404090000||D100234^宮本^誠一^^^^^L^^^DR||||||||20260404160000|||F
+OBX|1|TX|74177^腹部CT造影^CPT|1|肝臓：大きさ正常。脂肪肝所見なし。胆嚢：異常なし。膵臓：正常。腎臓：両側正常。||||||F|||20260404160000
+OBX|2|TX|74177^腹部CT造影^CPT|2|結論：腹部CT造影にて明らかな異常所見を認めず。||||||F|||20260404160000
+```
+
+---
+
+## 10. ADT^A02 - patient transfer (転棟)
+
+```
+MSH|^~\&|LifeMark-MX|金沢大学附属病院|SS-MIX2|地域連携|20260408100000||ADT^A02^ADT_A02|LM20260408100000010|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A02|20260408100000
+PID|||PAT100234^^^金沢大学病院^PI||池田^裕子^^^^^L||19720308|F|||富山県富山市新総曲輪1-7^^富山市^富山県^930-8501^JPN^H||^PRN^PH^^81^76^4318111||JPN|M
+PV1||I|7E^702^1^金沢大学病院^^^^N||||D100234^宮本^誠一^^^^^L^^^DR|||INT||6W^601^1^金沢大学病院^^^^N|||||||V100234|||||||||||||||||||||||||||20260408100000
+```
+
+---
+
+## 11. ORU^R01 - microbiology result (微生物検査結果)
+
+```
+MSH|^~\&|検査部|金沢大学病院|LifeMark-MX|金沢大学病院|20260406140000||ORU^R01^ORU_R01|MIC20260406140000011|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT100234^^^金沢大学病院^PI||池田^裕子^^^^^L||19720308|F
+PV1||I|6W^601^1^金沢大学病院^^^^N||||D100234^宮本^誠一^^^^^L^^^DR
+ORC|RE|MIC20260406001^LifeMark-MX
+OBR|1|MIC20260406001^LifeMark-MX||87070^培養同定^CPT|R||20260404090000|||||||20260404090000||D100234^宮本^誠一^^^^^L^^^DR||||||||20260406140000|||F
+OBX|1|TX|87070^培養同定^CPT|1|検体：喀痰。常在菌のみ検出。病原性菌陰性。||||||F|||20260406140000
+OBX|2|TX|87070^培養同定^CPT|2|薬剤感受性試験：不要||||||F|||20260406140000
+```
+
+---
+
+## 12. MDM^T02 - discharge summary with CDA attachment (退院サマリ)
+
+```
+MSH|^~\&|LifeMark-MX|金沢大学附属病院|SS-MIX2|地域連携|20260415160000||MDM^T02^MDM_T02|LM20260415160000012|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|T02|20260415160000
+PID|||PAT100234^^^金沢大学病院^PI||池田^裕子^^^^^L||19720308|F
+PV1||I|7E^702^1^金沢大学病院^^^^N||||D100234^宮本^誠一^^^^^L^^^DR
+TXA|1|DS^退院時サマリ^HL70270|TX|20260415160000|D100234^宮本^誠一^^^^^L^^^DR||20260415160000||||||DOC20260415001||||||AU
+OBX|1|ED|DS^退院時サマリ^HL70270|1|^text^xml^Base64^PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPENsaW5pY2FsRG9jdW1lbnQgeG1sbnM9InVybjpobDctb3JnOnYzIj4KICA8dGl0bGU+6YCA6Zmi5pmC44K144Oe44OqPC90aXRsZT4KICA8ZWZmZWN0aXZlVGltZSB2YWx1ZT0iMjAyNjA0MTUiLz4KICA8Y29tcG9uZW50PgogICAgPHN0cnVjdHVyZWRCb2R5PgogICAgICA8Y29tcG9uZW50PgogICAgICAgIDxzZWN0aW9uPgogICAgICAgICAgPHRpdGxlPuS4u+eXhTwvdGl0bGU+CiAgICAgICAgICA8dGV4dD7oirHnmYDohY7po6jnhpc8L3RleHQ+CiAgICAgICAgPC9zZWN0aW9uPgogICAgICA8L2NvbXBvbmVudD4KICAgIDwvc3RydWN0dXJlZEJvZHk+CiAgPC9jb21wb25lbnQ+CjwvQ2xpbmljYWxEb2N1bWVudD4K||||||F|||20260415160000
+```
+
+---
+
+## 13. SIU^S12 - appointment scheduled (予約登録)
+
+```
+MSH|^~\&|LifeMark-MX|金沢大学附属病院|外来予約|金沢大学病院|20260410100000||SIU^S12^SIU_S12|LM20260410100000013|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+SCH|APT20260420001^LifeMark-MX|APT20260420001^LifeMark-MX|||||外来再診^外来予約^L|||||^^20^20260420100000^20260420102000
+PID|||PAT100234^^^金沢大学病院^PI||池田^裕子^^^^^L||19720308|F
+PV1||O|内科外来^2^1^金沢大学病院^^^^N||||D100234^宮本^誠一^^^^^L^^^DR
+AIG|1||D100234^宮本^誠一^^^^^L^^^DR
+AIL|1||内科外来^2^1^金沢大学病院
+```
+
+---
+
+## 14. ORM^O01 - injection order (注射オーダ)
+
+```
+MSH|^~\&|LifeMark-MX|金沢大学附属病院|薬剤部|金沢大学病院|20260403080000||ORM^O01^ORM_O01|LM20260403080000014|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT100234^^^金沢大学病院^PI||池田^裕子^^^^^L||19720308|F
+PV1||I|6W^601^1^金沢大学病院^^^^N||||D100234^宮本^誠一^^^^^L^^^DR
+ORC|NW|INJ20260403001^LifeMark-MX||||||||||D100234^宮本^誠一^^^^^L^^^DR
+RXO|620004501^ソリタT3号輸液500mL^HOT9|||500||mL||IV^静脈内^HL70162|||||||||||||||D100234^宮本^誠一^^^^^L^^^DR
+TQ1|||||||||20260403080000|20260403200000
+```
+
+---
+
+## 15. ORU^R01 - ultrasound report (超音波レポート)
+
+```
+MSH|^~\&|生理検査部|金沢大学病院|LifeMark-MX|金沢大学病院|20260405150000||ORU^R01^ORU_R01|US20260405150000015|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT100234^^^金沢大学病院^PI||池田^裕子^^^^^L||19720308|F
+PV1||I|6W^601^1^金沢大学病院^^^^N||||D100234^宮本^誠一^^^^^L^^^DR
+ORC|RE|US20260405001^LifeMark-MX
+OBR|1|US20260405001^LifeMark-MX||76700^腹部超音波^CPT|R||20260405140000|||||||20260405140000||D100234^宮本^誠一^^^^^L^^^DR||||||||20260405150000|||F
+OBX|1|TX|76700^腹部超音波^CPT|1|肝臓：エコー輝度正常。胆嚢：壁肥厚なし。結石なし。膵臓：描出良好、異常なし。||||||F|||20260405150000
+OBX|2|TX|76700^腹部超音波^CPT|2|脾臓：腫大なし。腎臓：両側正常。腹水：なし。||||||F|||20260405150000
+```
+
+---
+
+## 16. ADT^A04 - outpatient registration (外来受付)
+
+```
+MSH|^~\&|LifeMark-MX|金沢大学附属病院|SS-MIX2|地域連携|20260420100000||ADT^A04^ADT_A01|LM20260420100000016|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A04|20260420100000
+PID|||PAT100234^^^金沢大学病院^PI||池田^裕子^^^^^L||19720308|F|||富山県富山市新総曲輪1-7^^富山市^富山県^930-8501^JPN^H||^PRN^PH^^81^76^4318111||JPN|M
+PV1||O|内科外来^2^1^金沢大学病院^^^^N||||D100234^宮本^誠一^^^^^L^^^DR|||INT||||A|||V200234|||||||||||||||||||||||||||20260420100000
+```
+
+---
+
+## 17. DFT^P03 - charge posting (診療報酬)
+
+```
+MSH|^~\&|LifeMark-MX|金沢大学附属病院|医事会計|金沢大学病院|20260420120000||DFT^P03^DFT_P03|LM20260420120000017|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|P03|20260420120000
+PID|||PAT100234^^^金沢大学病院^PI||池田^裕子^^^^^L||19720308|F
+PV1||O|内科外来^2^1^金沢大学病院^^^^N||||D100234^宮本^誠一^^^^^L^^^DR
+FT1|1|ORD20260420001|20260420|20260420|CG|112^再診料^診療行為コード||1|730|||||||||||||||D100234^宮本^誠一^^^^^L^^^DR
+FT1|2|ORD20260420002|20260420|20260420|CG|130^外来管理加算^診療行為コード||1|520|||||||||||||||D100234^宮本^誠一^^^^^L^^^DR
+```
+
+---
+
+## 18. RDE^O11 - pharmacy dispense event (調剤実施)
+
+```
+MSH|^~\&|薬剤部|金沢大学病院|LifeMark-MX|金沢大学病院|20260420113000||RDE^O11^RDE_O11|PH20260420113000018|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT100234^^^金沢大学病院^PI||池田^裕子^^^^^L||19720308|F
+PV1||O|内科外来^2^1^金沢大学病院^^^^N||||D100234^宮本^誠一^^^^^L^^^DR
+ORC|RE|RX20260420001^LifeMark-MX|DSP20260420001^薬剤部|||||||||D100234^宮本^誠一^^^^^L^^^DR
+RXE|^^^20260420^^^日|610418029^ロキソプロフェンNa錠60mg^HOT9|60||mg|錠|||||||7|||||||||||PH002^石川^沙耶^^^^^L^^^RPH
+RXD|1|610418029^ロキソプロフェンNa錠60mg^HOT9|20260420113000|21|錠||||||||||||||PH002^石川^沙耶^^^^^L^^^RPH
+```
+
+---
+
+## 19. ORU^R01 - blood gas analysis with embedded waveform (血液ガス)
+
+```
+MSH|^~\&|検査部|金沢大学病院|LifeMark-MX|金沢大学病院|20260407090000||ORU^R01^ORU_R01|BGA20260407090000019|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT100234^^^金沢大学病院^PI||池田^裕子^^^^^L||19720308|F
+PV1||I|7E^702^1^金沢大学病院^^^^N||||D100234^宮本^誠一^^^^^L^^^DR
+ORC|RE|BGA20260407001^LifeMark-MX
+OBR|1|BGA20260407001^LifeMark-MX||82803^血液ガス分析^CPT|R||20260407083000|||||||20260407083000||D100234^宮本^誠一^^^^^L^^^DR||||||||20260407090000|||F
+OBX|1|NM|82803^pH^CPT||7.41||7.35-7.45|N|||F|||20260407090000
+OBX|2|NM|82803^pCO2^CPT||38.5|mmHg|35.0-45.0|N|||F|||20260407090000
+OBX|3|NM|82803^pO2^CPT||95.2|mmHg|80.0-100.0|N|||F|||20260407090000
+OBX|4|NM|82803^HCO3^CPT||24.1|mEq/L|22.0-26.0|N|||F|||20260407090000
+OBX|5|ED|PDF^血液ガスレポート^L|1|^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA1MCA+PgpzdHJlYW0KQlQKL0YxIDEyIFRmCjEwMCA3MDAgVGQKKEJsb29kIEdhcyBSZXBvcnQpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKeHJlZgowIDUKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjA2IDAwMDAwIG4gCnRyYWlsZXIKPDwgL1NpemUgNSAvUm9vdCAxIDAgUiA+PgpzdGFydHhyZWYKMzA2CiUlRU9GCg==||||||F|||20260407090000
+```
+
+---
+
+## 20. MFN^M02 - physician master update (医師マスタ更新)
+
+```
+MSH|^~\&|LifeMark-MX|金沢大学附属病院|SS-MIX2|地域連携|20260401000000||MFN^M02^MFN_M02|LM20260401000000020|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+MFI|PRA^^HL70175||UPD|||NE
+MFE|MAD|D200345|20260401000000|D200345^片山^拓也^^^^^L^^^DR^金沢大学病院^CDA
+STF|D200345|D200345^^金沢大学病院|片山^拓也^^^^^L||M||||||^WPN^PH^^81^76^2658000
+PRA|D200345||I|消化器内科||||||||||||||||||20260401
+```

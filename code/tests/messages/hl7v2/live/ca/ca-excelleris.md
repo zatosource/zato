@@ -1,0 +1,302 @@
+# Excelleris - real HL7v2 ER7 messages
+
+---
+
+## 1. ORU^R01 - CBC with differential
+
+```
+MSH|^~\&|EXCELLERIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260509090000||ORU^R01^ORU_R01|EX000001|P|2.3
+PID|||4129865037^^^BC_PHN^JHN||Mitchell^Hannah^Rose||19720519|F|||2847 West 4th Ave^^Vancouver^BC^V6K 1R6^CA||^PRN^PH^^1^604^7382514
+ORC|RE|EX100001|EX200001||CM||||20260509064500|||34521^Patel^Amrita^^^Dr.^^MD
+OBR|1|EX100001|EX200001|58410-2^CBC panel^LN|||20260509062000|||||||||34521^Patel^Amrita^^^Dr.^^MD||||||20260509083000|||F
+OBX|1|NM|718-7^Hemoglobin^LN||138|g/L|120-160|N|||F
+OBX|2|NM|6690-2^Leukocytes^LN||7.5|x10E9/L|4.0-11.0|N|||F
+OBX|3|NM|789-8^Erythrocytes^LN||4.55|x10E12/L|3.80-5.20|N|||F
+OBX|4|NM|787-2^MCV^LN||89.2|fL|80.0-100.0|N|||F
+OBX|5|NM|777-3^Platelets^LN||267|x10E9/L|150-400|N|||F
+OBX|6|NM|770-8^Neutrophils^LN||4.2|x10E9/L|2.0-7.5|N|||F
+OBX|7|NM|731-0^Lymphocytes^LN||2.5|x10E9/L|1.0-4.0|N|||F
+OBX|8|NM|742-7^Monocytes^LN||0.6|x10E9/L|0.2-1.0|N|||F
+```
+
+---
+
+## 2. ORU^R01 - comprehensive metabolic panel
+
+```
+MSH|^~\&|EXCELLERIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260509110000||ORU^R01^ORU_R01|EX000002|P|2.3
+PID|||5283716094^^^BC_PHN^JHN||Yamamoto^Kenji^Ryo||19831127|M|||1450 Robson St^^Vancouver^BC^V6G 1B9^CA||^PRN^PH^^1^604^4827193
+ORC|RE|EX100002|EX200002||CM||||20260509070000|||56723^Andersson^Linnea^^^Dr.^^MD
+OBR|1|EX100002|EX200002|24323-8^CMP^LN|||20260509063000|||||||||56723^Andersson^Linnea^^^Dr.^^MD||||||20260509103000|||F
+OBX|1|NM|2345-7^Glucose^LN||5.4|mmol/L|3.3-5.5|N|||F
+OBX|2|NM|2160-0^Creatinine^LN||95|umol/L|62-115|N|||F
+OBX|3|NM|3094-0^Urea^LN||6.2|mmol/L|2.5-8.0|N|||F
+OBX|4|NM|17861-6^Calcium^LN||2.38|mmol/L|2.10-2.55|N|||F
+OBX|5|NM|2951-2^Sodium^LN||139|mmol/L|136-145|N|||F
+OBX|6|NM|2823-3^Potassium^LN||4.3|mmol/L|3.5-5.0|N|||F
+OBX|7|NM|2075-0^Chloride^LN||101|mmol/L|98-107|N|||F
+OBX|8|NM|1742-6^ALT^LN||35|U/L|7-56|N|||F
+OBX|9|NM|1920-8^AST^LN||28|U/L|10-40|N|||F
+```
+
+---
+
+## 3. ORU^R01 - lipid panel (fasting)
+
+```
+MSH|^~\&|EXCELLERIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260509143000||ORU^R01^ORU_R01|EX000003|P|2.3
+PID|||4129865037^^^BC_PHN^JHN||Mitchell^Hannah^Rose||19720519|F|||2847 West 4th Ave^^Vancouver^BC^V6K 1R6^CA||^PRN^PH^^1^604^7382514
+ORC|RE|EX100003|EX200003||CM||||20260509070000|||34521^Patel^Amrita^^^Dr.^^MD
+OBR|1|EX100003|EX200003|24331-1^Lipid panel^LN|||20260509063000|||||||||34521^Patel^Amrita^^^Dr.^^MD||||||20260509140000|||F
+OBX|1|NM|2093-3^Cholesterol total^LN||5.1|mmol/L|0.0-5.2|N|||F
+OBX|2|NM|2571-8^Triglycerides^LN||1.4|mmol/L|0.0-1.7|N|||F
+OBX|3|NM|2085-9^HDL Cholesterol^LN||1.6|mmol/L|1.0-999.0|N|||F
+OBX|4|NM|13457-7^LDL Cholesterol^LN||2.9|mmol/L|0.0-3.4|N|||F
+OBX|5|NM|9830-1^Total/HDL ratio^LN||3.2||0.0-5.0|N|||F
+```
+
+---
+
+## 4. ORU^R01 - HbA1c
+
+```
+MSH|^~\&|PLIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260510083000||ORU^R01^ORU_R01|EX000004|P|2.5
+PID|||5283716094^^^BC_PHN^JHN||Yamamoto^Kenji^Ryo||19831127|M|||1450 Robson St^^Vancouver^BC^V6G 1B9^CA||^PRN^PH^^1^604^4827193
+ORC|RE|EX100004|EX200004||CM||||20260510063000|||56723^Andersson^Linnea^^^Dr.^^MD
+OBR|1|EX100004|EX200004|4548-4^HbA1c^LN|||20260510060000|||||||||56723^Andersson^Linnea^^^Dr.^^MD||||||20260510080000|||F
+OBX|1|NM|4548-4^Hemoglobin A1c^LN||6.2|%|4.0-6.0|H|||F
+OBX|2|NM|59261-8^HbA1c IFCC^LN||44|mmol/mol|20-42|H|||F
+NTE|1||At risk. Repeat in 3-6 months. Lifestyle counseling recommended.
+```
+
+---
+
+## 5. ORU^R01 - thyroid function
+
+```
+MSH|^~\&|EXCELLERIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260510110000||ORU^R01^ORU_R01|EX000005|P|2.3
+PID|||4129865037^^^BC_PHN^JHN||Mitchell^Hannah^Rose||19720519|F|||2847 West 4th Ave^^Vancouver^BC^V6K 1R6^CA||^PRN^PH^^1^604^7382514
+ORC|RE|EX100005|EX200005||CM||||20260510070000|||34521^Patel^Amrita^^^Dr.^^MD
+OBR|1|EX100005|EX200005|34896-2^Thyroid panel^LN|||20260510064500|||||||||34521^Patel^Amrita^^^Dr.^^MD||||||20260510103000|||F
+OBX|1|NM|3016-3^TSH^LN||1.8|mIU/L|0.4-4.0|N|||F
+OBX|2|NM|3024-7^Free T4^LN||14.5|pmol/L|10.0-25.0|N|||F
+```
+
+---
+
+## 6. ORU^R01 - renal function panel
+
+```
+MSH|^~\&|PLIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260510140000||ORU^R01^ORU_R01|EX000006|P|2.5
+PID|||7148293051^^^BC_PHN^JHN||Brar^Gurpreet^Singh||19620304|M|||7820 Granville St^^Vancouver^BC^V6P 4Z3^CA||^PRN^PH^^1^604^3274182
+ORC|RE|EX100006|EX200006||CM||||20260510070000|||78234^Schmidt^Hans^^^Dr.^^MD
+OBR|1|EX100006|EX200006|24362-6^Renal function panel^LN|||20260510063000|||||||||78234^Schmidt^Hans^^^Dr.^^MD||||||20260510133000|||F
+OBX|1|NM|2160-0^Creatinine^LN||155|umol/L|62-115|H|||F
+OBX|2|NM|33914-3^eGFR^LN||38|mL/min/1.73m2|60-999|L|||F
+OBX|3|NM|3094-0^Urea^LN||12.5|mmol/L|2.5-8.0|H|||F
+OBX|4|NM|2951-2^Sodium^LN||137|mmol/L|136-145|N|||F
+OBX|5|NM|2823-3^Potassium^LN||5.3|mmol/L|3.5-5.0|H|||F
+OBX|6|NM|14959-1^Urine ACR^LN||18.5|mg/mmol|0.0-2.0|H|||F
+NTE|1||CKD Stage 3b. Nephrology referral recommended.
+```
+
+---
+
+## 7. ORU^R01 - liver function panel
+
+```
+MSH|^~\&|EXCELLERIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260511083000||ORU^R01^ORU_R01|EX000007|P|2.3
+PID|||5283716094^^^BC_PHN^JHN||Yamamoto^Kenji^Ryo||19831127|M|||1450 Robson St^^Vancouver^BC^V6G 1B9^CA||^PRN^PH^^1^604^4827193
+ORC|RE|EX100007|EX200007||CM||||20260511063000|||56723^Andersson^Linnea^^^Dr.^^MD
+OBR|1|EX100007|EX200007|24325-3^Hepatic function panel^LN|||20260511060000|||||||||56723^Andersson^Linnea^^^Dr.^^MD||||||20260511080000|||F
+OBX|1|NM|1742-6^ALT^LN||42|U/L|7-56|N|||F
+OBX|2|NM|1920-8^AST^LN||38|U/L|10-40|N|||F
+OBX|3|NM|1975-2^Bilirubin total^LN||15|umol/L|3-21|N|||F
+OBX|4|NM|6768-6^Alkaline phosphatase^LN||95|U/L|44-147|N|||F
+OBX|5|NM|2885-2^Total protein^LN||72|g/L|60-80|N|||F
+OBX|6|NM|1751-7^Albumin^LN||42|g/L|35-50|N|||F
+OBX|7|NM|2324-2^GGT^LN||68|U/L|8-61|H|||F
+```
+
+---
+
+## 8. ORU^R01 - urinalysis
+
+```
+MSH|^~\&|PLIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260511110000||ORU^R01^ORU_R01|EX000008|P|2.5
+PID|||7148293051^^^BC_PHN^JHN||Brar^Gurpreet^Singh||19620304|M|||7820 Granville St^^Vancouver^BC^V6P 4Z3^CA||^PRN^PH^^1^604^3274182
+ORC|RE|EX100008|EX200008||CM||||20260511070000|||78234^Schmidt^Hans^^^Dr.^^MD
+OBR|1|EX100008|EX200008|24356-8^Urinalysis complete^LN|||20260511064500|||||||||78234^Schmidt^Hans^^^Dr.^^MD||||||20260511103000|||F
+OBX|1|CWE|5767-9^Appearance^LN||Clear^^L||||||F
+OBX|2|CWE|5778-6^Color^LN||Yellow^^L||||||F
+OBX|3|NM|2756-5^pH^LN||6.5||5.0-8.0|N|||F
+OBX|4|NM|2965-2^Specific gravity^LN||1.018||1.005-1.030|N|||F
+OBX|5|NM|14959-1^Protein/Creatinine ratio^LN||85|mg/mmol|0-15|H|||F
+OBX|6|CWE|5792-7^Glucose UA^LN||Negative^^L||||||F
+```
+
+---
+
+## 9. ORU^R01 - Chlamydia/Gonorrhea NAAT
+
+```
+MSH|^~\&|EXCELLERIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260511150000||ORU^R01^ORU_R01|EX000009|P|2.3
+PID|||6294817503^^^BC_PHN^JHN||Donovan^Olivia^Grace||19961014|F|||543 Davie St^^Vancouver^BC^V6B 2G6^CA||^PRN^PH^^1^604^2718394
+ORC|RE|EX100009|EX200009||CM||||20260510100000|||23489^Hamilton^Connor^^^Dr.^^MD
+OBR|1|EX100009|EX200009|36902-5^CT/GC NAAT^LN|||20260510094500|||||||||23489^Hamilton^Connor^^^Dr.^^MD||||||20260511143000|||F
+OBX|1|CWE|21613-5^Chlamydia trachomatis NAAT^LN||260385009^Not detected^SCT||||||F
+OBX|2|CWE|21415-5^Neisseria gonorrhoeae NAAT^LN||260385009^Not detected^SCT||||||F
+```
+
+---
+
+## 10. ORU^R01 - iron studies
+
+```
+MSH|^~\&|PLIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260511163000||ORU^R01^ORU_R01|EX000010|P|2.5
+PID|||4129865037^^^BC_PHN^JHN||Mitchell^Hannah^Rose||19720519|F|||2847 West 4th Ave^^Vancouver^BC^V6K 1R6^CA||^PRN^PH^^1^604^7382514
+ORC|RE|EX100010|EX200010||CM||||20260511080000|||34521^Patel^Amrita^^^Dr.^^MD
+OBR|1|EX100010|EX200010|2500-7^Iron panel^LN|||20260511074500|||||||||34521^Patel^Amrita^^^Dr.^^MD||||||20260511160000|||F
+OBX|1|NM|2498-4^Iron^LN||15|umol/L|9-30|N|||F
+OBX|2|NM|2502-3^Transferrin saturation^LN||28|%|20-50|N|||F
+OBX|3|NM|2276-4^Ferritin^LN||45|ug/L|12-150|N|||F
+OBX|4|NM|3034-6^TIBC^LN||55|umol/L|45-72|N|||F
+```
+
+---
+
+## 11. ORU^R01 - vitamin D
+
+```
+MSH|^~\&|EXCELLERIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260512083000||ORU^R01^ORU_R01|EX000011|P|2.3
+PID|||5283716094^^^BC_PHN^JHN||Yamamoto^Kenji^Ryo||19831127|M|||1450 Robson St^^Vancouver^BC^V6G 1B9^CA||^PRN^PH^^1^604^4827193
+ORC|RE|EX100011|EX200011||CM||||20260512063000|||56723^Andersson^Linnea^^^Dr.^^MD
+OBR|1|EX100011|EX200011|1989-3^25-Hydroxyvitamin D^LN|||20260512060000|||||||||56723^Andersson^Linnea^^^Dr.^^MD||||||20260512080000|||F
+OBX|1|NM|1989-3^25-OH Vitamin D^LN||68|nmol/L|75-250|L|||F
+NTE|1||Insufficiency. Supplement with 1000 IU daily, recheck in 3 months.
+```
+
+---
+
+## 12. ORU^R01 - PSA screening
+
+```
+MSH|^~\&|PLIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260512100000||ORU^R01^ORU_R01|EX000012|P|2.5
+PID|||7148293051^^^BC_PHN^JHN||Brar^Gurpreet^Singh||19620304|M|||7820 Granville St^^Vancouver^BC^V6P 4Z3^CA||^PRN^PH^^1^604^3274182
+ORC|RE|EX100012|EX200012||CM||||20260512063000|||78234^Schmidt^Hans^^^Dr.^^MD
+OBR|1|EX100012|EX200012|2857-1^PSA^LN|||20260512060000|||||||||78234^Schmidt^Hans^^^Dr.^^MD||||||20260512093000|||F
+OBX|1|NM|2857-1^PSA total^LN||5.8|ug/L|0.0-4.0|H|||F
+OBX|2|NM|19197-3^PSA free^LN||0.9|ug/L|||||F
+OBX|3|NM|12841-3^Free/Total PSA ratio^LN||15.5|%|>25|L|||F
+NTE|1||Elevated PSA with low free/total ratio. Urology referral recommended.
+```
+
+---
+
+## 13. ORU^R01 - microbiology urine culture
+
+```
+MSH|^~\&|EXCELLERIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260512140000||ORU^R01^ORU_R01|EX000013|P|2.3
+PID|||6294817503^^^BC_PHN^JHN||Donovan^Olivia^Grace||19961014|F|||543 Davie St^^Vancouver^BC^V6B 2G6^CA||^PRN^PH^^1^604^2718394
+ORC|RE|EX100013|EX200013||CM||||20260510130000|||23489^Hamilton^Connor^^^Dr.^^MD
+OBR|1|EX100013|EX200013|630-4^Urine culture^LN|||20260510124500|||||||||23489^Hamilton^Connor^^^Dr.^^MD||||||20260512133000|||F
+OBX|1|CWE|600-7^Bacteria identified^LN||112283007^Escherichia coli^SCT||||||F
+OBX|2|ST|564-5^Colony count^LN||Greater than 100,000 CFU/mL||||||F
+OBX|3|ST|18945-6^Susceptibility Ciprofloxacin^LN||Susceptible||||||F
+OBX|4|ST|18993-6^Susceptibility Nitrofurantoin^LN||Susceptible||||||F
+OBX|5|ST|18961-3^Susceptibility TMP-SMX^LN||Susceptible||||||F
+```
+
+---
+
+## 14. ORU^R01 - celiac screen
+
+```
+MSH|^~\&|PLIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260512153000||ORU^R01^ORU_R01|EX000014|P|2.5
+PID|||4129865037^^^BC_PHN^JHN||Mitchell^Hannah^Rose||19720519|F|||2847 West 4th Ave^^Vancouver^BC^V6K 1R6^CA||^PRN^PH^^1^604^7382514
+ORC|RE|EX100014|EX200014||CM||||20260512080000|||34521^Patel^Amrita^^^Dr.^^MD
+OBR|1|EX100014|EX200014|31017-7^tTG IgA^LN|||20260512074500|||||||||34521^Patel^Amrita^^^Dr.^^MD||||||20260512150000|||F
+OBX|1|NM|31017-7^tTG IgA^LN||85|U/mL|0.0-20.0|H|||F
+OBX|2|NM|2458-8^IgA total^LN||3.2|g/L|0.7-4.0|N|||F
+NTE|1||Strongly positive tTG-IgA. Celiac disease likely. Gastroenterology referral for biopsy.
+```
+
+---
+
+## 15. ORU^R01 - coagulation panel
+
+```
+MSH|^~\&|EXCELLERIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260512163000||ORU^R01^ORU_R01|EX000015|P|2.3
+PID|||7148293051^^^BC_PHN^JHN||Brar^Gurpreet^Singh||19620304|M|||7820 Granville St^^Vancouver^BC^V6P 4Z3^CA||^PRN^PH^^1^604^3274182
+ORC|RE|EX100015|EX200015||CM||||20260512080000|||78234^Schmidt^Hans^^^Dr.^^MD
+OBR|1|EX100015|EX200015|38875-1^Coagulation panel^LN|||20260512074500|||||||||78234^Schmidt^Hans^^^Dr.^^MD||||||20260512160000|||F
+OBX|1|NM|5902-2^PT^LN||12.8|seconds|11.0-13.5|N|||F
+OBX|2|NM|6301-6^INR^LN||1.0||0.9-1.1|N|||F
+OBX|3|NM|3173-2^aPTT^LN||29.5|seconds|25.0-35.0|N|||F
+```
+
+---
+
+## 16. ORU^R01 - radiology report with embedded PDF
+
+```
+MSH|^~\&|PLIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260511170000||ORU^R01^ORU_R01|EX000016|P|2.5
+PID|||5283716094^^^BC_PHN^JHN||Yamamoto^Kenji^Ryo||19831127|M|||1450 Robson St^^Vancouver^BC^V6G 1B9^CA||^PRN^PH^^1^604^4827193
+ORC|RE|EX100016|EX200016||CM||||20260511130000|||56723^Andersson^Linnea^^^Dr.^^MD
+OBR|1|EX100016|EX200016|71020-2^Chest X-ray^LN|||20260511124500|||||||||56723^Andersson^Linnea^^^Dr.^^MD||||||20260511163000|||F
+OBX|1|ED|PDF^Chest X-ray Report^EXCELLERIS||^AP^^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0K||||||F
+OBX|2|FT|71020-2^CXR Impression^LN||Heart size normal. Lungs clear bilaterally. No pleural effusion or pneumothorax. No acute cardiopulmonary abnormality.||||||F
+```
+
+---
+
+## 17. ORU^R01 - B12 and folate
+
+```
+MSH|^~\&|EXCELLERIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260512170000||ORU^R01^ORU_R01|EX000017|P|2.3
+PID|||4129865037^^^BC_PHN^JHN||Mitchell^Hannah^Rose||19720519|F|||2847 West 4th Ave^^Vancouver^BC^V6K 1R6^CA||^PRN^PH^^1^604^7382514
+ORC|RE|EX100017|EX200017||CM||||20260512080000|||34521^Patel^Amrita^^^Dr.^^MD
+OBR|1|EX100017|EX200017|2132-9^Vitamin B12^LN|||20260512074500|||||||||34521^Patel^Amrita^^^Dr.^^MD||||||20260512163000|||F
+OBX|1|NM|2132-9^Vitamin B12^LN||185|pmol/L|138-652|N|||F
+OBX|2|NM|2284-8^Folate^LN||28|nmol/L|7-45|N|||F
+```
+
+---
+
+## 18. ORU^R01 - syphilis serology
+
+```
+MSH|^~\&|PLIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260512180000||ORU^R01^ORU_R01|EX000018|P|2.5
+PID|||6294817503^^^BC_PHN^JHN||Donovan^Olivia^Grace||19961014|F|||543 Davie St^^Vancouver^BC^V6B 2G6^CA||^PRN^PH^^1^604^2718394
+ORC|RE|EX100018|EX200018||CM||||20260512090000|||23489^Hamilton^Connor^^^Dr.^^MD
+OBR|1|EX100018|EX200018|22461-8^Syphilis serology^LN|||20260512084500|||||||||23489^Hamilton^Connor^^^Dr.^^MD||||||20260512173000|||F
+OBX|1|CWE|22461-8^Syphilis EIA^LN||260385009^Non-reactive^SCT||||||F
+```
+
+---
+
+## 19. ORU^R01 - bone density scan with embedded TIFF
+
+```
+MSH|^~\&|PLIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260512190000||ORU^R01^ORU_R01|EX000019|P|2.5
+PID|||4129865037^^^BC_PHN^JHN||Mitchell^Hannah^Rose||19720519|F|||2847 West 4th Ave^^Vancouver^BC^V6K 1R6^CA||^PRN^PH^^1^604^7382514
+ORC|RE|EX100019|EX200019||CM||||20260512100000|||34521^Patel^Amrita^^^Dr.^^MD
+OBR|1|EX100019|EX200019|38269-7^DEXA scan^LN|||20260512094500|||||||||34521^Patel^Amrita^^^Dr.^^MD||||||20260512183000|||F
+OBX|1|NM|38265-5^Lumbar spine T-score^LN||-1.8||>-1.0|L|||F
+OBX|2|NM|38267-1^Femoral neck T-score^LN||-2.2||>-1.0|L|||F
+OBX|3|ED|IMG^DEXA Scan Image^EXCELLERIS||^IM^TIFF^Base64^SUkqAAgAAAAIAAABAwABAAAAgAcAAAEBAwABAAAAXAUAAAIBAwABAAAAAQAAAwEDAAEAAAABAAAABgEDAAEAAAACAAAAEQEEAAEAAAAIAAAAFQEDAAEAAAABAAAAFgEDAAEAAAAB||||||F
+NTE|1||Osteopenia bilateral. T-score femoral neck -2.2 approaches osteoporosis threshold.
+```
+
+---
+
+## 20. ORU^R01 - cervical cytology with scanned image (PNG)
+
+```
+MSH|^~\&|EXCELLERIS|BC_BIO_AGENCY|EMR_RECV|CLINIC_SYS|20260512200000||ORU^R01^ORU_R01|EX000020|P|2.3
+PID|||6294817503^^^BC_PHN^JHN||Donovan^Olivia^Grace||19961014|F|||543 Davie St^^Vancouver^BC^V6B 2G6^CA||^PRN^PH^^1^604^2718394
+ORC|RE|EX100020|EX200020||CM||||20260511100000|||23489^Hamilton^Connor^^^Dr.^^MD
+OBR|1|EX100020|EX200020|10524-7^Cytology cervical^LN|||20260511094500|||||||||23489^Hamilton^Connor^^^Dr.^^MD||||||20260512193000|||F
+OBX|1|CWE|10524-7^Cervical cytology^LN||373887005^NILM^SCT||||||F
+OBX|2|ED|IMG^Cytology Slide Image^EXCELLERIS||^IM^PNG^Base64^iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAAJ0lEQVQ4y2P8z8BQz0AEYBxVMKoABTASawATNYwYVTCqgHoKRhUAAACXJgYBbc0tLgAAAABJRU5ErkJggg==||||||F
+```

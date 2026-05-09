@@ -1,0 +1,257 @@
+# ARIS (ARIS spol. s r.o.) - real HL7v2 ER7 messages
+
+## 1. ADT^A01 - Admission to surgical ward
+
+```
+MSH|^~\&|ARIS|UNB|LAB|UNB|20260509080000||ADT^A01^ADT_A01|ARIS20260509001|P|2.5|||AL|NE|SVK|UNICODE UTF-8|SVK^Slovak^HL70296
+EVN|A01|20260509080000
+PID|||7803156012^^^UNB^PI||Kučera^Šimon^Dávid^^^^L||19780315|M|||Dlhá 18^^Bratislava^^81101^SVK^H||^PRN^PH^^421^2^54127890|||||||||||||SVK
+PV1|1|I|CHIR^101^3^^^N^A|U|||701001^Kľúčik^Michal^^^MUDr.^^^UNB^L|||CHIR||||||||2026050001^^^UNB^VN|||||||||||||||||||||||||20260509080000
+PV2|||||||||20260516|7
+DG1|1||K80.1^Cholelitiáza s cholecystitídou^ICD10SK|||A
+IN1|1|27-001^^^VšZP|VšZP^Všeobecná zdravotná poisťovňa||Mamateyova 17^^Bratislava^^85104^SVK|||||||||Kučera^Šimon|M|19780315|Dlhá 18^^Bratislava^^81101^SVK
+```
+
+---
+
+## 2. ADT^A04 - Outpatient registration at ENT clinic
+
+```
+MSH|^~\&|ARIS|UNLP_KE|AMB|UNLP_KE|20260509083000||ADT^A04^ADT_A04|ARIS20260509002|P|2.5|||AL|NE|SVK|UNICODE UTF-8|SVK^Slovak^HL70296
+EVN|A04|20260509083000
+PID|||9155070044^^^UNLP_KE^PI||Tkáčová^Veronika^Mária^^^^L||19910507|F|||Hviezdoslavova 33^^Košice^^04011^SVK^H||^PRN^CP^^421^903^216487|||||||||||||SVK
+PV1|1|O|ORL_AMB^A01^1^^^N^A|R|||702002^Potočný^Adrián^^^MUDr.^^^UNLP_KE^L|||ORL||||||||2026050002^^^UNLP_KE^VN|||||||||||||||||||||||||20260509083000
+IN1|1|24-001^^^Dôvera|Dôvera^Dôvera zdravotná poisťovňa||Einsteinova 25^^Bratislava^^85101^SVK
+```
+
+---
+
+## 3. ADT^A08 - Update patient demographics
+
+```
+MSH|^~\&|ARIS|FNSP_BB|MPI|FNSP_BB|20260509090000||ADT^A08^ADT_A01|ARIS20260509003|P|2.5|||AL|NE|SVK|UNICODE UTF-8|SVK^Slovak^HL70296
+EVN|A08|20260509090000
+PID|||8760230087^^^FNSP_BB^PI||Macháčková^Soňa^Petra^^^^L||19870623|F|||Záhradná 7^^Banská Bystrica^^97401^SVK^H||^PRN^CP^^421^907^654321~^PRN^PH^^421^48^4141234|||||||||||||SVK
+PV1|1|I|GYN^301^1|||703003^Gálik^Norbert^^^MUDr.^^^FNSP_BB^L|||GYN||||||||2026040015^^^FNSP_BB^VN|||||||||||||||||||||||||20260415090000
+```
+
+---
+
+## 4. ADT^A03 - Discharge from cardiology
+
+```
+MSH|^~\&|ARIS|UNLP_KE|ADT|UNLP_KE|20260509093000||ADT^A03^ADT_A03|ARIS20260509004|P|2.5|||AL|NE|SVK|UNICODE UTF-8|SVK^Slovak^HL70296
+EVN|A03|20260509093000
+PID|||7551280016^^^UNLP_KE^PI||Svitková^Daniela^Eva^^^^L||19750128|F|||Hlavná 92^^Košice^^04001^SVK^H||^PRN^PH^^421^55^6221234|||||||||||||SVK
+PV1|1|I|KAR^202^1^^^N^A|R|||704004^Smolka^Dalibor^^^MUDr.^^^UNLP_KE^L|||KAR||||||||2026040066^^^UNLP_KE^VN|||||||||||||||||011||||||||20260420100000|20260509093000
+DG1|1||I25.1^Aterosklerotická choroba srdca^ICD10SK|||F
+IN1|1|25-001^^^Union_ZP|Union ZP^Union zdravotná poisťovňa||Bajkalská 29/A^^Bratislava^^82108^SVK
+```
+
+---
+
+## 5. ORM^O01 - Order for chest CT
+
+```
+MSH|^~\&|ARIS|FN_NR|RIS|FN_NR|20260509100000||ORM^O01|ARIS20260509005|P|2.3|||AL|NE|SVK|8859/2
+PID|||8262140058^^^FN_NR^PI||Cvičelová^Renáta^Jana^^^^L||19820214|F|||Komenského 14^^Nitra^^94901^SVK^H
+PV1|1|I|PNE^301^1|||705005^Kravčík^Ernest^^^MUDr.
+ORC|NW|ORD2026050005^ARIS|||||^^^20260509100000^^R||20260509100000|705005^Kravčík^Ernest^^^MUDr.
+OBR|1|ORD2026050005^ARIS||71250^CT hrudníka^CPT|||20260509095000|||||||||705005^Kravčík^Ernest^^^MUDr.||||||20260510080000|||F
+```
+
+---
+
+## 6. ORU^R01 - Blood gas results
+
+```
+MSH|^~\&|LAB|FN_NR|ARIS|FN_NR|20260509103000||ORU^R01|LAB20260509001|P|2.5|||AL|NE|SVK|UNICODE UTF-8|SVK^Slovak^HL70296
+PID|||8262140058^^^FN_NR^PI||Cvičelová^Renáta^Jana^^^^L||19820214|F|||Komenského 14^^Nitra^^94901^SVK^H
+PV1|1|I|PNE^301^1|||705005^Kravčík^Ernest^^^MUDr.
+ORC|RE|ORD2026050006^ARIS|RES2026050006^LAB
+OBR|1|ORD2026050006^ARIS|RES2026050006^LAB|24338-6^Krvné plyny^LN|||20260509094000|||||||||705005^Kravčík^Ernest^^^MUDr.||||||20260509103000|||F
+OBX|1|NM|2744-1^pH krvi^LN||7.32||7.35-7.45|L|||F|||20260509100000
+OBX|2|NM|2019-8^pCO2^LN||6.5|kPa|4.7-6.0|H|||F|||20260509100000
+OBX|3|NM|2703-7^pO2^LN||7.8|kPa|10.0-13.3|L|||F|||20260509100000
+OBX|4|NM|2713-6^Saturácia O2^LN||89|%|95-99|L|||F|||20260509100000
+```
+
+---
+
+## 7. ORU^R01 - Histopathology report with embedded PDF (base64)
+
+```
+MSH|^~\&|PAT|UNB|ARIS|UNB|20260509110000||ORU^R01|PAT20260509001|P|2.5|||AL|NE|SVK|UNICODE UTF-8|SVK^Slovak^HL70296
+PID|||7803156012^^^UNB^PI||Kučera^Šimon^Dávid^^^^L||19780315|M|||Dlhá 18^^Bratislava^^81101^SVK^H
+PV1|1|I|CHIR^101^3|||701001^Kľúčik^Michal^^^MUDr.
+ORC|RE|ORD2026050007^ARIS|RES2026050007^PAT
+OBR|1|ORD2026050007^ARIS|RES2026050007^PAT|11529-5^Histopatologické vyšetrenie^LN|||20260509082000|||||||||701001^Kľúčik^Michal^^^MUDr.||||||20260509110000|||F
+OBX|1|FT|22637-3^Makroskopický nález^LN||Žlčník 8x3 cm, stena zhrubnutá, mukóza hyperemická, prítomné konkrementy||||||F|||20260509100000
+OBX|2|FT|22636-5^Mikroskopický nález^LN||Chronická cholecystitída s akútnou exacerbáciou, bez dysplastických zmien||||||F|||20260509100000
+OBX|3|ED|11502-2^Laboratórna správa^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA1MCA+PgpzdHJlYW0KQlQgL0YxIDEyIFRmIDEwMCA3MDAgVGQgKExhYm9yYXRvcm5hIHNwcmF2YSkgVGogRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA3NCAwMDAwMCBuIAowMDAwMDAwMTQyIDAwMDAwIG4gCjAwMDAwMDAyNDIgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA1IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgozNDIKJSVFT0YK||||||F
+```
+
+---
+
+## 8. ADT^A02 - Transfer from surgery to ICU
+
+```
+MSH|^~\&|ARIS|UNB|ADT|UNB|20260509113000||ADT^A02^ADT_A02|ARIS20260509008|P|2.5|||AL|NE|SVK|UNICODE UTF-8|SVK^Slovak^HL70296
+EVN|A02|20260509113000
+PID|||7803156012^^^UNB^PI||Kučera^Šimon^Dávid^^^^L||19780315|M|||Dlhá 18^^Bratislava^^81101^SVK^H||^PRN^PH^^421^2^54127890|||||||||||||SVK
+PV1|1|I|JIS^001^3^^^N^D|U||CHIR^101^3^^^N^D|701001^Kľúčik^Michal^^^MUDr.^^^UNB^L|||JIS||||||||2026050001^^^UNB^VN|||||||||||||||||||||||||20260509080000
+```
+
+---
+
+## 9. SIU^S12 - Scheduled follow-up appointment
+
+```
+MSH|^~\&|ARIS|UNLP_KE|RIS|UNLP_KE|20260509120000||SIU^S12|ARIS20260509009|P|2.5|||AL|NE|SVK|UNICODE UTF-8|SVK^Slovak^HL70296
+SCH|APT2026050001|APT2026050001|||||ROUTINE|KONT^Kontrolné vyšetrenie^L|15|min|^^^20260523090000^^20260523091500|704004^Smolka^Dalibor^^^MUDr.
+PID|||7551280016^^^UNLP_KE^PI||Svitková^Daniela^Eva^^^^L||19750128|F|||Hlavná 92^^Košice^^04001^SVK^H||^PRN^PH^^421^55^6221234
+PV1|1|O|KAR_AMB^A01^1
+RGS|1
+AIS|1|A|KONT^Kontrolné vyšetrenie^L|20260523090000|15|min
+AIG|1|A|704004^Smolka^Dalibor^^^MUDr.|112
+AIL|1|A|KAR_AMB^A01^1^^^UNLP_KE
+```
+
+---
+
+## 10. ADT^A28 - New patient registration
+
+```
+MSH|^~\&|ARIS|FN_NR|MPI|FN_NR|20260509123000||ADT^A28^ADT_A05|ARIS20260509010|P|2.5|||AL|NE|SVK|UNICODE UTF-8|SVK^Slovak^HL70296
+EVN|A28|20260509123000
+PID|||0560090015^^^FN_NR^PI||Ďuricová^Iveta^Lucia^^^^L||20050609|F|||Lipová 25^^Nitra^^94901^SVK^H||^PRN^CP^^421^911^789012|||||||||||||SVK
+PV1|1|N
+IN1|1|27-001^^^VšZP|VšZP^Všeobecná zdravotná poisťovňa||Mamateyova 17^^Bratislava^^85104^SVK|||||||||Ďuricová^Iveta|S|20050609|Lipová 25^^Nitra^^94901^SVK
+```
+
+---
+
+## 11. ADT^A31 - Update patient contact information
+
+```
+MSH|^~\&|ARIS|FN_NR|MPI|FN_NR|20260509130000||ADT^A31^ADT_A05|ARIS20260509011|P|2.5|||AL|NE|SVK|UNICODE UTF-8|SVK^Slovak^HL70296
+EVN|A31|20260509130000
+PID|||0560090015^^^FN_NR^PI||Ďuricová^Iveta^Lucia^^^^L||20050609|F|||Lipová 25^^Nitra^^94901^SVK^H||^PRN^CP^^421^911^789012~^NET^X.400^^duricova@email.sk|||||||||||||SVK
+PV1|1|N
+```
+
+---
+
+## 12. ADT^A40 - Merge duplicate records
+
+```
+MSH|^~\&|ARIS|UNLP_KE|MPI|UNLP_KE|20260509133000||ADT^A40^ADT_A39|ARIS20260509012|P|2.5|||AL|NE|SVK|UNICODE UTF-8|SVK^Slovak^HL70296
+EVN|A40|20260509133000
+PID|||9155070044^^^UNLP_KE^PI||Tkáčová^Veronika^Mária^^^^L||19910507|F|||Hviezdoslavova 33^^Košice^^04011^SVK^H
+MRG|9155070099^^^UNLP_KE^PI
+```
+
+---
+
+## 13. ORM^O01 - Laboratory order for metabolic panel
+
+```
+MSH|^~\&|ARIS|FNSP_BB|LAB|FNSP_BB|20260509140000||ORM^O01|ARIS20260509013|P|2.3|||AL|NE|SVK|8859/2
+PID|||8760230087^^^FNSP_BB^PI||Macháčková^Soňa^Petra^^^^L||19870623|F|||Záhradná 7^^Banská Bystrica^^97401^SVK^H
+PV1|1|I|GYN^301^1|||703003^Gálik^Norbert^^^MUDr.
+ORC|NW|ORD2026050013^ARIS|||||^^^20260509140000^^R||20260509140000|703003^Gálik^Norbert^^^MUDr.
+OBR|1|ORD2026050013^ARIS||24323-8^Metabolický panel^LN|||20260509135000|||||||||703003^Gálik^Norbert^^^MUDr.||||||20260509170000|||F
+```
+
+---
+
+## 14. ORU^R01 - Metabolic panel results
+
+```
+MSH|^~\&|LAB|FNSP_BB|ARIS|FNSP_BB|20260509163000||ORU^R01|LAB20260509002|P|2.5|||AL|NE|SVK|UNICODE UTF-8|SVK^Slovak^HL70296
+PID|||8760230087^^^FNSP_BB^PI||Macháčková^Soňa^Petra^^^^L||19870623|F|||Záhradná 7^^Banská Bystrica^^97401^SVK^H
+PV1|1|I|GYN^301^1|||703003^Gálik^Norbert^^^MUDr.
+ORC|RE|ORD2026050013^ARIS|RES2026050013^LAB
+OBR|1|ORD2026050013^ARIS|RES2026050013^LAB|24323-8^Metabolický panel^LN|||20260509135000|||||||||703003^Gálik^Norbert^^^MUDr.||||||20260509163000|||F
+OBX|1|NM|2345-7^Glukóza^LN||4.9|mmol/L|3.9-5.6||||F|||20260509155000
+OBX|2|NM|2160-0^Kreatinín^LN||65|umol/L|44-80||||F|||20260509155000
+OBX|3|NM|2951-2^Sodík^LN||140|mmol/L|136-145||||F|||20260509155000
+OBX|4|NM|2823-3^Draslík^LN||4.1|mmol/L|3.5-5.1||||F|||20260509155000
+OBX|5|NM|17861-6^Vápnik^LN||2.35|mmol/L|2.15-2.55||||F|||20260509155000
+```
+
+---
+
+## 15. MDM^T02 - Operative report with embedded PDF (base64)
+
+```
+MSH|^~\&|ARIS|UNB|ARCH|UNB|20260509170000||MDM^T02|ARIS20260509015|P|2.5|||AL|NE|SVK|UNICODE UTF-8|SVK^Slovak^HL70296
+EVN|T02|20260509170000
+PID|||7803156012^^^UNB^PI||Kučera^Šimon^Dávid^^^^L||19780315|M|||Dlhá 18^^Bratislava^^81101^SVK^H
+PV1|1|I|CHIR^101^3|||701001^Kľúčik^Michal^^^MUDr.
+TXA|1|OP^Operačný protokol^L|TX|20260509165000|701001^Kľúčik^Michal^^^MUDr.|20260509170000||||||DOC2026050015|||||AU
+OBX|1|ED|28570-0^Operačný protokol^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA1MCA+PgpzdHJlYW0KQlQgL0YxIDEyIFRmIDEwMCA3MDAgVGQgKExhYm9yYXRvcm5hIHNwcmF2YSkgVGogRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA3NCAwMDAwMCBuIAowMDAwMDAwMTQyIDAwMDAwIG4gCjAwMDAwMDAyNDIgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA1IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgozNDIKJSVFT0YK||||||F
+```
+
+---
+
+## 16. ACK - Positive acknowledgment for admission
+
+```
+MSH|^~\&|LAB|UNB|ARIS|UNB|20260509080001||ACK^A01^ACK|LAB20260509ACK001|P|2.5|||AL|NE|SVK|UNICODE UTF-8|SVK^Slovak^HL70296
+MSA|AA|ARIS20260509001
+```
+
+---
+
+## 17. ADT^A01 - Admission to urology
+
+```
+MSH|^~\&|ARIS|FNSP_BB|ADT|FNSP_BB|20260509173000||ADT^A01^ADT_A01|ARIS20260509017|P|2.5|||AL|NE|SVK|UNICODE UTF-8|SVK^Slovak^HL70296
+EVN|A01|20260509173000
+PID|||6558070033^^^FNSP_BB^PI||Gašparíková^Monika^Terézia^^^^L||19650807|F|||Tajovského 9^^Banská Bystrica^^97401^SVK^H||^PRN^PH^^421^48^4181234|||||||||||||SVK
+PV1|1|I|URO^201^1^^^N^A|R|||706006^Hajdúch^Filip^^^MUDr.^^^FNSP_BB^L|||URO||||||||2026050017^^^FNSP_BB^VN|||||||||||||||||||||||||20260509173000
+PV2|||||||||20260514|5
+DG1|1||N20.0^Obličkový kameň^ICD10SK|||A
+IN1|1|24-001^^^Dôvera|Dôvera^Dôvera zdravotná poisťovňa||Einsteinova 25^^Bratislava^^85101^SVK
+```
+
+---
+
+## 18. ORU^R01 - Urine culture results
+
+```
+MSH|^~\&|LAB|FNSP_BB|ARIS|FNSP_BB|20260509180000||ORU^R01|LAB20260509003|P|2.5|||AL|NE|SVK|UNICODE UTF-8|SVK^Slovak^HL70296
+PID|||6558070033^^^FNSP_BB^PI||Gašparíková^Monika^Terézia^^^^L||19650807|F|||Tajovského 9^^Banská Bystrica^^97401^SVK^H
+PV1|1|I|URO^201^1|||706006^Hajdúch^Filip^^^MUDr.
+ORC|RE|ORD2026050018^ARIS|RES2026050018^LAB
+OBR|1|ORD2026050018^ARIS|RES2026050018^LAB|630-4^Kultivačné vyšetrenie moču^LN|||20260509174000|||||||||706006^Hajdúch^Filip^^^MUDr.||||||20260509180000|||F
+OBX|1|CE|630-4^Identifikácia^LN||Escherichia coli^Escherichia coli^SNM|||A|||F|||20260509175000
+OBX|2|NM|564-5^Počet kolónií^LN||100000|CFU/mL|<10000|H|||F|||20260509175000
+OBX|3|ST|18769-0^Citlivosť^LN||Ciprofloxacín: S, Amoxicilín/klav.: S, Cefalexín: R, Nitrofurantoín: S||||||F|||20260509175000
+```
+
+---
+
+## 19. SIU^S12 - Scheduled lithotripsy procedure
+
+```
+MSH|^~\&|ARIS|FNSP_BB|RIS|FNSP_BB|20260509183000||SIU^S12|ARIS20260509019|P|2.5|||AL|NE|SVK|UNICODE UTF-8|SVK^Slovak^HL70296
+SCH|APT2026050002|APT2026050002|||||ROUTINE|ESWL^Extrakorporálna litotripsia^L|45|min|^^^20260514080000^^20260514084500|706006^Hajdúch^Filip^^^MUDr.
+PID|||6558070033^^^FNSP_BB^PI||Gašparíková^Monika^Terézia^^^^L||19650807|F|||Tajovského 9^^Banská Bystrica^^97401^SVK^H||^PRN^PH^^421^48^4181234
+PV1|1|I|URO^201^1
+RGS|1
+AIS|1|A|ESWL^Extrakorporálna litotripsia^L|20260514080000|45|min
+AIG|1|A|706006^Hajdúch^Filip^^^MUDr.|204
+AIL|1|A|ESWL^001^1^^^FNSP_BB
+```
+
+---
+
+## 20. ACK - Negative acknowledgment for unknown patient
+
+```
+MSH|^~\&|MPI|FN_NR|ARIS|FN_NR|20260509123001||ACK^A28^ACK|MPI20260509ACK001|P|2.5|||AL|NE|SVK|UNICODE UTF-8|SVK^Slovak^HL70296
+MSA|AE|ARIS20260509010|Duplicitný pacient - rodné číslo už existuje
+ERR|||205^Duplicitný kľúč^HL70357
+```

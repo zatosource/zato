@@ -1,0 +1,273 @@
+# Mediconsult (Mediatri) - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A04 - Outpatient registration at health center (terveyskeskuskäynnin rekisteröinti)
+
+```
+MSH|^~\&|MEDIATRI|JYVASKYLA_TK|KANTA|THL|20260509080000||ADT^A04|MEDI000001|P|2.3|||AL|NE||FIN
+EVN|A04|20260509080000
+PID|||PT700001^^^JYTK^MR~120385-234A^^^DVV^NNFIN||Penttinen^Marko^Juhani^^Herra||19850312|M|||Kauppakatu 28^^Jyväskylä^^40100^FIN||^^CP^0401234588
+PV1||O|JYTK^YLEIS1^Vastaanottohuone 3^^KSSHP||||DR700^Aalto^Kirsi^^^LL^Lääkäri||||||||||||KÄYNTI700001|||||||||||||||||||||||20260509080000
+IN1|1|KELA|700001|KELA - Kansaneläkelaitos|Nordenskiöldinkatu 12^^Helsinki^^00250^FIN
+```
+
+---
+
+## 2. ADT^A01 - Inpatient admission at health center ward (terveyskeskusvuodeosaston sisäänkirjaus)
+
+```
+MSH|^~\&|MEDIATRI|JYVASKYLA_TK|KANTA|THL|20260509100000||ADT^A01|MEDI000002|P|2.3|||AL|NE||FIN
+EVN|A01|20260509100000
+PID|||PT700002^^^JYTK^MR~050340+567B^^^DVV^NNFIN||Koivula^Helmi^Inkeri^^Rouva||19400305|F|||Väinönkatu 14^^Jyväskylä^^40100^FIN||^^PH^0141234567
+PV1||I|JYTK^VUODE1^Huone 105^Vuode 2^^KSSHP||||DR701^Lahtinen^Jari^^^LL^Lääkäri||||||||||||HOITO700001|||||||||||||||||||||||20260509100000
+PV2|||^Lonkkamurtuman jatkohoito
+IN1|1|FENNIA|700002|Fennia Vakuutus|Kyllikinportti 2^^Helsinki^^00240^FIN
+```
+
+---
+
+## 3. ADT^A03 - Discharge from health center ward (terveyskeskusvuodeosastolta kotiutus)
+
+```
+MSH|^~\&|MEDIATRI|JYVASKYLA_TK|KANTA|THL|20260520140000||ADT^A03|MEDI000003|P|2.3|||AL|NE||FIN
+EVN|A03|20260520140000
+PID|||PT700002^^^JYTK^MR~050340+567B^^^DVV^NNFIN||Koivula^Helmi^Inkeri^^Rouva||19400305|F|||Väinönkatu 14^^Jyväskylä^^40100^FIN||^^PH^0141234567
+PV1||I|JYTK^VUODE1^Huone 105^Vuode 2^^KSSHP||||DR701^Lahtinen^Jari^^^LL^Lääkäri||||||||||||HOITO700001|||||||||||||||||||||||20260509100000|20260520140000
+```
+
+---
+
+## 4. ADT^A08 - Update patient information (potilastietojen päivitys)
+
+```
+MSH|^~\&|MEDIATRI|JYVASKYLA_TK|KANTA|THL|20260509110000||ADT^A08|MEDI000004|P|2.3|||AL|NE||FIN
+EVN|A08|20260509110000
+PID|||PT700003^^^JYTK^MR~190775-890C^^^DVV^NNFIN||Hämäläinen^Sirpa^Marjatta^^Rouva||19750719|F|||Yliopistonkatu 10^^Jyväskylä^^40100^FIN||^^CP^0509876553
+PV1||O|JYTK^YLEIS2^Vastaanottohuone 5^^KSSHP||||DR702^Mäkinen^Ulla^^^LL^Lääkäri||||||||||||KÄYNTI700002
+NK1|1|Hämäläinen^Juha||^^CP^0509876554||EC
+```
+
+---
+
+## 5. ADT^A31 - Update person demographics (henkilötietojen muutos)
+
+```
+MSH|^~\&|MEDIATRI|JYVASKYLA_TK|VRK|DVV|20260509120000||ADT^A31|MEDI000005|P|2.3|||AL|NE||FIN
+EVN|A31|20260509120000
+PID|||PT700004^^^JYTK^MR~010200-123D^^^DVV^NNFIN||Kinnunen^Eemeli^Petteri^^Herra||20000201|M|||Hannikaisenkatu 22^^Jyväskylä^^40100^FIN||^^CP^0401234589
+PV1||N
+```
+
+---
+
+## 6. ORM^O01 - Laboratory order from health center (terveyskeskuksen laboratoriotilaus)
+
+```
+MSH|^~\&|MEDIATRI|JYVASKYLA_TK|FIMLAB|KSSHP|20260509083000||ORM^O01|MEDI000006|P|2.3|||AL|NE||FIN
+PID|||PT700005^^^JYTK^MR~280460-345E^^^DVV^NNFIN||Laine^Reijo^Olavi^^Herra||19600428|M|||Kilpisenkatu 5^^Jyväskylä^^40100^FIN||^^PH^0142345678
+PV1||O|JYTK^YLEIS1^Vastaanottohuone 3^^KSSHP||||DR700^Aalto^Kirsi^^^LL^Lääkäri||||||||||||KÄYNTI700003
+ORC|NW|ORD700001^MEDIATRI|||||^^^20260509083000^^R||20260509083000|DR700^Aalto^Kirsi^^^LL^Lääkäri
+OBR|1|ORD700001^MEDIATRI||4587^fP-Gluk^FIMLAB|||20260509083000||||||||DR700^Aalto^Kirsi^^^LL^Lääkäri
+OBR|2|ORD700001^MEDIATRI||4480^B-HbA1c^FIMLAB|||20260509083000||||||||DR700^Aalto^Kirsi^^^LL^Lääkäri
+OBR|3|ORD700001^MEDIATRI||4600^fP-Kol^FIMLAB|||20260509083000||||||||DR700^Aalto^Kirsi^^^LL^Lääkäri
+OBR|4|ORD700001^MEDIATRI||4520^P-CRP^FIMLAB|||20260509083000||||||||DR700^Aalto^Kirsi^^^LL^Lääkäri
+```
+
+---
+
+## 7. ORU^R01 - Diabetes monitoring results (diabetesseurantatulokset)
+
+```
+MSH|^~\&|FIMLAB|KSSHP|MEDIATRI|JYVASKYLA_TK|20260509140000||ORU^R01|FIMLAB000001|P|2.3|||AL|NE||FIN
+PID|||PT700005^^^JYTK^MR~280460-345E^^^DVV^NNFIN||Laine^Reijo^Olavi^^Herra||19600428|M|||Kilpisenkatu 5^^Jyväskylä^^40100^FIN||^^PH^0142345678
+PV1||O|JYTK^YLEIS1^Vastaanottohuone 3^^KSSHP||||DR700^Aalto^Kirsi^^^LL^Lääkäri||||||||||||KÄYNTI700003
+ORC|RE|ORD700001^MEDIATRI|RES700001^FIMLAB||||^^^20260509083000^^R||20260509140000
+OBR|1|ORD700001^MEDIATRI|RES700001^FIMLAB|4587^fP-Gluk^FIMLAB|||20260509090000|||||||20260509090000|^^S|DR700^Aalto^Kirsi^^^LL^Lääkäri||||||20260509140000|||F
+OBX|1|NM|14879-1^fP-Gluk^LN||8.2|mmol/l|4.0-6.0|H|||F|||20260509140000
+OBX|2|NM|4548-4^B-HbA1c^LN||62|mmol/mol|<42|HH|||F|||20260509140000
+OBX|3|NM|2093-3^fP-Kol^LN||6.1|mmol/l|<5.0|H|||F|||20260509140000
+OBX|4|NM|4520^P-CRP^FIMLAB||2|mg/l|<3||||F|||20260509140000
+```
+
+---
+
+## 8. SIU^S12 - Health center appointment (terveyskeskuksen ajanvaraus)
+
+```
+MSH|^~\&|MEDIATRI|JYVASKYLA_TK|MEDIATRI_SCHED|KSSHP|20260509100000||SIU^S12|MEDI000007|P|2.3|||AL|NE||FIN
+SCH|APT700001|APT700001||||ROUTINE^Normaali^HL70276|FOLLOWUP^Kontrollikäynti^HL70277|DOCTOR^Lääkärin vastaanotto|20|min|^^^20260523093000^20260523095000
+PID|||PT700005^^^JYTK^MR~280460-345E^^^DVV^NNFIN||Laine^Reijo^Olavi^^Herra||19600428|M|||Kilpisenkatu 5^^Jyväskylä^^40100^FIN||^^PH^0142345678
+PV1||O|JYTK^YLEIS1^Vastaanottohuone 3^^KSSHP||||DR700^Aalto^Kirsi^^^LL^Lääkäri
+RGS|1
+AIS|1||YLEISLAAK^Yleislääkärin vastaanotto^MEDIATRI|20260523093000|20|min
+AIP|1||DR700^Aalto^Kirsi^^^LL^Lääkäri
+```
+
+---
+
+## 9. SIU^S14 - Appointment modification (ajanvarauksen muutos)
+
+```
+MSH|^~\&|MEDIATRI|JYVASKYLA_TK|MEDIATRI_SCHED|KSSHP|20260512080000||SIU^S14|MEDI000008|P|2.3|||AL|NE||FIN
+SCH|APT700001|APT700001||||ROUTINE^Normaali^HL70276|FOLLOWUP^Kontrollikäynti^HL70277|DOCTOR^Lääkärin vastaanotto|20|min|^^^20260526093000^20260526095000
+PID|||PT700005^^^JYTK^MR~280460-345E^^^DVV^NNFIN||Laine^Reijo^Olavi^^Herra||19600428|M|||Kilpisenkatu 5^^Jyväskylä^^40100^FIN||^^PH^0142345678
+PV1||O|JYTK^YLEIS1^Vastaanottohuone 3^^KSSHP||||DR700^Aalto^Kirsi^^^LL^Lääkäri
+RGS|1
+AIS|1||YLEISLAAK^Yleislääkärin vastaanotto^MEDIATRI|20260526093000|20|min
+AIP|1||DR700^Aalto^Kirsi^^^LL^Lääkäri
+```
+
+---
+
+## 10. MDM^T02 - Clinical note (kliininen muistiinpano)
+
+```
+MSH|^~\&|MEDIATRI|JYVASKYLA_TK|KANTA|THL|20260509150000||MDM^T02|MEDI000009|P|2.3|||AL|NE||FIN
+EVN|T02|20260509150000
+PID|||PT700005^^^JYTK^MR~280460-345E^^^DVV^NNFIN||Laine^Reijo^Olavi^^Herra||19600428|M|||Kilpisenkatu 5^^Jyväskylä^^40100^FIN||^^PH^0142345678
+PV1||O|JYTK^YLEIS1^Vastaanottohuone 3^^KSSHP||||DR700^Aalto^Kirsi^^^LL^Lääkäri||||||||||||KÄYNTI700003
+TXA|1|HP^Vastaanottokäynti|TX|||20260509150000||||||DOC700001||||AU
+OBX|1|TX|11506-3^Progress note^LN||Diabetes kontrollissa. HbA1c noussut, lääkityksen tehostus metformiinin annosta nostamalla. Elämäntapaohjaus annettu.||||||F
+```
+
+---
+
+## 11. ORM^O01 - Referral to specialist (lähete erikoissairaanhoitoon)
+
+```
+MSH|^~\&|MEDIATRI|JYVASKYLA_TK|LIFECARE|KSKS|20260509141000||ORM^O01|MEDI000010|P|2.3|||AL|NE||FIN
+PID|||PT700006^^^JYTK^MR~100590-678F^^^DVV^NNFIN||Saarinen^Matti^Kalevi^^Herra||19900510|M|||Vapaudenkatu 60^^Jyväskylä^^40100^FIN||^^CP^0451234576
+PV1||O|JYTK^YLEIS2^Vastaanottohuone 5^^KSSHP||||DR702^Mäkinen^Ulla^^^LL^Lääkäri||||||||||||KÄYNTI700004
+ORC|NW|ORD700002^MEDIATRI|||||^^^20260509141000^^R||20260509141000|DR702^Mäkinen^Ulla^^^LL^Lääkäri
+OBR|1|ORD700002^MEDIATRI||LAHETE^Lähete, kardiologia^MEDIATRI|||20260509141000||||||||DR702^Mäkinen^Ulla^^^LL^Lääkäri
+NTE|1||Potilaalla rasituksessa ilmenevää rintakipua. Rasitus-EKG epänormaali. Pyydän kardiologin arviota.
+```
+
+---
+
+## 12. ORU^R01 - Blood count result (verenkuvavastaus)
+
+```
+MSH|^~\&|FIMLAB|KSSHP|MEDIATRI|JYVASKYLA_TK|20260509143000||ORU^R01|FIMLAB000002|P|2.3|||AL|NE||FIN
+PID|||PT700007^^^JYTK^MR~150268-901G^^^DVV^NNFIN||Karjalainen^Raija^Anneli^^Rouva||19680215|F|||Puistokatu 15^^Jyväskylä^^40100^FIN||^^CP^0407654333
+PV1||O|JYTK^YLEIS3^Vastaanottohuone 7^^KSSHP||||DR703^Heikkinen^Pekka^^^LL^Lääkäri||||||||||||KÄYNTI700005
+ORC|RE|ORD700003^MEDIATRI|RES700003^FIMLAB||||^^^20260509090000^^R||20260509143000
+OBR|1|ORD700003^MEDIATRI|RES700003^FIMLAB|2741^B-PVK+T^FIMLAB|||20260509091000|||||||20260509091000|^^B|DR703^Heikkinen^Pekka^^^LL^Lääkäri||||||20260509143000|||F
+OBX|1|NM|6768^B-Leuk^FIMLAB||6.2|10E9/l|3.4-8.2||||F|||20260509143000
+OBX|2|NM|2171^B-Eryt^FIMLAB||3.85|10E12/l|3.90-5.20|L|||F|||20260509143000
+OBX|3|NM|1552^B-Hb^FIMLAB||118|g/l|117-155||||F|||20260509143000
+OBX|4|NM|2798^B-Trom^FIMLAB||275|10E9/l|150-360||||F|||20260509143000
+```
+
+---
+
+## 13. ORU^R01 - Thyroid screening result (kilpirauhasseulonta)
+
+```
+MSH|^~\&|FIMLAB|KSSHP|MEDIATRI|JYVASKYLA_TK|20260509150000||ORU^R01|FIMLAB000003|P|2.3|||AL|NE||FIN
+PID|||PT700008^^^JYTK^MR~220578-123H^^^DVV^NNFIN||Toivonen^Elina^Marjatta^^Rouva||19780522|F|||Seminaarinkatu 30^^Jyväskylä^^40100^FIN||^^CP^0401234590
+PV1||O|JYTK^YLEIS2^Vastaanottohuone 5^^KSSHP||||DR702^Mäkinen^Ulla^^^LL^Lääkäri||||||||||||KÄYNTI700006
+ORC|RE|ORD700004^MEDIATRI|RES700004^FIMLAB||||^^^20260509083000^^R||20260509150000
+OBR|1|ORD700004^MEDIATRI|RES700004^FIMLAB|4832^S-TSH^FIMLAB|||20260509085000|||||||20260509085000|^^S|DR702^Mäkinen^Ulla^^^LL^Lääkäri||||||20260509150000|||F
+OBX|1|NM|3016-3^S-TSH^LN||8.5|mU/l|0.27-4.20|HH|||F|||20260509150000
+OBX|2|NM|3024-7^S-T4V^LN||9.2|pmol/l|11.0-22.0|L|||F|||20260509150000
+```
+
+---
+
+## 14. ORU^R01 - Lab report with base64 PDF attachment (laboratorioraportti PDF-liitteellä)
+
+```
+MSH|^~\&|FIMLAB|KSSHP|MEDIATRI|JYVASKYLA_TK|20260509160000||ORU^R01|FIMLAB000004|P|2.3|||AL|NE||FIN
+PID|||PT700009^^^JYTK^MR~030450+234J^^^DVV^NNFIN||Pietilä^Eino^Olavi^^Herra||19500403|M|||Asemakatu 7^^Jyväskylä^^40100^FIN||^^PH^0143456789
+PV1||I|JYTK^VUODE1^Huone 108^Vuode 1^^KSSHP||||DR701^Lahtinen^Jari^^^LL^Lääkäri||||||||||||HOITO700002
+ORC|RE|ORD700005^MEDIATRI|RES700005^FIMLAB||||^^^20260508090000^^R||20260509160000
+OBR|1|ORD700005^MEDIATRI|RES700005^FIMLAB|1155^Pu-BaktVi^FIMLAB|||20260508091000|||||||20260508091000|^^PU|DR701^Lahtinen^Jari^^^LL^Lääkäri||||||20260509160000|||F
+OBX|1|CE|1155^Pu-BaktVi^FIMLAB||SAUR^Staphylococcus aureus^FIMLAB||||||F|||20260509160000
+OBX|2|ST|ABRES^Herkkyys^FIMLAB|1|Oksasilliini S, Klindamysiini S, Vankomysiini S, Trimetopriimi-sulfametoksatsoli S||||||F|||20260509160000
+OBX|3|ED|PDF^Mikrobiologinen lausunto^L||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UK||||||F|||20260509160000
+```
+
+---
+
+## 15. ADT^A40 - Patient merge (potilastietojen yhdistäminen)
+
+```
+MSH|^~\&|MEDIATRI|JYVASKYLA_TK|KANTA|THL|20260509130000||ADT^A40|MEDI000011|P|2.3|||AL|NE||FIN
+EVN|A40|20260509130000
+PID|||PT700010^^^JYTK^MR||Mäkinen^Ritva^Helena^^Rouva||19620818|F|||Kalevankatu 3^^Jyväskylä^^40100^FIN||^^PH^0144567890
+MRG|PT700099^^^JYTK^MR
+PV1||N
+```
+
+---
+
+## 16. ORU^R01 - PSA screening result (PSA-seulontatulos)
+
+```
+MSH|^~\&|FIMLAB|KSSHP|MEDIATRI|JYVASKYLA_TK|20260509152000||ORU^R01|FIMLAB000005|P|2.3|||AL|NE||FIN
+PID|||PT700011^^^JYTK^MR~120560-567K^^^DVV^NNFIN||Niskanen^Pertti^Antero^^Herra||19600512|M|||Voionmaankatu 20^^Jyväskylä^^40100^FIN||^^CP^0407654334
+PV1||O|JYTK^YLEIS3^Vastaanottohuone 7^^KSSHP||||DR703^Heikkinen^Pekka^^^LL^Lääkäri||||||||||||KÄYNTI700007
+ORC|RE|ORD700006^MEDIATRI|RES700006^FIMLAB||||^^^20260509090000^^R||20260509152000
+OBR|1|ORD700006^MEDIATRI|RES700006^FIMLAB|2857-1^S-PSA^LN|||20260509091500|||||||20260509091500|^^S|DR703^Heikkinen^Pekka^^^LL^Lääkäri||||||20260509152000|||F
+OBX|1|NM|2857-1^S-PSA^LN||2.8|ug/l|<4.0||||F|||20260509152000
+```
+
+---
+
+## 17. ORU^R01 - Kidney function panel (munuaistoimintapaneeli)
+
+```
+MSH|^~\&|FIMLAB|KSSHP|MEDIATRI|JYVASKYLA_TK|20260509155000||ORU^R01|FIMLAB000006|P|2.3|||AL|NE||FIN
+PID|||PT700012^^^JYTK^MR~180375-890L^^^DVV^NNFIN||Rantala^Tuula^Kristiina^^Rouva||19750318|F|||Rajakatu 12^^Jyväskylä^^40200^FIN||^^CP^0401234591
+PV1||O|JYTK^YLEIS1^Vastaanottohuone 3^^KSSHP||||DR700^Aalto^Kirsi^^^LL^Lääkäri||||||||||||KÄYNTI700008
+ORC|RE|ORD700007^MEDIATRI|RES700007^FIMLAB||||^^^20260509083000^^R||20260509155000
+OBR|1|ORD700007^MEDIATRI|RES700007^FIMLAB|2003^P-Krea^FIMLAB|||20260509085000|||||||20260509085000|^^S|DR700^Aalto^Kirsi^^^LL^Lääkäri||||||20260509155000|||F
+OBX|1|NM|2160-0^P-Krea^LN||68|umol/l|50-90||||F|||20260509155000
+OBX|2|NM|33914-3^eGFR^LN||85|ml/min/1.73m2|>60||||F|||20260509155000
+OBX|3|NM|3094-0^P-Urea^LN||5.2|mmol/l|2.6-6.4||||F|||20260509155000
+```
+
+---
+
+## 18. ORU^R01 - Vaccination report with base64 PDF (rokotusraportti PDF-liitteellä)
+
+```
+MSH|^~\&|MEDIATRI|JYVASKYLA_TK|KANTA|THL|20260509161000||ORU^R01|MEDI000012|P|2.3|||AL|NE||FIN
+PID|||PT700013^^^JYTK^MR~150102-345M^^^DVV^NNFIN||Koivunen^Emilia^Sofia^^Neiti||20020115|F|||Cygnaeuksenkatu 8^^Jyväskylä^^40100^FIN||^^CP^0451234577
+PV1||O|JYTK^NEUVOLA1^Vastaanottohuone 1^^KSSHP||||DR704^Rajala^Sanna^^^LL^Lääkäri||||||||||||KÄYNTI700009
+OBR|1|||30954-2^Vaccination record^LN|||20260509161000||||||||DR704^Rajala^Sanna^^^LL^Lääkäri||||||20260509161000|||F
+OBX|1|TX|30954-2^Vaccination record text^LN||Influenssarokotus annettu, kausi 2026-2027. Valmiste: Fluarix Tetra, erä AB1234.||||||F|||20260509161000
+OBX|2|ED|PDF^Rokotustodistus^L||^application^pdf^Base64^JVBERi0xLjUKJeLjz9MKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKL01hcmtJbmZvIDw8Ci9NYXJrZWQgdHJ1ZQo+PgovTGFuZyAoZmkpCj4+CmVuZG9iagoyIDAgb2JqCjw8Ci9UeXBlIC9QYWdlcwovS2lkcyBbMyAwIFJdCi9Db3VudCAxCi9NZWRpYUJveCA+Pgpl||||||F|||20260509161000
+```
+
+---
+
+## 19. ORM^O01 - Occupational health lab order (työterveyden laboratoriotilaus)
+
+```
+MSH|^~\&|MEDIATRI|JYVASKYLA_TTH|FIMLAB|KSSHP|20260509091000||ORM^O01|MEDI000013|P|2.3|||AL|NE||FIN
+PID|||PT700014^^^JTTH^MR~220188-678N^^^DVV^NNFIN||Kortelainen^Janne^Mikael^^Herra||19880122|M|||Gummeruksenkatu 3^^Jyväskylä^^40100^FIN||^^CP^0401234592
+PV1||O|JTTH^TYÖTERV1^Vastaanottohuone 2^^KSSHP||||DR705^Peltola^Mikko^^^LL^Lääkäri||||||||||||KÄYNTI700010
+ORC|NW|ORD700008^MEDIATRI|||||^^^20260509091000^^R||20260509091000|DR705^Peltola^Mikko^^^LL^Lääkäri
+OBR|1|ORD700008^MEDIATRI||2741^B-PVK+T^FIMLAB|||20260509091000||||||||DR705^Peltola^Mikko^^^LL^Lääkäri
+OBR|2|ORD700008^MEDIATRI||2085^P-ALAT^FIMLAB|||20260509091000||||||||DR705^Peltola^Mikko^^^LL^Lääkäri
+OBR|3|ORD700008^MEDIATRI||2003^P-Krea^FIMLAB|||20260509091000||||||||DR705^Peltola^Mikko^^^LL^Lääkäri
+```
+
+---
+
+## 20. ORU^R01 - Occupational health results (työterveyden tulokset)
+
+```
+MSH|^~\&|FIMLAB|KSSHP|MEDIATRI|JYVASKYLA_TTH|20260509150000||ORU^R01|FIMLAB000007|P|2.3|||AL|NE||FIN
+PID|||PT700014^^^JTTH^MR~220188-678N^^^DVV^NNFIN||Kortelainen^Janne^Mikael^^Herra||19880122|M|||Gummeruksenkatu 3^^Jyväskylä^^40100^FIN||^^CP^0401234592
+PV1||O|JTTH^TYÖTERV1^Vastaanottohuone 2^^KSSHP||||DR705^Peltola^Mikko^^^LL^Lääkäri||||||||||||KÄYNTI700010
+ORC|RE|ORD700008^MEDIATRI|RES700008^FIMLAB||||^^^20260509091000^^R||20260509150000
+OBR|1|ORD700008^MEDIATRI|RES700008^FIMLAB|2741^B-PVK+T^FIMLAB|||20260509092000|||||||20260509092000|^^B|DR705^Peltola^Mikko^^^LL^Lääkäri||||||20260509150000|||F
+OBX|1|NM|6768^B-Leuk^FIMLAB||5.5|10E9/l|3.4-8.2||||F|||20260509150000
+OBX|2|NM|1552^B-Hb^FIMLAB||152|g/l|134-167||||F|||20260509150000
+OBX|3|NM|1742-6^P-ALAT^LN||22|U/l|<40||||F|||20260509150000
+OBX|4|NM|2160-0^P-Krea^LN||82|umol/l|60-100||||F|||20260509150000
+```

@@ -1,0 +1,266 @@
+# NIS DOCTUS (AdaSoft) - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - Patient admission to cardiology ward
+
+```
+MSH|^~\&|DOCTUS|UNB|ADT|UNB|20250401072030||ADT^A01|DOCT00001|P|2.3||||||8859/2
+EVN|A01|20250401072000
+PID|1||8503170041^^^UZIS^NI~1258503170^^VšZP^HC||Srnka^Ignác^^^||19850317|M|||Lipová 9^^Bratislava^^81104^^SVK||+421905214738||SK|M|rímskokatolícka|8503170041
+NK1|1|Srnková^Zuzana||+421905318492||W
+PV1|1|I|KAR-1^105^A^UNB||||20001^Valčo^Štefan^^^MUDr.|||KAR||||A|||20001^Valčo^Štefan^^^MUDr.|I|||||||||||||||||||UNB|||||20250401072000
+DG1|1|I10|I21.0^Akútny transmurálny infarkt myokardu^ICD10SK|||A
+IN1|1|25^^VšZP|VšZP|Všeobecná zdravotná poisťovňa^^Bratislava||||||||20250101|20251231||||Srnka^Ignác|self|19850317|Lipová 9^^Bratislava^^81104|||||||||||||||||8503170041
+```
+
+---
+
+## 2. ADT^A04 - Outpatient registration at orthopedics
+
+```
+MSH|^~\&|DOCTUS|UNLP_KE|ADT|UNLP_KE|20250402083545||ADT^A04|DOCT00002|P|2.3||||||8859/2
+EVN|A04|20250402083500
+PID|1||7809250033^^^UZIS^NI~1257809250^^Dôvera^HC||Čekovská^Ulrika^^^||19780925|F|||Hviezdoslavova 27^^Košice^^04001^^SVK||+421917463821||SK|M||7809250033
+PV1|1|O|ORT-AMB^001^^UNLP_KE||||20002^Klačanský^Teodor^^^MUDr.|||ORT||||R|||20002^Klačanský^Teodor^^^MUDr.|O||||||||||||||||||||||20250402
+DG1|1|I10|M54.5^Bolesť dolnej časti chrbta^ICD10SK|||A
+```
+
+---
+
+## 3. ORM^O01 - Laboratory order for thyroid panel
+
+```
+MSH|^~\&|DOCTUS|FNSP_ZA|LAB|FNSP_ZA|20250403100215||ORM^O01|DOCT00003|P|2.3||||||8859/2
+PID|1||6411230058^^^UZIS^NI~1256411230^^Union^HC||Dzúrik^Kornél^^^Ing.||19641123|M|||Záhradná 34^^Žilina^^01001^^SVK||+421903527146||SK|M||6411230058
+PV1|1|O|END-AMB^001^^FNSP_ZA||||20003^Žarnov^Urban^^^MUDr.|||END||||R|||20003^Žarnov^Urban^^^MUDr.|O||||||||||||||||||||||20250403
+ORC|NW|ORD20250403-001|LAB20250403-001||CM||||20250403100200|||20003^Žarnov^Urban^^^MUDr.
+OBR|1|ORD20250403-001|LAB20250403-001|83036-9^Tyreoidálny panel^LN|||20250403100200|||||||||20003^Žarnov^Urban^^^MUDr.||||||20250403||||F
+```
+
+---
+
+## 4. ORU^R01 - Thyroid function results
+
+```
+MSH|^~\&|LAB|FNSP_ZA|DOCTUS|FNSP_ZA|20250404141530||ORU^R01|DOCT00004|P|2.3||||||8859/2
+PID|1||6411230058^^^UZIS^NI~1256411230^^Union^HC||Dzúrik^Kornél^^^Ing.||19641123|M|||Záhradná 34^^Žilina^^01001^^SVK||+421903527146||SK|M||6411230058
+PV1|1|O|END-AMB^001^^FNSP_ZA||||20003^Žarnov^Urban^^^MUDr.|||END||||R|||20003^Žarnov^Urban^^^MUDr.|O||||||||||||||||||||||20250404
+ORC|RE|ORD20250403-001|LAB20250404-001||CM||||20250404141400|||20003^Žarnov^Urban^^^MUDr.
+OBR|1|ORD20250403-001|LAB20250404-001|83036-9^Tyreoidálny panel^LN|||20250403100200|||||||||20003^Žarnov^Urban^^^MUDr.||||||20250404141500||||F
+OBX|1|NM|3016-3^TSH^LN||2.45|mIU/L|0.27-4.20|N|||F
+OBX|2|NM|3026-2^Voľný T4^LN||15.8|pmol/L|12.0-22.0|N|||F
+OBX|3|NM|3053-6^Voľný T3^LN||4.9|pmol/L|3.1-6.8|N|||F
+```
+
+---
+
+## 5. ADT^A03 - Patient discharge from cardiology
+
+```
+MSH|^~\&|DOCTUS|UNB|ADT|UNB|20250405160045||ADT^A03|DOCT00005|P|2.3||||||8859/2
+EVN|A03|20250405160000
+PID|1||8503170041^^^UZIS^NI~1258503170^^VšZP^HC||Srnka^Ignác^^^||19850317|M|||Lipová 9^^Bratislava^^81104^^SVK||+421905214738||SK|M||8503170041
+PV1|1|I|KAR-1^105^A^UNB||||20001^Valčo^Štefan^^^MUDr.|||KAR||||D|||20001^Valčo^Štefan^^^MUDr.|I|||||||||||||||||||UNB|||||20250401072000|||20250405160000
+DG1|1|I10|I21.0^Akútny transmurálny infarkt myokardu^ICD10SK|||A
+DG1|2|I10|I25.1^Aterosklerotická choroba srdca^ICD10SK|||W
+```
+
+---
+
+## 6. ADT^A08 - Update patient contact information
+
+```
+MSH|^~\&|DOCTUS|FNSP_BB|MPI|FNSP_BB|20250406091030||ADT^A08|DOCT00006|P|2.3||||||8859/2
+EVN|A08|20250406091000
+PID|1||7102080024^^^UZIS^NI~1257102080^^Dôvera^HC||Hajdúch^Ladislav^^^||19710208|M|||Kukučínova 15^^Banská Bystrica^^97401^^SVK||+421914685239||SK|M||7102080024
+PV1|1|O|INT-AMB^003^^FNSP_BB||||20004^Kosorín^Vlastimil^^^MUDr.|||INT||||R|||20004^Kosorín^Vlastimil^^^MUDr.|O||||||||||||||||||||||20250406
+```
+
+---
+
+## 7. ORU^R01 - Hematology results with embedded PDF
+
+```
+MSH|^~\&|LAB|FN_NR|DOCTUS|FN_NR|20250407133022||ORU^R01|DOCT00007|P|2.3||||||8859/2
+PID|1||9506140067^^^UZIS^NI~1259506140^^VšZP^HC||Procházka^Maxim^^^||19950614|M|||Štefánikova 42^^Nitra^^94901^^SVK||+421901734582||SK|S||9506140067
+PV1|1|I|HEM-1^201^A^FN_NR||||20005^Lašák^Xaver^^^MUDr.|||HEM||||A|||20005^Lašák^Xaver^^^MUDr.|I||||||||||||||||||||||20250407
+ORC|RE|ORD20250407-002|LAB20250407-002||CM||||20250407132900|||20005^Lašák^Xaver^^^MUDr.
+OBR|1|ORD20250407-002|LAB20250407-002|58410-2^Kompletný krvný obraz s diferenciálom^LN|||20250407070000|||||||||20005^Lašák^Xaver^^^MUDr.||||||20250407133000||||F
+OBX|1|NM|6690-2^Leukocyty^LN||12.8|10*9/L|4.0-10.0|H|||F
+OBX|2|NM|789-8^Erytrocyty^LN||3.95|10*12/L|4.2-5.8|L|||F
+OBX|3|NM|718-7^Hemoglobín^LN||108|g/L|130-175|L|||F
+OBX|4|NM|777-3^Trombocyty^LN||45|10*9/L|150-400|L|||F
+OBX|5|ED|11502-2^Laboratórna správa^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA1MCA+PgpzdHJlYW0KQlQgL0YxIDEyIFRmIDEwMCA3MDAgVGQgKExhYm9yYXRvcm5hIHNwcmF2YSkgVGogRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA3NCAwMDAwMCBuIAowMDAwMDAwMTQyIDAwMDAwIG4gCjAwMDAwMDAyNDIgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA1IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgozNDIKJSVFT0YK||||||F
+```
+
+---
+
+## 8. SIU^S12 - Scheduled gastroscopy appointment
+
+```
+MSH|^~\&|DOCTUS|NSP_TN|SCHED|NSP_TN|20250408104500||SIU^S12|DOCT00008|P|2.3||||||8859/2
+SCH|APT20250415-003|APT20250415-003|||||GASTRO|Gastroskopia|20|min|^^20^20250415100000^20250415102000
+PID|1||7306190042^^^UZIS^NI~1257306190^^Dôvera^HC||Gálik^Norbert^^^||19730619|M|||Vajanského 8^^Trnava^^91701^^SVK||+421907392641||SK|M||7306190042
+PV1|1|O|GAS-AMB^001^^NSP_TN||||20006^Bystričan^Zdenko^^^MUDr.|||GAS||||R|||20006^Bystričan^Zdenko^^^MUDr.|O||||||||||||||||||||||20250408
+RGS|1
+AIS|1|A|GASTRO^Gastroskopia|20250415100000||20|min
+AIL|1|A|GAS-AMB^001^^NSP_TN
+AIP|1|A|20006^Bystričan^Zdenko^^^MUDr.
+```
+
+---
+
+## 9. ADT^A02 - Patient transfer from cardiology to rehabilitation
+
+```
+MSH|^~\&|DOCTUS|NsP_PO|ADT|NsP_PO|20250409140015||ADT^A02|DOCT00009|P|2.3||||||8859/2
+EVN|A02|20250409140000
+PID|1||6812040029^^^UZIS^NI~1256812040^^VšZP^HC||Podbrezovský^Osvald^^^||19681204|M|||Hlavná 51^^Prešov^^08001^^SVK||+421916853247||SK|M||6812040029
+PV1|1|I|RHB-1^301^B^NsP_PO||||20007^Lehocký^Adam^^^MUDr.|||RHB||||T|||20007^Lehocký^Adam^^^MUDr.|I|||||||||||||||||||NsP_PO|||||20250403091000
+PV2|||^Rehabilitácia po kardiochirurgickom výkone
+```
+
+---
+
+## 10. MDM^T02 - Discharge letter with embedded PDF
+
+```
+MSH|^~\&|DOCTUS|UNLP_KE|DMS|UNLP_KE|20250410153045||MDM^T02|DOCT00010|P|2.3||||||8859/2
+EVN|T02|20250410153000
+PID|1||8207130055^^^UZIS^NI~1258207130^^Union^HC||Krásnohorský^Pravoslav^^^||19820713|M|||Bottova 19^^Košice^^04001^^SVK||+421902461538||SK|M||8207130055
+PV1|1|I|CHIR-2^405^A^UNLP_KE||||20008^Cingel^Boris^^^MUDr.|||CHIR||||D|||20008^Cingel^Boris^^^MUDr.|I||||||||||||||||||||||20250410
+TXA|1|DS|TX|20250410153000|20008^Cingel^Boris^^^MUDr.||20250410153000||||||DOC20250410-003||||AU
+OBX|1|ED|11502-2^Prepúšťacia správa^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA1MCA+PgpzdHJlYW0KQlQgL0YxIDEyIFRmIDEwMCA3MDAgVGQgKExhYm9yYXRvcm5hIHNwcmF2YSkgVGogRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA3NCAwMDAwMCBuIAowMDAwMDAwMTQyIDAwMDAwIG4gCjAwMDAwMDAyNDIgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA1IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgozNDIKJSVFT0YK||||||F
+```
+
+---
+
+## 11. ADT^A28 - New patient registration
+
+```
+MSH|^~\&|DOCTUS|FNSP_ZA|MPI|FNSP_ZA|20250411080030||ADT^A28|DOCT00011|P|2.3||||||8859/2
+EVN|A28|20250411080000
+PID|1||0512080076^^^UZIS^NI~1260512080^^VšZP^HC||Hájniková^Valéria^^^||20051208|F|||Jesenského 33^^Žilina^^01001^^SVK||+421904279315||SK|S||0512080076
+NK1|1|Hájnik^Tomáš||+421904385126||F
+```
+
+---
+
+## 12. ORM^O01 - Ultrasound order
+
+```
+MSH|^~\&|DOCTUS|FNSP_BB|RIS|FNSP_BB|20250412091530||ORM^O01|DOCT00012|P|2.3||||||8859/2
+PID|1||8009210031^^^UZIS^NI~1258009210^^Dôvera^HC||Svätopluk^Quido^^^||19800921|M|||Komenského 6^^Banská Bystrica^^97401^^SVK||+421915648273||SK|M||8009210031
+PV1|1|O|RAD-AMB^002^^FNSP_BB||||20009^Dulák^Cyprián^^^MUDr.|||RAD||||R|||20009^Dulák^Cyprián^^^MUDr.|O||||||||||||||||||||||20250412
+ORC|NW|ORD20250412-004|RIS20250412-004||CM||||20250412091500|||20009^Dulák^Cyprián^^^MUDr.
+OBR|1|ORD20250412-004|RIS20250412-004|76856-0^USG brucha^LN|||20250412091500|||||||||20009^Dulák^Cyprián^^^MUDr.||||||20250412||||F
+```
+
+---
+
+## 13. ORU^R01 - Urinalysis results
+
+```
+MSH|^~\&|LAB|FN_NR|DOCTUS|FN_NR|20250413104022||ORU^R01|DOCT00013|P|2.3||||||8859/2
+PID|1||8103150021^^^UZIS^NI~1258103150^^VšZP^HC||Rybáriková^Xénia^^^||19810315|F|||Námestie slobody 4^^Nitra^^94901^^SVK||+421908472936||SK|M||8103150021
+PV1|1|O|URO-AMB^001^^FN_NR||||20010^Kopas^Denis^^^MUDr.|||URO||||R|||20010^Kopas^Denis^^^MUDr.|O||||||||||||||||||||||20250413
+ORC|RE|ORD20250413-001|LAB20250413-001||CM||||20250413103900|||20010^Kopas^Denis^^^MUDr.
+OBR|1|ORD20250413-001|LAB20250413-001|24356-8^Moč chemicky^LN|||20250413080000|||||||||20010^Kopas^Denis^^^MUDr.||||||20250413104000||||F
+OBX|1|CE|5767-9^Vzhľad^LN||Zakalený||Číry||||F
+OBX|2|NM|5803-2^pH^LN||6.0||5.0-8.0|N|||F
+OBX|3|NM|5811-5^Špecifická hmotnosť^LN||1.025||1.005-1.030|N|||F
+OBX|4|CE|5802-4^Nitrít^LN||Pozitívny||Negatívny|A|||F
+OBX|5|NM|5799-2^Leukocyty^LN||25|/uL|0-10|H|||F
+```
+
+---
+
+## 14. ADT^A40 - Merge duplicate patient records
+
+```
+MSH|^~\&|DOCTUS|UNB|MPI|UNB|20250414110015||ADT^A40|DOCT00014|P|2.3||||||8859/2
+EVN|A40|20250414110000
+PID|1||9107250074^^^UZIS^NI~1259107250^^Dôvera^HC||Hlaváček^Richard^^^||19910725|M|||Štúrova 22^^Bratislava^^81101^^SVK||+421906517384||SK|S||9107250074
+MRG|9107250074-OLD^^^DOCTUS^MR|
+```
+
+---
+
+## 15. ACK - Positive acknowledgement
+
+```
+MSH|^~\&|LAB|FNSP_ZA|DOCTUS|FNSP_ZA|20250415081215||ACK|DOCT00015|P|2.3||||||8859/2
+MSA|AA|DOCT00003|Objednávka prijatá na spracovanie
+```
+
+---
+
+## 16. ADT^A01 - Admission to neurology
+
+```
+MSH|^~\&|DOCTUS|UNLP_KE|ADT|UNLP_KE|20250416062045||ADT^A01|DOCT00016|P|2.3||||||8859/2
+EVN|A01|20250416062000
+PID|1||6205170026^^^UZIS^NI~1256205170^^VšZP^HC||Paľovčík^Svätopluk^^^||19620517|M|||Partizánska 71^^Košice^^04001^^SVK||+421911624839||SK|M||6205170026
+NK1|1|Paľovčíková^Marta||+421911735946||W
+PV1|1|E|NEU-1^102^A^UNLP_KE||||20011^Sliačanová^Hedviga^^^MUDr.|||NEU||||E|||20011^Sliačanová^Hedviga^^^MUDr.|E|||||||||||||||||||UNLP_KE|||||20250416062000
+PV2|||^Akútna cievna mozgová príhoda
+DG1|1|I10|I63.9^Mozgový infarkt^ICD10SK|||A
+IN1|1|25^^VšZP|VšZP|Všeobecná zdravotná poisťovňa^^Bratislava||||||||20250101|20251231||||Paľovčík^Svätopluk|self|19620517|Partizánska 71^^Košice^^04001|||||||||||||||||6205170026
+```
+
+---
+
+## 17. ORM^O01 - CT head urgent order
+
+```
+MSH|^~\&|DOCTUS|UNLP_KE|RIS|UNLP_KE|20250416063000||ORM^O01|DOCT00017|P|2.3||||||8859/2
+PID|1||6205170026^^^UZIS^NI~1256205170^^VšZP^HC||Paľovčík^Svätopluk^^^||19620517|M|||Partizánska 71^^Košice^^04001^^SVK||+421911624839||SK|M||6205170026
+PV1|1|E|NEU-1^102^A^UNLP_KE||||20011^Sliačanová^Hedviga^^^MUDr.|||NEU||||E|||20011^Sliačanová^Hedviga^^^MUDr.|E||||||||||||||||||||||20250416
+ORC|NW|ORD20250416-001|RIS20250416-001||CM||||20250416062900|||20011^Sliačanová^Hedviga^^^MUDr.
+OBR|1|ORD20250416-001|RIS20250416-001|70450^CT hlavy natívne^LN|||20250416062900|||||||||20011^Sliačanová^Hedviga^^^MUDr.||||||||||||STAT
+```
+
+---
+
+## 18. ORU^R01 - Blood gas analysis results
+
+```
+MSH|^~\&|LAB|FNSP_BB|DOCTUS|FNSP_BB|20250417084530||ORU^R01|DOCT00018|P|2.3||||||8859/2
+PID|1||8806030043^^^UZIS^NI~1258806030^^Union^HC||Bodoríková^Alica^^^||19880603|F|||Rázusova 12^^Banská Bystrica^^97401^^SVK||+421903285714||SK|M||8806030043
+PV1|1|I|JIS^501^A^FNSP_BB||||20012^Zacharová^Irena^^^MUDr.|||JIS||||A|||20012^Zacharová^Irena^^^MUDr.|I||||||||||||||||||||||20250417
+ORC|RE|ORD20250417-003|LAB20250417-003||CM||||20250417084400|||20012^Zacharová^Irena^^^MUDr.
+OBR|1|ORD20250417-003|LAB20250417-003|24336-0^Astrup^LN|||20250417083000|||||||||20012^Zacharová^Irena^^^MUDr.||||||20250417084500||||F
+OBX|1|NM|2744-1^pH^LN||7.35||7.35-7.45|N|||F
+OBX|2|NM|2019-8^pCO2^LN||5.8|kPa|4.7-6.0|N|||F
+OBX|3|NM|2703-7^pO2^LN||9.2|kPa|10.0-13.3|L|||F
+OBX|4|NM|1959-6^HCO3^LN||23.5|mmol/L|22.0-26.0|N|||F
+OBX|5|NM|2713-6^BE^LN||-1.2|mmol/L|-2.0-2.0|N|||F
+```
+
+---
+
+## 19. ADT^A31 - Update patient insurance
+
+```
+MSH|^~\&|DOCTUS|NsP_PO|MPI|NsP_PO|20250418093022||ADT^A31|DOCT00019|P|2.3||||||8859/2
+EVN|A31|20250418093000
+PID|1||9003110052^^^UZIS^NI~1259003110^^Dôvera^HC||Šramková^Celestína^^^||19900311|F|||Kalinčiakova 5^^Prešov^^08001^^SVK||+421905836492||SK|M||9003110052
+IN1|1|24^^Dôvera|Dôvera|Dôvera zdravotná poisťovňa^^Bratislava||||||||20250101|20251231||||Šramková^Celestína|self|19900311|Kalinčiakova 5^^Prešov^^08001|||||||||||||||||9003110052
+```
+
+---
+
+## 20. ORU^R01 - Histopathology report with embedded PDF
+
+```
+MSH|^~\&|LAB_PAT|NSP_TN|DOCTUS|NSP_TN|20250419151045||ORU^R01|DOCT00020|P|2.3||||||8859/2
+PID|1||7510280038^^^UZIS^NI~1257510280^^VšZP^HC||Krajmerová^Dita^^^||19751028|F|||Tajovského 16^^Trnava^^91701^^SVK||+421912493567||SK|M||7510280038
+PV1|1|I|CHIR-1^302^A^NSP_TN||||20008^Cingel^Boris^^^MUDr.|||CHIR||||A|||20008^Cingel^Boris^^^MUDr.|I||||||||||||||||||||||20250419
+ORC|RE|ORD20250417-005|LAB20250419-005||CM||||20250419150900|||20008^Cingel^Boris^^^MUDr.
+OBR|1|ORD20250417-005|LAB20250419-005|22634-0^Histopatologické vyšetrenie^LN|||20250417140000|||||||||20008^Cingel^Boris^^^MUDr.||||||20250419151000||||F
+OBX|1|FT|22636-5^Makroskopický nález^LN||Resekát hrubého čreva dĺžky 25 cm||||||F
+OBX|2|FT|22637-3^Mikroskopický nález^LN||Adenokarcinóm, stredne diferencovaný, G2||||||F
+OBX|3|CE|59847-4^TNM klasifikácia^LN||pT3 pN1 M0||||||F
+OBX|4|ED|11502-2^Histopatologická správa^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA1MCA+PgpzdHJlYW0KQlQgL0YxIDEyIFRmIDEwMCA3MDAgVGQgKExhYm9yYXRvcm5hIHNwcmF2YSkgVGogRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA3NCAwMDAwMCBuIAowMDAwMDAwMTQyIDAwMDAwIG4gCjAwMDAwMDAyNDIgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA1IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgozNDIKJSVFT0YK||||||F
+```

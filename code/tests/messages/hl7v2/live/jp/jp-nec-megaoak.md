@@ -1,0 +1,261 @@
+# NEC MegaOakHR - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - inpatient admission (入院登録)
+
+```
+MSH|^~\&|MegaOakHR|大阪大学医学部附属病院|SS-MIX2|地域連携|20260301080000||ADT^A01^ADT_A01|MOK20260301080000001|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A01|20260301080000
+PID|||PAT200100^^^大阪大学病院^PI||中村^健太郎^^^^^L||19580620|M|||大阪府吹田市山田丘2-15^^吹田市^大阪府^565-0871^JPN^H||^PRN^PH^^81^6^68795111||JPN|M|||||||||||||||||||N
+PV1||I|4N^401^1^大阪大学病院^^^^N||||D200100^小林^正則^^^^^L^^^DR|||SUR||||A|||V200100|||||||||||||||||||||||||||20260301080000
+IN1|1||34567890|国民健康保険|大阪府大阪市中央区大手前3-1-43||||||||||||||||||||||||||||||||||||||||6
+```
+
+---
+
+## 2. ADT^A03 - discharge (退院)
+
+```
+MSH|^~\&|MegaOakHR|大阪大学医学部附属病院|SS-MIX2|地域連携|20260315100000||ADT^A03^ADT_A03|MOK20260315100000002|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A03|20260315100000
+PID|||PAT200100^^^大阪大学病院^PI||中村^健太郎^^^^^L||19580620|M|||大阪府吹田市山田丘2-15^^吹田市^大阪府^565-0871^JPN^H||^PRN^PH^^81^6^68795111||JPN|M
+PV1||I|4N^401^1^大阪大学病院^^^^N||||D200100^小林^正則^^^^^L^^^DR|||SUR||||||||V200100|||||||||||||||||||||||||||20260315100000
+```
+
+---
+
+## 3. ORM^O01 - pharmacy order (処方オーダ)
+
+```
+MSH|^~\&|MegaOakHR|大阪大学医学部附属病院|薬剤部|大阪大学病院|20260302083000||ORM^O01^ORM_O01|MOK20260302083000003|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT200100^^^大阪大学病院^PI||中村^健太郎^^^^^L||19580620|M
+PV1||I|4N^401^1^大阪大学病院^^^^N||||D200100^小林^正則^^^^^L^^^DR
+ORC|NW|ORD20260302001^MegaOakHR||||||||||D200100^小林^正則^^^^^L^^^DR
+RXO|610463080^セフトリアキソンナトリウム1g^HOT9|||1||g||IV^静脈内^HL70162|||||||||||||||D200100^小林^正則^^^^^L^^^DR
+TQ1|||1^^D&日&JAHIS0001|||||20260302|||7^日^JAHIS0002
+```
+
+---
+
+## 4. OML^O33 - laboratory order (検体検査オーダ)
+
+```
+MSH|^~\&|MegaOakHR|大阪大学医学部附属病院|検査部|大阪大学病院|20260302060000||OML^O33^OML_O33|MOK20260302060000004|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT200100^^^大阪大学病院^PI||中村^健太郎^^^^^L||19580620|M
+PV1||I|4N^401^1^大阪大学病院^^^^N||||D200100^小林^正則^^^^^L^^^DR
+SPM|1|||BLD^血液^HL70487|||||||||||20260302060000
+ORC|NW|LAB20260302001^MegaOakHR||||||||||D200100^小林^正則^^^^^L^^^DR
+OBR|1|LAB20260302001^MegaOakHR||2B010000001930101^WBC^JC10|R||20260302060000
+OBR|2|LAB20260302002^MegaOakHR||2B020000001930101^RBC^JC10|R||20260302060000
+OBR|3|LAB20260302003^MegaOakHR||2B100000001930101^PLT^JC10|R||20260302060000
+```
+
+---
+
+## 5. ORU^R01 - laboratory result (検査結果)
+
+```
+MSH|^~\&|検査部|大阪大学病院|MegaOakHR|大阪大学病院|20260302140000||ORU^R01^ORU_R01|LAB20260302140000005|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT200100^^^大阪大学病院^PI||中村^健太郎^^^^^L||19580620|M
+PV1||I|4N^401^1^大阪大学病院^^^^N||||D200100^小林^正則^^^^^L^^^DR
+ORC|RE|LAB20260302001^MegaOakHR||||||||||D200100^小林^正則^^^^^L^^^DR
+OBR|1|LAB20260302001^MegaOakHR||2B010000001930101^WBC^JC10|R||20260302060000|||||||20260302060000||D200100^小林^正則^^^^^L^^^DR||||||||20260302140000|||F
+OBX|1|NM|2B010000001930101^WBC^JC10||8200|/uL|3300-8600|N|||F|||20260302140000
+OBX|2|NM|2B020000001930101^RBC^JC10||452|万/uL|435-555|N|||F|||20260302140000
+OBX|3|NM|2B100000001930101^PLT^JC10||21.5|万/uL|15.8-34.8|N|||F|||20260302140000
+OBX|4|NM|2A020000001930101^AST(GOT)^JC10||35|U/L|13-30|H|||F|||20260302140000
+OBX|5|NM|2A030000001930101^ALT(GPT)^JC10||42|U/L|10-42|N|||F|||20260302140000
+```
+
+---
+
+## 6. ORU^R01 - radiology report with embedded PDF (放射線レポート)
+
+```
+MSH|^~\&|放射線部|大阪大学病院|MegaOakHR|大阪大学病院|20260305160000||ORU^R01^ORU_R01|RAD20260305160000006|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT200100^^^大阪大学病院^PI||中村^健太郎^^^^^L||19580620|M
+PV1||I|4N^401^1^大阪大学病院^^^^N||||D200100^小林^正則^^^^^L^^^DR
+ORC|RE|RAD20260305001^MegaOakHR
+OBR|1|RAD20260305001^MegaOakHR||71046^胸部CT^CPT|R||20260305090000|||||||20260305090000||D200100^小林^正則^^^^^L^^^DR||||||||20260305160000|||F
+OBX|1|TX|71046^胸部CT^CPT|1|両肺野に明らかな結節影や浸潤影を認めず。縦隔リンパ節腫大なし。胸水なし。||||||F|||20260305160000
+OBX|2|ED|PDF^放射線レポートPDF^L|1|^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA4NDIgNTk1XSAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA1NSA+PgpzdHJlYW0KQlQKL0YxIDEyIFRmCjEwMCA3MDAgVGQKKENoZXN0IENUIFJlcG9ydCkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTE1IDAwMDAwIG4gCjAwMDAwMDAyMDYgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA1IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgozMTEKJSVFT0YK||||||F|||20260305160000
+```
+
+---
+
+## 7. ADT^A08 - patient information update (患者情報更新)
+
+```
+MSH|^~\&|MegaOakHR|大阪大学医学部附属病院|SS-MIX2|地域連携|20260303090000||ADT^A08^ADT_A01|MOK20260303090000007|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A08|20260303090000
+PID|||PAT200100^^^大阪大学病院^PI||中村^健太郎^^^^^L||19580620|M|||大阪府吹田市山田丘2-15^^吹田市^大阪府^565-0871^JPN^H~大阪府大阪市北区梅田1-1-1^^北区^大阪府^530-0001^JPN^O||^PRN^PH^^81^6^68795111~^WPN^PH^^81^6^63451234||JPN|M|||||||||||||||||||N
+PV1||I|4N^401^1^大阪大学病院^^^^N||||D200100^小林^正則^^^^^L^^^DR|||SUR||||||||V200100|||||||||||||||||||||||||||20260301080000
+```
+
+---
+
+## 8. ORM^O01 - radiology order MRI (MRI検査オーダ)
+
+```
+MSH|^~\&|MegaOakHR|大阪大学医学部附属病院|放射線部|大阪大学病院|20260306080000||ORM^O01^ORM_O01|MOK20260306080000008|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT200100^^^大阪大学病院^PI||中村^健太郎^^^^^L||19580620|M
+PV1||I|4N^401^1^大阪大学病院^^^^N||||D200100^小林^正則^^^^^L^^^DR
+ORC|NW|RAD20260306001^MegaOakHR||||||||||D200100^小林^正則^^^^^L^^^DR
+OBR|1|RAD20260306001^MegaOakHR||70553^頭部MRI造影^CPT|R||20260306080000|||||||20260306080000||D200100^小林^正則^^^^^L^^^DR
+```
+
+---
+
+## 9. ADT^A02 - patient transfer (転棟)
+
+```
+MSH|^~\&|MegaOakHR|大阪大学医学部附属病院|SS-MIX2|地域連携|20260308100000||ADT^A02^ADT_A02|MOK20260308100000009|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A02|20260308100000
+PID|||PAT200100^^^大阪大学病院^PI||中村^健太郎^^^^^L||19580620|M|||大阪府吹田市山田丘2-15^^吹田市^大阪府^565-0871^JPN^H||^PRN^PH^^81^6^68795111||JPN|M
+PV1||I|6E^605^1^大阪大学病院^^^^N||||D200100^小林^正則^^^^^L^^^DR|||SUR||4N^401^1^大阪大学病院^^^^N|||||||V200100|||||||||||||||||||||||||||20260308100000
+```
+
+---
+
+## 10. OMP^O09 - prescription with multiple medications (複数処方)
+
+```
+MSH|^~\&|MegaOakHR|大阪大学医学部附属病院|薬剤部|大阪大学病院|20260310090000||OMP^O09^OMP_O09|MOK20260310090000010|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT200100^^^大阪大学病院^PI||中村^健太郎^^^^^L||19580620|M
+PV1||I|6E^605^1^大阪大学病院^^^^N||||D200100^小林^正則^^^^^L^^^DR
+ORC|NW|RX20260310001^MegaOakHR||||||||||D200100^小林^正則^^^^^L^^^DR
+RXO|610421053^ランソプラゾールOD錠15mg^HOT9|||15||mg
+TQ1|||1^^D&日&JAHIS0001|||||20260310|||14^日^JAHIS0002
+ORC|NW|RX20260310002^MegaOakHR||||||||||D200100^小林^正則^^^^^L^^^DR
+RXO|612340101^アムロジピン錠5mg^HOT9|||5||mg
+TQ1|||1^^D&日&JAHIS0001|||||20260310|||14^日^JAHIS0002
+```
+
+---
+
+## 11. ORU^R01 - pathology report with embedded image (病理レポート)
+
+```
+MSH|^~\&|病理部|大阪大学病院|MegaOakHR|大阪大学病院|20260312150000||ORU^R01^ORU_R01|PATH20260312150000011|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT200100^^^大阪大学病院^PI||中村^健太郎^^^^^L||19580620|M
+PV1||I|6E^605^1^大阪大学病院^^^^N||||D200100^小林^正則^^^^^L^^^DR
+ORC|RE|PATH20260312001^MegaOakHR
+OBR|1|PATH20260312001^MegaOakHR||88305^病理組織診断^CPT|R||20260308100000|||||||20260308100000||D200100^小林^正則^^^^^L^^^DR||||||||20260312150000|||F
+OBX|1|TX|88305^病理組織診断^CPT|1|大腸ポリープ切除検体：管状腺腫、軽度異型。断端陰性。||||||F|||20260312150000
+OBX|2|ED|IMG^病理画像^L|1|^image^jpeg^Base64^/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAQABADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAFRABAQAAAAAAAAAAAAAAAAAAAAn/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAB//2Q==||||||F|||20260312150000
+```
+
+---
+
+## 12. ADT^A04 - outpatient registration (外来受付)
+
+```
+MSH|^~\&|MegaOakHR|大阪大学医学部附属病院|SS-MIX2|地域連携|20260320080000||ADT^A04^ADT_A01|MOK20260320080000012|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A04|20260320080000
+PID|||PAT200200^^^大阪大学病院^PI||吉田^明美子^^^^^L||19850115|F|||大阪府豊中市新千里東町1-1-1^^豊中市^大阪府^560-0082^JPN^H||^PRN^PH^^81^6^68331234||JPN|S
+PV1||O|消化器外来^1^1^大阪大学病院^^^^N||||D200200^高橋^太一郎^^^^^L^^^DR|||GAS||||A|||V200200|||||||||||||||||||||||||||20260320080000
+IN1|1||45678901|社会保険|大阪府大阪市中央区備後町3-6-14||||||||||||||||||||||||||||||||||||||||8
+```
+
+---
+
+## 13. SIU^S12 - appointment scheduled (予約登録)
+
+```
+MSH|^~\&|MegaOakHR|大阪大学医学部附属病院|外来予約|大阪大学病院|20260318150000||SIU^S12^SIU_S12|MOK20260318150000013|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+SCH|APT20260325001^MegaOakHR|APT20260325001^MegaOakHR|||||外来受診^外来予約^L|||||^^30^20260325090000^20260325093000
+PID|||PAT200200^^^大阪大学病院^PI||吉田^明美子^^^^^L||19850115|F
+PV1||O|消化器外来^1^1^大阪大学病院^^^^N||||D200200^高橋^太一郎^^^^^L^^^DR
+AIG|1||D200200^高橋^太一郎^^^^^L^^^DR
+AIL|1||消化器外来^1^1^大阪大学病院
+```
+
+---
+
+## 14. ORU^R01 - MRI report (MRIレポート)
+
+```
+MSH|^~\&|放射線部|大阪大学病院|MegaOakHR|大阪大学病院|20260306170000||ORU^R01^ORU_R01|RAD20260306170000014|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT200100^^^大阪大学病院^PI||中村^健太郎^^^^^L||19580620|M
+PV1||I|4N^401^1^大阪大学病院^^^^N||||D200100^小林^正則^^^^^L^^^DR
+ORC|RE|RAD20260306001^MegaOakHR
+OBR|1|RAD20260306001^MegaOakHR||70553^頭部MRI造影^CPT|R||20260306100000|||||||20260306100000||D200100^小林^正則^^^^^L^^^DR||||||||20260306170000|||F
+OBX|1|TX|70553^頭部MRI造影^CPT|1|脳実質に異常信号なし。脳室系拡大なし。脳溝開大なし。造影効果を示す病変なし。||||||F|||20260306170000
+OBX|2|TX|70553^頭部MRI造影^CPT|2|結論：頭部MRI造影にて異常所見を認めず。||||||F|||20260306170000
+```
+
+---
+
+## 15. DFT^P03 - charge posting (診療報酬請求)
+
+```
+MSH|^~\&|MegaOakHR|大阪大学医学部附属病院|医事会計|大阪大学病院|20260315110000||DFT^P03^DFT_P03|MOK20260315110000015|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|P03|20260315110000
+PID|||PAT200100^^^大阪大学病院^PI||中村^健太郎^^^^^L||19580620|M
+PV1||I|6E^605^1^大阪大学病院^^^^N||||D200100^小林^正則^^^^^L^^^DR
+FT1|1|ORD20260315001|20260315|20260315|CG|110^入院基本料^診療行為コード||15|15540|||||||||||||||D200100^小林^正則^^^^^L^^^DR
+FT1|2|ORD20260315002|20260315|20260315|CG|500^手術料^診療行為コード||1|32000|||||||||||||||D200100^小林^正則^^^^^L^^^DR
+```
+
+---
+
+## 16. RDE^O11 - pharmacy dispense event (調剤実施)
+
+```
+MSH|^~\&|薬剤部|大阪大学病院|MegaOakHR|大阪大学病院|20260310100000||RDE^O11^RDE_O11|PH20260310100000016|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT200100^^^大阪大学病院^PI||中村^健太郎^^^^^L||19580620|M
+PV1||I|6E^605^1^大阪大学病院^^^^N||||D200100^小林^正則^^^^^L^^^DR
+ORC|RE|RX20260310001^MegaOakHR|DSP20260310001^薬剤部|||||||||D200100^小林^正則^^^^^L^^^DR
+RXE|^^^20260310^^^日|610421053^ランソプラゾールOD錠15mg^HOT9|15||mg|錠|||||||14|||||||||||PH100^森^太一^^^^^L^^^RPH
+RXD|1|610421053^ランソプラゾールOD錠15mg^HOT9|20260310100000|14|錠||||||||||||||PH100^森^太一^^^^^L^^^RPH
+```
+
+---
+
+## 17. ADT^A28 - new patient registration (新規患者登録)
+
+```
+MSH|^~\&|MegaOakHR|大阪大学医学部附属病院|MPI|地域連携|20260320070000||ADT^A28^ADT_A05|MOK20260320070000017|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A28|20260320070000
+PID|||PAT200200^^^大阪大学病院^PI||吉田^明美子^^^^^L||19850115|F|||大阪府豊中市新千里東町1-1-1^^豊中市^大阪府^560-0082^JPN^H||^PRN^PH^^81^6^68331234||JPN|S
+```
+
+---
+
+## 18. ORU^R01 - endoscopy report (内視鏡レポート)
+
+```
+MSH|^~\&|内視鏡部|大阪大学病院|MegaOakHR|大阪大学病院|20260325140000||ORU^R01^ORU_R01|ENDO20260325140000018|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT200200^^^大阪大学病院^PI||吉田^明美子^^^^^L||19850115|F
+PV1||O|消化器外来^1^1^大阪大学病院^^^^N||||D200200^高橋^太一郎^^^^^L^^^DR
+ORC|RE|ENDO20260325001^MegaOakHR
+OBR|1|ENDO20260325001^MegaOakHR||45378^下部消化管内視鏡^CPT|R||20260325100000|||||||20260325100000||D200200^高橋^太一郎^^^^^L^^^DR||||||||20260325140000|||F
+OBX|1|TX|45378^下部消化管内視鏡^CPT|1|盲腸から直腸まで全大腸観察。S状結腸に5mmのポリープ1個認め、ポリペクトミー施行。||||||F|||20260325140000
+OBX|2|TX|45378^下部消化管内視鏡^CPT|2|その他の部位に異常所見なし。切除検体は病理へ提出。||||||F|||20260325140000
+```
+
+---
+
+## 19. MDM^T02 - referral letter with CDA attachment (紹介状)
+
+```
+MSH|^~\&|MegaOakHR|大阪大学医学部附属病院|SS-MIX2|地域連携|20260315150000||MDM^T02^MDM_T02|MOK20260315150000019|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|T02|20260315150000
+PID|||PAT200100^^^大阪大学病院^PI||中村^健太郎^^^^^L||19580620|M
+PV1||I|6E^605^1^大阪大学病院^^^^N||||D200100^小林^正則^^^^^L^^^DR
+TXA|1|RL^紹介状^HL70270|TX|20260315150000|D200100^小林^正則^^^^^L^^^DR||20260315150000||||||DOC20260315001||||||AU
+OBX|1|ED|RL^紹介状^HL70270|1|^text^xml^Base64^PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPENsaW5pY2FsRG9jdW1lbnQgeG1sbnM9InVybjpobDctb3JnOnYzIj4KICA8dGl0bGU+57Si5LuL54q2PC90aXRsZT4KICA8ZWZmZWN0aXZlVGltZSB2YWx1ZT0iMjAyNjAzMTUiLz4KICA8Y29tcG9uZW50PgogICAgPHN0cnVjdHVyZWRCb2R5PgogICAgICA8Y29tcG9uZW50PgogICAgICAgIDxzZWN0aW9uPgogICAgICAgICAgPHRpdGxlPue0ueS7i+ebrueahDwvdGl0bGU+CiAgICAgICAgICA8dGV4dD7ooZPlvozjg5Xjgqnjg63jg7zjgqLjg4Pjg5fkvp3poLw8L3RleHQ+CiAgICAgICAgPC9zZWN0aW9uPgogICAgICA8L2NvbXBvbmVudD4KICAgIDwvc3RydWN0dXJlZEJvZHk+CiAgPC9jb21wb25lbnQ+CjwvQ2xpbmljYWxEb2N1bWVudD4K||||||F|||20260315150000
+```
+
+---
+
+## 20. MFN^M02 - physician master update (医師マスタ更新)
+
+```
+MSH|^~\&|MegaOakHR|大阪大学医学部附属病院|SS-MIX2|地域連携|20260401000000||MFN^M02^MFN_M02|MOK20260401000000020|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+MFI|PRA^^HL70175||UPD|||NE
+MFE|MAD|D300100|20260401000000|D300100^松本^幸江^^^^^L^^^DR^大阪大学病院^CDA
+STF|D300100|D300100^^大阪大学病院|松本^幸江^^^^^L||F||||||^WPN^PH^^81^6^68795111
+PRA|D300100||I|整形外科||||||||||||||||||20260401
+```

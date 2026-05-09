@@ -1,0 +1,321 @@
+# Allscripts Sunrise (Veradigm) - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - Admission at NYC H+H Lincoln
+
+```
+MSH|^~\&|SUNRISE|LINCOLN_HHC|ADT_RECV|NYC_HHC|20250308142200||ADT^A01|MSG20250308142200001|P|2.3|||AL|NE
+EVN|A01|20250308142200|||CGARCIA^Garcia^Carla^^^REG
+PID|1||MRN70011234^^^LINCOLN^MR~482-71-3395^^^SSA^SS||Tavares^Darnell^K^^Mr.||19720810|M||H^Hispanic^HL70005|1247 Grand Concourse^^Bronx^NY^10452^US^H||^PRN^PH^^^718^4429876|^WPN^PH^^^718^4429900||M^Married^HL70002|||482-71-3395
+NK1|1|Tavares^Lucinda^R^^Mrs.|SPO^Spouse^HL70063||^PRN^PH^^^718^4429877||EC^Emergency Contact
+PV1|1|I|MED3^M312^A^LINCOLN^^^^MED3||||1198234501^Quinones^Rafael^E^^^MD|3347891205^Leung^Mei^W^^^MD|MED||||7|||1198234501^Quinones^Rafael^E^^^MD|IN||SELF|||||||||||||||||20250308142200|||||
+PV2|||^Diabetic ketoacidosis
+IN1|1|MDCNY001^NY Medicaid|99123|NY Medicaid|PO Box 4220^^Albany^NY^12204^US|||||||20240101||||Tavares^Darnell^K|SEL^Self|19720810|1247 Grand Concourse^^Bronx^NY^10452^US|||||A|||||||M||||||MCD881944327
+DG1|1||250.10^DM Type II with ketoacidosis^ICD9|||A
+DG1|2||276.2^Metabolic acidosis^ICD9|||A
+GT1|1||Tavares^Darnell^K^^Mr.||1247 Grand Concourse^^Bronx^NY^10452^US|^PRN^PH^^^718^4429876|||||SEL^Self
+```
+
+---
+
+## 2. ADT^A04 - ED registration at NYC H+H Elmhurst
+
+```
+MSH|^~\&|SUNRISE|ELMHURST_HHC|ED_SYS|NYC_HHC|20250422071500||ADT^A04|MSG20250422071500002|P|2.3|||AL|NE
+EVN|A04|20250422071500|||PKIM^Kim^Paul^^^REG
+PID|1||MRN70022345^^^ELMHURST^MR||Nakamura^Keiko^^^Mrs.||19650523|F||A^Asian^HL70005|82-15 Baxter Ave^^Elmhurst^NY^11373^US^H||^PRN^PH^^^718^5037821|||M^Married^HL70002|||631-28-4490
+NK1|1|Nakamura^Toshiro^M^^Mr.|SPO^Spouse^HL70063||^PRN^PH^^^718^5037822||EC^Emergency Contact
+PV1|1|E|ED^^^ELMHURST^^^^ED||||2291467803^Hossain^Faisal^A^^^MD||EM||||1|||2291467803^Hossain^Faisal^A^^^MD|EM||SELF|||||||||||||||||20250422071500|||||
+PV2|||^Severe abdominal pain with nausea
+IN1|1|FIDELIS001^Fidelis Care|28211|Fidelis Care NY|95-25 Queens Blvd^^Rego Park^NY^11374^US|||GRP334455|||20240601||||Nakamura^Keiko|SEL^Self|19650523|82-15 Baxter Ave^^Elmhurst^NY^11373^US|||||A|||||||F||||||FID290174803
+DG1|1||789.00^Abdominal pain unspecified site^ICD9|||W
+GT1|1||Nakamura^Keiko^^^Mrs.||82-15 Baxter Ave^^Elmhurst^NY^11373^US|^PRN^PH^^^718^5037821|||||SEL^Self
+```
+
+---
+
+## 3. ADT^A03 - Discharge from NYC H+H Kings County
+
+```
+MSH|^~\&|SUNRISE|KINGS_COUNTY_HHC|DISCH_SYS|NYC_HHC|20250510163000||ADT^A03|MSG20250510163000003|P|2.3|||AL|NE
+EVN|A03|20250510163000|||JWILSON^Wilson^James^^^RN
+PID|1||MRN70033456^^^KINGS_COUNTY^MR||Washington^Keyana^Tamika^^Ms.||19880115|F||B^Black^HL70005|1290 Bedford Ave^^Brooklyn^NY^11216^US^H||^PRN^PH^^^718^7741098|||S^Single^HL70002|||710-53-8827
+NK1|1|Washington^Denise^C^^Mrs.|MTH^Mother^HL70063||^PRN^PH^^^718^7741099||EC^Emergency Contact
+PV1|1|I|SURG2^S208^A^KINGS_COUNTY^^^^SURG2||||4480126739^Adekunle^Olumide^B^^^MD|5531948062^Castillo^Yolanda^F^^^MD|SURG||||7|||4480126739^Adekunle^Olumide^B^^^MD|IN||SELF|||||||||||||||||20250507080000||20250510163000|||
+PV2|||^Post appendectomy recovery
+DG1|1||540.9^Acute appendicitis without mention of peritonitis^ICD9|||A
+PR1|1||47.09^Other appendectomy^ICD9|Laparoscopic appendectomy|20250507|0
+```
+
+---
+
+## 4. ADT^A08 - Patient update at NYC H+H Jacobi
+
+```
+MSH|^~\&|SUNRISE|JACOBI_HHC|REG_SYS|NYC_HHC|20250618091200||ADT^A08|MSG20250618091200004|P|2.3|||AL|NE
+EVN|A08|20250618091200|||SYSTEM^System^Auto^^^SYS
+PID|1||MRN70044567^^^JACOBI^MR||Dominguez^Xiomara^Beatriz^^Mrs.||19790222|F||H^Hispanic^HL70005|2310 Eastchester Rd^^Bronx^NY^10469^US^H||^PRN^PH^^^718^8815540|||M^Married^HL70002|||539-82-6014
+NK1|1|Dominguez^Hector^R^^Mr.|SPO^Spouse^HL70063||^PRN^PH^^^718^8815541||EC^Emergency Contact
+PV1|1|I|OB3^OB312^A^JACOBI^^^^OB3||||6604382917^Reznick^Ilana^F^^^MD||OB||||7|||6604382917^Reznick^Ilana^F^^^MD|IN||SELF|||||||||||||||||20250615100000|||||
+PV2|||^Preeclampsia management
+IN1|1|HEALTHFIRST001^Healthfirst|80705|Healthfirst NY|100 Church St^^New York^NY^10007^US|||GRP556677|||20240901||||Dominguez^Xiomara^Beatriz|SEL^Self|19790222|2310 Eastchester Rd^^Bronx^NY^10469^US|||||A|||||||F||||||HF1402938571
+DG1|1||642.40^Mild or unspecified pre-eclampsia unspecified^ICD9|||A
+```
+
+---
+
+## 5. ORM^O01 - Lab order at NYC H+H Harlem
+
+```
+MSH|^~\&|SUNRISE|HARLEM_HHC|LAB_SYS|NYC_HHC_LAB|20250705083000||ORM^O01|MSG20250705083000005|P|2.3|||AL|NE
+PID|1||MRN70055678^^^HARLEM^MR||Baptiste^Jamal^Reginald^^Mr.||19910704|M||B^Black^HL70005|2501 Frederick Douglass Blvd^^New York^NY^10030^US^H||^PRN^PH^^^212^6619034|||S^Single^HL70002|||824-60-1973
+PV1|1|I|MED5^M508^A^HARLEM^^^^MED5||||7715290463^Eisenberg^Samuel^J^^^MD||MED||||7|||7715290463^Eisenberg^Samuel^J^^^MD|IN||SELF|||||||||||||||||20250703142000|||||
+ORC|NW|ORD20250705001^SUNRISE|LAB20250705001^NYC_HHC_LAB||CM||||20250705083000|KSMITH^Smith^Karen^^^RN||7715290463^Eisenberg^Samuel^J^^^MD|HARLEM_HHC
+OBR|1|ORD20250705001^SUNRISE|LAB20250705001^NYC_HHC_LAB|80048^Basic Metabolic Panel^CPT4|||20250705083000|||||||||7715290463^Eisenberg^Samuel^J^^^MD||||||20250705083000|||F
+OBR|2|ORD20250705002^SUNRISE|LAB20250705002^NYC_HHC_LAB|83036^Hemoglobin A1c^CPT4|||20250705083000|||||||||7715290463^Eisenberg^Samuel^J^^^MD||||||20250705083000|||F
+OBR|3|ORD20250705003^SUNRISE|LAB20250705003^NYC_HHC_LAB|80061^Lipid Panel^CPT4|||20250705083000|||||||||7715290463^Eisenberg^Samuel^J^^^MD||||||20250705083000|||F
+DG1|1||250.00^DM Type II without complication^ICD9|||A
+```
+
+---
+
+## 6. ORU^R01 - Lab results at NYC H+H Lincoln
+
+```
+MSH|^~\&|SUNRISE|LINCOLN_HHC|LAB_RPT|NYC_HHC|20250720141500||ORU^R01|MSG20250720141500006|P|2.3|||AL|NE
+PID|1||MRN70011234^^^LINCOLN^MR||Tavares^Darnell^K^^Mr.||19720810|M||H^Hispanic^HL70005|1247 Grand Concourse^^Bronx^NY^10452^US^H||^PRN^PH^^^718^4429876|||M^Married^HL70002|||482-71-3395
+PV1|1|I|MED3^M312^A^LINCOLN^^^^MED3||||1198234501^Quinones^Rafael^E^^^MD||MED||||7|||1198234501^Quinones^Rafael^E^^^MD|IN||SELF|||||||||||||||||20250308142200|||||
+ORC|RE|ORD20250720001^SUNRISE|LAB20250720001^NYC_HHC_LAB||CM||||20250720141500|||1198234501^Quinones^Rafael^E^^^MD|LINCOLN_HHC
+OBR|1|ORD20250720001^SUNRISE|LAB20250720001^NYC_HHC_LAB|80048^Basic Metabolic Panel^CPT4|||20250720080000|||||||||1198234501^Quinones^Rafael^E^^^MD||||||20250720141500|||F
+OBX|1|NM|2345-7^Glucose^LN||187|mg/dL|74-106|HH|||F|||20250720120000
+OBX|2|NM|3094-0^BUN^LN||22|mg/dL|7-20|H|||F|||20250720120000
+OBX|3|NM|2160-0^Creatinine^LN||1.4|mg/dL|0.7-1.3|H|||F|||20250720120000
+OBX|4|NM|2951-2^Sodium^LN||138|mmol/L|136-145|N|||F|||20250720120000
+OBX|5|NM|2823-3^Potassium^LN||4.8|mmol/L|3.5-5.1|N|||F|||20250720120000
+OBX|6|NM|2075-0^Chloride^LN||100|mmol/L|98-106|N|||F|||20250720120000
+OBX|7|NM|2028-9^CO2^LN||18|mmol/L|21-32|L|||F|||20250720120000
+OBX|8|NM|17861-6^Calcium^LN||9.2|mg/dL|8.5-10.5|N|||F|||20250720120000
+```
+
+---
+
+## 7. ORU^R01 - Pathology report with embedded PDF
+
+```
+MSH|^~\&|SUNRISE|KINGS_COUNTY_HHC|PATH_SYS|NYC_HHC|20250805160000||ORU^R01|MSG20250805160000007|P|2.3|||AL|NE
+PID|1||MRN70033456^^^KINGS_COUNTY^MR||Washington^Keyana^Tamika^^Ms.||19880115|F||B^Black^HL70005|1290 Bedford Ave^^Brooklyn^NY^11216^US^H||^PRN^PH^^^718^7741098|||S^Single^HL70002|||710-53-8827
+PV1|1|O|PATH_CLINIC^^^KINGS_COUNTY^^^^PATH||||8823601549^Greenberg^Lev^N^^^MD||PATH||||1|||8823601549^Greenberg^Lev^N^^^MD|OP||SELF|||||||||||||||||20250805100000|||||
+ORC|RE|ORD20250805001^SUNRISE|PATH20250805001^NYC_HHC_PATH||CM||||20250805160000|||8823601549^Greenberg^Lev^N^^^MD|KINGS_COUNTY_HHC
+OBR|1|ORD20250805001^SUNRISE|PATH20250805001^NYC_HHC_PATH|88305^Surgical Pathology^CPT4|||20250805100000|||||||||8823601549^Greenberg^Lev^N^^^MD||||||20250805160000|||F
+OBX|1|TX|88305^Surgical Pathology^CPT4||SPECIMEN: Appendix, appendectomy. GROSS: Received in formalin is an appendix measuring 8.5cm in length and 1.2cm in diameter. Serosal surface is erythematous and covered with fibrinous exudate. Cross sections reveal thickened wall with luminal obliteration.||||||F|||20250805153000
+OBX|2|TX|88305^Surgical Pathology^CPT4||MICROSCOPIC: Transmural acute inflammation with neutrophilic infiltrate extending through muscularis propria to serosa. Luminal necrosis and fibrinopurulent debris. No evidence of perforation or malignancy.||||||F|||20250805153000
+OBX|3|TX|88305^Surgical Pathology^CPT4||DIAGNOSIS: Appendix, appendectomy - Acute suppurative appendicitis. No perforation identified. Margins free of acute inflammation.||||||F|||20250805153000
+OBX|4|ED|PATH_PDF^Pathology Report^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVGl0bGUgKFN1cmdpY2FsIFBhdGhvbG9neSBSZXBvcnQpCi9BdXRob3IgKERyLiBBYXJvbiBTLiBHb2xkc3RlaW4pCi9DcmVhdG9yIChBbGxzY3JpcHRzIFN1bnJpc2UgUGF0aG9sb2d5IE1vZHVsZSkKL1Byb2R1Y2VyIChWZXJhZGlnbSBQREYgR2VuZXJhdG9yIHYyLjgpCi9DcmVhdGlvbkRhdGUgKEQ6MjAyNTA4MDUxNjAwMDApCj4+CmVuZG9iagoyIDAgb2JqCjw8Ci9UeXBlIC9DYXRhbG9nCi9QYWdlcyAzIDAgUgo+PgplbmRvYmoKMyAwIG9iago8PAovVHlwZSAvUGFnZXMKL0tpZHMgWzQgMCBSXQovQ291bnQgMQo+PgplbmRvYmoKNCAwIG9iago8PAovVHlwZSAvUGFnZQovUGFyZW50IDMgMCBSCi9NZWRpYUJveCBbMCAwIDYxMiA3OTJdCi9Db250ZW50cyA1IDAgUgo+PgplbmRvYmoK||||||F|||20250805160000
+```
+
+---
+
+## 8. ORM^O01 - Radiology order at NYC H+H Coney Island
+
+```
+MSH|^~\&|SUNRISE|CONEY_ISLAND_HHC|RIS|NYC_HHC_RAD|20250820093000||ORM^O01|MSG20250820093000008|P|2.3|||AL|NE
+PID|1||MRN70066789^^^CONEY_ISLAND^MR||Kowalczyk^Stanislaw^T^^Mr.||19800417|M||W^White^HL70005|2847 Brighton 4th St^^Brooklyn^NY^11235^US^H||^PRN^PH^^^718^3364517|||M^Married^HL70002|||903-47-2218
+PV1|1|E|ED^^^CONEY_ISLAND^^^^ED||||9917024583^Sorokina^Natalia^V^^^MD||EM||||1|||9917024583^Sorokina^Natalia^V^^^MD|EM||SELF|||||||||||||||||20250820090000|||||
+ORC|NW|ORD20250820001^SUNRISE|RAD20250820001^NYC_HHC_RAD||SC||||20250820093000|RNURSE^Nurse^Rita^^^RN||9917024583^Sorokina^Natalia^V^^^MD|CONEY_ISLAND_HHC
+OBR|1|ORD20250820001^SUNRISE|RAD20250820001^NYC_HHC_RAD|70553^MRI Brain without and with Contrast^CPT4|||20250820093000|||||||||9917024583^Sorokina^Natalia^V^^^MD||||||20250820093000|||F||||||^Evaluate for stroke symptoms
+DG1|1||436^Acute cerebrovascular disease^ICD9|||W
+```
+
+---
+
+## 9. RAS^O17 - Medication administration at NYC H+H Bellevue
+
+```
+MSH|^~\&|SUNRISE|BELLEVUE_HHC|PHARM_SYS|NYC_HHC|20250902143000||RAS^O17|MSG20250902143000009|P|2.3|||AL|NE
+PID|1||MRN70077890^^^BELLEVUE^MR||Ocasio^Angel^Luis^^Mr.||19850312|M||H^Hispanic^HL70005|215 Avenue D^^New York^NY^10009^US^H||^PRN^PH^^^212^7745621|||S^Single^HL70002|||218-63-9074
+PV1|1|I|PSYCH4^P412^A^BELLEVUE^^^^PSYCH4||||1187320964^Liebowitz^Nathan^G^^^MD||PSY||||7|||1187320964^Liebowitz^Nathan^G^^^MD|IN||SELF|||||||||||||||||20250830080000|||||
+ORC|RE|ORD20250902001^SUNRISE|PHARM20250902001^NYC_HHC_PHARM||CM||||20250902143000|JNURSE^Nurse^Janet^^^RN||1187320964^Liebowitz^Nathan^G^^^MD|BELLEVUE_HHC
+RXA|0|1|20250902143000|20250902143500|5093^Haloperidol 5mg IM^RXNORM|5|mg||||||||||||||||||
+RXR|IM^Intramuscular^HL70162|RA^Right Arm^HL70163
+OBX|1|TX|ADMIN_NOTE^Administration Note^L||Patient tolerated injection without adverse reaction. Vital signs stable post-administration.||||||F|||20250902144000
+```
+
+---
+
+## 10. ADT^A01 - Admission at NYC H+H Metropolitan
+
+```
+MSH|^~\&|SUNRISE|METROPOLITAN_HHC|ADT_RECV|NYC_HHC|20250915201500||ADT^A01|MSG20250915201500010|P|2.3|||AL|NE
+EVN|A01|20250915201500|||DPARKER^Parker^Donna^^^REG
+PID|1||MRN70088901^^^METROPOLITAN^MR||Achebe^Chiamaka^T^^Ms.||19960328|F||B^Black^HL70005|412 E 102nd St^^New York^NY^10029^US^H||^PRN^PH^^^212^8837102|||S^Single^HL70002|||167-40-5923
+NK1|1|Achebe^Nkechi^O^^Mrs.|MTH^Mother^HL70063||^PRN^PH^^^212^8837103||EC^Emergency Contact
+PV1|1|I|MED2^M215^A^METROPOLITAN^^^^MED2||||2290174563^Callahan^Siobhan^M^^^MD||MED||||7|||2290174563^Callahan^Siobhan^M^^^MD|IN||SELF|||||||||||||||||20250915201500|||||
+PV2|||^Sickle cell crisis with acute chest syndrome
+IN1|1|MDCNY001^NY Medicaid|99123|NY Medicaid|PO Box 4220^^Albany^NY^12204^US|||||||20250101||||Achebe^Chiamaka^T|SEL^Self|19960328|412 E 102nd St^^New York^NY^10029^US|||||A|||||||F||||||MCD509213847
+DG1|1||282.62^Sickle cell disease with crisis^ICD9|||A
+DG1|2||517.1^Acute chest syndrome^ICD9|||A
+GT1|1||Achebe^Chiamaka^T^^Ms.||412 E 102nd St^^New York^NY^10029^US|^PRN^PH^^^212^8837102|||||SEL^Self
+```
+
+---
+
+## 11. ORU^R01 - Blood bank results at NYC H+H Jacobi
+
+```
+MSH|^~\&|SUNRISE|JACOBI_HHC|BLOOD_BANK|NYC_HHC|20250928104500||ORU^R01|MSG20250928104500011|P|2.3|||AL|NE
+PID|1||MRN70044567^^^JACOBI^MR||Dominguez^Xiomara^Beatriz^^Mrs.||19790222|F||H^Hispanic^HL70005|2310 Eastchester Rd^^Bronx^NY^10469^US^H||^PRN^PH^^^718^8815540|||M^Married^HL70002|||539-82-6014
+PV1|1|I|OB3^OB312^A^JACOBI^^^^OB3||||6604382917^Reznick^Ilana^F^^^MD||OB||||7|||6604382917^Reznick^Ilana^F^^^MD|IN||SELF|||||||||||||||||20250615100000|||||
+ORC|RE|ORD20250928001^SUNRISE|BB20250928001^NYC_HHC_BB||CM||||20250928104500|||6604382917^Reznick^Ilana^F^^^MD|JACOBI_HHC
+OBR|1|ORD20250928001^SUNRISE|BB20250928001^NYC_HHC_BB|86900^Blood Type^CPT4|||20250928090000|||||||||6604382917^Reznick^Ilana^F^^^MD||||||20250928104500|||F
+OBX|1|TX|883-9^ABO Group^LN||O||||||F|||20250928100000
+OBX|2|TX|10331-7^Rh Type^LN||Positive||||||F|||20250928100000
+OBX|3|TX|1250-0^Antibody Screen^LN||Negative||||||F|||20250928100000
+OBX|4|TX|46265-2^Direct Antiglobulin Test^LN||Negative||||||F|||20250928100000
+```
+
+---
+
+## 12. ADT^A08 - Demographics update at NYC H+H Woodhull
+
+```
+MSH|^~\&|SUNRISE|WOODHULL_HHC|REG_SYS|NYC_HHC|20251005112000||ADT^A08|MSG20251005112000012|P|2.3|||AL|NE
+EVN|A08|20251005112000|||SYSTEM^System^Auto^^^SYS
+PID|1||MRN70099012^^^WOODHULL^MR||Yamamoto^Rina^^^Ms.||19870914|F||A^Asian^HL70005|78 Montrose Ave^^Brooklyn^NY^11206^US^H||^PRN^PH^^^718^3022189|||S^Single^HL70002|||347-19-5068
+PV1|1|O|CLINIC2^^^WOODHULL^^^^CLINIC||||3309721854^Velez^Ignacio^M^^^MD||MED||||1|||3309721854^Velez^Ignacio^M^^^MD|OP||SELF|||||||||||||||||20251005100000|||||
+IN1|1|EMBLEM001^EmblemHealth|13551|EmblemHealth|55 Water St^^New York^NY^10041^US|||GRP778899|||20250101||||Yamamoto^Rina|SEL^Self|19870914|78 Montrose Ave^^Brooklyn^NY^11206^US|||||A|||||||F||||||EMB830271945
+```
+
+---
+
+## 13. ORM^O01 - Pharmacy order at NYC H+H Lincoln
+
+```
+MSH|^~\&|SUNRISE|LINCOLN_HHC|PHARM_SYS|NYC_HHC_PHARM|20251020083000||ORM^O01|MSG20251020083000013|P|2.3|||AL|NE
+PID|1||MRN70100123^^^LINCOLN^MR||Jefferson^Marquis^Terrell^^Mr.||19770520|M||B^Black^HL70005|843 Cauldwell Ave^^Bronx^NY^10456^US^H||^PRN^PH^^^718^5930274|||M^Married^HL70002|||271-86-4530
+PV1|1|I|CCU^CCU04^A^LINCOLN^^^^CCU||||4403195867^Chakraborty^Anil^S^^^MD||CARD||||7|||4403195867^Chakraborty^Anil^S^^^MD|IN||SELF|||||||||||||||||20251018160000|||||
+ORC|NW|ORD20251020001^SUNRISE|PHARM20251020001^NYC_HHC_PHARM||SC||||20251020083000|ANURSE^Nurse^Angela^^^RN||4403195867^Chakraborty^Anil^S^^^MD|LINCOLN_HHC
+OBR|1|ORD20251020001^SUNRISE|PHARM20251020001^NYC_HHC_PHARM|RX002^Medication Order^L|||20251020083000|||||||||4403195867^Chakraborty^Anil^S^^^MD
+RXO|854252^Heparin 25000 units in D5W 500mL IV^RXNORM||25000|units||IV|CONTINUOUS^^^CONT||G
+RXR|IV^Intravenous^HL70162|RA^Right Arm^HL70163
+DG1|1||410.71^Subendocardial infarction initial episode^ICD9|||A
+```
+
+---
+
+## 14. ORU^R01 - Cardiac markers results with PDF
+
+```
+MSH|^~\&|SUNRISE|LINCOLN_HHC|CARD_LAB|NYC_HHC|20251021061500||ORU^R01|MSG20251021061500014|P|2.3|||AL|NE
+PID|1||MRN70100123^^^LINCOLN^MR||Jefferson^Marquis^Terrell^^Mr.||19770520|M||B^Black^HL70005|843 Cauldwell Ave^^Bronx^NY^10456^US^H||^PRN^PH^^^718^5930274|||M^Married^HL70002|||271-86-4530
+PV1|1|I|CCU^CCU04^A^LINCOLN^^^^CCU||||4403195867^Chakraborty^Anil^S^^^MD||CARD||||7|||4403195867^Chakraborty^Anil^S^^^MD|IN||SELF|||||||||||||||||20251018160000|||||
+ORC|RE|ORD20251021001^SUNRISE|LAB20251021001^NYC_HHC_LAB||CM||||20251021061500|||4403195867^Chakraborty^Anil^S^^^MD|LINCOLN_HHC
+OBR|1|ORD20251021001^SUNRISE|LAB20251021001^NYC_HHC_LAB|93000^Cardiac Biomarkers^CPT4|||20251021040000|||||||||4403195867^Chakraborty^Anil^S^^^MD||||||20251021061500|||F
+OBX|1|NM|49563-0^Troponin I^LN||2.45|ng/mL|0.00-0.04|HH|||F|||20251021055000
+OBX|2|NM|30522-7^CK-MB^LN||38.2|ng/mL|0.0-5.0|HH|||F|||20251021055000
+OBX|3|NM|33762-6^NT-proBNP^LN||1850|pg/mL|0-300|HH|||F|||20251021055000
+OBX|4|NM|2157-6^CK Total^LN||425|U/L|30-200|H|||F|||20251021055000
+OBX|5|NM|30313-1^LDH^LN||310|U/L|140-280|H|||F|||20251021055000
+OBX|6|ED|CARDIAC_PDF^Cardiac Biomarkers Report^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVGl0bGUgKENhcmRpYWMgQmlvbWFya2VycyBSZXBvcnQpCi9BdXRob3IgKE5ZQyBIZWFsdGggKyBIb3NwaXRhbHMgTGFib3JhdG9yeSkKL0NyZWF0b3IgKEFsbHNjcmlwdHMgU3VucmlzZSBDbGluaWNhbCBMYWIpCi9Qcm9kdWNlciAoVmVyYWRpZ20gUERGIEdlbmVyYXRvciB2Mi41KQovQ3JlYXRpb25EYXRlIChEOjIwMjUxMDIxMDYxNTAwKQo+PgplbmRvYmoKMiAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMyAwIFIKPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFs0IDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCjQgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAzIDAgUgo+PgplbmRvYmoK||||||F|||20251021061500
+```
+
+---
+
+## 15. ADT^A04 - Registration at NYC H+H Queens
+
+```
+MSH|^~\&|SUNRISE|QUEENS_HHC|ED_SYS|NYC_HHC|20251103184500||ADT^A04|MSG20251103184500015|P|2.3|||AL|NE
+EVN|A04|20251103184500|||MLOPEZ^Lopez^Maria^^^REG
+PID|1||MRN70111234^^^QUEENS^MR||Gutierrez^Isabella^Valentina^^Ms.||20030815|F||H^Hispanic^HL70005|37-44 Junction Blvd^^Jackson Heights^NY^11372^US^H||^PRN^PH^^^718^4470923|||S^Single^HL70002|||602-81-3447
+NK1|1|Gutierrez^Ernesto^D^^Mr.|FTH^Father^HL70063||^PRN^PH^^^718^4470924||EC^Emergency Contact
+NK1|2|Gutierrez^Patricia^M^^Mrs.|MTH^Mother^HL70063||^PRN^PH^^^718^4470925||EC^Emergency Contact
+PV1|1|E|ED^^^QUEENS^^^^ED||||5590417328^Abdallah^Tariq^R^^^MD||EM||||1|||5590417328^Abdallah^Tariq^R^^^MD|EM||SELF|||||||||||||||||20251103184500|||||
+PV2|||^Severe headache with photophobia
+IN1|1|CHILD_HP001^Child Health Plus|11512|Child Health Plus NY|PO Box 4220^^Albany^NY^12204^US|||||||20250101||||Gutierrez^Ernesto^D|FTH^Father|19780120|37-44 Junction Blvd^^Jackson Heights^NY^11372^US|||||A|||||||F||||||CHP619043278
+DG1|1||784.0^Headache^ICD9|||W
+GT1|1||Gutierrez^Ernesto^D^^Mr.||37-44 Junction Blvd^^Jackson Heights^NY^11372^US|^PRN^PH^^^718^4470924|||||FTH^Father
+```
+
+---
+
+## 16. ORU^R01 - Urinalysis results at NYC H+H Elmhurst
+
+```
+MSH|^~\&|SUNRISE|ELMHURST_HHC|LAB_RPT|NYC_HHC|20251115101500||ORU^R01|MSG20251115101500016|P|2.3|||AL|NE
+PID|1||MRN70022345^^^ELMHURST^MR||Nakamura^Keiko^^^Mrs.||19650523|F||A^Asian^HL70005|82-15 Baxter Ave^^Elmhurst^NY^11373^US^H||^PRN^PH^^^718^5037821|||M^Married^HL70002|||631-28-4490
+PV1|1|O|CLINIC1^^^ELMHURST^^^^CLINIC||||2291467803^Hossain^Faisal^A^^^MD||MED||||1|||2291467803^Hossain^Faisal^A^^^MD|OP||SELF|||||||||||||||||20251115090000|||||
+ORC|RE|ORD20251115001^SUNRISE|LAB20251115001^NYC_HHC_LAB||CM||||20251115101500|||2291467803^Hossain^Faisal^A^^^MD|ELMHURST_HHC
+OBR|1|ORD20251115001^SUNRISE|LAB20251115001^NYC_HHC_LAB|81001^Urinalysis with Microscopy^CPT4|||20251115090000|||||||||2291467803^Hossain^Faisal^A^^^MD||||||20251115101500|||F
+OBX|1|TX|5778-6^Color^LN||Yellow||||||F|||20251115100000
+OBX|2|TX|5767-9^Appearance^LN||Hazy||||||F|||20251115100000
+OBX|3|NM|5803-2^pH^LN||5.5||5.0-8.0|N|||F|||20251115100000
+OBX|4|NM|5811-5^Specific Gravity^LN||1.025||1.005-1.030|N|||F|||20251115100000
+OBX|5|TX|5804-0^Protein^LN||Trace||Negative|A|||F|||20251115100000
+OBX|6|TX|5792-7^Glucose^LN||2+||Negative|A|||F|||20251115100000
+OBX|7|TX|20454-5^Leukocyte Esterase^LN||Negative||Negative|N|||F|||20251115100000
+OBX|8|TX|5802-4^Nitrite^LN||Negative||Negative|N|||F|||20251115100000
+OBX|9|NM|5821-4^WBC per HPF^LN||2|/HPF|0-5|N|||F|||20251115100000
+OBX|10|NM|5822-2^RBC per HPF^LN||0|/HPF|0-3|N|||F|||20251115100000
+```
+
+---
+
+## 17. ADT^A03 - Discharge from NYC H+H Harlem
+
+```
+MSH|^~\&|SUNRISE|HARLEM_HHC|DISCH_SYS|NYC_HHC|20251128141500||ADT^A03|MSG20251128141500017|P|2.3|||AL|NE
+EVN|A03|20251128141500|||BNURSE^Nurse^Brenda^^^RN
+PID|1||MRN70055678^^^HARLEM^MR||Baptiste^Jamal^Reginald^^Mr.||19910704|M||B^Black^HL70005|2501 Frederick Douglass Blvd^^New York^NY^10030^US^H||^PRN^PH^^^212^6619034|||S^Single^HL70002|||824-60-1973
+PV1|1|I|MED5^M508^A^HARLEM^^^^MED5||||7715290463^Eisenberg^Samuel^J^^^MD||MED||||7|||7715290463^Eisenberg^Samuel^J^^^MD|IN||SELF|||||||||||||||||20250703142000||20251128141500|||
+PV2|||^Diabetes management and education
+DG1|1||250.02^DM Type II uncontrolled^ICD9|||A
+DG1|2||250.40^DM Type II with renal manifestations^ICD9|||A
+```
+
+---
+
+## 18. ORM^O01 - Echocardiogram order at NYC H+H Bellevue
+
+```
+MSH|^~\&|SUNRISE|BELLEVUE_HHC|CARD_SYS|NYC_HHC_CARD|20251210091500||ORM^O01|MSG20251210091500018|P|2.3|||AL|NE
+PID|1||MRN70122345^^^BELLEVUE^MR||Petrenko^Yuri^V^^Mr.||19590812|M||W^White^HL70005|2685 Coney Island Ave^^Brooklyn^NY^11235^US^H||^PRN^PH^^^718^2041378|||M^Married^HL70002|||458-31-7092
+PV1|1|I|MED7^M712^A^BELLEVUE^^^^MED7||||6639108274^Watanabe^Kenji^M^^^MD||MED||||7|||6639108274^Watanabe^Kenji^M^^^MD|IN||SELF|||||||||||||||||20251208100000|||||
+ORC|NW|ORD20251210001^SUNRISE|CARD20251210001^NYC_HHC_CARD||SC||||20251210091500|CNURSE^Nurse^Carol^^^RN||6639108274^Watanabe^Kenji^M^^^MD|BELLEVUE_HHC
+OBR|1|ORD20251210001^SUNRISE|CARD20251210001^NYC_HHC_CARD|93306^Echocardiogram Complete^CPT4|||20251210091500|||||||||6639108274^Watanabe^Kenji^M^^^MD||||||20251210091500|||F||||||^Evaluate LV function CHF exacerbation
+DG1|1||428.0^Congestive heart failure unspecified^ICD9|||A
+DG1|2||401.9^Unspecified essential hypertension^ICD9|||A
+```
+
+---
+
+## 19. ADT^A01 - Admission at community hospital Staten Island
+
+```
+MSH|^~\&|SUNRISE|SI_UNIVERSITY_HOSP|ADT_RECV|COMMUNITY_HIE|20260115143000||ADT^A01|MSG20260115143000019|P|2.3|||AL|NE
+EVN|A01|20260115143000|||TGREEN^Green^Tamara^^^REG
+PID|1||MRN80011234^^^SI_UNIV^MR~641-30-8725^^^SSA^SS||Graziano^Salvatore^F^^Mr.||19520605|M||W^White^HL70005|189 Fingerboard Rd^^Staten Island^NY^10305^US^H||^PRN^PH^^^718^6622031|^WPN^PH^^^718^6622040||M^Married^HL70002|||641-30-8725
+NK1|1|Graziano^Angela^D^^Mrs.|SPO^Spouse^HL70063||^PRN^PH^^^718^6622032||EC^Emergency Contact
+PV1|1|I|TELE2^T208^A^SI_UNIV^^^^TELE2||||8801547236^Flanagan^Declan^P^^^MD||MED||||7|||8801547236^Flanagan^Declan^P^^^MD|IN||SELF|||||||||||||||||20260115143000|||||
+PV2|||^Atrial fibrillation with rapid ventricular response
+IN1|1|MEDICARE001^Medicare|00299|Medicare|PO Box 790000^^St Louis^MO^63179^US|||||||19870605||||Graziano^Salvatore^F|SEL^Self|19520605|189 Fingerboard Rd^^Staten Island^NY^10305^US|||||A|||||||M||||||MCR7102938456A
+IN1|2|AARP001^AARP Medicare Supplement|00123|AARP UnitedHealthcare|PO Box 740819^^Atlanta^GA^30374^US|||||||20200101||||Graziano^Salvatore^F|SEL^Self|19520605|189 Fingerboard Rd^^Staten Island^NY^10305^US|||||A|||||||M||||||AARP403917825
+DG1|1||427.31^Atrial fibrillation^ICD9|||A
+GT1|1||Graziano^Salvatore^F^^Mr.||189 Fingerboard Rd^^Staten Island^NY^10305^US|^PRN^PH^^^718^6622031|||||SEL^Self
+```
+
+---
+
+## 20. ORU^R01 - Coagulation results at NYC H+H Lincoln
+
+```
+MSH|^~\&|SUNRISE|LINCOLN_HHC|LAB_RPT|NYC_HHC|20260125093000||ORU^R01|MSG20260125093000020|P|2.3|||AL|NE
+PID|1||MRN70100123^^^LINCOLN^MR||Jefferson^Marquis^Terrell^^Mr.||19770520|M||B^Black^HL70005|843 Cauldwell Ave^^Bronx^NY^10456^US^H||^PRN^PH^^^718^5930274|||M^Married^HL70002|||271-86-4530
+PV1|1|I|CCU^CCU04^A^LINCOLN^^^^CCU||||4403195867^Chakraborty^Anil^S^^^MD||CARD||||7|||4403195867^Chakraborty^Anil^S^^^MD|IN||SELF|||||||||||||||||20251018160000|||||
+ORC|RE|ORD20260125001^SUNRISE|LAB20260125001^NYC_HHC_LAB||CM||||20260125093000|||4403195867^Chakraborty^Anil^S^^^MD|LINCOLN_HHC
+OBR|1|ORD20260125001^SUNRISE|LAB20260125001^NYC_HHC_LAB|85610^Coagulation Panel^CPT4|||20260125070000|||||||||4403195867^Chakraborty^Anil^S^^^MD||||||20260125093000|||F
+OBX|1|NM|5902-2^PT^LN||14.2|sec|11.0-13.5|H|||F|||20260125085000
+OBX|2|NM|6301-6^INR^LN||1.3||0.8-1.1|H|||F|||20260125085000
+OBX|3|NM|3173-2^PTT^LN||72.5|sec|25.0-35.0|HH|||F|||20260125085000
+OBX|4|NM|3255-7^Fibrinogen^LN||185|mg/dL|200-400|L|||F|||20260125085000
+OBX|5|NM|5905-5^D-Dimer^LN||2.8|mcg/mL|0.0-0.5|HH|||F|||20260125085000
+```

@@ -1,0 +1,264 @@
+# Hitachi Hospital Information System - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - inpatient admission (入院登録)
+
+```
+MSH|^~\&|HitachiHIS|広島大学病院|SS-MIX2|地域連携|20260301090000||ADT^A01^ADT_A01|HIT20260301090000001|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A01|20260301090000
+PID|||PAT500100^^^広島大学病院^PI||竹内^和也^^^^^L||19550308|M|||広島県広島市南区霞1-2-3^^南区^広島県^734-8551^JPN^H||^PRN^PH^^81^82^2575555||JPN|M|||||||||||||||||||N
+PV1||I|ICU^1^1^広島大学病院^^^^N||||D500100^村田^誠司^^^^^L^^^DR|||ICU||||E|||V500100|||||||||||||||||||||||||||20260301090000
+IN1|1||78901234|国民健康保険|広島県広島市中区袋町6-36||||||||||||||||||||||||||||||||||||||||6
+```
+
+---
+
+## 2. ADT^A03 - discharge (退院)
+
+```
+MSH|^~\&|HitachiHIS|広島大学病院|SS-MIX2|地域連携|20260320140000||ADT^A03^ADT_A03|HIT20260320140000002|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A03|20260320140000
+PID|||PAT500100^^^広島大学病院^PI||竹内^和也^^^^^L||19550308|M|||広島県広島市南区霞1-2-3^^南区^広島県^734-8551^JPN^H||^PRN^PH^^81^82^2575555||JPN|M
+PV1||I|8N^801^1^広島大学病院^^^^N||||D500100^村田^誠司^^^^^L^^^DR|||SUR||||||||V500100|||||||||||||||||||||||||||20260320140000
+```
+
+---
+
+## 3. ORM^O01 - emergency pharmacy order (救急処方オーダ)
+
+```
+MSH|^~\&|HitachiHIS|広島大学病院|薬剤部|広島大学病院|20260301093000||ORM^O01^ORM_O01|HIT20260301093000003|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT500100^^^広島大学病院^PI||竹内^和也^^^^^L||19550308|M
+PV1||E|救急外来^1^1^広島大学病院^^^^N||||D500100^村田^誠司^^^^^L^^^DR
+ORC|NW|ORD20260301001^HitachiHIS||||||||||D500100^村田^誠司^^^^^L^^^DR
+RXO|620006701^生理食塩液100mL^HOT9|||100||mL||IV^静脈内^HL70162|||||||||||||||D500100^村田^誠司^^^^^L^^^DR
+```
+
+---
+
+## 4. OML^O33 - emergency laboratory order (緊急検体検査オーダ)
+
+```
+MSH|^~\&|HitachiHIS|広島大学病院|検査部|広島大学病院|20260301091000||OML^O33^OML_O33|HIT20260301091000004|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT500100^^^広島大学病院^PI||竹内^和也^^^^^L||19550308|M
+PV1||E|救急外来^1^1^広島大学病院^^^^N||||D500100^村田^誠司^^^^^L^^^DR
+SPM|1|||BLD^血液^HL70487|||||||||||20260301091000
+ORC|NW|LAB20260301001^HitachiHIS|||||S|||||||D500100^村田^誠司^^^^^L^^^DR
+OBR|1|LAB20260301001^HitachiHIS||2A070000001930101^トロポニンT^JC10|S||20260301091000
+OBR|2|LAB20260301002^HitachiHIS||2A090000001930101^BNP^JC10|S||20260301091000
+OBR|3|LAB20260301003^HitachiHIS||2B010000001930101^WBC^JC10|S||20260301091000
+```
+
+---
+
+## 5. ORU^R01 - emergency laboratory result (緊急検査結果)
+
+```
+MSH|^~\&|検査部|広島大学病院|HitachiHIS|広島大学病院|20260301100000||ORU^R01^ORU_R01|LAB20260301100000005|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT500100^^^広島大学病院^PI||竹内^和也^^^^^L||19550308|M
+PV1||E|救急外来^1^1^広島大学病院^^^^N||||D500100^村田^誠司^^^^^L^^^DR
+ORC|RE|LAB20260301001^HitachiHIS||||||||||D500100^村田^誠司^^^^^L^^^DR
+OBR|1|LAB20260301001^HitachiHIS||2A070000001930101^トロポニンT^JC10|S||20260301091000|||||||20260301091000||D500100^村田^誠司^^^^^L^^^DR||||||||20260301100000|||F
+OBX|1|NM|2A070000001930101^トロポニンT^JC10||0.245|ng/mL|0.000-0.014|HH|||F|||20260301100000
+OBX|2|NM|2A090000001930101^BNP^JC10||892.5|pg/mL|0.0-18.4|HH|||F|||20260301100000
+OBX|3|NM|2B010000001930101^WBC^JC10||14200|/uL|3300-8600|H|||F|||20260301100000
+OBX|4|NM|3B035000002327201^CRP定量^JC10||8.92|mg/dL|0.00-0.30|HH|||F|||20260301100000
+```
+
+---
+
+## 6. ORU^R01 - emergency CT with embedded report (緊急CT)
+
+```
+MSH|^~\&|放射線部|広島大学病院|HitachiHIS|広島大学病院|20260301120000||ORU^R01^ORU_R01|RAD20260301120000006|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT500100^^^広島大学病院^PI||竹内^和也^^^^^L||19550308|M
+PV1||E|救急外来^1^1^広島大学病院^^^^N||||D500100^村田^誠司^^^^^L^^^DR
+ORC|RE|RAD20260301001^HitachiHIS
+OBR|1|RAD20260301001^HitachiHIS||71275^胸腹部CT造影^CPT|S||20260301100000|||||||20260301100000||D500100^村田^誠司^^^^^L^^^DR||||||||20260301120000|||F
+OBX|1|TX|71275^胸腹部CT造影^CPT|1|心臓：左室壁運動低下所見あり。冠動脈石灰化著明。大動脈解離なし。肺動脈血栓塞栓なし。||||||F|||20260301120000
+OBX|2|ED|PDF^緊急CTレポートPDF^L|1|^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA4NDIgNTk1XSAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA2MiA+PgpzdHJlYW0KQlQKL0YxIDEyIFRmCjEwMCA3MDAgVGQKKEVtZXJnZW5jeSBDVCBSZXBvcnQgLSBBS1MpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKeHJlZgowIDUKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjA2IDAwMDAwIG4gCnRyYWlsZXIKPDwgL1NpemUgNSAvUm9vdCAxIDAgUiA+PgpzdGFydHhyZWYKMzE4CiUlRU9GCg==||||||F|||20260301120000
+```
+
+---
+
+## 7. ADT^A02 - ICU to ward transfer (ICUから一般病棟へ転棟)
+
+```
+MSH|^~\&|HitachiHIS|広島大学病院|SS-MIX2|地域連携|20260305100000||ADT^A02^ADT_A02|HIT20260305100000007|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A02|20260305100000
+PID|||PAT500100^^^広島大学病院^PI||竹内^和也^^^^^L||19550308|M|||広島県広島市南区霞1-2-3^^南区^広島県^734-8551^JPN^H||^PRN^PH^^81^82^2575555||JPN|M
+PV1||I|8N^801^1^広島大学病院^^^^N||||D500100^村田^誠司^^^^^L^^^DR|||SUR||ICU^1^1^広島大学病院^^^^N|||||||V500100|||||||||||||||||||||||||||20260305100000
+```
+
+---
+
+## 8. ORM^O01 - post-operative injection order (術後注射オーダ)
+
+```
+MSH|^~\&|HitachiHIS|広島大学病院|薬剤部|広島大学病院|20260303080000||ORM^O01^ORM_O01|HIT20260303080000008|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT500100^^^広島大学病院^PI||竹内^和也^^^^^L||19550308|M
+PV1||I|ICU^1^1^広島大学病院^^^^N||||D500100^村田^誠司^^^^^L^^^DR
+ORC|NW|INJ20260303001^HitachiHIS||||||||||D500100^村田^誠司^^^^^L^^^DR
+RXO|620156201^ドブタミン注射液100mg^HOT9|||100||mg||IVP^静脈内持続点滴^HL70162|||||||||||||||D500100^村田^誠司^^^^^L^^^DR
+TQ1|||||||||20260303080000|20260304080000
+```
+
+---
+
+## 9. ADT^A08 - patient information update (患者情報更新)
+
+```
+MSH|^~\&|HitachiHIS|広島大学病院|SS-MIX2|地域連携|20260310090000||ADT^A08^ADT_A01|HIT20260310090000009|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A08|20260310090000
+PID|||PAT500100^^^広島大学病院^PI||竹内^和也^^^^^L||19550308|M|||広島県広島市南区霞1-2-3^^南区^広島県^734-8551^JPN^H||^PRN^PH^^81^82^2575555~^WPN^PH^^81^82^2226789||JPN|M|||||||||||||||||||N
+PV1||I|8N^801^1^広島大学病院^^^^N||||D500100^村田^誠司^^^^^L^^^DR|||SUR||||||||V500100|||||||||||||||||||||||||||20260301090000
+IN1|1||78901234|国民健康保険|広島県広島市中区袋町6-36||||||||||||||||||||||||||||||||||||||||6
+```
+
+---
+
+## 10. ORU^R01 - ICU monitoring data with waveform (ICUモニタリング)
+
+```
+MSH|^~\&|ICUモニター|広島大学病院|HitachiHIS|広島大学病院|20260302060000||ORU^R01^ORU_R01|MON20260302060000010|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT500100^^^広島大学病院^PI||竹内^和也^^^^^L||19550308|M
+PV1||I|ICU^1^1^広島大学病院^^^^N||||D500100^村田^誠司^^^^^L^^^DR
+ORC|RE|MON20260302001^HitachiHIS
+OBR|1|MON20260302001^HitachiHIS||94760^ICUバイタルモニタリング^CPT|R||20260302060000|||||||20260302060000||D500100^村田^誠司^^^^^L^^^DR||||||||20260302060000|||F
+OBX|1|NM|8310-5^体温^LN||37.2|Cel||||F|||20260302060000
+OBX|2|NM|8867-4^心拍数^LN||88|/min||||F|||20260302060000
+OBX|3|NM|8480-6^収縮期血圧^LN||118|mmHg||||F|||20260302060000
+OBX|4|NM|8462-4^拡張期血圧^LN||72|mmHg||||F|||20260302060000
+OBX|5|NM|2708-6^SpO2^LN||96|%||||F|||20260302060000
+OBX|6|ED|PDF^ICUモニタリングPDF^L|1|^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA1NCA+PgpzdHJlYW0KQlQKL0YxIDEyIFRmCjEwMCA3MDAgVGQKKElDVSBNb25pdG9yaW5nIFJlcG9ydCkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTE1IDAwMDAwIG4gCjAwMDAwMDAyMDYgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA1IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgozMTAKJSVFT0YK||||||F|||20260302060000
+```
+
+---
+
+## 11. ADT^A04 - outpatient registration (外来受付)
+
+```
+MSH|^~\&|HitachiHIS|広島大学病院|SS-MIX2|地域連携|20260325080000||ADT^A04^ADT_A01|HIT20260325080000011|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A04|20260325080000
+PID|||PAT500200^^^広島大学病院^PI||浜田^美穂子^^^^^L||19800405|F|||広島県呉市中央4-1-46^^呉市^広島県^737-0046^JPN^H||^PRN^PH^^81^823^222111||JPN|S
+PV1||O|神経内科外来^1^1^広島大学病院^^^^N||||D500200^平野^健太^^^^^L^^^DR|||NEU||||A|||V500200|||||||||||||||||||||||||||20260325080000
+```
+
+---
+
+## 12. ORM^O01 - surgery scheduling (手術オーダ)
+
+```
+MSH|^~\&|HitachiHIS|広島大学病院|手術室|広島大学病院|20260301150000||ORM^O01^ORM_O01|HIT20260301150000012|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT500100^^^広島大学病院^PI||竹内^和也^^^^^L||19550308|M
+PV1||I|ICU^1^1^広島大学病院^^^^N||||D500100^村田^誠司^^^^^L^^^DR
+ORC|NW|SUR20260302001^HitachiHIS||||||||||D500100^村田^誠司^^^^^L^^^DR
+OBR|1|SUR20260302001^HitachiHIS||33533^冠動脈バイパス術^CPT|R||20260302080000|||||||20260301150000||D500100^村田^誠司^^^^^L^^^DR
+```
+
+---
+
+## 13. SIU^S12 - appointment scheduled (予約登録)
+
+```
+MSH|^~\&|HitachiHIS|広島大学病院|外来予約|広島大学病院|20260320150000||SIU^S12^SIU_S12|HIT20260320150000013|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+SCH|APT20260325001^HitachiHIS|APT20260325001^HitachiHIS|||||外来受診^外来予約^L|||||^^30^20260325090000^20260325093000
+PID|||PAT500200^^^広島大学病院^PI||浜田^美穂子^^^^^L||19800405|F
+PV1||O|神経内科外来^1^1^広島大学病院^^^^N||||D500200^平野^健太^^^^^L^^^DR
+AIG|1||D500200^平野^健太^^^^^L^^^DR
+AIL|1||神経内科外来^1^1^広島大学病院
+```
+
+---
+
+## 14. DFT^P03 - charge posting (診療報酬請求)
+
+```
+MSH|^~\&|HitachiHIS|広島大学病院|医事会計|広島大学病院|20260320150000||DFT^P03^DFT_P03|HIT20260320150000014|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|P03|20260320150000
+PID|||PAT500100^^^広島大学病院^PI||竹内^和也^^^^^L||19550308|M
+PV1||I|8N^801^1^広島大学病院^^^^N||||D500100^村田^誠司^^^^^L^^^DR
+FT1|1|ORD20260320001|20260320|20260320|CG|110^入院基本料^診療行為コード||20|23200|||||||||||||||D500100^村田^誠司^^^^^L^^^DR
+FT1|2|ORD20260320002|20260320|20260320|CG|150^ICU管理料^診療行為コード||4|56000|||||||||||||||D500100^村田^誠司^^^^^L^^^DR
+FT1|3|ORD20260320003|20260320|20260320|CG|500^手術料(CABG)^診療行為コード||1|1200000|||||||||||||||D500100^村田^誠司^^^^^L^^^DR
+```
+
+---
+
+## 15. RDE^O11 - pharmacy dispense event (調剤実施)
+
+```
+MSH|^~\&|薬剤部|広島大学病院|HitachiHIS|広島大学病院|20260310090000||RDE^O11^RDE_O11|PH20260310090000015|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT500100^^^広島大学病院^PI||竹内^和也^^^^^L||19550308|M
+PV1||I|8N^801^1^広島大学病院^^^^N||||D500100^村田^誠司^^^^^L^^^DR
+ORC|RE|ORD20260310001^HitachiHIS|DSP20260310001^薬剤部|||||||||D500100^村田^誠司^^^^^L^^^DR
+RXE|^^^20260310^^^日|612340101^アムロジピン錠5mg^HOT9|5||mg|錠|||||||30|||||||||||PH400^福山^理恵子^^^^^L^^^RPH
+RXD|1|612340101^アムロジピン錠5mg^HOT9|20260310090000|30|錠||||||||||||||PH400^福山^理恵子^^^^^L^^^RPH
+```
+
+---
+
+## 16. ORU^R01 - post-operative blood gas (術後血液ガス)
+
+```
+MSH|^~\&|検査部|広島大学病院|HitachiHIS|広島大学病院|20260302200000||ORU^R01^ORU_R01|BGA20260302200000016|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT500100^^^広島大学病院^PI||竹内^和也^^^^^L||19550308|M
+PV1||I|ICU^1^1^広島大学病院^^^^N||||D500100^村田^誠司^^^^^L^^^DR
+ORC|RE|BGA20260302001^HitachiHIS
+OBR|1|BGA20260302001^HitachiHIS||82803^血液ガス分析^CPT|S||20260302190000|||||||20260302190000||D500100^村田^誠司^^^^^L^^^DR||||||||20260302200000|||F
+OBX|1|NM|82803^pH^CPT||7.38||7.35-7.45|N|||F|||20260302200000
+OBX|2|NM|82803^pCO2^CPT||42.1|mmHg|35.0-45.0|N|||F|||20260302200000
+OBX|3|NM|82803^pO2^CPT||88.5|mmHg|80.0-100.0|N|||F|||20260302200000
+OBX|4|NM|82803^Lac^CPT||2.8|mmol/L|0.5-2.2|H|||F|||20260302200000
+```
+
+---
+
+## 17. MDM^T02 - operation note with CDA (手術記録)
+
+```
+MSH|^~\&|HitachiHIS|広島大学病院|SS-MIX2|地域連携|20260302200000||MDM^T02^MDM_T02|HIT20260302200000017|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|T02|20260302200000
+PID|||PAT500100^^^広島大学病院^PI||竹内^和也^^^^^L||19550308|M
+PV1||I|ICU^1^1^広島大学病院^^^^N||||D500100^村田^誠司^^^^^L^^^DR
+TXA|1|OP^手術記録^HL70270|TX|20260302200000|D500100^村田^誠司^^^^^L^^^DR||20260302200000||||||DOC20260302001||||||AU
+OBX|1|ED|OP^手術記録^HL70270|1|^text^xml^Base64^PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPENsaW5pY2FsRG9jdW1lbnQgeG1sbnM9InVybjpobDctb3JnOnYzIj4KICA8dGl0bGU+5omL6KGT6KiY6YyyPC90aXRsZT4KICA8ZWZmZWN0aXZlVGltZSB2YWx1ZT0iMjAyNjAzMDIiLz4KICA8Y29tcG9uZW50PgogICAgPHN0cnVjdHVyZWRCb2R5PgogICAgICA8Y29tcG9uZW50PgogICAgICAgIDxzZWN0aW9uPgogICAgICAgICAgPHRpdGxlPuihk+W8j+WQjTwvdGl0bGU+CiAgICAgICAgICA8dGV4dD7lhrXli5Xohojjg5DjgqTjg5HjgrnooZMgeDM8L3RleHQ+CiAgICAgICAgPC9zZWN0aW9uPgogICAgICA8L2NvbXBvbmVudD4KICAgIDwvc3RydWN0dXJlZEJvZHk+CiAgPC9jb21wb25lbnQ+CjwvQ2xpbmljYWxEb2N1bWVudD4K||||||F|||20260302200000
+```
+
+---
+
+## 18. ADT^A28 - new patient registration (新規患者登録)
+
+```
+MSH|^~\&|HitachiHIS|広島大学病院|MPI|地域連携|20260325070000||ADT^A28^ADT_A05|HIT20260325070000018|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A28|20260325070000
+PID|||PAT500200^^^広島大学病院^PI||浜田^美穂子^^^^^L||19800405|F|||広島県呉市中央4-1-46^^呉市^広島県^737-0046^JPN^H||^PRN^PH^^81^823^222111||JPN|S
+```
+
+---
+
+## 19. ORU^R01 - MRI brain report (頭部MRIレポート)
+
+```
+MSH|^~\&|放射線部|広島大学病院|HitachiHIS|広島大学病院|20260325160000||ORU^R01^ORU_R01|RAD20260325160000019|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT500200^^^広島大学病院^PI||浜田^美穂子^^^^^L||19800405|F
+PV1||O|神経内科外来^1^1^広島大学病院^^^^N||||D500200^平野^健太^^^^^L^^^DR
+ORC|RE|RAD20260325001^HitachiHIS
+OBR|1|RAD20260325001^HitachiHIS||70553^頭部MRI造影^CPT|R||20260325100000|||||||20260325100000||D500200^平野^健太^^^^^L^^^DR||||||||20260325160000|||F
+OBX|1|TX|70553^頭部MRI造影^CPT|1|FLAIR：両側側脳室周囲に軽度の高信号域あり。加齢性変化として矛盾しない。||||||F|||20260325160000
+OBX|2|TX|70553^頭部MRI造影^CPT|2|拡散強調画像：急性期梗塞巣なし。造影効果を示す病変なし。||||||F|||20260325160000
+OBX|3|TX|70553^頭部MRI造影^CPT|3|結論：加齢に伴う白質変性。脳血管障害の急性期所見なし。||||||F|||20260325160000
+```
+
+---
+
+## 20. MFN^M02 - physician master update (医師マスタ更新)
+
+```
+MSH|^~\&|HitachiHIS|広島大学病院|SS-MIX2|地域連携|20260401000000||MFN^M02^MFN_M02|HIT20260401000000020|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+MFI|PRA^^HL70175||UPD|||NE
+MFE|MAD|D500300|20260401000000|D500300^岩崎^大輔^^^^^L^^^DR^広島大学病院^CDA
+STF|D500300|D500300^^広島大学病院|岩崎^大輔^^^^^L||M||||||^WPN^PH^^81^82^2575555
+PRA|D500300||I|救急科||||||||||||||||||20260401
+```

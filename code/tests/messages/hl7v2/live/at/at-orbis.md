@@ -1,0 +1,271 @@
+# ORBIS (Dedalus) (Austria) - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - inpatient admission (stationäre Aufnahme), Kepler Universitätsklinikum Linz
+
+```
+MSH|^~\&|ORBIS|KEPLER_LINZ|LAB|KEPLER_LINZ|20260210083000||ADT^A01^ADT_A01|ADT20260210001|P|2.5|||AL|NE|AUT|8859/1|DEU^German^HL70296
+EVN||20260210083000||||20260210082200
+PID|||456789^^^KEPLER_LINZ^PI~4781100175^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS||Lang^Florian^Leopold^^^^L||19750110|M|||Landstraße 22^^Linz^4^4020^AUT^H||^PRN^PH^^43^732^654321~^PRN^CP^^43^660^4567890|^WPN^PH^^43^732^7806-0|DEU^German^HL70296|M^Verheiratet^HL70002|||||||||||AUT^Austrian^HL70171
+PV1|1|I|NEU^502^1^KEPLER_LINZ^^N^A^5|E|||20123456^Schwarz^Heinrich^^^Univ.Prof.Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA|20123457^Pfeiffer^Lieselotte^^^Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA||NEU||||||||||FN2026-10234^^^KEPLER_LINZ^VN|||||||||||||||||||||||||20260210082200
+PV2|||||||||20260217|7
+```
+
+---
+
+## 2. ADT^A01 - inpatient admission with insurance, Klinikum Wels-Grieskirchen
+
+```
+MSH|^~\&|ORBIS|KLIN_WELS|RIS|KLIN_WELS|20260318091500||ADT^A01^ADT_A01|ADT20260318002|P|2.5|||AL|NE|AUT|8859/1|DEU^German^HL70296
+EVN||20260318091500||||20260318090800
+PID|||678901^^^KLIN_WELS^PI~8923230789^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS||Brunner^Michaela^Irmgard^^^^L||19890723|F|||Ringstraße 5^^Wels^4^4600^AUT^H||^PRN^PH^^43^7242^56789~^PRN^CP^^43^676^2345678||DEU^German^HL70296|M^Verheiratet^HL70002|||||||||||AUT^Austrian^HL70171
+PV1|1|I|GYNA^208^2^KLIN_WELS^^N^A^3|U|||20234567^Koller^Silvia^^^Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA||IM|GYNA||||||||||FN2026-20567^^^KLIN_WELS^VN|||||||||||||||||||||||||20260318090800
+IN1|1|0|04|ÖGK Oberösterreich|Gruberstraße 77^^Linz^^4020^AUT||||||||||||||||||||||||||||||||||||||||||||15
+```
+
+---
+
+## 3. ADT^A02 - patient transfer (Verlegung), Kepler Universitätsklinikum Linz
+
+```
+MSH|^~\&|ORBIS|KEPLER_LINZ|LAB|KEPLER_LINZ|20260215140000||ADT^A02^ADT_A02|ADT20260215003|P|2.5|||AL|NE|AUT|8859/1|DEU^German^HL70296
+EVN||20260215140000||||20260215135500
+PID|||456789^^^KEPLER_LINZ^PI~4781100175^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS||Lang^Florian^Leopold^^^^L||19750110|M|||Landstraße 22^^Linz^4^4020^AUT^H||^PRN^CP^^43^660^4567890||DEU^German^HL70296|M^Verheiratet^HL70002|||||||||||AUT^Austrian^HL70171
+PV1|1|I|STROKE^601^2^KEPLER_LINZ^^N^D^6|R||NEU^502^1^KEPLER_LINZ^^N^D^5|20123456^Schwarz^Heinrich^^^Univ.Prof.Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA||||||||||||FN2026-10234^^^KEPLER_LINZ^VN|||||||||||||||||||||||||20260215135500
+```
+
+---
+
+## 4. ADT^A03 - discharge (Entlassung), Kepler Universitätsklinikum Linz
+
+```
+MSH|^~\&|ORBIS|KEPLER_LINZ|LAB|KEPLER_LINZ|20260220100000||ADT^A03^ADT_A03|ADT20260220004|P|2.5|||AL|NE|AUT|8859/1|DEU^German^HL70296
+EVN||20260220100000||||20260220095500
+PID|||456789^^^KEPLER_LINZ^PI~4781100175^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS||Lang^Florian^Leopold^^^^L||19750110|M|||Landstraße 22^^Linz^4^4020^AUT^H||^PRN^CP^^43^660^4567890||DEU^German^HL70296|M^Verheiratet^HL70002|||||||||||AUT^Austrian^HL70171
+PV1|1|I|STROKE^601^2^KEPLER_LINZ^^N^B^6|R|||20123456^Schwarz^Heinrich^^^Univ.Prof.Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA||||||||||||FN2026-10234^^^KEPLER_LINZ^VN|||||||||||||||||011||||||||20260210082200|20260220095500
+```
+
+---
+
+## 5. ADT^A08 - update patient information (Änderung Patient), Salzkammergut Klinikum Vöcklabruck
+
+```
+MSH|^~\&|ORBIS|SK_VOECKLA|LAB|SK_VOECKLA|20260405143000||ADT^A08^ADT_A01|ADT20260405005|P|2.5|||AL|NE|AUT|8859/1|DEU^German^HL70296
+EVN|A08|20260405143000
+PID|||234567^^^SK_VOECKLA^PI~7359120878^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS||Aigner^Erwin^^^^^L||19780812|M|||Stadtplatz 15^^Vöcklabruck^4^4840^AUT^H||^PRN^CP^^43^664^8765432||DEU^German^HL70296|M^Verheiratet^HL70002|||||||||||AUT^Austrian^HL70171
+PV1|1|I|ORTH^304^1^SK_VOECKLA^^N^A^3|U|||20345678^Thaler^Rainer^^^Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA||||||||||||FN2026-30789^^^SK_VOECKLA^VN|||||||||||||||||||||||||20260402100000
+IN1|1|0|04|ÖGK Oberösterreich|Gruberstraße 77^^Linz^^4020^AUT||||||||||||||||||||||||||||||||||||||||||||15
+```
+
+---
+
+## 6. ADT^A04 - outpatient registration (ambulante Aufnahme), Kepler Universitätsklinikum Linz
+
+```
+MSH|^~\&|ORBIS|KEPLER_LINZ|PACS|KEPLER_LINZ|20260422100000||ADT^A04^ADT_A01|ADT20260422006|P|2.5|||AL|NE|AUT|8859/1|DEU^German^HL70296
+EVN|A04|20260422100000
+PID|||890123^^^KEPLER_LINZ^PI~6128220691^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS||Egger^Helga^^^^^L||19910622|F|||Mozartstraße 8^^Linz^4^4020^AUT^H||^PRN^CP^^43^650^1234567||DEU^German^HL70296|S^Ledig^HL70002|||||||||||AUT^Austrian^HL70171
+PV1|1|O|DERMA^AMB^01^KEPLER_LINZ||||20456789^Hager^Alois^^^Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA||||||||||||FN2026-11890^^^KEPLER_LINZ^VN|||||||||||||||||||||||||20260422100000
+```
+
+---
+
+## 7. ADT^A40 - patient merge (Zusammenführung), Klinikum Wels-Grieskirchen
+
+```
+MSH|^~\&|ORBIS|KLIN_WELS|LAB|KLIN_WELS|20260401153000||ADT^A40^ADT_A39|ADT20260401007|P|2.5|||AL|NE|AUT|8859/1|DEU^German^HL70296
+EVN|A40|20260401153000
+PID|||678901^^^KLIN_WELS^PI~8923230789^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS||Brunner^Michaela^Irmgard^^^^L||19890723|F|||Ringstraße 5^^Wels^4^4600^AUT^H||^PRN^CP^^43^676^2345678||DEU^German^HL70296|M^Verheiratet^HL70002|||||||||||AUT^Austrian^HL70171
+MRG|678900^^^KLIN_WELS^PI~8923230789^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS|
+```
+
+---
+
+## 8. ORM^O01 - radiology order (Radiologieanforderung), Kepler Universitätsklinikum Linz
+
+```
+MSH|^~\&|ORBIS|KEPLER_LINZ|RIS|KEPLER_LINZ|20260211093000||ORM^O01^ORM_O01|ORM20260211001|P|2.5|||AL|NE
+PID|1||456789^^^KEPLER_LINZ^PI~4781100175^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS||Lang^Florian^Leopold^^^^L||19750110|M
+PV1|1|I|NEU^502^1^KEPLER_LINZ||||20123456^Schwarz^Heinrich^^^Univ.Prof.Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA
+ORC|NW|ORD56789^ORBIS||GRP001^ORBIS|||||20260211093000|||20123456^Schwarz^Heinrich^^^Univ.Prof.Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA
+OBR|1|ORD56789^ORBIS||70553^MR Schädel mit KM^CPT4|||20260211093000|||||||||20123456^Schwarz^Heinrich^^^Univ.Prof.Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA|||||||||||^STAT
+DG1|1||I63.9^Hirninfarkt^ICD10BMSGPK
+NTE|1||V.a. ischämischer Insult, bitte diffusionsgewichtet.
+```
+
+---
+
+## 9. ORM^O01 - lab order (Laboranforderung), Klinikum Wels-Grieskirchen
+
+```
+MSH|^~\&|ORBIS|KLIN_WELS|LABSYS|KLIN_WELS|20260319080000||ORM^O01^ORM_O01|ORM20260319002|P|2.5|||AL|NE
+PID|1||678901^^^KLIN_WELS^PI~8923230789^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS||Brunner^Michaela^Irmgard^^^^L||19890723|F
+PV1|1|I|GYNA^208^2^KLIN_WELS||||20234567^Koller^Silvia^^^Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA
+ORC|NW|ORD34567^ORBIS||GRP002^ORBIS|||||20260319080000|||20234567^Koller^Silvia^^^Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA
+OBR|1|ORD34567^ORBIS||58410-2^Blutbild komplett^LN|||20260319080000|||||||||20234567^Koller^Silvia^^^Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA|||||||||||^ROUTINE
+DG1|1||O80^Spontangeburt eines Einlings^ICD10BMSGPK
+```
+
+---
+
+## 10. ORU^R01 - lab result (Laborbefund), Kepler Universitätsklinikum Linz
+
+```
+MSH|^~\&|LABSYS|KEPLER_LINZ|ORBIS|KEPLER_LINZ|20260211163000||ORU^R01^ORU_R01|LAB20260211001|P|2.5|||AL|NE
+PID|1||456789^^^KEPLER_LINZ^PI~4781100175^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS||Lang^Florian^Leopold^^^^L||19750110|M
+PV1|1|I|NEU^502^1^KEPLER_LINZ
+ORC|RE|ORD56001^ORBIS|FIL88234^LABSYS||CM
+OBR|1|ORD56001^ORBIS|FIL88234^LABSYS|24323-8^Umfassende Metabolische Analyse^LN|||20260211080000|||||||||20123456^Schwarz^Heinrich^^^Univ.Prof.Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA||||||20260211162000||LAB|F
+OBX|1|NM|2345-7^Glukose^LN||7.8|mmol/L|3.9-6.1|H|||F
+OBX|2|NM|2160-0^Kreatinin^LN||95|umol/L|62-106|N|||F
+OBX|3|NM|2951-2^Natrium^LN||141|mmol/L|136-145|N|||F
+OBX|4|NM|2823-3^Kalium^LN||3.8|mmol/L|3.5-5.1|N|||F
+OBX|5|NM|14682-9^LDH^LN||312|U/L|125-243|H|||F
+OBX|6|NM|2532-0^LDL Cholesterin^LN||4.2|mmol/L|<3.4|H|||F
+OBX|7|NM|30313-1^hsCRP^LN||18.5|mg/L|<5.0|H|||F
+```
+
+---
+
+## 11. ORU^R01 - haematology result (Hämatologie), Klinikum Wels-Grieskirchen
+
+```
+MSH|^~\&|LABSYS|KLIN_WELS|ORBIS|KLIN_WELS|20260320141500||ORU^R01^ORU_R01|LAB20260320002|P|2.5|||AL|NE
+PID|1||678901^^^KLIN_WELS^PI~8923230789^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS||Brunner^Michaela^Irmgard^^^^L||19890723|F
+PV1|1|I|GYNA^208^2^KLIN_WELS
+ORC|RE|ORD34567^ORBIS|FIL55678^LABSYS||CM
+OBR|1|ORD34567^ORBIS|FIL55678^LABSYS|58410-2^Blutbild komplett^LN|||20260319080000|||||||||20234567^Koller^Silvia^^^Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA||||||20260320140000||LAB|F
+OBX|1|NM|718-7^Hämoglobin^LN||12.8|g/dL|12.0-16.0|N|||F
+OBX|2|NM|4544-3^Hämatokrit^LN||38.2|%|36.0-46.0|N|||F
+OBX|3|NM|6690-2^Leukozyten^LN||11.4|10*9/L|4.5-11.0|H|||F
+OBX|4|NM|787-2^Erythrozyten^LN||4.25|10*12/L|3.80-5.20|N|||F
+OBX|5|NM|777-3^Thrombozyten^LN||278|10*9/L|150-400|N|||F
+OBX|6|NM|770-8^Neutrophile^LN||7.9|10*9/L|1.8-7.7|H|||F
+OBX|7|NM|731-0^Lymphozyten^LN||2.3|10*9/L|1.0-4.8|N|||F
+```
+
+---
+
+## 12. ORU^R01 - radiology result with embedded PDF report (base64), Kepler Universitätsklinikum Linz
+
+```
+MSH|^~\&|RIS|KEPLER_LINZ|ORBIS|KEPLER_LINZ|20260212110000||ORU^R01^ORU_R01|RAD20260212001|P|2.5|||AL|NE
+PID|1||456789^^^KEPLER_LINZ^PI~4781100175^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS||Lang^Florian^Leopold^^^^L||19750110|M
+PV1|1|I|NEU^502^1^KEPLER_LINZ
+ORC|RE|ORD56789^ORBIS|FIL99123^RIS||CM
+OBR|1|ORD56789^ORBIS|FIL99123^RIS|70553^MR Schädel mit KM^CPT4|||20260211093000|||||||||20123456^Schwarz^Heinrich^^^Univ.Prof.Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA||||||20260212105500||RAD|F
+OBX|1|TX|70553^MR Schädel^CPT4||Befund: Akuter ischämischer Infarkt im Stromgebiet der A. cerebri media rechts. Keine Einblutung. Kein Midline-Shift.||||||F
+OBX|2|ED|PDF^MR-Befund^LOCAL||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNTk1IDg0Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA1OTUgODQyXQovQ29udGVudHMgNCAwIFIKL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4KPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA2NCA+PgpzdHJlYW0KQlQKL0YxIDEyIFRmCjEwMCA3MDAgVGQKKEtlcGxlciBVbml2ZXJzaXRhdHNrbGluaWt1bSAtIE1SIFNjaGFkZWwgQmVmdW5kKSBUagoKRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250Ci9TdWJ0eXBlIC9UeXBlMQovQmFzZUZvbnQgL0hlbHZldGljYQo+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDE1MyAwMDAwMCBuIAowMDAwMDAwMzE0IDAwMDAwIG4gCjAwMDAwMDA0MzMgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2Ci9Sb290IDEgMCBSCj4+CnN0YXJ0eHJlZgo1MTMKJSVFT0YK||||||F
+```
+
+---
+
+## 13. SIU^S12 - appointment scheduling (Terminplanung), Kepler Universitätsklinikum Linz
+
+```
+MSH|^~\&|ORBIS|KEPLER_LINZ|SCHED|KEPLER_LINZ|20260301100000||SIU^S12^SIU_S12|SCH20260301001|P|2.5|||AL|NE
+SCH|APT90512^ORBIS|APT90512^SCHED|||||ROUTINE^Routine^HL70277|CONSULT^Kontrolle^LOCAL|30|MIN|^^30^20260315140000^20260315143000|||||20123456^Schwarz^Heinrich^^^Univ.Prof.Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA||KEPLER_LINZ||Booked
+PID|1||456789^^^KEPLER_LINZ^PI~4781100175^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS||Lang^Florian^Leopold^^^^L||19750110|M
+PV1|1|O|NEU^AMB^01^KEPLER_LINZ||||20123456^Schwarz^Heinrich^^^Univ.Prof.Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA
+RGS|1|A
+AIS|1|A|CONSULT^Neurologische Kontrolle^LOCAL|||20260315140000|0|MIN|30|MIN
+AIP|1|A|20123456^Schwarz^Heinrich^^^Univ.Prof.Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA|ATT^Attending^HL70443
+AIL|1|A|NEU^AMB^01^KEPLER_LINZ||20260315140000|0|MIN|30|MIN
+```
+
+---
+
+## 14. MDM^T02 - operative note (Operationsbericht), Klinikum Wels-Grieskirchen
+
+```
+MSH|^~\&|ORBIS|KLIN_WELS|DMS|KLIN_WELS|20260322143000||MDM^T02^MDM_T02|DOC20260322001|P|2.5|||AL|NE
+EVN|T02|20260322143000
+PID|1||678901^^^KLIN_WELS^PI~8923230789^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS||Brunner^Michaela^Irmgard^^^^L||19890723|F
+PV1|1|I|GYNA^OR1^01^KLIN_WELS||||20234567^Koller^Silvia^^^Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA
+TXA|1|OP^Operationsbericht^HL70270|TX^Text^HL70191||20260320100000|||||20234567^Koller^Silvia^^^Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA||||DOC-WELS-2026-567||AU^Authentifiziert^HL70271||20260322142000
+OBX|1|TX|OP_NOTE^Operationsbericht^LOCAL||Eingriff: Sectio caesarea\.br\Indikation: Beckenendlage\.br\Komplikationen: Keine\.br\Geschätzter Blutverlust: 400 mL\.br\Neugeborenes: männlich, 3250 g, APGAR 9/10/10.||||||F
+```
+
+---
+
+## 15. ORU^R01 - microbiology result with antibiogram, Salzkammergut Klinikum Vöcklabruck
+
+```
+MSH|^~\&|LABSYS|SK_VOECKLA|ORBIS|SK_VOECKLA|20260410163000||ORU^R01^ORU_R01|MICRO20260410001|P|2.5|||AL|NE
+PID|1||234567^^^SK_VOECKLA^PI~7359120878^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS||Aigner^Erwin^^^^^L||19780812|M
+PV1|1|I|ORTH^304^1^SK_VOECKLA
+ORC|RE|ORD89012^ORBIS|FIL33456^LABSYS||CM
+OBR|1|ORD89012^ORBIS|FIL33456^LABSYS|87040^Wundabstrich^LN|||20260407100000|||||||||20345678^Thaler^Rainer^^^Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA||||||20260410160000||MB|F
+OBX|1|CE|11475-1^Erregeridentifikation^LN||3092008^Staphylococcus aureus^SCT||||||F
+OBX|2|ST|18769-0^Resistenzprofil^LN||Siehe Antibiogramm||||||F
+OBX|3|ST|18862-3^Ampicillin^LN||R^Resistent||||||F
+OBX|4|ST|18900-1^Amoxicillin-Clavulansäure^LN||S^Sensibel||||||F
+OBX|5|ST|18878-9^Cefazolin^LN||S^Sensibel||||||F
+OBX|6|ST|18906-8^Ciprofloxacin^LN||R^Resistent||||||F
+OBX|7|NM|35659-2^MHK Vancomycin^LN||1.0|ug/mL|<=2|N|||F
+```
+
+---
+
+## 16. DFT^P03 - billing charge posting (Leistungsverrechnung), Klinikum Wels-Grieskirchen
+
+```
+MSH|^~\&|ORBIS|KLIN_WELS|BILLING|OEGK_OOE|20260325180000||DFT^P03^DFT_P03|CHG20260325001|P|2.5|||AL|NE
+EVN|P03|20260325180000
+PID|1||678901^^^KLIN_WELS^PI~8923230789^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS||Brunner^Michaela^Irmgard^^^^L||19890723|F|||Ringstraße 5^^Wels^4^4600^AUT^H
+PV1|1|I|GYNA^208^2^KLIN_WELS||||20234567^Koller^Silvia^^^Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA|||GYNA||||||||FN2026-20567^^^KLIN_WELS^VN|||||||||||||||||||||||||20260318090800
+FT1|1|CHG001|CHG001|20260320|20260325|CG|MEL0901^Sectio caesarea^MEL||||1||GYNA|||||||O80^Spontangeburt eines Einlings^ICD10BMSGPK|20234567^Koller^Silvia^^^Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA||2850.00
+FT1|2|CHG002|CHG002|20260321|20260325|CG|MEL0150^Neonatologische Erstversorgung^MEL||||1||NEO|||||||P96.8^Sonstige Zustände Perinatalperiode^ICD10BMSGPK|20567890^Mitterer^Gertraud^^^Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA||480.00
+DG1|1||O82.0^Entbindung durch Sectio caesarea^ICD10BMSGPK||20260320|A
+IN1|1|0|04|ÖGK Oberösterreich|Gruberstraße 77^^Linz^^4020^AUT||||||||||||||||||||||||||||||||||||||||||||15
+```
+
+---
+
+## 17. ACK - acknowledgment (Transportquittung), Kepler Universitätsklinikum Linz
+
+```
+MSH|^~\&|LAB|KEPLER_LINZ|ORBIS|KEPLER_LINZ|20260210083100||ACK^A01^ACK|ACK20260210001|P|2.5|||AL|NE|AUT|8859/1|DEU^German^HL70296
+MSA|CA|ADT20260210001
+```
+
+---
+
+## 18. MDM^T02 - pathology report with embedded PDF (base64), Kepler Universitätsklinikum Linz
+
+```
+MSH|^~\&|PATH|KEPLER_LINZ|ORBIS|KEPLER_LINZ|20260305160000||MDM^T02^MDM_T02|DOC20260305002|P|2.5|||AL|NE
+EVN|T02|20260305160000
+PID|1||456789^^^KEPLER_LINZ^PI~4781100175^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS||Lang^Florian^Leopold^^^^L||19750110|M
+PV1|1|I|NEU^502^1^KEPLER_LINZ||||20123456^Schwarz^Heinrich^^^Univ.Prof.Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA
+TXA|1|PATH^Neuropathologiebefund^HL70270|TX^Text^HL70191||20260304140000|||||20678901^Griesser^Anita^^^Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA||||DOC-NEURO-2026-112||AU^Authentifiziert^HL70271||20260305155000
+OBX|1|TX|PATH_RPT^Neuropathologiebefund^LOCAL||Material: Stereotaktische Biopsie rechts temporal\.br\Makroskopisch: 3 Gewebezylinder, 1.2 cm gesamt\.br\Mikroskopisch: Diffuses Astrozytom, IDH-mutiert, WHO Grad II\.br\Schlussfolgerung: Niedriggradiges Gliom.||||||F
+OBX|2|ED|PDF^Neuropathologie^LOCAL||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNTk1IDg0Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA1OTUgODQyXQovQ29udGVudHMgNCAwIFIKL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4KPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA2MCA+PgpzdHJlYW0KQlQKL0YxIDEyIFRmCjEwMCA3MDAgVGQKKEtlcGxlciBVbml2ZXJzaXRhdHNrbGluaWt1bSAtIE5ldXJvcGF0aG9sb2dpZWJlZnVuZCkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250Ci9TdWJ0eXBlIC9UeXBlMQovQmFzZUZvbnQgL0hlbHZldGljYQo+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDE1MyAwMDAwMCBuIAowMDAwMDAwMzE0IDAwMDAwIG4gCjAwMDAwMDA0MjkgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2Ci9Sb290IDEgMCBSCj4+CnN0YXJ0eHJlZgo1MDkKJSVFT0YK||||||F
+```
+
+---
+
+## 19. ORU^R01 - ultrasound result with embedded PDF (base64), Klinikum Wels-Grieskirchen
+
+```
+MSH|^~\&|RIS|KLIN_WELS|ORBIS|KLIN_WELS|20260319153000||ORU^R01^ORU_R01|RAD20260319002|P|2.5|||AL|NE
+PID|1||678901^^^KLIN_WELS^PI~8923230789^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS||Brunner^Michaela^Irmgard^^^^L||19890723|F
+PV1|1|I|GYNA^208^2^KLIN_WELS
+ORC|RE|ORD77890^ORBIS|FIL66234^RIS||CM
+OBR|1|ORD77890^ORBIS|FIL66234^RIS|76805^Geburtshilflicher Ultraschall^CPT4|||20260319100000|||||||||20234567^Koller^Silvia^^^Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA||||||20260319152000||RAD|F
+OBX|1|TX|76805^Ultraschallbefund^CPT4||Befund: Einlingsschwangerschaft 38+2 SSW. Schädellage. Geschätztes Gewicht 3100 g. Fruchtwasser normal. Plazenta Hinterwand, Grad II.||||||F
+OBX|2|ED|PDF^Ultraschallbefund^LOCAL||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNTk1IDg0Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA1OTUgODQyXQovQ29udGVudHMgNCAwIFIKL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4KPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA1NiA+PgpzdHJlYW0KQlQKL0YxIDEyIFRmCjEwMCA3MDAgVGQKKEtsaW5pa3VtIFdlbHMgLSBHZWJ1cnRzaGlsZmxpY2hlciBVbHRyYXNjaGFsbCkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250Ci9TdWJ0eXBlIC9UeXBlMQovQmFzZUZvbnQgL0hlbHZldGljYQo+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDE1MyAwMDAwMCBuIAowMDAwMDAwMzE0IDAwMDAwIG4gCjAwMDAwMDA0MjUgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2Ci9Sb290IDEgMCBSCj4+CnN0YXJ0eHJlZgo1MDUKJSVFT0YK||||||F
+```
+
+---
+
+## 20. ADT^A05 - pre-admission (Vorstationäre Aufnahme), Salzkammergut Klinikum Vöcklabruck
+
+```
+MSH|^~\&|ORBIS|SK_VOECKLA|LAB|SK_VOECKLA|20260408080000||ADT^A05^ADT_A05|ADT20260408008|P|2.5|||AL|NE|AUT|8859/1|DEU^German^HL70296
+EVN|A05|20260408080000
+PID|||234567^^^SK_VOECKLA^PI~7359120878^^^SVNR&1.2.40.0.10.1.4.3.1&ISO^SS||Aigner^Erwin^^^^^L||19780812|M|||Stadtplatz 15^^Vöcklabruck^4^4840^AUT^H||^PRN^CP^^43^664^8765432||DEU^German^HL70296|M^Verheiratet^HL70002|||||||||||AUT^Austrian^HL70171
+PV1|1|P|ORTH^304^1^SK_VOECKLA^^N^A^3|E|||20345678^Thaler^Rainer^^^Dr.^^^GDA&1.2.40.0.34.3.1.1&ISO^L^^^GDA||||||||||||FN2026-31002^^^SK_VOECKLA^VN|||||||||||||||||||||||||20260415080000
+IN1|1|0|04|ÖGK Oberösterreich|Gruberstraße 77^^Linz^^4020^AUT||||||||||||||||||||||||||||||||||||||||||||15
+```

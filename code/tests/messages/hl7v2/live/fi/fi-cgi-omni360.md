@@ -1,0 +1,266 @@
+# CGI OMNI360 - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - Inpatient admission (sisäänkirjaus)
+
+```
+MSH|^~\&|OMNI360|OYS|KANTA|THL|20260509080000||ADT^A01|OMNI000001|P|2.3|||AL|NE||FIN
+EVN|A01|20260509080000
+PID|||PT400001^^^OYS^MR~150178-234A^^^DVV^NNFIN||Karjalainen^Juha^Tapani^^Herra||19780115|M|||Kajaaninkatu 36^^Oulu^^90100^FIN||^^PH^0881234567~^^CP^0401234576
+PV1||I|OYS^KIR3^Huone 201^Vuode 1^PPSHP||||DR400^Räsänen^Markku^^^LL^Lääkäri||||||||||||HOITO400001|||||||||||||||||||||||20260509080000
+PV2|||^Reisiluun murtuma
+IN1|1|KELA|400001|KELA - Kansaneläkelaitos|Nordenskiöldinkatu 12^^Helsinki^^00250^FIN
+```
+
+---
+
+## 2. ADT^A02 - Patient transfer (osastosiirto)
+
+```
+MSH|^~\&|OMNI360|OYS|KANTA|THL|20260510100000||ADT^A02|OMNI000002|P|2.3|||AL|NE||FIN
+EVN|A02|20260510100000
+PID|||PT400001^^^OYS^MR~150178-234A^^^DVV^NNFIN||Karjalainen^Juha^Tapani^^Herra||19780115|M|||Kajaaninkatu 36^^Oulu^^90100^FIN||^^PH^0881234567~^^CP^0401234576
+PV1||I|OYS^ORT1^Huone 315^Vuode 2^PPSHP||||DR400^Räsänen^Markku^^^LL^Lääkäri||||||||||||HOITO400001|||||||||||||||||||||||20260509080000
+```
+
+---
+
+## 3. ADT^A03 - Patient discharge (uloskirjaus)
+
+```
+MSH|^~\&|OMNI360|OYS|KANTA|THL|20260516140000||ADT^A03|OMNI000003|P|2.3|||AL|NE||FIN
+EVN|A03|20260516140000
+PID|||PT400001^^^OYS^MR~150178-234A^^^DVV^NNFIN||Karjalainen^Juha^Tapani^^Herra||19780115|M|||Kajaaninkatu 36^^Oulu^^90100^FIN||^^PH^0881234567~^^CP^0401234576
+PV1||I|OYS^ORT1^Huone 315^Vuode 2^PPSHP||||DR400^Räsänen^Markku^^^LL^Lääkäri||||||||||||HOITO400001|||||||||||||||||||||||20260509080000|20260516140000
+```
+
+---
+
+## 4. ADT^A04 - Outpatient registration (polikliininen rekisteröinti)
+
+```
+MSH|^~\&|OMNI360|OYS|KANTA|THL|20260509091000||ADT^A04|OMNI000004|P|2.3|||AL|NE||FIN
+EVN|A04|20260509091000
+PID|||PT400002^^^OYS^MR~230590-567B^^^DVV^NNFIN||Hämäläinen^Riikka^Johanna^^Rouva||19900523|F|||Isokatu 22^^Oulu^^90100^FIN||^^CP^0509876548
+PV1||O|OYS^POLI1^Vastaanottohuone 5^^PPSHP||||DR401^Kokko^Heikki^^^LL^Lääkäri||||||||||||KÄYNTI400001|||||||||||||||||||||||20260509091000
+IN1|1|OP|400002|OP Vakuutus|Gebhardinaukio 1^^Helsinki^^00510^FIN
+```
+
+---
+
+## 5. ADT^A08 - Update patient information (potilastietojen päivitys)
+
+```
+MSH|^~\&|OMNI360|OYS|KANTA|THL|20260509110000||ADT^A08|OMNI000005|P|2.3|||AL|NE||FIN
+EVN|A08|20260509110000
+PID|||PT400003^^^OYS^MR~081255+678C^^^DVV^NNFIN||Mäkelä^Eino^Olavi^^Herra||19550108|M|||Torikatu 14^^Oulu^^90100^FIN||^^PH^0882345678~^^CP^0407654326
+PV1||I|OYS^SIS1^Huone 408^Vuode 1^PPSHP||||DR402^Hiltunen^Sari^^^LL^Lääkäri||||||||||||HOITO400002|||||||||||||||||||||||20260507090000
+NK1|1|Mäkelä^Ritva||^^CP^0407654327||EC
+```
+
+---
+
+## 6. ADT^A31 - Update person information (henkilötietojen muutos)
+
+```
+MSH|^~\&|OMNI360|OYS|VRK|DVV|20260509120000||ADT^A31|OMNI000006|P|2.3|||AL|NE||FIN
+EVN|A31|20260509120000
+PID|||PT400004^^^OYS^MR~290695-901D^^^DVV^NNFIN||Peltola^Minna^Katriina^^Rouva||19950629|F|||Pakkahuoneenkatu 4^^Oulu^^90100^FIN||^^CP^0401234577
+PV1||N
+```
+
+---
+
+## 7. ORM^O01 - Laboratory order (laboratoriotilaus)
+
+```
+MSH|^~\&|OMNI360|OYS|OYSLAB|PPSHP|20260509085000||ORM^O01|OMNI000007|P|2.3|||AL|NE||FIN
+PID|||PT400005^^^OYS^MR~120785-123E^^^DVV^NNFIN||Koivunen^Ari^Matti^^Herra||19850712|M|||Hallituskatu 8^^Oulu^^90100^FIN||^^CP^0451234571
+PV1||O|OYS^POLI2^Vastaanottohuone 3^^PPSHP||||DR403^Savolainen^Tiina^^^LL^Lääkäri||||||||||||KÄYNTI400002
+ORC|NW|ORD400001^OMNI360|||||^^^20260509085000^^R||20260509085000|DR403^Savolainen^Tiina^^^LL^Lääkäri
+OBR|1|ORD400001^OMNI360||2741^B-PVK+T^OYSLAB|||20260509085000||||||||DR403^Savolainen^Tiina^^^LL^Lääkäri
+OBR|2|ORD400001^OMNI360||4520^P-CRP^OYSLAB|||20260509085000||||||||DR403^Savolainen^Tiina^^^LL^Lääkäri
+OBR|3|ORD400001^OMNI360||4587^fP-Gluk^OYSLAB|||20260509085000||||||||DR403^Savolainen^Tiina^^^LL^Lääkäri
+```
+
+---
+
+## 8. ORU^R01 - Laboratory results (laboratoriovastaukset)
+
+```
+MSH|^~\&|OYSLAB|PPSHP|OMNI360|OYS|20260509140000||ORU^R01|OYSLAB000001|P|2.3|||AL|NE||FIN
+PID|||PT400005^^^OYS^MR~120785-123E^^^DVV^NNFIN||Koivunen^Ari^Matti^^Herra||19850712|M|||Hallituskatu 8^^Oulu^^90100^FIN||^^CP^0451234571
+PV1||O|OYS^POLI2^Vastaanottohuone 3^^PPSHP||||DR403^Savolainen^Tiina^^^LL^Lääkäri||||||||||||KÄYNTI400002
+ORC|RE|ORD400001^OMNI360|RES400001^OYSLAB||||^^^20260509085000^^R||20260509140000
+OBR|1|ORD400001^OMNI360|RES400001^OYSLAB|2741^B-PVK+T^OYSLAB|||20260509090000|||||||20260509090000|^^B|DR403^Savolainen^Tiina^^^LL^Lääkäri||||||20260509140000|||F
+OBX|1|NM|6768^B-Leuk^OYSLAB||7.5|10E9/l|3.4-8.2||||F|||20260509140000
+OBX|2|NM|1552^B-Hb^OYSLAB||138|g/l|117-155||||F|||20260509140000
+OBX|3|NM|2798^B-Trom^OYSLAB||230|10E9/l|150-360||||F|||20260509140000
+OBX|4|NM|4520^P-CRP^OYSLAB||3|mg/l|<3||||F|||20260509140000
+OBX|5|NM|14879-1^fP-Gluk^LN||5.2|mmol/l|4.0-6.0||||F|||20260509140000
+```
+
+---
+
+## 9. SIU^S12 - New appointment (uusi ajanvaraus)
+
+```
+MSH|^~\&|OMNI360|OYS|OMNI360_SCHED|PPSHP|20260509100000||SIU^S12|OMNI000008|P|2.3|||AL|NE||FIN
+SCH|APT400001|APT400001||||ROUTINE^Normaali^HL70276|FIRSTVISIT^Ensikäynti^HL70277|DOCTOR^Lääkärin vastaanotto|30|min|^^^20260521090000^20260521093000
+PID|||PT400006^^^OYS^MR~180398-345F^^^DVV^NNFIN||Niskanen^Laura^Elina^^Rouva||19980318|F|||Albertinkatu 15^^Oulu^^90100^FIN||^^CP^0401234578
+PV1||O|OYS^POLI3^Vastaanottohuone 7^^PPSHP||||DR404^Leinonen^Juha^^^LL^Lääkäri
+RGS|1
+AIS|1||ORTPOLI^Ortopedian poliklinikka^OMNI360|20260521090000|30|min
+AIP|1||DR404^Leinonen^Juha^^^LL^Lääkäri
+```
+
+---
+
+## 10. SIU^S14 - Appointment modification (ajanvarauksen muutos)
+
+```
+MSH|^~\&|OMNI360|OYS|OMNI360_SCHED|PPSHP|20260512080000||SIU^S14|OMNI000009|P|2.3|||AL|NE||FIN
+SCH|APT400001|APT400001||||ROUTINE^Normaali^HL70276|FIRSTVISIT^Ensikäynti^HL70277|DOCTOR^Lääkärin vastaanotto|30|min|^^^20260523090000^20260523093000
+PID|||PT400006^^^OYS^MR~180398-345F^^^DVV^NNFIN||Niskanen^Laura^Elina^^Rouva||19980318|F|||Albertinkatu 15^^Oulu^^90100^FIN||^^CP^0401234578
+PV1||O|OYS^POLI3^Vastaanottohuone 7^^PPSHP||||DR404^Leinonen^Juha^^^LL^Lääkäri
+RGS|1
+AIS|1||ORTPOLI^Ortopedian poliklinikka^OMNI360|20260523090000|30|min
+AIP|1||DR404^Leinonen^Juha^^^LL^Lääkäri
+```
+
+---
+
+## 11. MDM^T02 - Clinical document notification (asiakirjailmoitus)
+
+```
+MSH|^~\&|OMNI360|OYS|KANTA|THL|20260509150000||MDM^T02|OMNI000010|P|2.3|||AL|NE||FIN
+EVN|T02|20260509150000
+PID|||PT400007^^^OYS^MR~050475-789G^^^DVV^NNFIN||Lahtela^Raija^Anneli^^Rouva||19750504|F|||Kirkkokatu 20^^Oulu^^90100^FIN||^^CP^0409876549
+PV1||I|OYS^KIR3^Huone 201^Vuode 1^PPSHP||||DR405^Keskinen^Tero^^^LL^Lääkäri||||||||||||HOITO400003
+TXA|1|OP^Leikkauskertomus|TX|||20260509150000||||||DOC400001||||AU
+OBX|1|TX|11504-8^Surgical operation note^LN||Reisiluun ydinnaula-ostesynteesi suoritettu. Toimenpide sujui normaalisti, vuoto vähäinen.||||||F
+```
+
+---
+
+## 12. ORM^O01 - Radiology order (kuvantamistilaus)
+
+```
+MSH|^~\&|OMNI360|OYS|SECTRA_RIS|OYS_RAD|20260509103000||ORM^O01|OMNI000011|P|2.3|||AL|NE||FIN
+PID|||PT400008^^^OYS^MR~091060+901H^^^DVV^NNFIN||Vähälä^Erkki^Juhani^^Herra||19600109|M|||Rantakatu 5^^Oulu^^90100^FIN||^^PH^0883456789
+PV1||E|OYS^PPKL^Triage 2^^PPSHP||||DR406^Tuomela^Anna^^^LL^Lääkäri||||||||||||KÄYNTI400003
+ORC|NW|ORD400002^OMNI360|||||^^^20260509103000^^S||20260509103000|DR406^Tuomela^Anna^^^LL^Lääkäri
+OBR|1|ORD400002^OMNI360||36554-4^CT pää^RADLEX|||20260509103000||||||||DR406^Tuomela^Anna^^^LL^Lääkäri||||||||||PÄÄNSÄRKY^Äkillinen päänsärky
+```
+
+---
+
+## 13. ORU^R01 - CT result with base64 PDF (TT-vastaus PDF-liitteellä)
+
+```
+MSH|^~\&|SECTRA_RIS|OYS_RAD|OMNI360|OYS|20260509160000||ORU^R01|SECTRA000002|P|2.3|||AL|NE||FIN
+PID|||PT400008^^^OYS^MR~091060+901H^^^DVV^NNFIN||Vähälä^Erkki^Juhani^^Herra||19600109|M|||Rantakatu 5^^Oulu^^90100^FIN||^^PH^0883456789
+PV1||E|OYS^PPKL^Triage 2^^PPSHP||||DR406^Tuomela^Anna^^^LL^Lääkäri||||||||||||KÄYNTI400003
+ORC|RE|ORD400002^OMNI360|RES400002^SECTRA_RIS||||^^^20260509103000^^S||20260509160000
+OBR|1|ORD400002^OMNI360|RES400002^SECTRA_RIS|36554-4^CT pää^RADLEX|||20260509110000|||||||20260509110000|^^CT|DR407^Ikonen^Reijo^^^RAD^Radiologi||||||20260509160000|||F
+OBX|1|TX|18748-4^Diagnostic imaging study^LN||Pään TT: Ei merkkejä kallonsisäisestä verenvuodosta. Verisuonirakenteet normaalit. Aivoparenkyyma normaali.||||||F|||20260509160000
+OBX|2|ED|PDF^TT-lausunto^L||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UK||||||F|||20260509160000
+```
+
+---
+
+## 14. ORU^R01 - Abnormal kidney function (poikkeava munuaistoiminta)
+
+```
+MSH|^~\&|OYSLAB|PPSHP|OMNI360|OYS|20260509145000||ORU^R01|OYSLAB000002|P|2.3|||AL|NE||FIN
+PID|||PT400009^^^OYS^MR~221040+234J^^^DVV^NNFIN||Koivisto^Helga^Marjatta^^Rouva||19401022|F|||Kauppurienkatu 11^^Oulu^^90100^FIN||^^PH^0884567890
+PV1||I|OYS^SIS2^Huone 502^Vuode 1^PPSHP||||DR408^Parviainen^Jukka^^^LL^Lääkäri||||||||||||HOITO400004
+ORC|RE|ORD400003^OMNI360|RES400003^OYSLAB||||^^^20260509080000^^R||20260509145000
+OBR|1|ORD400003^OMNI360|RES400003^OYSLAB|2003^P-Krea^OYSLAB|||20260509082000|||||||20260509082000|^^S|DR408^Parviainen^Jukka^^^LL^Lääkäri||||||20260509145000|||F
+OBX|1|NM|2160-0^P-Krea^LN||168|umol/l|50-90|HH|||F|||20260509145000
+OBX|2|NM|3094-0^P-Urea^LN||15.2|mmol/l|2.6-6.4|HH|||F|||20260509145000
+OBX|3|NM|33914-3^eGFR^LN||28|ml/min/1.73m2|>60|L|||F|||20260509145000
+```
+
+---
+
+## 15. ADT^A40 - Patient merge (potilastietojen yhdistäminen)
+
+```
+MSH|^~\&|OMNI360|OYS|KANTA|THL|20260509130000||ADT^A40|OMNI000012|P|2.3|||AL|NE||FIN
+EVN|A40|20260509130000
+PID|||PT400010^^^OYS^MR||Mikkola^Seppo^Kalevi^^Herra||19630412|M|||Uusikatu 18^^Oulu^^90100^FIN||^^CP^0401234579
+MRG|PT400099^^^OYS^MR
+PV1||N
+```
+
+---
+
+## 16. ORU^R01 - Infection markers (infektiomarkerit)
+
+```
+MSH|^~\&|OYSLAB|PPSHP|OMNI360|OYS|20260509153000||ORU^R01|OYSLAB000003|P|2.3|||AL|NE||FIN
+PID|||PT400011^^^OYS^MR~140288-567K^^^DVV^NNFIN||Pulkkinen^Kati^Maria^^Rouva||19880214|F|||Asemakatu 3^^Oulu^^90100^FIN||^^CP^0407654328
+PV1||E|OYS^PPKL^Triage 1^^PPSHP||||DR409^Karhu^Ville^^^LL^Lääkäri||||||||||||KÄYNTI400004
+ORC|RE|ORD400004^OMNI360|RES400004^OYSLAB||||^^^20260509100000^^S||20260509153000
+OBR|1|ORD400004^OMNI360|RES400004^OYSLAB|4520^P-CRP^OYSLAB|||20260509101000|||||||20260509101000|^^S|DR409^Karhu^Ville^^^LL^Lääkäri||||||20260509153000|||F
+OBX|1|NM|4520^P-CRP^OYSLAB||85|mg/l|<3|HH|||F|||20260509153000
+OBX|2|NM|1988-5^P-CRP-herkka^LN||85.3|mg/l|<1.0|HH|||F|||20260509153000
+OBX|3|NM|26881-3^P-IL-6^LN||120|ng/l|<7|HH|||F|||20260509153000
+```
+
+---
+
+## 17. ORU^R01 - Medication monitoring (lääkeainepitoisuudet)
+
+```
+MSH|^~\&|OYSLAB|PPSHP|OMNI360|OYS|20260509155000||ORU^R01|OYSLAB000004|P|2.3|||AL|NE||FIN
+PID|||PT400012^^^OYS^MR~300572-890L^^^DVV^NNFIN||Manninen^Ilkka^Petteri^^Herra||19720530|M|||Linnansaari 6^^Oulu^^90100^FIN||^^CP^0451234572
+PV1||I|OYS^NEUR1^Huone 310^Vuode 1^PPSHP||||DR410^Väisänen^Kaisa^^^LL^Lääkäri||||||||||||HOITO400005
+ORC|RE|ORD400005^OMNI360|RES400005^OYSLAB||||^^^20260509090000^^R||20260509155000
+OBR|1|ORD400005^OMNI360|RES400005^OYSLAB|3968-5^S-Karbamatsepiini^LN|||20260509091000|||||||20260509091000|^^S|DR410^Väisänen^Kaisa^^^LL^Lääkäri||||||20260509155000|||F
+OBX|1|NM|3968-5^S-Karbamatsepiini^LN||32|umol/l|17-51||||F|||20260509155000
+```
+
+---
+
+## 18. ORU^R01 - Report with base64 PDF attachment (raportti PDF-liitteellä)
+
+```
+MSH|^~\&|OYSLAB|PPSHP|OMNI360|OYS|20260509170000||ORU^R01|OYSLAB000005|P|2.3|||AL|NE||FIN
+PID|||PT400013^^^OYS^MR~050680-345M^^^DVV^NNFIN||Korpi^Sanna^Kristiina^^Rouva||19800506|F|||Torikatu 30^^Oulu^^90100^FIN||^^CP^0401234580
+PV1||O|OYS^PAT1^Vastaanottohuone 1^^PPSHP||||DR411^Ojala^Pasi^^^LL^Lääkäri||||||||||||KÄYNTI400005
+ORC|RE|ORD400006^OMNI360|RES400006^OYSLAB||||^^^20260507100000^^R||20260509170000
+OBR|1|ORD400006^OMNI360|RES400006^OYSLAB|60570-9^Pathology report^LN|||20260507101000|||||||20260507101000|^^Biopsia|DR411^Ojala^Pasi^^^LL^Lääkäri||||||20260509170000|||F
+OBX|1|TX|22634-0^Pathology report text^LN||Ihomuutos: Benigni intradermaalinen nevus. Ei dysplasiaa.||||||F|||20260509170000
+OBX|2|ED|PDF^Patologian lausunto^L||^application^pdf^Base64^JVBERi0xLjUKJeLjz9MKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKL01hcmtJbmZvIDw8Ci9NYXJrZWQgdHJ1ZQo+PgovTGFuZyAoZmkpCj4+CmVuZG9iagoyIDAgb2JqCjw8Ci9UeXBlIC9QYWdlcwovS2lkcyBbMyAwIFJdCj4+CmVuZG9iagoK||||||F|||20260509170000
+```
+
+---
+
+## 19. ORM^O01 - Medication order (lääketilaus)
+
+```
+MSH|^~\&|OMNI360|OYS|APTEEKKI|OYS_APT|20260509141000||ORM^O01|OMNI000013|P|2.3|||AL|NE||FIN
+PID|||PT400014^^^OYS^MR~200895-567N^^^DVV^NNFIN||Leppänen^Mikko^Juhani^^Herra||19950820|M|||Kajaanintie 45^^Oulu^^90100^FIN||^^CP^0401234581
+PV1||I|OYS^KIR3^Huone 201^Vuode 1^PPSHP||||DR400^Räsänen^Markku^^^LL^Lääkäri||||||||||||HOITO400006
+ORC|NW|ORD400007^OMNI360|||||^^^20260509141000^^R||20260509141000|DR400^Räsänen^Markku^^^LL^Lääkäri
+OBR|1|ORD400007^OMNI360||LAAKE^Lääketilaus^OMNI360|||20260509141000||||||||DR400^Räsänen^Markku^^^LL^Lääkäri
+RXO|N02BE01^Parasetamoli^ATC||1000|mg||PO^Suun kautta^HL70162|^^^20260509180000^^R|1000|mg
+```
+
+---
+
+## 20. ORU^R01 - D-dimer and coagulation (D-dimeeri ja hyytymistekijät)
+
+```
+MSH|^~\&|OYSLAB|PPSHP|OMNI360|OYS|20260509162000||ORU^R01|OYSLAB000006|P|2.3|||AL|NE||FIN
+PID|||PT400015^^^OYS^MR~100375-234P^^^DVV^NNFIN||Sipilä^Tarja^Marjatta^^Rouva||19750310|F|||Kirkkokatu 8^^Oulu^^90100^FIN||^^CP^0407654329
+PV1||E|OYS^PPKL^Triage 3^^PPSHP||||DR412^Heikkinen^Arto^^^LL^Lääkäri||||||||||||KÄYNTI400006
+ORC|RE|ORD400008^OMNI360|RES400008^OYSLAB||||^^^20260509103000^^S||20260509162000
+OBR|1|ORD400008^OMNI360|RES400008^OYSLAB|48066-5^P-FiDD^LN|||20260509104000|||||||20260509104000|^^S|DR412^Heikkinen^Arto^^^LL^Lääkäri||||||20260509162000|||F
+OBX|1|NM|48066-5^P-FiDD^LN||0.45|mg/l|<0.50||||F|||20260509162000
+OBX|2|NM|6301-6^P-TT-INR^LN||1.0||0.9-1.2||||F|||20260509162000
+OBX|3|NM|3173-2^P-APTT^LN||28|s|23-33||||F|||20260509162000
+```

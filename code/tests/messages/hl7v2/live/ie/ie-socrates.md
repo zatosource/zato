@@ -1,0 +1,320 @@
+# Socrates GP Software - real HL7v2 ER7 messages
+
+## 1
+
+```
+MSH|^~\&|LABSYS|STJAMES|SOCRATES.HEALTHLINK.10|MCN.HL18293|20260114093045||ORU^R01|MSG20260114093045001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||SJH-504917^^^STJAMES^MR~9107234581A^^^PPSN^PPSN||Brennan^Saoirse^Niamh^^Ms.||19880703|F|||8 Griffith Avenue^^Drumcondra^Dublin 9^D09 T5X8^IRL^H||+35318724561^PRN^PH~+353871234567^PRN^CP||EN|M
+PV1|1|O|HAEM^HAEM-OPD^1^STJAMES||||DOC301^Gallagher^Eoin^^^Dr.^MD
+ORC|RE|SOCORD20260113001|SJHLAB20260114001||CM||||20260114090000
+OBR|1|SOCORD20260113001|SJHLAB20260114001|58410-2^CBC panel^LN|||20260113143000||||||||DOC301^Gallagher^Eoin^^^Dr.^MD||||||20260114090000|||F
+OBX|1|NM|6690-2^WBC^LN||7.8|10*9/L|4.0-11.0|N|||F|||20260114083000
+OBX|2|NM|789-8^RBC^LN||4.52|10*12/L|3.8-5.5|N|||F|||20260114083000
+OBX|3|NM|718-7^Haemoglobin^LN||13.1|g/dL|12.0-16.0|N|||F|||20260114083000
+OBX|4|NM|4544-3^Haematocrit^LN||39.2|%|36.0-46.0|N|||F|||20260114083000
+OBX|5|NM|787-2^MCV^LN||86.7|fL|80.0-100.0|N|||F|||20260114083000
+OBX|6|NM|785-6^MCH^LN||29.0|pg|27.0-32.0|N|||F|||20260114083000
+OBX|7|NM|777-3^Platelets^LN||245|10*9/L|150-400|N|||F|||20260114083000
+OBX|8|NM|770-8^Neutrophils^LN||4.2|10*9/L|2.0-7.5|N|||F|||20260114083000
+OBX|9|NM|731-0^Lymphocytes^LN||2.8|10*9/L|1.0-4.0|N|||F|||20260114083000
+```
+
+---
+
+## 2
+
+```
+MSH|^~\&|LABSYS|BEAUMONT|SOCRATES.HEALTHLINK.10|MCN.HL29384|20260220104512||ORU^R01|MSG20260220104512001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||BMT-639281^^^BEAUMONT^MR~7504218967B^^^PPSN^PPSN||Kavanagh^Diarmuid^Colm^^Mr.||19630508|M|||14 Vernon Avenue^^Clontarf^Dublin 3^D03 K8P2^IRL^H||+35318561234^PRN^PH~+353864567891^PRN^CP||EN|M
+PV1|1|O|ENDO^ENDO-OPD^2^BEAUMONT||||DOC302^Nolan^Caoimhe^^^Dr.^MD
+ORC|RE|SOCORD20260219001|BMTLAB20260220001||CM||||20260220100000
+OBR|1|SOCORD20260219001|BMTLAB20260220001|24348-5^Thyroid panel^LN|||20260219091500||||||||DOC302^Nolan^Caoimhe^^^Dr.^MD||||||20260220100000|||F
+OBX|1|NM|3016-3^TSH^LN||8.45|mIU/L|0.27-4.20|H|||F|||20260220094500
+OBX|2|NM|3024-7^Free T4^LN||9.2|pmol/L|12.0-22.0|L|||F|||20260220094500
+OBX|3|NM|3053-6^Free T3^LN||3.1|pmol/L|3.1-6.8|N|||F|||20260220094500
+OBX|4|NM|5383-2^Anti-TPO antibodies^LN||312|IU/mL|<35|H|||F|||20260220094500
+NTE|1||Elevated TSH with low FT4 consistent with primary hypothyroidism. Anti-TPO positive. Suggest levothyroxine initiation.
+```
+
+---
+
+## 3
+
+```
+MSH|^~\&|LABSYS|MMUH|SOCRATES.HEALTHLINK.10|MCN.HL37482|20260402141230||ORU^R01|MSG20260402141230001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||MMUH-716482^^^MMUH^MR~8301654729C^^^PPSN^PPSN||Doyle^Clodagh^Aisling^^Ms.||19710204|F|||5 Botanic Road^^Glasnevin^Dublin 9^D09 A7B4^IRL^H||+35318293456^PRN^PH||EN|W
+PV1|1|O|NEPH^NEPH-OPD^1^MMUH||||DOC303^Healy^Fiachra^^^Dr.^MD
+ORC|RE|SOCORD20260401001|MMUHLAB20260402001||CM||||20260402140000
+OBR|1|SOCORD20260401001|MMUHLAB20260402001|24362-6^Renal function panel^LN|||20260401110000||||||||DOC303^Healy^Fiachra^^^Dr.^MD||||||20260402140000|||F
+OBX|1|NM|2160-0^Creatinine^LN||142|umol/L|45-84|HH|||F|||20260402133000
+OBX|2|NM|3094-0^Urea^LN||14.8|mmol/L|2.5-7.8|H|||F|||20260402133000
+OBX|3|NM|2951-2^Sodium^LN||138|mmol/L|136-145|N|||F|||20260402133000
+OBX|4|NM|2823-3^Potassium^LN||5.6|mmol/L|3.5-5.1|H|||F|||20260402133000
+OBX|5|NM|33914-3^eGFR^LN||32|mL/min/1.73m2|>60|L|||F|||20260402133000
+OBX|6|NM|14682-9^Albumin/Creatinine ratio^LN||45|mg/mmol|<3.5|H|||F|||20260402133000
+NTE|1||Stage 3b CKD. Elevated potassium - consider dietary advice and review medications. Suggest nephrology referral.
+```
+
+---
+
+## 4
+
+```
+MSH|^~\&|LABSYS|TUH|SOCRATES.HEALTHLINK.10|MCN.HL48271|20260507083000||ORU^R01|MSG20260507083000001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||TUH-381956^^^TUH^MR~9408712365D^^^PPSN^PPSN||Walsh^Oisin^Ruairi^^Mr.||19920118|M|||22 Old Bawn Road^^Tallaght^Dublin 24^D24 K7P3^IRL^H||+35314523987^PRN^PH~+353876549321^PRN^CP||EN|S
+PV1|1|O|MED^GEN-OPD^1^TUH||||DOC304^Crowley^Sorcha^^^Dr.^MD
+ORC|RE|SOCORD20260506001|TUHLAB20260507001||CM||||20260507080000
+OBR|1|SOCORD20260506001|TUHLAB20260507001|24331-1^Lipid panel^LN|||20260506080000||||||||DOC304^Crowley^Sorcha^^^Dr.^MD||||||20260507080000|||F
+OBX|1|NM|2093-3^Total Cholesterol^LN||6.8|mmol/L|<5.0|H|||F|||20260507074500
+OBX|2|NM|2571-8^Triglycerides^LN||2.4|mmol/L|<1.7|H|||F|||20260507074500
+OBX|3|NM|2085-9^HDL Cholesterol^LN||0.95|mmol/L|>1.0|L|||F|||20260507074500
+OBX|4|NM|13457-7^LDL Cholesterol^LN||4.76|mmol/L|<3.0|H|||F|||20260507074500
+OBX|5|NM|13458-5^Total/HDL ratio^LN||7.2||<4.5|H|||F|||20260507074500
+NTE|1||Significantly elevated cardiovascular risk profile. Consider statin therapy per NICE/HSE lipid guidelines.
+```
+
+---
+
+## 5
+
+```
+MSH|^~\&|SOCRATES.HEALTHLINK.76|MCN.HL18293|SALESFORCE.HEALTHLINK.76|SALESFORCE.99994.L|20250817141200||VXU^V04|VXU20250817141200001|P|2.4|||AL
+PID|1||7603298145A^^^PPSN^PPSN~PMS84512^^^SOCRATES^MR||Sullivan^Grainne^Deirdre^^Mrs.||19650419|F|||31 Whitehall Road^^Churchtown^Dublin 14^D14 E3F5^IRL^H||||EN
+PV1|1|O||||||||||||||||||||||||||||||||||||72345^GMS
+ORC|RE||SOCVAX20250817001
+RXA|0|1|20250817|20250817|210^AstraZeneca^CDC|1|||8834217^Moran^Cathal^^^Dr.||^^^Churchtown GP Surgery||||ABV5811|20251130|AZN^^MVX|||CP|A
+RXR|IM^Intramuscular^HL70162|LA^Left Upper Arm^HL70163
+OBX|1|CE|X0058-0^Consent Given^LOCAL||Yes||||||F|||20250817
+OBX|2|CE|X0059-0^Eligibility^LOCAL||Yes||||||F|||20250817
+OBX|3|CE|X0064-4^Additional Factors^LOCAL||People with certain medical conditions||||||F|||20250817
+```
+
+---
+
+## 6
+
+```
+MSH|^~\&|SOCRATES.HEALTHLINK.10|MCN.HL39274|CONNOLLY|CONNOLLY|20260122100030||REF^I12^REF_I12|REF20260122100030001|P|2.4|||AL|NE||UNICODE UTF-8
+PRD|PP^Primary Care Provider||^^^Castleknock GP Clinic^^C||DOC305^Quinn^Muireann^^^Dr.^MD^^^GMS&GMS&L^IHPI
+PID|1||8206451398E^^^PPSN^PPSN||Dunne^Tadhg^Lorcan^^Mr.||19750611|M|||42 Auburn Avenue^^Castleknock^Dublin 15^D15 R7K3^IRL^H||+35318209876^PRN^PH~+353856781234^PRN^CP||EN|M
+PV1|1|O
+RF1|P^Pending^HL70283|MED^Medical^HL70280|GEN^General Medicine^LOCAL|||20260122
+NTE|1||Dear Colleague,\.br\Please review this 50-year-old male with persistent epigastric pain x 6 weeks. H. pylori positive on stool antigen test. Failed triple therapy eradication. Requesting OGD and specialist review.\.br\\.br\PMH: Type 2 DM, HTN\.br\Meds: Metformin 1g BD, Ramipril 5mg OD\.br\\.br\Kind regards,\.br\Dr. Muireann Quinn
+OBR|1|SOCREF20260122001||68461-4^Referral note^LN|||20260122
+OBX|1|FT|68461-4^Referral note^LN||H. pylori stool antigen: POSITIVE (12/01/2026)\.br\HbA1c: 52 mmol/mol (01/01/2026)\.br\Creatinine: 88 umol/L (01/01/2026)\.br\eGFR: 78 mL/min/1.73m2||||||F
+```
+
+---
+
+## 7
+
+```
+MSH|^~\&|P3048|MERCYUNIVERSITYHOSPITAL|SOCRATES.HEALTHLINK.10|MCN.HL51827|20260303152030||ORU^R01|MSG20260303152030001|P|2.4|||AL|NE||8859/1
+PID|1||MUH-461823^^^MUH^MR~7902345618F^^^PPSN^PPSN||Buckley^Aoife^Roisin^^Mrs.||19800324|F|||18 Barrack Street^^Cork^^T12 X7P3^IRL^H||+353214781234^PRN^PH||EN|M
+PV1|1|I|CARD^CARD-W3^12^MUH||||DOC306^Harrington^Ciran^^^Dr.^MD
+ORC|RE||MUH-DC20260303001||CM||||20260303150000
+OBR|1||MUH-DC20260303001|18842-5^Discharge Summary^LN|||20260228||||||||||||||20260303150000||MDOC|AU
+OBX|1|FT|18842-5^Discharge Summary^LN||DISCHARGE SUMMARY\.br\\.br\Patient: Buckley, Aoife\.br\DOB: 24/03/1980 MRN: MUH-461823\.br\Admission: 28/02/2026 Discharge: 03/03/2026\.br\\.br\Diagnosis: NSTEMI\.br\\.br\Presenting Complaint: Chest pain radiating to left arm, onset at rest.\.br\Troponin I: 0.85 ng/mL (ref <0.04). ECG: ST depression V3-V6.\.br\\.br\Investigations: Coronary angiography 01/03 - 90% stenosis LAD.\.br\PCI with DES to LAD performed successfully.\.br\\.br\Discharge Medications:\.br\- Aspirin 75mg OD\.br\- Clopidogrel 75mg OD (12 months)\.br\- Atorvastatin 80mg ON\.br\- Bisoprolol 2.5mg OD\.br\- Ramipril 2.5mg OD\.br\\.br\Follow-up: Cardiology OPD 6 weeks.\.br\GP: Please check U+E, lipids at 6 weeks.||||||F
+```
+
+---
+
+## 8
+
+```
+MSH|^~\&|LABSYS|CUH|SOCRATES.HEALTHLINK.10|MCN.HL62918|20260421091530||ORU^R01|MSG20260421091530001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||CUH-527184^^^CUH^MR~8605123478G^^^PPSN^PPSN||Fitzgerald^Conor^Declan^^Mr.||19900527|M|||7 Western Road^^Cork^^T23 Y6N8^IRL^H||+353214893216^PRN^PH||EN|S
+PV1|1|O|DIAB^DIAB-OPD^1^CUH||||DOC307^McCarthy^Siobhan^^^Dr.^MD
+ORC|RE|SOCORD20260420001|CUHLAB20260421001||CM||||20260421090000
+OBR|1|SOCORD20260420001|CUHLAB20260421001|4548-4^HbA1c^LN|||20260420083000||||||||DOC307^McCarthy^Siobhan^^^Dr.^MD||||||20260421090000|||F
+OBX|1|NM|4548-4^HbA1c^LN||68|mmol/mol|<48|H|||F|||20260421085000
+OBX|2|NM|2345-7^Fasting Glucose^LN||9.8|mmol/L|3.9-5.8|H|||F|||20260421085000
+OBX|3|NM|2160-0^Creatinine^LN||76|umol/L|62-106|N|||F|||20260421085000
+OBX|4|NM|14682-9^Albumin/Creatinine ratio^LN||4.2|mg/mmol|<3.5|H|||F|||20260421085000
+NTE|1||HbA1c above target for Type 2 DM. Microalbuminuria detected. Suggest medication review and dietitian referral.
+```
+
+---
+
+## 9
+
+```
+MSH|^~\&|SOCRATES.HEALTHLINK.13|MCN.HL18293|CLINISYS|STJAMES|20260112080030||OML^O21^OML_O21|OML20260112080030001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||8709213456H^^^PPSN^PPSN||Ryan^Orla^Brid^^Ms.||19840216|F|||11 Merrion Road^^Ballsbridge^Dublin 4^D04 Y1K9^IRL^H||+35316894523^PRN^PH~+353867891234^PRN^CP||EN|S
+PV1|1|O||||||DOC308^Daly^Eoghan^^^Dr.^MD^^^GMS&GMS&L^IHPI
+ORC|NW|SOCORD20260112001||||||20260112080000|DOC308^Daly^Eoghan^^^Dr.^MD
+OBR|1|SOCORD20260112001||58410-2^CBC panel^LN|||20260112||||A||||DOC308^Daly^Eoghan^^^Dr.^MD
+ORC|NW|SOCORD20260112002||||||20260112080000|DOC308^Daly^Eoghan^^^Dr.^MD
+OBR|2|SOCORD20260112002||24348-5^Thyroid panel^LN|||20260112||||A||||DOC308^Daly^Eoghan^^^Dr.^MD
+ORC|NW|SOCORD20260112003||||||20260112080000|DOC308^Daly^Eoghan^^^Dr.^MD
+OBR|3|SOCORD20260112003||24362-6^Renal function panel^LN|||20260112||||A||||DOC308^Daly^Eoghan^^^Dr.^MD
+NTE|1||Patient on metformin and ramipril. Annual review bloods. Fasting sample.
+```
+
+---
+
+## 10
+
+```
+MSH|^~\&|IPMS|UHL|SOCRATES.HEALTHLINK.10|MCN.HL71823|20260115163045||ADT^A03^ADT_A03|ADT20260115163045001|P|2.4|||AL|NE||UNICODE UTF-8
+EVN|A03|20260115163000
+PID|1||UHL-482917^^^UHL^MR~8103654297I^^^PPSN^PPSN||O'Brien^Darragh^Sean^^Mr.||19740319|M|||27 Catherine Street^^Limerick^^V94 T8Y3^IRL^H||+353614567892^PRN^PH||EN|M
+PV1|1|I|MED^MED-W4^8^UHL||||DOC309^Considine^Padraig^^^Dr.^MD||GEN||||7|||DOC309^Considine^Padraig^^^Dr.^MD|IN||GMS|||||||||||||||||||UHL|||||20260112091500|||20260115163000
+DG1|1||J18.9^Pneumonia unspecified organism^ICD10||20260112|A
+DG1|2||J44.1^COPD with acute exacerbation^ICD10||20260112|A
+```
+
+---
+
+## 11
+
+```
+MSH|^~\&|LABSYS|SVUH|SOCRATES.HEALTHLINK.10|MCN.HL82714|20260205110045||ORU^R01|MSG20260205110045001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||SVUH-718394^^^SVUH^MR~9204876513J^^^PPSN^PPSN||O'Connor^Niamh^Maeve^^Ms.||19950811|F|||3 Ailesbury Road^^Donnybrook^Dublin 4^D04 C3X9^IRL^H||+35312897654^PRN^PH||EN|S
+PV1|1|O|MICRO^MICRO-OPD^1^SVUH||||DOC310^Phelan^Declan^^^Dr.^MD
+ORC|RE|SOCORD20260203001|SVUHLAB20260205001||CM||||20260205100000
+OBR|1|SOCORD20260203001|SVUHLAB20260205001|630-4^Urine culture^LN|||20260203093000||||||||DOC310^Phelan^Declan^^^Dr.^MD||||||20260205100000|||F
+OBX|1|ST|630-4^Urine culture^LN||Escherichia coli >10^5 CFU/mL||||||F|||20260205093000
+OBX|2|ST|18769-0^Ampicillin susceptibility^LN||Resistant||||||F|||20260205093000
+OBX|3|ST|18862-3^Amoxicillin-clavulanate susceptibility^LN||Sensitive||||||F|||20260205093000
+OBX|4|ST|18906-8^Ciprofloxacin susceptibility^LN||Sensitive||||||F|||20260205093000
+OBX|5|ST|18928-2^Gentamicin susceptibility^LN||Sensitive||||||F|||20260205093000
+OBX|6|ST|18995-1^Nitrofurantoin susceptibility^LN||Sensitive||||||F|||20260205093000
+OBX|7|ST|18996-9^Trimethoprim susceptibility^LN||Resistant||||||F|||20260205093000
+NTE|1||E. coli UTI with ampicillin and trimethoprim resistance. Nitrofurantoin or augmentin recommended.
+```
+
+---
+
+## 12
+
+```
+MSH|^~\&|LABSYS|STJAMES|SOCRATES.HEALTHLINK.10|MCN.HL93847|20260328143015||ORU^R01|MSG20260328143015001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||SJH-629481^^^STJAMES^MR~7205817364K^^^PPSN^PPSN||Tobin^Ruairi^Eoin^^Mr.||19670209|M|||15 Thomas Street^^Dublin 8^^D08 P3R7^IRL^H||+35318436721^PRN^PH||EN|M
+PV1|1|O|HAEM^COAG-OPD^1^STJAMES||||DOC311^Madden^Fionnuala^^^Dr.^MD
+ORC|RE|SOCORD20260327001|SJHLAB20260328001||CM||||20260328140000
+OBR|1|SOCORD20260327001|SJHLAB20260328001|38875-1^Coagulation panel^LN|||20260327100000||||||||DOC311^Madden^Fionnuala^^^Dr.^MD||||||20260328140000|||F
+OBX|1|NM|5902-2^PT^LN||18.5|s|11.0-13.5|H|||F|||20260328133000
+OBX|2|NM|6301-6^INR^LN||2.8||2.0-3.0|N|||F|||20260328133000
+OBX|3|NM|3173-2^APTT^LN||34.2|s|25.0-38.0|N|||F|||20260328133000
+OBX|4|NM|3255-7^Fibrinogen^LN||3.4|g/L|1.5-4.0|N|||F|||20260328133000
+NTE|1||INR within therapeutic range for mechanical valve. Continue warfarin dose unchanged. Review 4 weeks.
+```
+
+---
+
+## 13
+
+```
+MSH|^~\&|SWIFTQUEUE|BEAUMONT|SOCRATES.HEALTHLINK.10|MCN.HL29384|20260410081500||SIU^S12^SIU_S12|SIU20260410081500001|P|2.4|||AL|NE||UNICODE UTF-8
+SCH|APPT20260410001|SOCSCH20260410001||||ROUTINE^Routine^HL70277|||30|MIN|^^30^20260515093000^20260515100000|DOC312^Byrne^Aisling^^^Dr.^MD|||DOC312^Byrne^Aisling^^^Dr.^MD|ORTHO^ORTHO-OPD^1^BEAUMONT|Booked^Booked^HL70278
+PID|1||BMT-294716^^^BEAUMONT^MR~8507219834L^^^PPSN^PPSN||Kelly^Deirdre^Grainne^^Mrs.||19820922|F|||6 Collins Avenue^^Beaumont^Dublin 9^D09 N4P8^IRL^H||+35318674521^PRN^PH~+353879876543^PRN^CP||EN|M
+PV1|1|O|ORTHO^ORTHO-OPD^1^BEAUMONT||||DOC312^Byrne^Aisling^^^Dr.^MD
+RGS|1
+AIP|1||DOC312^Byrne^Aisling^^^Dr.^MD|Accept^Accept^HL70278
+AIL|1||ORTHO^ORTHO-OPD^1^BEAUMONT|Accept^Accept^HL70278
+NTE|1||Follow-up for right knee total replacement. 6-week post-op review. Please bring imaging.
+```
+
+---
+
+## 14
+
+```
+MSH|^~\&|RIS|CONNOLLY|SOCRATES.HEALTHLINK.10|MCN.HL39274|20260124152000||ORU^R01|MSG20260124152000001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||CON-581736^^^CONNOLLY^MR~8206451398E^^^PPSN^PPSN||Dunne^Tadhg^Lorcan^^Mr.||19750611|M|||42 Auburn Avenue^^Castleknock^Dublin 15^D15 R7K3^IRL^H||+35318209876^PRN^PH||EN|M
+PV1|1|O|RAD^RAD-XR^1^CONNOLLY||||DOC313^Tobin^Colm^^^Dr.^MD
+ORC|RE|SOCORD20260124001|CONRAD20260124001||CM||||20260124150000
+OBR|1|SOCORD20260124001|CONRAD20260124001|71020^Chest X-ray^CPT4|||20260124120000||||||||DOC313^Tobin^Colm^^^Dr.^MD||||||20260124150000|||F
+OBX|1|FT|18748-4^Diagnostic imaging study^LN||CHEST X-RAY PA AND LATERAL\.br\\.br\Clinical Indication: Persistent cough. Smoker.\.br\\.br\Findings:\.br\- Heart size normal.\.br\- No pleural effusion.\.br\- Right upper lobe opacity 2.5cm, irregular margins. Suspicious for malignancy.\.br\- No bony abnormality.\.br\\.br\Conclusion: Right upper lobe opacity suspicious for malignancy. CT thorax recommended urgently.\.br\\.br\Reported by: Dr. Colm Tobin, Consultant Radiologist||||||F
+```
+
+---
+
+## 15
+
+```
+MSH|^~\&|LABSYS|COOMBE|SOCRATES.HEALTHLINK.10|MCN.HL48273|20260312091045||ORU^R01|MSG20260312091045001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||COO-382917^^^COOMBE^MR~9107654892M^^^PPSN^PPSN||Murphy^Caoimhe^Sorcha^^Ms.||19930714|F|||12 Cork Street^^The Liberties^Dublin 8^D08 W4X1^IRL^H||+35314562198^PRN^PH~+353854321987^PRN^CP||EN|S
+PV1|1|O|CYTO^CYTO-OPD^1^COOMBE||||DOC314^Gallagher^Brid^^^Dr.^MD
+ORC|RE|SOCORD20260310001|COOLAB20260312001||CM||||20260312090000
+OBR|1|SOCORD20260310001|COOLAB20260312001|10524-7^Cervical cytology^LN|||20260310103000||||||||DOC314^Gallagher^Brid^^^Dr.^MD||||||20260312090000|||F
+OBX|1|CE|10524-7^Cervical cytology^LN||LSIL^Low-grade squamous intraepithelial lesion^BETHESDA||||||F|||20260312084500
+OBX|2|CE|21440-3^HPV high risk^LN||POS^Positive^LOCAL||||||F|||20260312084500
+NTE|1||LSIL with HPV positive. Refer for colposcopy as per CervicalCheck guidelines.
+```
+
+---
+
+## 16
+
+```
+MSH|^~\&|LABSYS|GUH|SOCRATES.HEALTHLINK.10|MCN.HL73928|20260425103045||ORU^R01|MSG20260425103045001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||GUH-394817^^^GUH^MR~8401937256N^^^PPSN^PPSN||Moran^Sean^Cathal^^Mr.||19780302|M|||4 Shop Street^^Galway^^H91 X8Y2^IRL^H||+353912876543^PRN^PH||EN|M
+PV1|1|O|HEPAT^HEPAT-OPD^1^GUH||||DOC315^Considine^Orla^^^Dr.^MD
+ORC|RE|SOCORD20260424001|GUHLAB20260425001||CM||||20260425100000
+OBR|1|SOCORD20260424001|GUHLAB20260425001|24325-3^Hepatic function panel^LN|||20260424091500||||||||DOC315^Considine^Orla^^^Dr.^MD||||||20260425100000|||F
+OBX|1|NM|1742-6^ALT^LN||185|U/L|7-56|HH|||F|||20260425093000
+OBX|2|NM|1920-8^AST^LN||142|U/L|10-40|HH|||F|||20260425093000
+OBX|3|NM|6768-6^ALP^LN||95|U/L|44-147|N|||F|||20260425093000
+OBX|4|NM|1975-2^Total Bilirubin^LN||22|umol/L|<21|H|||F|||20260425093000
+OBX|5|NM|2862-1^Albumin^LN||38|g/L|35-52|N|||F|||20260425093000
+OBX|6|NM|2324-2^GGT^LN||88|U/L|9-48|H|||F|||20260425093000
+NTE|1||Hepatocellular pattern of LFT derangement. Suggest viral hepatitis screen, autoimmune liver screen, and abdominal ultrasound.
+```
+
+---
+
+## 17
+
+```
+MSH|^~\&|SOCRATES.HEALTHLINK.76|MCN.HL18293|PCRS|PCRS|20250818091000||ORU^R01|ORU20250818091000001|P|2.4|||AL
+PID|1||7603298145A^^^PPSN^PPSN||Sullivan^Grainne^Deirdre^^Mrs.||19650419|F|||31 Whitehall Road^^Churchtown^Dublin 14^D14 E3F5^IRL^H||||EN
+PV1|1|O||||||||||||||||||||||||||||||||||||72345^GMS
+OBR|1||SOCREIM20250818001|X0100-0^COVID-19 Vaccination Reimbursement^LOCAL|||20250818
+OBX|1|FT|X0100-0^COVID-19 Vaccination Reimbursement^LOCAL||Dose 1 administered 17/08/2025. AstraZeneca. Batch ABV5811.||||||F|||20250818
+OBX|2|NM|X0101-0^Vaccination Fee^LOCAL||25.00|EUR|||||F|||20250818
+```
+
+---
+
+## 18
+
+```
+MSH|^~\&|LABSYS|STJAMES|SOCRATES.HEALTHLINK.10|MCN.HL18293|20260402144530||ORU^R01|MSG20260402144530001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||SJH-817249^^^STJAMES^MR~8504671293O^^^PPSN^PPSN||Healy^Lorcan^Padraig^^Mr.||19731128|M|||9 New Street^^Dublin 8^^D08 N5W7^IRL^H||+35314897632^PRN^PH||EN|M
+PV1|1|I|SURG^SURG-W2^6^STJAMES||||DOC316^Dunne^Eoghan^^^Prof.^MD
+ORC|RE|SOCORD20260330001|SJHPATH20260402001||CM||||20260402140000
+OBR|1|SOCORD20260330001|SJHPATH20260402001|88305^Surgical pathology^CPT4|||20260329100000||||||||DOC316^Dunne^Eoghan^^^Prof.^MD||||||20260402140000|||F
+OBX|1|FT|22637-3^Path report^LN||HISTOPATHOLOGY REPORT\.br\\.br\Specimen: Right hemicolectomy\.br\\.br\Macroscopy: Right hemicolectomy 28cm. Polypoid tumour in caecum, 3.8cm diameter.\.br\\.br\Microscopy: Moderately differentiated adenocarcinoma of caecum invading through muscularis propria into pericolic fat (pT3). 22 lymph nodes examined, 1 positive (pN1a). Resection margins clear. No lymphovascular invasion.\.br\\.br\Conclusion: Adenocarcinoma caecum pT3N1aM0 Stage IIIA. MSI testing pending.||||||F
+OBX|2|ED|22637-3^Path report PDF^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVGl0bGUgKEhpc3RvcGF0aG9sb2d5IFJlcG9ydCAtIFN0IEphbWVzJ3MgSG9zcGl0YWwpCi9DcmVhdG9yIChMYWJvcmF0b3J5IEluZm9ybWF0aW9uIFN5c3RlbSkKL1Byb2R1Y2VyIChDbGluaXN5cyBMSVMgdjEyLjMpCi9DcmVhdGlvbkRhdGUgKEQ6MjAyNjA0MDIxNDQ1MDArMDAnMDAnKQo+PgplbmRvYmoKSElTVE9QQVRIT0xPR1kgUkVQT1JUCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KU3QgSmFtZXMncyBIb3NwaXRhbCBEdWJsaW4KCkxhYiBOdW1iZXI6IFNKSFBBVEgyMDI2MDQwMjAwMQpQYXRpZW50OiBUb2JpbiwgRmluYmFyciBBLgpET0I6IDI4LzExLzE5NzMKTVJOOiBTSkgtMzcyODE5ClBQU046IDczMDY3ODkwMTJPCgpTcGVjaW1lbjogUmlnaHQgaGVtaWNvbGVjdG9teQoKTWFjcm9zY29weTogUmlnaHQgaGVtaWNvbGVjdG9teSBtZWFzdXJpbmcgMjhjbS4gUG9seXBvaWQgdHVtb3VyIGluIGNhZWN1bSwgMy44Y20gZGlhbWV0ZXIuIE5vIHNlcm9zYWwgaW52b2x2ZW1lbnQuCgpNaWNyb3Njb3B5OiBNb2RlcmF0ZWx5IGRpZmZlcmVudGlhdGVkIGFkZW5vY2FyY2lub21hIGludmFkaW5nIHRocm91Z2ggbXVzY3VsYXJpcyBwcm9wcmlhIGludG8gcGVyaWNvbGljIGZhdCAocFQzKS4KTHltcGggbm9kZXM6IDIyIGV4YW1pbmVkLCAxIHBvc2l0aXZlIChwTjFhKS4KUmVzZWN0aW9uIG1hcmdpbnMgY2xlYXIuCk5vIGx5bXBob3Zhc2N1bGFyIGludmFzaW9uLgoKQ29uY2x1c2lvbjogQWRlbm9jYXJjaW5vbWEgY2FlY3VtIHBUM04xYU0wIFN0YWdlIElJSUEuCk1TSSBzdGF0dXM6IFBlbmRpbmcuCg==||||||F
+```
+
+---
+
+## 19
+
+```
+MSH|^~\&|CARDIOSYS|TUH|SOCRATES.HEALTHLINK.10|MCN.HL48271|20260311110530||ORU^R01|MSG20260311110530001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||TUH-629384^^^TUH^MR~8903214576P^^^PPSN^PPSN||Daly^Siobhan^Clodagh^^Mrs.||19820513|F|||17 Rathfarnham Road^^Rathfarnham^Dublin 14^A94 X4Y7^IRL^H||+35314987632^PRN^PH~+353876543218^PRN^CP||EN|M
+PV1|1|O|CARD^CARD-OPD^1^TUH||||DOC317^Walsh^Diarmuid^^^Dr.^MD
+ORC|RE|SOCORD20260311001|TUHECG20260311001||CM||||20260311110000
+OBR|1|SOCORD20260311001|TUHECG20260311001|11524-6^ECG study^LN|||20260311094500||||||||DOC317^Walsh^Diarmuid^^^Dr.^MD||||||20260311110000|||F
+OBX|1|FT|11524-6^ECG study^LN||12-LEAD ECG REPORT\.br\\.br\Rate: 78 bpm, Rhythm: Sinus rhythm\.br\Axis: Normal\.br\PR interval: 180ms, QRS: 88ms, QTc: 420ms\.br\\.br\Findings: Normal sinus rhythm. No ST changes. No conduction abnormality.\.br\Conclusion: Normal ECG.||||||F
+OBX|2|ED|11524-6^ECG tracing^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVGl0bGUgKDEyLUxlYWQgRUNHIFJlcG9ydCAtIFRhbGxhZ2h0IFVuaXZlcnNpdHkgSG9zcGl0YWwpCi9DcmVhdG9yIChQaGlsaXBzIFRyYWNlTWFzdGVyIFZ1ZSkKL1Byb2R1Y2VyIChDYXJkaW9sb2d5IEluZm9ybWF0aW9uIFN5c3RlbSB2NS4yKQovQ3JlYXRpb25EYXRlIChEOjIwMjYwMzExMTEwMDAwKzAwJzAwJykKPj4KZW5kb2JqCjEyLUxFQUQgRUNHIFJFUE9SVAotLS0tLS0tLS0tLS0tLS0tLS0KVGFsbGFnaHQgVW5pdmVyc2l0eSBIb3NwaXRhbApDYXJkaW9sb2d5IERlcGFydG1lbnQKClBhdGllbnQ6IEdhbm5vbiwgT3JsYSBNLgpET0I6IDEzLzA1LzE5ODIKTVJOOiBUVUgtODE3MjYzCgpEYXRlOiAxMS8wMy8yMDI2IDExOjAwCgpSYXRlOiA3OCBicG0KUmh5dGhtOiBTaW51cyByaHl0aG0KQXhpczogTm9ybWFsClBSIGludGVydmFsOiAxODBtcwpRUlMgZHVyYXRpb246IDg4bXMKUVRjOiA0MjBtcwoKSW50ZXJwcmV0YXRpb246IE5vcm1hbCBzaW51cyByaHl0aG0uIE5vIFNUIGNoYW5nZXMuCkNvbmNsdXNpb246IE5vcm1hbCBFQ0cuCg==||||||F
+```
+
+---
+
+## 20
+
+```
+MSH|^~\&|BEAUMONT|BEAUMONT|SOCRATES.HEALTHLINK.10|MCN.HL29384|20260430091230||RRI^I12^RRI_I12|RRI20260430091230001|P|2.4|||AL|NE||UNICODE UTF-8
+MSA|AA|REF20260415001
+PRD|PP^Primary Care Provider||^^^Raheny GP Practice^^C||DOC318^Harrington^Saoirse^^^Dr.^MD
+PRD|RT^Referred to Provider||^^^BEAUMONT ENT^^C||DOC319^Nolan^Ciran^^^Dr.^MD
+PID|1||BMT-517293^^^BEAUMONT^MR~9102876534Q^^^PPSN^PPSN||Brennan^Eoin^Conor^^Mr.||19860217|M|||8 Howth Road^^Raheny^Dublin 5^D05 A7B4^IRL^H||+35318723456^PRN^PH||EN|S
+PV1|1|O|ENT^ENT-OPD^2^BEAUMONT||||DOC319^Nolan^Ciran^^^Dr.^MD
+RF1|A^Accepted^HL70283|MED^Medical^HL70280|ENT^Otolaryngology^LOCAL|||20260430
+NTE|1||Referral accepted. Patient scheduled for ENT OPD review 15/05/2026 at 10:30. Please advise patient to bring audiology results if available.
+```

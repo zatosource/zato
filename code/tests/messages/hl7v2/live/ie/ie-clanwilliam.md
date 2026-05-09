@@ -1,0 +1,307 @@
+# Clanwilliam/Iguana Integration Platform - real HL7v2 ER7 messages
+
+## 1
+
+```
+MSH|^~\&|PAS|BEAUMONT|IGUANA|CLAIMSURE|20250401103015+0100||ADT^A01^ADT_A01|IGUANA20250401103015001|P|2.4|||AL|NE||UNICODE UTF-8
+EVN|A01|20250401103000|||ADM001^Tierney^Orla^^^Ms.^ADMIN
+PID|1||BH441276^^^BEAUMONT^MR~8203154567TA^^^PPS^NNNIRL||O'Brien^Seán^Cathal^^Mr.||19820315|M|||12 Griffith Avenue^^Dublin 9^^D09 K4W2^IE^H||+35318521047^PRN^PH~+353871234509^PRN^CP||EN|M|||8203154567TA^^^PPS||||IE||||N
+NK1|1|O'Brien^Roisín^^Ms.||+353871234510^PRN^PH||SPO
+PV1|1|I|MED^ST_JOSEPHS^BED-12^BEAUMONT^^^^^MED||||CON001^Healy^Fiachra^^^Prof.^MD|CON002^Gallagher^Niamh^^^Dr.^MD|MED||||7|||CON001^Healy^Fiachra^^^Prof.^MD|IP||GMS|||||||||||||||||||BEAUMONT|||||20250401103000
+PV2|||^Community acquired pneumonia||||||||||4|||||20250401|20250405
+IN1|1|GMS001^GMS Medical Card|HSE_GMS|HSE Primary Care Reimbursement Service^^Finglas^^Dublin 11^^IE||||||||||20250101|20251231
+AL1|1|DA|A002^Aspirin^LOCAL||GI bleeding|20190315
+```
+
+---
+
+## 2
+
+```
+MSH|^~\&|PAS|SJH|IGUANA|CLAIMSURE|20250415081530+0100||ADT^A04^ADT_A01|IGUANA20250415081530001|P|2.4|||AL|NE||UNICODE UTF-8
+EVN|A04|20250415081500|||ADM010^Doyle^Caoimhe^^^Ms.^ADMIN
+PID|1||SJH507812^^^SJH^MR~9106073456WA^^^PPS^NNNIRL||Kavanagh^Aoife^Deirdre^^Ms.||19910607|F|||18 Meath Street^^Dublin 8^^D08 T3N7^IE^H||+35314785632^PRN^PH~+353851098432^PRN^CP||EN|S|||9106073456WA^^^PPS||||IE
+PV1|1|O|DAYCASE^DC-UNIT^BAY-3^SJH||||CON010^Brennan^Lorcan^^^Mr.^MD||GEN_SURG||||1|||CON010^Brennan^Lorcan^^^Mr.^MD|OUT||VHI|||||||||||||||||||SJH|||||20250415080000
+IN1|1|VHI001^VHI Healthcare|VHI|VHI House^^Lower Abbey Street^^Dublin 1^^IE||||||PLAN_B^Plan B||||20240601|20260601
+```
+
+---
+
+## 3
+
+```
+MSH|^~\&|PAS|MMUH|IGUANA|CLAIMSURE|20250508151500+0100||ADT^A03^ADT_A03|IGUANA20250508151500001|P|2.4|||AL|NE||UNICODE UTF-8
+EVN|A03|20250508151500|||ADM020^Moran^Saoirse^^^Ms.^ADMIN
+PID|1||MMUH823145^^^MMUH^MR~7209183456T^^^PPS^NNNIRL||Sullivan^Ciarán^Eoin^^Mr.||19720918|M|||27 Manor Street^^Dublin 7^^D07 W5K8^IE^H||+35318671234^PRN^PH~+353879088765^PRN^CP||EN|M|||7209183456T^^^PPS||||IE
+PV1|1|I|CARD^CCU^BED-2^MMUH||||CON020^Quinn^Diarmuid^^^Prof.^MD||CARD||||5|||CON020^Quinn^Diarmuid^^^Prof.^MD|IP||GMS|||||||||||||||||||MMUH|||||20250503120000|||20250508151500
+DG1|1||I21.0^Acute STEMI anterior wall^ICD10||20250503|A
+DG1|2||I25.1^Atherosclerotic heart disease^ICD10||20250503|A
+PR1|1||00.66^PCI with drug-eluting stent LAD^ICD9|||20250503143000
+```
+
+---
+
+## 4
+
+```
+MSH|^~\&|LABSYS|BEAUMONT|IGUANA|PAS|20250401143000+0100||ORU^R01^ORU_R01|IGUANALAB20250401143000001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||BH441276^^^BEAUMONT^MR~8203154567TA^^^PPS^NNNIRL||O'Brien^Seán^Cathal^^Mr.||19820315|M
+PV1|1|I|MED^ST_JOSEPHS^BED-12^BEAUMONT||||CON001^Healy^Fiachra^^^Prof.^MD
+ORC|RE|BHORD20250401001|BHLAB20250401001||CM||||20250401130000+0100
+OBR|1|BHORD20250401001|BHLAB20250401001|24326-1^Basic Metabolic Panel^LN|||20250401110000+0100||||||||CON001^Healy^Fiachra^^^Prof.^MD||||||20250401142500+0100|||F
+OBX|1|NM|2951-2^Sodium^LN||136|mmol/L|135-145|N|||F
+OBX|2|NM|2823-3^Potassium^LN||4.8|mmol/L|3.5-5.3|N|||F
+OBX|3|NM|2160-0^Creatinine^LN||118|umol/L|62-106|H|||F
+OBX|4|NM|3094-0^Urea^LN||9.8|mmol/L|2.5-7.8|H|||F
+OBX|5|NM|14682-9^eGFR^LN||56|mL/min/1.73m2|>60|L|||F
+OBX|6|NM|1988-5^CRP^LN||89.4|mg/L|<5.0|HH|||F
+OBX|7|NM|2345-7^Glucose^LN||7.2|mmol/L|3.5-5.5|H|||F
+OBX|8|NM|1742-6^ALT^LN||32|U/L|<40|N|||F
+```
+
+---
+
+## 5
+
+```
+MSH|^~\&|LABSYS|MMUH|IGUANA|PAS|20250403161500+0100||ORU^R01^ORU_R01|IGUANALAB20250403161500001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||BH441276^^^BEAUMONT^MR~8203154567TA^^^PPS^NNNIRL||O'Brien^Seán^Cathal^^Mr.||19820315|M
+PV1|1|I|MED^ST_JOSEPHS^BED-12^BEAUMONT||||CON001^Healy^Fiachra^^^Prof.^MD
+ORC|RE|BHORD20250401002|BHLAB20250403001||CM||||20250403150000+0100
+OBR|1|BHORD20250401002|BHLAB20250403001|624-7^Sputum culture^LN|||20250401130000+0100||||||||CON001^Healy^Fiachra^^^Prof.^MD||||||20250403161000+0100|||F
+OBX|1|CE|624-7^Sputum culture^LN||3092008^Streptococcus pneumoniae^SCT||||||F
+OBX|2|ST|624-7^Colony count^LN||Heavy growth (>10^5 cfu/mL)||||||F
+OBX|3|CE|18769-0^Penicillin susceptibility^LN||S^Susceptible^LOCAL||||||F
+OBX|4|CE|18769-0^Clarithromycin susceptibility^LN||S^Susceptible^LOCAL||||||F
+OBX|5|CE|18769-0^Levofloxacin susceptibility^LN||S^Susceptible^LOCAL||||||F
+NTE|1||Streptococcus pneumoniae isolated, fully susceptible. Recommend de-escalation from IV to oral amoxicillin when clinically appropriate.
+```
+
+---
+
+## 6
+
+```
+MSH|^~\&|CPOE|SJH|IGUANA|LAB|20250415083000+0100||ORM^O01^ORM_O01|IGUANAORD20250415083000001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||SJH507812^^^SJH^MR~9106073456WA^^^PPS^NNNIRL||Kavanagh^Aoife^Deirdre^^Ms.||19910607|F
+PV1|1|O|DAYCASE^DC-UNIT^BAY-3^SJH||||CON010^Brennan^Lorcan^^^Mr.^MD
+ORC|NW|SJHORD20250415001|||SC||||20250415083000+0100|||CON010^Brennan^Lorcan^^^Mr.^MD
+OBR|1|SJHORD20250415001||58410-2^CBC panel^LN|||20250415083000+0100|||||||||CON010^Brennan^Lorcan^^^Mr.^MD
+OBR|2|SJHORD20250415002||24326-1^Renal profile^LN|||20250415083000+0100|||||||||CON010^Brennan^Lorcan^^^Mr.^MD
+OBR|3|SJHORD20250415003||COAG^Coagulation screen^LOCAL|||20250415083000+0100|||||||||CON010^Brennan^Lorcan^^^Mr.^MD
+OBR|4|SJHORD20250415004||GXM^Group and crossmatch^LOCAL|||20250415083000+0100|||||||||CON010^Brennan^Lorcan^^^Mr.^MD
+NTE|1||Pre-operative bloods for day-case laparoscopic cholecystectomy. Reserve 2 units PRBCs.
+```
+
+---
+
+## 7
+
+```
+MSH|^~\&|RIS|BEAUMONT|IGUANA|PAS|20250402151030+0100||ORU^R01^ORU_R01|IGUANARAD20250402151030001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||BH441276^^^BEAUMONT^MR~8203154567TA^^^PPS^NNNIRL||O'Brien^Seán^Cathal^^Mr.||19820315|M
+PV1|1|I|MED^ST_JOSEPHS^BED-12^BEAUMONT||||CON001^Healy^Fiachra^^^Prof.^MD
+ORC|RE|BHORD20250401003|BHRAD20250402001||CM
+OBR|1|BHORD20250401003|BHRAD20250402001|74177^CT abdomen pelvis with contrast^CPT4|||20250402100000+0100||||||||CON030^Nolan^Sorcha^^^Dr.^MD||||||20250402150000+0100|||F
+OBX|1|FT|74177^CT abdomen pelvis^CPT4||CT ABDOMEN AND PELVIS WITH IV CONTRAST\.br\\.br\Clinical Details: CAP, elevated CRP, abdominal distension\.br\\.br\Technique: Helical CT abdomen/pelvis post 100mL Omnipaque 350\.br\\.br\Findings:\.br\- Right lower lobe consolidation with small parapneumonic effusion\.br\- No lung abscess\.br\- Liver, spleen, pancreas, adrenals: Normal\.br\- Kidneys: Bilateral simple cortical cysts (largest 22mm right)\.br\- No hydronephrosis\.br\- Bowel: Mildly dilated loops of small bowel, likely ileus\.br\- No free fluid or lymphadenopathy\.br\\.br\Impression:\.br\1. Right lower lobe pneumonia with small effusion\.br\2. Paralytic ileus, likely reactive\.br\3. Incidental bilateral renal cysts.||||||F
+```
+
+---
+
+## 8
+
+```
+MSH|^~\&|PAS|SJH|IGUANA|CLAIMSURE|20250416091000+0100||ADT^A08^ADT_A01|IGUANA20250416091000001|P|2.4|||AL|NE||UNICODE UTF-8
+EVN|A08|20250416091000|||ADM010^Doyle^Caoimhe^^^Ms.^ADMIN
+PID|1||SJH507812^^^SJH^MR~9106073456WA^^^PPS^NNNIRL||Kavanagh^Aoife^Deirdre^^Ms.||19910607|F|||18 Meath Street^^Dublin 8^^D08 T3N7^IE^H||+35314785632^PRN^PH~+353851098432^PRN^CP||EN|S|||9106073456WA^^^PPS||||IE
+PV1|1|O|DAYCASE^DC-UNIT^BAY-3^SJH||||CON010^Brennan^Lorcan^^^Mr.^MD||GEN_SURG||||1|||CON010^Brennan^Lorcan^^^Mr.^MD|OUT||VHI|||||||||||||||||||SJH|||||20250415080000
+IN1|1|VHI001^VHI Healthcare|VHI|VHI House^^Lower Abbey Street^^Dublin 1^^IE||||||PLAN_B^Plan B||||20240601|20260601
+IN1|2|LAYA001^Laya Healthcare|LAYA|Laya House^^Eastgate Road^^Eastgate Business Park^^Little Island^^Cork^^IE||||||CORP^Corporate||||20250101|20251231
+```
+
+---
+
+## 9
+
+```
+MSH|^~\&|HEALTHLINK|GP_RAHENY|IGUANA|BEAUMONT|20250320142000+0000||REF^I12^REF_I12|IGUANAREF20250320142000001|P|2.4|||AL|NE||UNICODE UTF-8
+RF1|A|R|NEURO^Neurology Outpatient^LOCAL||20250320||20250620
+PID|1||7411251234F^^^PPS^NNNIRL||Walsh^Gráinne^Bríd^^Mrs.||19741125|F|||3 Clontarf Road^^Clontarf^^Dublin 3^^D03 P8N2^IE^H||+35318339012^PRN^PH~+353861234987^PRN^CP||EN|M|||7411251234F^^^PPS||||IE
+PRD|RP|Daly^Eoghan^^^Dr.^MD|Clontarf Medical Centre^^Vernon Avenue^^Clontarf^^Dublin 3^^IE|||||GP020
+PRD|RT|Fitzgerald^Muireann^^^Prof.^MD|Beaumont Hospital^^Beaumont Road^^Dublin 9^^IE|||||CON040
+PV1|1|R|||||GP020^Daly^Eoghan^^^Dr.^MD
+DG1|1||G43.9^Migraine unspecified^ICD10||20250315
+NTE|1||55-year-old female. Increasing frequency of migraines over 6 months, now 3-4/month. Failed propranolol and topiramate. Recent new onset visual aura. Request neurology opinion and consideration of MRI brain.
+```
+
+---
+
+## 10
+
+```
+MSH|^~\&|LABSYS|MMUH|IGUANA|PAS|20250503184530+0100||ORU^R01^ORU_R01|IGUANALAB20250503184530001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||MMUH823145^^^MMUH^MR~7209183456T^^^PPS^NNNIRL||Sullivan^Ciarán^Eoin^^Mr.||19720918|M
+PV1|1|I|CARD^CCU^BED-2^MMUH||||CON020^Quinn^Diarmuid^^^Prof.^MD
+ORC|RE|MMUHORD20250503001|MMUHLAB20250503001||CM||||20250503180000+0100
+OBR|1|MMUHORD20250503001|MMUHLAB20250503001|6598-7^High sensitivity Troponin I^LN|||20250503120000+0100||||||||CON020^Quinn^Diarmuid^^^Prof.^MD||||||20250503184000+0100|||F
+OBX|1|NM|49563-0^hs-TnI 0hr^LN||2450|ng/L|<14|HH|||F|||20250503121500+0100
+OBX|2|NM|49563-0^hs-TnI 3hr^LN||8920|ng/L|<14|HH|||F|||20250503151500+0100
+OBX|3|NM|49563-0^hs-TnI 6hr^LN||12340|ng/L|<14|HH|||F|||20250503181500+0100
+OBX|4|NM|33762-6^NT-proBNP^LN||1840|pg/mL|<125|HH|||F|||20250503121500+0100
+NTE|1||Serial high sensitivity troponin markedly elevated and rising. Consistent with acute STEMI. Patient to cath lab 14:00.
+```
+
+---
+
+## 11
+
+```
+MSH|^~\&|PAS|TUH|IGUANA|CLAIMSURE|20250420223015+0100||ADT^A01^ADT_A01|IGUANA20250420223015001|P|2.4|||AL|NE||UNICODE UTF-8
+EVN|A01|20250420223000|||ADM030^Connolly^Tadhg^^^Mr.^ADMIN
+PID|1||TUH619378^^^TUH^MR~5804072345M^^^PPS^NNNIRL||Ryan^Pádraig^Declan^^Mr.||19580407|M|||14 Belgard Road^^Tallaght^^Dublin 24^^D24 H7V6^IE^H||+35314148200^PRN^PH~+353862278901^PRN^CP||EN|M|||5804072345M^^^PPS||||IE||||N
+NK1|1|Ryan^Siobhán^^Mrs.||+353862278902^PRN^PH||SPO
+PV1|1|I|MED^AMU^BED-6^TUH^^^^^AMU||||CON050^Dunne^Aisling^^^Dr.^MD||GEN_MED||||7|||CON050^Dunne^Aisling^^^Dr.^MD|IP||GMS|||||||||||||||||||TUH|||||20250420223000
+PV2|||^COPD exacerbation||||||||||5|||||20250420|20250425
+AL1|1|DA|A003^Codeine^LOCAL||Nausea/vomiting|20100422
+```
+
+---
+
+## 12
+
+```
+MSH|^~\&|LABSYS|TUH|IGUANA|PAS|20250420234500+0100||ORU^R01^ORU_R01|IGUANALAB20250420234500001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||TUH619378^^^TUH^MR~5804072345M^^^PPS^NNNIRL||Ryan^Pádraig^Declan^^Mr.||19580407|M
+PV1|1|I|MED^AMU^BED-6^TUH||||CON050^Dunne^Aisling^^^Dr.^MD
+ORC|RE|TUHORD20250420001|TUHLAB20250420001||CM||||20250420233000+0100
+OBR|1|TUHORD20250420001|TUHLAB20250420001|24336-0^ABG panel^LN|||20250420230000+0100||||||||CON050^Dunne^Aisling^^^Dr.^MD||||||20250420234000+0100|||F
+OBX|1|NM|2744-1^pH arterial^LN||7.31|pH|7.35-7.45|L|||F
+OBX|2|NM|2019-8^pCO2 arterial^LN||7.8|kPa|4.7-6.0|H|||F
+OBX|3|NM|2703-7^pO2 arterial^LN||7.2|kPa|10.0-13.3|L|||F
+OBX|4|NM|1959-6^Bicarbonate^LN||28.5|mmol/L|22-28|H|||F
+OBX|5|NM|2713-6^Base excess^LN||+2.8|mmol/L|-2 to +2|H|||F
+OBX|6|NM|20564-1^SpO2^LN||88|%|94-98|L|||F
+OBX|7|ST|SAMPLE^Sample type^LOCAL||Arterial radial, on 2L nasal prongs||||||F
+NTE|1||Type 2 respiratory failure. Compensated respiratory acidosis. Consistent with acute on chronic COPD exacerbation. Consider NIV if worsening.
+```
+
+---
+
+## 13
+
+```
+MSH|^~\&|PAS|BLACKROCK_CLINIC|IGUANA|CLAIMSURE|20250422161500+0100||ADT^A03^ADT_A03|IGUANA20250422161500001|P|2.4|||AL|NE||UNICODE UTF-8
+EVN|A03|20250422161500|||ADM040^Whelan^Clodagh^^^Ms.^ADMIN
+PID|1||BC276543^^^BLACKROCK^MR~7806091234F^^^PPS^NNNIRL||Murphy^Siobhán^Orla^^Mrs.||19780609|F|||22 Newtownpark Avenue^^Blackrock^^Co Dublin^^A94 F2K8^IE^H||+35312103456^PRN^PH~+353871198765^PRN^CP||EN|M|||7806091234F^^^PPS||||IE
+PV1|1|I|ORTHO^WARD-2^BED-5^BLACKROCK||||CON060^Crowley^Colm^^^Mr.^MD||ORTHO||||2|||CON060^Crowley^Colm^^^Mr.^MD|IP||LAYA|||||||||||||||||||BLACKROCK_CLINIC|||||20250420080000|||20250422161500
+DG1|1||M17.1^Primary gonarthrosis right knee^ICD10||20250420|A
+PR1|1||81.54^Total knee replacement right^ICD9|||20250420093000
+IN1|1|LAYA001^Laya Healthcare|LAYA|Laya House^^Eastgate Road^^Little Island^^Cork^^IE||||||CORP^Corporate||||20250101|20251231|||||||||||||||||||LAYA/3341278
+IN2|1|VHI001^VHI Level 2 Excess|VHI|VHI House^^Lower Abbey Street^^Dublin 1^^IE
+```
+
+---
+
+## 14
+
+```
+MSH|^~\&|CATHLAB|MMUH|IGUANA|PAS|20250503174500+0100||ORU^R01^ORU_R01|IGUANACATH20250503174500001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||MMUH823145^^^MMUH^MR~7209183456T^^^PPS^NNNIRL||Sullivan^Ciarán^Eoin^^Mr.||19720918|M
+PV1|1|I|CARD^CCU^BED-2^MMUH||||CON020^Quinn^Diarmuid^^^Prof.^MD
+ORC|RE|MMUHORD20250503002|MMUHCATH20250503001||CM
+OBR|1|MMUHORD20250503002|MMUHCATH20250503001|93458^Coronary angiography^CPT4|||20250503140000+0100||||||||CON020^Quinn^Diarmuid^^^Prof.^MD||||||20250503173000+0100|||F
+OBX|1|FT|93458^Cath lab report^CPT4||CARDIAC CATHETERISATION REPORT\.br\\.br\Procedure: Primary PCI\.br\Operator: Prof Diarmuid Quinn\.br\Access: Right radial 6Fr\.br\\.br\LMS: Normal\.br\LAD: Acute thrombotic occlusion proximal segment\.br\LCx: Minor plaque OM1 origin (30%)\.br\RCA: Moderate stenosis mid-segment (50%)\.br\\.br\Intervention: Aspiration thrombectomy LAD\.br\Drug-eluting stent 3.0x28mm deployed at 14atm\.br\TIMI 3 flow restored\.br\\.br\LV function: Mild anterior hypokinesis, EF 48%\.br\\.br\Impression: Successful primary PCI to LAD with DES.||||||F
+OBX|2|NM|18043-0^LV EF^LN||48|%|55-75|L|||F
+```
+
+---
+
+## 15
+
+```
+MSH|^~\&|SCHED|BEAUMONT|IGUANA|PAS|20250410100000+0100||SIU^S12^SIU_S12|IGUANASCH20250410100000001|P|2.4|||AL|NE||UNICODE UTF-8
+SCH|APT998877^SCHED|APT998877^PAS|||||ROUTINE^Routine^HL70277|FOLLOWUP^Follow-up^LOCAL|20|MIN|^^20^202505201400^202505201420|||||CON040^Fitzgerald^Muireann^^^Prof.^MD|^WPN^PH^^^^^+35318093000|BEAUMONT_NEURO_OPD^BEAUMONT||Booked
+PID|1||BH293847^^^BEAUMONT^MR~7411251234F^^^PPS^NNNIRL||Walsh^Gráinne^Bríd^^Mrs.||19741125|F|||3 Clontarf Road^^Clontarf^^Dublin 3^^D03 P8N2^IE^H
+PV1|1|O|NEURO^OPD-NEURO-2^1^BEAUMONT||||CON040^Fitzgerald^Muireann^^^Prof.^MD
+RGS|1|A
+AIS|1|A|NEURO_FU^Neurology Follow-up^LOCAL|||202505201400|0|MIN|20|MIN
+AIP|1|A|CON040^Fitzgerald^Muireann^^^Prof.^MD|ATT^Attending^HL70443
+AIL|1|A|NEURO^OPD-NEURO-2^1^BEAUMONT||202505201400|0|MIN|20|MIN
+```
+
+---
+
+## 16
+
+```
+MSH|^~\&|PFTSYS|TUH|IGUANA|PAS|20250422104500+0100||ORU^R01^ORU_R01|IGUANAPFT20250422104500001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||TUH619378^^^TUH^MR~5804072345M^^^PPS^NNNIRL||Ryan^Pádraig^Declan^^Mr.||19580407|M
+PV1|1|I|MED^AMU^BED-6^TUH||||CON050^Dunne^Aisling^^^Dr.^MD
+ORC|RE|TUHORD20250422001|TUHPFT20250422001||CM
+OBR|1|TUHORD20250422001|TUHPFT20250422001|69981-9^Spirometry^LN|||20250422093000+0100||||||||CON050^Dunne^Aisling^^^Dr.^MD||||||20250422104000+0100|||F
+OBX|1|NM|20150-9^FEV1^LN||0.82|L|>2.5|L|||F
+OBX|2|NM|19868-9^FEV1 % predicted^LN||32|%|>80|L|||F
+OBX|3|NM|19876-2^FVC^LN||2.1|L|>3.5|L|||F
+OBX|4|NM|19872-1^FVC % predicted^LN||58|%|>80|L|||F
+OBX|5|NM|19926-5^FEV1/FVC^LN||39|%|>70|L|||F
+OBX|6|NM|19911-7^DLCO^LN||42|%|>80|L|||F
+NTE|1||Severe obstructive defect with air trapping and reduced gas transfer. No significant bronchodilator reversibility. Consistent with severe COPD (GOLD Stage IV).
+```
+
+---
+
+## 17
+
+```
+MSH|^~\&|PAS|BEAUMONT|IGUANA|CLAIMSURE|20250403091500+0100||ADT^A02^ADT_A02|IGUANA20250403091500001|P|2.4|||AL|NE||UNICODE UTF-8
+EVN|A02|20250403091500|||ADM001^Tierney^Orla^^^Ms.^ADMIN
+PID|1||BH441276^^^BEAUMONT^MR~8203154567TA^^^PPS^NNNIRL||O'Brien^Seán^Cathal^^Mr.||19820315|M
+PV1|1|I|MED^ST_MICHAELS^BED-4^BEAUMONT^^^^^MED||||CON001^Healy^Fiachra^^^Prof.^MD||MED||||7|||CON001^Healy^Fiachra^^^Prof.^MD|IP||GMS|||||||||||||||||||BEAUMONT|||||20250401103000
+PV2|||^Step-down from acute medical, improving pneumonia
+```
+
+---
+
+## 18
+
+```
+MSH|^~\&|PAS|BEAUMONT|IGUANA|HEALTHLINK|20250406101500+0100||ORU^R01^ORU_R01|IGUANADOC20250406101500001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||BH441276^^^BEAUMONT^MR~8203154567TA^^^PPS^NNNIRL||O'Brien^Seán^Cathal^^Mr.||19820315|M|||12 Griffith Avenue^^Dublin 9^^D09 K4W2^IE^H
+PV1|1|I|MED^ST_MICHAELS^BED-4^BEAUMONT||||CON001^Healy^Fiachra^^^Prof.^MD
+ORC|RE|BHORD20250406001|BHDOC20250406001||CM
+OBR|1|BHORD20250406001|BHDOC20250406001|18842-5^Discharge summary^LN|||20250405170000+0100||||||||CON001^Healy^Fiachra^^^Prof.^MD||||||20250406100000+0100|||F
+OBX|1|ED|18842-5^Discharge summary^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVGl0bGUgKERpc2NoYXJnZSBTdW1tYXJ5IC0gQmVhdW1vbnQgSG9zcGl0YWwpCi9DcmVhdG9yIChJZ3VhbmEgSW50ZWdyYXRpb24gUGxhdGZvcm0pCi9Qcm9kdWNlciAoSGVhbHRobGluayBJcmVsYW5kKQovQ3JlYXRpb25EYXRlIChEOjIwMjUwNDA1MTcwMDAwKzAxJzAwJykKPj4KZW5kb2JqCkRJU0NIQVJHRSBTVU1NQVJZCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KUGF0aWVudDogUGF0cmljayBNY0NhcnRoeQpNUk46IEJINzc4ODk5CkRPQjogMTIvMDUvMTk3NQpBZG1pc3Npb246IDAxLzA0LzIwMjUKRGlzY2hhcmdlOiAwNS8wNC8yMDI1CgpEaWFnbm9zaXM6IENvbW11bml0eSBhY3F1aXJlZCBwbmV1bW9uaWEgKFN0cmVwIHBuZXVtb25pYWUpCgpUcmVhdG1lbnQ6IElWIGFtb3hpY2lsbGluL2NsYXZ1bGFuYXRlIDV4IGRheXMsIHN0ZXBwZWQgZG93biB0byBvcmFsLgpUb3RhbCBhbnRpYmlvdGljIGNvdXJzZTogNyBkYXlzLgoKT24gZGlzY2hhcmdlOiBXZWxsLCBhZmVicmlsZSwgQ1JQIGZhbGxpbmcuClJlbmFsIGZ1bmN0aW9uIHN0YWJsZSAoZUdGUiA1NikuCgpNZWRpY2F0aW9uczogQW1veGljbGluIDUwMG1nIFREUyB4IDMgZGF5cy4KCkZvbGxvdy11cDogR1AgcmV2aWV3IDEgd2Vlay4gUmVwZWF0IENYUiA2IHdlZWtzLg==||||||F
+```
+
+---
+
+## 19
+
+```
+MSH|^~\&|PAS|SJH|IGUANA|HEALTHLINK|20250416141500+0100||MDM^T02^MDM_T02|IGUANADOC20250416141500001|P|2.4|||AL|NE||UNICODE UTF-8
+EVN|T02|20250416141500
+PID|1||SJH507812^^^SJH^MR~9106073456WA^^^PPS^NNNIRL||Kavanagh^Aoife^Deirdre^^Ms.||19910607|F|||18 Meath Street^^Dublin 8^^D08 T3N7^IE^H
+PV1|1|O|DAYCASE^DC-UNIT^BAY-3^SJH||||CON010^Brennan^Lorcan^^^Mr.^MD
+TXA|1|CN^Clinic Letter^LOCAL|TX||||20250416130000+0100||CON010^Brennan^Lorcan^^^Mr.^MD||||IGUANADOC-2025-44556||||||AU
+OBX|1|ED|11488-4^Consult note^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVGl0bGUgKFN1cmdpY2FsIENsaW5pYyBMZXR0ZXIgLSBTdCBKYW1lcydzIEhvc3BpdGFsKQovQ3JlYXRvciAoSWd1YW5hIEludGVncmF0aW9uIFBsYXRmb3JtKQovUHJvZHVjZXIgKEhlYWx0aGxpbmsgSXJlbGFuZCkKL0NyZWF0aW9uRGF0ZSAoRDoyMDI1MDQxNjEzMDAwMCswMScwMCcpCj4+CmVuZG9iagpTVVJHSUNBTCBDTElOSUMgTEVUVEVSCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KRHIgTWljaGFlbCBGbHlubgpSYWhlbnkgTWVkaWNhbCBDZW50cmUKSG93dGggUm9hZCwgUmFoZW55LCBEdWJsaW4gNQoKRGVhciBEciBGbHlubiwKClJlOiBDYXRoZXJpbmUgTm9sYW4sIERPQiAwOC8wMS8xOTgzCgpJIHJldmlld2VkIE1zIE5vbGFuIGluIHN1cmdpY2FsIE9QRCB0b2RheS4KU2hlIGhhcyBzeW1wdG9tYXRpYyBjaG9sZWxpdGhpYXNpcyB3aXRoIHJlY3VycmVudCBiaWxpYXJ5IGNvbGljLgpVbHRyYXNvdW5kIGNvbmZpcm1zIG11bHRpcGxlIGdhbGxzdG9uZXMsIG5vIENCRCBkaWxhdGF0aW9uLgoKUGxhbjogRGF5LWNhc2UgbGFwYXJvc2NvcGljIGNob2xlY3lzdGVjdG9teS4KU2NoZWR1bGVkIDE1LzA0LzIwMjUuCgpZb3VycyBzaW5jZXJlbHksCk1yIFN0ZXBoZW4gTWFsb25lCkNvbnN1bHRhbnQgR2VuZXJhbCBTdXJnZW9uClN0IEphbWVzJ3MgSG9zcGl0YWwsIER1Ymxpbg==||||||F
+```
+
+---
+
+## 20
+
+```
+MSH|^~\&|LABSYS|SJH|IGUANA|PAS|20250415151500+0100||ORU^R01^ORU_R01|IGUANALAB20250415151500001|P|2.4|||AL|NE||UNICODE UTF-8
+PID|1||SJH507812^^^SJH^MR~9106073456WA^^^PPS^NNNIRL||Kavanagh^Aoife^Deirdre^^Ms.||19910607|F
+PV1|1|O|DAYCASE^DC-UNIT^BAY-3^SJH||||CON010^Brennan^Lorcan^^^Mr.^MD
+ORC|RE|SJHORD20250415005|SJHLAB20250415001||CM||||20250415143000+0100
+OBR|1|SJHORD20250415005|SJHLAB20250415001|58410-2^CBC panel^LN|||20250415130000+0100||||||||CON010^Brennan^Lorcan^^^Mr.^MD||||||20250415151000+0100|||F
+OBX|1|NM|718-7^Haemoglobin^LN||128|g/L|120-160|N|||F
+OBX|2|NM|6690-2^WBC^LN||9.8|10*9/L|4.0-11.0|N|||F
+OBX|3|NM|777-3^Platelets^LN||268|10*9/L|150-400|N|||F
+OBX|4|NM|4544-3^Haematocrit^LN||0.39|L/L|0.36-0.46|N|||F
+OBX|5|NM|1742-6^ALT^LN||45|U/L|<40|H|||F
+OBX|6|NM|6768-6^ALP^LN||88|U/L|30-120|N|||F
+OBX|7|NM|1975-2^Bilirubin total^LN||12|umol/L|<21|N|||F
+NTE|1||Post-operative day 0 laparoscopic cholecystectomy. Mild ALT rise expected post-operatively. Haemoglobin stable. Fit for day-case discharge.
+```

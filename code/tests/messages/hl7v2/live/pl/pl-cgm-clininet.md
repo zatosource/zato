@@ -1,0 +1,292 @@
+# CGM CliniNet - real HL7v2 ER7 messages
+
+---
+
+## 1. ORM^O01 - New lab order (simple, HIS to diagnostic module)
+
+```
+MSH|^~\&|CLININET|UHC|Moduł diagn.||20020603121707||ORM^O01|CLININET20020603121707|P|2.3|||AL|NE|POL||PL|
+PID||73051213886^^^^PESEL|17741||KOWALCZYK^AGNIESZKA||19730512|F|||REDAŃSKA&34^^MIEŚCINA^^20-457|||||||||
+PV1|1|I|12113^^^^^^^^Ginekologia&GIN&HIS||||||||||||||||||||||||||||||||||||||||||||||||||
+IN1|||134&HIS|Mazowiecki Oddział NFZ&07R
+ORC|NW|17741-1-249^HIS||13235782^HIS|||^^^200110191339^^13&RUTYNOWE&R&HIS^||200110191340|||132^Mazur^Tadeusz^R.^^dr med^^HIS|||||1234^Ginekologia&GIN^HIS|||
+OBR|1|17741-1-249^HIS||1234^Badanie moczu&BSPMOCZ^HIS|||20011019||||||Antykoagulanty&NIE~Infuzje&NIE~Went.wspomagana&NIE~Went.kontrolowana&TAK~Tlenoterapia&TAK~Fototerapia&TAK||2323^Krew&KREW^HIS^^^^^SampleID&123456~Comment&komentarz|132^Mazur^Tadeusz^R.^^dr med^^HIS|||||||||||||||
+```
+
+---
+
+## 2. ORM^O01 - Composite order (profile with multiple tests)
+
+```
+MSH|^~\&|CLININET|UHC|Moduł diagn.||20020603121707||ORM^O01|CLININET20020603121707|P|2.3|||AL|NE|POL||PL|
+PID||73051213886^^^^PESEL|17741||KOWALCZYK^AGNIESZKA||19730512|F|||REDAŃSKA&34^^MIEŚCINA^^20-457|||||||||
+PV1|1|O|||||||||||||||||||||||||||||||||||||||||||||||||||
+IN1|||134&HIS|Mazowiecki Oddział NFZ&07R
+ORC|NW|17741-2-1^HIS||1345782^HIS|||^^^200110041555^^13&RUTYNOWE&R&HIS^||200110041556|||132^Wójcik^Henryk^^^^dr med^^HIS|||||1234^Pracownia Pulmonologiczna&P-PA^HIS|||
+OBR|1|17741-2-1^HIS||232^Biochemia&BIOCH^HIS|||20011004|||||||||132^Mazur^Tadeusz^R.^^dr med^^HIS||||||||||||||||||||||||||||
+ORC|NW|17741-2-2^HIS||1345782^HIS|||^^^200110041555^^13&RUTYNOWE&R&HIS^|17741-2-1&HIS|200110041556|||132^Mazur^Tadeusz^R.^^dr med^^HIS|||||1234^Pracownia Pulmonologiczna&P-PA^HIS|||
+OBR|2|17741-2-2^HIS||2323^Alat&ALAT^HIS|||20011004|||||||||132^Mazur^Tadeusz^R.^^dr med^^HIS|||||||||||||17741-2-1&HIS|||||||||||||||
+ORC|NW|17741-2-3^HIS||1345782^HIS|||^^^200110041555^^13&RUTYNOWE&R&HIS^|17741-2-1&HIS|200110041556|||132^Mazur^Tadeusz^R.^^dr med^^HIS|||||1234^Pracownia Pulmonologiczna&P-PA^HIS|||
+OBR|3|17741-2-3^HIS||2324^Aspat&ASPAT^HIS|||20011004|||||||||132^Mazur^Tadeusz^R.^^dr med^^HIS||||||||||||17741-2-1&HIS||||||||||||||||
+ORC|NW|17741-2-4^HIS||1345782^HIS|||^^^200110041555^^13&RUTYNOWE&R&HIS^|17741-2-1&HIS|200110041556|||132^Mazur^Tadeusz^R.^^dr med^^HIS|||||1234^Pracownia Pulmonologiczna&P-PA^HIS|||
+OBR|4|17741-2-4^HIS||2345^Krea&KREA^HIS|||20011004|||||||||132^Mazur^Tadeusz^R.^^dr med^^HIS|||||||||||||17741-2-1&HIS|||||||||||||||
+```
+
+---
+
+## 3. ORM^O01 - Order data modification
+
+```
+MSH|^~\&|CLININET|UHC|Moduł diagn.||20020603121707||ORM^O01|CLININET20020603121707|P|2.3|||AL|NE|POL||PL|
+PID||73051213886^^^^PESEL|17741||KOWALCZYK^AGNIESZKA||19730512|F|||REDAŃSKA&34^^MIEŚCINA^^20-457|||||||||
+PV1|1|O|||||||||||||||||||||||||||||||||||||||||||||||||||
+IN1|||134&HIS|Mazowiecki Oddział NFZ&07R
+ORC|XO|23-2-83^HIS||3242232^HIS|||||200109261114|||132^Kamiński^Zbigniew^^^^dr med^^HIS|12456^^^^^^^1^Ginekologia&GIN&HIS||||1234^Pracownia 1&ADA^HIS|||
+OBR|1|23-2-83^HIS||2324^Aspat&ASPAT^HIS||||||||||||132^Kamiński^Zbigniew^^^^dr med^^HIS||||||||||||||||||||||||||||
+```
+
+---
+
+## 4. ORM^O01 - Order cancellation
+
+```
+MSH|^~\&|CLININET|UHC|Moduł diagn.||20020603121707||ORM^O01|CLININET20020603121707|P|2.3|||AL|NE|POL||PL|
+ORC|CA|17770-1-158^HIS|||||||||||
+OBR||17770-1-158^HIS||2324^Aspat&ASPAT^HIS|||||||||||||||||||||||||||
+NTE|1|P|*** Testowa przyczyna anulowania L1 ***
+NTE|2|P|*** Testowa przyczyna anulowania L2 ***
+```
+
+---
+
+## 5. ORM^O01 - New order from diagnostic module to HIS
+
+```
+MSH|^~\&|Moduł diagn.||CLININET|UHC|20020603121707||ORM^O01|CLININET20020603121707|P|2.3|||AL|NE|POL||PL|
+PID||73051213886^^^^PESEL|17741||KOWALCZYK^AGNIESZKA||19730512|F|||REDAŃSKA&34^^MIEŚCINA^^20-457|||||||||
+PV1|1|I|12113^^^^^^^^Ginekologia&GIN&HIS||||||||||||||||||||||||||||||||||||||||||||||||||
+IN1|||134&HIS|Mazowiecki Oddział NFZ&07R
+ORC|NW||17741-1-249^LAB||||^^^200110191339^^13&RUTYNOWE&R&HIS^||200110191340|||132^Mazur^Tadeusz^R.^^dr med^^HIS|||||1234^Ginekologia&GIN^HIS|||
+OBR|1||17741-1-249^LIS|1234^Badanie moczu&BSPMOCZ^HIS|||20011019|||||||200110190900|2323^Krew&KREW^HIS^^^^^SampleID&123456~Comment&krew pobrano po zjedzeniu cukierka|132^Mazur^Tadeusz^R.^^dr med^^HIS||||||||||||||
+```
+
+---
+
+## 6. ORM^O01 - Order status change (diagnostic module to HIS)
+
+```
+MSH|^~\&|Moduł diagn.||CliniNET|UHC|20020603121707||ORM^O01|CLININET20020603121707|P|2.3|||AL|NE|POL||PL|
+ORC|SC|17770-1-158^HIS|||CM||||||||
+OBR||17770-1-158^HIS||2324^Aspat&ASPAT^HIS|||||||||||||||||||||||||||
+NTE|1|P|*** Testowa przyczyna zmiany statusu L1 ***
+NTE|2|P|*** Testowa przyczyna zmiany statusu L2 ***
+```
+
+---
+
+## 7. ORU^R01 - Numeric lab results (morphology/CBC)
+
+```
+MSH|^~\&|Moduł diagn.||CliniNET|UHC|20020603121707||ORU^R01|CLININET20020603121707|P|2.3|||AL|NE|POL||PL|
+ORC|RE|17578-1-49^HIS|
+OBR|1|57520-1-18^HIS||25454^Morfologia&MORF^HIS|||20010925000000|||||||||GIN||||||||||
+OBX|1|NM|335^HCT&HCT&LAB|N|39.4|%|(36 - 46)||||F|||20010926240000||132^Mazur^Tadeusz^R.^^dr med.^^HIS
+OBX|2|NM|336^HGB&HGB^LAB|N|13.30|g/dl|(11,5 - 15,0)||||F|||20010926240000||132^Mazur^Tadeusz^R.^^dr med.^^HIS
+OBX|3|NM|337^MCH&MCH^LAB|N|29.9|pg|(27 - 31)||||F|||20010926240000||132^Mazur^Tadeusz^R.^^dr med.^^HIS
+OBX|4|NM|338^MCHC&MCHC^LAB|N|33.8|g/dl|(32 - 36)||||F|||20010926240000||132^Mazur^Tadeusz^R.^^dr med.^^HIS
+OBX|5|NM|339^MCV&MCV^LAB|N|88.5|fl|(84 - 98)||||F|||20010926240000||132^Mazur^Tadeusz^R.^^dr med.^^HIS
+OBX|6|NM|340^PLT&PLT^LAB|N|239.0|10e3/uL|(130 - 400)||||F|||20010926240000||132^Mazur^Tadeusz^R.^^dr med.^^HIS
+OBX|7|NM|341^RBC&RBC^LAB|N|4.45|10e6/uL|(3,7 - 5,0)||||F|||20010926240000||132^Mazur^Tadeusz^R.^^dr med.^^HIS
+OBX|8|NM|342^WBC&WBC^LAB|N|9.70|10e3/uL|(4,0 - 10,0)||||F|||20010926240000||132^Mazur^Tadeusz^R.^^dr med.^^HIS
+```
+
+---
+
+## 8. ORU^R01 - Text result (formatted, with Polish characters)
+
+```
+MSH|^~\&|Moduł diagn.||CliniNET|UHC|20020603121707||ORU^R01|CLININET20020603121707|P|2.3|||AL|NE|POL||PL|
+ORC|RE|17578-1-49^HIS|
+OBR||17578-1-49^HIS||25422^Morfologia&MORF^HIS|||200203061549|||||||||||||||||||
+OBX|1|FT|||Wprowadzenie wyników z polskimi znaczkami: żźąęŻŹĄŚĘÓŃóń\.br\--- test 1 ---\.br\radiolog Jan||||||F|||200203061549|
+```
+
+---
+
+## 9. ACK - Acknowledgment (transport confirmation)
+
+```
+MSH|^~\&|CLININET|UHC|Moduł diagn.||20020603121707||ACK|CLININET20020603121707|P|2.3|||AL|NE|POL||PL|
+MSA|CA|||
+```
+
+---
+
+## 10. ORU^R01 - Radiology result (chest X-ray, CHAZON hospital)
+
+```
+MSH|^~\&|2|CHAZON2|1|CHAZON|20081222110953798||ORU^R01|CHAZON220081222110953798|P|2.3|||||POL||PL
+PID||46911|7HG2K|03220400779^^^^P|LEWANDOWSKI^Michał||20030204|M|||Spokojna 13^^Warszawa^^|04||||||||||||||||PL
+OBR|1|3212|125773|416^Klatka piersiowa bez kontrastu||||||||||||102^Szymański^Wojciech^^^^^^3234569
+OBX|1||13MN2AK|1|Opis testowy klatki piersiowej.||||||F|||20081222110953||51^DĄBROWSKI^STANISŁAW^^^^^^5555553
+```
+
+---
+
+## 11. ADT^A02 - Patient transfer
+
+```
+MSH|^~\&|AccMgr|1|||20050110114442||ADT^A02|59910287|P|2.3|||
+EVN|A02|20050110114442|||||
+PID|1||10006579^^^1^MRN^1||WIŚNIEWSKI^KRZYSZTOF^M||19241010|M|||Lipowa&8^^Kraków^^30-702|||||||||||||||||||||
+PV1|1|I|IN1^214^1^1|||IN1^214^1|37^KOZŁOWSKI^ANDRZEJ^^^^^^AccMgr^^^^CI|||01||||1|||37^KOZŁOWSKI^ANDRZEJ^^^^^^AccMgr^^^^CI|2|40007716^^^AccMgr^VN|4||||||||||||||||||1|||1||P|||20050110045253||||||
+```
+
+---
+
+## 12. ORU^R01 - Lab culture result with antibiogram
+
+```
+MSH|^~\&||^123457^Labs|||200808141530||ORU^R01|123456789|P|2.4
+PID|||123456^^^SMH^PI||JANKOWSKI^PAWEŁ||19620114|M|||Mickiewicza&22^^Poznań^^60-834
+PV1|||5N|||||G123456^DR ZIELIŃSKA
+OBR|||54321|666777^CULTURE^LN|||20080802||||||||SW^^^FOOT^RT|C987654
+OBX||CE|0^ORG|01|STAU||||||F
+OBX||CE|500152^AMP|01||||R|||F
+OBX||CE|500155^SXT|01||||S|||F
+OBX||CE|500162^CIP|01||||S|||F
+```
+
+---
+
+## 13. ADT^A02 - Patient transfer (Ascend/PYXIS system)
+
+```
+MSH|^~\&|Ascend|555|PYXIS|555|200501101145||ADT^A02|ADT66738|P|2.3|||||||
+EVN|A02|200501101146|||||
+PID|||4410030^^^ADT||KWIATKOWSKA^EWA||19460101|F|||Słowackiego&15^^Gdańsk^^80-254|
+PV1|1|I|ICU^2^B1^555|U|||1234^WOŹNIAK^ADAM^T.^MD||SUR||||A|||1234^WOŹNIAK^ADAM^T.^MD|S|555519^^^ADT|||||||||||||||||||||||||200501101145|
+```
+
+---
+
+## 14. ORM^O01 - New order with CITO priority (Polish HIS convention)
+
+```
+MSH|^~\&|CLININET|UHC|LAB||20040715083022||ORM^O01|CLININET20040715083022|P|2.3|||AL|NE|POL||PL|
+PID||51042105193^^^^PESEL|28445||ZIELIŃSKI^MAREK||19510421|M|||Marszałkowska&12^^Warszawa^^00-950|||||||||
+PV1|1|E|||||||||||||||||||||||||||||||||||||||||||||||||||
+IN1|||134&HIS|Mazowiecki Oddział NFZ&07R
+ORC|NW|28445-1-100^HIS||9988771^HIS|||^^^200407150830^^1&CITO&C&HIS^||200407150831|||51^Nowak^Anna^^^^dr^^HIS|||||1234^Izba Przyjęć&IP^HIS|||
+OBR|1|28445-1-100^HIS||5678^Glukoza&GLU^HIS|||20040715||||||||||51^Nowak^Anna^^^^dr^^HIS|||||||||||||||
+```
+
+---
+
+## 15. ORU^R01 - Radiology report with embedded PDF (base64)
+
+```
+MSH|^~\&|MESA_RPT_MGR|EAST_RADIOLOGY|REPOSITORY|XYZ|||ORU^R01|MESA4b141a5c|P|2.3.1||||||||
+PID|||P999^^^ISSUER45||KAMIŃSKA^ZOFIA||19500131T143414|M||||||||||PatientAcct|||||||||||||||||||
+OBR|1|A601Z^MESA_ORDPLC|B601Z^MESA_ORDFIL|Concept Name Code Sequence^2^3||20010501141500.0000||||||||||||ACC1||||||F|||||||||||||||||||
+OBX|2|ST|113014^DICOM Study^DCM||2.16.840.1.113669.632.20.540351.11112222||||||F|||201602100825||LEWANDOWSKI^TOMASZ
+OBX|3|ED|18748-4^Diagnostic Imaging Report^LN||^Application^PDF^Base64^JVBERi0xLjMNCiXi48/TDQoNCjEgMCBvYmoNCjw8DQovVHlwZSAvQ2F0YWxvZw0KL091dGxpbmVzIDIgMCBSDQovUGFnZXMgMyAwIFINCj4+DQplbmRvYmoNCg0KMiAwIG9iag0KPDwNCi9UeXBlIC9PdXRsaW5lcw0KL0NvdW50IDANCj4+DQplbmRvYmoNCg0KMyAwIG9iag0KPDwNCi9UeXBlIC9QYWdlcw0KL0NvdW50IDINCi9LaWRzIFsgNCAwIFIgNiAwIFIgXSANCj4+DQplbmRvYmoNCg0KNCAwIG9iag0KPDwNCi9UeXBlIC9QYWdlDQovUGFyZW50IDMgMCBSDQovUmVzb3VyY2VzIDw8DQovRm9udCA8PA0KL0YxIDkgMCBSIA0KPj4NCi9Qcm9jU2V0IDggMCBSDQo+Pg0KL01lZGlhQm94IFswIDAgNjEyLjAwMDAgNzkyLjAwMDBdDQovQ29udGVudHMgNSAwIFINCj4+DQplbmRvYmoNCg0KNSAwIG9iag0KPDwgL0xlbmd0aCAxMDc0ID4+DQpzdHJlYW0NCjIgSg0KQlQNCjAgMCAwIHJnDQovRjEgMDAyNyBUZg0KNTcuMzc1MCA3MjIuMjgwMCBUZA0KKCBBIFNpbXBsZSBQREYgRmlsZSApIFRqDQpFVA0KQlQNCi9GMSAwMDEwIFRmDQo2OS4yNTAwIDY4OC42MDgwIFRkDQooIFRoaXMgaXMgYSBzbWFsbCBkZW1vbnN0cmF0aW9uIC5wZGYgZmlsZSAtICkgVGoNCkVUDQpCVA0KL0YxIDAwMTAgVGYNCjY5LjI1MDAgNjY0LjcwNDAgVGQNCigganVzdCBmb3IgdXNlIGluIHRoZSBWaXJ0dWFsIE1lY2hhbmljcyB0dXRvcmlhbHMuIE1vcmUgdGV4dC4gQW5kIG1vcmUgKSBUag0KRVQNCkJUDQovRjEgMDAxMCBUZg0KNjkuMjUwMCA2NTIuNzUyMCBUZA0KKCB0ZXh0LiBBbmQgbW9yZSB0ZXh0LiBBbmQgbW9yZSB0ZXh0LiBBbmQgbW9yZSB0ZXh0LiApIFRqDQpFVA0KQlQNCi9GMSAwMDEwIFRmDQo2OS4yNTAwIDYyOC44NDgwIFRkDQooIEFuZCBtb3JlIHRleHQuIEFuZCBtb3JlIHRleHQuIEFuZCBtb3JlIHRleHQuIEFuZCBtb3JlIHRleHQuIEFuZCBtb3JlICkgVGoNCkVUDQpCVA0KL0YxIDAwMTAgVGYNCjY5LjI1MDAgNjE2Ljg5NjAgVGQNCiggdGV4dC4gQW5kIG1vcmUgdGV4dC4gQm9yaW5nLCB6enp6ei4gQW5kIG1vcmUgdGV4dC4gQW5kIG1vcmUgdGV4dC4gQW5kICkgVGoNCkVUDQpCVA0KL0YxIDAwMTAgVGYNCjY5LjI1MDAgNjA0Ljk0NDAgVGQNCiggbW9yZSB0ZXh0LiBBbmQgbW9yZSB0ZXh0LiBBbmQgbW9yZSB0ZXh0LiBBbmQgbW9yZSB0ZXh0LiBBbmQgbW9yZSB0ZXh0LiApIFRqDQpFVA0KQlQNCi9GMSAwMDEwIFRmDQo2OS4yNTAwIDU5Mi45OTIwIFRkDQooIEFuZCBtb3JlIHRleHQuIEFuZCBtb3JlIHRleHQuICkgVGoNCkVUDQpCVA0KL0YxIDAwMTAgVGYNCjY5LjI1MDAgNTY5LjA4ODAgVGQNCigganVzdCBmb3IgdXNlIGluIHRoZSBWaXJ0dWFsIE1lY2hhbmljcyB0dXRvcmlhbHMuIE1vcmUgdGV4dC4gQW5kIG1vcmUgKSBUag0KRVQNCkJUDQovRjEgMDAxMCBUZg0KNjkuMjUwMCA1NTcuMTM2MCBUZA0KKCB0ZXh0LiBBbmQgbW9yZSB0ZXh0LiBBbmQgbW9yZSB0ZXh0LiBFdmVuIG1vcmUuIENvbnRpbnVlZCBvbiBwYWdlIDIgLi4uKSBUag0KRVQNCmVuZHN0cmVhbQ0KZW5kb2JqDQoNCjYgMCBvYmoNCjw8DQovVHlwZSAvUGFnZQ0KL1BhcmVudCAzIDAgUg0KL1Jlc291cmNlcyA8PA0KL0ZvbnQgPDwNCi9GMSA5IDAgUiANCj4+DQovUHJvY1NldCA4IDAgUg0KPj4NCi9NZWRpYUJveCBbMCAwIDYxMi4wMDAwIDc5Mi4wMDAwXQ0KL0NvbnRlbnRzIDcgMCBSDQo+Pg0KZW5kb2JqDQoNCjcgMCBvYmoNCjw8IC9MZW5ndGggNjc2ID4+DQpzdHJlYW0NCjIgSg0KQlQNCjAgMCAwIHJnDQovRjEgMDAyNyBUZg0KNTcuMzc1MCA3MjIuMjgwMCBUZA0KKCBTaW1wbGUgUERGIEZpbGUgMiApIFRqDQpFVA0KQlQNCi9GMSAwMDEwIFRmDQo2OS4yNTAwIDY4OC42MDgwIFRkDQooIC4uLmNvbnRpbnVlZCBmcm9tIHBhZ2UgMS4gWWV0IG1vcmUgdGV4dC4gQW5kIG1vcmUgdGV4dC4gQW5kIG1vcmUgdGV4dC4gKSBUag0KRVQNCkJUDQovRjEgMDAxMCBUZg0KNjkuMjUwMCA2NzYuNjU2MCBUZA0KKCBBbmQgbW9yZSB0ZXh0LiBBbmQgbW9yZSB0ZXh0LiBBbmQgbW9yZSB0ZXh0LiBBbmQgbW9yZSB0ZXh0LiBBbmQgbW9yZSApIFRqDQpFVA0KQlQNCi9GMSAwMDEwIFRmDQo2OS4yNTAwIDY2NC43MDQwIFRkDQooIHRleHQuIE9oLCBob3cgYm9yaW5nIHR5cGluZyB0aGlzIHN0dWZmLiBCdXQgbm90IGFzIGJvcmluZyBhcyB3YXRjaGluZyApIFRqDQpFVA0KQlQNCi9GMSAwMDEwIFRmDQo2OS4yNTAwIDY1Mi43NTIwIFRkDQooIHBhaW50IGRyeS4gQW5kIG1vcmUgdGV4dC4gQW5kIG1vcmUgdGV4dC4gQW5kIG1vcmUgdGV4dC4gQW5kIG1vcmUgdGV4dC4gKSBUag0KRVQNCkJUDQovRjEgMDAxMCBUZg0KNjkuMjUwMCA2NDAuODAwMCBUZA0KKCBCb3JpbmcuICBNb3JlLCBhIGxpdHRsZSBtb3JlIHRleHQuIFRoZSBlbmQsIGFuZCBqdXN0IGFzIHdlbGwuICkgVGoNCkVUDQplbmRzdHJlYW0NCmVuZG9iag0KDQo4IDAgb2JqDQpbL1BERiAvVGV4dF0NCmVuZG9iag0KDQo5IDAgb2JqDQo8PA0KL1R5cGUgL0ZvbnQNCi9TdWJ0eXBlIC9UeXBlMQ0KL05hbWUgL0YxDQovQmFzZUZvbnQgL0hlbHZldGljYQ0KL0VuY29kaW5nIC9XaW5BbnNpRW5jb2RpbmcNCj4+DQplbmRvYmoNCg0KMTAgMCBvYmoNCjw8DQovQ3JlYXRvciAoUmF2ZSBcKGh0dHA6Ly93d3cubmV2cm9uYS5jb20vcmF2ZVwpKQ0KL1Byb2R1Y2VyIChOZXZyb25hIERlc2lnbnMpDQovQ3JlYXRpb25EYXRlIChEOjIwMDYwMzAxMDcyODI2KQ0KPj4NCmVuZG9iag0KDQp4cmVmDQowIDExDQowMDAwMDAwMDAwIDY1NTM1IGYNCjAwMDAwMDAwMTkgMDAwMDAgbg0KMDAwMDAwMDA5MyAwMDAwMCBuDQowMDAwMDAwMTQ3IDAwMDAwIG4NCjAwMDAwMDAyMjIgMDAwMDAgbg0KMDAwMDAwMDM5MCAwMDAwMCBuDQowMDAwMDAxNTIyIDAwMDAwIG4NCjAwMDAwMDE2OTAgMDAwMDAgbg0KMDAwMDAwMjQyMyAwMDAwMCBuDQowMDAwMDAyNDU2IDAwMDAwIG4NCjAwMDAwMDI1NzQgMDAwMDAgbg0KDQp0cmFpbGVyDQo8PA0KL1NpemUgMTENCi9Sb290IDEgMCBSDQovSW5mbyAxMCAwIFINCj4+DQoNCnN0YXJ0eHJlZg0KMjcxNA0KJSVFT0YNCg==||||||F||||||
+```
+
+---
+
+## 16. ORU^R01 - Cardiology referral with embedded PDF (ZorgDomein/IHE format)
+
+```
+MSH|^~\&|ZorgDomein||||20160324163441+0100||ORU^R01|ZD200046119|P|2.4
+PID|1||^^^NLMINBIZA^NNNLD||Dąbrowska&Dąbrowska^M^E^^^^L||20000101|M|||Kościuszki 14&Kościuszki&14^m.3^Łódź^^91-418^PL^H||042-6315283
+PV1|1|O
+ORC|NW|ZD200046119|||||||20160324163432+0100|^&&Grabowska^A.B.C.||01004567^&&Kwiatkowski^Z.Z.^^^^^^VEKTIS||015-2222222
+OBR|1|ZD200046119||CIS^Cardiologie^ZORGDOMEIN|||20160324163432+0100|||||||||01004567^&&Kwiatkowski^Z.Z.^^^^^^VEKTIS
+OBX|1|NM|AF^^123||||||||F
+OBX|2|ED|CARHAR^Hartfalen^ZORGDOMEIN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVGl0bGUgKP7/KQovQ3JlYXRvciAo/v8AdwBrAGgAdABtAGwAdABvAHAAZABmACAAMAAuADEAMgAuADIALgAxKQovUHJvZHVjZXIgKP7/AFEAdAAgADQALgA4AC4ANikKL0NyZWF0aW9uRGF0ZSAoRDoyMDE2MDMyNDE2MzQ0MSswMScwMCcpCj4+CmVuZG9iag==||||||F
+OBX|3|FT|CARCOA001^consult cardioloog^ZORGDOMEIN||||||||F
+```
+
+---
+
+## 17. ORU^R01 - Retinal screening result with embedded PDF
+
+```
+MSH|^~\&|IRIS|IRIS|Vendor|Vendor|20191220174508||ORU^R01|191220174508|T|2.3
+PID||Test2106462|Test2106462||SZYMAŃSKA^BARBARA||19630130|M||||||||||293907374|
+PV1|1|O|WRSIM||||5678432^WOŹNIAK^ADAM^^^MD^MD^^^^^^NPI|5678432^WOŹNIAK^ADAM^^^MD^MD^^^^^^NPI|||||||||5678432^WOŹNIAK^ADAM^^^MD^MD^^^^^^NPI||293907374|||||||||||||||||||||||||20191220054252|20191220054252
+ORC|RE|111997409|799248^IRIS||F||||20191220174508|||5678432^WOŹNIAK^ADAM^^^MD^MD^^^^^^NPI
+OBR|1|111997409|799248^IRIS|^FUNDUS PHOTOGRAPHY^EAP^^FUNDAL PHOTO|||20191220054252|||||||20191220054252||5678432^WOŹNIAK^ADAM^^^MD^MD^^^^^^NPI||||||20191220054412|||F|||||||mkozlowski@okulistyka.pl^Kozłowski^Michał^^Michał Kozłowski, MD, NPI: 1234567890, Taxonomy: 207W00000X
+OBX|1|ST|SEVERITY^^IRIS|1|NORMAL||||||F
+OBX|2|ST|RIGHTDIABRETIN^^IRIS|2|None||||||F
+OBX|3|ST|RIGHTMACEDEMA^^IRIS|3|None||||||F
+OBX|4|ST|RIGHTOTHERRETIN^^IRIS|4|None||||||F
+OBX|5|ST|RIGHTQUALAPP^^IRIS|5|Gradable Image||||||F
+OBX|6|ST|LEFTDIABRETIN^^IRIS|6|None||||||F
+OBX|7|ST|LEFTMACEDEMA^^IRIS|7|None||||||F
+OBX|8|ST|LEFTOTHERRETIN^^IRIS|8|None||||||F
+OBX|9|ST|LEFTQUALAPP^^IRIS|9|Gradable Image||||||F
+OBX|10|FT|Result^^IRIS|001|Retinal Study Result for Barbara Szymańska||||||F
+OBX|11|FT|Result^^IRIS|002|||||||F
+OBX|12|FT|Result^^IRIS|003|Barbara Szymańska, a 56 y/o, M (DOB: 01-30-1963, MRN: Test2106462)||||||F
+OBX|27|ED|||PDF^TEXT^^Base64^${ENCODED DOCUMENT REMOVED}||||||F
+```
+
+---
+
+## 18. ORU^R01 - Critical retinal result with referral link
+
+```
+MSH|^~\&|IRIS|IRIS|Vendor|Vendor|20191223193115||ORU^R01|191223193115|P|2.3
+PID||MRNtest123|MRNtest123||JANKOWSKA^DOROTA||19391126|F||||||||||123456789|
+PV1|1|O|WRSIM||||9876543^WIŚNIEWSKI^STANISŁAW^^^MD^MD^^^^^^NPI|9876543^WIŚNIEWSKI^STANISŁAW^^^MD^MD^^^^^^NPI|||||||||9876543^WIŚNIEWSKI^STANISŁAW^^^MD^MD^^^^^^NPI||123456789|||||||||||||||||||||||||20191223012424|20191223012424
+ORC|RE|12378912|799932^IRIS||F||||20191223193115|||9876543^WIŚNIEWSKI^STANISŁAW^^^MD^MD^^^^^^NPI
+OBR|1|12378912|799932^IRIS|^FUNDUS PHOTOGRAPHY^EAP^^FUNDAL PHOTO|||20191223012424|||||||20191223012424||9876543^WIŚNIEWSKI^STANISŁAW^^^MD^MD^^^^^^NPI||||||20191223012555|||F|||||||1234567890^Kozłowski^Michał^^^MD^MD^^^^^^NPI
+OBX|1|ST|SEVERITY^^IRIS|1|CRITICAL|||AA|||F
+OBX|2|ST|LEFTDIABRETIN^^IRIS|2|Severe|||AA|||F
+OBX|3|ST|LEFTMACEDEMA^^IRIS|3|Severe|||AA|||F
+OBX|4|ST|LEFTOTHERRETIN^^IRIS|4|Suspected Vein Occlusion|||A|||F
+OBX|5|ST|LEFTQUALAPP^^IRIS|5|Gradable Image||||||F
+OBX|6|ST|RIGHTDIABRETIN^^IRIS|6|Moderate|||A|||F
+OBX|7|ST|RIGHTMACEDEMA^^IRIS|7|Moderate|||A|||F
+OBX|8|ST|RIGHTOTHERRETIN^^IRIS|8|Suspected Dry AMD|||A|||F
+OBX|9|ST|RIGHTQUALAPP^^IRIS|9|Gradable Image||||||F
+OBX|34|RP|LINK^^PDFLINK|34|https://api.retinalscreenings.com/api/PatientOrders/GetSingleResultForDisplayInEmr?patientOrderId=799932\T\asPdf=True\T\isPreliminary=False\T\auth=6DCAFF6AC2A555F00F9E470D221B6A077C3497A668B1EEBBB4983C8D98672F8FBA00707190026B817325C2A088725B5A0E5D7AB659AC0790C1C1D22B2C50F897\T\asAddendum=False||||||F
+```
+
+---
+
+## 19. ORU^R01 - Result with NTE narrative notes
+
+```
+MSH|^~\&|IRIS|IRIS|Vendor|Vendor|20200103185623||ORU^R01|200103185623|T|2.3
+PID||15852|15852||KOZŁOWSKA^JOANNA||19990312|M|||||||||||
+PV1|1|O|Iris Test Client||||tmazur@okulistyka.pl^Mazur^Tomasz^^^PhD^PhD^^^^^^NPI|tmazur@okulistyka.pl^Mazur^Tomasz^^^PhD^PhD^^^^^^NPI|||||||||tmazur@okulistyka.pl^Mazur^Tomasz^^^PhD^PhD^^^^^^NPI||Encounter|||||||||||||||||||||||||20191218044543|20191218044543
+ORC|RE|7e39fa9b-27d6-4792-8769-2f9f422f187a|797619^IRIS||F||||20200103185623|||tmazur@okulistyka.pl^Mazur^Tomasz^^^PhD^PhD^^^^^^NPI
+OBR|1|7e39fa9b-27d6-4792-8769-2f9f422f187a|797619^IRIS|92250^FUNDUS PHOTOGRAPHY^EAP^^FUNDAL PHOTO|||20191218044543|||||||20191218044543||tmazur@okulistyka.pl^Mazur^Tomasz^^^PhD^PhD^^^^^^NPI||||||20191220023008|||F
+OBX|1|ST|SEVERITY^^IRIS|1|NORMAL||||||F
+OBX|2|ST|LEFTDIABRETIN^^IRIS|2|None||||||F
+OBX|3|ST|LEFTMACEDEMA^^IRIS|3|None||||||F
+NTE|1|ST|Retinal Study Result for Joanna Kozłowska||||||||F
+NTE|2|ST|||||||||F
+NTE|3|ST|Joanna Kozłowska, a 20 y/o, M (DOB: 03-12-1999, MRN: 15852)||||||||F
+NTE|4|ST|presented to Iris Test Client on 12-18-2019 for a retinal imaging study of the left and right eyes.||||||||F
+NTE|5|ST|||||||||F
+NTE|6|ST|Based on the findings of the study, the following is recommended for Joanna Kozłowska||||||||F
+NTE|7|ST|Normal Scan: Please advise the patient to return for a scan in 12 months.||||||||F
+```
+
+---
+
+## 20. ORM^O01 - Lab order with insurance and specimen (outpatient, Polish convention)
+
+```
+MSH|^~\&|CLININET|UHC|LAB|UHC|20041116142533||ORM^O01|CLININET20041116142533|P|2.3|||AL|NE|POL||PL|
+PID||85010112345^^^^PESEL|33021||Wiśniewska^Maria||19850101|F|||Kwiatowa&7^^Lublin^^20-001|||||||||
+PV1|1|O|45678^^^^^^^^Poradnia Kardiologiczna&KARD&HIS||||||||||||||||||||||||||||||||||||||||||||||||||
+IN1|||134&HIS|Mazowiecki Oddział NFZ&07R
+ORC|NW|33021-3-55^HIS||7654321^HIS|||^^^200411161425^^12&RUTYNOWE&RUT&HIS^||200411161426|||88^Wiśniewski^Piotr^^^^lek. med.^^HIS|||||45678^Poradnia Kardiologiczna&KARD^HIS|||
+OBR|1|33021-3-55^HIS||9012^Lipidogram&LIPID^HIS|||20041116||||||Cukrzyca&TAK~Statyny&NIE||4455^Surowica&SUR^HIS^^^^^SampleID&789012~Comment&pacjent na czczo|88^Wiśniewski^Piotr^^^^lek. med.^^HIS|||||||||||||||
+NTE|1|P|Pacjent na czczo od 12 godzin
+```

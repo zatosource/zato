@@ -1,0 +1,250 @@
+# Siemens syngo.via - real HL7v2 ER7 messages
+
+---
+
+## 1. ORU^R01 - CT coronary calcium score report
+
+```
+MSH|^~\&|SYNGO|SCRIPPS_RAD|SCRIPPS_EMR|SCRIPPS_LA_JOLLA|20250318153000||ORU^R01^ORU_R01|SV20250318153000001|P|2.5|||AL|NE
+PID|1||SCR-MR-00123456^^^SCRIPPS^MR||VALENZUELA^MARCOS^DANIEL||19620415|M||2135-2^Hispanic^HL70005|9888 GENESEE AVE^^LA JOLLA^CA^92037^US||^PRN^PH^^^858^5551234|||M|||548-31-7826
+PV1|1|O|SCRIPPS_CARD^^|R|||11234^SUBRAMANIAM^ARUN^^^MD||CARD||||R||||||V00123456|||||||||||||||||||||||||20250318
+ORC|RE|SCR-ORD-2025-33456|SV-RES-00123456||CM||||20250318130000|||11234^SUBRAMANIAM^ARUN^^^MD
+OBR|1|SCR-ORD-2025-33456|SV-RES-00123456|75571^CT CORONARY CALCIUM SCORE^CPT4||20250318120000|20250318120000|||||||20250318130000||11234^SUBRAMANIAM^ARUN^^^MD||22345^VELASCO^MARIA^^^MD|RAD||||20250318153000|||F
+OBX|1|FT|75571^CT CORONARY CALCIUM SCORE^CPT4||TECHNIQUE: ECG-gated non-contrast CT of the heart for coronary calcium scoring.\.br\\.br\FINDINGS:\.br\Left main: 0\.br\LAD: 42\.br\LCx: 18\.br\RCA: 85\.br\Total Agatston Score: 145\.br\\.br\IMPRESSION: Moderate coronary artery calcification (Agatston score 145). 75th-90th percentile for age and gender. Recommend risk factor modification and statin therapy evaluation.||||||F|||20250318153000
+```
+
+---
+
+## 2. ORM^O01 - CT angiography chest order from ED
+
+```
+MSH|^~\&|ED_EMR|HOAG_MEMORIAL|SYNGOVIA|HOAG_RAD|20250504020000||ORM^O01^ORM_O01|HM20250504020000012|P|2.5|||AL|NE
+PID|1||HOAG-MR-00234567^^^HOAG^MR||TRINH^BRIAN^KHOA||19710809|M||2028-9^Asian^HL70005|401 OLD NEWPORT BLVD^^NEWPORT BEACH^CA^92663^US||^PRN^PH^^^949^5555678|||M|||631-84-2957
+PV1|1|E|HOAG_ED^BED22^A^HOAG||||22345^THORNBURG^RACHEL^^^MD||||||||||V00234567|||||||||||||||||||||||||20250504
+ORC|NW|HOAG-ORD-2025-55678||||||20250504020000|||22345^THORNBURG^RACHEL^^^MD
+OBR|1|HOAG-ORD-2025-55678||71275^CT ANGIOGRAPHY CHEST^CPT4|S|20250504020000||||||ACUTE CHEST PAIN, ELEVATED D-DIMER, R/O PE|20250504020000||22345^THORNBURG^RACHEL^^^MD||RAD||||||||^^^^S
+```
+
+---
+
+## 3. ORU^R01 - CT pulmonary angiography result
+
+```
+MSH|^~\&|SYNGOVIA|HOAG_RAD|ED_EMR|HOAG_MEMORIAL|20250504031500||ORU^R01^ORU_R01|SV20250504031500034|P|2.5|||AL|NE
+PID|1||HOAG-MR-00234567^^^HOAG^MR||TRINH^BRIAN^KHOA||19710809|M||2028-9^Asian^HL70005|401 OLD NEWPORT BLVD^^NEWPORT BEACH^CA^92663^US||^PRN^PH^^^949^5555678|||M|||631-84-2957
+PV1|1|E|HOAG_ED^BED22^A^HOAG||||22345^THORNBURG^RACHEL^^^MD||||||||||V00234567|||||||||||||||||||||||||20250504
+ORC|RE|HOAG-ORD-2025-55678|SV-RES-00234567||CM||||20250504025000|||22345^THORNBURG^RACHEL^^^MD
+OBR|1|HOAG-ORD-2025-55678|SV-RES-00234567|71275^CT ANGIOGRAPHY CHEST^CPT4||20250504021000|20250504021000|||||||20250504025000||22345^THORNBURG^RACHEL^^^MD||33456^NWOSU^CHIDERA^^^MD|RAD||||20250504031500|||F
+OBX|1|FT|71275^CT ANGIOGRAPHY CHEST^CPT4||FINDINGS: Filling defects identified within the right lower lobe segmental and subsegmental pulmonary arteries, consistent with acute pulmonary embolism. No saddle embolus. RV/LV ratio is 0.9 (within normal limits). No evidence of right heart strain. Lung parenchyma shows no consolidation. Small bilateral pleural effusions.\.br\\.br\IMPRESSION: Acute pulmonary embolism involving the right lower lobe pulmonary arteries. No evidence of right heart strain. Anticoagulation recommended.||||||F|||20250504031500
+NTE|1|L|CRITICAL FINDING: PE identified. Ordering physician notified at 0250 by phone.
+```
+
+---
+
+## 4. ADT^A04 - Outpatient registration for scheduled imaging
+
+```
+MSH|^~\&|REG_EMR|RADNET_ENCINO|SYNGO|RADNET_RAD|20250610083000||ADT^A04^ADT_A01|RN20250610083000007|P|2.5|||AL|NE
+PID|1||RN-MR-00345678^^^RADNET^MR||O'CONNOR^MEGAN^CLAIRE||19850217|F||2106-3^White^HL70005|17200 VENTURA BLVD^^ENCINO^CA^91316^US||^PRN^PH^^^818^5553456|||M|||372-58-4190
+PV1|1|O|RADNET_ENCINO^^|R|||44567^HASHIMOTO^KENJI^^^MD||||||||||V00345678|||||||||||||||||||||||||20250610
+IN1|1|IMG001|ANTHEM_BLUE_CA|ANTHEM BLUE CROSS||||||||||||O'CONNOR^MEGAN^CLAIRE|S|19850217||||||||||||||||||PQR567890123
+```
+
+---
+
+## 5. ORU^R01 - MRI knee report from syngo.via
+
+```
+MSH|^~\&|SYNGORAD|RADNET_RAD|CLINIC_EMR|ORTHO_ASSOC_LA|20250617141500||ORU^R01^ORU_R01|SR20250617141500023|P|2.5|||AL|NE
+PID|1||RN-MR-00456789^^^RADNET^MR||MATSUDA^TYLER^KENJI||19880623|M||2028-9^Asian^HL70005|3320 DEL MAR HEIGHTS RD^^DEL MAR^CA^92014^US||^PRN^PH^^^858^5557890|||S|||419-63-8205
+PV1|1|O|RADNET_WESTWOOD^^|R|||55678^LEVINE^HOWARD^^^MD||ORTHO||||R||||||V00456789|||||||||||||||||||||||||20250617
+ORC|RE|RN-ORD-2025-77890|SV-RES-00456789||CM||||20250617120000|||55678^LEVINE^HOWARD^^^MD
+OBR|1|RN-ORD-2025-77890|SV-RES-00456789|73721^MRI RIGHT KNEE WITHOUT CONTRAST^CPT4||20250617100000|20250617100000|||||||20250617120000||55678^LEVINE^HOWARD^^^MD||66789^VELASCO^MARIA^^^MD|RAD||||20250617141500|||F
+OBX|1|FT|73721^MRI RIGHT KNEE WITHOUT CONTRAST^CPT4||FINDINGS: Complex tear of the posterior horn of the medial meniscus extending to the inferior articular surface (Grade III signal). Mild joint effusion. ACL and PCL are intact. Lateral meniscus is intact. Articular cartilage shows Grade II chondromalacia of the medial femoral condyle.\.br\\.br\IMPRESSION: Complex tear of the medial meniscus, posterior horn. Grade II chondromalacia of the medial femoral condyle. Mild joint effusion. Ligaments intact.||||||F|||20250617141500
+```
+
+---
+
+## 6. ORM^O01 - PET-CT order for oncology staging
+
+```
+MSH|^~\&|ONCO_EMR|USC_NORRIS|SIEMENS_SV|USC_RAD|20250722090000||ORM^O01^ORM_O01|USC20250722090000018|P|2.5|||AL|NE
+PID|1||USC-MR-00567890^^^USC^MR||CARDENAS^ENRIQUE^RAFAEL||19580312|M||2135-2^Hispanic^HL70005|1441 EASTLAKE AVE^^LOS ANGELES^CA^90033^US||^PRN^PH^^^323^5551234|||M|||583-47-0162
+PV1|1|O|USC_ONCO^^|R|||77890^SUBRAMANIAM^ARUN^^^MD||ONCO||||R||||||V00567890|||||||||||||||||||||||||20250722
+ORC|NW|USC-ORD-2025-99012||||||20250722090000|||77890^SUBRAMANIAM^ARUN^^^MD
+OBR|1|USC-ORD-2025-99012||78816^PET-CT WHOLE BODY^CPT4|R|20250722090000||||||NSCLC STAGING - RIGHT UPPER LOBE MASS|20250722090000||77890^SUBRAMANIAM^ARUN^^^MD||RAD||||||||^^^^R
+```
+
+---
+
+## 7. ORU^R01 - PET-CT whole body result
+
+```
+MSH|^~\&|SYNGOVIA|USC_RAD|ONCO_EMR|USC_NORRIS|20250724162000||ORU^R01^ORU_R01|SV20250724162000045|P|2.5|||AL|NE
+PID|1||USC-MR-00567890^^^USC^MR||CARDENAS^ENRIQUE^RAFAEL||19580312|M||2135-2^Hispanic^HL70005|1441 EASTLAKE AVE^^LOS ANGELES^CA^90033^US||^PRN^PH^^^323^5551234|||M|||583-47-0162
+PV1|1|O|USC_ONCO^^|R|||77890^SUBRAMANIAM^ARUN^^^MD||ONCO||||R||||||V00567890|||||||||||||||||||||||||20250722
+ORC|RE|USC-ORD-2025-99012|SV-RES-00567890||CM||||20250724130000|||77890^SUBRAMANIAM^ARUN^^^MD
+OBR|1|USC-ORD-2025-99012|SV-RES-00567890|78816^PET-CT WHOLE BODY^CPT4||20250724100000|20250724100000|||||||20250724130000||77890^SUBRAMANIAM^ARUN^^^MD||88901^HASHIMOTO^KENJI^^^MD|RAD||||20250724162000|||F
+OBX|1|FT|78816^PET-CT WHOLE BODY^CPT4||TECHNIQUE: FDG PET-CT from skull base to mid-thigh, 60 minutes after IV administration of 12.5 mCi F-18 FDG.\.br\\.br\FINDINGS: Right upper lobe spiculated mass measuring 3.2 x 2.8 cm with SUVmax 12.4. Right hilar lymph node measuring 1.6 cm, SUVmax 8.2. Subcarinal lymph node measuring 1.4 cm, SUVmax 6.8. No contralateral mediastinal or distant metastatic disease. Liver, adrenals, and skeleton without FDG-avid lesions.\.br\\.br\IMPRESSION: FDG-avid right upper lobe mass with ipsilateral hilar and subcarinal lymphadenopathy. Staging: T2a N2 M0. No distant metastases identified.||||||F|||20250724162000
+```
+
+---
+
+## 8. MDM^T02 - Structured radiology report document
+
+```
+MSH|^~\&|SYNGO|CEDARS_RAD|CEDARS_EMR|CEDARS_SINAI|20250830141500||MDM^T02^MDM_T02|SV20250830141500056|P|2.5|||AL|NE
+PID|1||CSM-MR-00678901^^^CEDARS^MR||GALLAGHER^SIOBHAN^MARIE||19750118|F||2106-3^White^HL70005|8700 BEVERLY BLVD^^LOS ANGELES^CA^90048^US||^PRN^PH^^^310^5554567|||M|||724-06-3851
+PV1|1|I|CEDARS_NEURO^408^A^CEDARS||||99012^NWOSU^CHIDERA^^^MD||NEURO||||R||||||V00678901|||||||||||||||||||||||||20250828
+TXA|1|RAD^RADIOLOGY REPORT|FT|20250830141500|99012^NWOSU^CHIDERA^^^MD||20250830141500||||CSM-DOC-2025-33456|||AU|||AV
+OBX|1|FT|18748-4^DIAGNOSTIC IMAGING REPORT^LN||PROCEDURE: CT HEAD WITHOUT CONTRAST\.br\\.br\CLINICAL INDICATION: Acute onset confusion, left-sided weakness\.br\\.br\FINDINGS: Hyperdense focus within the right middle cerebral artery territory, M1 segment. No established infarct identified. No hemorrhage. Midline structures are normal. Ventricles are symmetric.\.br\\.br\IMPRESSION: Dense MCA sign on the right, suggestive of acute thrombus. No established infarct. Recommend CTA and neurology consultation. Stroke code activated.||||||F|||20250830141500
+```
+
+---
+
+## 9. ORU^R01 - CT abdomen report with radiology PDF
+
+```
+MSH|^~\&|SYNGOVIA|STANFORD_RAD|EPIC_EMR|STANFORD_HC|20250415172000||ORU^R01^ORU_R01|SV20250415172000067|P|2.5|||AL|NE
+PID|1||STF-MR-00789012^^^STANFORD^MR||GILL^PREETINDER^KAUR||19790530|F||2028-9^Asian^HL70005|300 PASTEUR DR^^STANFORD^CA^94305^US||^PRN^PH^^^650^5558901|||M|||815-29-4673
+PV1|1|I|STANFORD_SURG^312^A^STANFORD||||10123^THORNBURG^RACHEL^^^MD||SURG||||R||||||V00789012|||||||||||||||||||||||||20250414
+ORC|RE|STF-ORD-2025-11234|SV-RES-00789012||CM||||20250415150000|||10123^THORNBURG^RACHEL^^^MD
+OBR|1|STF-ORD-2025-11234|SV-RES-00789012|74178^CT ABDOMEN AND PELVIS WITH AND WITHOUT CONTRAST^CPT4||20250415140000|20250415140000|||||||20250415150000||10123^THORNBURG^RACHEL^^^MD||21234^LEVINE^HOWARD^^^MD|RAD||||20250415172000|||F
+OBX|1|FT|74178^CT ABDOMEN AND PELVIS WITH AND WITHOUT CONTRAST^CPT4||FINDINGS: Status post appendectomy. Small fluid collection at the surgical bed measuring 2.1 x 1.4 cm, decreased from prior. No abscess. Normal bowel gas pattern. No free air or free fluid.\.br\\.br\IMPRESSION: Improving post-operative changes. Decreasing fluid collection at the appendectomy site. No abscess.||||||F|||20250415172000
+OBX|2|ED|28570-0^IMAGING PROCEDURE NOTE^LN||^application^pdf^Base64^JVBERi0xLjUKJeLjz9MKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgL01hcmtJbmZvIDw8IC9UeXBlIC9NYXJr||||||F|||20250415172000
+```
+
+---
+
+## 10. ORM^O01 - Ultrasound abdomen order
+
+```
+MSH|^~\&|GI_EMR|KAISER_LA|SYNGORAD|KAISER_RAD_LA|20250203100500||ORM^O01^ORM_O01|KLA20250203100500024|P|2.5|||AL|NE
+PID|1||KP-MR-00890123^^^KAISER^MR||HAMPTON^DENISE^LORRAINE||19810924|F||2054-5^Black^HL70005|4867 SUNSET BLVD^^LOS ANGELES^CA^90027^US||^PRN^PH^^^323^5553456|||M|||296-51-8374
+PV1|1|O|KAISER_GI^^|R|||32345^VELASCO^MARIA^^^MD||GI||||R||||||V00890123|||||||||||||||||||||||||20250203
+ORC|NW|KP-ORD-2025-22345||||||20250203100500|||32345^VELASCO^MARIA^^^MD
+OBR|1|KP-ORD-2025-22345||76700^ULTRASOUND ABDOMEN COMPLETE^CPT4|R|20250203100500||||||ELEVATED LFTs, RUQ PAIN|20250203100500||32345^VELASCO^MARIA^^^MD||RAD||||||||^^^^R
+```
+
+---
+
+## 11. ORU^R01 - Ultrasound abdomen result with gallstone findings
+
+```
+MSH|^~\&|SYNGO|KAISER_RAD_LA|GI_EMR|KAISER_LA|20250204093000||ORU^R01^ORU_R01|SV20250204093000035|P|2.5|||AL|NE
+PID|1||KP-MR-00890123^^^KAISER^MR||HAMPTON^DENISE^LORRAINE||19810924|F||2054-5^Black^HL70005|4867 SUNSET BLVD^^LOS ANGELES^CA^90027^US||^PRN^PH^^^323^5553456|||M|||296-51-8374
+PV1|1|O|KAISER_GI^^|R|||32345^VELASCO^MARIA^^^MD||GI||||R||||||V00890123|||||||||||||||||||||||||20250203
+ORC|RE|KP-ORD-2025-22345|SV-RES-00890123||CM||||20250204080000|||32345^VELASCO^MARIA^^^MD
+OBR|1|KP-ORD-2025-22345|SV-RES-00890123|76700^ULTRASOUND ABDOMEN COMPLETE^CPT4||20250204073000|20250204073000|||||||20250204080000||32345^VELASCO^MARIA^^^MD||43456^NWOSU^CHIDERA^^^MD|RAD||||20250204093000|||F
+OBX|1|FT|76700^ULTRASOUND ABDOMEN COMPLETE^CPT4||FINDINGS: Multiple gallstones identified within the gallbladder, the largest measuring 1.5 cm. Gallbladder wall thickness is 5 mm (borderline thickened). Positive sonographic Murphy sign. Common bile duct measures 4 mm (normal). Liver is homogeneous without focal lesion. Hepatic veins are patent. Spleen is normal in size. Kidneys are normal bilaterally. No free fluid.\.br\\.br\IMPRESSION: Cholelithiasis with borderline gallbladder wall thickening and positive Murphy sign, concerning for acute cholecystitis. Surgical consultation recommended.||||||F|||20250204093000
+```
+
+---
+
+## 12. ADT^A08 - Patient update for imaging patient
+
+```
+MSH|^~\&|CLINIC_EMR|RADNET_ENCINO|SYNGO|RADNET_RAD|20250610091500||ADT^A08^ADT_A01|RN20250610091500012|P|2.5|||AL|NE
+PID|1||RN-MR-00345678^^^RADNET^MR||O'CONNOR^MEGAN^CLAIRE||19850217|F||2106-3^White^HL70005|17200 VENTURA BLVD^^ENCINO^CA^91316^US||^PRN^PH^^^818^5553456|||M|||372-58-4190
+PV1|1|O|RADNET_ENCINO^^|R|||44567^HASHIMOTO^KENJI^^^MD||||||||||V00345678|||||||||||||||||||||||||20250610
+IN1|1|IMG002|CIGNA_CA|CIGNA||||||||||||O'CONNOR^MEGAN^CLAIRE|S|19850217||||||||||||||||||STU678901234
+```
+
+---
+
+## 13. ORU^R01 - CT head result for stroke evaluation
+
+```
+MSH|^~\&|SIEMENS_SV|CEDARS_RAD|CEDARS_EMR|CEDARS_SINAI|20250830142500||ORU^R01^ORU_R01|SS20250830142500067|P|2.5|||AL|NE
+PID|1||CSM-MR-00678901^^^CEDARS^MR||GALLAGHER^SIOBHAN^MARIE||19750118|F||2106-3^White^HL70005|8700 BEVERLY BLVD^^LOS ANGELES^CA^90048^US||^PRN^PH^^^310^5554567|||M|||724-06-3851
+PV1|1|I|CEDARS_NEURO^408^A^CEDARS||||99012^NWOSU^CHIDERA^^^MD||NEURO||||R||||||V00678901|||||||||||||||||||||||||20250828
+ORC|RE|CSM-ORD-2025-55678|SV-RES-00678901||CM||||20250830133000|||99012^NWOSU^CHIDERA^^^MD
+OBR|1|CSM-ORD-2025-55678|SV-RES-00678901|70450^CT HEAD WITHOUT CONTRAST^CPT4|S|20250830130000|20250830130000|||||||20250830133000||99012^NWOSU^CHIDERA^^^MD||54567^SUBRAMANIAM^ARUN^^^MD|RAD||||20250830142500|||F
+OBX|1|FT|70450^CT HEAD WITHOUT CONTRAST^CPT4||FINDINGS: Hyperdense focus within the right MCA M1 segment (dense MCA sign). No established hypodensity to suggest infarction. No intracranial hemorrhage. Ventricles are symmetric. Midline structures are normal. Mastoid air cells and paranasal sinuses are clear.\.br\\.br\IMPRESSION: Dense right MCA sign without established infarct. Findings suggestive of acute right MCA occlusion. Urgent CTA/CTP and neurology consultation recommended. STROKE CODE.||||||F|||20250830142500
+NTE|1|L|CRITICAL FINDING: Stroke code. Neurology notified at 1335.
+```
+
+---
+
+## 14. MDM^T02 - Interventional radiology procedure note
+
+```
+MSH|^~\&|SYNGOVIA|UCLA_IR|UCLA_EMR|UCLA_MEDICAL|20250916163000||MDM^T02^MDM_T02|SV20250916163000078|P|2.5|||AL|NE
+PID|1||UCLA-MR-00901234^^^UCLA^MR||ROJAS^PATRICIA^INES||19630721|F||2135-2^Hispanic^HL70005|757 WESTWOOD PLAZA^^LOS ANGELES^CA^90095^US||^PRN^PH^^^310^5559012|||W|||847-12-5903
+PV1|1|I|UCLA_IR^112^A^UCLA||||65678^HASHIMOTO^KENJI^^^MD||IR||||R||||||V00901234|||||||||||||||||||||||||20250916
+TXA|1|IR^IR PROCEDURE NOTE|FT|20250916163000|65678^HASHIMOTO^KENJI^^^MD||20250916163000||||UCLA-DOC-2025-55678|||AU|||AV
+OBX|1|FT|18748-4^DIAGNOSTIC IMAGING REPORT^LN||PROCEDURE: Transjugular liver biopsy with hepatic venous pressure gradient measurement\.br\\.br\INDICATION: Cirrhosis evaluation, portal hypertension assessment\.br\\.br\TECHNIQUE: Right internal jugular vein accessed. Under fluoroscopic guidance, catheter advanced to right hepatic vein. Wedged and free hepatic venous pressures obtained. HVPG: 14 mmHg (clinically significant portal hypertension). Three core biopsies obtained via transjugular approach.\.br\\.br\COMPLICATIONS: None\.br\SPECIMENS: Three liver cores to pathology||||||F|||20250916163000
+```
+
+---
+
+## 15. ORU^R01 - CT brain perfusion result with encapsulated PDF
+
+```
+MSH|^~\&|SYNGO|UCSF_RAD|EPIC_EMR|UCSF_MEDICAL|20250407182000||ORU^R01^ORU_R01|SV20250407182000089|P|2.5|||AL|NE
+PID|1||UCSF-MR-00012345^^^UCSF^MR||SINGLETON^DARNELL^MARCUS||19680504|M||2054-5^Black^HL70005|505 PARNASSUS AVE^^SAN FRANCISCO^CA^94143^US||^PRN^PH^^^415^5556789|||M|||462-90-1738
+PV1|1|E|UCSF_ED^STROKE^A^UCSF||||76789^LEVINE^HOWARD^^^MD||NEURO||||R||||||V01012345|||||||||||||||||||||||||20250407
+ORC|RE|UCSF-ORD-2025-44567|SV-RES-00012345||CM||||20250407170000|||76789^LEVINE^HOWARD^^^MD
+OBR|1|UCSF-ORD-2025-44567|SV-RES-00012345|0042T^CT PERFUSION BRAIN^CPT4|S|20250407165000|20250407165000|||||||20250407170000||76789^LEVINE^HOWARD^^^MD||87890^THORNBURG^RACHEL^^^MD|RAD||||20250407182000|||F
+OBX|1|FT|0042T^CT PERFUSION BRAIN^CPT4||TECHNIQUE: CT perfusion of the brain with automated post-processing via syngo.via.\.br\\.br\FINDINGS: Large area of prolonged Tmax (>6s) in the right MCA territory involving the frontal, temporal, and parietal lobes. Core infarct (CBF<30%) limited to a small focus in the right insular cortex. Mismatch ratio >1.8. Mismatch volume approximately 85 mL.\.br\\.br\IMPRESSION: Large perfusion-diffusion mismatch in the right MCA territory. Favorable pattern for intervention. Small established core infarct.||||||F|||20250407182000
+OBX|2|ED|28570-0^IMAGING PROCEDURE NOTE^LN||^application^pdf^Base64^JVBERi0xLjcKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgL01ldGFkYXRhIDMgMCBSIC9NYXJrSW5mbyA0IDAgUiA+Pg||||||F|||20250407182000
+```
+
+---
+
+## 16. ORM^O01 - MRI brain with contrast order
+
+```
+MSH|^~\&|NEURO_EMR|STANFORD_NEURO|SYNGORAD|STANFORD_RAD|20250811091000||ORM^O01^ORM_O01|SN20250811091000031|P|2.5|||AL|NE
+PID|1||STF-MR-00123789^^^STANFORD^MR||BRENNAN^COLLEEN^NORA||19890714|F||2106-3^White^HL70005|441 SOLANA HILLS DR^^SOLANA BEACH^CA^92075^US||^PRN^PH^^^858^5553456|||S|||203-67-4518
+PV1|1|O|STANFORD_NEURO^^|R|||98901^VELASCO^MARIA^^^MD||NEURO||||R||||||V01123456|||||||||||||||||||||||||20250811
+ORC|NW|STF-ORD-2025-77890||||||20250811091000|||98901^VELASCO^MARIA^^^MD
+OBR|1|STF-ORD-2025-77890||70553^MRI BRAIN WITH AND WITHOUT CONTRAST^CPT4|R|20250811091000||||||MULTIPLE SCLEROSIS SURVEILLANCE, ANNUAL|20250811091000||98901^VELASCO^MARIA^^^MD||RAD||||||||^^^^R
+```
+
+---
+
+## 17. ORU^R01 - MRI brain multiple sclerosis surveillance result
+
+```
+MSH|^~\&|SYNGOVIA|STANFORD_RAD|NEURO_EMR|STANFORD_NEURO|20250814151500||ORU^R01^ORU_R01|SV20250814151500042|P|2.5|||AL|NE
+PID|1||STF-MR-00123789^^^STANFORD^MR||BRENNAN^COLLEEN^NORA||19890714|F||2106-3^White^HL70005|441 SOLANA HILLS DR^^SOLANA BEACH^CA^92075^US||^PRN^PH^^^858^5553456|||S|||203-67-4518
+PV1|1|O|STANFORD_NEURO^^|R|||98901^VELASCO^MARIA^^^MD||NEURO||||R||||||V01123456|||||||||||||||||||||||||20250811
+ORC|RE|STF-ORD-2025-77890|SV-RES-00123789||CM||||20250814120000|||98901^VELASCO^MARIA^^^MD
+OBR|1|STF-ORD-2025-77890|SV-RES-00123789|70553^MRI BRAIN WITH AND WITHOUT CONTRAST^CPT4||20250813100000|20250813100000|||||||20250814120000||98901^VELASCO^MARIA^^^MD||09012^SUBRAMANIAM^ARUN^^^MD|RAD||||20250814151500|||F
+OBX|1|FT|70553^MRI BRAIN WITH AND WITHOUT CONTRAST^CPT4||TECHNIQUE: Multiplanar MRI of the brain with and without gadolinium, MS protocol.\.br\\.br\FINDINGS: Multiple periventricular and juxtacortical T2/FLAIR hyperintense lesions, unchanged compared to prior study dated 2024-08-12. Lesion count: 8 periventricular, 3 juxtacortical, 2 infratentorial. No new T2 lesions. No enhancing lesions on post-contrast sequences. No restricted diffusion.\.br\\.br\IMPRESSION: Stable MS plaque burden. No new or active lesions compared to prior study. Recommend continued disease-modifying therapy and follow-up per neurology.||||||F|||20250814151500
+```
+
+---
+
+## 18. ADT^A01 - Inpatient admission for imaging department
+
+```
+MSH|^~\&|HOSP_EMR|HOAG_MEMORIAL|SIEMENS_SV|HOAG_RAD|20250911142000||ADT^A01^ADT_A01|HM20250911142000009|P|2.5|||AL|NE
+PID|1||HOAG-MR-00345678^^^HOAG^MR||VAUGHN^TANYA^RENEE||19640825|F||2054-5^Black^HL70005|520 SUPERIOR AVE^^NEWPORT COAST^CA^92657^US||^PRN^PH^^^949^5551234|||W|||658-30-7412
+PV1|1|I|HOAG_MED^502^A^HOAG||||20123^LEVINE^HOWARD^^^MD||MED||||R||||||V01234567|||||||||||||||||||||||||20250911142000
+PV2|||^ACUTE PANCREATITIS
+NK1|1|VAUGHN^JEROME^ALAN|SPO|520 SUPERIOR AVE^^NEWPORT COAST^CA^92657^US|^PRN^PH^^^949^5551235
+```
+
+---
+
+## 19. ORU^R01 - CT chest follow-up with comparison
+
+```
+MSH|^~\&|SYNGO|KAISER_RAD_SF|KAISER_EMR|KAISER_SF|20250305104500||ORU^R01^ORU_R01|SV20250305104500054|P|2.5|||AL|NE
+PID|1||KP-MR-00567891^^^KAISER^MR||ROJAS^ALEJANDRO^LUIS||19520614|M||2135-2^Hispanic^HL70005|2425 GEARY BLVD^^SAN FRANCISCO^CA^94115^US||^PRN^PH^^^415^5559876|||M|||741-28-5063
+PV1|1|O|KAISER_PULM^^|R|||31234^THORNBURG^RACHEL^^^MD||PULM||||R||||||V00567890|||||||||||||||||||||||||20250305
+ORC|RE|KP-ORD-2025-33456|SV-RES-00567891||CM||||20250305090000|||31234^THORNBURG^RACHEL^^^MD
+OBR|1|KP-ORD-2025-33456|SV-RES-00567891|71260^CT CHEST WITH CONTRAST^CPT4||20250305083000|20250305083000|||||||20250305090000||31234^THORNBURG^RACHEL^^^MD||42345^NWOSU^CHIDERA^^^MD|RAD||||20250305104500|||F
+OBX|1|FT|71260^CT CHEST WITH CONTRAST^CPT4||COMPARISON: CT chest dated 2024-09-10.\.br\\.br\FINDINGS: Previously noted 8 mm ground glass nodule in the right upper lobe is now 6 mm (decreased). Left lower lobe 4 mm solid nodule is stable. No new pulmonary nodules. Mediastinal and hilar lymph nodes are within normal limits. Heart size is normal. No pleural effusion or pneumothorax.\.br\\.br\IMPRESSION: Decreasing right upper lobe ground glass nodule, now 6 mm (was 8 mm). Stable 4 mm left lower lobe nodule. Recommend follow-up CT in 12 months per Fleischner guidelines.||||||F|||20250305104500
+```
+
+---
+
+## 20. ACK - Acknowledgment for radiology order received
+
+```
+MSH|^~\&|SYNGOVIA|HOAG_RAD|ED_EMR|HOAG_MEMORIAL|20250504020030||ACK^O01^ACK|SV20250504020030001|P|2.5|||AL|NE
+MSA|AA|HM20250504020000012|Imaging order received and queued for protocoling
+```

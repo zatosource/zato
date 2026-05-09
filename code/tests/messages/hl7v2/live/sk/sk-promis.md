@@ -1,0 +1,262 @@
+# PROMIS/PRONIS (Prosoft) - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - Admission to infectious diseases ward
+
+```
+MSH|^~\&|PROMIS|UNLP_KE|ADT|UNLP_KE|20250701064530||ADT^A01|PRO00001|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+EVN|A01|20250701064500
+PID|1||9103220041^^^UZIS^NI~1259103220^^Dôvera^HC||Mrkvička^Ambróz^Blahoslav^^||19910322|M|||Lipová 17^^Košice^^04001^^SVK||+421905331201||SK|M||9103220041
+NK1|1|Mrkvičková^Ivana||+421905442318||W
+PV1|1|I|INF-2^304^A^UNLP_KE||||40001^Šufliarsky^Edmund^^^MUDr.|||INF||||A|||40001^Šufliarsky^Edmund^^^MUDr.|I|||||||||||||||||||UNLP_KE|||||20250701064500
+PV2|||^Horúčka, myalgia, artralgia, suspektná lymská borelióza
+DG1|1|I10|A69.2^Lymská borelióza^ICD10SK|||A
+IN1|1|24^^Dôvera|Dôvera|Dôvera zdravotná poisťovňa^^Bratislava||||||||20250101|20251231||||Mrkvička^Ambróz|self|19910322|Lipová 17^^Košice^^04001|||||||||||||||||9103220041
+```
+
+---
+
+## 2. ADT^A04 - Outpatient visit at rheumatology
+
+```
+MSH|^~\&|PROMIS|UNLP_KE|ADT|UNLP_KE|20250702091015||ADT^A04|PRO00002|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+EVN|A04|20250702091000
+PID|1||7806150038^^^UZIS^NI~1257806150^^VšZP^HC||Kvasničková^Ľubica^Margita^^||19780615|F|||Hlavná 43^^Košice^^04001^^SVK||+421917553412||SK|M||7806150038
+PV1|1|O|REU-AMB^001^^UNLP_KE||||40002^Lintner^Fridrich^^^MUDr.|||REU||||R|||40002^Lintner^Fridrich^^^MUDr.|O||||||||||||||||||||||20250702
+DG1|1|I10|M05.8^Reumatoidná artritída séropozitívna^ICD10SK|||A
+```
+
+---
+
+## 3. ORM^O01 - Serology order for Borrelia
+
+```
+MSH|^~\&|PROMIS|UNLP_KE|LAB|UNLP_KE|20250703094530||ORM^O01|PRO00003|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+PID|1||9103220041^^^UZIS^NI~1259103220^^Dôvera^HC||Mrkvička^Ambróz^Blahoslav^^||19910322|M|||Lipová 17^^Košice^^04001^^SVK||+421905331201||SK|M||9103220041
+PV1|1|I|INF-2^304^A^UNLP_KE||||40001^Šufliarsky^Edmund^^^MUDr.|||INF||||A|||40001^Šufliarsky^Edmund^^^MUDr.|I||||||||||||||||||||||20250703
+ORC|NW|ORD20250703-001|LAB20250703-001||CM||||20250703094500|||40001^Šufliarsky^Edmund^^^MUDr.
+OBR|1|ORD20250703-001|LAB20250703-001|31208-2^Borrelia burgdorferi protilátky^LN|||20250703094500|||||||||40001^Šufliarsky^Edmund^^^MUDr.||||||20250703||||F
+```
+
+---
+
+## 4. ORU^R01 - Serology results with embedded PDF
+
+```
+MSH|^~\&|LAB|UNLP_KE|PROMIS|UNLP_KE|20250704143022||ORU^R01|PRO00004|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+PID|1||9103220041^^^UZIS^NI~1259103220^^Dôvera^HC||Mrkvička^Ambróz^Blahoslav^^||19910322|M|||Lipová 17^^Košice^^04001^^SVK||+421905331201||SK|M||9103220041
+PV1|1|I|INF-2^304^A^UNLP_KE||||40001^Šufliarsky^Edmund^^^MUDr.|||INF||||A|||40001^Šufliarsky^Edmund^^^MUDr.|I||||||||||||||||||||||20250704
+ORC|RE|ORD20250703-001|LAB20250704-001||CM||||20250704142900|||40001^Šufliarsky^Edmund^^^MUDr.
+OBR|1|ORD20250703-001|LAB20250704-001|31208-2^Borrelia burgdorferi protilátky^LN|||20250703094500|||||||||40001^Šufliarsky^Edmund^^^MUDr.||||||20250704143000||||F
+OBX|1|NM|5195-3^Borrelia IgM ELISA^LN||45.2|AU/mL|0-22|H|||F
+OBX|2|NM|5196-1^Borrelia IgG ELISA^LN||18.5|AU/mL|0-22|N|||F
+OBX|3|CE|31208-2^Borrelia IgM Western blot^LN||Pozitívny (p41, OspC)||||||F
+OBX|4|ED|11502-2^Sérologická správa^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA1MCA+PgpzdHJlYW0KQlQgL0YxIDEyIFRmIDEwMCA3MDAgVGQgKExhYm9yYXRvcm5hIHNwcmF2YSkgVGogRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA3NCAwMDAwMCBuIAowMDAwMDAwMTQyIDAwMDAwIG4gCjAwMDAwMDAyNDIgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA1IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgozNDIKJSVFT0YK||||||F
+```
+
+---
+
+## 5. ADT^A03 - Discharge from infectious diseases
+
+```
+MSH|^~\&|PROMIS|UNLP_KE|ADT|UNLP_KE|20250705150045||ADT^A03|PRO00005|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+EVN|A03|20250705150000
+PID|1||9103220041^^^UZIS^NI~1259103220^^Dôvera^HC||Mrkvička^Ambróz^Blahoslav^^||19910322|M|||Lipová 17^^Košice^^04001^^SVK||+421905331201||SK|M||9103220041
+PV1|1|I|INF-2^304^A^UNLP_KE||||40001^Šufliarsky^Edmund^^^MUDr.|||INF||||D|||40001^Šufliarsky^Edmund^^^MUDr.|I|||||||||||||||||||UNLP_KE|||||20250701064500|||20250705150000
+DG1|1|I10|A69.2^Lymská borelióza^ICD10SK|||A
+```
+
+---
+
+## 6. ADT^A08 - Update patient demographics
+
+```
+MSH|^~\&|PROMIS|FNSP_ZA|MPI|FNSP_ZA|20250706084015||ADT^A08|PRO00006|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+EVN|A08|20250706084000
+PID|1||7209180032^^^UZIS^NI~1257209180^^Union ZP^HC||Závodčík^Ctibor^Demeter^^||19720918|M|||Štúrova 52^^Žilina^^01001^^SVK||+421903664517||SK|M||7209180032
+PV1|1|O|KAR-AMB^002^^FNSP_ZA||||40003^Pekárik^Gustáv^^^MUDr.|||KAR||||R|||40003^Pekárik^Gustáv^^^MUDr.|O||||||||||||||||||||||20250706
+```
+
+---
+
+## 7. SIU^S12 - Scheduled cardiac catheterization
+
+```
+MSH|^~\&|PROMIS|FNSP_ZA|SCHED|FNSP_ZA|20250707110530||SIU^S12|PRO00007|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+SCH|APT20250721-001|APT20250721-001|||||KATHET|Koronarografia|60|min|^^60^20250721080000^20250721090000
+PID|1||7209180032^^^UZIS^NI~1257209180^^Union ZP^HC||Závodčík^Ctibor^Demeter^^||19720918|M|||Štúrova 52^^Žilina^^01001^^SVK||+421903664517||SK|M||7209180032
+PV1|1|O|KAR-AMB^002^^FNSP_ZA||||40003^Pekárik^Gustáv^^^MUDr.|||KAR||||R|||40003^Pekárik^Gustáv^^^MUDr.|O||||||||||||||||||||||20250707
+RGS|1
+AIS|1|A|KATHET^Koronarografia|20250721080000||60|min
+AIL|1|A|KAR-KATHET^001^^FNSP_ZA
+AIP|1|A|40003^Pekárik^Gustáv^^^MUDr.
+```
+
+---
+
+## 8. ADT^A02 - Transfer to coronary care unit
+
+```
+MSH|^~\&|PROMIS|UNB|ADT|UNB|20250708021530||ADT^A02|PRO00008|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+EVN|A02|20250708021500
+PID|1||6405070023^^^UZIS^NI~1256405070^^VšZP^HC||Hnilička^Demeter^Evžen^^||19640507|M|||Vajanského 9^^Bratislava^^81104^^SVK||+421911775608||SK|M||6405070023
+PV1|1|I|KAR-KJ^501^A^UNB||||40004^Zárecký^Ivo^^^MUDr.|||KAR||||T|||40004^Zárecký^Ivo^^^MUDr.|E|||||||||||||||||||UNB|||||20250707183000
+PV2|||^Nestabilná angína pectoris, hemodynamická nestabilita
+```
+
+---
+
+## 9. ORM^O01 - Urgent troponin order
+
+```
+MSH|^~\&|PROMIS|UNB|LAB|UNB|20250708022000||ORM^O01|PRO00009|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+PID|1||6405070023^^^UZIS^NI~1256405070^^VšZP^HC||Hnilička^Demeter^Evžen^^||19640507|M|||Vajanského 9^^Bratislava^^81104^^SVK||+421911775608||SK|M||6405070023
+PV1|1|I|KAR-KJ^501^A^UNB||||40004^Zárecký^Ivo^^^MUDr.|||KAR||||A|||40004^Zárecký^Ivo^^^MUDr.|I||||||||||||||||||||||20250708
+ORC|NW|ORD20250708-001|LAB20250708-001||CM||||20250708021900|||40004^Zárecký^Ivo^^^MUDr.
+OBR|1|ORD20250708-001|LAB20250708-001|6598-7^Troponín T hs^LN|||20250708021900|||||||||40004^Zárecký^Ivo^^^MUDr.||||||||||||STAT
+```
+
+---
+
+## 10. ORU^R01 - Troponin and cardiac markers results
+
+```
+MSH|^~\&|LAB|UNB|PROMIS|UNB|20250708034522||ORU^R01|PRO00010|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+PID|1||6405070023^^^UZIS^NI~1256405070^^VšZP^HC||Hnilička^Demeter^Evžen^^||19640507|M|||Vajanského 9^^Bratislava^^81104^^SVK||+421911775608||SK|M||6405070023
+PV1|1|I|KAR-KJ^501^A^UNB||||40004^Zárecký^Ivo^^^MUDr.|||KAR||||A|||40004^Zárecký^Ivo^^^MUDr.|I||||||||||||||||||||||20250708
+ORC|RE|ORD20250708-001|LAB20250708-001||CM||||20250708034400|||40004^Zárecký^Ivo^^^MUDr.
+OBR|1|ORD20250708-001|LAB20250708-001|6598-7^Troponín T hs^LN|||20250708021900|||||||||40004^Zárecký^Ivo^^^MUDr.||||||20250708034500||||F
+OBX|1|NM|6598-7^Troponín T hs^LN||0.125|ug/L|0.000-0.014|H|||F
+OBX|2|NM|30522-7^CK-MB mass^LN||15.8|ug/L|0.0-4.9|H|||F
+OBX|3|NM|33762-6^NT-proBNP^LN||2850|pg/mL|0-125|H|||F
+```
+
+---
+
+## 11. ADT^A28 - New patient registration
+
+```
+MSH|^~\&|PROMIS|NsP_PO|MPI|NsP_PO|20250709080015||ADT^A28|PRO00011|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+EVN|A28|20250709080000
+PID|1||0511240067^^^UZIS^NI~1260511240^^Dôvera^HC||Polhošová^Nataša^Olympia^^||20051124|F|||Kukučínova 28^^Prešov^^08001^^SVK||+421901886743||SK|S||0511240067
+NK1|1|Polhoš^Rastislav||+421901997815||F
+```
+
+---
+
+## 12. ADT^A31 - Update emergency contact
+
+```
+MSH|^~\&|PROMIS|UNLP_KE|MPI|UNLP_KE|20250710093045||ADT^A31|PRO00012|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+EVN|A31|20250710093000
+PID|1||7806150038^^^UZIS^NI~1257806150^^VšZP^HC||Kvasničková^Ľubica^Margita^^||19780615|F|||Hlavná 43^^Košice^^04001^^SVK||+421917553412||SK|M||7806150038
+NK1|1|Kvasnička^Ladislav||+421917664503||H
+```
+
+---
+
+## 13. MDM^T02 - Clinical letter with embedded PDF
+
+```
+MSH|^~\&|PROMIS|UNB|DMS|UNB|20250711151530||MDM^T02|PRO00013|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+EVN|T02|20250711151500
+PID|1||6405070023^^^UZIS^NI~1256405070^^VšZP^HC||Hnilička^Demeter^Evžen^^||19640507|M|||Vajanského 9^^Bratislava^^81104^^SVK||+421911775608||SK|M||6405070023
+PV1|1|I|KAR-1^205^B^UNB||||40004^Zárecký^Ivo^^^MUDr.|||KAR||||A|||40004^Zárecký^Ivo^^^MUDr.|I||||||||||||||||||||||20250711
+TXA|1|CN|TX|20250711151500|40004^Zárecký^Ivo^^^MUDr.||20250711151500||||||DOC20250711-002||||AU
+OBX|1|ED|11502-2^Kardiologická správa^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA1MCA+PgpzdHJlYW0KQlQgL0YxIDEyIFRmIDEwMCA3MDAgVGQgKExhYm9yYXRvcm5hIHNwcmF2YSkgVGogRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA3NCAwMDAwMCBuIAowMDAwMDAwMTQyIDAwMDAwIG4gCjAwMDAwMDAyNDIgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA1IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgozNDIKJSVFT0YK||||||F
+```
+
+---
+
+## 14. ADT^A40 - Merge patient records
+
+```
+MSH|^~\&|PROMIS|FN_NR|MPI|FN_NR|20250712100530||ADT^A40|PRO00014|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+EVN|A40|20250712100500
+PID|1||8507130047^^^UZIS^NI~1258507130^^VšZP^HC||Lipnický^Gorazd^Hynek^^||19850713|M|||Hviezdoslavova 31^^Nitra^^94901^^SVK||+421914002189||SK|M||8507130047
+MRG|8507130047-OLD^^^PROMIS^MR|
+```
+
+---
+
+## 15. ACK - Positive acknowledgement for order
+
+```
+MSH|^~\&|LAB|UNB|PROMIS|UNB|20250713081015||ACK|PRO00015|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+MSA|AA|PRO00009|Urgentná objednávka prijatá
+```
+
+---
+
+## 16. ADT^A01 - Admission to ophthalmology
+
+```
+MSH|^~\&|PROMIS|FNSP_BB|ADT|FNSP_BB|20250714071530||ADT^A01|PRO00016|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+EVN|A01|20250714071500
+PID|1||6808250029^^^UZIS^NI~1256808250^^Union ZP^HC||Kučerák^Evžen^Florián^^||19680825|M|||Námestie slobody 14^^Banská Bystrica^^97401^^SVK||+421907119284||SK|M||6808250029
+NK1|1|Kučeráková^Alžbeta||+421907335467||W
+PV1|1|I|OFT-1^103^A^FNSP_BB||||40005^Bolebruch^Ján^^^MUDr.|||OFT||||A|||40005^Bolebruch^Ján^^^MUDr.|I|||||||||||||||||||FNSP_BB|||||20250714071500
+DG1|1|I10|H40.1^Primárny glaukóm s otvoreným uhlom^ICD10SK|||A
+IN1|1|27^^Union ZP|Union ZP|Union zdravotná poisťovňa^^Bratislava||||||||20250101|20251231||||Kučerák^Evžen|self|19680825|Námestie slobody 14^^Banská Bystrica^^97401|||||||||||||||||6808250029
+```
+
+---
+
+## 17. ORM^O01 - Order for visual field test
+
+```
+MSH|^~\&|PROMIS|FNSP_BB|OFT_DG|FNSP_BB|20250715083000||ORM^O01|PRO00017|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+PID|1||6808250029^^^UZIS^NI~1256808250^^Union ZP^HC||Kučerák^Evžen^Florián^^||19680825|M|||Námestie slobody 14^^Banská Bystrica^^97401^^SVK||+421907119284||SK|M||6808250029
+PV1|1|I|OFT-1^103^A^FNSP_BB||||40005^Bolebruch^Ján^^^MUDr.|||OFT||||A|||40005^Bolebruch^Ján^^^MUDr.|I||||||||||||||||||||||20250715
+ORC|NW|ORD20250715-001|OFT20250715-001||CM||||20250715082900|||40005^Bolebruch^Ján^^^MUDr.
+OBR|1|ORD20250715-001|OFT20250715-001|56844-5^Perimeter - zorné pole^LN|||20250715082900|||||||||40005^Bolebruch^Ján^^^MUDr.||||||20250715||||F
+```
+
+---
+
+## 18. ORU^R01 - Basic metabolic panel results
+
+```
+MSH|^~\&|LAB|UNLP_KE|PROMIS|UNLP_KE|20250716112045||ORU^R01|PRO00018|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+PID|1||7806150038^^^UZIS^NI~1257806150^^VšZP^HC||Kvasničková^Ľubica^Margita^^||19780615|F|||Hlavná 43^^Košice^^04001^^SVK||+421917553412||SK|M||7806150038
+PV1|1|O|REU-AMB^001^^UNLP_KE||||40002^Lintner^Fridrich^^^MUDr.|||REU||||R|||40002^Lintner^Fridrich^^^MUDr.|O||||||||||||||||||||||20250716
+ORC|RE|ORD20250716-002|LAB20250716-002||CM||||20250716111900|||40002^Lintner^Fridrich^^^MUDr.
+OBR|1|ORD20250716-002|LAB20250716-002|51990-0^Základný metabolický panel^LN|||20250716070000|||||||||40002^Lintner^Fridrich^^^MUDr.||||||20250716112000||||F
+OBX|1|NM|2345-7^Glukóza^LN||5.2|mmol/L|3.9-5.6|N|||F
+OBX|2|NM|2160-0^Kreatinín^LN||68|umol/L|44-97|N|||F
+OBX|3|NM|2823-3^Draslík^LN||4.2|mmol/L|3.5-5.1|N|||F
+OBX|4|NM|2947-0^Sodík^LN||141|mmol/L|136-145|N|||F
+OBX|5|NM|2028-9^CO2 celkový^LN||24|mmol/L|22-29|N|||F
+OBX|6|NM|17861-6^Kalcium^LN||2.35|mmol/L|2.15-2.55|N|||F
+```
+
+---
+
+## 19. ADT^A03 - Discharge from ophthalmology with embedded PDF
+
+```
+MSH|^~\&|PROMIS|FNSP_BB|ADT|FNSP_BB|20250717143022||ADT^A03|PRO00019|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+EVN|A03|20250717143000
+PID|1||6808250029^^^UZIS^NI~1256808250^^Union ZP^HC||Kučerák^Evžen^Florián^^||19680825|M|||Námestie slobody 14^^Banská Bystrica^^97401^^SVK||+421907119284||SK|M||6808250029
+PV1|1|I|OFT-1^103^A^FNSP_BB||||40005^Bolebruch^Ján^^^MUDr.|||OFT||||D|||40005^Bolebruch^Ján^^^MUDr.|I|||||||||||||||||||FNSP_BB|||||20250714071500|||20250717143000
+DG1|1|I10|H40.1^Primárny glaukóm s otvoreným uhlom^ICD10SK|||A
+DG1|2|I10|Z96.1^Stav po implantácii vnútroočnej šošovky^ICD10SK|||W
+OBX|1|ED|11502-2^Prepúšťacia správa^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA1MCA+PgpzdHJlYW0KQlQgL0YxIDEyIFRmIDEwMCA3MDAgVGQgKExhYm9yYXRvcm5hIHNwcmF2YSkgVGogRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA3NCAwMDAwMCBuIAowMDAwMDAwMTQyIDAwMDAwIG4gCjAwMDAwMDAyNDIgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA1IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgozNDIKJSVFT0YK||||||F
+```
+
+---
+
+## 20. ORU^R01 - Inflammation markers results
+
+```
+MSH|^~\&|LAB|NSP_TN|PROMIS|NSP_TN|20250718091530||ORU^R01|PRO00020|P|2.5|||AL|NE|SVK|UNICODE UTF-8
+PID|1||9510140051^^^UZIS^NI~1259510140^^Dôvera^HC||Dudášik^Florián^Gorazd^^||19951014|M|||Partizánska 67^^Trnava^^91701^^SVK||+421905008412||SK|S||9510140051
+PV1|1|I|INT-1^201^A^NSP_TN||||40006^Krnáč^Koloman^^^MUDr.|||INT||||A|||40006^Krnáč^Koloman^^^MUDr.|I||||||||||||||||||||||20250718
+ORC|RE|ORD20250718-001|LAB20250718-001||CM||||20250718091400|||40006^Krnáč^Koloman^^^MUDr.
+OBR|1|ORD20250718-001|LAB20250718-001|56490-6^Zápalové markery^LN|||20250718060000|||||||||40006^Krnáč^Koloman^^^MUDr.||||||20250718091500||||F
+OBX|1|NM|1988-5^CRP^LN||85.2|mg/L|0-5.0|H|||F
+OBX|2|NM|4537-7^Prokalcitonín^LN||0.8|ug/L|0-0.5|H|||F
+OBX|3|NM|770-8^Sedimentácia^LN||42|mm/h|0-15|H|||F
+OBX|4|NM|6690-2^Leukocyty^LN||14.5|10*9/L|4.0-10.0|H|||F
+```

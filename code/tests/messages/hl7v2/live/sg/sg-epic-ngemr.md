@@ -1,0 +1,269 @@
+# Epic NGEMR - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - Patient admission to SGH General Surgery
+
+```
+MSH|^~\&|NGEMR|SGH|ADT_RECV|IHIS|20250312083045||ADT^A01^ADT_A01|SGH20250312083045001|P|2.4|||AL|AL|SGP
+EVN|A01|20250312083000|||DRCHOW^Chow^Yee Mun^^^^^SGH^L^^^NPI
+PID|1||S8234519J^^^NRIC^NI~EP00398271^^^EPIC^MR||Krishnamurthy^Anand||19780415|M|||Block 412 Bedok North Avenue 2 #08-123^^Singapore^^460412^SGP||+6591372845|||S|||S8234519J
+PV1|1|I|GS^GS-12^BED-04^SGH^^^GS||||DRCHOW^Chow^Yee Mun^^^^^SGH^L^^^NPI||GEN||||ADM|||DRCHOW^Chow^Yee Mun^^^^^SGH^L^^^NPI|IN||SELF|||||||||||||||||||SGH||A|||20250312083000
+IN1|1|MEDISHIELD^Medishield Life||CPF Board^1 Jurong East Street 21^^Singapore^^609546^SGP|||||||||20250101|20251231|||Krishnamurthy^Anand|SELF|19780415|Block 412 Bedok North Avenue 2 #08-123^^Singapore^^460412^SGP
+```
+
+---
+
+## 2. ADT^A08 - Patient information update at NUH
+
+```
+MSH|^~\&|EPIC_EMR|NUH|PAS|NUHS|20250418140312||ADT^A08^ADT_A01|NUH20250418140312007|P|2.5|||AL|AL|SGP
+EVN|A08|20250418140300|||CLERK^Admin^NUH
+PID|1||T0245678B^^^NRIC^NI~EP00512843^^^EPIC^MR||Tay^Kok Leong||19650822|M|||25 Jalan Bukit Merah #15-07^^Singapore^^150025^SGP||+6598712345|||M|||T0245678B
+PV1|1|O|NUMC^ENDO-03^CHAIR-02^NUH|||||||MED||||REF|||DRSINGH^Singh^Harbinder^^^^^NUH^L^^^NPI|OUT||MEDISAVE|||||||||||||||||||NUH||A|||20250418090000
+NK1|1|Tay^Siew Lan||+6597654321||NOK
+```
+
+---
+
+## 3. ADT^A03 - Patient discharge from TTSH Respiratory Medicine
+
+```
+MSH|^~\&|NGEMR|TTSH|CDR|IHIS|20250501161530||ADT^A03^ADT_A03|TTSH20250501161530004|P|2.4|||AL|AL|SGP
+EVN|A03|20250501161500|||DRPEREIRA^Pereira^Aloysius^^^^^TTSH^L^^^NPI
+PID|1||S8912345C^^^NRIC^NI~EP00623491^^^EPIC^MR||Hamid^Bin^Ismail||19890303|M|||Blk 789 Ang Mo Kio Avenue 6 #03-456^^Singapore^^560789^SGP||+6581234567|||S|||S8912345C
+PV1|1|I|RM^RM-08^BED-02^TTSH^^^RM||||DRPEREIRA^Pereira^Aloysius^^^^^TTSH^L^^^NPI||RES||||ADM|||DRPEREIRA^Pereira^Aloysius^^^^^TTSH^L^^^NPI|IN||MEDISHIELD|||||||||||||||||||TTSH||D|||20250425100000|||20250501161500
+DG1|1|ICD10|J44.1^Chronic obstructive pulmonary disease with acute exacerbation^ICD10||20250425|A
+```
+
+---
+
+## 4. ORM^O01 - Laboratory order for CBC at CGH
+
+```
+MSH|^~\&|EPIC|CGH|LIS|CGH_LAB|20250220091200||ORM^O01^ORM_O01|CGH20250220091200012|P|2.4|||AL|AL|SGP
+PID|1||F6543210E^^^NRIC^NI~EP00734512^^^EPIC^MR||Fernandez^Maria^Rosario||19560710|F|||Block 123 Tampines Street 11 #12-345^^Singapore^^521123^SGP||+6562345678|||W|||F6543210E
+PV1|1|O|ED^ED-MAIN^BAY-07^CGH|||||||EM||||WALK|||DRONG^Ong^Kian Beng^^^^^CGH^L^^^NPI|EM||SELF|||||||||||||||||||CGH||A|||20250220090000
+ORC|NW|ORD20250220001|||||1^^^20250220091200^^R||20250220091200|NURSE01^Rahayu^Binte^^^^^CGH|||ED^ED-MAIN^BAY-07^CGH
+OBR|1|ORD20250220001||CBC^Complete Blood Count^L|||20250220091200||||A|||||DRONG^Ong^Kian Beng^^^^^CGH^L^^^NPI||||||20250220091200|||F
+```
+
+---
+
+## 5. ORM^O01 - Radiology order for chest X-ray at KKH
+
+```
+MSH|^~\&|NGEMR|KKH|RIS|KKH_RAD|20250115103000||ORM^O01^ORM_O01|KKH20250115103000005|P|2.5|||AL|AL|SGP
+PID|1||T1234567G^^^NRIC^NI~EP00845123^^^EPIC^MR||Chan^Mei Xuan||20120518|F|||12 Bukit Timah Road #04-05^^Singapore^^229621^SGP||+6563456789|||S|||T1234567G
+PV1|1|I|PW^PW-05^BED-01^KKH^^^PAED||||DRSYED^Syed^Ahmad Faisal^^^^^KKH^L^^^NPI||PAED||||ADM|||DRSYED^Syed^Ahmad Faisal^^^^^KKH^L^^^NPI|IN||MEDISHIELD|||||||||||||||||||KKH||A|||20250114200000
+ORC|NW|RAD20250115001|||||1^^^20250115103000^^R||20250115103000|NURSE02^Nurhaliza^Binte^^^^^KKH|||PW^PW-05^BED-01^KKH
+OBR|1|RAD20250115001||71020^Chest X-Ray AP and Lateral^CPT|||20250115103000||||A|||||DRSYED^Syed^Ahmad Faisal^^^^^KKH^L^^^NPI||||||20250115103000|||F
+```
+
+---
+
+## 6. ORU^R01 - Lab result for renal panel at SGH
+
+```
+MSH|^~\&|LIS|SGH_LAB|EPIC_EMR|SGH|20250322143500||ORU^R01^ORU_R01|SGH20250322143500019|P|2.4|||AL|AL|SGP
+PID|1||S6501234F^^^NRIC^NI~EP00456789^^^EPIC^MR||Nair^Suresh^Kumaran||19650228|M|||Blk 321 Clementi Avenue 4 #11-67^^Singapore^^120321^SGP||+6564567890|||M|||S6501234F
+PV1|1|I|RENAL^RN-03^BED-06^SGH|||||||NEPH||||ADM|||DRWEE^Wee^Ching Yao^^^^^SGH^L^^^NPI|IN||MEDISAVE|||||||||||||||||||SGH||A|||20250320080000
+ORC|RE|ORD20250322005||||||||||DRWEE^Wee^Ching Yao^^^^^SGH^L^^^NPI
+OBR|1|ORD20250322005||RENAL^Renal Panel^L|||20250322100000||||F|||||DRWEE^Wee^Ching Yao^^^^^SGH^L^^^NPI||||||20250322143500|||F
+OBX|1|NM|2160-0^Creatinine^LN||112|umol/L|60-110|H|||F|||20250322143000
+OBX|2|NM|3094-0^Urea^LN||8.2|mmol/L|2.5-7.8|H|||F|||20250322143000
+OBX|3|NM|2823-3^Potassium^LN||4.1|mmol/L|3.5-5.0|N|||F|||20250322143000
+OBX|4|NM|2951-2^Sodium^LN||138|mmol/L|135-145|N|||F|||20250322143000
+OBX|5|NM|14682-9^eGFR^LN||58|mL/min/1.73m2|>60|L|||F|||20250322143000
+```
+
+---
+
+## 7. ORU^R01 - Microbiology result with culture at TTSH
+
+```
+MSH|^~\&|LIS|TTSH_LAB|NGEMR|TTSH|20250407112000||ORU^R01^ORU_R01|TTSH20250407112000031|P|2.4|||AL|AL|SGP
+PID|1||G8765432H^^^NRIC^NI~EP00567234^^^EPIC^MR||Aisha^Binte^Yusof||19870914|F|||Blk 567 Woodlands Drive 14 #02-890^^Singapore^^730567^SGP||+6596543210|||M|||G8765432H
+PV1|1|I|ID^ID-06^BED-03^TTSH^^^ID||||DRQUEK^Quek^Teck Seng^^^^^TTSH^L^^^NPI||INF||||ADM|||DRQUEK^Quek^Teck Seng^^^^^TTSH^L^^^NPI|IN||MEDISHIELD|||||||||||||||||||TTSH||A|||20250404150000
+ORC|RE|ORD20250404010||||||||||DRQUEK^Quek^Teck Seng^^^^^TTSH^L^^^NPI
+OBR|1|ORD20250404010||87040^Blood Culture^CPT|||20250404160000||||F|||||DRQUEK^Quek^Teck Seng^^^^^TTSH^L^^^NPI||||||20250407112000|||F
+OBX|1|ST|600-7^Bacteria identified^LN||Escherichia coli||||||F|||20250407110000
+OBX|2|ST|18769-0^Susceptibility^LN||Amoxicillin-Clavulanate: S, Ciprofloxacin: R, Meropenem: S, Ceftriaxone: R, Trimethoprim-Sulfamethoxazole: R||||||F|||20250407110000
+OBX|3|ST|29576-6^Source^LN||Peripheral blood||||||F|||20250407110000
+```
+
+---
+
+## 8. ORU^R01 - Radiology report with embedded PDF at NUH
+
+```
+MSH|^~\&|RIS|NUH_RAD|EPIC_EMR|NUH|20250510093000||ORU^R01^ORU_R01|NUH20250510093000008|P|2.5|||AL|AL|SGP
+PID|1||S9012345A^^^NRIC^NI~EP00678345^^^EPIC^MR||De Souza^Patrick^Gabriel||19900112|M|||15 Queenstown Road #06-12^^Singapore^^149051^SGP||+6587654321|||S|||S9012345A
+PV1|1|O|XR^XR-MAIN^^NUH|||||||RAD||||REF|||DRYAP^Yap^Kok Seng^^^^^NUH^L^^^NPI|OUT||MEDISAVE|||||||||||||||||||NUH||A|||20250510080000
+ORC|RE|RAD20250509003||||||||||DRYAP^Yap^Kok Seng^^^^^NUH^L^^^NPI
+OBR|1|RAD20250509003||71020^Chest X-Ray PA^CPT|||20250509140000||||F|||||DRYAP^Yap^Kok Seng^^^^^NUH^L^^^NPI||||||20250510093000|||F
+OBX|1|ED|PDF^Radiology Report^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVGl0bGUgKFRlc3QgRG9jdW1lbnQpCi9Qcm9kdWNlciAoVGVzdCkKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL0NhdGFsb2cKL1BhZ2VzIDMgMCBSCj4+CmVuZG9iagozIDAgb2JqCjw8Ci9UeXBlIC9QYWdlcwovQ291bnQgMAovS2lkcyBbXQo+PgplbmRvYmoKeHJlZgowIDQKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwOTYgMDAwMDAgbiAKMDAwMDAwMDE0NSAwMDAwMCBuIAp0cmFpbGVyCjw8Ci9TaXplIDQKL1Jvb3QgMiAwIFIKPj4Kc3RhcnR4cmVmCjIwNQolJUVPRgo=||||||F
+OBX|2|FT|18782-3^Radiology Study Observation^LN||Heart size normal. Lungs clear. No pleural effusion. No focal consolidation. Impression: Normal chest radiograph.||||||F|||20250510092500
+```
+
+---
+
+## 9. SIU^S12 - Appointment scheduled at NNI Neurology clinic
+
+```
+MSH|^~\&|EPIC|NNI|SCHED|NNI_APPT|20250603100000||SIU^S12^SIU_S12|NNI20250603100000002|P|2.5|||AL|AL|SGP
+SCH|APPT20250603001|||||FOLLOWUP^Follow-up Visit|NEURO^Neurology Consultation^L|15|MIN|1||DRMENON^Menon^Ashok^^^^^NNI^L^^^NPI|||||DRMENON^Menon^Ashok^^^^^NNI^L^^^NPI||APPT20250603001|BOOKED|||||20250618140000|20250618141500
+PID|1||S7345678B^^^NRIC^NI~EP00789456^^^EPIC^MR||Yeo^Choon Seng||19730625|M|||Blk 234 Toa Payoh Lorong 8 #05-678^^Singapore^^310234^SGP||+6592345678|||M|||S7345678B
+PV1|1|O|NEURO^NRO-CLINIC^^NNI|||||||NEUR||||REF|||DRMENON^Menon^Ashok^^^^^NNI^L^^^NPI|OUT||MEDISAVE|||||||||||||||||||NNI||A|||20250603100000
+RGS|1|A
+AIS|1|A|NEURO^Neurology Consultation^L|20250618140000||15|MIN
+AIL|1|A|NNI^NRO-CLINIC^ROOM-03^NNI
+AIP|1|A|DRMENON^Menon^Ashok^^^^^NNI^L^^^NPI|ATTENDING
+```
+
+---
+
+## 10. SIU^S14 - Appointment modification at NCIS Oncology
+
+```
+MSH|^~\&|NGEMR|NCIS|SCHED|NCIS_APPT|20250715083000||SIU^S14^SIU_S12|NCIS20250715083000006|P|2.5|||AL|AL|SGP
+SCH|APPT20250710003|APPT20250710003||||FOLLOWUP^Follow-up Chemotherapy Review|ONC^Oncology Review^L|20|MIN|1||DRHO^Ho^Mei Fong^^^^^NCIS^L^^^NPI|||||DRHO^Ho^Mei Fong^^^^^NCIS^L^^^NPI||APPT20250710003|BOOKED|||||20250725100000|20250725102000
+PID|1||S8234567C^^^NRIC^NI~EP00890567^^^EPIC^MR||Lau^Siew Peng||19820318|F|||Blk 45 Marine Parade Central #10-23^^Singapore^^440045^SGP||+6589012345|||M|||S8234567C
+PV1|1|O|ONC^ONC-CLINIC^^NCIS|||||||ONCO||||REF|||DRHO^Ho^Mei Fong^^^^^NCIS^L^^^NPI|OUT||MEDISHIELD|||||||||||||||||||NCIS||A|||20250715083000
+RGS|1|A
+AIS|1|A|ONC^Oncology Review^L|20250725100000||20|MIN
+AIL|1|A|NCIS^ONC-CLINIC^ROOM-05^NCIS
+AIP|1|A|DRHO^Ho^Mei Fong^^^^^NCIS^L^^^NPI|ATTENDING
+```
+
+---
+
+## 11. MDM^T02 - Clinical document notification for discharge summary at SGH
+
+```
+MSH|^~\&|EPIC_EMR|SGH|CDR|IHIS|20250505120000||MDM^T02^MDM_T02|SGH20250505120000014|P|2.5|||AL|AL|SGP
+EVN|T02|20250505120000
+PID|1||S6789012D^^^NRIC^NI~EP00345678^^^EPIC^MR||Vasquez^Carmelita^Reyes||19670815|F|||Blk 678 Jurong West Street 64 #14-901^^Singapore^^640678^SGP||+6565678901|||W|||S6789012D
+PV1|1|I|CARD^CD-04^BED-08^SGH^^^CARD||||DRSEAH^Seah^Boon Leong^^^^^SGH^L^^^NPI||CARD||||ADM|||DRSEAH^Seah^Boon Leong^^^^^SGH^L^^^NPI|IN||MEDISHIELD|||||||||||||||||||SGH||D|||20250428120000|||20250505110000
+TXA|1|DS^Discharge Summary|TX|20250505115000||20250505120000|||||DRSEAH^Seah^Boon Leong^^^^^SGH^L^^^NPI|DOC20250505001||SGH||||AU
+OBX|1|ST|18842-5^Discharge Summary^LN||Diagnosis: Acute myocardial infarction. Patient underwent PCI with drug-eluting stent to LAD. Post-procedure recovery unremarkable. Discharged with dual antiplatelet therapy.||||||F|||20250505115000
+```
+
+---
+
+## 12. MDM^T02 - Pathology report with embedded PDF at CGH
+
+```
+MSH|^~\&|EPIC|CGH|CDR|IHIS|20250612154500||MDM^T02^MDM_T02|CGH20250612154500022|P|2.5|||AL|AL|SGP
+EVN|T02|20250612154500
+PID|1||F9876543G^^^NRIC^NI~EP00912345^^^EPIC^MR||Teo^Kim Huat||19580420|M|||Blk 890 Pasir Ris Street 12 #07-234^^Singapore^^510890^SGP||+6566789012|||M|||F9876543G
+PV1|1|I|SURG^SG-02^BED-05^CGH^^^SURG||||DRKOH^Koh^Wei Ming^^^^^CGH^L^^^NPI||SURG||||ADM|||DRKOH^Koh^Wei Ming^^^^^CGH^L^^^NPI|IN||MEDISAVE|||||||||||||||||||CGH||A|||20250610090000
+TXA|1|PATH^Pathology Report|TX|20250612150000||20250612154500|||||DRCHONG^Chong^Li Wei^^^^^CGH^L^^^NPI|DOC20250612002||CGH||||AU
+OBX|1|ED|PDF^Pathology Report^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVGl0bGUgKFRlc3QgRG9jdW1lbnQpCi9Qcm9kdWNlciAoVGVzdCkKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL0NhdGFsb2cKL1BhZ2VzIDMgMCBSCj4+CmVuZG9iagozIDAgb2JqCjw8Ci9UeXBlIC9QYWdlcwovQ291bnQgMAovS2lkcyBbXQo+PgplbmRvYmoKeHJlZgowIDQKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwOTYgMDAwMDAgbiAKMDAwMDAwMDE0NSAwMDAwMCBuIAp0cmFpbGVyCjw8Ci9TaXplIDQKL1Jvb3QgMiAwIFIKPj4Kc3RhcnR4cmVmCjIwNQolJUVPRgo=||||||F
+OBX|2|FT|22634-0^Pathology Report Text^LN||Specimen: Right hemicolectomy. Gross: Polypoid mass 4.5 cm at ascending colon. Micro: Moderately differentiated adenocarcinoma, pT3N1aM0. Margins clear.||||||F|||20250612150000
+```
+
+---
+
+## 13. ADT^A04 - Patient registration at NUH Emergency Department
+
+```
+MSH|^~\&|EPIC_EMR|NUH|ADT_RECV|NUHS|20250203221500||ADT^A04^ADT_A01|NUH20250203221500003|P|2.4|||AL|AL|SGP
+EVN|A04|20250203221500
+PID|1||G1234567H^^^NRIC^NI~EP01023456^^^EPIC^MR||Suppiah^Ramasamy||19750830|M|||Blk 101 Bukit Batok West Avenue 6 #03-45^^Singapore^^650101^SGP||+6593456789|||M|||G1234567H
+PV1|1|E|ED^ED-MAIN^BAY-12^NUH|||||||EM||||WALK|||DRLIM^Lim^Chee Heng^^^^^NUH^L^^^NPI|EM||SELF|||||||||||||||||||NUH||A|||20250203221500
+PV2|||^Chest pain, acute onset
+NK1|1|Suppiah^Lakshmi||+6594567890||NOK
+```
+
+---
+
+## 14. ADT^A02 - Patient transfer within KKH from NICU to Paediatric ward
+
+```
+MSH|^~\&|NGEMR|KKH|ADT_RECV|IHIS|20250820110000||ADT^A02^ADT_A02|KKH20250820110000009|P|2.4|||AL|AL|SGP
+EVN|A02|20250820110000|||NURSE03^Liew^Siew Peng^^^^^KKH
+PID|1||T2567890A^^^NRIC^NI~EP01134567^^^EPIC^MR||Baby^Goh^Wei Xuan||20250801|F|||8 College Road #08-01^^Singapore^^169857^SGP||+6561234567|||S|||T2567890A
+PV1|1|I|PW^PW-03^BED-02^KKH^^^PAED||||DRFOO^Foo^Mei Ling^^^^^KKH^L^^^NPI||PAED||||TRF|||DRFOO^Foo^Mei Ling^^^^^KKH^L^^^NPI|IN||MEDISHIELD|||||||||||||||||||KKH||A|||20250801120000
+PV2|||^Premature neonate, stable for transfer
+```
+
+---
+
+## 15. ORM^O01 - Medication order for Metformin at TTSH
+
+```
+MSH|^~\&|EPIC|TTSH|PHARM|TTSH_PHARM|20250310141500||ORM^O01^ORM_O01|TTSH20250310141500018|P|2.4|||AL|AL|SGP
+PID|1||S5678901E^^^NRIC^NI~EP01245678^^^EPIC^MR||Goh^Bee Leng||19560102|F|||Blk 456 Yishun Ring Road #09-123^^Singapore^^760456^SGP||+6597890123|||W|||S5678901E
+PV1|1|O|ENDO^EN-CLINIC^^TTSH|||||||ENDO||||REF|||DRBALA^Balasubramaniam^Karthik^^^^^TTSH^L^^^NPI|OUT||MEDISAVE|||||||||||||||||||TTSH||A|||20250310130000
+ORC|NW|ORD20250310007|||||1^^^20250310141500^^R||20250310141500|DRBALA^Balasubramaniam^Karthik^^^^^TTSH^L^^^NPI|||ENDO^EN-CLINIC^^TTSH
+OBR|1|ORD20250310007||RX^Pharmacy Order^L|||20250310141500||||A|||||DRBALA^Balasubramaniam^Karthik^^^^^TTSH^L^^^NPI
+RXO|6809^Metformin 500mg^NDC||500|mg||PO||1^^BID^Twice Daily|||30|TAB
+```
+
+---
+
+## 16. ORU^R01 - HbA1c result at SGH Endocrinology
+
+```
+MSH|^~\&|LIS|SGH_LAB|NGEMR|SGH|20250425160000||ORU^R01^ORU_R01|SGH20250425160000025|P|2.4|||AL|AL|SGP
+PID|1||S7123456F^^^NRIC^NI~EP01356789^^^EPIC^MR||Koh^Swee Heng||19710903|M|||Blk 567 Hougang Avenue 8 #12-34^^Singapore^^530567^SGP||+6590123456|||M|||S7123456F
+PV1|1|O|ENDO^EN-CLINIC^^SGH|||||||ENDO||||REF|||DRTAN^Tan^Ai Ling^^^^^SGH^L^^^NPI|OUT||MEDISAVE|||||||||||||||||||SGH||A|||20250425090000
+ORC|RE|ORD20250425011||||||||||DRTAN^Tan^Ai Ling^^^^^SGH^L^^^NPI
+OBR|1|ORD20250425011||HBA1C^HbA1c^L|||20250425093000||||F|||||DRTAN^Tan^Ai Ling^^^^^SGH^L^^^NPI||||||20250425160000|||F
+OBX|1|NM|4548-4^Hemoglobin A1c^LN||7.8|%|<7.0|H|||F|||20250425155000
+OBX|2|NM|2345-7^Glucose Fasting^LN||8.5|mmol/L|3.9-5.5|H|||F|||20250425155000
+```
+
+---
+
+## 17. SIU^S15 - Appointment cancellation at NNI
+
+```
+MSH|^~\&|EPIC|NNI|SCHED|NNI_APPT|20250701090000||SIU^S15^SIU_S12|NNI20250701090000004|P|2.5|||AL|AL|SGP
+SCH|APPT20250618001|||||FOLLOWUP^Follow-up Visit|NEURO^Neurology Consultation^L|15|MIN|1||DRMENON^Menon^Ashok^^^^^NNI^L^^^NPI|||||DRMENON^Menon^Ashok^^^^^NNI^L^^^NPI||APPT20250618001|CANCELLED|PATIENT^Patient Request|||20250718140000|20250718141500
+PID|1||S7345678B^^^NRIC^NI~EP00789456^^^EPIC^MR||Yeo^Choon Seng||19730625|M|||Blk 234 Toa Payoh Lorong 8 #05-678^^Singapore^^310234^SGP||+6592345678|||M|||S7345678B
+PV1|1|O|NEURO^NRO-CLINIC^^NNI|||||||NEUR||||REF|||DRMENON^Menon^Ashok^^^^^NNI^L^^^NPI|OUT||MEDISAVE|||||||||||||||||||NNI||A|||20250701090000
+```
+
+---
+
+## 18. ORU^R01 - COVID-19 PCR result at CGH
+
+```
+MSH|^~\&|LIS|CGH_LAB|EPIC|CGH|20250128184500||ORU^R01^ORU_R01|CGH20250128184500041|P|2.4|||AL|AL|SGP
+PID|1||S8456789G^^^NRIC^NI~EP01467890^^^EPIC^MR||Loh^Mei Yun||19840607|F|||Blk 123 Sengkang East Way #15-67^^Singapore^^541123^SGP||+6585678901|||S|||S8456789G
+PV1|1|O|ED^ED-MAIN^BAY-03^CGH|||||||EM||||WALK|||DRWONG^Wong^Keng Loon^^^^^CGH^L^^^NPI|EM||SELF|||||||||||||||||||CGH||A|||20250128160000
+ORC|RE|ORD20250128015||||||||||DRWONG^Wong^Keng Loon^^^^^CGH^L^^^NPI
+OBR|1|ORD20250128015||94500-6^SARS-CoV-2 RNA Qualitative NAAT^LN|||20250128163000||||F|||||DRWONG^Wong^Keng Loon^^^^^CGH^L^^^NPI||||||20250128184500|||F
+OBX|1|ST|94500-6^SARS-CoV-2 RNA^LN||Not detected||||||F|||20250128184000
+OBX|2|ST|94558-4^SARS-CoV-2 Ag^LN||Not detected||||||F|||20250128184000
+```
+
+---
+
+## 19. MDM^T02 - Operative note at SGH General Surgery
+
+```
+MSH|^~\&|NGEMR|SGH|CDR|IHIS|20250419170000||MDM^T02^MDM_T02|SGH20250419170000035|P|2.5|||AL|AL|SGP
+EVN|T02|20250419170000
+PID|1||S6234567H^^^NRIC^NI~EP01578901^^^EPIC^MR||Chong^Wee Kiat||19620115|M|||Blk 901 Bishan Street 12 #04-56^^Singapore^^570901^SGP||+6568901234|||M|||S6234567H
+PV1|1|I|GS^GS-08^BED-03^SGH^^^GS||||DRLIM^Lim^Boon Keng^^^^^SGH^L^^^NPI||GEN||||ADM|||DRLIM^Lim^Boon Keng^^^^^SGH^L^^^NPI|IN||MEDISHIELD|||||||||||||||||||SGH||A|||20250418200000
+TXA|1|OP^Operative Note|TX|20250419163000||20250419170000|||||DRLIM^Lim^Boon Keng^^^^^SGH^L^^^NPI|DOC20250419003||SGH||||AU
+OBX|1|FT|11504-8^Operative Note^LN||Procedure: Laparoscopic cholecystectomy. Indication: Symptomatic cholelithiasis. Findings: Distended gallbladder with multiple stones. No CBD stones. Procedure uneventful. EBL 20ml. Patient tolerated procedure well.||||||F|||20250419163000
+```
+
+---
+
+## 20. ORU^R01 - Echocardiogram report with embedded PDF at NUH Cardiology
+
+```
+MSH|^~\&|CARDIO|NUH_ECHO|EPIC_EMR|NUH|20250308151500||ORU^R01^ORU_R01|NUH20250308151500012|P|2.5|||AL|AL|SGP
+PID|1||S7890123D^^^NRIC^NI~EP01689012^^^EPIC^MR||Osman^Bin^Hakim||19781220|M|||Blk 234 Serangoon Avenue 3 #11-89^^Singapore^^550234^SGP||+6591234568|||M|||S7890123D
+PV1|1|O|CARD^CD-ECHO^^NUH|||||||CARD||||REF|||DRKOH^Koh^Siang Leng^^^^^NUH^L^^^NPI|OUT||MEDISAVE|||||||||||||||||||NUH||A|||20250308090000
+ORC|RE|ECHO20250308005||||||||||DRKOH^Koh^Siang Leng^^^^^NUH^L^^^NPI
+OBR|1|ECHO20250308005||93306^Echocardiography TTE^CPT|||20250308100000||||F|||||DRKOH^Koh^Siang Leng^^^^^NUH^L^^^NPI||||||20250308151500|||F
+OBX|1|ED|PDF^Echocardiogram Report^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVGl0bGUgKFRlc3QgRG9jdW1lbnQpCi9Qcm9kdWNlciAoVGVzdCkKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL0NhdGFsb2cKL1BhZ2VzIDMgMCBSCj4+CmVuZG9iagozIDAgb2JqCjw8Ci9UeXBlIC9QYWdlcwovQ291bnQgMAovS2lkcyBbXQo+PgplbmRvYmoKeHJlZgowIDQKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwOTYgMDAwMDAgbiAKMDAwMDAwMDE0NSAwMDAwMCBuIAp0cmFpbGVyCjw8Ci9TaXplIDQKL1Jvb3QgMiAwIFIKPj4Kc3RhcnR4cmVmCjIwNQolJUVPRgo=||||||F
+OBX|2|NM|18083-4^LVEF^LN||45|%|55-70|L|||F|||20250308150000
+OBX|3|FT|18844-1^Echocardiography Narrative^LN||Mild LV systolic dysfunction, LVEF 45%. Moderate mitral regurgitation. Normal RV function. No pericardial effusion. LA mildly dilated at 42mm.||||||F|||20250308150000
+```
