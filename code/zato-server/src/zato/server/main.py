@@ -231,8 +231,6 @@ class ZatoApplication:
                     v = int(v)
                 self.zato_config[k] = v
 
-        # Override pre-3.2 names with non-gunicorn specific ones ..
-
         # .. what interface to bind to ..
         if bind_host := self._get_config_value('bind_host'): # type: ignore
             self.zato_host = bind_host
