@@ -6,16 +6,35 @@ use crate::inference::ElemType;
 /// Base I/O element exposed to Python, carrying the element name, whether it
 /// is required, and the inferred (or explicit) element type.
 #[pyclass(subclass, skip_from_py_object)]
-#[derive(Clone)]
 pub struct Elem {
+
     /// Element name as declared by the Zato service.
     #[pyo3(get, set)]
     pub name: String,
+
     /// Whether the element is required (`true`) or optional (name prefixed with `-`).
     #[pyo3(get, set)]
     pub is_required: bool,
+
     /// Resolved I/O type for this element.
     pub elem_type: ElemType,
+
+    /// Optional default value provided by the service declaration.
+    #[pyo3(get, set)]
+    pub default: Option<Py<PyAny>>,
+}
+
+impl Elem {
+
+    /// Creates a deep copy, cloning the `default` Python object under the GIL.
+    pub fn clone_ref(&self, py: Python<'_>) -> Self {
+        Self {
+            name: self.name.clone(),
+            is_required: self.is_required,
+            elem_type: self.elem_type,
+            default: self.default.as_ref().map(|obj| obj.clone_ref(py)),
+        }
+    }
 }
 
 impl<'obj, 'py> FromPyObject<'obj, 'py> for Elem {
@@ -24,16 +43,19 @@ impl<'obj, 'py> FromPyObject<'obj, 'py> for Elem {
     /// Extracts an `Elem` by cloning the Rust struct out of its Python wrapper.
     fn extract(obj: Borrowed<'obj, 'py, PyAny>) -> Result<Self, Self::Error> {
         let borrowed: Borrowed<'obj, 'py, Self> = obj.cast()?;
-        Ok(borrowed.borrow().clone())
+        let elem = borrowed.borrow();
+        Ok(elem.clone_ref(obj.py()))
     }
 }
 
 #[pymethods]
 impl Elem {
+
     /// Creates a new `Elem`, stripping a leading `-` to mark the element as optional.
     #[new]
+    #[pyo3(signature = (name, *, default=None))]
     #[expect(clippy::option_if_let_else, reason = "strip_prefix borrows name, preventing move into closure")]
-    fn new(name: String) -> Self {
+    fn new(name: String, default: Option<Py<PyAny>>) -> Self {
         let (is_required, clean_name) = if let Some(stripped) = name.strip_prefix('-') {
             (false, stripped.to_string())
         } else {
@@ -43,6 +65,7 @@ impl Elem {
             name: clean_name,
             is_required,
             elem_type: ElemType::Text,
+            default,
         }
     }
 
@@ -63,7 +86,7 @@ macro_rules! define_elem_type {
 
         impl $name {
             /// Builds the subtype together with its parent `Elem`, handling the optional `-` prefix.
-            pub fn create(name: String) -> (Self, Elem) {
+            pub fn create(name: String, default: Option<Py<PyAny>>) -> (Self, Elem) {
                 let (is_required, clean_name) = if let Some(stripped) = name.strip_prefix('-') {
                     (false, stripped.to_string())
                 } else {
@@ -73,6 +96,7 @@ macro_rules! define_elem_type {
                     name: clean_name,
                     is_required,
                     elem_type: $variant,
+                    default,
                 })
             }
         }
@@ -81,8 +105,9 @@ macro_rules! define_elem_type {
         impl $name {
             /// Creates a new instance from the element name, delegating to `create`.
             #[new]
-            fn new(name: String) -> (Self, Elem) {
-                Self::create(name)
+            #[pyo3(signature = (name, *, default=None))]
+            fn new(name: String, default: Option<Py<PyAny>>) -> (Self, Elem) {
+                Self::create(name, default)
             }
         }
     };

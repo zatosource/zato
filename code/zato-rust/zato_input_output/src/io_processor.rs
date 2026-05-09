@@ -196,19 +196,19 @@ impl IOProcessor {
 
         match elem_type {
             ElemType::Bool => {
-                let init = Bool::create(name);
+                let init = Bool::create(name, None);
                 Ok(Py::new(py, init)?.into_bound(py).into_any())
             }
             ElemType::Int => {
-                let init = Int::create(name);
+                let init = Int::create(name, None);
                 Ok(Py::new(py, init)?.into_bound(py).into_any())
             }
             ElemType::Secret => {
-                let init = Secret::create(name);
+                let init = Secret::create(name, None);
                 Ok(Py::new(py, init)?.into_bound(py).into_any())
             }
             _ => {
-                let init = Text::create(name);
+                let init = Text::create(name, None);
                 Ok(Py::new(py, init)?.into_bound(py).into_any())
             }
         }
