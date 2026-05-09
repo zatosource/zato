@@ -510,9 +510,13 @@ class HL7Segment:
         if self._segment_id == "MSH":
             parts.append("^~\\&")
 
-        # .. fill in each field position, using empty string for gaps ..
-        for pos in range(1 if self._segment_id != "MSH" else 2, max_pos + 1):
-            parts.append(fields_by_pos.get(pos, ""))
+        # .. fill in each field position, using empty string for gaps.
+        # .. MSH starts at position 3 because MSH-1 is the pipe itself
+        # .. and MSH-2 (encoding characters) was already appended above ..
+        start_position = 3 if self._segment_id == 'MSH' else 1
+
+        for pos in range(start_position, max_pos + 1):
+            parts.append(fields_by_pos.get(pos, ''))
 
         return "|".join(parts)
 
@@ -645,7 +649,18 @@ def _get_by_path(msg: "HL7Message", path: str) -> Any:
     if raw_segment is None:
         return None
 
-    field_idx = field_pos - 1
+    # .. MSH raw fields are offset by 2 because MSH-1 (field separator "|")
+    # .. is implicit and MSH-2 (encoding characters) occupies fields[0] ..
+    is_msh = raw_segment.segment_id == 'MSH'
+
+    if is_msh:
+        field_idx = field_pos - 2
+    else:
+        field_idx = field_pos - 1
+
+    if field_idx < 0:
+        return None
+
     if field_idx >= len(raw_segment.fields):
         return None
 
@@ -703,19 +718,36 @@ def _get_by_path(msg: "HL7Message", path: str) -> Any:
 
 def _resolve_segment(msg: "HL7Message", segment_ref: str) -> Any:
     segment_ref_upper = segment_ref.upper()
-    for item in msg._raw_message.items:
-        if hasattr(item, 'segment_id') and item.segment_id == segment_ref_upper:
-            seg_class = _segment_classes.get(segment_ref_upper)
-            if seg_class:
-                seg = seg_class.__new__(seg_class)  # type: ignore[call-overload]
-                seg._raw_segment = item
-                seg._parent_message = msg
-                return seg
+
+    # .. walk all items recursively, descending into groups ..
+    items_to_check:'list[Any]' = list(msg._raw_message.items)
+
+    while items_to_check:
+        item = items_to_check.pop(0)
+
+        # .. if this is a segment, check if it matches ..
+        if hasattr(item, 'segment_id'):
+            if item.segment_id == segment_ref_upper:
+                seg_class = _segment_classes.get(segment_ref_upper)
+                if seg_class:
+                    seg = seg_class.__new__(seg_class)  # type: ignore[call-overload]
+                    seg._raw_segment = item
+                    seg._parent_message = msg
+                    return seg
+
+        # .. if this is a group, descend into its children ..
+        if hasattr(item, 'items'):
+            items_to_check.extend(item.items)
+
+    # .. try descriptor-based resolution as a last resort.
     segment_ref_lower = segment_ref.lower()
     for name in dir(msg.__class__):
         attr = getattr(msg.__class__, name)
-        if isinstance(attr, HL7SegmentAttr) and name.lower() == segment_ref_lower:
-            return getattr(msg, name)
+        if isinstance(attr, HL7SegmentAttr):
+            if name.lower() == segment_ref_lower:
+                out = getattr(msg, name)
+                return out
+
     return None
 
 
@@ -743,18 +775,31 @@ def _set_by_path(msg: "HL7Message", path: str, value: str) -> None:
 
     segment_id = segment_ref.upper()
     found = False
-    for item in msg._raw_message.items:
-        if hasattr(item, 'segment_id') and item.segment_id == segment_id:
-            found = True
-            break
+
+    # .. walk all items recursively, descending into groups ..
+    items_to_check:'list[Any]' = list(msg._raw_message.items)
+
+    while items_to_check:
+        item = items_to_check.pop(0)
+
+        if hasattr(item, 'segment_id'):
+            if item.segment_id == segment_id:
+                found = True
+                break
+
+        if hasattr(item, 'items'):
+            items_to_check.extend(item.items)
+
     if not found:
         segment_ref_lower = segment_ref.lower()
         for name in dir(msg.__class__):
             attr = getattr(msg.__class__, name)
-            if isinstance(attr, HL7SegmentAttr) and name.lower() == segment_ref_lower:
-                segment_id = attr.segment_id
-                found = True
-                break
+            if isinstance(attr, HL7SegmentAttr):
+                if name.lower() == segment_ref_lower:
+                    segment_id = attr.segment_id
+                    found = True
+                    break
+
     if not found:
         return
 
@@ -767,7 +812,14 @@ def _set_by_path(msg: "HL7Message", path: str, value: str) -> None:
     if field_pos is None:
         return
 
-    field_idx = field_pos - 1
+    # .. MSH raw fields are offset by 2 because MSH-1 (field separator "|")
+    # .. is implicit and MSH-2 (encoding characters) occupies fields[0] ..
+    is_msh = segment_id == 'MSH'
+
+    if is_msh:
+        field_idx = field_pos - 2
+    else:
+        field_idx = field_pos - 1
 
     if len(parts) == 2:
         msg._raw_message.set_segment_field(segment_id, field_idx, rep_idx, 0, 0, value)
