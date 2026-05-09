@@ -207,7 +207,7 @@ class Request:
                     if param not in self.input:
                         self.input[param] = value
 
-        # We merge channel params in if requested even if it's not SIO
+        # We merge channel params in if requested even if it's not I/O
         else:
             if self.merge_channel_params:
                 self.input.update(self.channel_params)

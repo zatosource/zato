@@ -25,7 +25,7 @@ from zato.common.util.file_system import fs_safe_now
 from zato.common.util.open_ import open_w
 from zato.common.util.python_ import import_module_by_path
 from zato.server.service import AsIs
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 

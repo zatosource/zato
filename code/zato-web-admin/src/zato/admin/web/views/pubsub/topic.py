@@ -35,11 +35,10 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active'
-        output_optional = 'description', 'publisher_count', 'subscriber_count',
-        output_repeated = True
+    input_required = 'cluster_id',
+    output_required = 'id', 'name', 'is_active'
+    output_optional = 'description', 'publisher_count', 'subscriber_count',
+    output_repeated = True
 
     def handle(self):
         return {
@@ -55,10 +54,9 @@ class _CreateEdit(CreateEdit):
 
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_active'
-        input_optional = 'description',
-        output_required = 'id', 'name'
+    input_required = 'name', 'is_active'
+    input_optional = 'description',
+    output_required = 'id', 'name'
 
     def success_message(self, item):
         return 'Successfully {} Pub/Sub topic `{}`'.format(self.verb, item.name)

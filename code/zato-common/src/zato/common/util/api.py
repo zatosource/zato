@@ -97,7 +97,7 @@ if PY3:
 
 # Zato
 from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, MISC, \
-     Secret_Shadow, SIMPLE_IO, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN
+     Secret_Shadow, IO, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN
 from zato.common.broker_message import HOT_DEPLOY, SERVICE
 from zato.common.const import SECRETS, ServiceConst
 from zato.common.crypto.api import CryptoManager
@@ -574,7 +574,7 @@ def get_body_payload(body):
 # ################################################################################################################################
 
 def payload_from_request(json_parser, cid, request, data_format, transport, channel_item=None):
-    """ Converts a raw request to a payload suitable for usage with SimpleIO.
+    """ Converts a raw request to a payload suitable for usage with I/O.
     """
     if request is not None:
 
@@ -1203,7 +1203,7 @@ def get_basic_auth_credentials(auth):
 
 def get_http_json_channel(name, service, cluster, security):
     return HTTPSOAP(None, '{}.json'.format(name), True, True, 'channel', 'plain_http', None, '/zato/json/{}'.format(name),
-        None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster, security=security)
+        None, '', None, IO.FORMAT.JSON, service=service, cluster=cluster, security=security)
 
 # ################################################################################################################################
 

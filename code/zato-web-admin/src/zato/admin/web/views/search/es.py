@@ -28,10 +28,9 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'hosts', 'timeout', 'body_as')
-        output_repeated = True
+    input_required = 'cluster_id',
+    output_required = 'id', 'name', 'is_active', 'hosts', 'timeout', 'body_as'
+    output_repeated = True
 
     def handle(self):
         return {
@@ -44,9 +43,8 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'hosts', 'timeout', 'body_as')
-        output_required = ('id', 'name')
+    input_required = 'name', 'is_active', 'hosts', 'timeout', 'body_as'
+    output_required = 'id', 'name'
 
     def success_message(self, item):
         return 'Successfully {} the ElasticSearch connection [{}]'.format(self.verb, item.name)

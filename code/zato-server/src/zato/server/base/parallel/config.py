@@ -242,19 +242,6 @@ class ConfigLoader:
             else:
                 logger.info('Startup rate limiting; channel_id:%s, name:%s, no rate_limiting', channel_id, channel_name)
 
-        # I/O
-        # In preparation for an I/O rewrite, we loaded I/O config from a file
-        # but actual code paths require the pre-3.0 format so let's prepare it here.
-        self.config.simple_io = ConfigDict('simple_io', Bunch())
-
-        int_exact = self.io_config.int_config.exact
-        int_suffixes = self.io_config.int_config.suffixes
-        bool_prefixes = self.io_config.bool_config.prefixes
-
-        self.config.simple_io['int_parameters'] = int_exact
-        self.config.simple_io['int_parameter_suffixes'] = int_suffixes
-        self.config.simple_io['bool_parameter_prefixes'] = bool_prefixes
-
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         # E-mail - SMTP

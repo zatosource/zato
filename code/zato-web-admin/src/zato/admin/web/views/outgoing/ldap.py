@@ -34,15 +34,14 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id', 'type_')
-        output_required = ('id', 'name', 'is_active', 'get_info', 'ip_mode', 'connect_timeout', 'auto_bind', 'server_list',
-            'pool_size', 'pool_exhaust_timeout', 'pool_keep_alive', 'pool_max_cycles', 'pool_lifetime', 'pool_ha_strategy',
-            'username', 'auth_type')
-        output_optional = ('is_active', 'use_tls', 'pool_name', 'use_sasl_external', 'is_read_only',
-            'should_check_names', 'use_auto_range', 'should_return_empty_attrs', 'is_tls_enabled', 'tls_private_key_file',
-            'tls_cert_file', 'tls_ca_certs_file', 'tls_version', 'tls_ciphers', 'tls_validate', 'sasl_mechanism')
-        output_repeated = True
+    input_required = 'cluster_id', 'type_'
+    output_required = ('id', 'name', 'is_active', 'get_info', 'ip_mode', 'connect_timeout', 'auto_bind', 'server_list',
+        'pool_size', 'pool_exhaust_timeout', 'pool_keep_alive', 'pool_max_cycles', 'pool_lifetime', 'pool_ha_strategy',
+        'username', 'auth_type')
+    output_optional = ('is_active', 'use_tls', 'pool_name', 'use_sasl_external', 'is_read_only',
+        'should_check_names', 'use_auto_range', 'should_return_empty_attrs', 'is_tls_enabled', 'tls_private_key_file',
+        'tls_cert_file', 'tls_ca_certs_file', 'tls_version', 'tls_ciphers', 'tls_validate', 'sasl_mechanism')
+    output_repeated = True
 
     def handle(self):
         return {
@@ -56,14 +55,13 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'get_info', 'ip_mode', 'connect_timeout', 'auto_bind', 'server_list', 'pool_size',
-            'pool_exhaust_timeout', 'pool_keep_alive', 'pool_max_cycles', 'pool_lifetime', 'pool_ha_strategy', 'username',
-            'auth_type')
-        input_optional = ('is_active', 'use_tls', 'pool_name', 'use_sasl_external', 'is_read_only',
-            'should_check_names', 'use_auto_range', 'should_return_empty_attrs', 'is_tls_enabled', 'tls_private_key_file',
-            'tls_cert_file', 'tls_ca_certs_file', 'tls_version', 'tls_ciphers', 'tls_validate', 'sasl_mechanism')
-        output_required = ('id', 'name')
+    input_required = ('name', 'get_info', 'ip_mode', 'connect_timeout', 'auto_bind', 'server_list', 'pool_size',
+        'pool_exhaust_timeout', 'pool_keep_alive', 'pool_max_cycles', 'pool_lifetime', 'pool_ha_strategy', 'username',
+        'auth_type')
+    input_optional = ('is_active', 'use_tls', 'pool_name', 'use_sasl_external', 'is_read_only',
+        'should_check_names', 'use_auto_range', 'should_return_empty_attrs', 'is_tls_enabled', 'tls_private_key_file',
+        'tls_cert_file', 'tls_ca_certs_file', 'tls_version', 'tls_ciphers', 'tls_validate', 'sasl_mechanism')
+    output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict):
         initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.OUTCONN_LDAP

@@ -15,7 +15,7 @@ from zato.common.const import ServiceConst
 from zato.common.odb import query
 from zato.common.odb.model import SecurityBase
 from zato.server.service import Boolean, Integer, List
-from zato.server.service.internal import AdminService, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################

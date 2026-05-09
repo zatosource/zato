@@ -34,10 +34,9 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id',
-        output_required = 'id', 'name', 'pattern', 'access_type', 'sec_base_id', 'subscription_count'
-        output_repeated = True
+    input_required = 'cluster_id',
+    output_required = 'id', 'name', 'pattern', 'access_type', 'sec_base_id', 'subscription_count'
+    output_repeated = True
 
     def handle(self):
         create_form = CreateForm()
@@ -108,11 +107,9 @@ class Create(_CreateEdit):
     service_name = 'zato.pubsub.permission.create'
     form_class = CreateForm
 
-    class SimpleIO:
-        input_required = 'sec_base_id',
-        input_optional = 'cluster_id', 'pub_topics', 'sub_topics'
-        output_required = 'id', 'security'
-        output_optional = []
+    input_required = 'sec_base_id',
+    input_optional = 'cluster_id', 'pub_topics', 'sub_topics'
+    output_required = 'id', 'security'
 
     def success_message(self, item):
         return 'Successfully created the PubSub permission'
@@ -127,11 +124,9 @@ class Edit(_CreateEdit):
     form_class = EditForm
     form_prefix = 'edit-'
 
-    class SimpleIO:
-        input_required = 'id', 'sec_base_id'
-        input_optional = 'cluster_id', 'pub_topics', 'sub_topics'
-        output_required = 'id', 'security'
-        output_optional = []
+    input_required = 'id', 'sec_base_id'
+    input_optional = 'cluster_id', 'pub_topics', 'sub_topics'
+    output_required = 'id', 'security'
 
     def success_message(self, item):
 

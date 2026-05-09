@@ -26,7 +26,7 @@ from zato.common.util.config import replace_query_string_items_in_dict
 from zato.common.util.time_ import utcnow
 from zato.server.generic.connection import GenericConnection
 from zato.server.service import AsIs, Int
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+from zato.server.service.internal import AdminService, ChangePasswordBase
 from zato.server.service.internal.generic import _BaseService
 from zato.server.service.meta import DeleteMeta
 
@@ -91,7 +91,7 @@ extra_secret_keys = (
 
 )
 
-# Note that this is a set, unlike extra_secret_keys, because we do not make it part of SIO.
+# Note that this is a set, unlike extra_secret_keys, because we do not make it part of I/O.
 extra_simple_type = {
     'is_active',
 }
@@ -122,7 +122,7 @@ def ensure_ints(data:'strdict') -> 'None':
 
 # ################################################################################################################################
 
-class _CreateEditSIO(AdminSIO):
+class _CreateEditIO:
     input_required = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn')
     input_optional = ('cluster_id', 'id', Int('pool_size'), Int('cache_expiry'), 'address', Int('port'), Int('timeout'),
         'data_format', 'version',

@@ -53,30 +53,28 @@ class DataClassIO:
     def __init__(
         self,
         server,          # type: ParallelServer
-        server_config,   # type: ignore
         user_declaration # type: any_
     ) -> 'None':
 
         self.server = server
-        self.server_config = server_config
         self.user_declaration = user_declaration
 
     @staticmethod
-    def attach_io(server, server_config, class_):
+    def attach_io(server, class_):
         """ Given a service class, the method extracts its user-defined I/O definition
         and attaches the I/O processor to the class's _io attribute.
         """
         try:
             # pylint: disable=attribute-defined-outside-init
 
-            # Get the user-defined SimpleIO definition
-            user_sio = getattr(class_, 'SimpleIO', None)
+            # Get the user-defined I/O definition
+            user_io = getattr(class_, 'IO', None)
 
             # This class does not use I/O so we can just return immediately
-            if not user_sio:
+            if not user_io:
                 return
 
-            io_instance = DataClassIO(server, server_config, user_sio)
+            io_instance = DataClassIO(server, user_io)
             io_instance.service_class = class_
             class_._io = io_instance
 
@@ -94,7 +92,7 @@ class DataClassIO:
         extra        # type: any_
     ) -> 'any_':
 
-        # If we have a SimpleIO input declared ..
+        # If we have an I/O input declared ..
         if getattr(self.user_declaration, 'input', None):
 
             # .. if it already is a model, we give it to the service as-is ..

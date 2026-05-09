@@ -42,7 +42,7 @@ from zato.common.api import DONT_DEPLOY_ATTR_NAME, SourceCodeInfo, TRACE1
 from zato.common.facade import PubSubFacade, SecurityFacade
 from zato.common.json_internal import dumps
 from zato.common.marshal_.api import Model as DataClassModel
-from zato.common.marshal_.simpleio import DataClassIO
+from zato.common.marshal_.io import DataClassIO
 from zato.common.odb.model.base import Base as ModelBase
 from zato.common.typing_ import cast_, list_
 from zato.common.util.api import deployment_info, import_module_from_path, is_python_file, visit_py_source
@@ -507,7 +507,6 @@ class ServiceStore:
                     # .. generate the input model class now ..
                     model_input = DataClassModel.build_model_from_flat_input(
                         service_store.server,
-                        service_store.server.io_config,
                         IOProcessor,
                         name,
                         io_input
@@ -531,7 +530,6 @@ class ServiceStore:
                     # .. generate the input model class now ..
                     model_output = DataClassModel.build_model_from_flat_input(
                         service_store.server,
-                        service_store.server.io_config,
                         IOProcessor,
                         name,
                         io_output
@@ -545,7 +543,7 @@ class ServiceStore:
             else:
                 IOClass = IOProcessor # type: ignore
 
-            _ = IOClass.attach_io(service_store.server, service_store.server.io_config, class_) # type: ignore
+            _ = IOClass.attach_io(service_store.server, class_) # type: ignore
 
         # May be None during unit-tests - not every test provides it.
         if service_store:

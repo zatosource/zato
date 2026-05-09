@@ -15,7 +15,6 @@ from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, \
     common_scheduler_server_address_opts, sql_conf_contents, ZatoCommand
 from zato.common.api import CONTENT_TYPE, Default_Extra_Service_File_Data, Default_Service_File_Data, NotGiven, SCHEDULER
 from zato.common.crypto.api import ServerCryptoManager
-from zato.common.simpleio_ import simple_io_conf_contents
 from zato.common.util.api import as_bool, get_demo_extra_py_fs_locations, get_demo_py_fs_locations
 from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
 from zato.common.util.open_ import open_r, open_w
@@ -30,7 +29,7 @@ if 0:
 # ################################################################################################################################
 
 # For pyflakes
-simple_io_conf_contents = simple_io_conf_contents
+io_conf_contents = io_conf_contents
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -452,9 +451,6 @@ class Create(ZatoCommand):
         # SQLAlchemy
         from sqlalchemy.exc import IntegrityError
 
-        # Python 2/3 compatibility
-        from six import PY3
-
         # Zato
         from zato.common.api import SERVER_JOIN_STATUS
         from zato.common.crypto.const import well_known_data
@@ -627,15 +623,6 @@ class Create(ZatoCommand):
                 zato_odb_password=odb_password,
             ))
             secrets_conf.close()
-
-            bytes_to_str_encoding = 'utf8' if PY3 else ''
-
-            simple_io_conf_loc = os.path.join(self.target_dir, 'config/repo/simple-io.conf')
-            simple_io_conf = open_w(simple_io_conf_loc)
-            _ = simple_io_conf.write(simple_io_conf_contents.format(
-                bytes_to_str_encoding=bytes_to_str_encoding
-            ))
-            simple_io_conf.close()
 
             if show_output:
                 self.logger.debug('Core configuration stored in {}'.format(server_conf_loc))

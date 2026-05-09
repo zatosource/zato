@@ -78,7 +78,7 @@ class DeleteObjectsResponse(BaseDeleteObjectsResponse):
 
 class DeleteObjectsImpl(Service):
 
-    class SimpleIO:
+    class IO:
         input = DeleteObjectsImplRequest
         output = DeleteObjectsImplResponse
 
@@ -203,7 +203,7 @@ class DeleteObjects(Service):
 
     name = 'zato.common.delete-objects'
 
-    class SimpleIO:
+    class IO:
         input = DeleteObjectsRequest
         output = DeleteObjectsResponse
 

@@ -189,7 +189,7 @@ class Create(ZatoCommand):
         """
 
         # Zato
-        from zato.common.api import SIMPLE_IO
+        from zato.common.api import IO
         from zato.common.odb.model import HTTPSOAP, Service
 
         ping_impl_name = 'zato.server.service.internal.Ping'
@@ -199,7 +199,7 @@ class Create(ZatoCommand):
 
         ping_no_sec_channel = HTTPSOAP(
             None, 'zato.ping', True, True, 'channel',
-            'plain_http', None, '/zato/ping', None, '', None, SIMPLE_IO.FORMAT.JSON, service=ping_service, cluster=cluster)
+            'plain_http', None, '/zato/ping', None, '', None, IO.FORMAT.JSON, service=ping_service, cluster=cluster)
         session.add(ping_no_sec_channel)
 
         return ping_service
@@ -255,13 +255,13 @@ class Create(ZatoCommand):
         """
 
         # Zato
-        from zato.common.api import SIMPLE_IO
+        from zato.common.api import IO
         from zato.common.odb.model import HTTPSOAP
 
         channel = HTTPSOAP(
             None, 'zato.ide_publisher', True, True, 'channel', 'plain_http',
             None, '/ide-deploy', None, '', None,
-            SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster,
+            IO.FORMAT.JSON, service=service, cluster=cluster,
             security=security)
         session.add(channel)
 

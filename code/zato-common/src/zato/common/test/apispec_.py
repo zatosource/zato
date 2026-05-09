@@ -52,28 +52,8 @@ class CyMyService(Service):
 
     It has a docstring.
     """
-    class SimpleIO:
-        """
-        * input_req_user_id - This is the first line.
-
-        Here is another.
-
-        And here
-        are some
-        more lines.
-
-        * input_opt_user_name - b111
-
-        * output_req_address_id - c111 c222 c333 c444
-
-        * output_opt_address_name - d111
-
-          d222
-        """
-        input_required = 'input_req_user_id', 'input_req_customer_id'
-        input_optional = 'input_opt_user_name', 'input_opt_customer_name'
-        output_required = 'output_req_address_id', 'output_req_address_name'
-        output_optional = 'output_opt_address_type', 'output_opt_address_subtype'
+    input = 'input_req_user_id', 'input_req_customer_id', '-input_opt_user_name', '-input_opt_customer_name'
+    output = 'output_req_address_id', 'output_req_address_name', '-output_opt_address_type', '-output_opt_address_subtype'
 
 # ################################################################################################################################
 # ################################################################################################################################

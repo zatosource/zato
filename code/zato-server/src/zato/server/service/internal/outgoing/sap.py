@@ -21,7 +21,7 @@ from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import OutgoingSAP
 from zato.common.odb.query import out_sap_list
 from zato.common.util.api import ping_sap
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
+from zato.server.service.internal import AdminService, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################

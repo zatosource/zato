@@ -15,7 +15,7 @@ from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import OutgoingAMQP
 from zato.common.odb.query import out_amqp_list
 from zato.server.service import AsIs
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 _delivery_mode_map = {
     'non_persistent': 1,

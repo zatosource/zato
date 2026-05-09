@@ -22,7 +22,7 @@ from zato.common.broker_message import MESSAGE_TYPE, SECURITY
 from zato.common.odb.model import Cluster
 from zato.common.util.api import get_response_value, make_cid_public
 from zato.common.util.sql import search as sql_search
-from zato.server.service import AsIs, Bool, Int, Service
+from zato.server.service import AsIs, Int, Service
 
 # ################################################################################################################################
 
@@ -58,25 +58,11 @@ class SearchTool:
 
 # ################################################################################################################################
 
-class AdminSIO:
-    pass
-
-# ################################################################################################################################
-
-class GetListAdminSIO:
-    input_optional = (Int('cur_page'), Bool('paginate'), 'query')
-
-# ################################################################################################################################
-
 class AdminService(Service):
     """ A Zato admin service, part of the Zato public API.
     """
-    output_optional = ('_meta',)
+    output = '-_meta',
     skip_before_handle = False
-
-    class SimpleIO(AdminSIO):
-        """ This empty definition is needed in case the service should be invoked through REST.
-        """
 
     def __init__(self):
         super(AdminService, self).__init__()
@@ -226,13 +212,10 @@ class ServerInvoker(AdminService):
 class ChangePasswordBase(AdminService):
     """ A base class for handling the changing of any of the ODB passwords.
     """
-    # Subclasses may wish to set it to False to special-case what they need to deal with
     password_required = True
 
-    class SimpleIO(AdminSIO):
-        input_required = 'password',
-        input_optional = Int('id'), 'name', 'type_'
-        output_required = AsIs('id')
+    input = 'password', Int('-id'), '-name', '-type_'
+    output = AsIs('id'),
 
     def _handle(self, class_, auth_func, action, name_func=None, instance_id=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL,
         *args, **kwargs):

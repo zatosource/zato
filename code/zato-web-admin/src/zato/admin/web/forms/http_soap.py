@@ -13,7 +13,7 @@ from django import forms
 from zato.admin.web.forms import add_security_select, add_services, \
     SearchForm as _ChooseClusterForm, DataFormatForm
 from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP, HTTP_SOAP_SERIALIZATION_TYPE, \
-     MISC, PARAMS_PRIORITY, SIMPLE_IO, SOAP_VERSIONS, URL_PARAMS_PRIORITY
+     MISC, PARAMS_PRIORITY, IO, SOAP_VERSIONS, URL_PARAMS_PRIORITY
 
 # ################################################################################################################################
 
@@ -59,7 +59,7 @@ class CreateForm(DataFormatForm):
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
     content_encoding = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
-    data_formats_allowed = SIMPLE_IO.HTTP_SOAP_FORMAT
+    data_formats_allowed = IO.HTTP_SOAP_FORMAT
     http_accept = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=HTTP_SOAP.ACCEPT.ANY)
     validate_tls = forms.ChoiceField(widget=forms.Select())
 

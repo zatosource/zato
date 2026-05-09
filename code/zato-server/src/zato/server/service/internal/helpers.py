@@ -208,7 +208,7 @@ class APISpecHelperUser(Service):
     """
     name = 'helpers.api-spec.user'
 
-    class SimpleIO:
+    class IO:
         input  = GetUserRequest
         output = GetUserResponse
 
@@ -317,7 +317,7 @@ class MyDataclassService(Service):
     """
     name = 'helpers.dataclass-service'
 
-    class SimpleIO:
+    class IO:
         input  = MyRequest
         output = MyResponse
 
@@ -331,7 +331,7 @@ class CommandsService(Service):
 
     name = 'helpers.commands-service'
 
-    class SimpleIO:
+    class IO:
         output = CommandResult
 
     class _CommandsServiceTestCase(TestCase):

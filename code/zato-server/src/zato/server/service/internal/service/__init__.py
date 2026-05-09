@@ -33,7 +33,7 @@ from zato.common.util.api import hot_deploy
 from zato.common.util.file_system import get_tmp_path
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean, Integer, Service
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################
