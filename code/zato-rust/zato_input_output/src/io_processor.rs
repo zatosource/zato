@@ -144,7 +144,7 @@ impl IOProcessor {
     /// Inspects a Python service class for `input`/`output` attributes, builds
     /// element metadata, and attaches the resulting processor as `_io` on the class.
     #[staticmethod]
-    fn attach_io(py: Python<'_>, _server: &Bound<'_, PyAny>, _server_config: &Bound<'_, PyAny>, class: &Bound<'_, PyAny>) -> PyResult<()> {
+    fn attach_io(py: Python<'_>, _server: &Bound<'_, PyAny>, class: &Bound<'_, PyAny>) -> PyResult<()> {
         let io_input = class.getattr("input").ok();
         let io_output = class.getattr("output").ok();
 

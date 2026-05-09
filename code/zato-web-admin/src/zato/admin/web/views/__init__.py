@@ -411,7 +411,7 @@ class Index(BaseView):
             output_class = self.get_output_class()
             item = output_class() if output_class else self.output_class()
 
-            # Use attributes that were definded upfront for the SimpleIO definition
+            # Use attributes that were defined upfront for the I/O definition
             # or use everything that we received from the service.
             names = names if names else msg_item.keys()
 
@@ -435,14 +435,14 @@ class Index(BaseView):
         """ Creates a new instance of the model class for each of the element received
         and fills it in with received attributes.
         """
-        sio_names = tuple(chain(self.output_required, self.output_optional))
+        io_names = tuple(chain(self.output_required, self.output_optional))
 
         for msg_item in (item_list or []):
 
             item = self.output_class()
 
-            # .. use the SIO field names if declared, otherwise take all keys from the response item.
-            names = sio_names if sio_names else msg_item.keys()
+            # .. use the I/O field names if declared, otherwise take all keys from the response item.
+            names = io_names if io_names else msg_item.keys()
 
             for name in sorted(names):
                 value = getattr(msg_item, name, None)
@@ -576,7 +576,7 @@ class CreateEdit(BaseView):
 
             input_dict.update(initial_input_dict)
 
-            logger.info('CreateEdit step 4: building input_dict from SIO, initial_input_dict=%s', initial_input_dict)
+            logger.info('CreateEdit step 4: building input_dict from I/O, initial_input_dict=%s', initial_input_dict)
 
             for name in chain(self.input_required, self.input_optional):
                 if name not in input_dict and name not in self.input_dict:

@@ -20,7 +20,7 @@ from traceback import format_exc
 from typing import NamedTuple
 
 # Zato
-from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HTTP_SOAP, MISC, SEC_DEF_TYPE, SIMPLE_IO, \
+from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HTTP_SOAP, MISC, SEC_DEF_TYPE, IO, \
     TRACE1, URL_PARAMS_PRIORITY, ZATO_NONE
 from zato.common.const import ServiceConst
 from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, ServiceMissingException
@@ -114,8 +114,8 @@ class ModuleCtx:
     Channel = CHANNEL.HTTP_SOAP
     No_URL_Match = (None, False)
     Exception_Separator = '*' * 80
-    IO_JSON = SIMPLE_IO.FORMAT.JSON
-    IO_FORM_DATA = SIMPLE_IO.FORMAT.FORM_DATA
+    IO_JSON = IO.FORMAT.JSON
+    IO_FORM_DATA = IO.FORMAT.FORM_DATA
     Dict_Like = {DATA_FORMAT.JSON, DATA_FORMAT.DICT, DATA_FORMAT.FORM_DATA}
     Form_Data_Content_Type = ('application/x-www-form-urlencoded', 'multipart/form-data')
 
@@ -1026,8 +1026,8 @@ class RequestHandler:
         if response.content_type_changed:
             content_type = response.content_type
         else:
-            # .. or they did not so let's find out if we're using SimpleIO ..
-            if data_format == SIMPLE_IO.FORMAT.JSON:
+            # .. or they did not so let's find out if we're using I/O ..
+            if data_format == IO.FORMAT.JSON:
                 content_type = self.server.json_content_type
 
             # .. alright, let's use the default value after all.

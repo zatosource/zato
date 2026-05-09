@@ -221,9 +221,8 @@ class GetMessages(PubSubRESTService):
     """
     name = 'pubsub.rest.get-messages'
 
-    class SimpleIO:
-        input_optional = Int('max_messages'), Int('max_len')
-        output_optional = AsIs('messages'), Int('message_count'), 'is_ok', 'cid', AsIs('status'), 'details'
+    input = Int('-max_messages'), Int('-max_len')
+    output = AsIs('-messages'), Int('-message_count'), '-is_ok', '-cid', AsIs('-status'), '-details'
 
 # ################################################################################################################################
 
@@ -286,9 +285,8 @@ class Subscribe(PubSubRESTService):
     """
     name = 'pubsub.rest.subscribe'
 
-    class SimpleIO:
-        input_required = 'topic_name'
-        output_optional = 'is_ok', 'cid', AsIs('status'), 'details', 'sub_key'
+    input = 'topic_name',
+    output = '-is_ok', '-cid', AsIs('-status'), '-details', '-sub_key'
 
 # ################################################################################################################################
 
@@ -378,9 +376,8 @@ class Unsubscribe(PubSubRESTService):
     """
     name = 'pubsub.rest.unsubscribe'
 
-    class SimpleIO:
-        input_required = 'topic_name'
-        output_optional = 'is_ok', 'cid', AsIs('status'), 'details'
+    input = 'topic_name',
+    output = '-is_ok', '-cid', AsIs('-status'), '-details'
 
 # ################################################################################################################################
 

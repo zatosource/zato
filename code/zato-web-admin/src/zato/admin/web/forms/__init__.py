@@ -16,7 +16,7 @@ from zato.common.ext.future.utils import iteritems
 from zato.common.py23_.past.builtins import basestring
 
 # Zato
-from zato.common.api import SIMPLE_IO, ZATO_NONE
+from zato.common.api import IO, ZATO_NONE
 
 # ################################################################################################################################
 
@@ -234,7 +234,7 @@ class DataFormatForm(forms.Form):
         self.fields['data_format'].choices = []
         self.fields['data_format'].choices.append(INITIAL_CHOICES)
 
-        for code, name in iteritems(self.data_formats_allowed or SIMPLE_IO.COMMON_FORMAT):
+        for code, name in iteritems(self.data_formats_allowed or IO.COMMON_FORMAT):
             self.fields['data_format'].choices.append([code, name])
 
 # ################################################################################################################################

@@ -16,7 +16,7 @@ from bson import ObjectId
 # Zato
 from zato.common.ext.dataclasses import dataclass
 from zato.common.marshal_.api import Model
-from zato.common.test import BaseSIOTestCase
+from zato.common.test import BaseIOTestCase
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,7 +28,7 @@ class User(Model):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ToJSONTestCase(BaseSIOTestCase):
+class ToJSONTestCase(BaseIOTestCase):
 
     def test_serialize_string(self):
 

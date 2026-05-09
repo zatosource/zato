@@ -1245,9 +1245,8 @@ class _Hook(Service): # type: ignore
     """
     _hook_func_name: 'strdict'
 
-    class SimpleIO:
-        input_required = (Opaque('ctx'),)
-        output_optional = ('hook_action',)
+    input = Opaque('ctx'),
+    output = '-hook_action',
 
     def handle(self):
         func_name = self._hook_func_name[self.request.input.ctx.hook_type]

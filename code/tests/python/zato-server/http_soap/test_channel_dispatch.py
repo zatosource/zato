@@ -17,7 +17,7 @@ from hypothesis import given, HealthCheck, settings as hypothesis_settings
 from hypothesis import strategies as st
 
 # Zato
-from zato.common.api import CONTENT_TYPE, DATA_FORMAT, MISC, SIMPLE_IO, TRACE1, ZATO_NONE
+from zato.common.api import CONTENT_TYPE, DATA_FORMAT, MISC, IO, TRACE1, ZATO_NONE
 from zato.common.exception import BackendInvocationError, BadRequest, Forbidden, \
     MethodNotAllowed, NotFound, ServiceMissingException, TooManyRequests, Unauthorized
 from zato.common.json_ import dumps
@@ -428,7 +428,7 @@ class DispatchFormDataTestCase(unittest.TestCase):
         """ Form data is extracted when data_format is FORM_DATA and content type matches.
         """
         mock_get_form_data.return_value = {'field1': 'value1'}
-        channel_item = _make_channel_item({'data_format': SIMPLE_IO.FORMAT.FORM_DATA})
+        channel_item = _make_channel_item({'data_format': IO.FORMAT.FORM_DATA})
         ctx = _make_dispatcher(channel_item=channel_item)
         wsgi_environ = _make_wsgi_environ({'CONTENT_TYPE': 'application/x-www-form-urlencoded'})
 
@@ -981,7 +981,7 @@ class DispatchHypothesisTestCase(unittest.TestCase):
 
     @given(
         is_active=st.booleans(),
-        data_format=st.sampled_from([DATA_FORMAT.JSON, DATA_FORMAT.DICT, DATA_FORMAT.FORM_DATA, SIMPLE_IO.FORMAT.FORM_DATA]),
+        data_format=st.sampled_from([DATA_FORMAT.JSON, DATA_FORMAT.DICT, DATA_FORMAT.FORM_DATA, IO.FORMAT.FORM_DATA]),
         content_encoding=st.sampled_from(['', 'gzip']),
         merge_url_params_req=st.booleans(),
     )

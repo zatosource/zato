@@ -93,9 +93,8 @@ class Index(_Index):
     clear_self_items = False
     update_request_with_self_input = False
 
-    class SimpleIO(_Index.SimpleIO):
-        input_optional = ('action',)
-        output_repeated = True
+    input_optional = 'action',
+    output_repeated = True
 
     def before_invoke_admin_service(self):
         self.items = {

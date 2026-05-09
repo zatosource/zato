@@ -9,14 +9,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import datetime
 from logging import getLogger
-from tempfile import NamedTemporaryFile
 from time import sleep
 from random import choice, randint
 from unittest import TestCase
 from uuid import uuid4
 
 # Bunch
-from bunch import Bunch, bunchify
+from bunch import Bunch
 
 # six
 from six import string_types
@@ -25,15 +24,14 @@ from six import string_types
 from sqlalchemy import create_engine
 
 # Zato
-from zato.common.api import CHANNEL, DATA_FORMAT, SIMPLE_IO
-from zato.common.ext.configobj_ import ConfigObj
+from zato.common.api import CHANNEL, DATA_FORMAT, IO
+from zato.common.defaults import secret_fields_exact, secret_fields_prefix, secret_fields_suffix
 from zato.common.json_internal import loads
 from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb import model
 from zato.common.odb.model import Cluster, ElasticSearch
 from zato.common.odb.api import SessionWrapper, SQLConnectionPool
 from zato.common.odb.query import search_es_list
-from zato.common.simpleio_ import get_bytes_to_str_encoding, get_sio_server_config, simple_io_conf_contents
 from zato.common.py23_ import maxint
 from zato.common.typing_ import cast_
 from zato.common.util.api import is_port_taken, new_cid
@@ -423,7 +421,7 @@ class IOElemWrapper:
 
     def __cmp__(self, other):
         # Compare to either other's name or to other directly. In the latter case it means it's a plain string name
-        # of a SIO attribute.
+        # of an I/O attribute.
         return cmp(self.value.name, getattr(other, 'name', other))
 
 # ################################################################################################################################
@@ -448,7 +446,7 @@ class ServiceTestCase(TestCase):
         class_.component_enabled_email = True
         class_.component_enabled_search = True
         class_.component_enabled_msg_path = True
-        class_.has_io = getattr(class_, 'SimpleIO', False)
+        class_.has_io = getattr(class_, 'IO', False)
 
         instance = class_()
 
@@ -498,8 +496,8 @@ class ServiceTestCase(TestCase):
         for k, v in request_data.items():
             self.assertEqual(getattr(instance.request.input, k), v)
 
-        io_keys = set(getattr(instance.SimpleIO, 'input_required', []))
-        io_keys.update(set(getattr(instance.SimpleIO, 'input_optional', [])))
+        io_keys = set(getattr(instance.IO, 'input_required', []))
+        io_keys.update(set(getattr(instance.IO, 'input_optional', [])))
         given_keys = set(request_data.keys())
 
         diff = io_keys ^ given_keys
@@ -635,14 +633,14 @@ class ODBTestCase(TestCase):
 # ################################################################################################################################
 
 class MyODBService(Service):
-    class SimpleIO:
+    class IO:
         output = 'cluster_id', 'is_active', 'name'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class MyODBServiceWithResponseElem(MyODBService):
-    class SimpleIO(MyODBService.SimpleIO):
+    class IO(MyODBService.IO):
         response_elem = 'my_response_elem'
 
 # ################################################################################################################################
@@ -659,33 +657,23 @@ class MyZatoClass:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BaseSIOTestCase(TestCase):
+class BaseIOTestCase(TestCase):
 
     def setUp(self):
         self.maxDiff = maxint
 
     def get_server_config(self, needs_response_elem=False):
 
-        with NamedTemporaryFile(delete=False) as f:
-            contents = simple_io_conf_contents.format(bytes_to_str_encoding=get_bytes_to_str_encoding())
-            if isinstance(contents, unicode):
-                contents = contents.encode('utf8')
-            f.write(contents)
-            f.flush()
-            temporary_file_name=f.name
-
-        io_fs_config = ConfigObj(temporary_file_name)
-        io_fs_config = bunchify(io_fs_config)
-
-        import os
-        os.remove(temporary_file_name)
-
-        io_server_config = get_sio_server_config(io_fs_config)
+        io_config = Bunch()
+        io_config.secret = Bunch()
+        io_config.secret.exact = secret_fields_exact
+        io_config.secret.prefix = secret_fields_prefix
+        io_config.secret.suffix = secret_fields_suffix
 
         if not needs_response_elem:
-            io_server_config.response_elem = None
+            io_config.response_elem = None
 
-        return io_server_config
+        return io_config
 
 # ################################################################################################################################
 

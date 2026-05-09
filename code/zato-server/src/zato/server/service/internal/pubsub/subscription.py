@@ -27,7 +27,7 @@ from zato.common.pubsub.util import evaluate_pattern_match, get_security_definit
 from zato.common.util.api import as_bool, new_sub_key, utcnow
 from zato.common.util.sql import elems_with_opaque
 from zato.server.service import AsIs, PubSubMessage, Service
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -410,7 +410,7 @@ class Edit(AdminService):
                 sub.sec_base_id = input.sec_base_id
                 sub.delivery_type = input.delivery_type
 
-                for key in self.SimpleIO.input_optional:
+                for key in ('is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'):
                     if key in input:
                         value = input[key]
                         setattr(sub, key, value)

@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
-from zato.common.api import OAuth as OAuthCommon, SIMPLE_IO
+from zato.common.api import OAuth as OAuthCommon, IO
 from zato.admin.web.forms import add_select
 
 # ################################################################################################################################
@@ -43,7 +43,7 @@ class CreateForm(forms.Form):
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
 
-        add_select(self, 'data_format', SIMPLE_IO.Bearer_Token_Format, needs_initial_select=False)
+        add_select(self, 'data_format', IO.Bearer_Token_Format, needs_initial_select=False)
 
 # ################################################################################################################################
 # ################################################################################################################################

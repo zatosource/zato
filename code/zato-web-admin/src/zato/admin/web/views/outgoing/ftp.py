@@ -34,10 +34,9 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'host', 'user', 'acct', 'timeout', 'port', 'dircache', 'default_directory')
-        output_repeated = True
+    input_required = 'cluster_id',
+    output_required = 'id', 'name', 'is_active', 'host', 'user', 'acct', 'timeout', 'port', 'dircache', 'default_directory'
+    output_repeated = True
 
     def handle(self):
         return {
@@ -52,9 +51,8 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'host', 'user', 'timeout', 'acct', 'port', 'dircache', 'default_directory')
-        output_required = ('id', 'name')
+    input_required = 'name', 'is_active', 'host', 'user', 'timeout', 'acct', 'port', 'dircache', 'default_directory'
+    output_required = 'id', 'name'
 
     def success_message(self, item):
         return 'Outgoing FTP connection `{}` successfully {}'.format(item.name, self.verb)

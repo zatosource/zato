@@ -122,8 +122,8 @@ class Response:
         return self._payload
 
     def _set_payload(self, value, _json=DATA_FORMAT.JSON):
-        """ Strings, lists and tuples are assigned as-is. Dicts as well if SIO is not used. However, if SIO is used
-        the dicts are matched and transformed according to the SIO definition.
+        """ Strings, lists and tuples are assigned as-is. Dicts as well if I/O is not used. However, if I/O is used
+        the dicts are matched and transformed according to the I/O definition.
         Generators/iterators (used for SSE streaming) are stored directly without serialization.
         """
         # 0)
@@ -137,7 +137,7 @@ class Response:
         if isinstance(value, dict):
 
             # 1a)
-            # If we are using SimpleIO, extract elements from that dict ..
+            # If we are using I/O, extract elements from that dict ..
             if self._has_io_output:
                 self._payload.set_payload_attrs(value)
 
@@ -159,7 +159,7 @@ class Response:
             else:
 
                 # 2b1)
-                # .. if using SimpleIO ..
+                # .. if using I/O ..
                 if self._has_io_output:
                     self._payload.set_payload_attrs(value)
 

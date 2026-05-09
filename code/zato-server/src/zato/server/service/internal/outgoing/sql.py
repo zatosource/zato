@@ -23,7 +23,7 @@ from zato.common.odb.model import Cluster, SQLConnectionPool
 from zato.common.odb.query import out_sql_list
 from zato.common.util.api import get_sql_engine_display_name
 from zato.server.service import AsIs, Integer
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+from zato.server.service.internal import AdminService, ChangePasswordBase
 
 class _SQLService:
     """ A common class for various SQL-related services.

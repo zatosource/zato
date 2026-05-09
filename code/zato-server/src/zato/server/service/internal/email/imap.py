@@ -19,7 +19,7 @@ from zato.common.broker_message import EMAIL
 from zato.common.odb.model import IMAP
 from zato.common.odb.query import email_imap_list
 from zato.server.service import AsIs
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
+from zato.server.service.internal import AdminService, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################

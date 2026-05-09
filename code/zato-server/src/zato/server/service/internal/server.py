@@ -19,7 +19,7 @@ from six import add_metaclass
 from zato.common.exception import ZatoException
 from zato.common.odb.model import Server
 from zato.common.odb.query import server_list
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService
 from zato.server.service.meta import GetListMeta
 
 # ################################################################################################################################

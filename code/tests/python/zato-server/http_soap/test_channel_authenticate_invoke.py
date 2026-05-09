@@ -18,7 +18,7 @@ from hypothesis import given, HealthCheck, settings as hypothesis_settings
 from hypothesis import strategies as st
 
 # Zato
-from zato.common.api import CONTENT_TYPE, DATA_FORMAT, MISC, SIMPLE_IO, URL_PARAMS_PRIORITY, ZATO_NONE
+from zato.common.api import CONTENT_TYPE, DATA_FORMAT, MISC, IO, URL_PARAMS_PRIORITY, ZATO_NONE
 from zato.common.exception import (
     BackendInvocationError, BadRequest, Forbidden, MethodNotAllowed,
     NotFound, ServiceMissingException, TooManyRequests, Unauthorized,
@@ -212,7 +212,7 @@ class ExtractPostDataTestCase(unittest.TestCase):
         """ When data_format is FORM_DATA but content type does not match, an empty dict is returned.
         """
         ctx = _make_dispatcher()
-        channel_item = _make_channel_item({'data_format': SIMPLE_IO.FORMAT.FORM_DATA})
+        channel_item = _make_channel_item({'data_format': IO.FORMAT.FORM_DATA})
         wsgi_environ = _make_wsgi_environ({'CONTENT_TYPE': 'application/json'})
 
         result = ctx.dispatcher._extract_post_data(channel_item, wsgi_environ)
@@ -227,7 +227,7 @@ class ExtractPostDataTestCase(unittest.TestCase):
         """
         mock_get_form_data.return_value = {'key': 'value'}
         ctx = _make_dispatcher()
-        channel_item = _make_channel_item({'data_format': SIMPLE_IO.FORMAT.FORM_DATA})
+        channel_item = _make_channel_item({'data_format': IO.FORMAT.FORM_DATA})
         wsgi_environ = _make_wsgi_environ({'CONTENT_TYPE': 'application/x-www-form-urlencoded'})
 
         result = ctx.dispatcher._extract_post_data(channel_item, wsgi_environ)
@@ -242,7 +242,7 @@ class ExtractPostDataTestCase(unittest.TestCase):
         """
         mock_get_form_data.return_value = {'token': 'abc'}
         ctx = _make_dispatcher()
-        channel_item = _make_channel_item({'data_format': SIMPLE_IO.FORMAT.FORM_DATA})
+        channel_item = _make_channel_item({'data_format': IO.FORMAT.FORM_DATA})
         wsgi_environ = _make_wsgi_environ({'CONTENT_TYPE': 'application/x-www-form-urlencoded'})
 
         _ = ctx.dispatcher._extract_post_data(channel_item, wsgi_environ)
@@ -255,7 +255,7 @@ class ExtractPostDataTestCase(unittest.TestCase):
         """ When CONTENT_TYPE is missing from wsgi_environ, an empty dict is returned.
         """
         ctx = _make_dispatcher()
-        channel_item = _make_channel_item({'data_format': SIMPLE_IO.FORMAT.FORM_DATA})
+        channel_item = _make_channel_item({'data_format': IO.FORMAT.FORM_DATA})
         wsgi_environ = _make_wsgi_environ()
 
         result = ctx.dispatcher._extract_post_data(channel_item, wsgi_environ)
@@ -270,7 +270,7 @@ class ExtractPostDataTestCase(unittest.TestCase):
         """
         mock_get_form_data.return_value = {'file': 'data'}
         ctx = _make_dispatcher()
-        channel_item = _make_channel_item({'data_format': SIMPLE_IO.FORMAT.FORM_DATA})
+        channel_item = _make_channel_item({'data_format': IO.FORMAT.FORM_DATA})
         wsgi_environ = _make_wsgi_environ({'CONTENT_TYPE': 'multipart/form-data; boundary=---abc'})
 
         result = ctx.dispatcher._extract_post_data(channel_item, wsgi_environ)
@@ -674,7 +674,7 @@ class HypothesisTestCase(unittest.TestCase):
         """ _extract_post_data does not crash on random content types.
         """
         ctx = _make_dispatcher()
-        channel_item = _make_channel_item({'data_format': SIMPLE_IO.FORMAT.FORM_DATA})
+        channel_item = _make_channel_item({'data_format': IO.FORMAT.FORM_DATA})
         wsgi_environ = _make_wsgi_environ({'CONTENT_TYPE': content_type})
 
         result = ctx.dispatcher._extract_post_data(channel_item, wsgi_environ)
@@ -1430,7 +1430,7 @@ class ExtractPostDataMutantKillTestCase(unittest.TestCase):
         """
         mock_get_form_data.return_value = {'field': 'val'}
         ctx = _make_dispatcher()
-        channel_item = _make_channel_item({'data_format': SIMPLE_IO.FORMAT.FORM_DATA})
+        channel_item = _make_channel_item({'data_format': IO.FORMAT.FORM_DATA})
         wsgi_environ = _make_wsgi_environ({'CONTENT_TYPE': 'application/x-www-form-urlencoded'})
 
         result = ctx.dispatcher._extract_post_data(channel_item, wsgi_environ)

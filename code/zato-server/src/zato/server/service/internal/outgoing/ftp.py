@@ -18,7 +18,7 @@ from zato.common.odb.model import OutgoingFTP
 from zato.common.odb.query import out_ftp, out_ftp_list
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
 # ################################################################################################################################

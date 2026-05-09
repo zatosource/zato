@@ -32,10 +32,9 @@ class Index(_Index):
     service_name = 'zato.outgoing.sap.get-list'
     output_class = Bunch
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'host', 'sysnr', 'sysid', 'user', 'client', 'router', 'pool_size')
-        output_repeated = True
+    input_required = 'cluster_id',
+    output_required = 'id', 'name', 'is_active', 'host', 'sysnr', 'sysid', 'user', 'client', 'router', 'pool_size'
+    output_repeated = True
 
     def handle(self):
         return {
@@ -49,9 +48,8 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'host', 'sysnr', 'user', 'sysid', 'client', 'router', 'pool_size')
-        output_required = ('id', 'name')
+    input_required = 'name', 'is_active', 'host', 'sysnr', 'user', 'sysid', 'client', 'router', 'pool_size'
+    output_required = 'id', 'name'
 
     def success_message(self, item):
         return 'Successfully {} the outgoing SAP RFC connection [{}]'.format(self.verb, item.name)

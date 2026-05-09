@@ -192,7 +192,6 @@ class Model(BaseModel):
     @staticmethod
     def build_model_from_flat_input(
         server,            # type: ParallelServer
-        io_server_config, # type: ignore
         io_processor_class,       # type: ignore
         name,  # type: str
         input, # type: str | tuplist
@@ -209,7 +208,7 @@ class Model(BaseModel):
             input = [input]
 
         # .. build an actual I/O handler ..
-        io_processor = io_processor_class(server, io_server_config, input) # type: ignore
+        io_processor = io_processor_class() # type: ignore
 
         # .. now, go through everything we have on input ..
         for item in input:

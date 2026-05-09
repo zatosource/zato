@@ -873,8 +873,8 @@ class OAuth:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# TODO: SIMPLE_IO.FORMAT should be removed in favour of plain DATA_FORMAT
-class SIMPLE_IO:
+# TODO: IO.FORMAT should be removed in favour of plain DATA_FORMAT
+class IO:
 
     class FORMAT(Attrs):
         FORM_DATA = DATA_FORMAT.FORM_DATA

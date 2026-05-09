@@ -17,7 +17,7 @@ from typing import get_args, get_origin, Union
 from uuid import UUID as stdlib_UUID
 
 # Zato
-from zato.common.marshal_.simpleio import DataClassIO
+from zato.common.marshal_.io import DataClassIO
 from zato.input_output import AsIs, Bool, CSV, Date, DateTime, Decimal, Dict, DictList, Elem, Float, \
     Int, IOProcessor, List, Secret, Text, UTC, UUID
 

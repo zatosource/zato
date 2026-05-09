@@ -20,7 +20,7 @@ from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, HTTPBasicAuth
 from zato.common.odb.query import basic_auth_list
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
 # ################################################################################################################################

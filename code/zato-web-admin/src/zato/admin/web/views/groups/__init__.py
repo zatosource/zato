@@ -45,10 +45,9 @@ class Index(_Index):
     output_class = GroupObject
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = ('group_type',)
-        output_required = ('type', 'id', 'name')
-        output_repeated = True
+    input_required = 'group_type',
+    output_required = 'type', 'id', 'name'
+    output_repeated = True
 
     def get_initial_input(self) -> 'strdict':
         return {
@@ -96,10 +95,9 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'group_type', 'name'
-        input_optional = 'id',
-        output_required = 'id', 'name'
+    input_required = 'group_type', 'name'
+    input_optional = 'id',
+    output_required = 'id', 'name'
 
     def pre_process_input_dict(self, input_dict:'strdict') -> 'None':
 

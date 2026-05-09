@@ -26,7 +26,7 @@ from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_se
      set_instance_opaque_attrs
 from zato.server.connection.http_soap import BadRequest
 from zato.server.service import AsIs, Boolean, Integer
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -16,7 +16,7 @@ from zato.common.api import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, NTLM
 from zato.common.odb.query import ntlm_list
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -89,11 +89,10 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id',
-        input_optional = 'query',
-        output_required = 'id', 'name', 'is_active', 'is_internal', 'impl_name', 'may_be_deleted', 'usage', 'slow_threshold'
-        output_repeated = True
+    input_required = 'cluster_id',
+    input_optional = 'query',
+    output_required = 'id', 'name', 'is_active', 'is_internal', 'impl_name', 'may_be_deleted', 'usage', 'slow_threshold'
+    output_repeated = True
 
     def handle(self):
         return {
@@ -123,9 +122,8 @@ class Edit(CreateEdit):
     form_prefix = 'edit-'
     service_name = 'zato.service.edit'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'id', 'is_active', 'slow_threshold'
-        output_required = 'id', 'name', 'impl_name', 'is_internal', 'usage', 'may_be_deleted'
+    input_required = 'id', 'is_active', 'slow_threshold'
+    output_required = 'id', 'name', 'impl_name', 'is_internal', 'usage', 'may_be_deleted'
 
     def success_message(self, item:'any_') -> 'str':
         return 'Successfully {} service `{}`'.format(self.verb, item.name)

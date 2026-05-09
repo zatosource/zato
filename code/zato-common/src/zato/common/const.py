@@ -20,7 +20,7 @@ class ServiceConst:
 
 class SECRETS:
 
-    # These parameters will be automatically encrypted in SimpleIO input
+    # These parameters will be automatically encrypted in I/O input
     PARAMS = ('auth_data', 'auth_token', 'password', 'secret_key', 'token', 'secret')
 
     # Zato secret (Fernet)

@@ -33,11 +33,10 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'is_debug', 'mode', 'ping_address')
-        output_optional = ('username',)
-        output_repeated = True
+    input_required = 'cluster_id',
+    output_required = 'id', 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'is_debug', 'mode', 'ping_address'
+    output_optional = 'username',
+    output_repeated = True
 
     def handle(self):
         return {
@@ -50,9 +49,8 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'host', 'port', 'timeout', 'username', 'is_debug', 'mode', 'ping_address')
-        output_required = ('id', 'name')
+    input_required = 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'is_debug', 'mode', 'ping_address'
+    output_required = 'id', 'name'
 
     def success_message(self, item):
         return 'Successfully {0} the SMTP connection [{1}]'.format(self.verb, item.name)

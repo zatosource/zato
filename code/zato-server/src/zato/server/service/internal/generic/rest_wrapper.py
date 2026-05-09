@@ -97,7 +97,7 @@ class _WrapperBase(Service):
     _wrapper_impl_suffix = None
     _uses_name = False
 
-    # SimpleIO
+    # I/O
     output = '-id', '-name', '-info', '-is_success'
 
 # ################################################################################################################################
