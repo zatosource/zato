@@ -1,0 +1,14 @@
+[package]
+name = "zato_rate_limiting_tests"
+version = "4.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+chrono = { version = "0.4.44", default-features = false, features = ["std", "clock"] }
+zato_rate_limiting_core = { path = "../../../../zato-rust/zato_rate_limiting_core" }
+proptest = "1.11.0"
+
+[[test]]
+name = "rate_limiting_tests"
+path = "main.rs"

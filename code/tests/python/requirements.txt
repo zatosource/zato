@@ -1,0 +1,15 @@
+pytest==9.0.3
+pytest-xdist
+aiohttp==3.13.5
+fuse-python==1.0.9
+hypothesis==6.152.1
+crc32c
+PyYAML
+coverage==7.6.10
+requests==2.32.3
+ruff==0.15.12
+pyright==1.1.409
+pip-licenses==5.5.5
+deptry==0.25.1
+vulture==2.16
+cyclonedx-bom==7.3.0

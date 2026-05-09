@@ -1,0 +1,47 @@
+cognitive-complexity-threshold = 15
+too-many-arguments-threshold   = 5
+too-many-lines-threshold       = 80
+type-complexity-threshold      = 500
+min-ident-chars-threshold      = 2
+allowed-idents-below-min-chars = ["_", "..", "'_", "py", "id", "fd", "io", "dt"]
+avoid-breaking-exported-api    = false
+check-private-items            = true
+allow-unwrap-in-tests          = true
+allow-expect-in-tests          = true
+allow-panic-in-tests           = true
+
+# --- Architectural bans ---
+# Every rule of the form "never use X, always use Y" goes here.
+# Add entries as new rules emerge. This is the living document.
+
+disallowed-macros = [
+  { path = "std::dbg",                  reason = "debug artefact" },
+  { path = "lazy_static::lazy_static",  reason = "prefer OnceLock in a struct, not module-level singleton" },
+]
+
+disallowed-types = [
+  # Wrong abstraction level
+  { path = "std::sync::Mutex",   reason = "prefer parking_lot::Mutex", replacement = "parking_lot::Mutex" },
+  # Unnecessary intermediate formats
+  { path = "serde_json::Value",  reason = "use typed structs with PyO3 extract(), not dynamic JSON blobs" },
+  { path = "serde_yaml::Value",  reason = "use typed structs, not dynamic YAML blobs" },
+]
+
+disallowed-methods = [
+  # Process-global mutations
+  { path = "std::env::set_var",      reason = "process-global state, data race risk" },
+  { path = "std::env::remove_var",   reason = "process-global state, data race risk" },
+  { path = "std::process::exit",     reason = "use Result propagation" },
+  # Unnecessary intermediate formats - JSON
+  { path = "serde_json::from_str",   reason = "use PyO3 extract() or typed deserialization, not JSON round-trip" },
+  { path = "serde_json::from_value", reason = "use PyO3 extract() or typed deserialization, not JSON round-trip" },
+  { path = "serde_json::from_slice", reason = "use PyO3 extract() or typed deserialization, not JSON round-trip" },
+  { path = "serde_json::to_string",  reason = "use PyO3 dict injection or typed serialization, not JSON round-trip" },
+  { path = "serde_json::to_value",   reason = "use PyO3 dict injection or typed serialization, not JSON round-trip" },
+  { path = "serde_json::to_vec",     reason = "use PyO3 dict injection or typed serialization, not JSON round-trip" },
+  # Unnecessary intermediate formats - YAML
+  { path = "serde_yaml::from_str",   reason = "use typed deserialization, not YAML round-trip" },
+  { path = "serde_yaml::to_string",  reason = "use typed serialization, not YAML round-trip" },
+]
+
+disallowed-names = ["foo", "bar", "baz", "tmp", "temp"]
