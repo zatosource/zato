@@ -211,7 +211,7 @@ class ACC(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    accident_identifier: list[EI] | EI | str | None = HL7Field(
+    accident_identifier: list[EI] | EI | list[str] | str | None = HL7Field(
         position=13,
         datatype="EI",
         usage=Usage.OPTIONAL,
@@ -323,7 +323,7 @@ class AFF(HL7Segment):
         datatype="XAD",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    professional_organization_affiliation_date_range: list[DR] | DR | str | None = HL7Field(
+    professional_organization_affiliation_date_range: list[DR] | DR | list[str] | str | None = HL7Field(
         position=4,
         datatype="DR",
         usage=Usage.OPTIONAL,
@@ -357,7 +357,7 @@ class AIG(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False,    )
-    resource_group: list[CWE] | CWE | str | None = HL7Field(
+    resource_group: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=5,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -421,7 +421,7 @@ class AIL(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70206",    )
-    location_resource_id: list[PL] | PL | str | None = HL7Field(
+    location_resource_id: list[PL] | PL | list[str] | str | None = HL7Field(
         position=3,
         datatype="PL",
         usage=Usage.OPTIONAL,
@@ -485,7 +485,7 @@ class AIP(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70206",    )
-    personnel_resource_id: list[XCN] | XCN | str | None = HL7Field(
+    personnel_resource_id: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=3,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -589,12 +589,12 @@ class AIS(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70278",    )
-    placer_supplemental_service_information: list[CWE] | CWE | str | None = HL7Field(
+    placer_supplemental_service_information: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=11,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70411",    )
-    filler_supplemental_service_information: list[CWE] | CWE | str | None = HL7Field(
+    filler_supplemental_service_information: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=12,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -623,7 +623,7 @@ class AL1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70128",    )
-    allergy_reaction_code: list[ST] | ST | str | None = HL7Field(
+    allergy_reaction_code: list[ST] | ST | list[str] | str | None = HL7Field(
         position=5,
         datatype="ST",
         usage=Usage.OPTIONAL,
@@ -632,17 +632,17 @@ class AL1(HL7Segment):
 class APR(HL7Segment):
     _segment_id = "APR"
 
-    time_selection_criteria: list[SCV] | SCV | str | None = HL7Field(
+    time_selection_criteria: list[SCV] | SCV | list[str] | str | None = HL7Field(
         position=1,
         datatype="SCV",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70294",    )
-    resource_selection_criteria: list[SCV] | SCV | str | None = HL7Field(
+    resource_selection_criteria: list[SCV] | SCV | list[str] | str | None = HL7Field(
         position=2,
         datatype="SCV",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70294",    )
-    location_selection_criteria: list[SCV] | SCV | str | None = HL7Field(
+    location_selection_criteria: list[SCV] | SCV | list[str] | str | None = HL7Field(
         position=3,
         datatype="SCV",
         usage=Usage.OPTIONAL,
@@ -652,7 +652,7 @@ class APR(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    filler_override_criteria: list[SCV] | SCV | str | None = HL7Field(
+    filler_override_criteria: list[SCV] | SCV | list[str] | str | None = HL7Field(
         position=5,
         datatype="SCV",
         usage=Usage.OPTIONAL,
@@ -711,7 +711,7 @@ class ARQ(HL7Segment):
         datatype="CNE",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    requested_start_date_time_range: list[DR] | DR | str | None = HL7Field(
+    requested_start_date_time_range: list[DR] | DR | list[str] | str | None = HL7Field(
         position=11,
         datatype="DR",
         usage=Usage.OPTIONAL,
@@ -731,17 +731,17 @@ class ARQ(HL7Segment):
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    placer_contact_person: list[XCN] | XCN | str = HL7Field(
+    placer_contact_person: list[XCN] | XCN | list[str] | str = HL7Field(
         position=15,
         datatype="XCN",
         usage=Usage.REQUIRED,
         repeatable=True,    )
-    placer_contact_phone_number: list[XTN] | XTN | str | None = HL7Field(
+    placer_contact_phone_number: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=16,
         datatype="XTN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    placer_contact_address: list[XAD] | XAD | str | None = HL7Field(
+    placer_contact_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=17,
         datatype="XAD",
         usage=Usage.OPTIONAL,
@@ -751,12 +751,12 @@ class ARQ(HL7Segment):
         datatype="PL",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    entered_by_person: list[XCN] | XCN | str = HL7Field(
+    entered_by_person: list[XCN] | XCN | list[str] | str = HL7Field(
         position=19,
         datatype="XCN",
         usage=Usage.REQUIRED,
         repeatable=True,    )
-    entered_by_phone_number: list[XTN] | XTN | str | None = HL7Field(
+    entered_by_phone_number: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=20,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -776,12 +776,12 @@ class ARQ(HL7Segment):
         datatype="EI",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    placer_order_number: list[EI] | EI | str | None = HL7Field(
+    placer_order_number: list[EI] | EI | list[str] | str | None = HL7Field(
         position=24,
         datatype="EI",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    filler_order_number: list[EI] | EI | str | None = HL7Field(
+    filler_order_number: list[EI] | EI | list[str] | str | None = HL7Field(
         position=25,
         datatype="EI",
         usage=Usage.OPTIONAL,
@@ -810,12 +810,12 @@ class ARV(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70717",    )
-    access_restriction_reason: list[CWE] | CWE | str | None = HL7Field(
+    access_restriction_reason: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=4,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70719",    )
-    special_access_restriction_instructions: list[ST] | ST | str | None = HL7Field(
+    special_access_restriction_instructions: list[ST] | ST | list[str] | str | None = HL7Field(
         position=5,
         datatype="ST",
         usage=Usage.OPTIONAL,
@@ -830,12 +830,12 @@ class ARV(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70952",    )
-    security_handling_instructions: list[CWE] | CWE | str | None = HL7Field(
+    security_handling_instructions: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=8,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70953",    )
-    access_restriction_message_location: list[ERL] | ERL | str | None = HL7Field(
+    access_restriction_message_location: list[ERL] | ERL | list[str] | str | None = HL7Field(
         position=9,
         datatype="ERL",
         usage=Usage.OPTIONAL,
@@ -899,12 +899,12 @@ class AUT(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    requested_disciplines: list[CWE] | CWE | str | None = HL7Field(
+    requested_disciplines: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=11,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70522",    )
-    authorized_disciplines: list[CWE] | CWE | str | None = HL7Field(
+    authorized_disciplines: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=12,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -1073,12 +1073,12 @@ class BHS(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70952",    )
-    security_handling_instructions: list[CWE] | CWE | str | None = HL7Field(
+    security_handling_instructions: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=16,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70953",    )
-    special_access_restriction_instructions: list[ST] | ST | str | None = HL7Field(
+    special_access_restriction_instructions: list[ST] | ST | list[str] | str | None = HL7Field(
         position=17,
         datatype="ST",
         usage=Usage.OPTIONAL,
@@ -1135,7 +1135,7 @@ class BPO(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70575",    )
-    bp_processing_requirements: list[CWE] | CWE | str | None = HL7Field(
+    bp_processing_requirements: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=3,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -1185,7 +1185,7 @@ class BPO(HL7Segment):
         datatype="XAD",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    bp_indication_for_use: list[CWE] | CWE | str | None = HL7Field(
+    bp_indication_for_use: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=13,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -1254,7 +1254,7 @@ class BPX(HL7Segment):
         datatype="CNE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70579",    )
-    bc_special_testing: list[CNE] | CNE | str | None = HL7Field(
+    bc_special_testing: list[CNE] | CNE | list[str] | str | None = HL7Field(
         position=12,
         datatype="CNE",
         usage=Usage.OPTIONAL,
@@ -1323,7 +1323,7 @@ class BTS(HL7Segment):
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    batch_totals: list[NM] | NM | str | None = HL7Field(
+    batch_totals: list[NM] | NM | list[str] | str | None = HL7Field(
         position=3,
         datatype="NM",
         usage=Usage.OPTIONAL,
@@ -1417,7 +1417,7 @@ class BTX(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    bp_adverse_reaction_type: list[CWE] | CWE | str | None = HL7Field(
+    bp_adverse_reaction_type: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=18,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -1515,7 +1515,7 @@ class CDM(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False,    )
-    charge_code_alias: list[CWE] | CWE | str | None = HL7Field(
+    charge_code_alias: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=2,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -1535,12 +1535,12 @@ class CDM(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70268",    )
-    exploding_charges: list[CWE] | CWE | str | None = HL7Field(
+    exploding_charges: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=6,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70132",    )
-    procedure_code: list[CNE] | CNE | str | None = HL7Field(
+    procedure_code: list[CNE] | CNE | list[str] | str | None = HL7Field(
         position=7,
         datatype="CNE",
         usage=Usage.OPTIONAL,
@@ -1550,7 +1550,7 @@ class CDM(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70183",    )
-    inventory_number: list[CWE] | CWE | str | None = HL7Field(
+    inventory_number: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=9,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -1560,12 +1560,12 @@ class CDM(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    contract_number: list[CX] | CX | str | None = HL7Field(
+    contract_number: list[CX] | CX | list[str] | str | None = HL7Field(
         position=11,
         datatype="CX",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    contract_organization: list[XON] | XON | str | None = HL7Field(
+    contract_organization: list[XON] | XON | list[str] | str | None = HL7Field(
         position=12,
         datatype="XON",
         usage=Usage.OPTIONAL,
@@ -1668,7 +1668,7 @@ class CER(HL7Segment):
         datatype="ST",
         usage=Usage.REQUIRED,
         repeatable=False,    )
-    subject_directory_attribute_extension: list[CWE] | CWE | str | None = HL7Field(
+    subject_directory_attribute_extension: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=14,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -1688,7 +1688,7 @@ class CER(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70136",    )
-    crl_distribution_point: list[CWE] | CWE | str | None = HL7Field(
+    crl_distribution_point: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=18,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -1708,7 +1708,7 @@ class CER(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70289",    )
-    jurisdiction_breadth: list[CWE] | CWE | str | None = HL7Field(
+    jurisdiction_breadth: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=22,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -1782,7 +1782,7 @@ class CM0(HL7Segment):
         datatype="ST",
         usage=Usage.REQUIRED,
         repeatable=False,    )
-    chairman_of_study: list[XCN] | XCN | str | None = HL7Field(
+    chairman_of_study: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=5,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -1802,7 +1802,7 @@ class CM0(HL7Segment):
         datatype="DT",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    contact_for_study: list[XCN] | XCN | str | None = HL7Field(
+    contact_for_study: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=9,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -1812,7 +1812,7 @@ class CM0(HL7Segment):
         datatype="XTN",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    contacts_address: list[XAD] | XAD | str | None = HL7Field(
+    contacts_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=11,
         datatype="XAD",
         usage=Usage.OPTIONAL,
@@ -1918,27 +1918,27 @@ class CON(HL7Segment):
         datatype="EI",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    consent_text: list[FT] | FT | str | None = HL7Field(
+    consent_text: list[FT] | FT | list[str] | str | None = HL7Field(
         position=5,
         datatype="FT",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    subject_specific_consent_text: list[FT] | FT | str | None = HL7Field(
+    subject_specific_consent_text: list[FT] | FT | list[str] | str | None = HL7Field(
         position=6,
         datatype="FT",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    consent_background_information: list[FT] | FT | str | None = HL7Field(
+    consent_background_information: list[FT] | FT | list[str] | str | None = HL7Field(
         position=7,
         datatype="FT",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    subject_specific_consent_background_text: list[FT] | FT | str | None = HL7Field(
+    subject_specific_consent_background_text: list[FT] | FT | list[str] | str | None = HL7Field(
         position=8,
         datatype="FT",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    consenter_imposed_limitations: list[FT] | FT | str | None = HL7Field(
+    consenter_imposed_limitations: list[FT] | FT | list[str] | str | None = HL7Field(
         position=9,
         datatype="FT",
         usage=Usage.OPTIONAL,
@@ -2013,12 +2013,12 @@ class CON(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70502",    )
-    consenter_id: list[XPN] | XPN | str = HL7Field(
+    consenter_id: list[XPN] | XPN | list[str] | str = HL7Field(
         position=24,
         datatype="XPN",
         usage=Usage.REQUIRED,
         repeatable=True,    )
-    relationship_to_subject: list[CWE] | CWE | str = HL7Field(
+    relationship_to_subject: list[CWE] | CWE | list[str] | str = HL7Field(
         position=25,
         datatype="CWE",
         usage=Usage.REQUIRED,
@@ -2081,12 +2081,12 @@ class CSR(HL7Segment):
         datatype="DTM",
         usage=Usage.REQUIRED,
         repeatable=False,    )
-    person_performing_study_registration: list[XCN] | XCN | str | None = HL7Field(
+    person_performing_study_registration: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=7,
         datatype="XCN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    study_authorizing_provider: list[XCN] | XCN | str = HL7Field(
+    study_authorizing_provider: list[XCN] | XCN | list[str] | str = HL7Field(
         position=8,
         datatype="XCN",
         usage=Usage.REQUIRED,
@@ -2159,17 +2159,17 @@ class CSS(HL7Segment):
 class CTD(HL7Segment):
     _segment_id = "CTD"
 
-    contact_role: list[CWE] | CWE | str = HL7Field(
+    contact_role: list[CWE] | CWE | list[str] | str = HL7Field(
         position=1,
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=True, table="HL70131",    )
-    contact_name: list[XPN] | XPN | str | None = HL7Field(
+    contact_name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=2,
         datatype="XPN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    contact_address: list[XAD] | XAD | str | None = HL7Field(
+    contact_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=3,
         datatype="XAD",
         usage=Usage.OPTIONAL,
@@ -2179,7 +2179,7 @@ class CTD(HL7Segment):
         datatype="PL",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    contact_communication_information: list[XTN] | XTN | str | None = HL7Field(
+    contact_communication_information: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=5,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -2189,7 +2189,7 @@ class CTD(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70185",    )
-    contact_identifiers: list[PLN] | PLN | str | None = HL7Field(
+    contact_identifiers: list[PLN] | PLN | list[str] | str | None = HL7Field(
         position=7,
         datatype="PLN",
         usage=Usage.OPTIONAL,
@@ -2297,7 +2297,7 @@ class CTR(HL7Segment):
         datatype="MOP",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    corporation: list[XON] | XON | str | None = HL7Field(
+    corporation: list[XON] | XON | list[str] | str | None = HL7Field(
         position=16,
         datatype="XON",
         usage=Usage.OPTIONAL,
@@ -2341,7 +2341,7 @@ class DB1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70334",    )
-    disabled_person_identifier: list[CX] | CX | str | None = HL7Field(
+    disabled_person_identifier: list[CX] | CX | list[str] | str | None = HL7Field(
         position=3,
         datatype="CX",
         usage=Usage.OPTIONAL,
@@ -2385,12 +2385,12 @@ class DEV(HL7Segment):
         datatype="EI",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    device_type: list[CNE] | CNE | str | None = HL7Field(
+    device_type: list[CNE] | CNE | list[str] | str | None = HL7Field(
         position=3,
         datatype="CNE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70961",    )
-    device_status: list[CNE] | CNE | str | None = HL7Field(
+    device_status: list[CNE] | CNE | list[str] | str | None = HL7Field(
         position=4,
         datatype="CNE",
         usage=Usage.OPTIONAL,
@@ -2440,7 +2440,7 @@ class DEV(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    safety_characteristics: list[CWE] | CWE | str | None = HL7Field(
+    safety_characteristics: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=14,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -2489,7 +2489,7 @@ class DG1(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70359",    )
-    diagnosing_clinician: list[XCN] | XCN | str | None = HL7Field(
+    diagnosing_clinician: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=16,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -2607,12 +2607,12 @@ class DON(HL7Segment):
         datatype="CNE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70932",    )
-    intended_procedure_type: list[CNE] | CNE | str = HL7Field(
+    intended_procedure_type: list[CNE] | CNE | list[str] | str = HL7Field(
         position=7,
         datatype="CNE",
         usage=Usage.REQUIRED,
         repeatable=True, table="HL70933",    )
-    actual_procedure_type: list[CNE] | CNE | str = HL7Field(
+    actual_procedure_type: list[CNE] | CNE | list[str] | str = HL7Field(
         position=8,
         datatype="CNE",
         usage=Usage.REQUIRED,
@@ -2622,7 +2622,7 @@ class DON(HL7Segment):
         datatype="ID",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70136",    )
-    donor_eligibility_procedure_type: list[CNE] | CNE | str = HL7Field(
+    donor_eligibility_procedure_type: list[CNE] | CNE | list[str] | str = HL7Field(
         position=10,
         datatype="CNE",
         usage=Usage.REQUIRED,
@@ -2642,7 +2642,7 @@ class DON(HL7Segment):
         datatype="CNE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70935",    )
-    phlebotomy_issue: list[CNE] | CNE | str = HL7Field(
+    phlebotomy_issue: list[CNE] | CNE | list[str] | str = HL7Field(
         position=14,
         datatype="CNE",
         usage=Usage.REQUIRED,
@@ -2727,7 +2727,7 @@ class DON(HL7Segment):
         datatype="NM",
         usage=Usage.REQUIRED,
         repeatable=False,    )
-    donation_sample_identifier: list[EI] | EI | str = HL7Field(
+    donation_sample_identifier: list[EI] | EI | list[str] | str = HL7Field(
         position=31,
         datatype="EI",
         usage=Usage.REQUIRED,
@@ -2737,7 +2737,7 @@ class DON(HL7Segment):
         datatype="XCN",
         usage=Usage.REQUIRED,
         repeatable=False,    )
-    donation_material_review_staff: list[XCN] | XCN | str = HL7Field(
+    donation_material_review_staff: list[XCN] | XCN | list[str] | str = HL7Field(
         position=33,
         datatype="XCN",
         usage=Usage.REQUIRED,
@@ -2756,7 +2756,7 @@ class DPS(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70051",    )
-    procedure_code: list[CWE] | CWE | str = HL7Field(
+    procedure_code: list[CWE] | CWE | list[str] | str = HL7Field(
         position=2,
         datatype="CWE",
         usage=Usage.REQUIRED,
@@ -2997,7 +2997,7 @@ class DST(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70943",    )
-    route: list[CWE] | CWE | str | None = HL7Field(
+    route: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=2,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -3021,7 +3021,7 @@ class ECD(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70136",    )
-    parameters: list[TX] | TX | str | None = HL7Field(
+    parameters: list[TX] | TX | list[str] | str | None = HL7Field(
         position=5,
         datatype="TX",
         usage=Usage.OPTIONAL,
@@ -3040,7 +3040,7 @@ class ECR(HL7Segment):
         datatype="DTM",
         usage=Usage.REQUIRED,
         repeatable=False,    )
-    command_response_parameters: list[TX] | TX | str | None = HL7Field(
+    command_response_parameters: list[TX] | TX | list[str] | str | None = HL7Field(
         position=3,
         datatype="TX",
         usage=Usage.OPTIONAL,
@@ -3089,7 +3089,7 @@ class EDU(HL7Segment):
         datatype="XAD",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    major_field_of_study: list[CWE] | CWE | str | None = HL7Field(
+    major_field_of_study: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=9,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -3127,7 +3127,7 @@ class EQP(HL7Segment):
 class EQU(HL7Segment):
     _segment_id = "EQU"
 
-    equipment_instance_identifier: list[EI] | EI | str = HL7Field(
+    equipment_instance_identifier: list[EI] | EI | list[str] | str = HL7Field(
         position=1,
         datatype="EI",
         usage=Usage.REQUIRED,
@@ -3161,7 +3161,7 @@ class EQU(HL7Segment):
 class ERR(HL7Segment):
     _segment_id = "ERR"
 
-    error_location: list[ERL] | ERL | str | None = HL7Field(
+    error_location: list[ERL] | ERL | list[str] | str | None = HL7Field(
         position=2,
         datatype="ERL",
         usage=Usage.OPTIONAL,
@@ -3196,7 +3196,7 @@ class ERR(HL7Segment):
         datatype="TX",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    inform_person_indicator: list[CWE] | CWE | str | None = HL7Field(
+    inform_person_indicator: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=9,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -3206,12 +3206,12 @@ class ERR(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70518",    )
-    override_reason_code: list[CWE] | CWE | str | None = HL7Field(
+    override_reason_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=11,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70519",    )
-    help_desk_contact_point: list[XTN] | XTN | str | None = HL7Field(
+    help_desk_contact_point: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=12,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -3235,7 +3235,7 @@ class EVN(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70062",    )
-    operator_id: list[XCN] | XCN | str | None = HL7Field(
+    operator_id: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=5,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -3264,7 +3264,7 @@ class FAC(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70331",    )
-    facility_address: list[XAD] | XAD | str = HL7Field(
+    facility_address: list[XAD] | XAD | list[str] | str = HL7Field(
         position=3,
         datatype="XAD",
         usage=Usage.REQUIRED,
@@ -3274,27 +3274,27 @@ class FAC(HL7Segment):
         datatype="XTN",
         usage=Usage.REQUIRED,
         repeatable=False,    )
-    contact_person: list[XCN] | XCN | str | None = HL7Field(
+    contact_person: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=5,
         datatype="XCN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    contact_title: list[ST] | ST | str | None = HL7Field(
+    contact_title: list[ST] | ST | list[str] | str | None = HL7Field(
         position=6,
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    contact_address: list[XAD] | XAD | str | None = HL7Field(
+    contact_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=7,
         datatype="XAD",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    contact_telecommunication: list[XTN] | XTN | str | None = HL7Field(
+    contact_telecommunication: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=8,
         datatype="XTN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    signature_authority: list[XCN] | XCN | str = HL7Field(
+    signature_authority: list[XCN] | XCN | list[str] | str = HL7Field(
         position=9,
         datatype="XCN",
         usage=Usage.REQUIRED,
@@ -3304,7 +3304,7 @@ class FAC(HL7Segment):
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    signature_authority_address: list[XAD] | XAD | str | None = HL7Field(
+    signature_authority_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=11,
         datatype="XAD",
         usage=Usage.OPTIONAL,
@@ -3393,12 +3393,12 @@ class FHS(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70952",    )
-    security_handling_instructions: list[CWE] | CWE | str | None = HL7Field(
+    security_handling_instructions: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=16,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70953",    )
-    special_access_restriction_instructions: list[ST] | ST | str | None = HL7Field(
+    special_access_restriction_instructions: list[ST] | ST | list[str] | str | None = HL7Field(
         position=17,
         datatype="ST",
         usage=Usage.OPTIONAL,
@@ -3487,17 +3487,17 @@ class FT1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70018",    )
-    diagnosis_code_ft1: list[CWE] | CWE | str | None = HL7Field(
+    diagnosis_code_ft1: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=19,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70051",    )
-    performed_by_code: list[XCN] | XCN | str | None = HL7Field(
+    performed_by_code: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=20,
         datatype="XCN",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70084",    )
-    ordered_by_code: list[XCN] | XCN | str | None = HL7Field(
+    ordered_by_code: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=21,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -3512,7 +3512,7 @@ class FT1(HL7Segment):
         datatype="EI",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    entered_by_code: list[XCN] | XCN | str | None = HL7Field(
+    entered_by_code: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=24,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -3522,7 +3522,7 @@ class FT1(HL7Segment):
         datatype="CNE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70088",    )
-    procedure_code_modifier: list[CNE] | CNE | str | None = HL7Field(
+    procedure_code_modifier: list[CNE] | CNE | list[str] | str | None = HL7Field(
         position=26,
         datatype="CNE",
         usage=Usage.OPTIONAL,
@@ -3547,12 +3547,12 @@ class FT1(HL7Segment):
         datatype="CX",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    transaction_reference_key: list[SI] | SI | str | None = HL7Field(
+    transaction_reference_key: list[SI] | SI | list[str] | str | None = HL7Field(
         position=31,
         datatype="SI",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    performing_facility: list[XON] | XON | str | None = HL7Field(
+    performing_facility: list[XON] | XON | list[str] | str | None = HL7Field(
         position=32,
         datatype="XON",
         usage=Usage.OPTIONAL,
@@ -3572,7 +3572,7 @@ class FT1(HL7Segment):
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    special_processing_code: list[CWE] | CWE | str | None = HL7Field(
+    special_processing_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=36,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -3770,7 +3770,7 @@ class GOL(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    goal_evaluation_comment: list[ST] | ST | str | None = HL7Field(
+    goal_evaluation_comment: list[ST] | ST | list[str] | str | None = HL7Field(
         position=17,
         datatype="ST",
         usage=Usage.OPTIONAL,
@@ -3785,12 +3785,12 @@ class GOL(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    goal_target_type: list[CWE] | CWE | str | None = HL7Field(
+    goal_target_type: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=20,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    goal_target_name: list[XPN] | XPN | str | None = HL7Field(
+    goal_target_name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=21,
         datatype="XPN",
         usage=Usage.OPTIONAL,
@@ -3809,7 +3809,7 @@ class GP1(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70455",    )
-    revenue_code: list[CWE] | CWE | str | None = HL7Field(
+    revenue_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=2,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -3819,7 +3819,7 @@ class GP1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70457",    )
-    oce_edits_per_visit_code: list[CWE] | CWE | str | None = HL7Field(
+    oce_edits_per_visit_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=4,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -3858,7 +3858,7 @@ class GP2(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70460",    )
-    oce_edit_code: list[CWE] | CWE | str | None = HL7Field(
+    oce_edit_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=6,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -3868,7 +3868,7 @@ class GP2(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70466",    )
-    modifier_edit_code: list[CWE] | CWE | str | None = HL7Field(
+    modifier_edit_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=8,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -3912,32 +3912,32 @@ class GT1(HL7Segment):
         datatype="SI",
         usage=Usage.REQUIRED,
         repeatable=False,    )
-    guarantor_number: list[CX] | CX | str | None = HL7Field(
+    guarantor_number: list[CX] | CX | list[str] | str | None = HL7Field(
         position=2,
         datatype="CX",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    guarantor_name: list[XPN] | XPN | str = HL7Field(
+    guarantor_name: list[XPN] | XPN | list[str] | str = HL7Field(
         position=3,
         datatype="XPN",
         usage=Usage.REQUIRED,
         repeatable=True,    )
-    guarantor_spouse_name: list[XPN] | XPN | str | None = HL7Field(
+    guarantor_spouse_name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=4,
         datatype="XPN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    guarantor_address: list[XAD] | XAD | str | None = HL7Field(
+    guarantor_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=5,
         datatype="XAD",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    guarantor_ph_num_home: list[XTN] | XTN | str | None = HL7Field(
+    guarantor_ph_num_home: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=6,
         datatype="XTN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    guarantor_ph_num_business: list[XTN] | XTN | str | None = HL7Field(
+    guarantor_ph_num_business: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=7,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -3982,22 +3982,22 @@ class GT1(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    guarantor_employer_name: list[XPN] | XPN | str | None = HL7Field(
+    guarantor_employer_name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=16,
         datatype="XPN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    guarantor_employer_address: list[XAD] | XAD | str | None = HL7Field(
+    guarantor_employer_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=17,
         datatype="XAD",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    guarantor_employer_phone_number: list[XTN] | XTN | str | None = HL7Field(
+    guarantor_employer_phone_number: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=18,
         datatype="XTN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    guarantor_employee_id_number: list[CX] | CX | str | None = HL7Field(
+    guarantor_employee_id_number: list[CX] | CX | list[str] | str | None = HL7Field(
         position=19,
         datatype="CX",
         usage=Usage.OPTIONAL,
@@ -4007,7 +4007,7 @@ class GT1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70066",    )
-    guarantor_organization_name: list[XON] | XON | str | None = HL7Field(
+    guarantor_organization_name: list[XON] | XON | list[str] | str | None = HL7Field(
         position=21,
         datatype="XON",
         usage=Usage.OPTIONAL,
@@ -4047,7 +4047,7 @@ class GT1(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    guarantor_employer_id_number: list[CX] | CX | str | None = HL7Field(
+    guarantor_employer_id_number: list[CX] | CX | list[str] | str | None = HL7Field(
         position=29,
         datatype="CX",
         usage=Usage.OPTIONAL,
@@ -4072,12 +4072,12 @@ class GT1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70223",    )
-    ambulatory_status: list[CWE] | CWE | str | None = HL7Field(
+    ambulatory_status: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=34,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70009",    )
-    citizenship: list[CWE] | CWE | str | None = HL7Field(
+    citizenship: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=35,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -4112,7 +4112,7 @@ class GT1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70006",    )
-    mothers_maiden_name: list[XPN] | XPN | str | None = HL7Field(
+    mothers_maiden_name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=42,
         datatype="XPN",
         usage=Usage.OPTIONAL,
@@ -4122,17 +4122,17 @@ class GT1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70212",    )
-    ethnic_group: list[CWE] | CWE | str | None = HL7Field(
+    ethnic_group: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=44,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70189",    )
-    contact_persons_name: list[XPN] | XPN | str | None = HL7Field(
+    contact_persons_name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=45,
         datatype="XPN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    contact_persons_telephone_number: list[XTN] | XTN | str | None = HL7Field(
+    contact_persons_telephone_number: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=46,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -4157,7 +4157,7 @@ class GT1(HL7Segment):
         datatype="JCC",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    guarantor_employers_organization_name: list[XON] | XON | str | None = HL7Field(
+    guarantor_employers_organization_name: list[XON] | XON | list[str] | str | None = HL7Field(
         position=51,
         datatype="XON",
         usage=Usage.OPTIONAL,
@@ -4177,7 +4177,7 @@ class GT1(HL7Segment):
         datatype="FC",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    guarantor_race: list[CWE] | CWE | str | None = HL7Field(
+    guarantor_race: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=55,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -4221,7 +4221,7 @@ class IAM(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70128",    )
-    allergy_reaction_code: list[ST] | ST | str | None = HL7Field(
+    allergy_reaction_code: list[ST] | ST | list[str] | str | None = HL7Field(
         position=5,
         datatype="ST",
         usage=Usage.OPTIONAL,
@@ -4449,7 +4449,7 @@ class IIM(HL7Segment):
         datatype="CNE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70088",    )
-    procedure_code_modifier: list[CNE] | CNE | str | None = HL7Field(
+    procedure_code_modifier: list[CNE] | CNE | list[str] | str | None = HL7Field(
         position=15,
         datatype="CNE",
         usage=Usage.OPTIONAL,
@@ -4522,27 +4522,27 @@ class IN1(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70072",    )
-    insurance_company_id: list[CX] | CX | str = HL7Field(
+    insurance_company_id: list[CX] | CX | list[str] | str = HL7Field(
         position=3,
         datatype="CX",
         usage=Usage.REQUIRED,
         repeatable=True,    )
-    insurance_company_name: list[XON] | XON | str | None = HL7Field(
+    insurance_company_name: list[XON] | XON | list[str] | str | None = HL7Field(
         position=4,
         datatype="XON",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    insurance_company_address: list[XAD] | XAD | str | None = HL7Field(
+    insurance_company_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=5,
         datatype="XAD",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    insurance_co_contact_person: list[XPN] | XPN | str | None = HL7Field(
+    insurance_co_contact_person: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=6,
         datatype="XPN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    insurance_co_phone_number: list[XTN] | XTN | str | None = HL7Field(
+    insurance_co_phone_number: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=7,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -4552,17 +4552,17 @@ class IN1(HL7Segment):
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    group_name: list[XON] | XON | str | None = HL7Field(
+    group_name: list[XON] | XON | list[str] | str | None = HL7Field(
         position=9,
         datatype="XON",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    insureds_group_emp_id: list[CX] | CX | str | None = HL7Field(
+    insureds_group_emp_id: list[CX] | CX | list[str] | str | None = HL7Field(
         position=10,
         datatype="CX",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    insureds_group_emp_name: list[XON] | XON | str | None = HL7Field(
+    insureds_group_emp_name: list[XON] | XON | list[str] | str | None = HL7Field(
         position=11,
         datatype="XON",
         usage=Usage.OPTIONAL,
@@ -4587,7 +4587,7 @@ class IN1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70086",    )
-    name_of_insured: list[XPN] | XPN | str | None = HL7Field(
+    name_of_insured: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=16,
         datatype="XPN",
         usage=Usage.OPTIONAL,
@@ -4602,7 +4602,7 @@ class IN1(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    insureds_address: list[XAD] | XAD | str | None = HL7Field(
+    insureds_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=19,
         datatype="XAD",
         usage=Usage.OPTIONAL,
@@ -4657,7 +4657,7 @@ class IN1(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    verification_by: list[XCN] | XCN | str | None = HL7Field(
+    verification_by: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=30,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -4712,7 +4712,7 @@ class IN1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70001",    )
-    insureds_employers_address: list[XAD] | XAD | str | None = HL7Field(
+    insureds_employers_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=44,
         datatype="XAD",
         usage=Usage.OPTIONAL,
@@ -4737,7 +4737,7 @@ class IN1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70295",    )
-    insureds_id_number: list[CX] | CX | str | None = HL7Field(
+    insureds_id_number: list[CX] | CX | list[str] | str | None = HL7Field(
         position=49,
         datatype="CX",
         usage=Usage.OPTIONAL,
@@ -4762,7 +4762,7 @@ class IN1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70099",    )
-    external_health_plan_identifiers: list[CX] | CX | str | None = HL7Field(
+    external_health_plan_identifiers: list[CX] | CX | list[str] | str | None = HL7Field(
         position=54,
         datatype="CX",
         usage=Usage.OPTIONAL,
@@ -4776,7 +4776,7 @@ class IN1(HL7Segment):
 class IN2(HL7Segment):
     _segment_id = "IN2"
 
-    insureds_employee_id: list[CX] | CX | str | None = HL7Field(
+    insureds_employee_id: list[CX] | CX | list[str] | str | None = HL7Field(
         position=1,
         datatype="CX",
         usage=Usage.OPTIONAL,
@@ -4786,7 +4786,7 @@ class IN2(HL7Segment):
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    insureds_employers_name_and_id: list[XCN] | XCN | str | None = HL7Field(
+    insureds_employers_name_and_id: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=3,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -4796,7 +4796,7 @@ class IN2(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70139",    )
-    mail_claim_party: list[CWE] | CWE | str | None = HL7Field(
+    mail_claim_party: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=5,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -4806,7 +4806,7 @@ class IN2(HL7Segment):
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    medicaid_case_name: list[XPN] | XPN | str | None = HL7Field(
+    medicaid_case_name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=7,
         datatype="XPN",
         usage=Usage.OPTIONAL,
@@ -4816,7 +4816,7 @@ class IN2(HL7Segment):
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    military_sponsor_name: list[XPN] | XPN | str | None = HL7Field(
+    military_sponsor_name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=9,
         datatype="XPN",
         usage=Usage.OPTIONAL,
@@ -4881,7 +4881,7 @@ class IN2(HL7Segment):
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    special_coverage_approval_name: list[XPN] | XPN | str | None = HL7Field(
+    special_coverage_approval_name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=22,
         datatype="XPN",
         usage=Usage.OPTIONAL,
@@ -4891,17 +4891,17 @@ class IN2(HL7Segment):
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    non_covered_insurance_code: list[CWE] | CWE | str | None = HL7Field(
+    non_covered_insurance_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=24,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70143",    )
-    payor_id: list[CX] | CX | str | None = HL7Field(
+    payor_id: list[CX] | CX | list[str] | str | None = HL7Field(
         position=25,
         datatype="CX",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    payor_subscriber_id: list[CX] | CX | str | None = HL7Field(
+    payor_subscriber_id: list[CX] | CX | list[str] | str | None = HL7Field(
         position=26,
         datatype="CX",
         usage=Usage.OPTIONAL,
@@ -4911,12 +4911,12 @@ class IN2(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70144",    )
-    room_coverage_type_amount: list[RMC] | RMC | str | None = HL7Field(
+    room_coverage_type_amount: list[RMC] | RMC | list[str] | str | None = HL7Field(
         position=28,
         datatype="RMC",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    policy_type_amount: list[PTA] | PTA | str | None = HL7Field(
+    policy_type_amount: list[PTA] | PTA | list[str] | str | None = HL7Field(
         position=29,
         datatype="PTA",
         usage=Usage.OPTIONAL,
@@ -4931,12 +4931,12 @@ class IN2(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70223",    )
-    ambulatory_status: list[CWE] | CWE | str | None = HL7Field(
+    ambulatory_status: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=32,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70009",    )
-    citizenship: list[CWE] | CWE | str | None = HL7Field(
+    citizenship: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=33,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -4971,7 +4971,7 @@ class IN2(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70006",    )
-    mothers_maiden_name: list[XPN] | XPN | str | None = HL7Field(
+    mothers_maiden_name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=40,
         datatype="XPN",
         usage=Usage.OPTIONAL,
@@ -4981,12 +4981,12 @@ class IN2(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70212",    )
-    ethnic_group: list[CWE] | CWE | str | None = HL7Field(
+    ethnic_group: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=42,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70189",    )
-    marital_status: list[CWE] | CWE | str | None = HL7Field(
+    marital_status: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=43,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -5016,12 +5016,12 @@ class IN2(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70311",    )
-    employer_contact_person_name: list[XPN] | XPN | str | None = HL7Field(
+    employer_contact_person_name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=49,
         datatype="XPN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    employer_contact_person_phone_number: list[XTN] | XTN | str | None = HL7Field(
+    employer_contact_person_phone_number: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=50,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -5031,17 +5031,17 @@ class IN2(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70222",    )
-    insureds_contact_persons_name: list[XPN] | XPN | str | None = HL7Field(
+    insureds_contact_persons_name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=52,
         datatype="XPN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    insureds_contact_person_phone_number: list[XTN] | XTN | str | None = HL7Field(
+    insureds_contact_person_phone_number: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=53,
         datatype="XTN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    insureds_contact_person_reason: list[CWE] | CWE | str | None = HL7Field(
+    insureds_contact_person_reason: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=54,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -5051,7 +5051,7 @@ class IN2(HL7Segment):
         datatype="DT",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    relationship_to_the_patient_stop_date: list[DT] | DT | str | None = HL7Field(
+    relationship_to_the_patient_stop_date: list[DT] | DT | list[str] | str | None = HL7Field(
         position=56,
         datatype="DT",
         usage=Usage.OPTIONAL,
@@ -5061,7 +5061,7 @@ class IN2(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70232",    )
-    insurance_co_contact_phone_number: list[XTN] | XTN | str | None = HL7Field(
+    insurance_co_contact_phone_number: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=58,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -5086,12 +5086,12 @@ class IN2(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70063",    )
-    insureds_phone_number_home: list[XTN] | XTN | str | None = HL7Field(
+    insureds_phone_number_home: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=63,
         datatype="XTN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    insureds_employer_phone_number: list[XTN] | XTN | str | None = HL7Field(
+    insureds_employer_phone_number: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=64,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -5116,17 +5116,17 @@ class IN2(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70136",    )
-    insured_organization_name_and_id: list[XON] | XON | str | None = HL7Field(
+    insured_organization_name_and_id: list[XON] | XON | list[str] | str | None = HL7Field(
         position=69,
         datatype="XON",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    insured_employer_organization_name_and_id: list[XON] | XON | str | None = HL7Field(
+    insured_employer_organization_name_and_id: list[XON] | XON | list[str] | str | None = HL7Field(
         position=70,
         datatype="XON",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    race: list[CWE] | CWE | str | None = HL7Field(
+    race: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=71,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -5155,7 +5155,7 @@ class IN3(HL7Segment):
         datatype="CX",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    certified_by: list[XCN] | XCN | str | None = HL7Field(
+    certified_by: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=3,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -5180,7 +5180,7 @@ class IN3(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    operator: list[XCN] | XCN | str | None = HL7Field(
+    operator: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=8,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -5210,7 +5210,7 @@ class IN3(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    physician_reviewer: list[XCN] | XCN | str | None = HL7Field(
+    physician_reviewer: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=14,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -5220,7 +5220,7 @@ class IN3(HL7Segment):
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    certification_contact_phone_number: list[XTN] | XTN | str | None = HL7Field(
+    certification_contact_phone_number: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=16,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -5235,12 +5235,12 @@ class IN3(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70346",    )
-    certification_agency_phone_number: list[XTN] | XTN | str | None = HL7Field(
+    certification_agency_phone_number: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=19,
         datatype="XTN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    pre_certification_requirement: list[ICD] | ICD | str | None = HL7Field(
+    pre_certification_requirement: list[ICD] | ICD | list[str] | str | None = HL7Field(
         position=20,
         datatype="ICD",
         usage=Usage.OPTIONAL,
@@ -5260,12 +5260,12 @@ class IN3(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70151",    )
-    second_opinion_documentation_received: list[CWE] | CWE | str | None = HL7Field(
+    second_opinion_documentation_received: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=24,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70152",    )
-    second_opinion_physician: list[XCN] | XCN | str | None = HL7Field(
+    second_opinion_physician: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=25,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -5309,7 +5309,7 @@ class INV(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70451",    )
-    substance_status: list[CWE] | CWE | str | None = HL7Field(
+    substance_status: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=2,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -5369,7 +5369,7 @@ class INV(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    test_fluid_identifiers: list[CWE] | CWE | str | None = HL7Field(
+    test_fluid_identifiers: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=15,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -5438,7 +5438,7 @@ class IPC(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70604",    )
-    protocol_code: list[CWE] | CWE | str | None = HL7Field(
+    protocol_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=6,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -5448,7 +5448,7 @@ class IPC(HL7Segment):
         datatype="EI",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    scheduled_procedure_step_location: list[CWE] | CWE | str | None = HL7Field(
+    scheduled_procedure_step_location: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=8,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -5605,7 +5605,7 @@ class ITM(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70871",    )
-    approving_regulatory_agency: list[XON] | XON | str | None = HL7Field(
+    approving_regulatory_agency: list[XON] | XON | list[str] | str | None = HL7Field(
         position=16,
         datatype="XON",
         usage=Usage.OPTIONAL,
@@ -5615,7 +5615,7 @@ class ITM(HL7Segment):
         datatype="CNE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70532",    )
-    ruling_act: list[CWE] | CWE | str | None = HL7Field(
+    ruling_act: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=18,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -5665,7 +5665,7 @@ class ITM(HL7Segment):
         datatype="CNE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70088",    )
-    procedure_code_modifier: list[CNE] | CNE | str | None = HL7Field(
+    procedure_code_modifier: list[CNE] | CNE | list[str] | str | None = HL7Field(
         position=28,
         datatype="CNE",
         usage=Usage.OPTIONAL,
@@ -5839,7 +5839,7 @@ class IVC(HL7Segment):
         datatype="CP",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    vat_rates_applied: list[NM] | NM | str | None = HL7Field(
+    vat_rates_applied: list[NM] | NM | list[str] | str | None = HL7Field(
         position=24,
         datatype="NM",
         usage=Usage.OPTIONAL,
@@ -5908,7 +5908,7 @@ class IVT(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70625",    )
-    bin_location_identifier: list[EI] | EI | str | None = HL7Field(
+    bin_location_identifier: list[EI] | EI | list[str] | str | None = HL7Field(
         position=7,
         datatype="EI",
         usage=Usage.OPTIONAL,
@@ -5968,7 +5968,7 @@ class IVT(HL7Segment):
         datatype="CP",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    substitute_item_identifier: list[EI] | EI | str | None = HL7Field(
+    substitute_item_identifier: list[EI] | EI | list[str] | str | None = HL7Field(
         position=19,
         datatype="EI",
         usage=Usage.OPTIONAL,
@@ -6022,7 +6022,7 @@ class LAN(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70296",    )
-    language_ability_code: list[CWE] | CWE | str | None = HL7Field(
+    language_ability_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=3,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -6046,12 +6046,12 @@ class LCC(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70264",    )
-    accommodation_type: list[CWE] | CWE | str | None = HL7Field(
+    accommodation_type: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=3,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70129",    )
-    charge_code: list[CWE] | CWE | str = HL7Field(
+    charge_code: list[CWE] | CWE | list[str] | str = HL7Field(
         position=4,
         datatype="CWE",
         usage=Usage.REQUIRED,
@@ -6099,17 +6099,17 @@ class LDP(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70264",    )
-    location_service: list[CWE] | CWE | str | None = HL7Field(
+    location_service: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=3,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70069",    )
-    specialty_type: list[CWE] | CWE | str | None = HL7Field(
+    specialty_type: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=4,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70265",    )
-    valid_patient_classes: list[CWE] | CWE | str | None = HL7Field(
+    valid_patient_classes: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=5,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -6134,7 +6134,7 @@ class LDP(HL7Segment):
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    visiting_hours: list[VH] | VH | str | None = HL7Field(
+    visiting_hours: list[VH] | VH | list[str] | str | None = HL7Field(
         position=10,
         datatype="VH",
         usage=Usage.OPTIONAL,
@@ -6163,32 +6163,32 @@ class LOC(HL7Segment):
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    location_type_loc: list[CWE] | CWE | str = HL7Field(
+    location_type_loc: list[CWE] | CWE | list[str] | str = HL7Field(
         position=3,
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=True, table="HL70260",    )
-    organization_name_loc: list[XON] | XON | str | None = HL7Field(
+    organization_name_loc: list[XON] | XON | list[str] | str | None = HL7Field(
         position=4,
         datatype="XON",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    location_address: list[XAD] | XAD | str | None = HL7Field(
+    location_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=5,
         datatype="XAD",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    location_phone: list[XTN] | XTN | str | None = HL7Field(
+    location_phone: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=6,
         datatype="XTN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    license_number: list[CWE] | CWE | str | None = HL7Field(
+    license_number: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=7,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70461",    )
-    location_equipment: list[CWE] | CWE | str | None = HL7Field(
+    location_equipment: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=8,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -6222,7 +6222,7 @@ class LRL(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70325",    )
-    organizational_location_relationship_value: list[XON] | XON | str | None = HL7Field(
+    organizational_location_relationship_value: list[XON] | XON | list[str] | str | None = HL7Field(
         position=5,
         datatype="XON",
         usage=Usage.OPTIONAL,
@@ -6285,12 +6285,12 @@ class MFA(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70181",    )
-    primary_key_value_mfa: list[Varies] | Varies | str = HL7Field(
+    primary_key_value_mfa: list[Varies] | Varies | list[str] | str = HL7Field(
         position=5,
         datatype="Varies",
         usage=Usage.REQUIRED,
         repeatable=True, table="HL70607",    )
-    primary_key_value_type_mfa: list[ID] | ID | str = HL7Field(
+    primary_key_value_type_mfa: list[ID] | ID | list[str] | str = HL7Field(
         position=6,
         datatype="ID",
         usage=Usage.REQUIRED,
@@ -6314,12 +6314,12 @@ class MFE(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    primary_key_value_mfe: list[Varies] | Varies | str = HL7Field(
+    primary_key_value_mfe: list[Varies] | Varies | list[str] | str = HL7Field(
         position=4,
         datatype="Varies",
         usage=Usage.REQUIRED,
         repeatable=True, table="HL70608",    )
-    primary_key_value_type: list[ID] | ID | str = HL7Field(
+    primary_key_value_type: list[ID] | ID | list[str] | str = HL7Field(
         position=5,
         datatype="ID",
         usage=Usage.REQUIRED,
@@ -6343,7 +6343,7 @@ class MFI(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70175",    )
-    master_file_application_identifier: list[HD] | HD | str | None = HL7Field(
+    master_file_application_identifier: list[HD] | HD | list[str] | str | None = HL7Field(
         position=2,
         datatype="HD",
         usage=Usage.OPTIONAL,
@@ -6372,7 +6372,7 @@ class MFI(HL7Segment):
 class MRG(HL7Segment):
     _segment_id = "MRG"
 
-    prior_patient_identifier_list: list[CX] | CX | str = HL7Field(
+    prior_patient_identifier_list: list[CX] | CX | list[str] | str = HL7Field(
         position=1,
         datatype="CX",
         usage=Usage.REQUIRED,
@@ -6387,12 +6387,12 @@ class MRG(HL7Segment):
         datatype="CX",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70061",    )
-    prior_alternate_visit_id: list[CX] | CX | str | None = HL7Field(
+    prior_alternate_visit_id: list[CX] | CX | list[str] | str | None = HL7Field(
         position=6,
         datatype="CX",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70061",    )
-    prior_patient_name: list[XPN] | XPN | str | None = HL7Field(
+    prior_patient_name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=7,
         datatype="XPN",
         usage=Usage.OPTIONAL,
@@ -6455,7 +6455,7 @@ class MSH(HL7Segment):
         datatype="HD",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70361",    )
-    receiving_facility: list[HD] | HD | str | None = HL7Field(
+    receiving_facility: list[HD] | HD | list[str] | str | None = HL7Field(
         position=6,
         datatype="HD",
         usage=Usage.OPTIONAL,
@@ -6515,7 +6515,7 @@ class MSH(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70399",    )
-    character_set: list[ID] | ID | str | None = HL7Field(
+    character_set: list[ID] | ID | list[str] | str | None = HL7Field(
         position=18,
         datatype="ID",
         usage=Usage.OPTIONAL,
@@ -6530,7 +6530,7 @@ class MSH(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70356",    )
-    message_profile_identifier: list[EI] | EI | str | None = HL7Field(
+    message_profile_identifier: list[EI] | EI | list[str] | str | None = HL7Field(
         position=21,
         datatype="EI",
         usage=Usage.OPTIONAL,
@@ -6560,12 +6560,12 @@ class MSH(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70952",    )
-    security_handling_instructions: list[CWE] | CWE | str | None = HL7Field(
+    security_handling_instructions: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=27,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70953",    )
-    special_access_restriction_instructions: list[ST] | ST | str | None = HL7Field(
+    special_access_restriction_instructions: list[ST] | ST | list[str] | str | None = HL7Field(
         position=28,
         datatype="ST",
         usage=Usage.OPTIONAL,
@@ -6612,7 +6612,7 @@ class NK1(HL7Segment):
         datatype="SI",
         usage=Usage.REQUIRED,
         repeatable=False,    )
-    name: list[XPN] | XPN | str | None = HL7Field(
+    name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=2,
         datatype="XPN",
         usage=Usage.OPTIONAL,
@@ -6622,7 +6622,7 @@ class NK1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70063",    )
-    address: list[XAD] | XAD | str | None = HL7Field(
+    address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=4,
         datatype="XAD",
         usage=Usage.OPTIONAL,
@@ -6657,7 +6657,7 @@ class NK1(HL7Segment):
         datatype="CX",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    organization_name_nk1: list[XON] | XON | str | None = HL7Field(
+    organization_name_nk1: list[XON] | XON | list[str] | str | None = HL7Field(
         position=13,
         datatype="XON",
         usage=Usage.OPTIONAL,
@@ -6677,17 +6677,17 @@ class NK1(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    living_dependency: list[CWE] | CWE | str | None = HL7Field(
+    living_dependency: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=17,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70223",    )
-    ambulatory_status: list[CWE] | CWE | str | None = HL7Field(
+    ambulatory_status: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=18,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70009",    )
-    citizenship: list[CWE] | CWE | str | None = HL7Field(
+    citizenship: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=19,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -6722,7 +6722,7 @@ class NK1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70006",    )
-    mothers_maiden_name: list[XPN] | XPN | str | None = HL7Field(
+    mothers_maiden_name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=26,
         datatype="XPN",
         usage=Usage.OPTIONAL,
@@ -6732,27 +6732,27 @@ class NK1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70212",    )
-    ethnic_group: list[CWE] | CWE | str | None = HL7Field(
+    ethnic_group: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=28,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70189",    )
-    contact_reason: list[CWE] | CWE | str | None = HL7Field(
+    contact_reason: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=29,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70222",    )
-    contact_persons_name: list[XPN] | XPN | str | None = HL7Field(
+    contact_persons_name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=30,
         datatype="XPN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    contact_persons_address: list[XAD] | XAD | str | None = HL7Field(
+    contact_persons_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=32,
         datatype="XAD",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    next_of_kin_associated_partys_identifiers: list[CX] | CX | str | None = HL7Field(
+    next_of_kin_associated_partys_identifiers: list[CX] | CX | list[str] | str | None = HL7Field(
         position=33,
         datatype="CX",
         usage=Usage.OPTIONAL,
@@ -6762,7 +6762,7 @@ class NK1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70311",    )
-    race: list[CWE] | CWE | str | None = HL7Field(
+    race: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=35,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -6953,7 +6953,7 @@ class NTE(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70105",    )
-    comment: list[FT] | FT | str | None = HL7Field(
+    comment: list[FT] | FT | list[str] | str | None = HL7Field(
         position=3,
         datatype="FT",
         usage=Usage.OPTIONAL,
@@ -6983,7 +6983,7 @@ class NTE(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    coded_comment: list[CWE] | CWE | str | None = HL7Field(
+    coded_comment: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=9,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -7027,7 +7027,7 @@ class OBR(HL7Segment):
         datatype="CQ",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    collector_identifier: list[XCN] | XCN | str | None = HL7Field(
+    collector_identifier: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=10,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -7042,7 +7042,7 @@ class OBR(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70613",    )
-    relevant_clinical_information: list[CWE] | CWE | str | None = HL7Field(
+    relevant_clinical_information: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=13,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -7107,7 +7107,7 @@ class OBR(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70124",    )
-    reason_for_study: list[CWE] | CWE | str | None = HL7Field(
+    reason_for_study: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=31,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -7122,12 +7122,12 @@ class OBR(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    transport_logistics_of_collected_sample: list[CWE] | CWE | str | None = HL7Field(
+    transport_logistics_of_collected_sample: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=38,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70614",    )
-    collectors_comment: list[CWE] | CWE | str | None = HL7Field(
+    collectors_comment: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=39,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -7147,7 +7147,7 @@ class OBR(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70225",    )
-    planned_patient_transport_comment: list[CWE] | CWE | str | None = HL7Field(
+    planned_patient_transport_comment: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=43,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -7157,17 +7157,17 @@ class OBR(HL7Segment):
         datatype="CNE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70088",    )
-    procedure_code_modifier: list[CNE] | CNE | str | None = HL7Field(
+    procedure_code_modifier: list[CNE] | CNE | list[str] | str | None = HL7Field(
         position=45,
         datatype="CNE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70340",    )
-    placer_supplemental_service_information: list[CWE] | CWE | str | None = HL7Field(
+    placer_supplemental_service_information: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=46,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70411",    )
-    filler_supplemental_service_information: list[CWE] | CWE | str | None = HL7Field(
+    filler_supplemental_service_information: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=47,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -7192,12 +7192,12 @@ class OBR(HL7Segment):
         datatype="EI",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    alternate_placer_order_number: list[CX] | CX | str | None = HL7Field(
+    alternate_placer_order_number: list[CX] | CX | list[str] | str | None = HL7Field(
         position=53,
         datatype="CX",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    parent_order: list[EIP] | EIP | str | None = HL7Field(
+    parent_order: list[EIP] | EIP | list[str] | str | None = HL7Field(
         position=54,
         datatype="EIP",
         usage=Usage.OPTIONAL,
@@ -7231,7 +7231,7 @@ class OBX(HL7Segment):
         datatype="OG",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    observation_value: list[varies] | varies | str | None = HL7Field(
+    observation_value: list[varies] | varies | list[str] | str | None = HL7Field(
         position=5,
         datatype="varies",
         usage=Usage.OPTIONAL,
@@ -7246,7 +7246,7 @@ class OBX(HL7Segment):
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    interpretation_codes: list[CWE] | CWE | str | None = HL7Field(
+    interpretation_codes: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=8,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -7256,7 +7256,7 @@ class OBX(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    nature_of_abnormal_test: list[ID] | ID | str | None = HL7Field(
+    nature_of_abnormal_test: list[ID] | ID | list[str] | str | None = HL7Field(
         position=10,
         datatype="ID",
         usage=Usage.OPTIONAL,
@@ -7286,17 +7286,17 @@ class OBX(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70624",    )
-    responsible_observer: list[XCN] | XCN | str | None = HL7Field(
+    responsible_observer: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=16,
         datatype="XCN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    observation_method: list[CWE] | CWE | str | None = HL7Field(
+    observation_method: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=17,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70626",    )
-    equipment_instance_identifier: list[EI] | EI | str | None = HL7Field(
+    equipment_instance_identifier: list[EI] | EI | list[str] | str | None = HL7Field(
         position=18,
         datatype="EI",
         usage=Usage.OPTIONAL,
@@ -7306,7 +7306,7 @@ class OBX(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    observation_site: list[CWE] | CWE | str | None = HL7Field(
+    observation_site: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=20,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -7346,7 +7346,7 @@ class OBX(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70914",    )
-    local_process_control: list[CWE] | CWE | str | None = HL7Field(
+    local_process_control: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=28,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -7366,12 +7366,12 @@ class OBX(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    observation_value_absent_reason: list[CWE] | CWE | str | None = HL7Field(
+    observation_value_absent_reason: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=32,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70960",    )
-    observation_related_specimen_identifier: list[EIP] | EIP | str | None = HL7Field(
+    observation_related_specimen_identifier: list[EIP] | EIP | list[str] | str | None = HL7Field(
         position=33,
         datatype="EIP",
         usage=Usage.OPTIONAL,
@@ -7522,7 +7522,7 @@ class OH2(HL7Segment):
         datatype="XON",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    employer_address: list[XAD] | XAD | str | None = HL7Field(
+    employer_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=13,
         datatype="XAD",
         usage=Usage.OPTIONAL,
@@ -7532,12 +7532,12 @@ class OH2(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70956",    )
-    job_duties: list[ST] | ST | str | None = HL7Field(
+    job_duties: list[ST] | ST | list[str] | str | None = HL7Field(
         position=15,
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    occupational_hazards: list[FT] | FT | str | None = HL7Field(
+    occupational_hazards: list[FT] | FT | list[str] | str | None = HL7Field(
         position=16,
         datatype="FT",
         usage=Usage.OPTIONAL,
@@ -7644,7 +7644,7 @@ class OM1(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False,    )
-    permitted_data_types: list[ID] | ID | str | None = HL7Field(
+    permitted_data_types: list[ID] | ID | list[str] | str | None = HL7Field(
         position=3,
         datatype="ID",
         usage=Usage.OPTIONAL,
@@ -7664,12 +7664,12 @@ class OM1(HL7Segment):
         datatype="TX",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    other_service_test_observation_i_ds_for_the_observation: list[CWE] | CWE | str | None = HL7Field(
+    other_service_test_observation_i_ds_for_the_observation: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=7,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70632",    )
-    other_names: list[ST] | ST | str | None = HL7Field(
+    other_names: list[ST] | ST | list[str] | str | None = HL7Field(
         position=8,
         datatype="ST",
         usage=Usage.OPTIONAL,
@@ -7694,12 +7694,12 @@ class OM1(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70136",    )
-    identity_of_instrument_used_to_perform_this_study: list[CWE] | CWE | str | None = HL7Field(
+    identity_of_instrument_used_to_perform_this_study: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=13,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70633",    )
-    coded_representation_of_method: list[CWE] | CWE | str | None = HL7Field(
+    coded_representation_of_method: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=14,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -7709,7 +7709,7 @@ class OM1(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70136",    )
-    observation_producing_department_section: list[CWE] | CWE | str | None = HL7Field(
+    observation_producing_department_section: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=16,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -7754,7 +7754,7 @@ class OM1(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    processing_priority: list[ID] | ID | str | None = HL7Field(
+    processing_priority: list[ID] | ID | list[str] | str | None = HL7Field(
         position=25,
         datatype="ID",
         usage=Usage.OPTIONAL,
@@ -7764,12 +7764,12 @@ class OM1(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70169",    )
-    outside_sites_where_observation_may_be_performed: list[CWE] | CWE | str | None = HL7Field(
+    outside_sites_where_observation_may_be_performed: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=27,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70638",    )
-    address_of_outside_sites: list[XAD] | XAD | str | None = HL7Field(
+    address_of_outside_sites: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=28,
         datatype="XAD",
         usage=Usage.OPTIONAL,
@@ -7784,7 +7784,7 @@ class OM1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70177",    )
-    observations_required_to_interpret_this_observation: list[CWE] | CWE | str | None = HL7Field(
+    observations_required_to_interpret_this_observation: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=31,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -7794,27 +7794,27 @@ class OM1(HL7Segment):
         datatype="TX",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    contraindications_to_observations: list[CWE] | CWE | str | None = HL7Field(
+    contraindications_to_observations: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=33,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70640",    )
-    reflex_tests_observations: list[CWE] | CWE | str | None = HL7Field(
+    reflex_tests_observations: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=34,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70641",    )
-    rules_that_trigger_reflex_testing: list[TX] | TX | str | None = HL7Field(
+    rules_that_trigger_reflex_testing: list[TX] | TX | list[str] | str | None = HL7Field(
         position=35,
         datatype="TX",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    fixed_canned_message: list[CWE] | CWE | str | None = HL7Field(
+    fixed_canned_message: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=36,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70643",    )
-    patient_preparation: list[TX] | TX | str | None = HL7Field(
+    patient_preparation: list[TX] | TX | list[str] | str | None = HL7Field(
         position=37,
         datatype="TX",
         usage=Usage.OPTIONAL,
@@ -7829,7 +7829,7 @@ class OM1(HL7Segment):
         datatype="TX",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    service_test_observation_performance_schedule: list[ST] | ST | str | None = HL7Field(
+    service_test_observation_performance_schedule: list[ST] | ST | list[str] | str | None = HL7Field(
         position=40,
         datatype="ST",
         usage=Usage.OPTIONAL,
@@ -7884,17 +7884,17 @@ class OM1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    other_names_51: list[ST] | ST | str | None = HL7Field(
+    other_names_51: list[ST] | ST | list[str] | str | None = HL7Field(
         position=51,
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    replacement_producers_service_test_observation_id: list[CWE] | CWE | str | None = HL7Field(
+    replacement_producers_service_test_observation_id: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=52,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70646",    )
-    prior_resuts_instructions: list[TX] | TX | str | None = HL7Field(
+    prior_resuts_instructions: list[TX] | TX | list[str] | str | None = HL7Field(
         position=53,
         datatype="TX",
         usage=Usage.OPTIONAL,
@@ -7904,7 +7904,7 @@ class OM1(HL7Segment):
         datatype="TX",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    test_category: list[CWE] | CWE | str | None = HL7Field(
+    test_category: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=55,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -7919,12 +7919,12 @@ class OM1(HL7Segment):
         datatype="CQ",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    gender_restriction: list[CWE] | CWE | str | None = HL7Field(
+    gender_restriction: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=58,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70001",    )
-    age_restriction: list[NR] | NR | str | None = HL7Field(
+    age_restriction: list[NR] | NR | list[str] | str | None = HL7Field(
         position=59,
         datatype="NR",
         usage=Usage.OPTIONAL,
@@ -7943,7 +7943,7 @@ class OM2(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70648",    )
-    range_of_decimal_precision: list[NM] | NM | str | None = HL7Field(
+    range_of_decimal_precision: list[NM] | NM | list[str] | str | None = HL7Field(
         position=3,
         datatype="NM",
         usage=Usage.OPTIONAL,
@@ -7958,12 +7958,12 @@ class OM2(HL7Segment):
         datatype="TX",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    reference_normal_range_for_ordinal_and_continuous_observations: list[RFR] | RFR | str | None = HL7Field(
+    reference_normal_range_for_ordinal_and_continuous_observations: list[RFR] | RFR | list[str] | str | None = HL7Field(
         position=6,
         datatype="RFR",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    critical_range_for_ordinal_and_continuous_observations: list[RFR] | RFR | str | None = HL7Field(
+    critical_range_for_ordinal_and_continuous_observations: list[RFR] | RFR | list[str] | str | None = HL7Field(
         position=7,
         datatype="RFR",
         usage=Usage.OPTIONAL,
@@ -7973,7 +7973,7 @@ class OM2(HL7Segment):
         datatype="RFR",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    delta_check_criteria: list[DLT] | DLT | str | None = HL7Field(
+    delta_check_criteria: list[DLT] | DLT | list[str] | str | None = HL7Field(
         position=9,
         datatype="DLT",
         usage=Usage.OPTIONAL,
@@ -7997,22 +7997,22 @@ class OM3(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70650",    )
-    valid_coded_answers: list[CWE] | CWE | str | None = HL7Field(
+    valid_coded_answers: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=3,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70652",    )
-    normal_text_codes_for_categorical_observations: list[CWE] | CWE | str | None = HL7Field(
+    normal_text_codes_for_categorical_observations: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=4,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70654",    )
-    abnormal_text_codes_for_categorical_observations: list[CWE] | CWE | str | None = HL7Field(
+    abnormal_text_codes_for_categorical_observations: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=5,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70655",    )
-    critical_text_codes_for_categorical_observations: list[CWE] | CWE | str | None = HL7Field(
+    critical_text_codes_for_categorical_observations: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=6,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -8036,17 +8036,17 @@ class OM4(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70170",    )
-    container_description: list[TX] | TX | str | None = HL7Field(
+    container_description: list[TX] | TX | list[str] | str | None = HL7Field(
         position=3,
         datatype="TX",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    container_volume: list[NM] | NM | str | None = HL7Field(
+    container_volume: list[NM] | NM | list[str] | str | None = HL7Field(
         position=4,
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    container_units: list[CWE] | CWE | str | None = HL7Field(
+    container_units: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=5,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -8086,7 +8086,7 @@ class OM4(HL7Segment):
         datatype="TX",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    specimen_priorities: list[ID] | ID | str | None = HL7Field(
+    specimen_priorities: list[ID] | ID | list[str] | str | None = HL7Field(
         position=13,
         datatype="ID",
         usage=Usage.OPTIONAL,
@@ -8096,7 +8096,7 @@ class OM4(HL7Segment):
         datatype="CQ",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    specimen_handling_code: list[CWE] | CWE | str | None = HL7Field(
+    specimen_handling_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=15,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -8111,7 +8111,7 @@ class OM4(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    taxonomic_classification_code: list[CWE] | CWE | str | None = HL7Field(
+    taxonomic_classification_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=18,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -8125,7 +8125,7 @@ class OM5(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    test_observations_included_within_an_ordered_test_battery: list[CWE] | CWE | str | None = HL7Field(
+    test_observations_included_within_an_ordered_test_battery: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=2,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -8163,7 +8163,7 @@ class OM7(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False,    )
-    category_identifier: list[CWE] | CWE | str | None = HL7Field(
+    category_identifier: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=3,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -8173,7 +8173,7 @@ class OM7(HL7Segment):
         datatype="TX",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    category_synonym: list[ST] | ST | str | None = HL7Field(
+    category_synonym: list[ST] | ST | list[str] | str | None = HL7Field(
         position=5,
         datatype="ST",
         usage=Usage.OPTIONAL,
@@ -8253,7 +8253,7 @@ class OM7(HL7Segment):
         datatype="XCN",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    orderable_at_location: list[PL] | PL | str | None = HL7Field(
+    orderable_at_location: list[PL] | PL | list[str] | str | None = HL7Field(
         position=21,
         datatype="PL",
         usage=Usage.OPTIONAL,
@@ -8268,7 +8268,7 @@ class OM7(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70136",    )
-    primary_key_value_cdm: list[CWE] | CWE | str | None = HL7Field(
+    primary_key_value_cdm: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=24,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -8297,7 +8297,7 @@ class OMC(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70664",    )
-    collection_event_process_step: list[CWE] | CWE | str = HL7Field(
+    collection_event_process_step: list[CWE] | CWE | list[str] | str = HL7Field(
         position=5,
         datatype="CWE",
         usage=Usage.REQUIRED,
@@ -8327,7 +8327,7 @@ class OMC(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70136",    )
-    answer_choices: list[CWE] | CWE | str | None = HL7Field(
+    answer_choices: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=11,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -8376,7 +8376,7 @@ class ORC(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70121",    )
-    parent_order: list[EIP] | EIP | str | None = HL7Field(
+    parent_order: list[EIP] | EIP | list[str] | str | None = HL7Field(
         position=8,
         datatype="EIP",
         usage=Usage.OPTIONAL,
@@ -8446,12 +8446,12 @@ class ORC(HL7Segment):
         datatype="DT",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    alternate_placer_order_number: list[CX] | CX | str | None = HL7Field(
+    alternate_placer_order_number: list[CX] | CX | list[str] | str | None = HL7Field(
         position=33,
         datatype="CX",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    order_workflow_profile: list[CWE] | CWE | str | None = HL7Field(
+    order_workflow_profile: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=34,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -8540,7 +8540,7 @@ class ORG(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70136",    )
-    cost_center_code: list[CWE] | CWE | str | None = HL7Field(
+    cost_center_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=13,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -8603,17 +8603,17 @@ class PAC(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70908",    )
-    package_condition: list[CWE] | CWE | str | None = HL7Field(
+    package_condition: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=6,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70544",    )
-    package_handling_code: list[CWE] | CWE | str | None = HL7Field(
+    package_handling_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=7,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70376",    )
-    package_risk_code: list[CWE] | CWE | str | None = HL7Field(
+    package_risk_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=8,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -8770,7 +8770,7 @@ class PCR(HL7Segment):
 class PD1(HL7Segment):
     _segment_id = "PD1"
 
-    living_dependency: list[CWE] | CWE | str | None = HL7Field(
+    living_dependency: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=1,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -8780,7 +8780,7 @@ class PD1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70220",    )
-    patient_primary_facility: list[XON] | XON | str | None = HL7Field(
+    patient_primary_facility: list[XON] | XON | list[str] | str | None = HL7Field(
         position=3,
         datatype="XON",
         usage=Usage.OPTIONAL,
@@ -8810,7 +8810,7 @@ class PD1(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70136",    )
-    duplicate_patient: list[CX] | CX | str | None = HL7Field(
+    duplicate_patient: list[CX] | CX | list[str] | str | None = HL7Field(
         position=10,
         datatype="CX",
         usage=Usage.OPTIONAL,
@@ -8830,12 +8830,12 @@ class PD1(HL7Segment):
         datatype="DT",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    place_of_worship: list[XON] | XON | str | None = HL7Field(
+    place_of_worship: list[XON] | XON | list[str] | str | None = HL7Field(
         position=14,
         datatype="XON",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    advance_directive_code: list[CWE] | CWE | str | None = HL7Field(
+    advance_directive_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=15,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -8884,7 +8884,7 @@ class PD1(HL7Segment):
 class PDA(HL7Segment):
     _segment_id = "PDA"
 
-    death_cause_code: list[CWE] | CWE | str | None = HL7Field(
+    death_cause_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=1,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -8933,7 +8933,7 @@ class PDA(HL7Segment):
 class PDC(HL7Segment):
     _segment_id = "PDC"
 
-    manufacturer_distributor: list[XON] | XON | str = HL7Field(
+    manufacturer_distributor: list[XON] | XON | list[str] | str = HL7Field(
         position=1,
         datatype="XON",
         usage=Usage.REQUIRED,
@@ -8958,7 +8958,7 @@ class PDC(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70676",    )
-    model_identifier: list[ST] | ST | str | None = HL7Field(
+    model_identifier: list[ST] | ST | list[str] | str | None = HL7Field(
         position=6,
         datatype="ST",
         usage=Usage.OPTIONAL,
@@ -8968,7 +8968,7 @@ class PDC(HL7Segment):
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    other_identifier: list[ST] | ST | str | None = HL7Field(
+    other_identifier: list[ST] | ST | list[str] | str | None = HL7Field(
         position=8,
         datatype="ST",
         usage=Usage.OPTIONAL,
@@ -9012,12 +9012,12 @@ class PDC(HL7Segment):
 class PEO(HL7Segment):
     _segment_id = "PEO"
 
-    event_identifiers_used: list[CWE] | CWE | str | None = HL7Field(
+    event_identifiers_used: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=1,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70678",    )
-    event_symptom_diagnosis_code: list[CWE] | CWE | str | None = HL7Field(
+    event_symptom_diagnosis_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=2,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -9042,12 +9042,12 @@ class PEO(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    event_location_occurred_address: list[XAD] | XAD | str | None = HL7Field(
+    event_location_occurred_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=7,
         datatype="XAD",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    event_qualification: list[ID] | ID | str | None = HL7Field(
+    event_qualification: list[ID] | ID | list[str] | str | None = HL7Field(
         position=8,
         datatype="ID",
         usage=Usage.OPTIONAL,
@@ -9062,7 +9062,7 @@ class PEO(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70239",    )
-    event_outcome: list[ID] | ID | str | None = HL7Field(
+    event_outcome: list[ID] | ID | list[str] | str | None = HL7Field(
         position=11,
         datatype="ID",
         usage=Usage.OPTIONAL,
@@ -9072,47 +9072,47 @@ class PEO(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70241",    )
-    event_description_from_others: list[FT] | FT | str | None = HL7Field(
+    event_description_from_others: list[FT] | FT | list[str] | str | None = HL7Field(
         position=13,
         datatype="FT",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    event_description_from_original_reporter: list[FT] | FT | str | None = HL7Field(
+    event_description_from_original_reporter: list[FT] | FT | list[str] | str | None = HL7Field(
         position=14,
         datatype="FT",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    event_description_from_patient: list[FT] | FT | str | None = HL7Field(
+    event_description_from_patient: list[FT] | FT | list[str] | str | None = HL7Field(
         position=15,
         datatype="FT",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    event_description_from_practitioner: list[FT] | FT | str | None = HL7Field(
+    event_description_from_practitioner: list[FT] | FT | list[str] | str | None = HL7Field(
         position=16,
         datatype="FT",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    event_description_from_autopsy: list[FT] | FT | str | None = HL7Field(
+    event_description_from_autopsy: list[FT] | FT | list[str] | str | None = HL7Field(
         position=17,
         datatype="FT",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    cause_of_death: list[CWE] | CWE | str | None = HL7Field(
+    cause_of_death: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=18,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70680",    )
-    primary_observer_name: list[XPN] | XPN | str | None = HL7Field(
+    primary_observer_name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=19,
         datatype="XPN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    primary_observer_address: list[XAD] | XAD | str | None = HL7Field(
+    primary_observer_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=20,
         datatype="XAD",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    primary_observer_telephone: list[XTN] | XTN | str | None = HL7Field(
+    primary_observer_telephone: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=21,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -9141,22 +9141,22 @@ class PEO(HL7Segment):
 class PES(HL7Segment):
     _segment_id = "PES"
 
-    sender_organization_name: list[XON] | XON | str | None = HL7Field(
+    sender_organization_name: list[XON] | XON | list[str] | str | None = HL7Field(
         position=1,
         datatype="XON",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    sender_individual_name: list[XCN] | XCN | str | None = HL7Field(
+    sender_individual_name: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=2,
         datatype="XCN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    sender_address: list[XAD] | XAD | str | None = HL7Field(
+    sender_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=3,
         datatype="XAD",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    sender_telephone: list[XTN] | XTN | str | None = HL7Field(
+    sender_telephone: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=4,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -9171,7 +9171,7 @@ class PES(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    sender_event_description: list[FT] | FT | str | None = HL7Field(
+    sender_event_description: list[FT] | FT | list[str] | str | None = HL7Field(
         position=7,
         datatype="FT",
         usage=Usage.OPTIONAL,
@@ -9201,7 +9201,7 @@ class PES(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70235",    )
-    event_reported_to: list[ID] | ID | str | None = HL7Field(
+    event_reported_to: list[ID] | ID | list[str] | str | None = HL7Field(
         position=13,
         datatype="ID",
         usage=Usage.OPTIONAL,
@@ -9215,17 +9215,17 @@ class PID(HL7Segment):
         datatype="SI",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    patient_identifier_list: list[CX] | CX | str = HL7Field(
+    patient_identifier_list: list[CX] | CX | list[str] | str = HL7Field(
         position=3,
         datatype="CX",
         usage=Usage.REQUIRED,
         repeatable=True,    )
-    patient_name: list[XPN] | XPN | str = HL7Field(
+    patient_name: list[XPN] | XPN | list[str] | str = HL7Field(
         position=5,
         datatype="XPN",
         usage=Usage.REQUIRED,
         repeatable=True, table="HL70200",    )
-    mothers_maiden_name: list[XPN] | XPN | str | None = HL7Field(
+    mothers_maiden_name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=6,
         datatype="XPN",
         usage=Usage.OPTIONAL,
@@ -9240,12 +9240,12 @@ class PID(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70001",    )
-    race: list[CWE] | CWE | str | None = HL7Field(
+    race: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=10,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70005",    )
-    patient_address: list[XAD] | XAD | str | None = HL7Field(
+    patient_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=11,
         datatype="XAD",
         usage=Usage.OPTIONAL,
@@ -9270,12 +9270,12 @@ class PID(HL7Segment):
         datatype="CX",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70061",    )
-    mothers_identifier: list[CX] | CX | str | None = HL7Field(
+    mothers_identifier: list[CX] | CX | list[str] | str | None = HL7Field(
         position=21,
         datatype="CX",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70061",    )
-    ethnic_group: list[CWE] | CWE | str | None = HL7Field(
+    ethnic_group: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=22,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -9295,7 +9295,7 @@ class PID(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    citizenship: list[CWE] | CWE | str | None = HL7Field(
+    citizenship: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=26,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -9320,7 +9320,7 @@ class PID(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70136",    )
-    identity_reliability_code: list[CWE] | CWE | str | None = HL7Field(
+    identity_reliability_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=32,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -9355,12 +9355,12 @@ class PID(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70429",    )
-    tribal_citizenship: list[CWE] | CWE | str | None = HL7Field(
+    tribal_citizenship: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=39,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70171",    )
-    patient_telecommunication_information: list[XTN] | XTN | str | None = HL7Field(
+    patient_telecommunication_information: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=40,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -9433,27 +9433,27 @@ class PM1(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70072",    )
-    insurance_company_id: list[CX] | CX | str = HL7Field(
+    insurance_company_id: list[CX] | CX | list[str] | str = HL7Field(
         position=2,
         datatype="CX",
         usage=Usage.REQUIRED,
         repeatable=True,    )
-    insurance_company_name: list[XON] | XON | str | None = HL7Field(
+    insurance_company_name: list[XON] | XON | list[str] | str | None = HL7Field(
         position=3,
         datatype="XON",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    insurance_company_address: list[XAD] | XAD | str | None = HL7Field(
+    insurance_company_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=4,
         datatype="XAD",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    insurance_co_contact_person: list[XPN] | XPN | str | None = HL7Field(
+    insurance_co_contact_person: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=5,
         datatype="XPN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    insurance_co_phone_number: list[XTN] | XTN | str | None = HL7Field(
+    insurance_co_phone_number: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=6,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -9463,7 +9463,7 @@ class PM1(HL7Segment):
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    group_name: list[XON] | XON | str | None = HL7Field(
+    group_name: list[XON] | XON | list[str] | str | None = HL7Field(
         position=8,
         datatype="XON",
         usage=Usage.OPTIONAL,
@@ -9666,7 +9666,7 @@ class PR1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70051",    )
-    procedure_code_modifier: list[CNE] | CNE | str | None = HL7Field(
+    procedure_code_modifier: list[CNE] | CNE | list[str] | str | None = HL7Field(
         position=16,
         datatype="CNE",
         usage=Usage.OPTIONAL,
@@ -9676,7 +9676,7 @@ class PR1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70416",    )
-    tissue_type_code: list[CWE] | CWE | str | None = HL7Field(
+    tissue_type_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=18,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -9701,7 +9701,7 @@ class PR1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70763",    )
-    treating_organizational_unit: list[PL] | PL | str | None = HL7Field(
+    treating_organizational_unit: list[PL] | PL | list[str] | str | None = HL7Field(
         position=23,
         datatype="PL",
         usage=Usage.OPTIONAL,
@@ -9725,12 +9725,12 @@ class PRA(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70681",    )
-    practitioner_group: list[CWE] | CWE | str | None = HL7Field(
+    practitioner_group: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=2,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70358",    )
-    practitioner_category: list[CWE] | CWE | str | None = HL7Field(
+    practitioner_category: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=3,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -9740,17 +9740,17 @@ class PRA(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70187",    )
-    specialty: list[SPD] | SPD | str | None = HL7Field(
+    specialty: list[SPD] | SPD | list[str] | str | None = HL7Field(
         position=5,
         datatype="SPD",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70337",    )
-    practitioner_id_numbers: list[PLN] | PLN | str | None = HL7Field(
+    practitioner_id_numbers: list[PLN] | PLN | list[str] | str | None = HL7Field(
         position=6,
         datatype="PLN",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70338",    )
-    privileges: list[PIP] | PIP | str | None = HL7Field(
+    privileges: list[PIP] | PIP | list[str] | str | None = HL7Field(
         position=7,
         datatype="PIP",
         usage=Usage.OPTIONAL,
@@ -9770,7 +9770,7 @@ class PRA(HL7Segment):
         datatype="DT",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    government_reimbursement_billing_eligibility: list[CWE] | CWE | str | None = HL7Field(
+    government_reimbursement_billing_eligibility: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=11,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -9834,7 +9834,7 @@ class PRB(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    problem_management_discipline: list[CWE] | CWE | str | None = HL7Field(
+    problem_management_discipline: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=11,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -9933,27 +9933,27 @@ class PRC(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70132",    )
-    facility_id_prc: list[CWE] | CWE | str | None = HL7Field(
+    facility_id_prc: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=2,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70464",    )
-    department: list[CWE] | CWE | str | None = HL7Field(
+    department: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=3,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70184",    )
-    valid_patient_classes: list[CWE] | CWE | str | None = HL7Field(
+    valid_patient_classes: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=4,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70004",    )
-    price: list[CP] | CP | str | None = HL7Field(
+    price: list[CP] | CP | list[str] | str | None = HL7Field(
         position=5,
         datatype="CP",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    formula: list[ST] | ST | str | None = HL7Field(
+    formula: list[ST] | ST | list[str] | str | None = HL7Field(
         position=6,
         datatype="ST",
         usage=Usage.OPTIONAL,
@@ -9993,7 +9993,7 @@ class PRC(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70268",    )
-    billing_category: list[CWE] | CWE | str | None = HL7Field(
+    billing_category: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=14,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -10022,17 +10022,17 @@ class PRC(HL7Segment):
 class PRD(HL7Segment):
     _segment_id = "PRD"
 
-    provider_role: list[CWE] | CWE | str = HL7Field(
+    provider_role: list[CWE] | CWE | list[str] | str = HL7Field(
         position=1,
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=True, table="HL70286",    )
-    provider_name: list[XPN] | XPN | str | None = HL7Field(
+    provider_name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=2,
         datatype="XPN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    provider_address: list[XAD] | XAD | str | None = HL7Field(
+    provider_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=3,
         datatype="XAD",
         usage=Usage.OPTIONAL,
@@ -10042,7 +10042,7 @@ class PRD(HL7Segment):
         datatype="PL",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    provider_communication_information: list[XTN] | XTN | str | None = HL7Field(
+    provider_communication_information: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=5,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -10052,7 +10052,7 @@ class PRD(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70185",    )
-    provider_identifiers: list[PLN] | PLN | str | None = HL7Field(
+    provider_identifiers: list[PLN] | PLN | list[str] | str | None = HL7Field(
         position=7,
         datatype="PLN",
         usage=Usage.OPTIONAL,
@@ -10062,7 +10062,7 @@ class PRD(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    effective_end_date_of_provider_role: list[DTM] | DTM | str | None = HL7Field(
+    effective_end_date_of_provider_role: list[DTM] | DTM | list[str] | str | None = HL7Field(
         position=9,
         datatype="DTM",
         usage=Usage.OPTIONAL,
@@ -10072,17 +10072,17 @@ class PRD(HL7Segment):
         datatype="XON",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    provider_organization_address: list[XAD] | XAD | str | None = HL7Field(
+    provider_organization_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=11,
         datatype="XAD",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    provider_organization_location_information: list[PL] | PL | str | None = HL7Field(
+    provider_organization_location_information: list[PL] | PL | list[str] | str | None = HL7Field(
         position=12,
         datatype="PL",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    provider_organization_communication_information: list[XTN] | XTN | str | None = HL7Field(
+    provider_organization_communication_information: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=13,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -10116,7 +10116,7 @@ class PRT(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70912",    )
-    person: list[XCN] | XCN | str | None = HL7Field(
+    person: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=5,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -10131,17 +10131,17 @@ class PRT(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70406",    )
-    organization: list[XON] | XON | str | None = HL7Field(
+    organization: list[XON] | XON | list[str] | str | None = HL7Field(
         position=8,
         datatype="XON",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    location: list[PL] | PL | str | None = HL7Field(
+    location: list[PL] | PL | list[str] | str | None = HL7Field(
         position=9,
         datatype="PL",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    device: list[EI] | EI | str | None = HL7Field(
+    device: list[EI] | EI | list[str] | str | None = HL7Field(
         position=10,
         datatype="EI",
         usage=Usage.OPTIONAL,
@@ -10161,12 +10161,12 @@ class PRT(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    address: list[XAD] | XAD | str | None = HL7Field(
+    address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=14,
         datatype="XAD",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    telecommunication_address: list[XTN] | XTN | str | None = HL7Field(
+    telecommunication_address: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=15,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -10211,7 +10211,7 @@ class PRT(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70185",    )
-    contact_identifiers: list[PLN] | PLN | str | None = HL7Field(
+    contact_identifiers: list[PLN] | PLN | list[str] | str | None = HL7Field(
         position=24,
         datatype="PLN",
         usage=Usage.OPTIONAL,
@@ -10670,17 +10670,17 @@ class PV1(HL7Segment):
         datatype="PL",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    attending_doctor: list[XCN] | XCN | str | None = HL7Field(
+    attending_doctor: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=7,
         datatype="XCN",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70010",    )
-    referring_doctor: list[XCN] | XCN | str | None = HL7Field(
+    referring_doctor: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=8,
         datatype="XCN",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70010",    )
-    consulting_doctor: list[XCN] | XCN | str | None = HL7Field(
+    consulting_doctor: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=9,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -10710,7 +10710,7 @@ class PV1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70023",    )
-    ambulatory_status: list[CWE] | CWE | str | None = HL7Field(
+    ambulatory_status: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=15,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -10720,7 +10720,7 @@ class PV1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70099",    )
-    admitting_doctor: list[XCN] | XCN | str | None = HL7Field(
+    admitting_doctor: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=17,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -10735,7 +10735,7 @@ class PV1(HL7Segment):
         datatype="CX",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    financial_class: list[FC] | FC | str | None = HL7Field(
+    financial_class: list[FC] | FC | list[str] | str | None = HL7Field(
         position=20,
         datatype="FC",
         usage=Usage.OPTIONAL,
@@ -10755,22 +10755,22 @@ class PV1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70046",    )
-    contract_code: list[CWE] | CWE | str | None = HL7Field(
+    contract_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=24,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70044",    )
-    contract_effective_date: list[DT] | DT | str | None = HL7Field(
+    contract_effective_date: list[DT] | DT | list[str] | str | None = HL7Field(
         position=25,
         datatype="DT",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    contract_amount: list[NM] | NM | str | None = HL7Field(
+    contract_amount: list[NM] | NM | list[str] | str | None = HL7Field(
         position=26,
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    contract_period: list[NM] | NM | str | None = HL7Field(
+    contract_period: list[NM] | NM | list[str] | str | None = HL7Field(
         position=27,
         datatype="NM",
         usage=Usage.OPTIONAL,
@@ -10880,7 +10880,7 @@ class PV1(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    alternate_visit_id: list[CX] | CX | str | None = HL7Field(
+    alternate_visit_id: list[CX] | CX | list[str] | str | None = HL7Field(
         position=50,
         datatype="CX",
         usage=Usage.OPTIONAL,
@@ -10924,7 +10924,7 @@ class PV2(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    patient_valuables: list[ST] | ST | str | None = HL7Field(
+    patient_valuables: list[ST] | ST | list[str] | str | None = HL7Field(
         position=5,
         datatype="ST",
         usage=Usage.OPTIONAL,
@@ -10934,7 +10934,7 @@ class PV2(HL7Segment):
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    visit_user_code: list[CWE] | CWE | str | None = HL7Field(
+    visit_user_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=7,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -10964,7 +10964,7 @@ class PV2(HL7Segment):
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    referral_source_code: list[XCN] | XCN | str | None = HL7Field(
+    referral_source_code: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=13,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -11014,7 +11014,7 @@ class PV2(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70136",    )
-    clinic_organization_name: list[XON] | XON | str | None = HL7Field(
+    clinic_organization_name: list[XON] | XON | list[str] | str | None = HL7Field(
         position=23,
         datatype="XON",
         usage=Usage.OPTIONAL,
@@ -11094,7 +11094,7 @@ class PV2(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70430",    )
-    recreational_drug_use_code: list[CWE] | CWE | str | None = HL7Field(
+    recreational_drug_use_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=39,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -11104,7 +11104,7 @@ class PV2(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70432",    )
-    precaution_code: list[CWE] | CWE | str | None = HL7Field(
+    precaution_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=41,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -11124,7 +11124,7 @@ class PV2(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70316",    )
-    advance_directive_code: list[CWE] | CWE | str | None = HL7Field(
+    advance_directive_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=45,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -11144,7 +11144,7 @@ class PV2(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    notify_clergy_code: list[CWE] | CWE | str | None = HL7Field(
+    notify_clergy_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=49,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -11279,7 +11279,7 @@ class QRI(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    match_reason_code: list[CWE] | CWE | str | None = HL7Field(
+    match_reason_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=2,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -11318,12 +11318,12 @@ class RCP(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70395",    )
-    sort_by_field: list[SRT] | SRT | str | None = HL7Field(
+    sort_by_field: list[SRT] | SRT | list[str] | str | None = HL7Field(
         position=6,
         datatype="SRT",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    segment_group_inclusion: list[ID] | ID | str | None = HL7Field(
+    segment_group_inclusion: list[ID] | ID | list[str] | str | None = HL7Field(
         position=7,
         datatype="ID",
         usage=Usage.OPTIONAL,
@@ -11337,7 +11337,7 @@ class RDF(HL7Segment):
         datatype="NM",
         usage=Usage.REQUIRED,
         repeatable=False,    )
-    column_description: list[RCD] | RCD | str = HL7Field(
+    column_description: list[RCD] | RCD | list[str] | str = HL7Field(
         position=2,
         datatype="RCD",
         usage=Usage.REQUIRED,
@@ -11464,7 +11464,7 @@ class RF1(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70281",    )
-    referral_disposition: list[CWE] | CWE | str | None = HL7Field(
+    referral_disposition: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=4,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -11494,12 +11494,12 @@ class RF1(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    referral_reason: list[CWE] | CWE | str | None = HL7Field(
+    referral_reason: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=10,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70336",    )
-    external_referral_identifier: list[EI] | EI | str | None = HL7Field(
+    external_referral_identifier: list[EI] | EI | list[str] | str | None = HL7Field(
         position=11,
         datatype="EI",
         usage=Usage.OPTIONAL,
@@ -11778,12 +11778,12 @@ class RXA(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70690",    )
-    administration_notes: list[CWE] | CWE | str | None = HL7Field(
+    administration_notes: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=9,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70691",    )
-    administering_provider: list[XCN] | XCN | str | None = HL7Field(
+    administering_provider: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=10,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -11803,27 +11803,27 @@ class RXA(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70692",    )
-    substance_lot_number: list[ST] | ST | str | None = HL7Field(
+    substance_lot_number: list[ST] | ST | list[str] | str | None = HL7Field(
         position=15,
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    substance_expiration_date: list[DTM] | DTM | str | None = HL7Field(
+    substance_expiration_date: list[DTM] | DTM | list[str] | str | None = HL7Field(
         position=16,
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    substance_manufacturer_name: list[CWE] | CWE | str | None = HL7Field(
+    substance_manufacturer_name: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=17,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    substance_treatment_refusal_reason: list[CWE] | CWE | str | None = HL7Field(
+    substance_treatment_refusal_reason: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=18,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70693",    )
-    indication: list[CWE] | CWE | str | None = HL7Field(
+    indication: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=19,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -11873,7 +11873,7 @@ class RXA(HL7Segment):
         datatype="XAD",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    administered_tag_identifier: list[EI] | EI | str | None = HL7Field(
+    administered_tag_identifier: list[EI] | EI | list[str] | str | None = HL7Field(
         position=29,
         datatype="EI",
         usage=Usage.OPTIONAL,
@@ -11912,7 +11912,7 @@ class RXC(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70699",    )
-    supplementary_code: list[CWE] | CWE | str | None = HL7Field(
+    supplementary_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=7,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -11981,12 +11981,12 @@ class RXD(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    dispense_notes: list[ST] | ST | str | None = HL7Field(
+    dispense_notes: list[ST] | ST | list[str] | str | None = HL7Field(
         position=9,
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    dispensing_provider: list[XCN] | XCN | str | None = HL7Field(
+    dispensing_provider: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=10,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -12006,7 +12006,7 @@ class RXD(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70136",    )
-    special_dispensing_instructions: list[CWE] | CWE | str | None = HL7Field(
+    special_dispensing_instructions: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=15,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -12021,22 +12021,22 @@ class RXD(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70707",    )
-    substance_lot_number: list[ST] | ST | str | None = HL7Field(
+    substance_lot_number: list[ST] | ST | list[str] | str | None = HL7Field(
         position=18,
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    substance_expiration_date: list[DTM] | DTM | str | None = HL7Field(
+    substance_expiration_date: list[DTM] | DTM | list[str] | str | None = HL7Field(
         position=19,
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    substance_manufacturer_name: list[CWE] | CWE | str | None = HL7Field(
+    substance_manufacturer_name: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=20,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    indication: list[CWE] | CWE | str | None = HL7Field(
+    indication: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=21,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -12056,7 +12056,7 @@ class RXD(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70321",    )
-    supplementary_code: list[CWE] | CWE | str | None = HL7Field(
+    supplementary_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=25,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -12101,12 +12101,12 @@ class RXD(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70484",    )
-    pharmacy_phone_number: list[XTN] | XTN | str | None = HL7Field(
+    pharmacy_phone_number: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=34,
         datatype="XTN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    dispense_tag_identifier: list[EI] | EI | str | None = HL7Field(
+    dispense_tag_identifier: list[EI] | EI | list[str] | str | None = HL7Field(
         position=35,
         datatype="EI",
         usage=Usage.OPTIONAL,
@@ -12140,7 +12140,7 @@ class RXE(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70716",    )
-    providers_administration_instructions: list[CWE] | CWE | str | None = HL7Field(
+    providers_administration_instructions: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=7,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -12165,12 +12165,12 @@ class RXE(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    ordering_providers_dea_number: list[XCN] | XCN | str | None = HL7Field(
+    ordering_providers_dea_number: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=13,
         datatype="XCN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    pharmacist_treatment_suppliers_verifier_id: list[XCN] | XCN | str | None = HL7Field(
+    pharmacist_treatment_suppliers_verifier_id: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=14,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -12205,7 +12205,7 @@ class RXE(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70136",    )
-    special_dispensing_instructions: list[CWE] | CWE | str | None = HL7Field(
+    special_dispensing_instructions: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=21,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -12235,7 +12235,7 @@ class RXE(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70723",    )
-    give_indication: list[CWE] | CWE | str | None = HL7Field(
+    give_indication: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=27,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -12255,7 +12255,7 @@ class RXE(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70321",    )
-    supplementary_code: list[CWE] | CWE | str | None = HL7Field(
+    supplementary_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=31,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -12285,7 +12285,7 @@ class RXE(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70478",    )
-    pharmaceutical_substance_alternative: list[CWE] | CWE | str | None = HL7Field(
+    pharmaceutical_substance_alternative: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=37,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -12325,7 +12325,7 @@ class RXE(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70480",    )
-    pharmacy_phone_number: list[XTN] | XTN | str | None = HL7Field(
+    pharmacy_phone_number: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=45,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -12369,7 +12369,7 @@ class RXG(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70716",    )
-    administration_notes: list[CWE] | CWE | str | None = HL7Field(
+    administration_notes: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=9,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -12384,7 +12384,7 @@ class RXG(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70136",    )
-    special_administration_instructions: list[CWE] | CWE | str | None = HL7Field(
+    special_administration_instructions: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=13,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -12414,22 +12414,22 @@ class RXG(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70723",    )
-    substance_lot_number: list[ST] | ST | str | None = HL7Field(
+    substance_lot_number: list[ST] | ST | list[str] | str | None = HL7Field(
         position=19,
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    substance_expiration_date: list[DTM] | DTM | str | None = HL7Field(
+    substance_expiration_date: list[DTM] | DTM | list[str] | str | None = HL7Field(
         position=20,
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    substance_manufacturer_name: list[CWE] | CWE | str | None = HL7Field(
+    substance_manufacturer_name: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=21,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    indication: list[CWE] | CWE | str | None = HL7Field(
+    indication: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=22,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -12464,7 +12464,7 @@ class RXG(HL7Segment):
         datatype="XAD",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    give_tag_identifier: list[EI] | EI | str | None = HL7Field(
+    give_tag_identifier: list[EI] | EI | list[str] | str | None = HL7Field(
         position=31,
         datatype="EI",
         usage=Usage.OPTIONAL,
@@ -12508,12 +12508,12 @@ class RXO(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70750",    )
-    providers_pharmacy_treatment_instructions: list[CWE] | CWE | str | None = HL7Field(
+    providers_pharmacy_treatment_instructions: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=6,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70751",    )
-    providers_administration_instructions: list[CWE] | CWE | str | None = HL7Field(
+    providers_administration_instructions: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=7,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -12543,7 +12543,7 @@ class RXO(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    pharmacist_treatment_suppliers_verifier_id: list[XCN] | XCN | str | None = HL7Field(
+    pharmacist_treatment_suppliers_verifier_id: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=15,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -12568,7 +12568,7 @@ class RXO(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70756",    )
-    indication: list[CWE] | CWE | str | None = HL7Field(
+    indication: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=20,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -12588,7 +12588,7 @@ class RXO(HL7Segment):
         datatype="CQ",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    supplementary_code: list[CWE] | CWE | str | None = HL7Field(
+    supplementary_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=24,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -12648,7 +12648,7 @@ class RXO(HL7Segment):
         datatype="XAD",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    pharmacy_phone_number: list[XTN] | XTN | str | None = HL7Field(
+    pharmacy_phone_number: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=36,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -12870,7 +12870,7 @@ class SAC(HL7Segment):
         datatype="NA",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    location: list[CWE] | CWE | str | None = HL7Field(
+    location: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=15,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -12930,7 +12930,7 @@ class SAC(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70381",    )
-    additive: list[CWE] | CWE | str | None = HL7Field(
+    additive: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=27,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -12995,12 +12995,12 @@ class SAC(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70782",    )
-    system_induced_contaminants: list[CWE] | CWE | str | None = HL7Field(
+    system_induced_contaminants: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=40,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70374",    )
-    drug_interference: list[CWE] | CWE | str | None = HL7Field(
+    drug_interference: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=41,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -13010,12 +13010,12 @@ class SAC(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70375",    )
-    special_handling_code: list[CWE] | CWE | str | None = HL7Field(
+    special_handling_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=43,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70376",    )
-    other_environmental_factors: list[CWE] | CWE | str | None = HL7Field(
+    other_environmental_factors: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=44,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -13209,7 +13209,7 @@ class SCD(HL7Segment):
         datatype="CNE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70088",    )
-    patient_identifier_list: list[CX] | CX | str | None = HL7Field(
+    patient_identifier_list: list[CX] | CX | list[str] | str | None = HL7Field(
         position=33,
         datatype="CX",
         usage=Usage.OPTIONAL,
@@ -13283,7 +13283,7 @@ class SCH(HL7Segment):
         datatype="CNE",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    placer_contact_person: list[XCN] | XCN | str | None = HL7Field(
+    placer_contact_person: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=12,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -13293,7 +13293,7 @@ class SCH(HL7Segment):
         datatype="XTN",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    placer_contact_address: list[XAD] | XAD | str | None = HL7Field(
+    placer_contact_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=14,
         datatype="XAD",
         usage=Usage.OPTIONAL,
@@ -13303,7 +13303,7 @@ class SCH(HL7Segment):
         datatype="PL",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    filler_contact_person: list[XCN] | XCN | str = HL7Field(
+    filler_contact_person: list[XCN] | XCN | list[str] | str = HL7Field(
         position=16,
         datatype="XCN",
         usage=Usage.REQUIRED,
@@ -13313,7 +13313,7 @@ class SCH(HL7Segment):
         datatype="XTN",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    filler_contact_address: list[XAD] | XAD | str | None = HL7Field(
+    filler_contact_address: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=18,
         datatype="XAD",
         usage=Usage.OPTIONAL,
@@ -13323,12 +13323,12 @@ class SCH(HL7Segment):
         datatype="PL",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    entered_by_person: list[XCN] | XCN | str = HL7Field(
+    entered_by_person: list[XCN] | XCN | list[str] | str = HL7Field(
         position=20,
         datatype="XCN",
         usage=Usage.REQUIRED,
         repeatable=True,    )
-    entered_by_phone_number: list[XTN] | XTN | str | None = HL7Field(
+    entered_by_phone_number: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=21,
         datatype="XTN",
         usage=Usage.OPTIONAL,
@@ -13353,12 +13353,12 @@ class SCH(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70278",    )
-    placer_order_number: list[EI] | EI | str | None = HL7Field(
+    placer_order_number: list[EI] | EI | list[str] | str | None = HL7Field(
         position=26,
         datatype="EI",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    filler_order_number: list[EI] | EI | str | None = HL7Field(
+    filler_order_number: list[EI] | EI | list[str] | str | None = HL7Field(
         position=27,
         datatype="EI",
         usage=Usage.OPTIONAL,
@@ -13522,7 +13522,7 @@ class SHP(HL7Segment):
         datatype="EI",
         usage=Usage.REQUIRED,
         repeatable=False,    )
-    internal_shipment_id: list[EI] | EI | str | None = HL7Field(
+    internal_shipment_id: list[EI] | EI | list[str] | str | None = HL7Field(
         position=2,
         datatype="EI",
         usage=Usage.OPTIONAL,
@@ -13547,7 +13547,7 @@ class SHP(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70906",    )
-    shipment_confidentiality: list[CWE] | CWE | str | None = HL7Field(
+    shipment_confidentiality: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=7,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -13557,17 +13557,17 @@ class SHP(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    shipment_condition: list[CWE] | CWE | str | None = HL7Field(
+    shipment_condition: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=9,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70544",    )
-    shipment_handling_code: list[CWE] | CWE | str | None = HL7Field(
+    shipment_handling_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=10,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70376",    )
-    shipment_risk_code: list[CWE] | CWE | str | None = HL7Field(
+    shipment_risk_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=11,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -13644,7 +13644,7 @@ class SPM(HL7Segment):
         datatype="EIP",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    specimen_parent_i_ds: list[EIP] | EIP | str | None = HL7Field(
+    specimen_parent_i_ds: list[EIP] | EIP | list[str] | str | None = HL7Field(
         position=3,
         datatype="EIP",
         usage=Usage.OPTIONAL,
@@ -13654,12 +13654,12 @@ class SPM(HL7Segment):
         datatype="CWE",
         usage=Usage.REQUIRED,
         repeatable=False, table="HL70487",    )
-    specimen_type_modifier: list[CWE] | CWE | str | None = HL7Field(
+    specimen_type_modifier: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=5,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70541",    )
-    specimen_additives: list[CWE] | CWE | str | None = HL7Field(
+    specimen_additives: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=6,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -13674,7 +13674,7 @@ class SPM(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70784",    )
-    specimen_source_site_modifier: list[CWE] | CWE | str | None = HL7Field(
+    specimen_source_site_modifier: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=9,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -13684,7 +13684,7 @@ class SPM(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70543",    )
-    specimen_role: list[CWE] | CWE | str | None = HL7Field(
+    specimen_role: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=11,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -13699,17 +13699,17 @@ class SPM(HL7Segment):
         datatype="NM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    specimen_description: list[ST] | ST | str | None = HL7Field(
+    specimen_description: list[ST] | ST | list[str] | str | None = HL7Field(
         position=14,
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    specimen_handling_code: list[CWE] | CWE | str | None = HL7Field(
+    specimen_handling_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=15,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70376",    )
-    specimen_risk_code: list[CWE] | CWE | str | None = HL7Field(
+    specimen_risk_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=16,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -13734,7 +13734,7 @@ class SPM(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70136",    )
-    specimen_reject_reason: list[CWE] | CWE | str | None = HL7Field(
+    specimen_reject_reason: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=21,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -13749,7 +13749,7 @@ class SPM(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70492",    )
-    specimen_condition: list[CWE] | CWE | str | None = HL7Field(
+    specimen_condition: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=24,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -13779,12 +13779,12 @@ class SPM(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70494",    )
-    accession_id: list[CX] | CX | str | None = HL7Field(
+    accession_id: list[CX] | CX | list[str] | str | None = HL7Field(
         position=30,
         datatype="CX",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    other_specimen_id: list[CX] | CX | str | None = HL7Field(
+    other_specimen_id: list[CX] | CX | list[str] | str | None = HL7Field(
         position=31,
         datatype="CX",
         usage=Usage.OPTIONAL,
@@ -13818,17 +13818,17 @@ class STF(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70786",    )
-    staff_identifier_list: list[CX] | CX | str | None = HL7Field(
+    staff_identifier_list: list[CX] | CX | list[str] | str | None = HL7Field(
         position=2,
         datatype="CX",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70061",    )
-    staff_name: list[XPN] | XPN | str | None = HL7Field(
+    staff_name: list[XPN] | XPN | list[str] | str | None = HL7Field(
         position=3,
         datatype="XPN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    staff_type: list[CWE] | CWE | str | None = HL7Field(
+    staff_type: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=4,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -13848,42 +13848,42 @@ class STF(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70183",    )
-    department: list[CWE] | CWE | str | None = HL7Field(
+    department: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=8,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70184",    )
-    hospital_service_stf: list[CWE] | CWE | str | None = HL7Field(
+    hospital_service_stf: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=9,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70069",    )
-    phone: list[XTN] | XTN | str | None = HL7Field(
+    phone: list[XTN] | XTN | list[str] | str | None = HL7Field(
         position=10,
         datatype="XTN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    office_home_address_birthplace: list[XAD] | XAD | str | None = HL7Field(
+    office_home_address_birthplace: list[XAD] | XAD | list[str] | str | None = HL7Field(
         position=11,
         datatype="XAD",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    institution_activation_date: list[DIN] | DIN | str | None = HL7Field(
+    institution_activation_date: list[DIN] | DIN | list[str] | str | None = HL7Field(
         position=12,
         datatype="DIN",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70537",    )
-    institution_inactivation_date: list[DIN] | DIN | str | None = HL7Field(
+    institution_inactivation_date: list[DIN] | DIN | list[str] | str | None = HL7Field(
         position=13,
         datatype="DIN",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70537",    )
-    backup_person_id: list[CWE] | CWE | str | None = HL7Field(
+    backup_person_id: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=14,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    e_mail_address: list[ST] | ST | str | None = HL7Field(
+    e_mail_address: list[ST] | ST | list[str] | str | None = HL7Field(
         position=15,
         datatype="ST",
         usage=Usage.OPTIONAL,
@@ -13958,7 +13958,7 @@ class STF(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70136",    )
-    citizenship: list[CWE] | CWE | str | None = HL7Field(
+    citizenship: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=30,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -13988,7 +13988,7 @@ class STF(HL7Segment):
         datatype="DT",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    cost_center_code: list[CWE] | CWE | str | None = HL7Field(
+    cost_center_code: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=36,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -14003,7 +14003,7 @@ class STF(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70540",    )
-    generic_resource_type_or_category: list[CWE] | CWE | str | None = HL7Field(
+    generic_resource_type_or_category: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=39,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -14189,17 +14189,17 @@ class TQ1(HL7Segment):
         datatype="CQ",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    repeat_pattern: list[RPT] | RPT | str | None = HL7Field(
+    repeat_pattern: list[RPT] | RPT | list[str] | str | None = HL7Field(
         position=3,
         datatype="RPT",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    explicit_time: list[TM] | TM | str | None = HL7Field(
+    explicit_time: list[TM] | TM | list[str] | str | None = HL7Field(
         position=4,
         datatype="TM",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    relative_time_and_units: list[CQ] | CQ | str | None = HL7Field(
+    relative_time_and_units: list[CQ] | CQ | list[str] | str | None = HL7Field(
         position=5,
         datatype="CQ",
         usage=Usage.OPTIONAL,
@@ -14219,7 +14219,7 @@ class TQ1(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    priority: list[CWE] | CWE | str | None = HL7Field(
+    priority: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=9,
         datatype="CWE",
         usage=Usage.OPTIONAL,
@@ -14263,17 +14263,17 @@ class TQ2(HL7Segment):
         datatype="ID",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70503",    )
-    related_placer_number: list[EI] | EI | str | None = HL7Field(
+    related_placer_number: list[EI] | EI | list[str] | str | None = HL7Field(
         position=3,
         datatype="EI",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    related_filler_number: list[EI] | EI | str | None = HL7Field(
+    related_filler_number: list[EI] | EI | list[str] | str | None = HL7Field(
         position=4,
         datatype="EI",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    related_placer_group_number: list[EI] | EI | str | None = HL7Field(
+    related_placer_group_number: list[EI] | EI | list[str] | str | None = HL7Field(
         position=5,
         datatype="EI",
         usage=Usage.OPTIONAL,
@@ -14327,7 +14327,7 @@ class TXA(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    primary_activity_provider_code_name: list[XCN] | XCN | str | None = HL7Field(
+    primary_activity_provider_code_name: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=5,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -14342,22 +14342,22 @@ class TXA(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    edit_date_time: list[DTM] | DTM | str | None = HL7Field(
+    edit_date_time: list[DTM] | DTM | list[str] | str | None = HL7Field(
         position=8,
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    originator_code_name: list[XCN] | XCN | str | None = HL7Field(
+    originator_code_name: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=9,
         datatype="XCN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    assigned_document_authenticator: list[XCN] | XCN | str | None = HL7Field(
+    assigned_document_authenticator: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=10,
         datatype="XCN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    transcriptionist_code_name: list[XCN] | XCN | str | None = HL7Field(
+    transcriptionist_code_name: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=11,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -14372,7 +14372,7 @@ class TXA(HL7Segment):
         datatype="EI",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    placer_order_number: list[EI] | EI | str | None = HL7Field(
+    placer_order_number: list[EI] | EI | list[str] | str | None = HL7Field(
         position=14,
         datatype="EI",
         usage=Usage.OPTIONAL,
@@ -14412,22 +14412,22 @@ class TXA(HL7Segment):
         datatype="ST",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    authentication_person_time_stamp_set: list[PPN] | PPN | str | None = HL7Field(
+    authentication_person_time_stamp_set: list[PPN] | PPN | list[str] | str | None = HL7Field(
         position=22,
         datatype="PPN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    distributed_copies_code_and_name_of_recipients: list[XCN] | XCN | str | None = HL7Field(
+    distributed_copies_code_and_name_of_recipients: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=23,
         datatype="XCN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    folder_assignment: list[CWE] | CWE | str | None = HL7Field(
+    folder_assignment: list[CWE] | CWE | list[str] | str | None = HL7Field(
         position=24,
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=True, table="HL70791",    )
-    document_title: list[ST] | ST | str | None = HL7Field(
+    document_title: list[ST] | ST | list[str] | str | None = HL7Field(
         position=25,
         datatype="ST",
         usage=Usage.OPTIONAL,
@@ -14584,7 +14584,7 @@ class VAR(HL7Segment):
         datatype="DTM",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    variance_originator: list[XCN] | XCN | str | None = HL7Field(
+    variance_originator: list[XCN] | XCN | list[str] | str | None = HL7Field(
         position=4,
         datatype="XCN",
         usage=Usage.OPTIONAL,
@@ -14594,7 +14594,7 @@ class VAR(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    variance_description: list[ST] | ST | str | None = HL7Field(
+    variance_description: list[ST] | ST | list[str] | str | None = HL7Field(
         position=6,
         datatype="ST",
         usage=Usage.OPTIONAL,
@@ -14628,7 +14628,7 @@ class VND(HL7Segment):
         datatype="CNE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70532",    )
-    corporation: list[EI] | EI | str | None = HL7Field(
+    corporation: list[EI] | EI | list[str] | str | None = HL7Field(
         position=6,
         datatype="EI",
         usage=Usage.OPTIONAL,
@@ -14643,12 +14643,12 @@ class VND(HL7Segment):
         datatype="MOP",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
-    associated_contract_id: list[EI] | EI | str | None = HL7Field(
+    associated_contract_id: list[EI] | EI | list[str] | str | None = HL7Field(
         position=9,
         datatype="EI",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
-    class_of_trade: list[ST] | ST | str | None = HL7Field(
+    class_of_trade: list[ST] | ST | list[str] | str | None = HL7Field(
         position=10,
         datatype="ST",
         usage=Usage.OPTIONAL,
