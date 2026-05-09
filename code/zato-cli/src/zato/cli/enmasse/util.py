@@ -185,6 +185,7 @@ def get_top_level_order() -> 'strlist':
         'jira',
         'kafka_channel',
         'kafka_outgoing',
+        'channel_hl7_mllp',
         'email_imap',
         'email_smtp',
         'odoo',
@@ -218,6 +219,8 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['jira'] = 'name', 'is_active', 'address', 'username',
     order['kafka_channel'] = 'name', 'is_active', 'address', 'topic', 'group_id', 'service',
     order['kafka_outgoing'] = 'name', 'is_active', 'address', 'topic',
+    order['channel_hl7_mllp'] = 'name', 'is_active', 'service', 'msh9_message_type', 'msh9_trigger_event', 'should_validate', \
+        'normalize_line_endings', 'fix_off_by_one_field_index', 'dedup_ttl_value', 'dedup_ttl_unit', 'is_default',
     order['email_imap'] = 'name', 'is_active', 'type', 'host', 'port', 'username', 'tenant_id', 'client_id', # TODO: Implement type vs. server_type
     order['email_smtp'] = 'name', 'is_active', 'host', 'port', 'username',
     order['odoo'] = 'name', 'is_active', 'host', 'port', 'database', 'user'

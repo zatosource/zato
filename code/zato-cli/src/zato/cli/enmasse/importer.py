@@ -29,6 +29,7 @@ from zato.cli.enmasse.importers.scheduler import SchedulerImporter
 from zato.cli.enmasse.importers.sql import SQLImporter
 from zato.cli.enmasse.importers.confluence import ConfluenceImporter
 from zato.cli.enmasse.importers.jira import JiraImporter
+from zato.cli.enmasse.importers.channel_hl7_mllp import ChannelHL7MLLPImporter
 from zato.cli.enmasse.importers.kafka import KafkaChannelImporter, KafkaOutgoingImporter
 from zato.cli.enmasse.importers.ldap import LDAPImporter
 from zato.cli.enmasse.importers.microsoft_365 import Microsoft365Importer
@@ -64,6 +65,7 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.es', 'zato.cli.enmasse.importers.odoo',
                         'zato.cli.enmasse.importers.scheduler', 'zato.cli.enmasse.importers.sql',
                         'zato.cli.enmasse.importers.confluence', 'zato.cli.enmasse.importers.jira',
+                        'zato.cli.enmasse.importers.channel_hl7_mllp',
                         'zato.cli.enmasse.importers.kafka',
                         'zato.cli.enmasse.importers.ldap', 'zato.cli.enmasse.importers.microsoft_365',
                         'zato.cli.enmasse.importers.outgoing_rest', 'zato.cli.enmasse.importers.outgoing_soap',
@@ -98,6 +100,7 @@ class EnmasseYAMLImporter:
         self.job_defs = {}
         self.confluence_defs = {}
         self.jira_defs = {}
+        self.channel_hl7_mllp_defs = {}
         self.kafka_channel_defs = {}
         self.kafka_outgoing_defs = {}
         self.ldap_defs = {}
@@ -128,6 +131,7 @@ class EnmasseYAMLImporter:
         self.scheduler_importer = SchedulerImporter(self)
         self.confluence_importer = ConfluenceImporter(self)
         self.jira_importer = JiraImporter(self)
+        self.channel_hl7_mllp_importer = ChannelHL7MLLPImporter(self)
         self.kafka_channel_importer = KafkaChannelImporter(self)
         self.kafka_outgoing_importer = KafkaOutgoingImporter(self)
         self.ldap_importer = LDAPImporter(self)
@@ -560,6 +564,25 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_channel_hl7_mllp(self, channel_hl7_mllp_list:'list', session:'SASession') -> 'tuple':
+        if not channel_hl7_mllp_list:
+            return [], []
+
+        count = len(channel_hl7_mllp_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} HL7 MLLP channel {noun}')
+
+        for idx, item in enumerate(channel_hl7_mllp_list):
+            logger.info('HL7 MLLP channel item %d: %s', idx, item)
+
+        created, updated = self.channel_hl7_mllp_importer.sync_definitions(channel_hl7_mllp_list, session)
+        self.channel_hl7_mllp_defs = self.channel_hl7_mllp_importer.connection_defs
+        logger.info('Processed HL7 MLLP channel definitions: created=%d updated=%d', len(created), len(updated))
+
+        return created, updated
+
+# ################################################################################################################################
+
     def sync_kafka_channel(self, kafka_channel_list:'list', session:'SASession') -> 'tuple':
         if not kafka_channel_list:
             return [], []
@@ -881,6 +904,14 @@ class EnmasseYAMLImporter:
             self.created_objects['kafka_outgoing'] = kafka_outgoing_created
         if kafka_outgoing_updated:
             self.updated_objects['kafka_outgoing'] = kafka_outgoing_updated
+
+        # Process HL7 MLLP channel definitions
+        channel_hl7_mllp_list = yaml_config.get('channel_hl7_mllp', [])
+        channel_hl7_mllp_created, channel_hl7_mllp_updated = self.sync_channel_hl7_mllp(channel_hl7_mllp_list, session)
+        if channel_hl7_mllp_created:
+            self.created_objects['channel_hl7_mllp'] = channel_hl7_mllp_created
+        if channel_hl7_mllp_updated:
+            self.updated_objects['channel_hl7_mllp'] = channel_hl7_mllp_updated
 
         # Process Microsoft 365 connection definitions
         ms365_list = yaml_config.get('microsoft_365', [])
