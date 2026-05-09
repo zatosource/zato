@@ -67,7 +67,6 @@ from zato.common.util.platform_ import is_posix
 from zato.common.util.time_ import TimeUtil
 from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
-from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigDict, ConfigStore
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
@@ -92,8 +91,6 @@ if 0:
         strlist, strorlistnone, strnone, strorlist, strset
     from zato.server.base.parallel.delivery import RedisPushDelivery
     from zato.server.connection.cache import Cache, CacheAPI
-    from zato.server.ext.zunicorn.arbiter import Arbiter
-    from zato.server.ext.zunicorn.workers.ggevent import GeventWorker
     from zato.server.service.store import ServiceStore
     from zato.simpleio import SIOServerConfig
     from zato.server.startup_callable import StartupCallableTool
@@ -127,14 +124,13 @@ _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
+class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     """ Main server process.
     """
     odb: 'ODBManager'
     config: 'ConfigStore'
     crypto_manager: 'ServerCryptoManager'
     sql_pool_store: 'PoolStore'
-    on_wsgi_request: 'any_'
 
     cluster: 'ClusterModel'
     worker_store: 'WorkerStore'
@@ -222,8 +218,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self.crypto_use_tls = False
         self.pid = -1
         self.sync_internal = False
-        self.is_first_worker = False
-        self.process_idx = -1
         self.shmem_size = -1.0
         self.audit_pii = audit_pii
         self.has_fg = False
@@ -274,6 +268,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self.needs_all_access_log = True
         self.access_log_ignore = set()
         self.rest_log_ignore   = set()
+        self.has_prometheus = True
         self.is_enabled_for_warn = logging.getLogger('zato').isEnabledFor(WARN)
         self.is_admin_enabled_for_info = logging.getLogger('zato_admin').isEnabledFor(INFO)
 
@@ -764,10 +759,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
         # This cannot be done in __init__ because each sub-process obviously has its own PID
         self.pid = os.getpid()
-
-        # This also cannot be done in __init__ which doesn't have this variable yet
-        self.process_idx = int(os.environ['ZATO_SERVER_WORKER_IDX'])
-        self.is_first_worker = self.process_idx == 0
 
         # Monitoring
         logger.info('Monitoring setup - datadog_enabled:%s grafana_cloud_enabled:%s',
@@ -1774,7 +1765,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
         # If a pid has any of these names in its name or command line,
         # we consider it a process that will be stopped.
-        to_include = ['zato', 'gunicorn']
+        to_include = ['zato']
 
         for proc in list(psutil.process_iter(['pid', 'name'])):
             proc_name = proc.name()
@@ -2027,48 +2018,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     @staticmethod
-    def post_fork(arbiter:'Arbiter', worker:'any_') -> 'None':
-        """ A Gunicorn hook which initializes the worker.
+    def start_server_process(server:'ParallelServer', deployment_key:'str') -> 'None':
+        """ Initializes the server process.
         """
 
         # Each subprocess needs to have the random number generator re-seeded.
         random_seed()
 
-        # This is our parallel server
-        server = worker.app.zato_wsgi_app # type: ParallelServer
-
         server.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_POST_FORK, kwargs={
-            'arbiter': arbiter,
-            'worker': worker,
+            'server': server,
         })
 
-        worker.app.zato_wsgi_app.worker_pid = worker.pid
-        ParallelServer.start_server(server, arbiter.zato_deployment_key)
-
-# ################################################################################################################################
-
-    @staticmethod
-    def on_starting(arbiter:'Arbiter') -> 'None':
-        """ A Gunicorn hook for setting the deployment key for this particular
-        set of server processes. It needs to be added to the arbiter because
-        we want for each worker to be (re-)started to see the same key.
-        """
-        arbiter.zato_deployment_key = '{}.{}'.format(utcnow().isoformat(), uuid4().hex)
-
-# ################################################################################################################################
-
-    @staticmethod
-    def worker_exit(arbiter:'Arbiter', worker:'GeventWorker') -> 'None':
-
-        # Invoke cleanup procedures
-        app:'ParallelServer' = worker.app.zato_wsgi_app
-        _ = app.cleanup_on_stop()
-
-# ################################################################################################################################
-
-    @staticmethod
-    def before_pid_kill(arbiter:'Arbiter', worker:'GeventWorker') -> 'None':
-        pass
+        server.worker_pid = os.getpid()
+        ParallelServer.start_server(server, deployment_key)
 
 # ################################################################################################################################
 
@@ -2076,10 +2038,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         """ A shutdown cleanup procedure.
         """
 
-        # Tell the ODB we've gone through a clean shutdown but only if this is
-        # the main process going down (Arbiter) not one of Gunicorn workers.
-        # We know it's the main process because its ODB's session has never
-        # been initialized.
+        # Tell the ODB we've gone through a clean shutdown but only if the
+        # ODB session has never been initialized (pre-worker-start path).
         if not self.odb.session_initialized:
 
             self.config.odb_data = self.get_config_odb_data(self)
@@ -2111,7 +2071,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             logger.info('Stopping server process (%s:%s) (%s)', self.name, self.pid, os.getpid())
 
             import sys
-            sys.exit(3) # Same as arbiter's WORKER_BOOT_ERROR
+            sys.exit(0)
 
 # ################################################################################################################################
 

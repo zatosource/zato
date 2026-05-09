@@ -54,7 +54,6 @@ from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.sap import SAPWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
-from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from zato.server.generic.api.channel_mcp import ChannelMCPWrapper
 from zato.server.generic.api.channel_openapi import ChannelOpenAPIWrapper
 from zato.server.generic.api.cloud_confluence import CloudConfluenceWrapper
@@ -118,11 +117,11 @@ class _generic_msg:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GeventWorker(GunicornGeventWorker):
+class GeventWorker:
 
-    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
+    def __init__(self) -> 'None':
         self.deployment_key = '{}.{}'.format(utcnow().isoformat(), uuid4().hex)
-        super(GunicornGeventWorker, self).__init__(*args, **kwargs)
+        self.pid = os.getpid()
 
 # ################################################################################################################################
 
@@ -155,7 +154,7 @@ _base_type = '_WorkerStoreBase'
 _WorkerStoreBase = type(_base_type, _get_base_classes(), {})
 
 class WorkerStore(_WorkerStoreBase):
-    """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
+    """ Dispatches work between different pieces of configuration of an individual server worker.
     """
     config_dispatcher: 'ConfigDispatcher | None' = None
 
@@ -165,7 +164,6 @@ class WorkerStore(_WorkerStoreBase):
         self.worker_config = worker_config
         self.server = server
         self.update_lock = RLock()
-        self.worker_idx = int(os.environ['ZATO_SERVER_WORKER_IDX'])
 
         # To expedite look-ups
         self._simple_types = simple_types
