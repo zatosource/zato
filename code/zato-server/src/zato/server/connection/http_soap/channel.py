@@ -618,14 +618,11 @@ class RequestDispatcher:
         else:
             channel_name = '(None)'
 
-        # .. this is needed in parallel.py's on_wsgi_request ..
+        # .. this is needed by the request handler ..
         wsgi_environ['zato.channel_item'] = channel_item
 
         # .. read the raw data ..
-        payload = wsgi_environ['wsgi.input'].read()
-
-        # .. store for later use prior to any kind of parsing ..
-        wsgi_environ['zato.http.raw_request'] = payload
+        payload = wsgi_environ['zato.http.raw_request']
 
         out = _URLMatchResult(
             url_match=url_match,
@@ -775,11 +772,13 @@ class RequestDispatcher:
         # Disallowed traffic - silent TCP drop, as if a firewall discarded the packet ..
         if rate_limit_result.is_disallowed:
 
-            raw_socket = wsgi_environ['gunicorn.socket']
+            fd = wsgi_environ['zato.socket_fd']
+            raw_socket = socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM)
             raw_socket.setsockopt(_socket_SOL_SOCKET, _socket_SO_LINGER, _so_linger_on)
             raw_socket.close()
+            os.close(fd)
 
-            # Tell the caller (on_wsgi_request) to skip all response processing
+            # Tell the caller to skip all response processing
             wsgi_environ['zato.http.rate_limit.dropped'] = True
 
             out = b''

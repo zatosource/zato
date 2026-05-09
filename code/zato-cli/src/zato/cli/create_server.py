@@ -41,15 +41,10 @@ server_conf_dict = deepcopy(CONTENT_TYPE)
 # ################################################################################################################################
 
 server_conf_template = """[main]
-gunicorn_bind=0.0.0.0:{{port}}
-gunicorn_worker_class=gevent
-gunicorn_workers={{gunicorn_workers}}
-gunicorn_timeout=1234567890
-gunicorn_user=
-gunicorn_group=
-gunicorn_proc_name=
-gunicorn_logger_class=
-gunicorn_graceful_timeout=1
+bind=0.0.0.0:{{port}}
+num_threads={{num_threads}}
+timeout=1234567890
+graceful_timeout=1
 
 work_dir=../../work
 
@@ -547,7 +542,7 @@ class Create(ZatoCommand):
             # Substitue the variables ..
             server_conf_data = server_conf_template.format(
                     port=getattr(args, 'http_port', None) or default_http_port,
-                    gunicorn_workers=threads,
+                    num_threads=threads,
                     odb_db_name=args.odb_db_name or args.sqlite_path,
                     odb_engine=odb_engine,
                     odb_host=args.odb_host or '',

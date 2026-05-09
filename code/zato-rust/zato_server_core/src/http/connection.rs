@@ -174,6 +174,7 @@ pub(super) fn handle_connection(py: Python<'_>, ctx: &ConnectionCtx<'_>) -> PyRe
             }
         }
         dict.set_item(intern!(py, "zato.http.raw_request"), PyBytes::new(py, &buf[header_len..end]))?;
+        dict.set_item(intern!(py, "zato.socket_fd"), ctx.fd)?;
 
         let result = ctx.request_handler.call1(py, (&dict,))?;
 
