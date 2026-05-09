@@ -214,6 +214,27 @@ kafka_channel:
     ssl_cert_file: /path/to/cert.pem
     ssl_key_file: /path/to/key.pem
 
+channel_hl7_mllp:
+
+  - name: enmasse.hl7.mllp.1
+    service: enmasse.hl7.test.service
+    should_validate: true
+    msh9_message_type: ORU
+
+  - name: enmasse.hl7.mllp.2
+    service: enmasse.hl7.test.service.2
+    msh9_message_type: ADT
+    msh9_trigger_event: A01
+    fix_off_by_one_field_index: true
+    dedup_ttl_value: 30
+    dedup_ttl_unit: minutes
+
+  - name: enmasse.hl7.mllp.3
+    service: enmasse.hl7.test.service.3
+    is_default: true
+    normalize_obx2_value_type: false
+    allow_short_encoding_characters: false
+
 kafka_outgoing:
 
   - name: enmasse.kafka.outgoing.1

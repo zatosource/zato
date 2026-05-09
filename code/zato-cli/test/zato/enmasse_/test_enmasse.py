@@ -119,7 +119,8 @@ class EnmasseTestCase(BaseEnmasseTestCase):
             _ = self.invoke_enmasse(import_path)
 
             # Now export the data
-            _ = self.invoke_enmasse(export_path, is_import=False, is_export=True, include_type='channel_rest,security,elastic_search,channel_openapi')
+            include_types = 'channel_rest,security,elastic_search,channel_openapi,channel_hl7_mllp'
+            _ = self.invoke_enmasse(export_path, is_import=False, is_export=True, include_type=include_types)
 
             # Read back both files
             with open(import_path, 'r') as f:
@@ -145,6 +146,21 @@ class EnmasseTestCase(BaseEnmasseTestCase):
                     channel_2 = exported_channels_by_name[channel_2_name]
                     self.assertIn('rate_limiting', channel_2, f'rate_limiting missing from exported {channel_2_name}')
                     self.assertEqual(len(channel_2['rate_limiting']), 1)
+
+            # Verify that HL7 MLLP channels survived the round trip
+            if exported_dict:
+                if 'channel_hl7_mllp' in exported_dict:
+                    exported_hl7_channels = exported_dict['channel_hl7_mllp']
+
+                    # Filter to only enmasse test channels
+                    enmasse_hl7_channels = []
+                    for channel in exported_hl7_channels:
+                        if channel['name'].startswith('enmasse.hl7.mllp.'):
+                            enmasse_hl7_channels.append(channel)
+
+                    enmasse_channel_count = len(enmasse_hl7_channels)
+                    self.assertEqual(enmasse_channel_count, 3,
+                        f'Expected 3 HL7 MLLP channels, found {enmasse_channel_count}')
 
             # Verify that rate_limiting survived the round trip for security
             if exported_dict and 'security' in exported_dict:

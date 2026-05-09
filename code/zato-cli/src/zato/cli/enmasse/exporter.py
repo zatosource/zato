@@ -24,6 +24,7 @@ from zato.cli.enmasse.exporters.jira import JiraExporter
 from zato.cli.enmasse.exporters.ldap import LDAPExporter
 from zato.cli.enmasse.exporters.microsoft_365 import Microsoft365Exporter
 from zato.cli.enmasse.exporters.confluence import ConfluenceExporter
+from zato.cli.enmasse.exporters.channel_hl7_mllp import ChannelHL7MLLPExporter
 from zato.cli.enmasse.exporters.es import ElasticSearchExporter
 from zato.cli.enmasse.exporters.outgoing_rest import OutgoingRESTExporter
 from zato.cli.enmasse.exporters.outgoing_soap import OutgoingSOAPExporter
@@ -66,6 +67,7 @@ class EnmasseYAMLExporter:
         self.security_exporter = SecurityExporter(self)
         self.sql_exporter = SQLExporter(self)
         self.channel_exporter = ChannelExporter(self)
+        self.channel_hl7_mllp_exporter = ChannelHL7MLLPExporter(self)
         self.jira_exporter = JiraExporter(self)
         self.ldap_exporter = LDAPExporter(self)
         self.microsoft_365_exporter = Microsoft365Exporter(self)
@@ -168,6 +170,15 @@ class EnmasseYAMLExporter:
         _ = self.get_cluster(session) # Ensure cluster info is loaded
         channel_list = self.channel_exporter.export(session, self.cluster_id)
         return channel_list
+
+# ################################################################################################################################
+
+    def export_channel_hl7_mllp(self, session:'SASession') -> 'list':
+        """ Exports HL7 MLLP channel definitions.
+        """
+        _ = self.get_cluster(session)
+        channel_hl7_mllp_list = self.channel_hl7_mllp_exporter.export(session, self.cluster_id)
+        return channel_hl7_mllp_list
 
 # ################################################################################################################################
 
@@ -322,6 +333,11 @@ class EnmasseYAMLExporter:
         channel_rest_defs = self.export_channel_rest(session)
         if channel_rest_defs:
             output_dict['channel_rest'] = channel_rest_defs
+
+        # Export HL7 MLLP channel definitions
+        channel_hl7_mllp_defs = self.export_channel_hl7_mllp(session)
+        if channel_hl7_mllp_defs:
+            output_dict['channel_hl7_mllp'] = channel_hl7_mllp_defs
 
         # Export outgoing REST connection definitions
         outgoing_rest_defs = self.export_outgoing_rest(session)
