@@ -218,7 +218,6 @@ impl SIOProcessor {
     /// values to their declared types and raising on missing required elements.
     #[pyo3(signature = (data, data_format, extra=None, service=None))]
     #[expect(unused_variables, reason = "data_format and service parameters reserved for future use")]
-    #[expect(clippy::too_many_arguments, reason = "PyO3 method signature mirrors the Python API")]
     fn parse_input(
         &self,
         py: Python<'_>,

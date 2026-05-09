@@ -5,7 +5,6 @@ use crate::inference::ElemType;
 
 /// Base SIO element exposed to Python, carrying the element name, whether it
 /// is required, and the inferred (or explicit) element type.
-#[expect(clippy::struct_field_names, reason = "elem_type clearly describes the field purpose")]
 #[pyclass(subclass, skip_from_py_object)]
 #[derive(Clone)]
 pub struct Elem {

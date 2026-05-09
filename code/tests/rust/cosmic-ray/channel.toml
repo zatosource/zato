@@ -1,0 +1,8 @@
+[cosmic-ray]
+module-path = "../zatosource-zato/4.1/code/zato-server/src/zato/server/connection/http_soap/channel.py"
+timeout = 30.0
+test-command = "../zatosource-zato/4.1/code/bin/python -m pytest src/zato-server/http_soap/ -x --tb=no -q -W ignore::DeprecationWarning"
+excluded-modules = []
+
+[cosmic-ray.distributor]
+name = "local"
