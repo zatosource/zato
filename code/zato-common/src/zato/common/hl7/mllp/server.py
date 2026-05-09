@@ -87,6 +87,13 @@ class HL7MLLPServer:
         should_validate:'bool' = False,
         dedup_ttl_value:'int' = 0,
         dedup_ttl_unit:'str' = '',
+        normalize_obx2_value_type:'bool' = True,
+        replace_invalid_obx2_value_type:'bool' = True,
+        normalize_invalid_escape_sequences:'bool' = True,
+        normalize_obx8_abnormal_flags:'bool' = True,
+        normalize_quadruple_quoted_empty:'bool' = True,
+        allow_short_encoding_characters:'bool' = True,
+        fix_off_by_one_field_index:'bool' = False,
         ) -> 'None':
 
         self.address = address
@@ -113,6 +120,18 @@ class HL7MLLPServer:
         self.should_force_standard_delimiters   = should_force_standard_delimiters
         self.should_use_msh18_encoding          = should_use_msh18_encoding
         self.default_character_encoding         = default_character_encoding
+
+        # Build the Rust-level parser tolerance config from channel settings ..
+        from zato_hl7v2_rs import ToleranceConfig
+        tolerance_config = ToleranceConfig()
+        tolerance_config.normalize_obx2_value_type          = normalize_obx2_value_type
+        tolerance_config.replace_invalid_obx2_value_type    = replace_invalid_obx2_value_type
+        tolerance_config.normalize_invalid_escape_sequences = normalize_invalid_escape_sequences
+        tolerance_config.normalize_obx8_abnormal_flags      = normalize_obx8_abnormal_flags
+        tolerance_config.normalize_quadruple_quoted_empty   = normalize_quadruple_quoted_empty
+        tolerance_config.allow_short_encoding_characters    = allow_short_encoding_characters
+        tolerance_config.fix_off_by_one_field_index         = fix_off_by_one_field_index
+        self.tolerance_config = tolerance_config
 
         # Deduplication - only active when both ttl_value and ttl_unit are provided
         if dedup_ttl_value and dedup_ttl_unit:
@@ -436,7 +455,8 @@ class HL7MLLPServer:
 
                     # .. attempt to parse (and optionally validate) the message ..
                     try:
-                        callback_data = hl7_parse_message(message_text, validate=self.should_validate)
+                        callback_data = hl7_parse_message(
+                            message_text, validate=self.should_validate, tolerance=self.tolerance_config)
 
                     # .. parsing or validation failed - send an AE reject ACK
                     # .. back to the sender and skip this message ..

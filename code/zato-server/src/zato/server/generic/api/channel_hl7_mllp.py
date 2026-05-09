@@ -139,6 +139,13 @@ class ChannelHL7MLLPWrapper(Wrapper):
             should_use_msh18_encoding=self.config.use_msh18_encoding,
             dedup_ttl_value=dedup_ttl_value,
             dedup_ttl_unit=dedup_ttl_unit,
+            normalize_obx2_value_type=self.config.get('normalize_obx2_value_type', True),
+            replace_invalid_obx2_value_type=self.config.get('replace_invalid_obx2_value_type', True),
+            normalize_invalid_escape_sequences=self.config.get('normalize_invalid_escape_sequences', True),
+            normalize_obx8_abnormal_flags=self.config.get('normalize_obx8_abnormal_flags', True),
+            normalize_quadruple_quoted_empty=self.config.get('normalize_quadruple_quoted_empty', True),
+            allow_short_encoding_characters=self.config.get('allow_short_encoding_characters', True),
+            fix_off_by_one_field_index=self.config.get('fix_off_by_one_field_index', False),
         )
 
         spawn_greenlet(_shared_state.server.start)
