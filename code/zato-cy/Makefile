@@ -19,19 +19,12 @@ clean:
 rate-limit:
 	$(MAKE) build
 
-simpleio:
-	$(MAKE) build
-
 reqresp-tests:
 	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/cy/reqresp/test_*.py -s
-
-simpleio-tests:
-	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/cy/simpleio_/test_*.py -s
 
 test:
 	echo "Running tests in $(Zato_Package_Name)"
 	$(MAKE) reqresp-tests
-	$(MAKE) simpleio-tests
 
 ruff:
 	echo "Running ruff in $(Zato_Package_Name)"

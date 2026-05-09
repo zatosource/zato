@@ -1,9 +1,9 @@
 .PHONY: help install install-deps clean \
-	scheduler-install server-install sio-install health-install \
-	scheduler-clean server-clean sio-clean health-clean tests-clean \
-	scheduler-build server-build sio-build health-build build \
+	scheduler-install server-install io-install health-install \
+	scheduler-clean server-clean io-clean health-clean tests-clean \
+	scheduler-build server-build io-build health-build build \
 	scheduler-rust-unit-tests scheduler-shim-tests scheduler-integration-tests scheduler-fuzzy \
-	server-sio-tests server-marshall-tests server-config-store-tests server-commands-tests \
+	server-io-tests server-marshall-tests server-config-store-tests server-commands-tests \
 	server-connection-tests server-pattern-tests server-pubsub-unit-tests server-pubsub-tests server-mcp-live-tests server-fuzzy server-tests \
 	rate-limiting-rust-unit-tests rate-limiting-python-unit-tests test-rate-limiting \
 	enmasse-tests cli-odb-default-tests cli-tests \
@@ -62,7 +62,7 @@ install-deps: ## Create local venv and install this repo's test dependencies.
 	cd tests && uv venv .venv --clear
 	cd tests && uv pip install -r requirements.txt
 
-install: install-deps scheduler-install server-install sio-install health-install ## Full install across every component (deps + build).
+install: install-deps scheduler-install server-install io-install health-install ## Full install across every component (deps + build).
 
 scheduler-install: ## Install/build the public scheduler Rust extension.
 	$(MAKE) -C $(Zato_Base) scheduler-install
@@ -70,13 +70,13 @@ scheduler-install: ## Install/build the public scheduler Rust extension.
 server-install: ## Install/build the public server Rust extension.
 	$(MAKE) -C $(Zato_Base) server-install
 
-sio-install: ## Install/build the public SIO Rust extension.
-	$(MAKE) -C $(Zato_Base) sio-install
+io-install: ## Install/build the public I/O Rust extension.
+	$(MAKE) -C $(Zato_Base) io-install
 
 health-install: ## Install health deps and build.
 	$(MAKE) -C $(Zato_Health) install
 
-clean: tests-clean scheduler-clean server-clean sio-clean health-clean ## Wipe all build artifacts and venvs across every component.
+clean: tests-clean scheduler-clean server-clean io-clean health-clean ## Wipe all build artifacts and venvs across every component.
 
 tests-clean: ## Wipe this repo's venv and pytest caches.
 	rm -rf tests/.venv
@@ -89,8 +89,8 @@ scheduler-clean: ## Clean public scheduler Rust target dir.
 server-clean: ## Clean public server Rust target dir.
 	$(MAKE) -C $(Zato_Base) server-clean
 
-sio-clean: ## Clean public SIO Rust target dir.
-	$(MAKE) -C $(Zato_Base) sio-clean
+io-clean: ## Clean public I/O Rust target dir.
+	$(MAKE) -C $(Zato_Base) io-clean
 
 health-clean: ## Clean health build artifacts and zato-libs entries.
 	$(MAKE) -C $(Zato_Health) clean
@@ -101,17 +101,17 @@ scheduler-build: ## Build the public scheduler Rust extension.
 server-build: ## Build the public server Rust extension.
 	$(MAKE) -C $(Zato_Base) server-build
 
-sio-build: ## Build the public SIO Rust extension.
-	$(MAKE) -C $(Zato_Base) sio-build
+io-build: ## Build the public I/O Rust extension.
+	$(MAKE) -C $(Zato_Base) io-build
 
 health-build: ## Build the healthcare Rust extensions and copy .so files into zato-libs.
 	$(MAKE) -C $(Zato_Health) build
 
-build: scheduler-build server-build sio-build health-build ## Build everything across all repos.
+build: scheduler-build server-build io-build health-build ## Build everything across all repos.
 
-ensure-sio-built:
-	@$(ZATO_PY) -c "import zato_sio" 2>/dev/null || \
-		{ echo "--- Auto-building sio ---"; $(MAKE) sio-build; }
+ensure-io-built:
+	@$(ZATO_PY) -c "from zato import input_output" 2>/dev/null || \
+		{ echo "--- Auto-building I/O ---"; $(MAKE) io-build; }
 
 ensure-scheduler-built:
 	@$(ZATO_PY) -c "import zato_scheduler_core" 2>/dev/null || \
@@ -143,8 +143,8 @@ scheduler-integration-tests: ensure-scheduler-built ## Scheduler Python integrat
 scheduler-fuzzy: ## Scheduler proptest + cargo-fuzz.
 	$(MAKE) -C $(Zato_Base) scheduler-tests timeout=$(timeout)
 
-server-sio-tests: ensure-sio-built ## SIO unit tests (public src).
-	$(ZATO_PY) -m pytest $(Zato_Base)/code/zato-server/test/zato/test_sio_eval.py -v -s -o cache_dir=tests/.pytest_cache_sio $(FAIL_FAST) $(SKIP_PASSED) $(FROM_LAST) $(PYTEST_ARGS)
+server-io-tests: ensure-io-built ## I/O unit tests (public src).
+	$(ZATO_PY) -m pytest $(Zato_Base)/code/zato-server/test/zato/test_io_eval.py -v -s -o cache_dir=tests/.pytest_cache_io $(FAIL_FAST) $(SKIP_PASSED) $(FROM_LAST) $(PYTEST_ARGS)
 
 server-marshall-tests: ## Marshall unit tests (public src).
 	$(ZATO_PY) -m pytest $(Zato_Base)/code/zato-common/test/zato/common/marshall_/ -v -s -o cache_dir=tests/.pytest_cache_marshall $(FAIL_FAST) $(SKIP_PASSED) $(FROM_LAST) $(PYTEST_ARGS)
@@ -205,7 +205,7 @@ health-hl7-tests: ## HL7v2 tests run inside the health repo.
 health-fhir-tests: ## FHIR tests run inside the health repo.
 	$(MAKE) -C $(Zato_Health) fhir-tests
 
-test-fast: server-sio-tests server-marshall-tests scheduler-shim-tests ## Fastest: pure-Python unit tests.
+test-fast: server-io-tests server-marshall-tests scheduler-shim-tests ## Fastest: pure-Python unit tests.
 
 test-rust-unit: scheduler-rust-unit-tests rate-limiting-rust-unit-tests ## Rust unit tests (cargo test).
 
@@ -282,7 +282,7 @@ format-zato: ## Check Rust formatting across all public crates.
 	cargo fmt --manifest-path $(ZATO_RUST_DIR)/zato_common_core/Cargo.toml    -- --check && \
 	cargo fmt --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    -- --check && \
 	cargo fmt --manifest-path $(ZATO_RUST_DIR)/zato_scheduler_core/Cargo.toml -- --check && \
-	cargo fmt --manifest-path $(ZATO_RUST_DIR)/zato_sio/Cargo.toml            -- --check && \
+	cargo fmt --manifest-path $(ZATO_RUST_DIR)/zato_input_output/Cargo.toml             -- --check && \
 	cargo fmt --manifest-path $(ZATO_RUST_DIR)/zato_queue_bridge/Cargo.toml   -- --check
 
 format: format-zato ## Check Rust formatting everywhere.
@@ -292,7 +292,7 @@ clippy-zato: ## Clippy all public Rust crates.
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_common_core/Cargo.toml    --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_scheduler_core/Cargo.toml --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
-	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_sio/Cargo.toml            --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
+	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_input_output/Cargo.toml             --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_queue_bridge/Cargo.toml   --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS)
 
 clippy: clippy-zato ## Clippy everything.
@@ -317,7 +317,7 @@ dylint-zato: ## Dylint all public Rust crates.
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_common_core/Cargo.toml    -- --tests && \
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    -- --tests && \
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_scheduler_core/Cargo.toml -- --tests && \
-	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_sio/Cargo.toml            -- --tests && \
+	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_input_output/Cargo.toml             -- --tests && \
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_queue_bridge/Cargo.toml   -- --tests
 
 dylint: dylint-zato ## Dylint everything.
@@ -327,7 +327,7 @@ deny-zato: ## Dependency audit (advisories, licenses, bans) for public crates.
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_common_core/Cargo.toml    check --config $(CURDIR)/tests/rust/rust-lint/deny.toml && \
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    check --config $(CURDIR)/tests/rust/rust-lint/deny.toml && \
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_scheduler_core/Cargo.toml check --config $(CURDIR)/tests/rust/rust-lint/deny.toml && \
-	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_sio/Cargo.toml            check --config $(CURDIR)/tests/rust/rust-lint/deny.toml && \
+	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_input_output/Cargo.toml             check --config $(CURDIR)/tests/rust/rust-lint/deny.toml && \
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_queue_bridge/Cargo.toml   check --config $(CURDIR)/tests/rust/rust-lint/deny.toml
 
 deny: deny-zato ## Dependency audit everywhere.

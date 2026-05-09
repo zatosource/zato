@@ -30,11 +30,10 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id', 'type_')
-        output_required = ('id', 'name', 'is_active', 'address', 'topic', 'group_id', 'service')
-        output_optional = ('ssl', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file')
-        output_repeated = True
+    input_required = 'cluster_id', 'type_'
+    output_required = 'id', 'name', 'is_active', 'address', 'topic', 'group_id', 'service'
+    output_optional = 'ssl', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file'
+    output_repeated = True
 
     def handle(self):
         return {
@@ -45,10 +44,9 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'address', 'topic', 'group_id', 'service')
-        input_optional = ('is_active', 'ssl', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file')
-        output_required = ('id', 'name')
+    input_required = 'name', 'address', 'topic', 'group_id', 'service'
+    input_optional = 'is_active', 'ssl', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file'
+    output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict):
         initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA

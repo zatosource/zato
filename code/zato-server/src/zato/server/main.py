@@ -62,7 +62,7 @@ from zato.common.ext.configobj_ import ConfigObj
 from zato.common.ipaddress_ import get_preferred_ip
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
-from zato.common.simpleio_ import get_sio_server_config
+from zato.common.simpleio_ import get_sio_server_config as get_io_server_config
 from zato.common.util.api import asbool, get_config, is_encrypted, new_cid_server, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.env import populate_environment_from_file
@@ -348,8 +348,8 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     server_config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_config)
     pickup_config = get_config(repo_location, 'pickup.conf')
 
-    sio_config = get_config(repo_location, 'simple-io.conf', needs_user_config=False)
-    sio_config = get_sio_server_config(sio_config)
+    io_config = get_config(repo_location, 'simple-io.conf', needs_user_config=False)
+    io_config = get_io_server_config(io_config)
 
     server_config.main.token = server_config.main.token.encode('utf8')
 
@@ -371,7 +371,7 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     startup_callable_tool.invoke(SERVER_STARTUP.PHASE.FS_CONFIG_ONLY, kwargs={
         'server_config': server_config,
         'pickup_config': pickup_config,
-        'sio_config': sio_config,
+        'io_config': io_config,
         'base_dir': base_dir,
     })
 
@@ -437,7 +437,7 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     server.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
     server.logging_config = logging_config
     server.logging_conf_path = logging_conf_path
-    server.sio_config = sio_config
+    server.io_config = io_config
     server.user_config.update(server_config.user_config_items)
     server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']

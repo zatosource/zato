@@ -46,8 +46,8 @@ pub struct Response {
     #[pyo3(get, set)]
     pub status_message: String,
 
-    /// Reference to the SIO processor attached to the service, if any.
-    sio: Option<PyObject>,
+    /// Reference to the I/O processor attached to the service, if any.
+    io: Option<PyObject>,
 
     /// Raw content-type string, managed through a custom getter/setter pair.
     content_type_inner: String,
@@ -56,9 +56,9 @@ pub struct Response {
     #[pyo3(get, set)]
     pub content_type_changed: bool,
 
-    /// Whether this response carries SIO-declared output elements.
+    /// Whether this response carries I/O-declared output elements.
     #[pyo3(get)]
-    pub has_sio_output: bool,
+    pub has_io_output: bool,
 }
 
 #[pymethods]
@@ -78,31 +78,31 @@ impl Response {
             headers: headers.into_any().unbind(),
             status_code: 200,
             status_message: "OK".to_string(),
-            sio: None,
+            io: None,
             content_type_inner: "text/plain".to_string(),
             content_type_changed: false,
-            has_sio_output: false,
+            has_io_output: false,
         })
     }
 
-    /// Initializes the response with a correlation id, SIO processor, and data format,
-    /// building a `Payload` from output element names when SIO output is declared.
-    fn init(&mut self, py: Python<'_>, cid: Option<String>, sio: Option<&Bound<'_, PyAny>>, data_format: Option<String>) -> PyResult<()> {
+    /// Initializes the response with a correlation id, I/O processor, and data format,
+    /// building a `Payload` from output element names when I/O output is declared.
+    fn init(&mut self, py: Python<'_>, cid: Option<String>, io: Option<&Bound<'_, PyAny>>, data_format: Option<String>) -> PyResult<()> {
         self.cid = cid;
         self.data_format.clone_from(&data_format);
 
-        if let Some(sio_obj) = sio {
-            let is_dataclass = sio_obj.getattr("is_dataclass")
+        if let Some(io_object) = io {
+            let is_dataclass = io_object.getattr("is_dataclass")
                 .and_then(|val| val.extract::<bool>())
                 .unwrap_or(false);
 
             if !is_dataclass {
-                let has_output = sio_obj.getattr("has_output_declared")
+                let has_output = io_object.getattr("has_output_declared")
                     .and_then(|val| val.extract::<bool>())
                     .unwrap_or(false);
 
                 if has_output {
-                    let output_names = sio_obj.getattr("all_output_elem_names")?
+                    let output_names = io_object.getattr("all_output_elem_names")?
                         .extract::<Vec<String>>()?;
 
                     let payload = Payload::create(
@@ -111,11 +111,11 @@ impl Response {
                         data_format,
                     );
                     self.payload_inner = Py::new(py, payload)?.into_any();
-                    self.has_sio_output = true;
+                    self.has_io_output = true;
                 }
             }
 
-            self.sio = Some(sio_obj.clone().unbind());
+            self.io = Some(io_object.clone().unbind());
         }
 
         Ok(())
@@ -141,7 +141,7 @@ impl Response {
     }
 
     /// Assigns a new payload, dispatching to the appropriate storage strategy
-    /// based on the value type and whether SIO output is declared.
+    /// based on the value type and whether I/O output is declared.
     #[setter]
     fn set_payload(&mut self, py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<()> {
         if value.is_instance_of::<pyo3::types::PyDict>()
@@ -149,7 +149,7 @@ impl Response {
             || value.is_instance_of::<pyo3::types::PyBytes>()
         {
             self.payload_inner = value.clone().unbind();
-        } else if self.has_sio_output {
+        } else if self.has_io_output {
             let payload = self.payload_inner.bind(py);
             payload.call_method1("set_payload_attrs", (value,))?;
         } else if !value.is_none() {

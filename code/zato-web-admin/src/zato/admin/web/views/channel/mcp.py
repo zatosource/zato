@@ -48,11 +48,10 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id', 'type_')
-        output_required = ('id', 'name', 'is_active')
-        output_optional = ('url_path', 'services', 'security_groups')
-        output_repeated = True
+    input_required = 'cluster_id', 'type_'
+    output_required = 'id', 'name', 'is_active'
+    output_optional = 'url_path', 'services', 'security_groups'
+    output_repeated = True
 
     def on_before_append_item(self, item:'any_') -> 'any_':
 
@@ -84,10 +83,9 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name',)
-        input_optional = ('is_active', 'url_path')
-        output_required = ('id', 'name')
+    input_required = 'name',
+    input_optional = 'is_active', 'url_path'
+    output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict:'strdict') -> 'None':
         initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.CHANNEL_MCP

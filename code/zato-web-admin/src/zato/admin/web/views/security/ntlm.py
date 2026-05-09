@@ -29,10 +29,9 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'username')
-        output_repeated = True
+    input_required = 'cluster_id',
+    output_required = 'id', 'name', 'username'
+    output_repeated = True
 
     def handle(self):
         return {

@@ -118,15 +118,10 @@ class GetList(AdminService):
     """
     _filter_by = PubSubSubscription.sub_key,
 
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_pubsub_subscription_get_list_request'
-        response_elem = 'zato_pubsub_subscription_get_list_response'
-        input_required = 'cluster_id'
-        input_optional = 'needs_password'
-        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', AsIs('topic_link_list'), 'sec_base_id', \
-            'sec_name', 'security', 'username', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_optional = 'rest_push_endpoint_name', AsIs('topic_name_list'), 'password'
-        output_repeated = True
+    input = 'cluster_id', '-needs_password'
+    output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', AsIs('topic_link_list'), 'sec_base_id', \
+        'sec_name', 'security', 'username', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name', \
+        '-rest_push_endpoint_name', AsIs('-topic_name_list'), '-password'
 
     def get_data(self, session):
 
@@ -215,13 +210,10 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new pub/sub subscription.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_subscription_create_request'
-        response_elem = 'zato_pubsub_subscription_create_response'
-        input_required = 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type'
-        input_optional = 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name', 'sub_key'
-        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_name', 'security', 'delivery_type'
-        output_optional = AsIs('topic_name_list'), AsIs('topic_link_list')
+    input = 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type', \
+        '-is_delivery_active', '-is_pub_active', '-push_type', '-rest_push_endpoint_id', '-push_service_name', '-sub_key'
+    output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_name', 'security', 'delivery_type', \
+        AsIs('-topic_name_list'), AsIs('-topic_link_list')
 
     def handle(self):
 
@@ -392,13 +384,10 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a pub/sub subscription.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_subscription_edit_request'
-        response_elem = 'zato_pubsub_subscription_edit_response'
-        input_required = 'sub_key', 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type'
-        input_optional = 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'sec_name', 'security', 'delivery_type'
-        output_optional = AsIs('topic_name_list'), AsIs('topic_link_list')
+    input = 'sub_key', 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type', \
+        '-is_delivery_active', '-is_pub_active', '-push_type', '-rest_push_endpoint_id', '-push_service_name'
+    output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'sec_name', 'security', 'delivery_type', \
+        AsIs('-topic_name_list'), AsIs('-topic_link_list')
 
     def handle(self):
 
@@ -571,10 +560,7 @@ class Delete(AdminService):
     """
     skip_before_handle = True
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_subscription_delete_request'
-        response_elem = 'zato_pubsub_subscription_delete_response'
-        input_optional = 'id', 'sub_key', 'should_call_pubsub_consumer_backend', AsIs('session'),
+    input = '-id', '-sub_key', '-should_call_pubsub_consumer_backend', AsIs('-session')
 
     def handle(self):
 
@@ -638,12 +624,9 @@ class _BaseModifyTopicList(AdminService):
     """
     action = '<Action-Not-Set>'
 
-    class SimpleIO(AdminSIO):
-        input_required = AsIs('topic_name_list')
-        input_optional = 'username', 'sec_name', 'is_delivery_active', 'delivery_type', 'push_type', \
-            'rest_push_endpoint_id', 'push_service_name', 'sub_key'
-        output_optional = AsIs('topic_name_list')
-        response_elem = None
+    input = AsIs('topic_name_list'), '-username', '-sec_name', '-is_delivery_active', '-delivery_type', '-push_type', \
+        '-rest_push_endpoint_id', '-push_service_name', '-sub_key'
+    output = AsIs('-topic_name_list'),
 
 # ################################################################################################################################
 

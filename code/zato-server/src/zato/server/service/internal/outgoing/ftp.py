@@ -44,13 +44,8 @@ class _FTPService(AdminService):
 class GetByID(AdminService):
     """ Returns an FTP connection by its ID.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_ftp_get_by_id_request'
-        response_elem = None
-        input_required = 'cluster_id', 'id'
-        output_required = _get_output_required
-        output_optional = _get_output_optional
-        output_repeated = False
+    input = 'cluster_id', 'id'
+    output = _get_output_required + ('-user', '-acct', '-timeout', Boolean('-dircache'), '-default_directory')
 
     def get_data(self, session):
         return out_ftp(session, self.server.cluster_id, self.request.input.id)
@@ -67,13 +62,8 @@ class GetList(AdminService):
     """
     _filter_by = OutgoingFTP.name,
 
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_outgoing_ftp_get_list_request'
-        response_elem = 'zato_outgoing_ftp_get_list_response'
-        input_required = 'cluster_id'
-        output_required = _get_output_required
-        output_optional = _get_output_optional
-        output_repeated = True
+    input = 'cluster_id',
+    output = _get_output_required + ('-user', '-acct', '-timeout', Boolean('-dircache'), '-default_directory')
 
     def get_data(self, session):
         return elems_with_opaque(self._search(out_ftp_list, session, self.request.input.cluster_id, False))
@@ -88,12 +78,8 @@ class GetList(AdminService):
 class Create(_FTPService):
     """ Creates a new outgoing FTP connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_ftp_create_request'
-        response_elem = 'zato_outgoing_ftp_create_response'
-        input_required = 'cluster_id', 'name', 'is_active', 'host', 'port', Boolean('dircache')
-        input_optional = 'user', 'acct', 'timeout', 'default_directory'
-        output_required = 'id', 'name'
+    input = 'cluster_id', 'name', 'is_active', 'host', 'port', Boolean('dircache'), '-user', '-acct', '-timeout', '-default_directory'
+    output = 'id', 'name'
 
     def handle(self):
 
@@ -143,12 +129,8 @@ class Create(_FTPService):
 class Edit(_FTPService):
     """ Updates an outgoing FTP connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_ftp_edit_request'
-        response_elem = 'zato_outgoing_ftp_edit_response'
-        input_required = 'id', 'cluster_id', 'name', 'is_active', 'host', 'port', Boolean('dircache')
-        input_optional = 'user', 'acct', 'timeout', 'default_directory'
-        output_required = 'id', 'name'
+    input = 'id', 'cluster_id', 'name', 'is_active', 'host', 'port', Boolean('dircache'), '-user', '-acct', '-timeout', '-default_directory'
+    output = 'id', 'name'
 
     def handle(self):
 
@@ -203,10 +185,7 @@ class Edit(_FTPService):
 class Delete(_FTPService):
     """ Deletes an outgoing FTP connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_ftp_delete_request'
-        response_elem = 'zato_outgoing_ftp_delete_response'
-        input_required = 'id'
+    input = 'id',
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -233,10 +212,6 @@ class Delete(_FTPService):
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an outgoing FTP connection.
     """
-    class SimpleIO(ChangePasswordBase.SimpleIO):
-        request_elem = 'zato_outgoing_ftp_change_password_request'
-        response_elem = 'zato_outgoing_ftp_change_password_response'
-
     def handle(self):
         def _auth(instance, password):
             instance.password = password

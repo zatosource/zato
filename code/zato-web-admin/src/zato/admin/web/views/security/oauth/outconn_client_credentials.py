@@ -38,11 +38,10 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active', 'username', 'auth_server_url', 'scopes', \
-            'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format'
-        output_repeated = True
+    input_required = 'cluster_id',
+    output_required = 'id', 'name', 'is_active', 'username', 'auth_server_url', 'scopes', \
+        'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format'
+    output_repeated = True
 
     def handle(self):
         return {
@@ -57,10 +56,9 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_active', 'username', 'auth_server_url', 'scopes', \
-            'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format'
-        output_required = 'id', 'name'
+    input_required = 'name', 'is_active', 'username', 'auth_server_url', 'scopes', \
+        'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format'
+    output_required = 'id', 'name'
 
     def success_message(self, item):
         return 'Bearer token definition `{}` {} successfully'.format(item.name, self.verb)

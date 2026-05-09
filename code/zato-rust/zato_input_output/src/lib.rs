@@ -1,10 +1,10 @@
-//! Zato `SimpleIO` (SIO) - type-aware serialization layer for Zato service definitions.
+//! Zato I/O - type-aware serialization layer for Zato service definitions.
 //!
 //! Provides element types (`Bool`, `Int`, `Text`, etc.) that Zato services use
 //! to declare their input/output contracts and a processor that drives
 //! serialization, deserialization, and type inference at runtime.
 
-/// Name-based type inference for SIO element names.
+/// Name-based type inference for I/O element names.
 mod inference;
 
 /// Backward-compatible Python element types exposed via `PyO3`.
@@ -19,14 +19,14 @@ pub mod payload;
 /// Response envelope construction.
 pub mod response;
 
-/// Core SIO processing logic.
-pub mod sio_processor;
+/// Core I/O processing logic.
+pub mod io_processor;
 
 use pyo3::prelude::*;
 
-/// Returns `true` if the given Python value is an SIO `Bool` element.
+/// Returns `true` if the given Python value is an I/O `Bool` element.
 #[pyfunction]
-fn is_sio_bool(value: &Bound<'_, PyAny>) -> bool {
+fn is_io_bool(value: &Bound<'_, PyAny>) -> bool {
     if let Ok(elem) = value.extract::<compat::Elem>() {
         elem.elem_type == inference::ElemType::Bool
     } else {
@@ -34,9 +34,9 @@ fn is_sio_bool(value: &Bound<'_, PyAny>) -> bool {
     }
 }
 
-/// Returns `true` if the given Python value is an SIO `Int` element.
+/// Returns `true` if the given Python value is an I/O `Int` element.
 #[pyfunction]
-fn is_sio_int(value: &Bound<'_, PyAny>) -> bool {
+fn is_io_int(value: &Bound<'_, PyAny>) -> bool {
     if let Ok(elem) = value.extract::<compat::Elem>() {
         elem.elem_type == inference::ElemType::Int
     } else {
@@ -44,12 +44,12 @@ fn is_sio_int(value: &Bound<'_, PyAny>) -> bool {
     }
 }
 
-/// Registers all SIO types, aliases, and helper functions with the Python module.
+/// Registers all I/O types, aliases, and helper functions with the Python module.
 #[pymodule]
-fn zato_sio(module: &Bound<'_, PyModule>) -> PyResult<()> {
+fn input_output(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<payload::Payload>()?;
     module.add_class::<response::Response>()?;
-    module.add_class::<sio_processor::SIOProcessor>()?;
+    module.add_class::<io_processor::IOProcessor>()?;
     module.add_class::<service_input::ServiceInput>()?;
 
     module.add_class::<compat::Elem>()?;
@@ -75,8 +75,8 @@ fn zato_sio(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add("Unicode", module.getattr("Text")?)?;
     module.add("ListOfDicts", module.getattr("DictList")?)?;
 
-    module.add_function(wrap_pyfunction!(is_sio_bool, module)?)?;
-    module.add_function(wrap_pyfunction!(is_sio_int, module)?)?;
+    module.add_function(wrap_pyfunction!(is_io_bool, module)?)?;
+    module.add_function(wrap_pyfunction!(is_io_int, module)?)?;
 
     Ok(())
 }

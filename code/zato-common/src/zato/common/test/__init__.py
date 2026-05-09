@@ -39,8 +39,8 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import is_port_taken, new_cid
 from zato.server.service import Service
 
-# Zato - Cython
-from zato.simpleio import CySimpleIO
+# Zato
+from zato.input_output import IOProcessor
 
 # Python 2/3 compatibility
 from zato.common.py23_.past.builtins import basestring, cmp, unicode, xrange
@@ -415,8 +415,8 @@ class TestServer:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SIOElemWrapper:
-    """ Makes comparison between two SIOElem elements use their names.
+class IOElemWrapper:
+    """ Makes comparison between two IOElem elements use their names.
     """
     def __init__(self, value):
         self.value = value
@@ -448,7 +448,7 @@ class ServiceTestCase(TestCase):
         class_.component_enabled_email = True
         class_.component_enabled_search = True
         class_.component_enabled_msg_path = True
-        class_.has_sio = getattr(class_, 'SimpleIO', False)
+        class_.has_io = getattr(class_, 'SimpleIO', False)
 
         instance = class_()
 
@@ -460,15 +460,9 @@ class ServiceTestCase(TestCase):
         config_manager.config_store.cloud_aws_s3 = MagicMock(return_value=None)
         config_manager.invoke_matcher.is_allowed = MagicMock(return_value=True)
 
-        simple_io_config = {
-            'int_parameters': SIMPLE_IO.INT_PARAMETERS.VALUES,
-            'int_parameter_suffixes': SIMPLE_IO.INT_PARAMETERS.SUFFIXES,
-            'bool_parameter_prefixes': SIMPLE_IO.BOOL_PARAMETERS.SUFFIXES,
-        }
-
         class_.update(
             instance, channel, TestServer(service_store_name_to_impl_name, service_store_impl_name_to_service, config_manager),
-            None, config_manager, new_cid(), request_data, request_data, simple_io_config=simple_io_config,
+            None, config_manager, new_cid(), request_data, request_data,
             data_format=data_format, job_type=job_type)
 
         def get_data(self, *ignored_args, **ignored_kwargs):
@@ -500,24 +494,24 @@ class ServiceTestCase(TestCase):
             None)
         return instance
 
-    def _check_sio_request_input(self, instance, request_data):
+    def _check_io_request_input(self, instance, request_data):
         for k, v in request_data.items():
             self.assertEqual(getattr(instance.request.input, k), v)
 
-        sio_keys = set(getattr(instance.SimpleIO, 'input_required', []))
-        sio_keys.update(set(getattr(instance.SimpleIO, 'input_optional', [])))
+        io_keys = set(getattr(instance.SimpleIO, 'input_required', []))
+        io_keys.update(set(getattr(instance.SimpleIO, 'input_optional', [])))
         given_keys = set(request_data.keys())
 
-        diff = sio_keys ^ given_keys
-        self.assertFalse(diff, 'There should be no difference between sio_keys {} and given_keys {}, diff {}'.format(
-            sio_keys, given_keys, diff))
+        diff = io_keys ^ given_keys
+        self.assertFalse(diff, 'There should be no difference between io_keys {} and given_keys {}, diff {}'.format(
+            io_keys, given_keys, diff))
 
     def check_impl(self, service_class, request_data, response_data, response_elem, mock_data=None):
         mock_data = mock_data or {}
         expected_data = sorted(response_data.items())
 
         instance = self.invoke(service_class, request_data, None, mock_data)
-        self._check_sio_request_input(instance, request_data)
+        self._check_io_request_input(instance, request_data)
 
         if response_data:
             if not isinstance(instance.response.payload, basestring):
@@ -553,10 +547,10 @@ class ServiceTestCase(TestCase):
                 expected_value = getattr(expected, key)
                 self.assertEqual(given_value, expected_value)
 
-        self._check_sio_request_input(instance, request_data)
+        self._check_io_request_input(instance, request_data)
 
     def wrap_force_type(self, elem):
-        return SIOElemWrapper(elem)
+        return IOElemWrapper(elem)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -680,27 +674,27 @@ class BaseSIOTestCase(TestCase):
             f.flush()
             temporary_file_name=f.name
 
-        sio_fs_config = ConfigObj(temporary_file_name)
-        sio_fs_config = bunchify(sio_fs_config)
+        io_fs_config = ConfigObj(temporary_file_name)
+        io_fs_config = bunchify(io_fs_config)
 
         import os
         os.remove(temporary_file_name)
 
-        sio_server_config = get_sio_server_config(sio_fs_config)
+        io_server_config = get_sio_server_config(io_fs_config)
 
         if not needs_response_elem:
-            sio_server_config.response_elem = None
+            io_server_config.response_elem = None
 
-        return sio_server_config
+        return io_server_config
 
 # ################################################################################################################################
 
-    def get_sio(self, declaration, class_):
+    def get_io(self, declaration, class_):
 
-        sio = CySimpleIO(None, self.get_server_config(), declaration)
-        sio.build(class_)
+        io_instance = IOProcessor(None, self.get_server_config(), declaration)
+        io_instance.build(class_)
 
-        return sio
+        return io_instance
 
 # ################################################################################################################################
 # ################################################################################################################################

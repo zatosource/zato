@@ -27,20 +27,20 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-sio_config = Bunch()
+io_config = Bunch()
 
-sio_config.int = Bunch()
-sio_config.bool = Bunch()
-sio_config.secret = Bunch()
-sio_config.bytes_to_str = Bunch()
+io_config.int = Bunch()
+io_config.bool = Bunch()
+io_config.secret = Bunch()
+io_config.bytes_to_str = Bunch()
 
-sio_config.int.prefix = set()
-sio_config.int.exact = set()
-sio_config.int.suffix = {'_id'}
+io_config.int.prefix = set()
+io_config.int.exact = set()
+io_config.int.suffix = {'_id'}
 
-sio_config.bool.prefix = set()
-sio_config.bool.exact = set()
-sio_config.bool.suffix = set()
+io_config.bool.prefix = set()
+io_config.bool.exact = set()
+io_config.bool.suffix = set()
 
 service_name = 'helpers.dataclass-service'
 

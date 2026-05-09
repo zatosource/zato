@@ -27,7 +27,7 @@ from sqlalchemy.engine.result import Row as KeyedTuple
 # Zato
 from zato.common.api import DATA_FORMAT, RESTAdapterResponse, simple_types, ZATO_OK
 from zato.common.marshal_.api import Model
-from zato.cy.reqresp.payload import SimpleIOPayload
+from zato.cy.reqresp.payload import IOPayload
 
 # Python 2/3 compatibility
 from zato.common.py23_.past.builtins import unicode as past_unicode
@@ -36,9 +36,9 @@ from zato.common.py23_.past.builtins import unicode as past_unicode
 
 if 0:
     from zato.common.typing_ import any_
-    from zato.simpleio import CySimpleIO
+    from zato.input_output import IOProcessor
     any_ = any_
-    CySimpleIO = CySimpleIO
+    IOProcessor = IOProcessor
     past_unicode = past_unicode
 
 # ################################################################################################################################
@@ -66,11 +66,11 @@ class Response:
     headers          = cy.declare(cy.dict, visibility='public')     # type: dict
     status_code      = cy.declare(cy.int, visibility='public')      # type: int
     status_message   = cy.declare(cy.object, visibility='public')  # type: past_unicode
-    sio              = cy.declare(object, visibility='public')      # type: CySimpleIO
+    io              = cy.declare(object, visibility='public')      # type: IOProcessor
 
     # Private-use attributes (still declared as public)
     _content_type        = cy.declare(cy.object, visibility='public') # type: past_unicode
-    _has_sio_output      = cy.declare(cy.bint, visibility='public')    # type: bool
+    _has_io_output      = cy.declare(cy.bint, visibility='public')    # type: bool
     content_type_changed = cy.declare(cy.bint, visibility='public')    # type: bool
 
     def __cinit__(self):
@@ -83,27 +83,27 @@ class Response:
         self.headers = {}
         self.status_code = OK
         self.status_message = 'OK'
-        self.sio = None
+        self.io = None
         self._content_type = 'text/plain'
-        self._has_sio_output = False
+        self._has_io_output = False
 
     def __len__(self):
         return len(self._payload)
 
 # ################################################################################################################################
 
-    def init(self, cid, sio:object, data_format):
+    def init(self, cid, io:object, data_format):
         self.cid = cid
-        self.sio = sio # type: CySimpleIO
+        self.io = io # type: IOProcessor
         self.data_format = data_format
 
-        # We get below only if there is an SIO definition, but not a dataclass-based one, and it has output declared
-        if self.sio:
-            if not self.sio.is_dataclass:
-                if cy.cast(cy.bint, self.sio.definition.has_output_declared):
-                    self._payload = SimpleIOPayload(self.sio, self.sio.definition.all_output_elem_names, self.cid,
+        # We get below only if there is an I/O definition, but not a dataclass-based one, and it has output declared
+        if self.io:
+            if not self.io.is_dataclass:
+                if cy.cast(cy.bint, self.io.definition.has_output_declared):
+                    self._payload = IOPayload(self.io, self.io.definition.all_output_elem_names, self.cid,
                         self.data_format)
-                    self._has_sio_output = True
+                    self._has_io_output = True
 
 # ################################################################################################################################
 
@@ -138,7 +138,7 @@ class Response:
 
             # 1a)
             # If we are using SimpleIO, extract elements from that dict ..
-            if self._has_sio_output:
+            if self._has_io_output:
                 self._payload.set_payload_attrs(value)
 
             # 1b)
@@ -160,7 +160,7 @@ class Response:
 
                 # 2b1)
                 # .. if using SimpleIO ..
-                if self._has_sio_output:
+                if self._has_io_output:
                     self._payload.set_payload_attrs(value)
 
                 # 2b2)
@@ -181,7 +181,7 @@ class Response:
                         else:
                             # .. someone assigned to self.response.payload an object that needs
                             # serialisation but we do not know how to do it.
-                            raise Exception('Cannot serialise value without SimpleIO ouput declaration ({})'.format(value))
+                            raise Exception('Cannot serialise value without I/O output declaration ({})'.format(value))
 
     payload = property(_get_payload, _set_payload) # type: any_
 

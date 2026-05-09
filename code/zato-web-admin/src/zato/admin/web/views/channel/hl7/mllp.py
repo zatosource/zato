@@ -35,28 +35,27 @@ class Index(_Index):
     output_class = HL7MLLPConfigObject
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name', 'is_active', 'is_internal', 'service', 'security_name'
-        output_optional = (
-            'should_parse_on_input', 'should_validate', 'should_return_errors',
-            'should_log_messages', 'logging_level',
-            'max_msg_size', 'max_msg_size_unit', 'read_buffer_size', 'recv_timeout',
-            'start_seq', 'end_seq',
-            'msh3_sending_app', 'msh4_sending_facility',
-            'msh5_receiving_app', 'msh6_receiving_facility', 'msh9_message_type',
-            'msh9_trigger_event', 'msh11_processing_id', 'msh12_version_id', 'is_default',
-            'dedup_ttl_value', 'dedup_ttl_unit',
-            'default_character_encoding',
-            'normalize_line_endings', 'force_standard_delimiters',
-            'repair_truncated_msh', 'split_concatenated_messages', 'use_msh18_encoding',
-            'normalize_obx2_value_type', 'replace_invalid_obx2_value_type',
-            'normalize_invalid_escape_sequences', 'normalize_obx8_abnormal_flags',
-            'normalize_quadruple_quoted_empty', 'allow_short_encoding_characters',
-            'fix_off_by_one_field_index',
-            'use_rest', 'rest_only', 'rest_channel_id',
-        ) + generic_attrs
-        output_repeated = True
+    input_required = 'cluster_id', 'type_'
+    output_required = 'id', 'name', 'is_active', 'is_internal', 'service', 'security_name'
+    output_optional = (
+        'should_parse_on_input', 'should_validate', 'should_return_errors',
+        'should_log_messages', 'logging_level',
+        'max_msg_size', 'max_msg_size_unit', 'read_buffer_size', 'recv_timeout',
+        'start_seq', 'end_seq',
+        'msh3_sending_app', 'msh4_sending_facility',
+        'msh5_receiving_app', 'msh6_receiving_facility', 'msh9_message_type',
+        'msh9_trigger_event', 'msh11_processing_id', 'msh12_version_id', 'is_default',
+        'dedup_ttl_value', 'dedup_ttl_unit',
+        'default_character_encoding',
+        'normalize_line_endings', 'force_standard_delimiters',
+        'repair_truncated_msh', 'split_concatenated_messages', 'use_msh18_encoding',
+        'normalize_obx2_value_type', 'replace_invalid_obx2_value_type',
+        'normalize_invalid_escape_sequences', 'normalize_obx8_abnormal_flags',
+        'normalize_quadruple_quoted_empty', 'allow_short_encoding_characters',
+        'fix_off_by_one_field_index',
+        'use_rest', 'rest_only', 'rest_channel_id',
+    ) + generic_attrs
+    output_repeated = True
 
 # ################################################################################################################################
 
@@ -73,27 +72,26 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_internal', 'service'
-        input_optional = (
-            'is_active', 'should_parse_on_input', 'should_validate', 'should_return_errors',
-            'should_log_messages', 'logging_level',
-            'max_msg_size', 'max_msg_size_unit', 'read_buffer_size', 'recv_timeout',
-            'start_seq', 'end_seq',
-            'msh3_sending_app', 'msh4_sending_facility',
-            'msh5_receiving_app', 'msh6_receiving_facility', 'msh9_message_type',
-            'msh9_trigger_event', 'msh11_processing_id', 'msh12_version_id', 'is_default',
-            'dedup_ttl_value', 'dedup_ttl_unit',
-            'default_character_encoding',
-            'normalize_line_endings', 'force_standard_delimiters',
-            'repair_truncated_msh', 'split_concatenated_messages', 'use_msh18_encoding',
-            'normalize_obx2_value_type', 'replace_invalid_obx2_value_type',
-            'normalize_invalid_escape_sequences', 'normalize_obx8_abnormal_flags',
-            'normalize_quadruple_quoted_empty', 'allow_short_encoding_characters',
-            'fix_off_by_one_field_index',
-            'use_rest', 'rest_only', 'rest_channel_id', 'rest_url_path', 'rest_security_id',
-        ) + generic_attrs
-        output_required = 'id', 'name'
+    input_required = 'name', 'is_internal', 'service'
+    input_optional = (
+        'is_active', 'should_parse_on_input', 'should_validate', 'should_return_errors',
+        'should_log_messages', 'logging_level',
+        'max_msg_size', 'max_msg_size_unit', 'read_buffer_size', 'recv_timeout',
+        'start_seq', 'end_seq',
+        'msh3_sending_app', 'msh4_sending_facility',
+        'msh5_receiving_app', 'msh6_receiving_facility', 'msh9_message_type',
+        'msh9_trigger_event', 'msh11_processing_id', 'msh12_version_id', 'is_default',
+        'dedup_ttl_value', 'dedup_ttl_unit',
+        'default_character_encoding',
+        'normalize_line_endings', 'force_standard_delimiters',
+        'repair_truncated_msh', 'split_concatenated_messages', 'use_msh18_encoding',
+        'normalize_obx2_value_type', 'replace_invalid_obx2_value_type',
+        'normalize_invalid_escape_sequences', 'normalize_obx8_abnormal_flags',
+        'normalize_quadruple_quoted_empty', 'allow_short_encoding_characters',
+        'fix_off_by_one_field_index',
+        'use_rest', 'rest_only', 'rest_channel_id', 'rest_url_path', 'rest_security_id',
+    ) + generic_attrs
+    output_required = 'id', 'name'
 
 # ################################################################################################################################
 
