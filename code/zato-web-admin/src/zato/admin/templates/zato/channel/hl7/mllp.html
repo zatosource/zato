@@ -67,6 +67,13 @@
             'repair_truncated_msh',
             'split_concatenated_messages',
             'use_msh18_encoding',
+            'normalize_obx2_value_type',
+            'replace_invalid_obx2_value_type',
+            'normalize_invalid_escape_sequences',
+            'normalize_obx8_abnormal_flags',
+            'normalize_quadruple_quoted_empty',
+            'allow_short_encoding_characters',
+            'fix_off_by_one_field_index',
             'use_rest',
             'rest_only',
             'rest_channel_id',
@@ -183,6 +190,14 @@
                         <td class='ignore'>{{ item.repair_truncated_msh }}</td>
                         <td class='ignore'>{{ item.split_concatenated_messages }}</td>
                         <td class='ignore'>{{ item.use_msh18_encoding }}</td>
+
+                        <td class='ignore'>{{ item.normalize_obx2_value_type }}</td>
+                        <td class='ignore'>{{ item.replace_invalid_obx2_value_type }}</td>
+                        <td class='ignore'>{{ item.normalize_invalid_escape_sequences }}</td>
+                        <td class='ignore'>{{ item.normalize_obx8_abnormal_flags }}</td>
+                        <td class='ignore'>{{ item.normalize_quadruple_quoted_empty }}</td>
+                        <td class='ignore'>{{ item.allow_short_encoding_characters }}</td>
+                        <td class='ignore'>{{ item.fix_off_by_one_field_index }}</td>
 
                         <td class='ignore'>{{ item.use_rest }}</td>
                         <td class='ignore'>{{ item.rest_only }}</td>
@@ -334,7 +349,7 @@
                     <div class="dashboard-tab-panel" id="mllp-create-tab-panel-tolerance" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:21%"><label for="id_normalize_line_endings">Normalize line endings</label></td>
+                                <td style="width:30%"><label for="id_normalize_line_endings">Normalize line endings</label></td>
                                 <td><label class="toggle-switch">{{ create_form.normalize_line_endings }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
@@ -348,6 +363,34 @@
                             <tr>
                                 <td><label for="id_split_concatenated_messages">Split concatenated messages</label></td>
                                 <td><label class="toggle-switch">{{ create_form.split_concatenated_messages }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_normalize_obx2_value_type">Fill empty OBX-2 value type</label></td>
+                                <td><label class="toggle-switch">{{ create_form.normalize_obx2_value_type }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_replace_invalid_obx2_value_type">Replace invalid OBX-2 value type</label></td>
+                                <td><label class="toggle-switch">{{ create_form.replace_invalid_obx2_value_type }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_normalize_invalid_escape_sequences">Strip orphan escape characters</label></td>
+                                <td><label class="toggle-switch">{{ create_form.normalize_invalid_escape_sequences }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_normalize_obx8_abnormal_flags">Clear OBX-8 literal null</label></td>
+                                <td><label class="toggle-switch">{{ create_form.normalize_obx8_abnormal_flags }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_normalize_quadruple_quoted_empty">Strip multi-quote sequences</label></td>
+                                <td><label class="toggle-switch">{{ create_form.normalize_quadruple_quoted_empty }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_allow_short_encoding_characters">Pad short encoding characters</label></td>
+                                <td><label class="toggle-switch">{{ create_form.allow_short_encoding_characters }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_fix_off_by_one_field_index">Fix off-by-one field index</label></td>
+                                <td><label class="toggle-switch">{{ create_form.fix_off_by_one_field_index }}<span class="toggle-slider"></span></label></td>
                             </tr>
                         </table>
                     </div>
@@ -530,7 +573,7 @@
                     <div class="dashboard-tab-panel" id="mllp-edit-tab-panel-tolerance" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:21%"><label for="id_edit-normalize_line_endings">Normalize line endings</label></td>
+                                <td style="width:30%"><label for="id_edit-normalize_line_endings">Normalize line endings</label></td>
                                 <td><label class="toggle-switch">{{ edit_form.normalize_line_endings }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
@@ -544,6 +587,34 @@
                             <tr>
                                 <td><label for="id_edit-split_concatenated_messages">Split concatenated messages</label></td>
                                 <td><label class="toggle-switch">{{ edit_form.split_concatenated_messages }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-normalize_obx2_value_type">Fill empty OBX-2 value type</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.normalize_obx2_value_type }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-replace_invalid_obx2_value_type">Replace invalid OBX-2 value type</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.replace_invalid_obx2_value_type }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-normalize_invalid_escape_sequences">Strip orphan escape characters</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.normalize_invalid_escape_sequences }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-normalize_obx8_abnormal_flags">Clear OBX-8 literal null</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.normalize_obx8_abnormal_flags }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-normalize_quadruple_quoted_empty">Strip multi-quote sequences</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.normalize_quadruple_quoted_empty }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-allow_short_encoding_characters">Pad short encoding characters</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.allow_short_encoding_characters }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-fix_off_by_one_field_index">Fix off-by-one field index</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.fix_off_by_one_field_index }}<span class="toggle-slider"></span></label></td>
                             </tr>
                         </table>
                     </div>

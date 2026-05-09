@@ -95,12 +95,21 @@ class CreateForm(forms.Form):
         widget=forms.Select(attrs={'style':'width:20%'}),
     )
 
-    # Message tolerance toggles
+    # Message tolerance toggles (MLLP preprocessing layer)
     normalize_line_endings        = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     force_standard_delimiters     = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     repair_truncated_msh          = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     split_concatenated_messages   = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     use_msh18_encoding            = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+
+    # Parser tolerance toggles (Rust ER7 content-level fixups)
+    normalize_obx2_value_type           = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    replace_invalid_obx2_value_type     = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    normalize_invalid_escape_sequences  = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    normalize_obx8_abnormal_flags       = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    normalize_quadruple_quoted_empty    = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    allow_short_encoding_characters     = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    fix_off_by_one_field_index          = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     # REST bridge
     use_rest         = forms.BooleanField(required=False, widget=forms.CheckboxInput())

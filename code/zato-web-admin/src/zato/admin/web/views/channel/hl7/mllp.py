@@ -50,6 +50,10 @@ class Index(_Index):
             'default_character_encoding',
             'normalize_line_endings', 'force_standard_delimiters',
             'repair_truncated_msh', 'split_concatenated_messages', 'use_msh18_encoding',
+            'normalize_obx2_value_type', 'replace_invalid_obx2_value_type',
+            'normalize_invalid_escape_sequences', 'normalize_obx8_abnormal_flags',
+            'normalize_quadruple_quoted_empty', 'allow_short_encoding_characters',
+            'fix_off_by_one_field_index',
             'use_rest', 'rest_only', 'rest_channel_id',
         ) + generic_attrs
         output_repeated = True
@@ -83,6 +87,10 @@ class _CreateEdit(CreateEdit):
             'default_character_encoding',
             'normalize_line_endings', 'force_standard_delimiters',
             'repair_truncated_msh', 'split_concatenated_messages', 'use_msh18_encoding',
+            'normalize_obx2_value_type', 'replace_invalid_obx2_value_type',
+            'normalize_invalid_escape_sequences', 'normalize_obx8_abnormal_flags',
+            'normalize_quadruple_quoted_empty', 'allow_short_encoding_characters',
+            'fix_off_by_one_field_index',
             'use_rest', 'rest_only', 'rest_channel_id', 'rest_url_path', 'rest_security_id',
         ) + generic_attrs
         output_required = 'id', 'name'

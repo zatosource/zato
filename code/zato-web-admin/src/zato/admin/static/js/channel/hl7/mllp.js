@@ -229,11 +229,20 @@ $.fn.zato.channel.hl7.mllp.field_descriptions = {
     'id_start_seq': 'MLLP start-of-block byte in hex.<br>Standard: 0b.',
     'id_end_seq': 'MLLP end-of-block bytes in hex.<br>Standard: 1c 0d.',
 
-    // Tolerance tab
+    // Tolerance tab - wire-level preprocessing
     'id_normalize_line_endings': 'Converts CRLF and LF to CR<br>as required by HL7 v2.',
     'id_force_standard_delimiters': 'Rewrites MSH-2 to standard delimiters<br>(^~\\&amp;).',
     'id_repair_truncated_msh': 'Recovers messages with a corrupted<br>or malformed MSH segment.',
     'id_split_concatenated_messages': 'Splits a TCP payload containing multiple<br>MSH segments into separate messages.',
+
+    // Tolerance tab - parser-level fixups
+    'id_normalize_obx2_value_type': 'When OBX-2 is empty but OBX-5 has data,<br>fills OBX-2 with ST so the observation<br>value can be accessed.',
+    'id_replace_invalid_obx2_value_type': 'Replaces unrecognized OBX-2 data types<br>with ST. Prevents parse failures from<br>nonstandard value type codes.',
+    'id_normalize_invalid_escape_sequences': 'Removes stray backslash characters that<br>do not form a valid HL7 escape sequence.<br>Prevents parse errors from malformed escapes.',
+    'id_normalize_obx8_abnormal_flags': 'Clears OBX-8 (Abnormal Flags) when it<br>contains the literal string "null" instead<br>of a valid flag value.',
+    'id_normalize_quadruple_quoted_empty': 'Strips sequences of two or more consecutive<br>double-quote characters that some systems<br>emit as empty-field placeholders.',
+    'id_allow_short_encoding_characters': 'Pads MSH-2 with standard encoding characters<br>when the sender provides fewer than the<br>required four.',
+    'id_fix_off_by_one_field_index': 'Removes a spurious empty first field from<br>non-MSH segments. Fixes messages where a<br>leading separator shifts all field indices.',
 
     // Deduplication tab
     'id_dedup_ttl_value': 'How long to remember message control IDs (MSH-10).<br>Duplicates within this window are acknowledged<br>but not delivered to the service.',
@@ -328,6 +337,14 @@ $.fn.zato.channel.hl7.mllp.data_table.new_row = function(item, data, include_tr)
     row += String.format("<td class='ignore'>{0}</td>", item.repair_truncated_msh);
     row += String.format("<td class='ignore'>{0}</td>", item.split_concatenated_messages);
     row += String.format("<td class='ignore'>{0}</td>", item.use_msh18_encoding);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.normalize_obx2_value_type);
+    row += String.format("<td class='ignore'>{0}</td>", item.replace_invalid_obx2_value_type);
+    row += String.format("<td class='ignore'>{0}</td>", item.normalize_invalid_escape_sequences);
+    row += String.format("<td class='ignore'>{0}</td>", item.normalize_obx8_abnormal_flags);
+    row += String.format("<td class='ignore'>{0}</td>", item.normalize_quadruple_quoted_empty);
+    row += String.format("<td class='ignore'>{0}</td>", item.allow_short_encoding_characters);
+    row += String.format("<td class='ignore'>{0}</td>", item.fix_off_by_one_field_index);
 
     row += String.format("<td class='ignore'>{0}</td>", item.use_rest);
     row += String.format("<td class='ignore'>{0}</td>", item.rest_only);
