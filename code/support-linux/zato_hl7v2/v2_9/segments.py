@@ -3222,6 +3222,11 @@ class ERR(HL7Segment):
 class EVN(HL7Segment):
     _segment_id = "EVN"
 
+    event_type_code: Optional[ID] = HL7Field(
+        position=1,
+        datatype="ID",
+        usage=Usage.OPTIONAL,
+        repeatable=False, table="HL70003",    )
     recorded_date_time: DTM = HL7Field(
         position=2,
         datatype="DTM",
@@ -9217,10 +9222,20 @@ class PID(HL7Segment):
         datatype="SI",
         usage=Usage.OPTIONAL,
         repeatable=False,    )
+    patient_id: Optional[ST] = HL7Field(
+        position=2,
+        datatype="ST",
+        usage=Usage.OPTIONAL,
+        repeatable=False,    )
     patient_identifier_list: list[CX] = HL7Field(
         position=3,
         datatype="CX",
         usage=Usage.REQUIRED,
+        repeatable=True,    )
+    alternate_patient_id: Optional[list[CX]] = HL7Field(
+        position=4,
+        datatype="CX",
+        usage=Usage.OPTIONAL,
         repeatable=True,    )
     patient_name: list[XPN] = HL7Field(
         position=5,
@@ -9242,6 +9257,11 @@ class PID(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70001",    )
+    patient_alias: Optional[list[XPN]] = HL7Field(
+        position=9,
+        datatype="XPN",
+        usage=Usage.OPTIONAL,
+        repeatable=True,    )
     race: Optional[list[CWE]] = HL7Field(
         position=10,
         datatype="CWE",
@@ -9250,6 +9270,21 @@ class PID(HL7Segment):
     patient_address: Optional[list[XAD]] = HL7Field(
         position=11,
         datatype="XAD",
+        usage=Usage.OPTIONAL,
+        repeatable=True,    )
+    county_code: Optional[IS] = HL7Field(
+        position=12,
+        datatype="IS",
+        usage=Usage.OPTIONAL,
+        repeatable=False, table="HL70289",    )
+    phone_number_home: Optional[list[XTN]] = HL7Field(
+        position=13,
+        datatype="XTN",
+        usage=Usage.OPTIONAL,
+        repeatable=True,    )
+    phone_number_business: Optional[list[XTN]] = HL7Field(
+        position=14,
+        datatype="XTN",
         usage=Usage.OPTIONAL,
         repeatable=True,    )
     primary_language: Optional[CWE] = HL7Field(
@@ -9272,6 +9307,16 @@ class PID(HL7Segment):
         datatype="CX",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70061",    )
+    ssn_number: Optional[ST] = HL7Field(
+        position=19,
+        datatype="ST",
+        usage=Usage.OPTIONAL,
+        repeatable=False,    )
+    drivers_license_number: Optional[DLN] = HL7Field(
+        position=20,
+        datatype="DLN",
+        usage=Usage.OPTIONAL,
+        repeatable=False,    )
     mothers_identifier: Optional[list[CX]] = HL7Field(
         position=21,
         datatype="CX",
@@ -9307,6 +9352,11 @@ class PID(HL7Segment):
         datatype="CWE",
         usage=Usage.OPTIONAL,
         repeatable=False, table="HL70172",    )
+    nationality: Optional[CWE] = HL7Field(
+        position=28,
+        datatype="CWE",
+        usage=Usage.OPTIONAL,
+        repeatable=False, table="HL70212",    )
     patient_death_date_and_time: Optional[DTM] = HL7Field(
         position=29,
         datatype="DTM",
