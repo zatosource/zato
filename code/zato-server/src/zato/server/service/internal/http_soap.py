@@ -45,8 +45,8 @@ _GetList_Optional = ('include_wrapper', 'cluster_id', 'connection', 'transport',
 class _HTTPSOAPService:
     """ A common class for various HTTP/SOAP-related services.
     """
-    def notify_worker_threads(self, params, action):
-        """ Notify worker threads of new or updated parameters.
+    def notify_server(self, params, action):
+        """ Notify the server of new or updated parameters.
         """
         params['action'] = action
         self.config_dispatcher.publish(params)
@@ -465,7 +465,7 @@ class Create(_CreateEdit):
                     action = CHANNEL.HTTP_SOAP_CREATE_EDIT.value
                 else:
                     action = OUTGOING.HTTP_SOAP_CREATE_EDIT.value
-                self.notify_worker_threads(input, action)
+                self.notify_server(input, action)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
@@ -658,7 +658,7 @@ class Edit(_CreateEdit):
                 else:
                     action = OUTGOING.HTTP_SOAP_CREATE_EDIT.value
 
-                self.notify_worker_threads(input, action)
+                self.notify_server(input, action)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
@@ -732,7 +732,7 @@ class Delete(AdminService, _HTTPSOAPService):
                 else:
                     action = OUTGOING.HTTP_SOAP_DELETE.value
 
-                self.notify_worker_threads({
+                self.notify_server({
                     'id': self.request.input.id,
                     'name':old_name,
                     'transport':old_transport,
@@ -786,9 +786,9 @@ class GetURLSecurity(AdminService):
     """
     def handle(self):
         response = {}
-        response['url_sec'] = sorted(self.worker_store.request_handler.security.url_sec.items())
-        response['plain_http_handler.http_soap'] = sorted(self.worker_store.request_handler.plain_http_handler.http_soap.items())
-        response['soap_handler.http_soap'] = sorted(self.worker_store.request_handler.soap_handler.http_soap.items())
+        response['url_sec'] = sorted(self.server.config_manager.request_handler.security.url_sec.items())
+        response['plain_http_handler.http_soap'] = sorted(self.server.config_manager.request_handler.plain_http_handler.http_soap.items())
+        response['soap_handler.http_soap'] = sorted(self.server.config_manager.request_handler.soap_handler.http_soap.items())
         self.response.payload = dumps(response, sort_keys=True, indent=4)
         self.response.content_type = 'application/json'
 

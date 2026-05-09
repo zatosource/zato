@@ -1457,11 +1457,9 @@ def startup_service_payload_from_path(name, value, repo_location):
 # ################################################################################################################################
 
 def invoke_startup_services(source, key, fs_server_config, repo_location, config_dispatcher=None, service_name=None,
-    skip_include=True, worker_store=None):
-    """ Invoked when we are the first worker and we know we have a broker client and all the other config is ready
-    so we can publish the request to execute startup services. In the worst case the requests will get back to us but it's
-    also possible that other workers are already running. In short, there is no guarantee that any server or worker in particular
-    will receive the requests, only that there will be exactly one.
+    skip_include=True, config_manager=None):
+    """ Invoked when we are the first server and we know we have a broker client and all the other config is ready
+    so we can publish the request to execute startup services.
     """
     for name, payload in iteritems(fs_server_config.get(key, {})):
 
@@ -1494,7 +1492,7 @@ def invoke_startup_services(source, key, fs_server_config, repo_location, config
         if config_dispatcher:
             config_dispatcher.invoke_async(msg)
         else:
-            worker_store.on_message_invoke_service(msg, msg['channel'], msg['action'])
+            config_manager.on_message_invoke_service(msg, msg['channel'], msg['action'])
 
 # ################################################################################################################################
 
@@ -1552,7 +1550,7 @@ def get_logger_for_class(class_):
 
 # ################################################################################################################################
 
-def get_worker_pids_by_parent(parent_pid:'int') -> 'intlist':
+def get_server_pids_by_parent(parent_pid:'int') -> 'intlist':
     """ Returns all children PIDs of the process whose PID is given on input.
     """
     # psutil
@@ -1562,8 +1560,8 @@ def get_worker_pids_by_parent(parent_pid:'int') -> 'intlist':
 
 # ################################################################################################################################
 
-def get_worker_pids():
-    """ Returns all sibling worker PIDs of the server process we are being invoked on, including our own worker too.
+def get_server_pids():
+    """ Returns all sibling server PIDs of the server process we are being invoked on, including our own process too.
     """
     # psutil
     import psutil
@@ -1574,8 +1572,8 @@ def get_worker_pids():
     # .. and this is its parent PID ..
     parent_pid = current_process.ppid()
 
-    # .. now, we can return PIDs of all the workers.
-    return get_worker_pids_by_parent(parent_pid)
+    # .. now, we can return PIDs of all the server processes.
+    return get_server_pids_by_parent(parent_pid)
 
 # ################################################################################################################################
 
@@ -1589,10 +1587,10 @@ def update_bind_port(data, idx):
 
 # ################################################################################################################################
 
-def start_connectors(worker_store, service_name, data):
+def start_connectors(config_manager, service_name, data):
 
-    for pid in get_worker_pids():
-        worker_store.server.invoke(service_name, data, pid=pid, is_async=True, data_format=DATA_FORMAT.DICT)
+    for pid in get_server_pids():
+        config_manager.server.invoke(service_name, data, pid=pid, is_async=True, data_format=DATA_FORMAT.DICT)
 
 # ################################################################################################################################
 

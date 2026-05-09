@@ -370,7 +370,7 @@ class Create(AdminService):
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_CREATE.value
 
                 # .. our own process we invoke directly ..
-                self.server.worker_store.on_config_event_PUBSUB_SUBSCRIPTION_CREATE(pubsub_msg)
+                self.server.config_manager.on_config_event_PUBSUB_SUBSCRIPTION_CREATE(pubsub_msg)
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
@@ -550,7 +550,7 @@ class Edit(AdminService):
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_EDIT.value
 
                 # .. our own process we invoke directly ..
-                self.server.worker_store.on_config_event_PUBSUB_SUBSCRIPTION_EDIT(pubsub_msg)
+                self.server.config_manager.on_config_event_PUBSUB_SUBSCRIPTION_EDIT(pubsub_msg)
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
@@ -626,7 +626,7 @@ class Delete(AdminService):
 
         # .. our own consumer task (from the same process) we want to stop synchronously so we call the handler directly ..
         #if should_call_pubsub_consumer_backend:
-        self.server.worker_store.on_config_event_PUBSUB_SUBSCRIPTION_DELETE(pubsub_msg)
+        self.server.config_manager.on_config_event_PUBSUB_SUBSCRIPTION_DELETE(pubsub_msg)
 
         # .. and now we can notify the pub/sub server, knowing that the consumer is already stopped.
 
@@ -929,7 +929,7 @@ class HandleDelivery(Service):
             if input_key == 'publisher':
 
                 # .. go through all the Basic Auth definitions ..
-                for sec_config in self.server.worker_store.worker_config.basic_auth.values():
+                for sec_config in self.server.config_manager.config_store.basic_auth.values():
 
                     # .. dive deeper ..
                     sec_config = sec_config['config']
@@ -972,7 +972,7 @@ class HandleDelivery(Service):
         delivery_count = meta['delivery_count']
 
         # Get the detailed configuration of the subscriber ..
-        config = self.server.worker_store.get_pubsub_sub_config(sub_key)
+        config = self.server.config_manager.get_pubsub_sub_config(sub_key)
 
         push_type = config['push_type']
 

@@ -37,7 +37,7 @@ class SyncObjectsImpl(Service):
         # Optionally, synchronize in-RAM state of security definitions
         if input.security:
             self.logger.info('Synchronizing security definitions')
-            self.server.worker_store.sync_security()
+            self.server.config_manager.sync_security()
 
 # ################################################################################################################################
 # ################################################################################################################################

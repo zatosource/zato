@@ -12,7 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 if 0:
     from bunch import Bunch
     from zato.server.base.parallel import ParallelServer
-    from zato.server.base.worker import WorkerStore
+    from zato.server.base.config_manager import ConfigManager
     from zato.server.connection.http_soap.url_data import URLData
     ParallelServer = ParallelServer
     URLData = URLData
@@ -20,8 +20,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class WorkerImpl:
-    """ Base class for objects that implement worker functionality. Does not implement anything itself,
+class ConfigManagerImpl:
+    """ Base class for objects that implement config manager functionality. Does not implement anything itself,
     instead serving as a common marker for all derived subclasses.
     """
     server: 'ParallelServer'
@@ -29,7 +29,7 @@ class WorkerImpl:
 
 # ################################################################################################################################
 
-    def on_config_event_Common_Sync_Objects(self:'WorkerStore', msg:'Bunch') -> 'None':
+    def on_config_event_Common_Sync_Objects(self:'ConfigManager', msg:'Bunch') -> 'None':
         _ = self.server.invoke('pub.zato.common.sync-objects-impl', msg)
 
 # ################################################################################################################################

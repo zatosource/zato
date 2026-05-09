@@ -91,7 +91,7 @@ class PubSubRESTService(Service):
     def _validate_credentials(self, username:'str', password:'str') -> 'bool':
         """ Validate username/password against all basic auth security definitions.
         """
-        basic_auth_config = self.server.worker_store.request_dispatcher.url_data.basic_auth_config
+        basic_auth_config = self.server.config_manager.request_dispatcher.url_data.basic_auth_config
         auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
 
         for sec_def in basic_auth_config.values():

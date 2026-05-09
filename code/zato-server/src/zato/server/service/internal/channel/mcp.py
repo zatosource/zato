@@ -52,9 +52,9 @@ class MCPEndpoint(AdminService):
         """ Processes an incoming MCP request.
         """
 
-        # Look up the MCP channel config from the worker store,
+        # Look up the MCP channel config from the config manager,
         # then reach the ChannelMCPWrapper through its .conn attribute ..
-        channel_config = self.server.worker_store.channel_mcp[self.channel.name]
+        channel_config = self.server.config_manager.channel_mcp[self.channel.name]
         wrapper = channel_config.conn
 
         # .. read the session ID from the request header if present ..

@@ -109,7 +109,7 @@ class Create(AdminService):
             self.response.payload.name = definition.name
 
         # Make sure the object has been created
-        _:'any_' = self.server.worker_store.wait_for_oauth(input.name)
+        _:'any_' = self.server.config_manager.wait_for_oauth(input.name)
 
 # ################################################################################################################################
 # ################################################################################################################################

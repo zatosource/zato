@@ -122,7 +122,7 @@ def ensure_django_channel_exists(session, cluster_id):
 def ensure_mcp_channel_exists(session, cluster_id):
     """ Creates both the HTTP channel and the generic connection for MCP if they do not exist.
     The HTTP channel routes POST /mcp to the MCPEndpoint service.
-    The generic connection registers the channel-mcp type in the worker store.
+    The generic connection registers the channel-mcp type in the config manager.
     Both must share the same name so MCPEndpoint can look up its handler.
     Returns True if created, False if already existed.
     """

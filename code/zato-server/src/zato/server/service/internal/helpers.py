@@ -738,8 +738,8 @@ class OpenAPIHandler(Service):
         """ Validates auth header against any of the basic auth definitions.
         """
         for security_id in basic_auth_security_ids:
-            # Get the security definition from the worker store
-            sec_def = self.server.worker_store.basic_auth_get_by_id(security_id)
+            # Get the security definition from the config manager
+            sec_def = self.server.config_manager.basic_auth_get_by_id(security_id)
             if sec_def:
                 # Decrypt password if encrypted
                 password = sec_def['password']

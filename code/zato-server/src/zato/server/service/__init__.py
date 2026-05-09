@@ -98,7 +98,7 @@ if 0:
     from zato.distlock import Lock
     from zato.server.connection.ftp import FTPStore
     from zato.server.connection.http_soap.outgoing import RESTWrapper
-    from zato.server.base.worker import WorkerStore
+    from zato.server.base.config_manager import ConfigManager
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
     from zato.simpleio import CySimpleIO
@@ -119,7 +119,7 @@ if 0:
     ServerCryptoManager = ServerCryptoManager
     timedelta = timedelta
     TimeUtil = TimeUtil
-    WorkerStore = WorkerStore
+    ConfigManager = ConfigManager
 
 # ################################################################################################################################
 
@@ -367,8 +367,8 @@ class Service:
     amqp = AMQPFacade()
     commands = CommandsFacade()
 
-    _worker_store:'WorkerStore'
-    _worker_config:'ConfigStore'
+    _config_manager:'ConfigManager'
+    _config_store:'ConfigStore'
 
     _has_before_job_hooks:'bool' = False
     _has_after_job_hooks:'bool' = False
@@ -451,13 +451,13 @@ class Service:
 
         self.out = self.outgoing = Outgoing(
             self.amqp,
-            self._worker_config.out_odoo,
-            self._worker_store.worker_config.out_plain_http,
-            self._worker_config.out_soap,
-            self._worker_store.sql_pool_store,
-            self._worker_config.out_sap,
-            self._worker_store.outconn_ldap,
-            self._worker_store.outconn_mongodb,
+            self._config_store.out_odoo,
+            self._config_manager.config_store.out_plain_http,
+            self._config_store.out_soap,
+            self._config_manager.sql_pool_store,
+            self._config_store.out_sap,
+            self._config_manager.outconn_ldap,
+            self._config_manager.outconn_mongodb,
         ) # type: Outgoing
 
         # REST facade for outgoing connections
@@ -552,15 +552,15 @@ class Service:
         # The if's below are meant to be written in this way because we don't want any unnecessary attribute lookups
         # and method calls in this method - it's invoked each time a service is executed. The attributes are set
         # for the whole of the Service class each time it is discovered they are needed. It cannot be done in ServiceStore
-        # because at the time that ServiceStore executes the worker config may still not be ready.
+        # because at the time that ServiceStore executes the config store may still not be ready.
 
         if self.component_enabled_email:
             if not Service.email:
-                Service.email = EMailAPI(self._worker_store.email_smtp_api, self._worker_store.email_imap_api)
+                Service.email = EMailAPI(self._config_manager.email_smtp_api, self._config_manager.email_imap_api)
 
         if self.component_enabled_search:
             if not Service.search:
-                Service.search = SearchAPI(self._worker_store.search_es_api)
+                Service.search = SearchAPI(self._config_manager.search_es_api)
 
         if may_have_wsgi_environ:
             self.request.http.init(self.wsgi_environ)
@@ -571,20 +571,20 @@ class Service:
             self.response.init(self.cid, self._sio, self.data_format)
 
         # Cache is always enabled
-        self.cache = self._worker_store.cache_api
+        self.cache = self._config_manager.cache_api
 
         # REST facade
-        self.rest.init(self.cid, self._worker_store.worker_config.out_plain_http)
+        self.rest.init(self.cid, self._config_manager.config_store.out_plain_http)
 
         # Kafka facade
-        self.kafka.init(self._worker_store)
+        self.kafka.init(self._config_manager)
 
         # MLLP facade
-        self.mllp.init(self._worker_store)
+        self.mllp.init(self._config_manager)
 
         # Vendors - Keysight
         self.keysight = KeysightContainer()
-        self.keysight.init(self.cid, self._worker_store.worker_config.out_plain_http)
+        self.keysight.init(self.cid, self._config_manager.config_store.out_plain_http)
 
 # ################################################################################################################################
 
@@ -672,7 +672,7 @@ class Service:
         transport,     # type: str
         server,        # type: ParallelServer
         config_dispatcher, # type: ConfigDispatcher | None
-        worker_store,  # type: WorkerStore
+        config_manager,  # type: ConfigManager
         cid,           # type: str
         simple_io_config, # type: anydict
         *args:'any_',
@@ -704,7 +704,7 @@ class Service:
         params_priority = kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT)
 
         service.update(service, channel, server, config_dispatcher, # type: ignore
-            worker_store, cid, payload, raw_request, transport, simple_io_config, data_format, wsgi_environ,
+            config_manager, cid, payload, raw_request, transport, simple_io_config, data_format, wsgi_environ,
             job_type=job_type, channel_params=channel_params,
             merge_channel_params=merge_channel_params, params_priority=params_priority,
             in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'),
@@ -888,7 +888,7 @@ class Service:
         set_response_func = kwargs.pop('set_response_func', service.set_response_data)
 
         invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,
-            self.config_dispatcher, self._worker_store, kwargs.pop('cid', self.cid), {})
+            self.config_dispatcher, self._config_manager, kwargs.pop('cid', self.cid), {})
 
         kwargs.update({
             'serialize':serialize,

@@ -107,7 +107,7 @@ class Create(AdminService):
                 self.response.payload.header = input.header
 
         # Make sure the object has been created
-        _:'any_' = self.server.worker_store.wait_for_apikey(input.name)
+        _:'any_' = self.server.config_manager.wait_for_apikey(input.name)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -38,7 +38,7 @@ if 0:
     from requests import Response
     from zato.common.typing_ import any_, anydict, callnone
     from zato.server.base.parallel import ParallelServer
-    from zato.server.base.worker import WorkerStore
+    from zato.server.base.config_manager import ConfigManager
     from zato.server.config import ConfigDict
     from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
     from zato.server.queue_bridge.client import QueueBridgeClient
@@ -426,9 +426,9 @@ class KafkaFacade:
     _outconn_kafka: 'anydict'
     _queue_bridge: 'QueueBridgeClient'
 
-    def init(self, worker_store:'WorkerStore') -> 'None':
-        self._outconn_kafka = worker_store.outconn_kafka
-        self._queue_bridge = worker_store.server._queue_bridge
+    def init(self, config_manager:'ConfigManager') -> 'None':
+        self._outconn_kafka = config_manager.outconn_kafka
+        self._queue_bridge = config_manager.server._queue_bridge
 
 # ################################################################################################################################
 
@@ -472,8 +472,8 @@ class MLLPFacade:
     """
     _outconn_hl7_mllp: 'anydict'
 
-    def init(self, worker_store:'WorkerStore') -> 'None':
-        self._outconn_hl7_mllp = worker_store.outconn_hl7_mllp
+    def init(self, config_manager:'ConfigManager') -> 'None':
+        self._outconn_hl7_mllp = config_manager.outconn_hl7_mllp
 
 # ################################################################################################################################
 

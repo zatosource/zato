@@ -111,7 +111,7 @@ class ImportObjects(Service):
 
     def _get_rest_conn_id_by_name(self, name:'str') -> 'int':
 
-        if conn := self.server.worker_store.get_outconn_rest(name):
+        if conn := self.server.config_manager.get_outconn_rest(name):
             conn_config = conn['config']
             conn_id = conn_config['id']
             return conn_id

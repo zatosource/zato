@@ -40,7 +40,7 @@ _Max_Msg_Size_Multipliers = {
 
 class _SharedMLLPState:
     """ Holds the single shared HL7MLLPServer and HL7MessageRouter instance
-    across all MLLP channel wrappers within a worker process.
+    across all MLLP channel wrappers within a server process.
     """
 
     def __init__(self) -> 'None':

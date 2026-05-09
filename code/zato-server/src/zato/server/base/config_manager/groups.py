@@ -11,9 +11,9 @@ import logging
 
 # Zato
 from zato.common.api import Groups
-from zato.server.base.worker.common import WorkerImpl
+from zato.server.base.config_manager.common import ConfigManagerImpl
 
-logger_groups = logging.getLogger('zato.groups.worker')
+logger_groups = logging.getLogger('zato.groups.config_manager')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -21,29 +21,29 @@ logger_groups = logging.getLogger('zato.groups.worker')
 if 0:
     from bunch import Bunch
     from zato.common.typing_ import any_
-    from zato.server.base.worker import WorkerStore
+    from zato.server.base.config_manager import ConfigManager
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SecurityGroups(WorkerImpl):
-    """ Security groups-related functionality for worker objects.
+class SecurityGroups(ConfigManagerImpl):
+    """ Security groups-related functionality for config manager objects.
     """
 
 # ################################################################################################################################
 
     def _yield_security_groups_ctx_items(
-        self:'WorkerStore' # type: ignore
+        self:'ConfigManager' # type: ignore
     ) -> 'any_':
 
-        for channel_item in self.worker_config.http_soap:
+        for channel_item in self.config_store.http_soap:
             if security_groups_ctx := channel_item.get('security_groups_ctx'):
                 yield security_groups_ctx
 
 # ################################################################################################################################
 
     def on_config_event_Groups_Edit(
-        self:'WorkerStore', # type: ignore
+        self:'ConfigManager', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
         logger_groups.info('on_config_event_Groups_Edit: msg=%s', msg)
@@ -51,7 +51,7 @@ class SecurityGroups(WorkerImpl):
 # ################################################################################################################################
 
     def on_config_event_Groups_Edit_Member_List(
-        self:'WorkerStore', # type: ignore
+        self:'ConfigManager', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
 
@@ -75,7 +75,7 @@ class SecurityGroups(WorkerImpl):
 # ################################################################################################################################
 
     def on_config_event_Groups_Delete(
-        self:'WorkerStore', # type: ignore
+        self:'ConfigManager', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
 

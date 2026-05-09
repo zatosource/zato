@@ -667,150 +667,150 @@ class Cache:
 # ################################################################################################################################
 
     def sync_after_set(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .set operation in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .set operation in another process.
         """
         self.impl.set(data.key, data.value, data.expiry, False, None, data.orig_now)
 
     def sync_after_set_by_prefix(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .set_by_prefix operation in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .set_by_prefix operation in another process.
         """
         self.impl.set_by_prefix(data.key, data.value, data.expiry, False, None, data.limit, data.orig_now)
 
     def sync_after_set_by_suffix(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .set_by_suffix operation in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .set_by_suffix operation in another process.
         """
         self.impl.set_by_suffix(data.key, data.value, data.expiry, False, None, data.limit, data.orig_now)
 
     def sync_after_set_by_regex(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .set_by_regex operation in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .set_by_regex operation in another process.
         """
         self.impl.set_by_regex(data.key, data.value, data.expiry, False, None, data.limit, data.orig_now)
 
     def sync_after_set_contains(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .set_contains operation in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .set_contains operation in another process.
         """
         self.impl.set_contains(data.key, data.value, data.expiry, False, None, data.limit, data.orig_now)
 
     def sync_after_set_not_contains(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .set_not_contains operation
-        in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .set_not_contains operation
+        in another process.
         """
         self.impl.set_not_contains(data.key, data.value, data.expiry, False, None, data.limit, data.orig_now)
 
     def sync_after_set_contains_all(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .set_contains_all operation
-        in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .set_contains_all operation
+        in another process.
         """
         self.impl.set_contains_all(data.key, data.value, data.expiry, False, None, data.limit, data.orig_now)
 
     def sync_after_set_contains_any(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .set_contains_any operation
-        in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .set_contains_any operation
+        in another process.
         """
         self.impl.set_contains_any(data.key, data.value, data.expiry, False, None, data.limit, data.orig_now)
 
 # ################################################################################################################################
 
     def sync_after_delete(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .delete operation in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .delete operation in another process.
         """
         self.impl.delete(data.key)
 
     def sync_after_delete_by_prefix(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .delete_by_prefix operation
-        in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .delete_by_prefix operation
+        in another process.
         """
         self.impl.delete_by_prefix(data.key, False, data.limit)
 
     def sync_after_delete_by_suffix(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .delete_by_suffix operation
-        in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .delete_by_suffix operation
+        in another process.
         """
         self.impl.delete_by_suffix(data.key, False, data.limit)
 
     def sync_after_delete_by_regex(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .delete_by_regex operation
-        in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .delete_by_regex operation
+        in another process.
         """
         self.impl.delete_by_regex(data.key, False, data.limit)
 
     def sync_after_delete_contains(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .delete_contains operation
-        in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .delete_contains operation
+        in another process.
         """
         self.impl.delete_contains(data.key, False, data.limit)
 
     def sync_after_delete_not_contains(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .delete_not_contains operation
-        in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .delete_not_contains operation
+        in another process.
         """
         self.impl.delete_not_contains(data.key, False, data.limit)
 
     def sync_after_delete_contains_all(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .delete_contains_all operation
-        in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .delete_contains_all operation
+        in another process.
         """
         self.impl.delete_contains_all(data.key, False, data.limit)
 
     def sync_after_delete_contains_any(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .delete_contains_any operation
-        in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .delete_contains_any operation
+        in another process.
         """
         self.impl.delete_contains_any(data.key, False, data.limit)
 
 # ################################################################################################################################
 
     def sync_after_expire(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after an .expire operation in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after an .expire operation in another process.
         """
         self.impl.set_expiration_data(data.key, data.expiry, data.expires_at)
 
     def sync_after_expire_by_prefix(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .expire_by_prefix operation
-        in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .expire_by_prefix operation
+        in another process.
         """
         self.impl.expire_by_prefix(data.key, data.expiry, data.limit)
 
     def sync_after_expire_by_suffix(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .expire_by_suffix operation
-        in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .expire_by_suffix operation
+        in another process.
         """
         self.impl.expire_by_suffix(data.key, data.expiry, data.limit)
 
     def sync_after_expire_by_regex(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .expire_by_regex operation
-        in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .expire_by_regex operation
+        in another process.
         """
         self.impl.expire_by_regex(data.key, data.expiry, data.limit)
 
     def sync_after_expire_contains(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .expire_contains operation
-        in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .expire_contains operation
+        in another process.
         """
         self.impl.expire_contains(data.key, data.expiry, data.limit)
 
     def sync_after_expire_not_contains(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .expire_not_contains operation
-        in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .expire_not_contains operation
+        in another process.
         """
         self.impl.expire_not_contains(data.key, data.expiry, data.limit)
 
     def sync_after_expire_contains_all(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .expire_contains_all operation
-        in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .expire_contains_all operation
+        in another process.
         """
         self.impl.expire_contains_all(data.key, data.expiry, data.limit)
 
     def sync_after_expire_contains_any(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .expire_contains_any operation
-        in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .expire_contains_any operation
+        in another process.
         """
         self.impl.expire_contains_any(data.key, data.expiry, data.limit)
 
 # ################################################################################################################################
 
     def sync_after_clear(self):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .clear operation in another worker process.
+        """ Invoked by Cache API to synchronizes the local cache after a .clear operation in another process.
         """
         self.impl.clear()
 
@@ -843,13 +843,12 @@ class CacheAPI:
 # ################################################################################################################################
 
     def after_state_changed(self, op, cache_name, data, _broker_msg=builtin_op_to_broker_msg, _pickle_dumps=pickle_dumps):
-        """ Callback method invoked by each cache if it requires synchronization with other worker processes.
+        """ Callback method invoked by each cache if it requires synchronization with other server processes.
         """
         try:
 
             data['action'] = _broker_msg[op]
             data['cache_name'] = cache_name
-            data['source_worker_id'] = self.server.worker_id
 
             key = data.get('key', _no_key)
             value = data.get('value', _no_value)
@@ -1003,133 +1002,133 @@ class CacheAPI:
 # ################################################################################################################################
 
     def sync_after_set(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .set operation in another worker process.
+        """ Synchronizes the state of the local cache after a .set operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_set(data)
 
     def sync_after_set_by_prefix(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .set_by_prefix operation in another worker process.
+        """ Synchronizes the state of the local cache after a .set_by_prefix operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_set_by_prefix(data)
 
     def sync_after_set_by_suffix(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .set_by_suffix operation in another worker process.
+        """ Synchronizes the state of the local cache after a .set_by_suffix operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_set_by_suffix(data)
 
     def sync_after_set_by_regex(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .set_by_regex operation in another worker process.
+        """ Synchronizes the state of the local cache after a .set_by_regex operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_set_by_regex(data)
 
     def sync_after_set_contains(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .set_contains operation in another worker process.
+        """ Synchronizes the state of the local cache after a .set_contains operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_set_contains(data)
 
     def sync_after_set_not_contains(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .set_not_contains operation in another worker process.
+        """ Synchronizes the state of the local cache after a .set_not_contains operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_set_not_contains(data)
 
     def sync_after_set_contains_all(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .set_contains_all operation in another worker process.
+        """ Synchronizes the state of the local cache after a .set_contains_all operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_set_contains_all(data)
 
     def sync_after_set_contains_any(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .set_contains_any operation in another worker process.
+        """ Synchronizes the state of the local cache after a .set_contains_any operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_set_contains_any(data)
 
 # ################################################################################################################################
 
     def sync_after_delete(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .delete operation in another worker process.
+        """ Synchronizes the state of the local cache after a .delete operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_delete(data)
 
     def sync_after_delete_by_prefix(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .delete_by_prefix operation in another worker process.
+        """ Synchronizes the state of the local cache after a .delete_by_prefix operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_delete_by_prefix(data)
 
     def sync_after_delete_by_suffix(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .delete_by_suffix operation in another worker process.
+        """ Synchronizes the state of the local cache after a .delete_by_suffix operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_delete_by_suffix(data)
 
     def sync_after_delete_by_regex(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .delete_by_regex operation in another worker process.
+        """ Synchronizes the state of the local cache after a .delete_by_regex operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_delete_by_regex(data)
 
     def sync_after_delete_contains(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .delete_contains operation in another worker process.
+        """ Synchronizes the state of the local cache after a .delete_contains operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_delete_contains(data)
 
     def sync_after_delete_not_contains(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .delete_not_contains operation in another worker process.
+        """ Synchronizes the state of the local cache after a .delete_not_contains operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_delete_not_contains(data)
 
     def sync_after_delete_contains_all(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .delete_contains_all operation in another worker process.
+        """ Synchronizes the state of the local cache after a .delete_contains_all operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_delete_contains_all(data)
 
     def sync_after_delete_contains_any(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .delete_contains_any operation in another worker process.
+        """ Synchronizes the state of the local cache after a .delete_contains_any operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_delete_contains_any(data)
 
 # ################################################################################################################################
 
     def sync_after_expire(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after an .expire operation in another worker process.
+        """ Synchronizes the state of the local cache after an .expire operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_expire(data)
 
     def sync_after_expire_by_prefix(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .expire_by_prefix operation in another worker process.
+        """ Synchronizes the state of the local cache after a .expire_by_prefix operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_expire_by_prefix(data)
 
     def sync_after_expire_by_suffix(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .expire_by_suffix operation in another worker process.
+        """ Synchronizes the state of the local cache after a .expire_by_suffix operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_expire_by_suffix(data)
 
     def sync_after_expire_by_regex(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .expire_by_regex operation in another worker process.
+        """ Synchronizes the state of the local cache after a .expire_by_regex operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_expire_by_regex(data)
 
     def sync_after_expire_contains(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .expire_contains operation in another worker process.
+        """ Synchronizes the state of the local cache after a .expire_contains operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_expire_contains(data)
 
     def sync_after_expire_not_contains(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .expire_not_contains operation in another worker process.
+        """ Synchronizes the state of the local cache after a .expire_not_contains operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_expire_not_contains(data)
 
     def sync_after_expire_contains_all(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .expire_contains_all operation in another worker process.
+        """ Synchronizes the state of the local cache after a .expire_contains_all operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_expire_contains_all(data)
 
     def sync_after_expire_contains_any(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .expire_contains_any operation in another worker process.
+        """ Synchronizes the state of the local cache after a .expire_contains_any operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_expire_contains_any(data)
 
 # ################################################################################################################################
 
     def sync_after_clear(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .clear operation in another worker process.
+        """ Synchronizes the state of the local cache after a .clear operation in another process.
         """
         self.caches[cache_type][data.cache_name].sync_after_clear()
 

@@ -126,7 +126,7 @@ class Create(AdminService):
             self.response.payload.name = auth.name
 
         # Make sure the object has been created
-        _:'any_' = self.server.worker_store.wait_for_basic_auth(input.name)
+        _:'any_' = self.server.config_manager.wait_for_basic_auth(input.name)
 
 # ################################################################################################################################
 # ################################################################################################################################
