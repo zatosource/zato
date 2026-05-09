@@ -212,15 +212,10 @@ class HL7SegmentAttr:
         if seg_class is None:
             return None
         if raw_message is None:
-            if self.repeatable:
-                result: list[Any] = []
-                cache[self.attr_name] = result
-                return result
-            else:
-                seg = seg_class()
-                seg._parent_message = instance
-                cache[self.attr_name] = seg
-                return seg
+            seg = seg_class()
+            seg._parent_message = instance
+            cache[self.attr_name] = seg
+            return seg
         if self.repeatable:
             result = []
             for item in raw_message.items:
