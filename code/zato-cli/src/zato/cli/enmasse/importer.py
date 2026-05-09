@@ -577,7 +577,10 @@ class EnmasseYAMLImporter:
 
         created, updated = self.channel_hl7_mllp_importer.sync_definitions(channel_hl7_mllp_list, session)
         self.channel_hl7_mllp_defs = self.channel_hl7_mllp_importer.connection_defs
-        logger.info('Processed HL7 MLLP channel definitions: created=%d updated=%d', len(created), len(updated))
+
+        created_count = len(created)
+        updated_count = len(updated)
+        logger.info('Processed HL7 MLLP channel definitions: created=%d updated=%d', created_count, updated_count)
 
         return created, updated
 

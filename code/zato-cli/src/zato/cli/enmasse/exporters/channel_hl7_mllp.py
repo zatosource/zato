@@ -30,7 +30,7 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
-CHANNEL_OPTIONAL_FIELDS = [
+Channel_Optional_Fields = [
     'service',
     'should_log_messages',
     'should_return_errors',
@@ -89,7 +89,10 @@ class ChannelHL7MLLPExporter:
             return []
 
         connections = to_json(db_items, return_as_dict=True)
-        logger.debug('Processing %d HL7 MLLP channel definitions', len(connections))
+
+        connection_count = len(connections)
+        noun = 'definition' if connection_count == 1 else 'definitions'
+        logger.debug('Processing %d HL7 MLLP channel %s', connection_count, noun)
 
         exported = []
 
@@ -106,7 +109,7 @@ class ChannelHL7MLLPExporter:
                 'name': row['name'],
             }
 
-            for field in CHANNEL_OPTIONAL_FIELDS:
+            for field in Channel_Optional_Fields:
                 if value := row.get(field):
                     item[field] = value
 
@@ -114,7 +117,8 @@ class ChannelHL7MLLPExporter:
             exported.append(item)
 
         exported_count = len(exported)
-        logger.info('Successfully prepared %d HL7 MLLP channel definitions for export', exported_count)
+        noun = 'definition' if exported_count == 1 else 'definitions'
+        logger.info('Successfully prepared %d HL7 MLLP channel %s for export', exported_count, noun)
         return exported
 
 # ################################################################################################################################
