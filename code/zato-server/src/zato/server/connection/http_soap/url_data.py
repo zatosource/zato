@@ -32,8 +32,8 @@ from zato.server.connection.http_soap.url_dispatcher import Matcher, PyURLData
 # ################################################################################################################################
 
 if 0:
-    from zato.server.base.worker import WorkerStore
-    WorkerStore = WorkerStore
+    from zato.server.base.config_manager import ConfigManager
+    ConfigManager = ConfigManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,11 +46,11 @@ logger = logging.getLogger(__name__)
 class URLData(PyURLData):
     """ Performs URL matching and security checks.
     """
-    def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, \
+    def __init__(self, config_manager, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, \
                  oauth_config=None, apikey_config=None, config_dispatcher=None, odb=None):
         super(URLData, self).__init__(channel_data)
 
-        self.worker = worker
+        self.config_manager = config_manager
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
         self.ntlm_config = ntlm_config
@@ -140,7 +140,7 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
-    def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, *,
+    def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, config_manager, *,
         enforce_auth=True):
         """ Authenticates and authorizes a given request. Returns None on success
         """
@@ -455,8 +455,8 @@ class URLData(PyURLData):
 
         if security_groups := msg.get('security_groups'):
             channel_item['security_groups'] = security_groups
-            self.worker.server.security_groups_ctx_builder.populate_members()
-            security_groups_ctx = self.worker.server.security_groups_ctx_builder.build_ctx(channel_item['id'], security_groups)
+            self.config_manager.server.security_groups_ctx_builder.populate_members()
+            security_groups_ctx = self.config_manager.server.security_groups_ctx_builder.build_ctx(channel_item['id'], security_groups)
             channel_item['security_groups_ctx'] = security_groups_ctx
 
         channel_item['service_impl_name'] = msg['impl_name']
@@ -494,7 +494,7 @@ class URLData(PyURLData):
         """ Creates a new channel, both its core data and the related security definition.
         Clears out URL cache for that entry, if it existed at all.
         """
-        match_target = get_match_target(msg, http_methods_allowed_re=self.worker.server.http_methods_allowed_re)
+        match_target = get_match_target(msg, http_methods_allowed_re=self.config_manager.server.http_methods_allowed_re)
 
         channel_item = self._channel_item_from_msg(msg, match_target, old_data)
         self.channel_data.append(channel_item)
@@ -517,7 +517,7 @@ class URLData(PyURLData):
             'http_accept': msg.get('old_http_accept'),
             'soap_action': msg.get('old_soap_action'),
             'url_path': msg.get('old_url_path'),
-        }, http_methods_allowed_re=self.worker.server.http_methods_allowed_re)
+        }, http_methods_allowed_re=self.config_manager.server.http_methods_allowed_re)
 
         # Delete from URL cache
         self._remove_from_cache(old_match_target)

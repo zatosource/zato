@@ -170,9 +170,9 @@ class GroupsManager:
             security_id = int(security_id)
 
             if sec_type == SEC_DEF_TYPE.BASIC_AUTH:
-                get_sec_func = self.server.worker_store.basic_auth_get_by_id
+                get_sec_func = self.server.config_manager.basic_auth_get_by_id
             elif sec_type == SEC_DEF_TYPE.APIKEY:
-                get_sec_func = self.server.worker_store.apikey_get_by_id
+                get_sec_func = self.server.config_manager.apikey_get_by_id
             else:
                 raise Exception(f'Unrecognized sec_type: {sec_type}')
 

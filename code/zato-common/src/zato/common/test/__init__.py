@@ -219,8 +219,8 @@ def enrich_with_static_config(object_):
     object_.component_enabled_sms = True
     object_.get_name()
 
-    object_._worker_config = Bunch(out_odoo=None, out_soap=None)
-    object_._worker_store = Bunch(
+    object_._config_store = Bunch(out_odoo=None, out_soap=None)
+    object_._config_manager = Bunch(
         sql_pool_store=None, cassandra_api=None, email_smtp_api=None, email_imap_api=None, search_es_api=None)
 
 # ################################################################################################################################
@@ -351,13 +351,13 @@ class TestODB:
 
 class TestServer:
 
-    def __init__(self, service_store_name_to_impl_name=None, service_store_impl_name_to_service=None, worker_store=None):
+    def __init__(self, service_store_name_to_impl_name=None, service_store_impl_name_to_service=None, config_manager=None):
 
         self.odb = TestODB()
         self.kvdb = TestKVDB()
         self.service_store = TestServiceStore(service_store_name_to_impl_name, service_store_impl_name_to_service)
         self.marshal_api = MarshalAPI()
-        self.worker_store = worker_store
+        self.config_manager = config_manager
 
         self.repo_location = rand_string()
         self.delivery_store = None
@@ -454,11 +454,11 @@ class ServiceTestCase(TestCase):
 
         server = MagicMock()
 
-        worker_store = MagicMock()
-        worker_store.worker_config = MagicMock
-        worker_store.worker_config.outgoing_connections = MagicMock(return_value=(None, None, None, None))
-        worker_store.worker_config.cloud_aws_s3 = MagicMock(return_value=None)
-        worker_store.invoke_matcher.is_allowed = MagicMock(return_value=True)
+        config_manager = MagicMock()
+        config_manager.config_store = MagicMock
+        config_manager.config_store.outgoing_connections = MagicMock(return_value=(None, None, None, None))
+        config_manager.config_store.cloud_aws_s3 = MagicMock(return_value=None)
+        config_manager.invoke_matcher.is_allowed = MagicMock(return_value=True)
 
         simple_io_config = {
             'int_parameters': SIMPLE_IO.INT_PARAMETERS.VALUES,
@@ -467,8 +467,8 @@ class ServiceTestCase(TestCase):
         }
 
         class_.update(
-            instance, channel, TestServer(service_store_name_to_impl_name, service_store_impl_name_to_service, worker_store),
-            None, worker_store, new_cid(), request_data, request_data, simple_io_config=simple_io_config,
+            instance, channel, TestServer(service_store_name_to_impl_name, service_store_impl_name_to_service, config_manager),
+            None, config_manager, new_cid(), request_data, request_data, simple_io_config=simple_io_config,
             data_format=data_format, job_type=job_type)
 
         def get_data(self, *ignored_args, **ignored_kwargs):
@@ -496,7 +496,7 @@ class ServiceTestCase(TestCase):
 
         instance.handle()
         instance.update_handle(
-            set_response_func, instance, request_data, channel, data_format, None, server, None, worker_store, new_cid(),
+            set_response_func, instance, request_data, channel, data_format, None, server, None, config_manager, new_cid(),
             None)
         return instance
 

@@ -13,7 +13,7 @@ from contextlib import closing
 # Zato
 from zato.client import AnyServiceInvoker
 from zato.common.api import INFO_FORMAT, MISC, SERVER_JOIN_STATUS, SERVER_UP_STATUS
-from zato.common.component_info import format_info, get_info, get_worker_pids
+from zato.common.component_info import format_info, get_info, get_server_pids
 from zato.common.const import ServiceConst
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.query import server_list
@@ -35,8 +35,8 @@ class GetInfo(Service):
     def handle(self):
 
         # Let's prepare as much as we can upfront.
-        sec_def:'any_' = self.server.worker_store.basic_auth_get(ServiceConst.API_Admin_Invoke_Username).config
-        channel:'any_' = self.server.worker_store.get_channel_rest(MISC.DefaultAdminInvokeChannel)
+        sec_def:'any_' = self.server.config_manager.basic_auth_get(ServiceConst.API_Admin_Invoke_Username).config
+        channel:'any_' = self.server.config_manager.get_channel_rest(MISC.DefaultAdminInvokeChannel)
         out = {}
 
         # We assume that if the current server uses TLS or not,
@@ -96,6 +96,6 @@ class GetWorkerPids(Service):
     output:'any_' = List('pids')
 
     def handle(self):
-        self.response.payload.pids = get_worker_pids(self.server.base_dir)
+        self.response.payload.pids = get_server_pids(self.server.base_dir)
 
 # ################################################################################################################################

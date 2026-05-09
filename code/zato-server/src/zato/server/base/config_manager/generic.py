@@ -16,7 +16,7 @@ from zato.common.const import SECRETS
 from zato.common.util.api import as_bool, parse_simple_type
 from zato.common.util.config import replace_query_string_items_in_dict
 from zato.distlock import PassThrough as PassThroughLock
-from zato.server.base.worker.common import WorkerImpl
+from zato.server.base.config_manager.common import ConfigManagerImpl
 from zato.server.generic.connection import GenericConnection
 
 # ################################################################################################################################
@@ -36,7 +36,7 @@ _secret_prefixes = (SECRETS.Encrypted_Indicator, SECRETS.PREFIX)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Generic(WorkerImpl):
+class Generic(ConfigManagerImpl):
     """ Handles broker messages destined for generic objects, such as connections.
     """
     logger: 'Logger'

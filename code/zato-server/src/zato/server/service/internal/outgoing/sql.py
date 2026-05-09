@@ -28,8 +28,8 @@ from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordB
 class _SQLService:
     """ A common class for various SQL-related services.
     """
-    def notify_worker_threads(self, params, action=OUTGOING.SQL_CREATE_EDIT.value):
-        """ Notify worker threads of new or updated parameters.
+    def notify_server(self, params, action=OUTGOING.SQL_CREATE_EDIT.value):
+        """ Notify the server of new or updated parameters.
         """
         params['action'] = action
         self.config_dispatcher.publish(params)
@@ -111,7 +111,7 @@ class Create(AdminService, _SQLService):
                 # Make sure not to use bytes when notifying other threads
                 input.extra = input.extra.decode('utf8') if isinstance(input.extra, bytes) else input.extra
 
-                self.notify_worker_threads(input)
+                self.notify_server(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
@@ -173,7 +173,7 @@ class Edit(AdminService, _SQLService):
                 # Make sure not to use bytes when notifying other threads
                 input.extra = input.extra.decode('utf8') if isinstance(input.extra, bytes) else input.extra
 
-                self.notify_worker_threads(input)
+                self.notify_server(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
@@ -204,7 +204,7 @@ class Delete(AdminService, _SQLService):
                 session.delete(item)
                 session.commit()
 
-                self.notify_worker_threads({'name':old_name}, OUTGOING.SQL_DELETE.value)
+                self.notify_server({'name':old_name}, OUTGOING.SQL_DELETE.value)
 
             except Exception:
                 session.rollback()

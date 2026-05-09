@@ -17,7 +17,6 @@ from errno import ENOENT
 from inspect import isclass
 from threading import RLock
 from traceback import format_exc
-from uuid import uuid4
 
 # Bunch
 from bunch import bunchify
@@ -42,7 +41,7 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, new_cid_server, parse_datetime, \
     update_apikey_username_to_channel, utcnow, visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
 from zato.common.util.retry import get_remaining_time, get_sleep_time
-from zato.server.base.worker.common import WorkerImpl
+from zato.server.base.config_manager.common import ConfigManagerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.connector import ConnectorStore, Connector_Type
@@ -117,14 +116,6 @@ class _generic_msg:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GeventWorker:
-
-    def __init__(self) -> 'None':
-        self.deployment_key = '{}.{}'.format(utcnow().isoformat(), uuid4().hex)
-        self.pid = os.getpid()
-
-# ################################################################################################################################
-
 def _get_base_classes() -> 'anytuple':
     ignore = ('__init__.py', 'common.py')
     out = []
@@ -140,7 +131,7 @@ def _get_base_classes() -> 'anytuple':
             mod_info = import_module_from_path(py_path)
             for name in dir(mod_info.module):
                 item = getattr(mod_info.module, name)
-                if isclass(item) and issubclass(item, WorkerImpl) and item is not WorkerImpl:
+                if isclass(item) and issubclass(item, ConfigManagerImpl) and item is not ConfigManagerImpl:
                     out.append(item)
 
     return tuple(out) # type: ignore
@@ -148,20 +139,20 @@ def _get_base_classes() -> 'anytuple':
 # ################################################################################################################################
 # ################################################################################################################################
 
-_base_type = '_WorkerStoreBase'
+_base_type = '_ConfigManagerBase'
 
-# Dynamically adds as base classes everything found in current directory that subclasses WorkerImpl
-_WorkerStoreBase = type(_base_type, _get_base_classes(), {})
+# Dynamically adds as base classes everything found in current directory that subclasses ConfigManagerImpl
+_ConfigManagerBase = type(_base_type, _get_base_classes(), {})
 
-class WorkerStore(_WorkerStoreBase):
-    """ Dispatches work between different pieces of configuration of an individual server worker.
+class ConfigManager(_ConfigManagerBase):
+    """ Dispatches work between different pieces of configuration of an individual server.
     """
     config_dispatcher: 'ConfigDispatcher | None' = None
 
-    def __init__(self, worker_config:'ConfigStore', server:'ParallelServer') -> 'None':
+    def __init__(self, config_store:'ConfigStore', server:'ParallelServer') -> 'None':
         self.logger = logging.getLogger(self.__class__.__name__)
         self.is_ready = False
-        self.worker_config = worker_config
+        self.config_store = config_store
         self.server = server
         self.update_lock = RLock()
 
@@ -281,12 +272,12 @@ class WorkerStore(_WorkerStoreBase):
         request_handler = RequestHandler(self.server)
         url_data = URLData(
             self,
-            self.worker_config.http_soap,
+            self.config_store.http_soap,
             self._get_channel_url_sec(),
-            self.worker_config.basic_auth,
-            self.worker_config.ntlm,
-            self.worker_config.oauth,
-            self.worker_config.apikey,
+            self.config_store.basic_auth,
+            self.config_store.ntlm,
+            self.config_store.oauth,
+            self.config_store.apikey,
             self.config_dispatcher,
             self.server.odb,
         )
@@ -296,14 +287,14 @@ class WorkerStore(_WorkerStoreBase):
             server = self.server,
             url_data = url_data,
             request_handler = request_handler,
-            simple_io_config = self.worker_config.simple_io,
+            simple_io_config = self.config_store.simple_io,
             return_tracebacks = self.server.return_tracebacks,
             default_error_message = self.server.default_error_message,
             http_methods_allowed = self.server.http_methods_allowed
         )
 
         # Security groups - add details of each one to REST channels
-        self._populate_channel_security_groups_info(self.worker_config.http_soap)
+        self._populate_channel_security_groups_info(self.config_store.http_soap)
 
         # Create all the expected connections and objects
         self.init_sql()
@@ -474,7 +465,7 @@ class WorkerStore(_WorkerStoreBase):
         out:'any_' = []
 
         for transport in('soap', 'plain_http'):
-            config_dict = getattr(self.worker_config, 'out_' + transport)
+            config_dict = getattr(self.config_store, 'out_' + transport)
             for name in list(config_dict): # Must use list explicitly so config_dict can be changed during iteration
                 config_data = config_dict[name]
                 if not isinstance(config_data, str):
@@ -491,13 +482,13 @@ class WorkerStore(_WorkerStoreBase):
         self.sql_pool_store = PoolStore()
 
         # Connect to ODB
-        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.worker_config.odb_data
+        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config_store.odb_data
         self.odb = SessionWrapper()
-        self.odb.init_session(ZATO_ODB_POOL_NAME, self.worker_config.odb_data, self.sql_pool_store[ZATO_ODB_POOL_NAME].pool)
+        self.odb.init_session(ZATO_ODB_POOL_NAME, self.config_store.odb_data, self.sql_pool_store[ZATO_ODB_POOL_NAME].pool)
 
         # Any user-defined SQL connections left?
-        for pool_name in self.worker_config.out_sql:
-            config = self.worker_config.out_sql[pool_name]['config']
+        for pool_name in self.config_store.out_sql:
+            config = self.config_store.out_sql[pool_name]['config']
             config['fs_sql_config'] = self.server.fs_sql_config
             self.sql_pool_store[pool_name] = config
 
@@ -505,9 +496,9 @@ class WorkerStore(_WorkerStoreBase):
         """ Initializes FTP connections. The method replaces whatever value self.out_ftp
         previously had (initially this would be a ConfigDict of connection definitions).
         """
-        config_list = self.worker_config.out_ftp.get_config_list()
-        self.worker_config.out_ftp = FTPStore() # type: ignore
-        self.worker_config.out_ftp.add_params(config_list)
+        config_list = self.config_store.out_ftp.get_config_list()
+        self.config_store.out_ftp = FTPStore() # type: ignore
+        self.config_store.out_ftp.add_params(config_list)
 
     def init_http_soap(self, *, has_sec_config:'bool'=True) -> 'None':
         """ Initializes plain HTTP/SOAP connections.
@@ -538,17 +529,17 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def init_search_es(self) -> 'None':
-        self.init_simple(self.worker_config.search_es, self.search_es_api, 'an ElasticSearch')
+        self.init_simple(self.config_store.search_es, self.search_es_api, 'an ElasticSearch')
 
 # ################################################################################################################################
 
     def init_email_smtp(self) -> 'None':
-        self.init_simple(self.worker_config.email_smtp, self.email_smtp_api, 'an SMTP')
+        self.init_simple(self.config_store.email_smtp, self.email_smtp_api, 'an SMTP')
 
 # ################################################################################################################################
 
     def init_email_imap(self) -> 'None':
-        self.init_simple(self.worker_config.email_imap, self.email_imap_api, 'an IMAP')
+        self.init_simple(self.config_store.email_imap, self.email_imap_api, 'an IMAP')
 
 # ################################################################################################################################
 
@@ -561,10 +552,10 @@ class WorkerStore(_WorkerStoreBase):
                 return config['def_name']==def_name
             return _inner
 
-        for def_name, data in self.worker_config.definition_amqp.items():
+        for def_name, data in self.config_store.definition_amqp.items():
 
-            channels = self.worker_config.channel_amqp.get_config_list(_name_matches(def_name))
-            outconns = self.worker_config.out_amqp.get_config_list(_name_matches(def_name))
+            channels = self.config_store.channel_amqp.get_config_list(_name_matches(def_name))
+            outconns = self.config_store.out_amqp.get_config_list(_name_matches(def_name))
 
             for outconn in outconns:
                 self.amqp_out_name_to_def[outconn['name']] = def_name
@@ -579,8 +570,8 @@ class WorkerStore(_WorkerStoreBase):
                 channels=self._config_to_dict(channels), outconns=self._config_to_dict(outconns))
         '''
 
-        channels = self.worker_config.channel_amqp.get_config_list()
-        outconns = self.worker_config.out_amqp.get_config_list()
+        channels = self.config_store.channel_amqp.get_config_list()
+        outconns = self.config_store.out_amqp.get_config_list()
 
         for item in channels:
             name = item['name']
@@ -601,9 +592,9 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def init_odoo(self) -> 'None':
-        names = self.worker_config.out_odoo.keys()
+        names = self.config_store.out_odoo.keys()
         for name in names:
-            item = config = self.worker_config.out_odoo[name]
+            item = config = self.config_store.out_odoo[name]
             config = item['config']
             config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
             item.conn = OdooWrapper(config, self.server)
@@ -612,9 +603,9 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def init_sap(self) -> 'None':
-        names = self.worker_config.out_sap.keys()
+        names = self.config_store.out_sap.keys()
         for name in names:
-            item = config = self.worker_config.out_sap[name]
+            item = config = self.config_store.out_sap[name]
             config = item['config']
             config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
             item.conn = SAPWrapper(config, self.server)
@@ -625,7 +616,7 @@ class WorkerStore(_WorkerStoreBase):
     def init_caches(self) -> 'None':
 
         for name in ['builtin']:
-            cache = getattr(self.worker_config, 'cache_{}'.format(name))
+            cache = getattr(self.config_store, 'cache_{}'.format(name))
             for value in cache.values():
                 self.cache_api.create(bunchify(value['config']))
 
@@ -642,10 +633,10 @@ class WorkerStore(_WorkerStoreBase):
         url_sec = self._get_channel_url_sec()
         self.request_dispatcher.url_data.set_security_objects(
             url_sec=url_sec,
-            basic_auth_config=self.worker_config.basic_auth,
-            ntlm_config=self.worker_config.ntlm,
-            oauth_config=self.worker_config.oauth,
-            apikey_config=self.worker_config.apikey,
+            basic_auth_config=self.config_store.basic_auth,
+            ntlm_config=self.config_store.ntlm,
+            oauth_config=self.config_store.oauth,
+            apikey_config=self.config_store.apikey,
         )
 
         # .. now, initialize connections that may depend on what we have just loaded ..
@@ -656,7 +647,7 @@ class WorkerStore(_WorkerStoreBase):
     def update_apikeys(self) -> 'None':
         """ API keys need to be upper-cased and in the format that WSGI environment will have them in.
         """
-        for config_dict in self.worker_config.apikey.values():
+        for config_dict in self.config_store.apikey.values():
             config_dict.config.orig_header = config_dict.config.get('header') or API_Key.Default_Header
             update_apikey_username_to_channel(config_dict.config)
 
@@ -678,7 +669,7 @@ class WorkerStore(_WorkerStoreBase):
             handler(msg)
 
             for transport in ['plain_http', 'soap']:
-                config_dict = getattr(self.worker_config, 'out_' + transport)
+                config_dict = getattr(self.config_store, 'out_' + transport)
 
                 for conn_name in config_dict.copy_keys():
 
@@ -709,7 +700,7 @@ class WorkerStore(_WorkerStoreBase):
     def _visit_wrapper_delete(self, wrapper:'HTTPSOAPWrapper', msg:'bunch_') -> 'None':
         """ Deletes a wrapper.
         """
-        config_dict = getattr(self.worker_config, 'out_' + wrapper.config['transport'])
+        config_dict = getattr(self.config_store, 'out_' + wrapper.config['transport'])
         if wrapper.config['security_name'] == msg['name']:
             del config_dict[wrapper.config['name']]
 
@@ -732,7 +723,7 @@ class WorkerStore(_WorkerStoreBase):
         # Some connection types are built elsewhere
         to_skip = {}
 
-        for config_dict in self.worker_config.generic_connection.values():
+        for config_dict in self.config_store.generic_connection.values():
 
             if config_dict:
                 config = config_dict.get('config')
@@ -1005,7 +996,7 @@ class WorkerStore(_WorkerStoreBase):
         # Local variables
         not_applicable = {}
 
-        for topic_name, sub_list in self.worker_config.pubsub_subs.items():
+        for topic_name, sub_list in self.config_store.pubsub_subs.items():
             for sub_config in sub_list:
                 config_sub_key = sub_config['sub_key']
                 if config_sub_key == sub_key:
@@ -1259,7 +1250,7 @@ class WorkerStore(_WorkerStoreBase):
     def invoke(self, service:'str', payload:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes a service by its name with request on input.
         """
-        channel = kwargs.get('channel', CHANNEL.WORKER)
+        channel = kwargs.get('channel', CHANNEL.INVOKE)
 
         if 'serialize' in kwargs:
             serialize = kwargs.get('serialize')
@@ -1318,7 +1309,7 @@ class WorkerStore(_WorkerStoreBase):
 
         response = service.update_handle(service.set_response_data, service, payload,
             channel, data_format, transport, self.server, self.config_dispatcher, self, cid,
-            self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
+            self.config_store.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
             environ=msg.get('environ'))
 
         if skip_response_elem:
@@ -1419,7 +1410,7 @@ class WorkerStore(_WorkerStoreBase):
         item_key = 'name' if by_name else 'id'
 
         with self.update_lock:
-            for outconn_value in self.worker_config.out_plain_http.values():
+            for outconn_value in self.config_store.out_plain_http.values():
                 if isinstance(outconn_value, dict):
                     config = outconn_value['config'] # type: dict
                     if config[item_key] == value:
@@ -1428,7 +1419,7 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def wait_for_outconn_rest(self, name:'str', timeout:'int'=999999) -> 'bool':
-        return wait_for_dict_key(self.worker_config.out_plain_http, name, timeout, interval=0.5)
+        return wait_for_dict_key(self.config_store.out_plain_http, name, timeout, interval=0.5)
 
 # ################################################################################################################################
 
@@ -1516,7 +1507,7 @@ class WorkerStore(_WorkerStoreBase):
         """ Deletes/closes an HTTP/SOAP outconn.
         """
         # Are we dealing with plain HTTP or SOAP?
-        config_dict = getattr(self.worker_config, 'out_' + transport)
+        config_dict = getattr(self.config_store, 'out_' + transport)
 
         self._delete_config_close_wrapper(name, config_dict, 'an outgoing HTTP/SOAP connection', log_func)
 
@@ -1533,7 +1524,7 @@ class WorkerStore(_WorkerStoreBase):
 
         # .. and create a new one
         wrapper = self._http_soap_wrapper_from_config(msg, has_sec_config=False)
-        config_dict = getattr(self.worker_config, 'out_' + msg['transport'])
+        config_dict = getattr(self.config_store, 'out_' + msg['transport'])
         config_dict[msg['name']] = Bunch()
         config_dict[msg['name']].config = msg
         config_dict[msg['name']].conn = wrapper
@@ -1557,7 +1548,7 @@ class WorkerStore(_WorkerStoreBase):
         password_decrypted = self.server.decrypt(password)
 
         # All outgoing REST connections
-        out_plain_http = self.worker_config.out_plain_http
+        out_plain_http = self.config_store.out_plain_http
 
         # .. get the one that we need ..
         item = out_plain_http.get_by_id(msg.id)
@@ -1634,15 +1625,15 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def on_config_event_OUTGOING_FTP_CREATE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
-        out_ftp = cast_('FTPStore', self.worker_config.out_ftp)
+        out_ftp = cast_('FTPStore', self.config_store.out_ftp)
         out_ftp.create_edit(msg, msg.get('old_name'))
 
     def on_config_event_OUTGOING_FTP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
-        out_ftp = cast_('FTPStore', self.worker_config.out_ftp)
+        out_ftp = cast_('FTPStore', self.config_store.out_ftp)
         out_ftp.delete(msg.name)
 
     def on_config_event_OUTGOING_FTP_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
-        out_ftp = cast_('FTPStore', self.worker_config.out_ftp)
+        out_ftp = cast_('FTPStore', self.config_store.out_ftp)
         out_ftp.change_password(msg.name, msg.password)
 
 # ################################################################################################################################
@@ -1746,28 +1737,28 @@ class WorkerStore(_WorkerStoreBase):
     def on_config_event_OUTGOING_ODOO_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates or updates an Odoo connection.
         """
-        _ = self._on_config_event_cloud_create_edit(msg, 'Odoo', self.worker_config.out_odoo, OdooWrapper)
+        _ = self._on_config_event_cloud_create_edit(msg, 'Odoo', self.config_store.out_odoo, OdooWrapper)
 
     on_config_event_OUTGOING_ODOO_CHANGE_PASSWORD = on_config_event_OUTGOING_ODOO_EDIT = on_config_event_OUTGOING_ODOO_CREATE
 
     def on_config_event_OUTGOING_ODOO_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Closes and deletes an Odoo connection.
         """
-        self._delete_config_close_wrapper(msg['name'], self.worker_config.out_odoo, 'Odoo', logger.debug)
+        self._delete_config_close_wrapper(msg['name'], self.config_store.out_odoo, 'Odoo', logger.debug)
 
 # ################################################################################################################################
 
     def on_config_event_OUTGOING_SAP_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates or updates an SAP RFC connection.
         """
-        _ = self._on_config_event_cloud_create_edit(msg, 'SAP', self.worker_config.out_sap, SAPWrapper)
+        _ = self._on_config_event_cloud_create_edit(msg, 'SAP', self.config_store.out_sap, SAPWrapper)
 
     on_config_event_OUTGOING_SAP_CHANGE_PASSWORD = on_config_event_OUTGOING_SAP_EDIT = on_config_event_OUTGOING_SAP_CREATE
 
     def on_config_event_OUTGOING_SAP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Closes and deletes an SAP RFC connection.
         """
-        self._delete_config_close_wrapper(msg['name'], self.worker_config.out_sap, 'SAP', logger.debug)
+        self._delete_config_close_wrapper(msg['name'], self.config_store.out_sap, 'SAP', logger.debug)
 
 # ################################################################################################################################
 
@@ -1895,18 +1886,18 @@ class WorkerStore(_WorkerStoreBase):
         sub_config.push_service_name = getattr(msg, 'push_service_name', None)
         sub_config.rest_push_endpoint_id = getattr(msg, 'rest_push_endpoint_id', None)
 
-        if topic_name not in self.worker_config.pubsub_subs:
-            self.worker_config.pubsub_subs[topic_name] = []
-        self.worker_config.pubsub_subs[topic_name].append(sub_config)
+        if topic_name not in self.config_store.pubsub_subs:
+            self.config_store.pubsub_subs[topic_name] = []
+        self.config_store.pubsub_subs[topic_name].append(sub_config)
 
     def _remove_pubsub_sub_configs_by_sub_key(self, sub_key:'str') -> 'None':
         empty_topics = []
-        for topic_name, sub_list in self.worker_config.pubsub_subs.items():
+        for topic_name, sub_list in self.config_store.pubsub_subs.items():
             sub_list[:] = [item for item in sub_list if item['sub_key'] != sub_key]
             if not sub_list:
                 empty_topics.append(topic_name)
         for topic_name in empty_topics:
-            del self.worker_config.pubsub_subs[topic_name]
+            del self.config_store.pubsub_subs[topic_name]
 
     def _update_pubsub_permissions(self, msg:'bunch_') -> 'None':
         if hasattr(msg, 'username') and msg.username:

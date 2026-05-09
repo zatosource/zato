@@ -205,9 +205,9 @@ class _CreateEdit(_BaseService):
 
             # .. look up the security name by its ID ..
             if sec_def_type == SEC_DEF_TYPE.BASIC_AUTH:
-                func = self.server.worker_store.basic_auth_get_by_id
+                func = self.server.config_manager.basic_auth_get_by_id
             elif sec_def_type == SEC_DEF_TYPE.OAUTH:
-                func = self.server.worker_store.oauth_get_by_id
+                func = self.server.config_manager.oauth_get_by_id
             else:
                 func = None
 
@@ -523,7 +523,7 @@ class Ping(_BaseService):
             custom_ping_func_dict = {}
 
             # Most connections use a generic ping function, unless overridden on a case-by-case basis.
-            ping_func = custom_ping_func_dict.get(instance.type_, self.server.worker_store.ping_generic_connection)
+            ping_func = custom_ping_func_dict.get(instance.type_, self.server.config_manager.ping_generic_connection)
 
             start_time = utcnow()
 

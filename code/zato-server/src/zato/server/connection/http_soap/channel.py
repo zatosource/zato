@@ -50,7 +50,7 @@ if 0:
     from zato.common.typing_ import any_, anydict, anytuple, callable_, dictnone, stranydict, strlist, strstrdict
     from zato.server.service import Service
     from zato.server.base.parallel import ParallelServer
-    from zato.server.base.worker import WorkerStore
+    from zato.server.base.config_manager import ConfigManager
     from zato.server.connection.http_soap.url_data import URLData
     ConfigDispatcher = ConfigDispatcher
     ParallelServer = ParallelServer
@@ -316,7 +316,7 @@ class RequestDispatcher:
         wsgi_environ:'stranydict',
         payload:'bytes',
         post_data:'anydict',
-        worker_store:'WorkerStore',
+        config_manager:'ConfigManager',
         _needs_details:'bool'=_needs_details,
     ) -> 'None':
         """ Validates credentials via sec_def and security groups.
@@ -350,7 +350,7 @@ class RequestDispatcher:
                 payload,
                 wsgi_environ,
                 post_data,
-                worker_store,
+                config_manager,
                 enforce_auth=True
             )
 
@@ -371,7 +371,7 @@ class RequestDispatcher:
         wsgi_environ:'stranydict',
         payload:'bytes',
         post_data:'anydict',
-        worker_store:'WorkerStore',
+        config_manager:'ConfigManager',
         zato_response_headers_container:'anydict',
     ) -> 'any_':
         """ Builds channel params and calls request_handler.handle.
@@ -388,7 +388,7 @@ class RequestDispatcher:
             channel_params = {}
 
         out = self.request_handler.handle(cid, url_match, channel_item, wsgi_environ,
-            payload, worker_store, self.simple_io_config, post_data, meta.path_info, channel_params,
+            payload, config_manager, self.simple_io_config, post_data, meta.path_info, channel_params,
             zato_response_headers_container)
 
         return out
@@ -438,7 +438,7 @@ class RequestDispatcher:
         channel_item:'anydict',
         wsgi_environ:'stranydict',
         payload:'bytes',
-        worker_store:'WorkerStore',
+        config_manager:'ConfigManager',
         zato_response_headers_container:'anydict',
         remote_addr:'str',
         now_us:'int',
@@ -452,7 +452,7 @@ class RequestDispatcher:
         post_data = self._extract_post_data(channel_item, wsgi_environ)
 
         # .. this will raise an exception if credentials are invalid ..
-        self._check_security(cid, meta, channel_item, wsgi_environ, payload, post_data, worker_store)
+        self._check_security(cid, meta, channel_item, wsgi_environ, payload, post_data, config_manager)
 
         # .. now that auth succeeded, check sec_def rate limiting first ..
         sec_def_rate_limit_result = self._check_sec_def_rate_limiting(wsgi_environ, remote_addr, now_us)
@@ -478,7 +478,7 @@ class RequestDispatcher:
         # .. invoke the service ..
         response = self._invoke_service(
             cid, meta, url_match, channel_item, wsgi_environ,
-            payload, post_data, worker_store, zato_response_headers_container)
+            payload, post_data, config_manager, zato_response_headers_container)
 
         out = self._format_response(channel_item, wsgi_environ, response)
 
@@ -640,7 +640,7 @@ class RequestDispatcher:
         cid:'str',
         req_timestamp:'str',
         wsgi_environ:'stranydict',
-        worker_store:'WorkerStore',
+        config_manager:'ConfigManager',
         user_agent:'str',
         remote_addr:'str',
     ) -> 'any_':
@@ -684,7 +684,7 @@ class RequestDispatcher:
                 # .. this will raise an exception on auth error ..
                 out = self._authenticate_and_invoke(
                     cid, meta, url_match, channel_item, wsgi_environ,
-                    payload, worker_store, zato_response_headers_container,
+                    payload, config_manager, zato_response_headers_container,
                     remote_addr, now_us,
                 )
 
@@ -1005,7 +1005,7 @@ class RequestHandler:
         channel_item:'any_',
         wsgi_environ:'stranydict',
         raw_request:'bytes',
-        worker_store:'WorkerStore',
+        config_manager:'ConfigManager',
         simple_io_config:'stranydict',
         post_data:'dictnone',
         path_info:'str',
@@ -1039,8 +1039,8 @@ class RequestHandler:
         # No cache for this channel or no cached response, invoke the service then.
         response = service.update_handle(self._set_response_data, service, raw_request,
             CHANNEL.HTTP_SOAP, channel_item.data_format, channel_item.transport, self.server,
-            cast_('ConfigDispatcher', worker_store.config_dispatcher),
-            worker_store, cid, simple_io_config, wsgi_environ=wsgi_environ,
+            cast_('ConfigDispatcher', config_manager.config_dispatcher),
+            config_manager, cid, simple_io_config, wsgi_environ=wsgi_environ,
             url_match=url_match, channel_item=channel_item, channel_params=channel_params,
             merge_channel_params=channel_item.merge_url_params_req,
             params_priority=channel_item.params_pri,

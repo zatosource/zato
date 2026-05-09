@@ -62,7 +62,7 @@ class BearerTokenManager:
         self.set_cache()
 
     def set_cache(self):
-        cache_api = self.server.worker_store.cache_api
+        cache_api = self.server.config_manager.cache_api
         try:
             self.cache = cache_api.get_builtin_cache(self.cache_name)
         except KeyError:

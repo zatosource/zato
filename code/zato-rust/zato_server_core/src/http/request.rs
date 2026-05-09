@@ -171,12 +171,12 @@ pub fn handle_http_request(
     }
     http_environ.set_item("zato.http.remote_addr", &remote_addr)?;
 
-    let worker_store = server.getattr("worker_store")?;
-    let dispatcher = worker_store.getattr("request_dispatcher")?;
+    let config_manager = server.getattr("config_manager")?;
+    let dispatcher = config_manager.getattr("request_dispatcher")?;
 
     let payload_result = dispatcher.call_method1(
         "dispatch",
-        (&cid, &py_ts_utc, http_environ, &worker_store, &user_agent, &remote_addr),
+        (&cid, &py_ts_utc, http_environ, &config_manager, &user_agent, &remote_addr),
     );
 
     // Check whether the dispatch returned a streaming iterator or a regular payload ..

@@ -293,8 +293,8 @@ class ConfigLoader:
         # .. now, update the set of channels to ignore the REST log for ..
         self.rest_log_ignore.update(rest_log_ignore)
 
-        # Assign config to worker
-        self.worker_store.worker_config = self.config
+        # Assign config to config manager
+        self.config_manager.config_store = self.config
 
 # ################################################################################################################################
 

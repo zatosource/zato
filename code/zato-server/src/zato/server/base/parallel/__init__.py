@@ -61,7 +61,7 @@ from zato.common.util.platform_ import is_posix
 from zato.common.util.time_ import TimeUtil
 from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
-from zato.server.base.worker import WorkerStore
+from zato.server.base.config_manager import ConfigManager
 from zato.server.config import ConfigDict, ConfigStore
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import ODBConfigSource
@@ -124,7 +124,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     sql_pool_store: 'PoolStore'
 
     cluster: 'ClusterModel'
-    worker_store: 'WorkerStore'
+    config_manager: 'ConfigManager'
     service_store: 'ServiceStore'
 
     rpc: 'ServerRPC'
@@ -149,6 +149,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     pubsub_subscriptions: 'SubscriptionsStore'
 
     work_dir:'str'
+
+# ################################################################################################################################
+
+    @property
+    def worker_store(self) -> 'ConfigManager':
+        return self.config_manager
+
+# ################################################################################################################################
 
     def __init__(self) -> 'None':
         self.logger = logger
@@ -183,8 +191,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.id = -1
         self.name = ''
         self.process_cid = new_cid_server()
-        self.worker_id = ''
-        self.worker_pid = -1
+        self.server_pid = -1
         self.cluster_id = -1
         self.cluster_name = ''
         self.startup_jobs = {}
@@ -268,11 +275,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def maybe_on_first_worker(self, server:'ParallelServer') -> 'anyset':
-        """ This method will execute code with a distibuted lock held. We need a lock because we can have multiple worker
-        processes fighting over the right to redeploy services. The first worker to obtain the lock will actually perform
+    def maybe_on_first_server(self, server:'ParallelServer') -> 'anyset':
+        """ This method will execute code with a distributed lock held. We need a lock because we can have multiple server
+        processes fighting over the right to redeploy services. The first server to obtain the lock will actually perform
         the redeployment and set a flag meaning that for this particular deployment key (and remember that each server restart
-        means a new deployment key) the services have been already deployed. Further workers will check that the flag exists
+        means a new deployment key) the services have been already deployed. Further servers will check that the flag exists
         and will skip the deployment altogether.
         """
         def import_initial_services_jobs() -> 'anyset':
@@ -600,7 +607,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Read all the user config files that are already available on startup
         self.read_user_config()
 
-        locally_deployed = self.maybe_on_first_worker(server)
+        locally_deployed = self.maybe_on_first_server(server)
 
         return locally_deployed
 
@@ -800,8 +807,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.cluster = self.odb.cluster
         self.cluster_id = self.cluster.id
         self.cluster_name = self.cluster.name
-        self.worker_id = '{}.{}.{}.{}'.format(self.cluster_id, self.id, self.worker_pid, self.process_cid)
-
         # SQL post-processing
         ODBPostProcess(self.odb.session(), None, self.cluster_id).run()
 
@@ -822,7 +827,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.http_methods_allowed_re = '({})'.format(http_methods_allowed_re)
 
         # Reads in all configuration from ODB
-        self.worker_store = WorkerStore(self.config, self)
+        self.config_manager = ConfigManager(self.config, self)
         self.set_up_config(server) # type: ignore
 
         # Normalize hot-deploy configuration
@@ -852,9 +857,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # API keys configuration
         self.set_up_api_key_config()
 
-        # Some parts of the worker store's configuration are required during the deployment of services
-        # which is why we are doing it here, before worker_store.init() is called.
-        self.worker_store.early_init()
+        # Some parts of the config manager's configuration are required during the deployment of services
+        # which is why we are doing it here, before config_manager.init() is called.
+        self.config_manager.early_init()
 
         # Deploys services
         locally_deployed = self._after_init_common(server) # type: ignore
@@ -863,8 +868,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.groups_manager = GroupsManager(self)
         self.security_groups_ctx_builder = SecurityGroupsCtxBuilder(self)
 
-        # Initializes worker store, including connectors
-        self.worker_store.init()
+        # Initializes config manager, including connectors
+        self.config_manager.init()
 
         # Security facade wrapper
         self.security_facade = SecurityFacade(self)
@@ -901,9 +906,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Load pub/sub permissions from database into pattern matcher
         self._load_pubsub_permissions()
 
-        # Let the worker know the broker client is ready
-        self.worker_store.set_config_dispatcher(self.config_dispatcher)
-        self.worker_store.after_config_dispatcher_set()
+        # Let the config manager know the broker client is ready
+        self.config_manager.set_config_dispatcher(self.config_dispatcher)
+        self.config_manager.after_config_dispatcher_set()
 
         self._after_init_accepted(locally_deployed)
         self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host, self.port, self.preferred_address, use_tls)
@@ -965,7 +970,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         """ Builds tool registries for all MCP channels.
         Called after all services (internal and user-defined) are deployed.
         """
-        for channel_config in self.worker_store.channel_mcp.values():
+        for channel_config in self.config_manager.channel_mcp.values():
             wrapper = channel_config.conn
             if wrapper:
                 if wrapper.handler:
@@ -977,7 +982,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         """ Rebuilds tool registries and queues list_changed notifications for all MCP channels.
         Called after hot-deploy deploys new services at runtime.
         """
-        for channel_config in self.worker_store.channel_mcp.values():
+        for channel_config in self.config_manager.channel_mcp.values():
             wrapper = channel_config.conn
             if wrapper:
                 wrapper.on_services_deployed()
@@ -1155,7 +1160,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         outcome = SCHEDULER.OUTCOME.OK
         _t0 = _time.monotonic()
         try:
-            self.worker_store.on_message_invoke_service(msg, 'scheduler', 'SCHEDULER_JOB_EXECUTED')
+            self.config_manager.on_message_invoke_service(msg, 'scheduler', 'SCHEDULER_JOB_EXECUTED')
         except Exception:
             outcome = SCHEDULER.OUTCOME.ERROR
             logger.warning('Scheduler job_id=%s; name=%s; outcome=error; traceback=%s', job_id, job_name, format_exc())
@@ -1526,8 +1531,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.set_up_config(self) # type: ignore
 
         # .. now reload it ..
-        self.worker_store.init()
-        self.worker_store.init_pubsub()
+        self.config_manager.init()
+        self.config_manager.init_pubsub()
 
         # .. reload pub/sub permissions from database ..
         self._load_pubsub_permissions()
@@ -1830,21 +1835,21 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def get_default_cache(self) -> 'CacheAPI':
         """ Returns the server's default cache.
         """
-        return cast_('CacheAPI', self.worker_store.cache_api.default)
+        return cast_('CacheAPI', self.config_manager.cache_api.default)
 
 # ################################################################################################################################
 
     def get_cache(self, cache_type:'str', cache_name:'str') -> 'Cache':
         """ Returns a cache object of given type and name.
         """
-        return self.worker_store.cache_api.get_cache(cache_type, cache_name)
+        return self.config_manager.cache_api.get_cache(cache_type, cache_name)
 
 # ################################################################################################################################
 
     def get_from_cache(self, cache_type:'str', cache_name:'str', key:'str') -> 'any_':
         """ Returns a value from input cache by key, or None if there is no such key.
         """
-        cache = self.worker_store.cache_api.get_cache(cache_type, cache_name)
+        cache = self.config_manager.cache_api.get_cache(cache_type, cache_name)
         return cache.get(key) # type: ignore
 
 # ################################################################################################################################
@@ -1852,7 +1857,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def set_in_cache(self, cache_type:'str', cache_name:'str', key:'str', value:'any_') -> 'any_':
         """ Sets a value in cache for input parameters.
         """
-        cache = self.worker_store.cache_api.get_cache(cache_type, cache_name)
+        cache = self.config_manager.cache_api.get_cache(cache_type, cache_name)
         return cache.set(key, value) # type: ignore
 
 # ################################################################################################################################
@@ -1882,9 +1887,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 # ################################################################################################################################
 
     def invoke(self, service:'str', request:'any_'=None, *args:'any_', **kwargs:'any_') -> 'any_':
-        """ Invokes a service either in our own worker or, if PID is given on input, in another process of this server.
+        """ Invokes a service either in our own process or, if PID is given on input, in another process of this server.
         """
-        response = self.worker_store.invoke(
+        response = self.config_manager.invoke(
             service, request,
             data_format=kwargs.pop('data_format', DATA_FORMAT.DICT),
             serialize=kwargs.pop('serialize', True),
@@ -1909,7 +1914,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def invoke_async(self, service:'str', request:'any_', callback:'callable_', *args:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes a service in background.
         """
-        return self.worker_store.invoke(service, request, is_async=True, callback=callback, *args, **kwargs)
+        return self.config_manager.invoke(service, request, is_async=True, callback=callback, *args, **kwargs)
 
 # ################################################################################################################################
 
@@ -1964,7 +1969,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             'server': server,
         })
 
-        server.worker_pid = os.getpid()
+        server.server_pid = os.getpid()
         ParallelServer.start_server(server, deployment_key)
 
 # ################################################################################################################################
@@ -1974,7 +1979,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         """
 
         # Tell the ODB we've gone through a clean shutdown but only if the
-        # ODB session has never been initialized (pre-worker-start path).
+        # ODB session has never been initialized (pre-server-start path).
         if not self.odb.session_initialized:
 
             self.config.odb_data = self.get_config_odb_data(self)
@@ -2025,11 +2030,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def api_service_store_get_service_name_by_id(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.service_store.get_service_name_by_id(*args, **kwargs)
 
-    def api_worker_store_basic_auth_get_by_id(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        return self.worker_store.basic_auth_get_by_id(*args, **kwargs)
+    def api_config_manager_basic_auth_get_by_id(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self.config_manager.basic_auth_get_by_id(*args, **kwargs)
 
-    def api_worker_store_reconnect_generic(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        return self.worker_store.reconnect_generic(*args, **kwargs) # type: ignore
+    def api_config_manager_reconnect_generic(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self.config_manager.reconnect_generic(*args, **kwargs) # type: ignore
 
 # ################################################################################################################################
 

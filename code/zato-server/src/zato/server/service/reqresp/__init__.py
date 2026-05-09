@@ -247,7 +247,7 @@ class Request:
 
 class Outgoing:
     """ A container for various outgoing connections a service can access. This in fact is a thin wrapper around data
-    fetched from the service's self.worker_store.
+    fetched from the service's config manager.
     """
     __slots__ = ('amqp', 'ftp', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'sap', 'ldap', 'mongodb', 'redis')
 

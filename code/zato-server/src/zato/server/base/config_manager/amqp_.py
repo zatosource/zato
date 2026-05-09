@@ -12,7 +12,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.util.api import spawn_greenlet
-from zato.server.base.worker.common import WorkerImpl
+from zato.server.base.config_manager.common import ConfigManagerImpl
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -20,7 +20,7 @@ from zato.server.base.worker.common import WorkerImpl
 if 0:
     from bunch import Bunch
     from zato.common.typing_ import any_, dictnone, strnone
-    from zato.server.base.worker import WorkerStore
+    from zato.server.base.config_manager import ConfigManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,11 +30,11 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class AMQP(WorkerImpl):
-    """ AMQP-related functionality for worker objects.
+class AMQP(ConfigManagerImpl):
+    """ AMQP-related functionality for config manager objects.
     """
     def amqp_connection_create(
-        self:'WorkerStore', # type: ignore
+        self:'ConfigManager', # type: ignore
         msg:'Bunch',
     ) -> 'None':
         msg.is_active = True
@@ -43,7 +43,7 @@ class AMQP(WorkerImpl):
 # ################################################################################################################################
 
     def on_config_event_OUTGOING_AMQP_CREATE(
-        self:'WorkerStore', # type: ignore
+        self:'ConfigManager', # type: ignore
         msg:'Bunch',
     ) -> 'None':
         with self.update_lock:
@@ -54,7 +54,7 @@ class AMQP(WorkerImpl):
 # ################################################################################################################################
 
     def on_config_event_OUTGOING_AMQP_EDIT(
-        self:'WorkerStore', # type: ignore
+        self:'ConfigManager', # type: ignore
         msg:'Bunch',
     ) -> 'None':
         with self.update_lock:
@@ -65,7 +65,7 @@ class AMQP(WorkerImpl):
 # ################################################################################################################################
 
     def on_config_event_OUTGOING_AMQP_DELETE(
-        self:'WorkerStore', # type: ignore
+        self:'ConfigManager', # type: ignore
         msg:'Bunch',
     ) -> 'None':
         with self.update_lock:
@@ -75,7 +75,7 @@ class AMQP(WorkerImpl):
 # ################################################################################################################################
 
     def on_config_event_CHANNEL_AMQP_CREATE(
-        self:'WorkerStore', # type: ignore
+        self:'ConfigManager', # type: ignore
         msg:'Bunch',
     ) -> 'None':
         with self.update_lock:
@@ -85,7 +85,7 @@ class AMQP(WorkerImpl):
 # ################################################################################################################################
 
     def on_config_event_CHANNEL_AMQP_EDIT(
-        self:'WorkerStore', # type: ignore
+        self:'ConfigManager', # type: ignore
         msg:'Bunch',
     ) -> 'None':
         with self.update_lock:
@@ -94,7 +94,7 @@ class AMQP(WorkerImpl):
 # ################################################################################################################################
 
     def on_config_event_CHANNEL_AMQP_DELETE(
-        self:'WorkerStore', # type: ignore
+        self:'ConfigManager', # type: ignore
         msg:'Bunch',
     ) -> 'None':
         with self.update_lock:
@@ -103,7 +103,7 @@ class AMQP(WorkerImpl):
 # ################################################################################################################################
 
     def amqp_invoke(
-        self:'WorkerStore', # type: ignore
+        self:'ConfigManager', # type: ignore
         out_name:'str',
         msg:'Bunch',
         exchange:'str'='/',
@@ -119,7 +119,7 @@ class AMQP(WorkerImpl):
         return self.amqp_api.invoke(out_name, msg, exchange, routing_key, properties, headers, **kwargs)
 
     def _amqp_invoke_async(
-        self:'WorkerStore', # type: ignore
+        self:'ConfigManager', # type: ignore
         *args:'any_',
         **kwargs:'any_',
     ) -> 'None':
@@ -129,7 +129,7 @@ class AMQP(WorkerImpl):
             logger.warning(format_exc())
 
     def amqp_invoke_async(
-        self:'WorkerStore', # type: ignore
+        self:'ConfigManager', # type: ignore
         *args:'any_',
         **kwargs:'any_',
     ) -> 'None':

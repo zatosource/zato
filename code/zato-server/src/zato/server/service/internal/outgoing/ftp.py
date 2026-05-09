@@ -32,8 +32,8 @@ _get_output_optional = 'user', 'acct', 'timeout', Boolean('dircache'), 'default_
 class _FTPService(AdminService):
     """ A common class for various FTP-related services.
     """
-    def notify_worker_threads(self, params, action=OUTGOING.FTP_CREATE_EDIT.value):
-        """ Notify worker threads of new or updated parameters.
+    def notify_server(self, params, action=OUTGOING.FTP_CREATE_EDIT.value):
+        """ Notify the server of new or updated parameters.
         """
         params['action'] = action
         self.config_dispatcher.publish(params)
@@ -126,7 +126,7 @@ class Create(_FTPService):
                 session.add(item)
                 session.commit()
 
-                self.notify_worker_threads(input)
+                self.notify_server(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
@@ -186,7 +186,7 @@ class Edit(_FTPService):
                 session.add(item)
                 session.commit()
 
-                self.notify_worker_threads(input)
+                self.notify_server(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
@@ -219,7 +219,7 @@ class Delete(_FTPService):
                 session.delete(item)
                 session.commit()
 
-                self.notify_worker_threads({'name':old_name}, OUTGOING.FTP_DELETE.value)
+                self.notify_server({'name':old_name}, OUTGOING.FTP_DELETE.value)
 
             except Exception:
                 session.rollback()

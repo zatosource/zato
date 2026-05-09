@@ -65,7 +65,7 @@ if 0:
     from zato.common.typing_ import any_, anydict, anylist, callable_, intstrdict, module_, stranydict, \
         strdictdict, strint, strintdict, strlist, stroriter, tuple_
     from zato.server.base.parallel import ParallelServer
-    from zato.server.base.worker import WorkerStore
+    from zato.server.base.config_manager import ConfigManager
     from zato.server.config import ConfigStore
     callable_ = callable_
     intstrdict = intstrdict
@@ -76,7 +76,7 @@ if 0:
     HotDeployProject = HotDeployProject
     ODBManager       = ODBManager
     ParallelServer   = ParallelServer
-    WorkerStore      = WorkerStore
+    ConfigManager    = ConfigManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -107,7 +107,7 @@ data_class_model_class_name = 'zato.server.service.Model'
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _TestingWorkerStore:
+class _TestingConfigManager:
     sql_pool_store = None
     outconn_ldap = None
     outconn_mongodb = None
@@ -117,7 +117,7 @@ class _TestingWorkerStore:
     cache_api = None
 
     def __init__(self):
-        self.worker_config = cast_('ConfigStore', None)
+        self.config_store = cast_('ConfigStore', None)
 
 # ################################################################################################################################
 
@@ -278,8 +278,8 @@ class ServiceStore:
         self.action_internal_done  = 'Deployed'
 
         if self.is_testing:
-            self._testing_worker_store = cast_('WorkerStore', _TestingWorkerStore())
-            self._testing_worker_store.worker_config = cast_('ConfigStore', _TestingWorkerConfig())
+            self._testing_config_manager = cast_('ConfigManager', _TestingConfigManager())
+            self._testing_config_manager.config_store = cast_('ConfigStore', _TestingWorkerConfig())
 
 # ################################################################################################################################
 
@@ -555,8 +555,8 @@ class ServiceStore:
 
             if self.is_testing:
 
-                class_._worker_store = self._testing_worker_store
-                class_._worker_config = self._testing_worker_store.worker_config
+                class_._config_manager = self._testing_config_manager
+                class_._config_store = self._testing_config_manager.config_store
                 class_.component_enabled_email = True
                 class_.component_enabled_search = True
                 class_.component_enabled_odoo = True
@@ -564,18 +564,18 @@ class ServiceStore:
             else:
 
                 class_.add_http_method_handlers()
-                class_._worker_store = service_store.server.worker_store
+                class_._config_manager = service_store.server.config_manager
                 class_._enforce_service_invokes = service_store.server.enforce_service_invokes # type: ignore
                 class_.odb = service_store.server.odb
                 class_.schedule = SchedulerFacade(service_store.server)
-                class_.cloud.confluence = service_store.server.worker_store.cloud_confluence
-                class_.cloud.jira = service_store.server.worker_store.cloud_jira
-                class_.cloud.salesforce = service_store.server.worker_store.cloud_salesforce
-                class_.cloud.ms365 = service_store.server.worker_store.cloud_microsoft_365
-                class_.amqp.publish = service_store.server.worker_store.amqp_invoke
+                class_.cloud.confluence = service_store.server.config_manager.cloud_confluence
+                class_.cloud.jira = service_store.server.config_manager.cloud_jira
+                class_.cloud.salesforce = service_store.server.config_manager.cloud_salesforce
+                class_.cloud.ms365 = service_store.server.config_manager.cloud_microsoft_365
+                class_.amqp.publish = service_store.server.config_manager.amqp_invoke
                 class_.commands.init(service_store.server)
 
-                class_._worker_config = service_store.server.worker_store.worker_config
+                class_._config_store = service_store.server.config_manager.config_store
                 class_.rules = service_store.server.rules
 
                 class_.component_enabled_email = service_store.server.fs_server_config.component_enabled.email
@@ -1513,8 +1513,8 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def on_worker_initialized(self) -> 'None':
-        """ Executed after a worker has been fully initialized, e.g. all connectors are started and references to these objects
+    def on_server_initialized(self) -> 'None':
+        """ Executed after the server has been fully initialized, e.g. all connectors are started and references to these objects
         can be assigned as class-wide attributes to services.
         """
 
