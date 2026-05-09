@@ -19,7 +19,7 @@ from threading import RLock
 from traceback import format_exc
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # gevent
 from gevent import sleep
@@ -28,7 +28,7 @@ from gevent import sleep
 from orjson import dumps
 
 # Zato
-from zato.bunch import Bunch
+from zato.common.ext.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
      PubSub, SEC_DEF_TYPE, simple_types, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
@@ -75,7 +75,7 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch as bunch_
+    from zato.common.ext.bunch import Bunch as bunch_
     from kombu.transport.pyamqp import Message as KombuMessage
     from zato.common.config_dispatcher import ConfigDispatcher
     from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict

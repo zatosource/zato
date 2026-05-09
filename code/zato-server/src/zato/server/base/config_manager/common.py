@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.config_manager import ConfigManager
     from zato.server.connection.http_soap.url_data import URLData

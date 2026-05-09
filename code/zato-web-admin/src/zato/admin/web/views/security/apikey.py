@@ -22,7 +22,7 @@ from zato.admin.web.views import change_password as _change_password, CreateEdit
 from zato.common.json_internal import dumps
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 logger = logging.getLogger(__name__)
 

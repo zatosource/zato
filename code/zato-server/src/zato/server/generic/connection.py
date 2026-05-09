@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # Zato
 from zato.common.api import GENERIC

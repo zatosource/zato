@@ -18,7 +18,7 @@ from zato.server.service.internal import AdminService, ChangePasswordBase
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from zato.common.ext.configobj_ import ConfigObj
     from zato.common.typing_ import any_, anylist, strdict
     Bunch = Bunch

@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import MagicMock
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Zato
 from zato.common.rate_limiting.common import Window_Unit_Second

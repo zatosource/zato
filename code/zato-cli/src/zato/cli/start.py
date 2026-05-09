@@ -71,7 +71,7 @@ Examples:
     def run_check_config(self) -> 'None':
 
         # Bunch
-        from bunch import Bunch
+        from zato.common.ext.bunch import Bunch
 
         # Zato
         from zato.cli.check_config import CheckConfig

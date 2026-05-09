@@ -21,7 +21,7 @@ from zato.common.util.open_ import open_w
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import any_
 
 # ################################################################################################################################
@@ -315,7 +315,7 @@ class Create(ZatoCommand):
     def _bunch_from_args(self, args:'any_', admin_invoke_password:'str', cluster_name:'str'='') -> 'Bunch':
 
         # Bunch
-        from bunch import Bunch
+        from zato.common.ext.bunch import Bunch
 
         out = Bunch()
         out.path = args.path

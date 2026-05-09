@@ -14,7 +14,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # gevent
 from gevent.pywsgi import WSGIServer

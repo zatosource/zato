@@ -14,7 +14,7 @@ from datetime import datetime
 from math import ceil
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # cryptography
 from cryptography.fernet import Fernet, InvalidToken

@@ -16,7 +16,7 @@ from time import time
 from traceback import format_exc
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # SQLAlchemy
 from sqlalchemy import Boolean, Integer

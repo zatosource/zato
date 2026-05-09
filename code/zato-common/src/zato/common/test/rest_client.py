@@ -13,7 +13,7 @@ from json import dumps, loads
 from time import sleep
 
 # Bunch
-from bunch import Bunch, bunchify
+from zato.common.ext.bunch import Bunch, bunchify
 
 # Requests
 import requests

@@ -15,7 +15,7 @@ from unittest import TestCase
 from uuid import uuid4
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # six
 from six import string_types

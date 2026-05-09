@@ -29,7 +29,7 @@ from zato.common.util.time_ import utcnow
 
 if 0:
     from logging import Logger
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import any_, callable_, intnone, strnone
     from zato.server.base.parallel import ParallelServer
 

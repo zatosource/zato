@@ -21,7 +21,7 @@ from zato.admin.web.views import change_password as _change_password, CreateEdit
      Index as _Index, method_allowed
 from zato.common.api import ODOO
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 logger = logging.getLogger(__name__)
 

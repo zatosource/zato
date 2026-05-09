@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# cython: auto_pickle=False
-
 """
 Copyright (C) Zato Source s.r.o. https://zato.io
 
@@ -9,23 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import traceback
 from logging import getLogger
-
-# Cython
-import cython as cy
 
 # Zato
 from zato.common.api import DATA_FORMAT
-
-# Zato
 from zato.input_output import IOProcessor
-
-# ################################################################################################################################
-
-if 0:
-    from zato.common.py23_.past.builtins import unicode as past_unicode
-    past_unicode = past_unicode
 
 # ################################################################################################################################
 
@@ -39,27 +25,11 @@ _not_given:object = object()
 # ################################################################################################################################
 # ################################################################################################################################
 
-@cy.cclass
 class IOPayload:
     """ Represents a payload, i.e. individual response elements, set via I/O declaration.
     """
-    io = cy.declare(cy.object, visibility='public')              # type: IOProcessor
-    all_output_elem_names = cy.declare(list, visibility='public') # type: list
-    output_repeated = cy.declare(cy.bint, visibility='public')    # type: bool
 
-    cid         = cy.declare(cy.object, visibility='public') # type: past_unicode
-    data_format = cy.declare(cy.object, visibility='public') # type: past_unicode
-
-    # One of the two will be used to produce a response
-    user_attrs_dict = cy.declare(dict, visibility='public') # type: dict
-    user_attrs_list = cy.declare(list, visibility='public') # type: list
-
-    # This is used by Zato internal services only
-    zato_meta = cy.declare(cy.object, visibility='public') # type: object
-
-# ################################################################################################################################
-
-    def __cinit__(self, io:IOProcessor, all_output_elem_names:list, cid, data_format):
+    def __init__(self, io:IOProcessor, all_output_elem_names:list, cid, data_format):
         self.io = io
         self.all_output_elem_names = all_output_elem_names
         self.output_repeated = self.io.definition.output_repeated
@@ -105,27 +75,25 @@ class IOPayload:
 
 # ################################################################################################################################
 
-    @cy.returns(bool)
     def has_data(self):
         return bool(self.user_attrs_dict or self.user_attrs_list)
 
 # ################################################################################################################################
 
-    @cy.returns(dict)
     def _extract_payload_attrs(self, item:object) -> dict:
         """ Extract response attributes from a single object. Used with items other than dicts.
         """
         extracted:dict = {}
-        is_dict:cy.bint= isinstance(item, dict)
+        is_dict = isinstance(item, dict)
 
         # Use a different function depending on whether the object is dict-like or not.
         # Note that we need .get to be able to provide a default value.
-        has_get = hasattr(item, 'get') # type: bool
+        has_get = hasattr(item, 'get')
         name = None
 
-        for name in self.all_output_elem_names: # type: str
+        for name in self.all_output_elem_names:
             if is_dict:
-                value = cy.cast(dict, item).get(name, _not_given)
+                value = item.get(name, _not_given)
             elif has_get:
                 value = item.get(name, _not_given)
             else:
@@ -137,7 +105,6 @@ class IOPayload:
 
 # ################################################################################################################################
 
-    @cy.returns(dict)
     def _extract_payload_attrs_dict(self, item:object) -> dict:
         """ Extract response attributes from a dict.
         """
@@ -153,19 +120,17 @@ class IOPayload:
 
 # ################################################################################################################################
 
-    @cy.cfunc
     def _is_sqlalchemy(self, item:object):
         return hasattr(item, '_sa_class_manager')
 
 # ################################################################################################################################
 
-    @cy.cfunc
     def _preprocess_payload_attrs(self, value):
 
         # First, check if this is not a response from a Zato service wrapped in a response element.
         # If it is, extract the actual inner response first.
         if isinstance(value, dict) and len(value) == 1:
-            response_name:str = list(value.keys())[0] # type: str
+            response_name:str = list(value.keys())[0]
             if response_name.startswith('zato') and response_name.endswith('_response'):
                 return value[response_name]
             else:
@@ -175,7 +140,6 @@ class IOPayload:
 
 # ################################################################################################################################
 
-    @cy.ccall
     def set_payload_attrs(self, value:object):
         """ Assigns user-defined attributes to what will eventually be a response.
         """
@@ -184,7 +148,7 @@ class IOPayload:
         self.user_attrs_list.clear()
 
         value = self._preprocess_payload_attrs(value)
-        is_dict:cy.bint = isinstance(value, dict)
+        is_dict = isinstance(value, dict)
 
         # Shortcut in case we know already this is a dict on input
         if is_dict:
@@ -203,7 +167,6 @@ class IOPayload:
 
 # ################################################################################################################################
 
-    @cy.ccall
     def getvalue(self, serialize:bool=True, force_dict_serialisation:bool=True): # noqa: E252
         """ Returns a service's payload, either serialised or not.
         """

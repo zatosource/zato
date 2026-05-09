@@ -14,7 +14,7 @@ from traceback import format_exc
 from urllib.parse import parse_qsl, urlparse, urlunparse
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # parse
 from parse import PARSE_RE as parse_re

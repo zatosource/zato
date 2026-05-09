@@ -20,7 +20,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # gevent
 import gevent
@@ -29,7 +29,7 @@ from gevent.lock import RLock
 
 # Zato
 from zato.common.config_dispatcher import ConfigDispatchReceiver, ConfigDispatcher
-from zato.bunch import Bunch
+from zato.common.ext.bunch import Bunch
 from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, HotDeploy, PubSub, SERVER_STARTUP, \
     SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
@@ -73,7 +73,7 @@ from zato.server.groups.ctx import SecurityGroupsCtxBuilder
 
 if 0:
 
-    from bunch import Bunch as bunch_
+    from zato.common.ext.bunch import Bunch as bunch_
     from kombu.transport.pyamqp import Message as KombuMessage
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
@@ -376,7 +376,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def add_pickup_conf_from_local_path(self, paths:'str', source:'str', path_patterns:'strorlistnone'=None) -> 'None':
 
         # Bunchz
-        from bunch import bunchify
+        from zato.common.ext.bunch import bunchify
 
         # Local variables
         path_patterns = path_patterns or HotDeploy.Default_Patterns
@@ -464,7 +464,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def _add_user_conf_from_path(self, path:'str', source:'str') -> 'None':
 
         # Bunch
-        from bunch import bunchify
+        from zato.common.ext.bunch import bunchify
 
         # Ignore files other than the below ones
         suffixes = ['ini', 'conf', 'yaml', 'yml']
@@ -1122,7 +1122,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         """
         import time as _time
         from json import loads as json_loads
-        from bunch import Bunch
+        from zato.common.ext.bunch import Bunch
         from zato.common.api import SCHEDULER
         from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 

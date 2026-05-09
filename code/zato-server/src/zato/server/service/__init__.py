@@ -16,7 +16,7 @@ from re import findall
 from traceback import format_exc
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # lxml
 from lxml.etree import _Element as EtreeElement # type: ignore
@@ -30,7 +30,7 @@ from gevent.lock import RLock
 from zato.common.py23_ import maxint
 
 # Zato
-from zato.bunch import Bunch
+from zato.common.ext.bunch import Bunch
 from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, NotGiven, PARAMS_PRIORITY, \
      RESTAdapterResponse, zato_no_op_marker
 from zato.common.exception import Inactive, Reportable, ZatoException
@@ -51,9 +51,9 @@ from zato.server.pattern.api import InvokeRetry
 from zato.server.pattern.api import ParallelExec
 from zato.server.service.reqresp import AMQPRequestData, Cloud, Outgoing, Request
 
-# Zato - Cython
-from zato.cy.reqresp.payload import IOPayload
-from zato.cy.reqresp.response import Response
+# Zato
+from zato.server.reqresp.payload import IOPayload
+from zato.server.reqresp.response import Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
 from zato.common.ext.dataclasses import dataclass

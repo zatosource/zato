@@ -18,7 +18,7 @@ from zato.server.connection.mcp.session import MCPSessionManager
 # ################################################################################################################################
 
 if 0:
-    from zato.bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import any_, strlist
     from zato.server.base.parallel import ParallelServer
 

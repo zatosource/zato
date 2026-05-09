@@ -11,7 +11,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # Zato
 from zato.common.broker_message import code_to_name

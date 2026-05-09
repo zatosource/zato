@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # PyYAML
 from yaml import FullLoader, load as yaml_load

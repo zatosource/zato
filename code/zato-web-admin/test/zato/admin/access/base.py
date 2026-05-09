@@ -13,7 +13,7 @@ from http.client import FOUND, MOVED_PERMANENTLY, NOT_MODIFIED, OK
 from unittest import TestCase
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # Django
 import django

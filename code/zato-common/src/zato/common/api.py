@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from numbers import Number
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Zato
 from zato.common.defaults import http_plain_server_port

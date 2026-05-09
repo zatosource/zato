@@ -44,10 +44,6 @@ code/util/extra/
 code/uv.lock
 code/windows-bin/zato.py
 code/zato-common/src/zato/common/pubsub/server/*.multi.yaml
-code/zato-cy/src/zato/cy/*.c
-code/zato-cy/src/zato/cy/*.html
-code/zato-cy/src/zato/cy/*/*.c
-code/zato-cy/src/zato/cy/*/*.html
 code/zato-exeagent
 code/zato-libs/
 code/zato-web-admin/src/zato/admin/static/css/.sass-cache/

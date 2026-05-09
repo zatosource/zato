@@ -16,7 +16,7 @@ from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.ftp import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################

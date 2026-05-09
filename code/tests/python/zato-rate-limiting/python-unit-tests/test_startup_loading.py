@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import unittest
 
 # Zato
-from zato.bunch import Bunch
+from zato.common.ext.bunch import Bunch
 from zato.common.json_internal import dumps
 from zato.common.rate_limiting.common import Window_Unit_Second
 from zato.common.rate_limiting.manager import RateLimitingManager

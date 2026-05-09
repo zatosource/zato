@@ -14,7 +14,7 @@ from traceback import format_exc
 from urllib.parse import quote
 
 # Bunch
-from bunch import Bunch, bunchify
+from zato.common.ext.bunch import Bunch, bunchify
 
 # Zato
 from zato.common.broker_message import PUBSUB
@@ -83,7 +83,7 @@ def _build_topic_objects_list(topic_data_list=None, topics=None, topic_data_by_n
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import strdict, strlist
 
 # ################################################################################################################################

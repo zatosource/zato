@@ -12,7 +12,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Zato
 from zato.common.api import SEC_DEF_TYPE

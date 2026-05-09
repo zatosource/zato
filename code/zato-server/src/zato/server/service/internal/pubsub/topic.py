@@ -11,7 +11,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Zato
 from zato.common.broker_message import PUBSUB

@@ -11,7 +11,7 @@ from unittest import TestCase, main
 
 # Zato
 import zato.server.base.config_manager as config_manager_module
-from zato.bunch import Bunch
+from zato.common.ext.bunch import Bunch
 from zato.common.api import GENERIC as COMMON_GENERIC
 from zato.server.generic.api.channel_mcp import ChannelMCPWrapper
 

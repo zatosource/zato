@@ -46,7 +46,7 @@ from types import ModuleType
 from uuid import uuid4
 
 # Bunch
-from bunch import Bunch, bunchify
+from zato.common.ext.bunch import Bunch, bunchify
 
 # ciso8601
 try:

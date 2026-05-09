@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# cython: auto_pickle=False
-
 """
 Copyright (C) 2020, Zato Source s.r.o. https://zato.io
 
@@ -14,9 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from http.client import OK
 from logging import getLogger
 
-# Cython
-import cython as cy
-
 # lxml
 from lxml.etree import _Element as EtreeElement
 from lxml.objectify import ObjectifiedElement
@@ -27,7 +22,7 @@ from sqlalchemy.engine.result import Row as KeyedTuple
 # Zato
 from zato.common.api import DATA_FORMAT, RESTAdapterResponse, simple_types, ZATO_OK
 from zato.common.marshal_.api import Model
-from zato.cy.reqresp.payload import IOPayload
+from zato.server.reqresp.payload import IOPayload
 
 # Python 2/3 compatibility
 from zato.common.py23_.past.builtins import unicode as past_unicode
@@ -52,28 +47,11 @@ direct_payload:tuple = simple_types + (RESTAdapterResponse, EtreeElement, Object
 # ################################################################################################################################
 # ################################################################################################################################
 
-@cy.cclass
 class Response:
     """ A response from a service's invocation.
     """
-    # Public attributes
-    result           = cy.declare(cy.object, visibility='public')  # type: past_unicode
-    result_details   = cy.declare(cy.object, visibility='public')  # type: past_unicode
-    _payload         = cy.declare(cy.object, visibility='public')   # type: object
-    content_encoding = cy.declare(cy.object, visibility='public')  # type: past_unicode
-    cid              = cy.declare(cy.object, visibility='public')  # type: past_unicode
-    data_format      = cy.declare(cy.object, visibility='public')  # type: past_unicode
-    headers          = cy.declare(cy.dict, visibility='public')     # type: dict
-    status_code      = cy.declare(cy.int, visibility='public')      # type: int
-    status_message   = cy.declare(cy.object, visibility='public')  # type: past_unicode
-    io              = cy.declare(object, visibility='public')      # type: IOProcessor
 
-    # Private-use attributes (still declared as public)
-    _content_type        = cy.declare(cy.object, visibility='public') # type: past_unicode
-    _has_io_output      = cy.declare(cy.bint, visibility='public')    # type: bool
-    content_type_changed = cy.declare(cy.bint, visibility='public')    # type: bool
-
-    def __cinit__(self):
+    def __init__(self):
         self.result = ZATO_OK
         self.result_details = ''
         self._payload = ''
@@ -86,6 +64,7 @@ class Response:
         self.io = None
         self._content_type = 'text/plain'
         self._has_io_output = False
+        self.content_type_changed = False
 
     def __len__(self):
         return len(self._payload)
@@ -100,7 +79,7 @@ class Response:
         # We get below only if there is an I/O definition, but not a dataclass-based one, and it has output declared
         if self.io:
             if not self.io.is_dataclass:
-                if cy.cast(cy.bint, self.io.definition.has_output_declared):
+                if bool(self.io.definition.has_output_declared):
                     self._payload = IOPayload(self.io, self.io.definition.all_output_elem_names, self.cid,
                         self.data_format)
                     self._has_io_output = True

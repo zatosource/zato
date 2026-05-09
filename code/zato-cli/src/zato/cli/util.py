@@ -25,7 +25,7 @@ def run_cli_command(command_class:'any_', config:'anydict', path:'any_') -> 'Non
     import os
 
     # Bunch
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
 
     args = Bunch()
     args.verbose = True

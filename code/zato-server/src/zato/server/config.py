@@ -15,7 +15,7 @@ from threading import RLock
 from paste.util.multidict import MultiDict
 
 # Bunch
-from zato.bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Python 2/3 compatibility
 from zato.common.ext.future.utils import itervalues
