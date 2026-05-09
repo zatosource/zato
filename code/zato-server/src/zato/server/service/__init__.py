@@ -36,7 +36,6 @@ from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, NotGiven, PARAMS_PRIOR
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import PubSubFacade, SecurityFacade
 from zato.common.json_internal import dumps
-from zato.common.monitoring.logger_ import DatadogLogger
 from zato.common.monitoring.metrics import ServiceMetrics
 from zato.common.typing_ import cast_, type_
 from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
@@ -46,8 +45,6 @@ from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.facade import KafkaFacade, KeysightContainer, MLLPFacade, RESTFacade, SchedulerFacade
-from zato.server.connection.http_soap.outgoing import current_datadog_cid, current_datadog_context, \
-    current_datadog_env_name, current_datadog_process_name, current_datadog_service_name
 from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
@@ -89,7 +86,6 @@ UUID = UUID # type: ignore
 # ################################################################################################################################
 
 if 0:
-    from ddtrace._trace.context import Context as DatadogContext
     from logging import Logger
     from zato.common.config_dispatcher import ConfigDispatcher
     from zato.common.audit import AuditPII
@@ -204,7 +200,6 @@ def call_hook_with_service(hook:'callable_', service:'Service') -> 'None':
 internal_invoke_keys = {
     'as_bunch',
     'cid',
-    'datadog_context',
     'serialize',
     'set_response_func',
     'skip_response_elem',
@@ -415,8 +410,6 @@ class Service:
     processing_time: 'float'
 
     # Monitoring
-    needs_datadog_logging: 'bool'
-    datadog_context: 'DatadogContext' = None # type: ignore
     metrics: 'ServiceMetrics'
 
     # Rule engine
@@ -688,13 +681,7 @@ class Service:
 
         self.process_name = kwargs.get('process_name') or service.process_name
 
-        # Configure logging depending on whether monitoring is enabled ..
-        if service.needs_datadog_logging:
-            service.logger = DatadogLogger(cid, server, service.name, self.process_name, self)
-        else:
-
-            # .. no Datadog = use stdlib's logger.
-            service.logger = _get_logger(service.name) # type: Logger
+        service.logger = _get_logger(service.name) # type: Logger
 
         # .. now we can assign the logger to our request object.
         service.request.logger = service.logger
@@ -723,69 +710,6 @@ class Service:
             in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'),
             channel_info=kwargs.get('channel_info'),
             channel_item=channel_item)
-
-        # Datadog spans - created here but finished after handle() completes
-        _datadog_span = None
-        _datadog_channel_span = None
-
-        if service.needs_datadog_logging:
-
-            # We may have it from our caller ..
-            _datadog_parent_context = kwargs.get('datadog_context')
-
-            # .. build the service name for Datadog ..
-            if self.server.env_name:
-                _dd_service_name = f'{self.server.env_name} | {service.name}'
-            else:
-                _dd_service_name = service.name
-
-            # .. build a span indicating that we're being invoked ..
-            _datadog_span = self.server.datadog_tracer.start_span(
-                name='',
-                service=_dd_service_name,
-                resource=f'Invoker',
-                child_of=_datadog_parent_context
-            )
-
-            # .. set our metadata ..
-            _datadog_span.set_tag('cid', self.cid)
-            _datadog_span.set_tag('zato_process', self.process_name)
-            _datadog_span.set_tag('zato_service', service.name)
-            _datadog_span.set_tag('zato_env_name', self.server.env_name)
-            _datadog_span.set_tag('zato_message_level', 'INFO')
-            _datadog_span.set_tag('zato_message', f'Service was invoked')
-
-            # .. store it for possible later use ..
-            self.datadog_context = _datadog_span.context
-
-            # .. set it in contextvar so http_request can access it ..
-            _ = current_datadog_context.set(_datadog_span.context)
-            _ = current_datadog_service_name.set(service.name)
-            _ = current_datadog_process_name.set(self.process_name)
-            _ = current_datadog_cid.set(self.cid)
-            _ = current_datadog_env_name.set(self.server.env_name)
-
-            # .. if this is a REST channel, create a span for it ..
-            if channel == CHANNEL.HTTP_SOAP and channel_item:
-                channel_name = channel_item.get('name', '')
-                request_method = wsgi_environ.get('REQUEST_METHOD', '')
-                raw_uri = wsgi_environ.get('RAW_URI', '')
-                _datadog_channel_span = self.server.datadog_tracer.start_span(
-                    name='zato.http.channel',
-                    service=_dd_service_name,
-                    resource=f'REST Channel: {channel_name}',
-                    child_of=_datadog_span.context
-                )
-                _datadog_channel_span.set_tag('cid', self.cid)
-                _datadog_channel_span.set_tag('zato_process', self.process_name)
-                _datadog_channel_span.set_tag('zato_service', service.name)
-                _datadog_channel_span.set_tag('zato_env_name', self.server.env_name)
-                _datadog_channel_span.set_tag('zato_message_level', 'INFO')
-                _datadog_channel_span.set_tag('zato_message', f'{request_method} {raw_uri}')
-
-        # Increment invocation counter for Grafana Cloud
-        if server.is_grafana_cloud_enabled:
-            service.metrics.incr('zato_service_' + service.name.replace('.', '_').replace('-', '_'))
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
@@ -873,11 +797,6 @@ class Service:
                 else:
                     if e:
                         raise e from None
-                finally:
-                    if _datadog_channel_span:
-                        _datadog_channel_span.finish()
-                    if _datadog_span:
-                        _datadog_span.finish()
 
         # We don't accept it but some response needs to be returned anyway.
         else:
@@ -974,7 +893,6 @@ class Service:
         kwargs.update({
             'serialize':serialize,
             'as_bunch': as_bunch,
-            'datadog_context': getattr(self, 'datadog_context', None),
         })
 
         if timeout:

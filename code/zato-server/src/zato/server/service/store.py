@@ -582,12 +582,6 @@ class ServiceStore:
                 class_.component_enabled_search = service_store.server.fs_server_config.component_enabled.search
                 class_.component_enabled_odoo = service_store.server.fs_server_config.component_enabled.odoo
 
-            # Monitoring
-            zato_prefixes = ('zato', 'pub.zato')
-            is_zato_service = service_name.startswith(zato_prefixes)
-            is_excluded_service = service_name == 'demo.ping'
-            class_.needs_datadog_logging = self.server.is_datadog_enabled and (not is_zato_service) and (not is_excluded_service)
-
             # Crypto operations
             class_.crypto = service_store.server.crypto_manager
 

@@ -27,12 +27,6 @@ import gevent
 from gevent import sleep, spawn
 from gevent.lock import RLock
 
-# Open Telemetry
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-
 # Zato
 from zato.common.config_dispatcher import ConfigDispatchReceiver, ConfigDispatcher
 from zato.bunch import Bunch
@@ -80,10 +74,7 @@ from zato.server.groups.ctx import SecurityGroupsCtxBuilder
 if 0:
 
     from bunch import Bunch as bunch_
-    from ddtrace.trace import tracer as dd_tracer
-    from ddtrace._trace.tracer import Tracer as DatadogTracer
     from kombu.transport.pyamqp import Message as KombuMessage
-    from opentelemetry.trace import Tracer as OTLPTracer
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
@@ -145,12 +136,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
     stop_after: 'intnone'
     deploy_auto_from: 'str' = ''
-
-    datadog_tracer: 'DatadogTracer'
-    otlp_tracer: 'OTLPTracer'
-
-    is_datadog_enabled: 'bool'
-    is_grafana_cloud_enabled: 'bool'
 
     env_name: 'str'
 
@@ -759,16 +744,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         # This cannot be done in __init__ because each sub-process obviously has its own PID
         self.pid = os.getpid()
-
-        # Monitoring
-        logger.info('Monitoring setup - datadog_enabled:%s grafana_cloud_enabled:%s',
-            self.is_datadog_enabled, self.is_grafana_cloud_enabled)
-
-        if self.is_datadog_enabled:
-            self._set_up_datadog()
-
-        if self.is_grafana_cloud_enabled:
-            self._set_up_grafana_cloud()
 
         # Used later on
         use_tls = as_bool(self.fs_server_config.crypto.use_tls)
@@ -1903,46 +1878,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 data[idx] = item
 
         return data
-
-# ################################################################################################################################
-
-    def _set_up_grafana_cloud(self):
-        logger.info('Setting up Grafana Cloud monitoring')
-
-        from opentelemetry.sdk.resources import Resource
-        from opentelemetry.sdk.metrics import MeterProvider
-        from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-        from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-
-        resource = Resource.create({'service.name': 'zato.server'})
-
-        trace_exporter = OTLPSpanExporter(endpoint='http://localhost:4318/v1/traces')
-        processor = BatchSpanProcessor(trace_exporter)
-
-        provider = TracerProvider(resource=resource)
-        provider.add_span_processor(processor)
-        trace.set_tracer_provider(provider)
-
-        self.otlp_tracer = trace.get_tracer('zato.server')
-
-        metrics_exporter = OTLPMetricExporter(endpoint='http://localhost:4318/v1/metrics')
-        metrics_reader = PeriodicExportingMetricReader(metrics_exporter, export_interval_millis=5000)
-        metrics_provider = MeterProvider(resource=resource, metric_readers=[metrics_reader])
-
-        self.otlp_meter = metrics_provider.get_meter('zato.server')
-        self.otlp_gauges = {}
-        self.otlp_gauges_lock = RLock()
-        self.otlp_counters = {}
-        self.otlp_counters_lock = RLock()
-
-# ################################################################################################################################
-
-    def _set_up_datadog(self):
-        logger.info('Setting up Datadog monitoring')
-
-        # Datadog
-        from ddtrace.trace import tracer
-        self.datadog_tracer = tracer
 
 # ################################################################################################################################
 
