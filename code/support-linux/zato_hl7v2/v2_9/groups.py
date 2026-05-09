@@ -990,11 +990,44 @@ class EarU08SpecimenContainer(HL7Group):
 class EhcE01InvoiceInformationSubmit(HL7Group):
     _group_name = "INVOICE_INFORMATION_SUBMIT"
 
+class EhcE01ProductServiceSection(HL7Group):
+    _group_name = "PRODUCT_SERVICE_SECTION"
+
+class EhcE01ProductServiceGroup(HL7Group):
+    _group_name = "PRODUCT_SERVICE_GROUP"
+
+class EhcE01PatientInfo(HL7Group):
+    _group_name = "PATIENT_INFO"
+
+class EhcE01Insurance(HL7Group):
+    _group_name = "INSURANCE"
+
+class EhcE01Diagnosis(HL7Group):
+    _group_name = "DIAGNOSIS"
+
+class EhcE01ProductServiceLineItem(HL7Group):
+    _group_name = "PRODUCT_SERVICE_LINE_ITEM"
+
+class EhcE01Procedure(HL7Group):
+    _group_name = "PROCEDURE"
+
 class EhcE02InvoiceInformationCancel(HL7Group):
     _group_name = "INVOICE_INFORMATION_CANCEL"
 
+class EhcE02ProductServiceSection(HL7Group):
+    _group_name = "PRODUCT_SERVICE_SECTION"
+
+class EhcE02Psg(HL7Group):
+    _group_name = "PSG"
+
 class EhcE04ReassessmentRequestInfo(HL7Group):
     _group_name = "REASSESSMENT_REQUEST_INFO"
+
+class EhcE04ProductServiceSection(HL7Group):
+    _group_name = "PRODUCT_SERVICE_SECTION"
+
+class EhcE04ProductServiceGroup(HL7Group):
+    _group_name = "PRODUCT_SERVICE_GROUP"
 
 class EhcE10InvoiceProcessingResultsInfo(HL7Group):
     _group_name = "INVOICE_PROCESSING_RESULTS_INFO"
@@ -1038,11 +1071,29 @@ class EhcE15AdjustmentPayee(HL7Group):
 class EhcE20AuthorizationRequest(HL7Group):
     _group_name = "AUTHORIZATION_REQUEST"
 
+class EhcE20PatInfo(HL7Group):
+    _group_name = "PAT_INFO"
+
+class EhcE20Insurance(HL7Group):
+    _group_name = "INSURANCE"
+
+class EhcE20Diagnosis(HL7Group):
+    _group_name = "DIAGNOSIS"
+
+class EhcE20PslItemInfo(HL7Group):
+    _group_name = "PSL_ITEM_INFO"
+
 class EhcE21AuthorizationRequest(HL7Group):
     _group_name = "AUTHORIZATION_REQUEST"
 
+class EhcE21PslItemInfo(HL7Group):
+    _group_name = "PSL_ITEM_INFO"
+
 class EhcE24AuthorizationResponseInfo(HL7Group):
     _group_name = "AUTHORIZATION_RESPONSE_INFO"
+
+class EhcE24PslItemInfo(HL7Group):
+    _group_name = "PSL_ITEM_INFO"
 
 class MdmT01CommonOrder(HL7Group):
     _group_name = "COMMON_ORDER"
@@ -1597,6 +1648,24 @@ class OmnO07Timing(HL7Group):
     _group_name = "TIMING"
 
 class OmnO07Observation(HL7Group):
+    _group_name = "OBSERVATION"
+
+class OrmO01Patient(HL7Group):
+    _group_name = "PATIENT"
+
+class OrmO01PatientVisit(HL7Group):
+    _group_name = "PATIENT_VISIT"
+
+class OrmO01Insurance(HL7Group):
+    _group_name = "INSURANCE"
+
+class OrmO01Order(HL7Group):
+    _group_name = "ORDER"
+
+class OrmO01OrderDetail(HL7Group):
+    _group_name = "ORDER_DETAIL"
+
+class OrmO01Observation(HL7Group):
     _group_name = "OBSERVATION"
 
 class OmpO09Patient(HL7Group):
@@ -2918,6 +2987,12 @@ class RspE03QueryAckIpr(HL7Group):
 
 class RspE22QueryAck(HL7Group):
     _group_name = "QUERY_ACK"
+
+class RspE22AuthorizationInfo(HL7Group):
+    _group_name = "AUTHORIZATION_INFO"
+
+class RspE22PslItemInfo(HL7Group):
+    _group_name = "PSL_ITEM_INFO"
 
 class RspK11SegmentPattern(HL7Group):
     _group_name = "SEGMENT_PATTERN"
