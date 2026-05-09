@@ -17,11 +17,12 @@ from bunch import Bunch
 from django.urls import resolve
 
 # Zato
-from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, ADMIN_INVOKE_PATH, SASession, settings_db
+from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, SASession, settings_db
 from zato.admin.web.forms import SearchForm
 from zato.admin.web.models import ClusterColorMarker
 from zato.admin.web.util import get_user_profile
-from zato.client import AnyServiceInvoker
+from zato.client import ZatoClient
+from zato.common.const import ServiceConst
 from zato.common.json_internal import loads
 from zato.common.odb.model import Cluster
 from zato.common.version import get_version
@@ -87,7 +88,7 @@ class HeadersEnrichedException(Exception):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Client(AnyServiceInvoker):
+class Client(ZatoClient):
     def __init__(self, req, *args, **kwargs):
         self.forwarded_for = req.META.get('HTTP_X_FORWARDED_FOR') or req.META.get('REMOTE_ADDR')
         super(Client, self).__init__(*args, **kwargs)
@@ -95,13 +96,17 @@ class Client(AnyServiceInvoker):
 # ################################################################################################################################
 
     def invoke(self, *args, **kwargs):
-        response = super(Client, self).invoke(*args, headers={'X-Zato-Forwarded-For': self.forwarded_for}, **kwargs)
+        headers = kwargs.pop('headers', {})
+        headers['X-Zato-Forwarded-For'] = self.forwarded_for
+
+        response = super(Client, self).invoke(*args, headers=headers, **kwargs)
+
         if response.inner.status_code != OK:
 
             json_data = loads(response.inner.text)
             cid = json_data.get('cid')
             err_details = json_data.get('details')
-            full_details = 'CID: {}; nDetails: {}'.format(cid, err_details)
+            full_details = 'CID: {}, nDetails: {}'.format(cid, err_details)
 
             if not err_details:
                 err_details = json_data
@@ -121,7 +126,9 @@ class Client(AnyServiceInvoker):
 # ################################################################################################################################
 
     def invoke_async(self, *args, **kwargs):
-        response = super(Client, self).invoke_async(*args, headers={'X-Zato-Forwarded-For': self.forwarded_for}, **kwargs)
+        headers = kwargs.pop('headers', {})
+        headers['X-Zato-Forwarded-For'] = self.forwarded_for
+        response = super(Client, self).invoke_async(*args, headers=headers, **kwargs)
         return response
 
 # ################################################################################################################################
@@ -182,7 +189,7 @@ class ZatoMiddleware:
                 url = 'http://127.0.0.1:17010'
 
                 auth = (ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD)
-                req.zato.client = Client(req, url, ADMIN_INVOKE_PATH, auth, to_bunch=True)
+                req.zato.client = Client(req, url, ServiceConst.API_Invoke_Url_Path, auth, to_bunch=True)
 
             req.zato.clusters = req.zato.odb.query(Cluster).order_by(Cluster.name).all()
             req.zato.search_form = SearchForm(req.zato.clusters, req.GET)

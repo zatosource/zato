@@ -472,7 +472,7 @@ class MISC:
     OAUTH_SIG_METHODS = ['HMAC-SHA1', 'PLAINTEXT']
     PIDFILE = 'pidfile'
     SEPARATOR = ':::'
-    DefaultAdminInvokeChannel = 'admin.invoke.json'
+    DefaultAdminInvokeChannel = 'zato.api.invoke'
     Default_Cluster_ID = 1
 
 # ################################################################################################################################

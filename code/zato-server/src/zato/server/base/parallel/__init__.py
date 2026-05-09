@@ -83,7 +83,7 @@ if 0:
     from zato.server.base.parallel.delivery import RedisPushDelivery
     from zato.server.connection.cache import CacheAPI
     from zato.server.service.store import ServiceStore
-    from zato.simpleio import SIOServerConfig
+    from zato.input_output import IOProcessor
     from zato.server.startup_callable import StartupCallableTool
 
     bunch_ = bunch_
@@ -92,7 +92,7 @@ if 0:
     random_seed = random_seed
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
-    SIOServerConfig = SIOServerConfig # type: ignore
+    IOProcessor = IOProcessor # type: ignore
     StartupCallableTool = StartupCallableTool
 
 # ################################################################################################################################
@@ -186,7 +186,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.pickup_config = Bunch()
         self.logging_config = Bunch()
         self.logging_conf_path = 'server-'
-        self.sio_config = cast_('SIOServerConfig', None)
+        self.io_config = cast_('any_', None)
         self.connector_server_grace_time = None
         self.id = -1
         self.name = ''
@@ -1408,22 +1408,18 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def _pre_initialize(self) -> 'None':
 
         from contextlib import closing
-        from zato.common.util.channel import ensure_django_channel_exists, ensure_mcp_channel_exists, \
+        from zato.common.util.channel import ensure_mcp_channel_exists, \
             ensure_openapi_channel_exists
 
         with closing(self.odb.session()) as session:
             openapi_created = ensure_openapi_channel_exists(session, self.cluster_id)
-            django_created = ensure_django_channel_exists(session, self.cluster_id)
             mcp_created = ensure_mcp_channel_exists(session, self.cluster_id)
 
-            if openapi_created or django_created or mcp_created:
+            if openapi_created or mcp_created:
                 session.commit()
 
             if openapi_created:
                 logger.info('Created OpenAPI handler channel')
-
-            if django_created:
-                logger.info('Created Django handler channel')
 
             if mcp_created:
                 logger.info('Created MCP handler channel')
