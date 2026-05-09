@@ -11,14 +11,14 @@ from contextlib import closing
 from logging import getLogger
 
 # Zato
-from zato.bunch import Bunch
+from zato.common.ext.bunch import Bunch
 from zato.common.const import SECRETS, ServiceConst
 from zato.common.json_internal import loads
 from zato.common.util.config import resolve_name
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.config import ConfigDict
-from zato.url_dispatcher import Matcher
+from zato.server.connection.http_soap.url_dispatcher import Matcher
 
 # ################################################################################################################################
 # ################################################################################################################################

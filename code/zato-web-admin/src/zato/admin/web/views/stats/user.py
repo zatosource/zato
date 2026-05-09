@@ -12,7 +12,7 @@ from enum import Enum, unique
 from json import dumps, loads
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Django
 from django.http import HttpResponse

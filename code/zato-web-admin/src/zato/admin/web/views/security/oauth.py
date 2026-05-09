@@ -18,7 +18,7 @@ from zato.admin.web.views import change_password as _change_password, \
      CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.api import NONCE_STORE
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 logger = logging.getLogger(__name__)
 

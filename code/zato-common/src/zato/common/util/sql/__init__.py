@@ -11,7 +11,7 @@ from itertools import chain
 from logging import DEBUG, getLogger
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # gevent
 from gevent import sleep
@@ -29,7 +29,7 @@ from zato.common.util.search import SearchResults
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import any_
 
 # ################################################################################################################################

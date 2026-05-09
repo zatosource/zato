@@ -13,7 +13,7 @@ import re
 from logging import getLogger
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # rule-engine
 import rule_engine

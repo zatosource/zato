@@ -11,7 +11,7 @@ import logging
 from functools import wraps
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # SQLAlchemy
 from sqlalchemy import and_, func, not_, or_

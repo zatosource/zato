@@ -11,7 +11,7 @@ from http.client import OK
 from logging import getLogger
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Django
 from django.urls import resolve

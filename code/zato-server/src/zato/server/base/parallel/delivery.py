@@ -103,7 +103,7 @@ class RedisPushDelivery:
         push_type = sub_config['push_type']
 
         if push_type == 'service':
-            from bunch import bunchify
+            from zato.common.ext.bunch import bunchify
             service_name = sub_config['push_service_name']
             flat = dict(msg.get('meta', {}))
             flat['data'] = msg['data']

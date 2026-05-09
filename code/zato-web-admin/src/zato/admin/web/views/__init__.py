@@ -16,7 +16,7 @@ from itertools import chain
 from traceback import format_exc
 
 # bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Django
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseServerError

@@ -34,7 +34,7 @@ from zato.common.api import SCHEDULER, TRACE1
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 from zato.common.util.api import pprint
 
 # Python 2/3 compatibility

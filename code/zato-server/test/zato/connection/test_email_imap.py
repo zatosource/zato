@@ -12,7 +12,7 @@ from operator import itemgetter
 from unittest import main, TestCase
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # Zato
 from zato.common.api import EMAIL

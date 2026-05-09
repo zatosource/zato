@@ -20,7 +20,7 @@ from zato.server.connection.queue import Wrapper
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################

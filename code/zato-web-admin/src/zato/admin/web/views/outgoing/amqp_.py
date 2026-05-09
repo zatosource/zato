@@ -22,7 +22,7 @@ from zato.admin.web.forms.outgoing.amqp_ import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed
 from zato.common.json_internal import dumps
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################

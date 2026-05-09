@@ -18,7 +18,7 @@ from zato.admin.web.forms.channel.amqp_ import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, Index as _Index, method_allowed
 from zato.common.json_internal import dumps
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 logger = logging.getLogger(__name__)
 

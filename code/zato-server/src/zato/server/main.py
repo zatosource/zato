@@ -62,7 +62,7 @@ from zato.common.ext.configobj_ import ConfigObj
 from zato.common.ipaddress_ import get_preferred_ip
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
-from zato.bunch import Bunch
+from zato.common.ext.bunch import Bunch
 from zato.common.defaults import secret_fields_exact, secret_fields_prefix, secret_fields_suffix
 from zato.common.util.api import asbool, get_config, is_encrypted, new_cid_server, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
@@ -80,7 +80,7 @@ from zato_server_core import HTTPServer, handle_http_request, init_rest_log, ini
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import any_, callable_, dictnone, strintnone
     callable_ = callable_
 

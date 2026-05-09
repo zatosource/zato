@@ -19,7 +19,7 @@ logger_groups = logging.getLogger('zato.groups.config_manager')
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import any_
     from zato.server.base.config_manager import ConfigManager
 

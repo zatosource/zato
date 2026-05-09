@@ -7,7 +7,7 @@
 	server-connection-tests server-pattern-tests server-pubsub-unit-tests server-pubsub-tests server-mcp-live-tests server-fuzzy server-tests \
 	rate-limiting-rust-unit-tests rate-limiting-python-unit-tests test-rate-limiting \
 	enmasse-tests cli-odb-default-tests cli-tests \
-	common-tests cy-tests distlock-tests web-admin-tests \
+	common-tests distlock-tests web-admin-tests \
 	health-hl7-tests health-fhir-tests \
 	test-fast test-rust-unit test-integration test-pubsub test-fuzzy \
 	test-all test \
@@ -189,9 +189,6 @@ cli-tests: ## All CLI tests (public per-component).
 
 common-tests: ## Common tests (public per-component).
 	$(MAKE) -C $(Zato_Base)/code/zato-common test
-
-cy-tests: ## Cython tests (public per-component).
-	$(MAKE) -C $(Zato_Base)/code/zato-cy test
 
 distlock-tests: ## Distlock tests (public per-component).
 	$(MAKE) -C $(Zato_Base)/code/zato-distlock test

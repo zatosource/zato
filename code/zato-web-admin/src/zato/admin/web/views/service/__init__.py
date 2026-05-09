@@ -25,7 +25,7 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index,
 from zato.admin.middleware import HeadersEnrichedException
 from zato.common.ext.validate_ import is_boolean
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################

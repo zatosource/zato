@@ -11,7 +11,7 @@ import logging
 from copy import deepcopy
 
 # Bunch
-from bunch import Bunch, bunchify
+from zato.common.ext.bunch import Bunch, bunchify
 
 # lxml
 from lxml.etree import _Element as EtreeElement

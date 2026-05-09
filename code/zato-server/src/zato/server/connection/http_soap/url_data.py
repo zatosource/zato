@@ -19,7 +19,7 @@ from zato.common.ext.future.utils import iteritems
 from zato.common.py23_.past.builtins import unicode
 
 # Zato
-from zato.bunch import Bunch
+from zato.common.ext.bunch import Bunch
 from zato.common.api import CHANNEL, CONNECTION, MISC, SEC_DEF_TYPE, ZATO_NONE
 from zato.common.broker_message import code_to_name, SECURITY
 from zato.common.dispatch import dispatcher

@@ -18,7 +18,7 @@ from threading import RLock
 from time import time
 
 # Bunch
-from bunch import Bunch, bunchify
+from zato.common.ext.bunch import Bunch, bunchify
 
 # SQLAlchemy
 from sqlalchemy import and_, create_engine, event, select

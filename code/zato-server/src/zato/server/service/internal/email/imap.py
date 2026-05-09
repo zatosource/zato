@@ -25,7 +25,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import any_
     from zato.server.service import Service
 

@@ -11,7 +11,7 @@ import os
 from unittest import main, TestCase
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # Zato
 from zato.server.generic.api.outconn_ldap import LDAPClient
@@ -20,7 +20,7 @@ from zato.server.generic.api.outconn_ldap import LDAPClient
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################

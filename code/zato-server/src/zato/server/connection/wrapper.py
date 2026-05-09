@@ -31,7 +31,7 @@ import typing
 if typing.TYPE_CHECKING:
 
     # Bunch
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
 
     # Zato
     from zato.server.base.parallel import ParallelServer

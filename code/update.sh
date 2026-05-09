@@ -17,12 +17,6 @@ echo "*** Downloading updates ***"
 git_pull_output=$(git -C $CURDIR pull 2>&1)
 echo "$git_pull_output"
 
-if echo "$git_pull_output" | grep -q "zato-cy/"; then
-    export Zato_Should_Update_Cy=True
-else
-    export Zato_Should_Update_Cy=False
-fi
-
 # An optional, specific branch or commit provided on input
 while getopts "c:" opt; do
     case "$opt" in

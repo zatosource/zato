@@ -18,7 +18,7 @@ from zato.server.base.config_manager.common import ConfigManagerImpl
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import any_, dictnone, strnone
     from zato.server.base.config_manager import ConfigManager
 

@@ -20,7 +20,7 @@ from zato.admin.web.util import get_pubsub_security_definitions, get_service_lis
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, get_outconn_rest_list
 from zato.common.api import CONNECTION, PubSub, URL_TYPE
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################

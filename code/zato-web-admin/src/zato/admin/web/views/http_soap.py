@@ -27,7 +27,7 @@ from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 from zato.common.util import openapi_ as openapi_module
 
 # ################################################################################################################################
