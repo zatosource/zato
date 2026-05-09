@@ -77,6 +77,7 @@ vscode
 ~
 
 # Rust build artifacts
+**/Cargo.lock
 **/mutants*
 **/target/
 **/corpus/

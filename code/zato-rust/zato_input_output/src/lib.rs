@@ -46,7 +46,7 @@ fn is_io_int(value: &Bound<'_, PyAny>) -> bool {
 
 /// Registers all I/O types, aliases, and helper functions with the Python module.
 #[pymodule]
-fn input_output(module: &Bound<'_, PyModule>) -> PyResult<()> {
+fn zato_input_output(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<payload::Payload>()?;
     module.add_class::<response::Response>()?;
     module.add_class::<io_processor::IOProcessor>()?;
