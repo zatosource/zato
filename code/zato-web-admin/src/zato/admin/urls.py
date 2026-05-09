@@ -14,9 +14,6 @@ from django.contrib.auth.decorators import login_required
 from zato.admin import settings
 from zato.admin.web.util import static_serve
 from zato.admin.web.views import account, datadog, env_variables, grafana_cloud, http_soap, live_form_updates, log_streaming, main, news, openapi_, python_packages, scheduler, service, updates
-from zato.admin.web.views.cache import builtin as cache_builtin
-from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
-from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
 from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel.hl7 import mllp as channel_hl7_mllp
 from zato.admin.web.views.channel.hl7 import rest as channel_hl7_rest
@@ -622,38 +619,6 @@ urlpatterns += [
 # ################################################################################################################################
 
 urlpatterns += [
-
-    # .. Built-in
-
-    url(r'^zato/cache/builtin/$',
-        login_required(cache_builtin.Index()), name=cache_builtin.Index.url_name),
-    url(r'^zato/cache/builtin/create/$',
-        login_required(cache_builtin.Create()), name=cache_builtin.Create.url_name),
-    url(r'^zato/cache/builtin/edit/$',
-        login_required(cache_builtin.Edit()), name=cache_builtin.Edit.url_name),
-    url(r'^zato/cache/builtin/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(cache_builtin.Delete()), name=cache_builtin.Delete.url_name),
-    url(r'^zato/cache/builtin/clear/$',
-        login_required(cache_builtin.clear), name='cache-builtin-clear'),
-
-    url(r'^zato/cache/builtin/entries/(?P<id>.*)/delete/$',
-        login_required(cache_builtin_entries.Delete()), name=cache_builtin_entries.Delete.url_name),
-
-    url(r'^zato/cache/builtin/entries/(?P<id>.*)/$',
-        login_required(cache_builtin_entries.Index()), name=cache_builtin_entries.Index.url_name),
-
-    url(r'^zato/cache/builtin/details/entry/create/cache-id/(?P<id>.*)/cluster/(?P<cluster_id>.*)/action/$',
-        login_required(cache_builtin_entry.create_action), name='cache-builtin-create-entry-action'),
-
-    url(r'^zato/cache/builtin/details/entry/create/cache-id/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(cache_builtin_entry.create), name='cache-builtin-create-entry'),
-
-    url(r'^zato/cache/builtin/details/entry/edit/cache-id/(?P<id>.*)/cluster/(?P<cluster_id>.*)/action/$',
-        login_required(cache_builtin_entry.edit_action), name='cache-builtin-edit-entry-action'),
-
-    url(r'^zato/cache/builtin/details/entry/edit/cache-id/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(cache_builtin_entry.edit), name='cache-builtin-edit-entry'),
-
     ]
 
 # ################################################################################################################################

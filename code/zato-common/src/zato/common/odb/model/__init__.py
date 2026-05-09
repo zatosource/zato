@@ -16,7 +16,7 @@ from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Index, Integ
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common.api import AMQP, CACHE, HTTP_SOAP_SERIALIZATION_TYPE, MISC, ODOO, SAP, SCHEDULER, PARAMS_PRIORITY, \
+from zato.common.api import AMQP, HTTP_SOAP_SERIALIZATION_TYPE, MISC, ODOO, SAP, SCHEDULER, PARAMS_PRIORITY, \
     URL_PARAMS_PRIORITY
 from zato.common.json_internal import json_dumps
 from zato.common.odb.model.base import Base, _JSON
@@ -428,16 +428,11 @@ class HTTPSOAP(Base):
     url_params_pri = Column(String(200), nullable=True, default=URL_PARAMS_PRIORITY.DEFAULT)
     params_pri = Column(String(200), nullable=True, default=PARAMS_PRIORITY.DEFAULT)
 
-    cache_expiry = Column(Integer, nullable=True, default=0)
-
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
 
     security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
     security = relationship(SecurityBase, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
-
-    cache_id = Column(Integer, ForeignKey('cache_builtin.id', ondelete='CASCADE'), nullable=True)
-    cache = relationship('CacheBuiltin', backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
     service = relationship('Service', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
@@ -450,7 +445,7 @@ class HTTPSOAP(Base):
             pool_size=None, merge_url_params_req=None, url_params_pri=None, params_pri=None, serialization_type=None,
             timeout=None, service_id=None, service=None, security=None, cluster_id=None,
             cluster=None, service_name=None, security_id=None, security_name=None, content_type=None,
-            cache_id=None, cache_type=None, cache_expiry=None, cache_name=None, content_encoding=None, match_slash=None,
+            content_encoding=None, match_slash=None,
             http_accept=None, validate_tls=None, opaque=None, **kwargs):
         super(HTTPSOAP, self).__init__(**kwargs)
         self.id = id
@@ -481,10 +476,6 @@ class HTTPSOAP(Base):
         self.security_id = security_id
         self.security_name = security_name
         self.content_type = content_type
-        self.cache_id = cache_id
-        self.cache_type = cache_type
-        self.cache_expiry = cache_expiry
-        self.cache_name = cache_name # Not used by the DB
         self.content_encoding = content_encoding
         self.match_slash = match_slash # Not used by the DB
         self.http_accept = http_accept # Not used by the DB
@@ -695,37 +686,6 @@ class IntervalBasedJob(Base):
         self.seconds = seconds
         self.repeats = repeats
         self.definition_text = definition_text # Not used by the database
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class CacheBuiltin(Base):
-    """ Cache definitions using mechanisms built into Zato.
-    """
-    __tablename__ = 'cache_builtin'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('cache_builtin_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-    is_default = Column(Boolean(), nullable=False)
-    cache_type = Column(String(45), nullable=False, default=CACHE.TYPE.BUILTIN)
-
-    max_size = Column(Integer(), nullable=False, default=CACHE.DEFAULT.MAX_SIZE)
-    max_item_size = Column(Integer(), nullable=False, default=CACHE.DEFAULT.MAX_ITEM_SIZE)
-    extend_expiry_on_get = Column(Boolean(), nullable=False, default=True)
-    extend_expiry_on_set = Column(Boolean(), nullable=False, default=False)
-    sync_method = Column(String(20), nullable=False, default=CACHE.SYNC_METHOD.IN_BACKGROUND.id)
-    persistent_storage = Column(String(40), nullable=False, default=CACHE.PERSISTENT_STORAGE.NO_PERSISTENT_STORAGE.id)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('cache_list', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, cluster=None):
-        self.cluster = cluster
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1155,9 +1115,6 @@ class GenericConnDef(Base):
     secret = Column(String(1000), nullable=True)
     secret_type = Column(String(45), nullable=True)
 
-    cache_id = Column(Integer, ForeignKey('cache_builtin.id', ondelete='CASCADE'), nullable=True)
-    cache = relationship('CacheBuiltin', backref=backref('generic_conn_def_list', order_by=name, cascade='all, delete, delete-orphan'))
-
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('generic_conn_def_list', order_by=id, cascade='all, delete, delete-orphan'))
 
@@ -1232,9 +1189,6 @@ class GenericConn(Base):
     conn_def_id = Column(Integer, ForeignKey('generic_conn_def.id', ondelete='CASCADE'), nullable=True)
     conn_def = relationship(GenericConnDef, backref=backref('generic_conn_def_list',
         order_by=id, cascade='all, delete, delete-orphan'))
-
-    cache_id = Column(Integer, ForeignKey('cache_builtin.id', ondelete='CASCADE'), nullable=True)
-    cache = relationship('CacheBuiltin', backref=backref('generic_conn_list', order_by=name, cascade='all, delete, delete-orphan'))
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('generic_conn_list', order_by=id, cascade='all, delete, delete-orphan'))

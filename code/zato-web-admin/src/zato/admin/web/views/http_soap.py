@@ -21,7 +21,7 @@ from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_group_list as common_get_group_list, get_http_channel_security_id, \
     get_security_id_from_select, get_security_groups_from_checkbox_list, id_only_service, \
         method_allowed, SecurityList
-from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
+from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      generic_attrs, Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
      SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.exception import ZatoException
@@ -52,10 +52,6 @@ TRANSPORT = {
     'plain_http': 'REST',
     'soap': 'SOAP',
     }
-
-CACHE_TYPE = {
-    CACHE.TYPE.BUILTIN: 'Built-in',
-}
 
 _rest_security_type_supported = {
     SEC_DEF_TYPE.APIKEY,
@@ -101,8 +97,6 @@ def _get_edit_create_message(params, prefix=''): # type: ignore
         'security_id': security_id,
         'security_groups': security_groups,
         'content_type': params.get(prefix + 'content_type'),
-        'cache_id': params.get(prefix + 'cache_id'),
-        'cache_expiry': params.get(prefix + 'cache_expiry'),
         'content_encoding': params.get(prefix + 'content_encoding'),
         'validate_tls': params.get(prefix + 'validate_tls'),
         'data_encoding': params.get(prefix + 'data_encoding'),
@@ -143,23 +137,6 @@ def _edit_create_response(req, id, verb, transport, connection, name): # type: i
         'security_groups_info': f'{group_count} group{group_count_suffix}, {group_member_count} client{group_member_count_suffix}'
     }
 
-    # Caching is a channel-only concept
-    if connection == 'channel':
-        response = req.zato.client.invoke('zato.http-soap.get', {
-            'cluster_id': req.zato.cluster_id,
-            'id': id,
-        })
-
-        if response.data.cache_id:
-            cache_type = response.data.cache_type
-            cache_name = '{}/{}'.format(CACHE_TYPE[cache_type], response.data.cache_name)
-        else:
-            cache_type = None
-            cache_name = None
-
-        return_data['cache_type'] = cache_type
-        return_data['cache_name'] = cache_name
-
     return HttpResponse(dumps(return_data), content_type='application/javascript')
 
 # ################################################################################################################################
@@ -197,17 +174,8 @@ def index(req): # type: ignore
 
         _soap_versions = SOAP_CHANNEL_VERSIONS if connection == 'channel' else SOAP_VERSIONS
 
-        cache_list = []
-
-        for cache_type in [CACHE.TYPE.BUILTIN]:
-            service_name = 'zato.cache.{}.get-list'.format(cache_type)
-            response = req.zato.client.invoke(service_name, {'cluster_id': req.zato.cluster.id})
-
-            for item in sorted(response, key=itemgetter('name')):
-                cache_list.append({'id':item.id, 'name':'{}/{}'.format(CACHE_TYPE[cache_type], item.name)})
-
-        create_form = CreateForm(_security, cache_list, _soap_versions, req=req)
-        edit_form = EditForm(_security, cache_list, _soap_versions, prefix='edit', req=req)
+        create_form = CreateForm(_security, _soap_versions, req=req)
+        edit_form = EditForm(_security, _soap_versions, prefix='edit', req=req)
 
         if connection == 'outgoing':
             create_form.fields['url_path'].required = False
@@ -270,16 +238,6 @@ def index(req): # type: ignore
                 http_soap.url_params_pri = item.url_params_pri
                 http_soap.params_pri = item.params_pri
                 http_soap.content_encoding = item.content_encoding
-
-                if item.cache_id:
-                    cache_name = '{}/{}'.format(CACHE_TYPE[item.cache_type], item.cache_name)
-                else:
-                    cache_name = None
-
-                http_soap.cache_id = item.cache_id
-                http_soap.cache_name = cache_name
-                http_soap.cache_type = item.cache_type
-                http_soap.cache_expiry = item.cache_expiry
 
                 match_slash = item.get('match_slash')
                 if match_slash == '':

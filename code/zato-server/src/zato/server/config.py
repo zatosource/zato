@@ -297,7 +297,6 @@ class ConfigStore:
         self.generic_connection = None   # type: ConfigDict
         self.service = None   # type: ConfigDict
         self.search_es = None   # type: ConfigDict
-        self.cache_builtin = None   # type: ConfigDict
 
         # Local on-disk configuraion repository
         self.repo_location = None # type: str

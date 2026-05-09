@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_security_select, add_select, add_services, \
+from zato.admin.web.forms import add_security_select, add_services, \
     SearchForm as _ChooseClusterForm, DataFormatForm
 from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP, HTTP_SOAP_SERIALIZATION_TYPE, \
      MISC, PARAMS_PRIORITY, SIMPLE_IO, SOAP_VERSIONS, URL_PARAMS_PRIORITY
@@ -58,8 +58,6 @@ class CreateForm(DataFormatForm):
     content_type = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
-    cache_id = forms.ChoiceField(widget=forms.Select())
-    cache_expiry = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial=0)
     content_encoding = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     data_formats_allowed = SIMPLE_IO.HTTP_SOAP_FORMAT
     http_accept = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=HTTP_SOAP.ACCEPT.ANY)
@@ -67,11 +65,10 @@ class CreateForm(DataFormatForm):
 
     data_encoding = forms.CharField(widget=forms.HiddenInput())
 
-    def __init__(self, security_list=None, cache_list=None, soap_versions=SOAP_VERSIONS,
+    def __init__(self, security_list=None, soap_versions=SOAP_VERSIONS,
             prefix=None, post_data=None, req=None):
 
         security_list = security_list or []
-        cache_list = cache_list or []
 
         super(CreateForm, self).__init__(post_data, prefix=prefix)
 
@@ -99,7 +96,6 @@ class CreateForm(DataFormatForm):
         add_security_select(self, security_list)
 
         add_services(self, req)
-        add_select(self, 'cache_id', cache_list)
 
 # ################################################################################################################################
 # ################################################################################################################################

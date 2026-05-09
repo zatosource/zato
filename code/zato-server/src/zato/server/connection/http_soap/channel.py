@@ -14,14 +14,10 @@ import struct
 from datetime import datetime as _datetime_class, timedelta as _timedelta, timezone as _timezone
 from email.utils import format_datetime as _format_datetime
 from gzip import GzipFile
-from hashlib import sha256
 from http.client import INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, TOO_MANY_REQUESTS
 from io import StringIO
 from traceback import format_exc
 from typing import NamedTuple
-
-# regex
-from regex import compile as regex_compile
 
 # Zato
 from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HTTP_SOAP, MISC, SEC_DEF_TYPE, SIMPLE_IO, \
@@ -63,8 +59,6 @@ if 0:
 logger = logging.getLogger('zato_rest')
 _logger_is_enabled_for = logger.isEnabledFor
 _logging_info = logging.INFO
-split_re = regex_compile('........?').findall # type: ignore
-
 # ################################################################################################################################
 
 _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
@@ -91,7 +85,6 @@ def _datetime_utcnow():
     return _datetime_class.now(_utc)
 _content_type_json = CONTENT_TYPE['JSON']
 _content_type_sse = 'text/event-stream'
-_streaming_flag = 'zato.mcp.is_streaming'
 _bad_request_types = (BadRequest, ModelValidationError, BackendInvocationError)
 _default_admin_channel = MISC.DefaultAdminInvokeChannel
 
@@ -168,36 +161,6 @@ def get_client_error_wrapper(transport:'str', data_format:'str') -> 'callable_':
     except KeyError:
         # Any KeyError must be caught by the caller
         return client_error_wrapper[data_format]
-
-# ################################################################################################################################
-
-class _CachedResponse:
-    """ A wrapper for responses served from caches.
-    """
-    __slots__ = ('payload', 'content_type', 'headers', 'status_code')
-
-    def __init__(self, payload:'any_', content_type:'str', headers:'stranydict', status_code:'int') -> 'None':
-        self.payload = payload
-        self.content_type = content_type
-        self.headers = headers
-        self.status_code = status_code
-
-# ################################################################################################################################
-
-class _HashCtx:
-    """ Encapsulates information needed to compute a hash value of an incoming request.
-    """
-    def __init__(
-        self,
-        raw_request:'str',
-        channel_item:'any_',
-        channel_params:'stranydict',
-        wsgi_environ:'stranydict'
-    ) -> 'None':
-        self.raw_request = raw_request
-        self.channel_item = channel_item
-        self.channel_params = channel_params
-        self.wsgi_environ = wsgi_environ
 
 # ################################################################################################################################
 
@@ -943,61 +906,6 @@ class RequestHandler:
 
 # ################################################################################################################################
 
-    def get_response_from_cache(
-        self,
-        service:'Service',
-        raw_request:'bytes',
-        channel_item:'any_',
-        channel_params:'stranydict',
-        wsgi_environ:'stranydict'
-    ) -> 'anytuple':
-        """ Returns a cached response for incoming request or None if there is nothing cached for it.
-        By default, an incoming request's hash is calculated by sha256 over a concatenation of:
-          * WSGI REQUEST_METHOD   # E.g. GET or POST
-          * WSGI PATH_INFO        # E.g. /my/api
-          * sorted(zato.http.GET) # E.g. ?foo=123&bar=456 (query string aka channel_params)
-          * payload bytes         # E.g. '{"customer_id":"123"}' - a string object, before parsing
-        Note that query string is sorted which means that ?foo=123&bar=456 is equal to ?bar=456&foo=123,
-        that is, the order of parameters in query string does not matter.
-        """
-        if service.get_request_hash:# type: ignore
-            hash_value = service.get_request_hash(
-                _HashCtx(raw_request, channel_item, channel_params, wsgi_environ) # type: ignore
-                )
-        else:
-            query_string = str(sorted(channel_params.items()))
-            data = '%s%s%s%s' % (wsgi_environ['REQUEST_METHOD'], wsgi_environ['PATH_INFO'], query_string, raw_request)
-            hash_value = sha256(data.encode('utf8')).hexdigest()
-            hash_value = '-'.join(split_re(hash_value)) # type: ignore
-
-        # No matter if hash value is default or from service, always prefix it with channel's type and ID
-        cache_key = 'http-channel-%s-%s' % (channel_item['id'], hash_value)
-
-        # We have the key so now we can check if there is any matching response already stored in cache
-        response = self.server.get_from_cache(channel_item['cache_type'], channel_item['cache_name'], cache_key)
-
-        # If there is any response, we can now load into a format that our callers expect
-        if response:
-            response = loads(response)
-            response = _CachedResponse(response['payload'], response['content_type'], response['headers'],
-                response['status_code'])
-
-        return cache_key, response
-
-# ################################################################################################################################
-
-    def set_response_in_cache(self, channel_item:'any_', key:'str', response:'any_'):
-        """ Caches responses from this channel's invocation for as long as the cache is configured to keep it.
-        """
-        self.server.set_in_cache(channel_item['cache_type'], channel_item['cache_name'], key, dumps({
-            'payload': response.payload,
-            'content_type': response.content_type,
-            'headers': response.headers,
-            'status_code': response.status_code,
-        }))
-
-# ################################################################################################################################
-
     def handle(
         self,
         cid:'str',
@@ -1020,15 +928,6 @@ class RequestHandler:
             raise NotFound(cid, response_404.format(
                 path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid))
 
-        # This is needed for type checking to make sure the name is bound
-        cache_key = ''
-
-        # If caching is configured for this channel, we need to first check if there is no response already
-        if channel_item['cache_type']:
-            cache_key, response = self.get_response_from_cache(service, raw_request, channel_item, channel_params, wsgi_environ)
-            if response:
-                return response
-
         # Add any path params matched to WSGI environment so it can be easily accessible later on
         wsgi_environ['zato.http.path_params'] = url_match
 
@@ -1036,7 +935,7 @@ class RequestHandler:
         if channel_item['data_format'] == ModuleCtx.SIO_FORM_DATA:
             wsgi_environ['zato.request.payload'] = post_data
 
-        # No cache for this channel or no cached response, invoke the service then.
+        # Invoke the service ..
         response = service.update_handle(self._set_response_data, service, raw_request,
             CHANNEL.HTTP_SOAP, channel_item.data_format, channel_item.transport, self.server,
             cast_('ConfigDispatcher', config_manager.config_dispatcher),
@@ -1046,13 +945,7 @@ class RequestHandler:
             params_priority=channel_item.params_pri,
             zato_response_headers_container=zato_response_headers_container)
 
-        # Cache the response if needed (cache_key was already created on return from get_response_from_cache),
-        # .. but streaming responses must not be cached because they are iterators, not serializable.
-        if channel_item['cache_type']:
-            if not wsgi_environ.get(_streaming_flag):
-                self.set_response_in_cache(channel_item, cache_key, response)
-
-        # Having used the cache or not, we can return the response now
+        # .. and return it to the caller.
         return response
 
 # ################################################################################################################################

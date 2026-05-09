@@ -323,10 +323,7 @@ class BaseHTTPSOAPWrapper:
                 # .. populate headers ..
                 headers['Authorization'] = f'Bearer {result.info.token}'
 
-                # .. this is needed for later use ..
-                token_expires_in_sec = result.cache_expiry
                 token_is_cache_hit = result.is_cache_hit
-                token_cache_hits = result.cache_hits
 
                 # This is needed by request
                 auth = None
@@ -339,20 +336,18 @@ class BaseHTTPSOAPWrapper:
                 auth = getattr(self, 'requests_auth', None)
 
                 # .. we have no token to report about.
-                token_expires_in_sec = None
                 token_is_cache_hit = None
-                token_cache_hits = None
 
             # .. basic details about what we are sending what we are sending ..
-            msg = f'REST out → cid={cid}; {method} {address}; name:{self.config["name"]}; params={params}; len={len(data)}' + \
+            message = f'REST out -> cid={cid}; {method} {address}; name:{self.config["name"]}; params={params}; len={len(data)}' + \
                   f'; sec={sec_def_name} ({_sec_type})'
 
             # .. optionally, log details of the Bearer token ..
             if is_bearer_token:
-                msg += f'; expiry={token_expires_in_sec}; tok-from-cache={token_is_cache_hit}; tok-cache-hits={token_cache_hits}'
+                message += f'; tok-from-cache={token_is_cache_hit}'
 
             # .. log the information about our request ..
-            logger.info(msg)
+            logger.info(message)
 
             # .. extract retry parameters ..
             max_retries = kwargs.pop('max_retries', None) or 0

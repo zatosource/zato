@@ -81,7 +81,7 @@ if 0:
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, strdict, strbytes, \
         strlist, strorlistnone, strnone, strorlist, strset
     from zato.server.base.parallel.delivery import RedisPushDelivery
-    from zato.server.connection.cache import Cache, CacheAPI
+    from zato.server.connection.cache import CacheAPI
     from zato.server.service.store import ServiceStore
     from zato.simpleio import SIOServerConfig
     from zato.server.startup_callable import StartupCallableTool
@@ -1829,36 +1829,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 if ide_username and ide_password:
                     self.logger.info('Setting password for IDE user `%s`', ide_username)
                     self._set_ide_password(ide_username, ide_password)
-
-# ################################################################################################################################
-
-    def get_default_cache(self) -> 'CacheAPI':
-        """ Returns the server's default cache.
-        """
-        return cast_('CacheAPI', self.config_manager.cache_api.default)
-
-# ################################################################################################################################
-
-    def get_cache(self, cache_type:'str', cache_name:'str') -> 'Cache':
-        """ Returns a cache object of given type and name.
-        """
-        return self.config_manager.cache_api.get_cache(cache_type, cache_name)
-
-# ################################################################################################################################
-
-    def get_from_cache(self, cache_type:'str', cache_name:'str', key:'str') -> 'any_':
-        """ Returns a value from input cache by key, or None if there is no such key.
-        """
-        cache = self.config_manager.cache_api.get_cache(cache_type, cache_name)
-        return cache.get(key) # type: ignore
-
-# ################################################################################################################################
-
-    def set_in_cache(self, cache_type:'str', cache_name:'str', key:'str', value:'any_') -> 'any_':
-        """ Sets a value in cache for input parameters.
-        """
-        cache = self.config_manager.cache_api.get_cache(cache_type, cache_name)
-        return cache.set(key, value) # type: ignore
 
 # ################################################################################################################################
 

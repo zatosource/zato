@@ -138,9 +138,6 @@ ping_query=SELECT 1
 # ################################################################################################################################
 
 command_imports = (
-    ('cache_delete', 'zato.cli.cache.CacheDelete'),
-    ('cache_get', 'zato.cli.cache.CacheGet'),
-    ('cache_set', 'zato.cli.cache.CacheSet'),
     ('change_password', 'zato.cli.security.basic_auth.ChangePassword'),
     ('check_config', 'zato.cli.check_config.CheckConfig'),
     ('create_api_key', 'zato.cli.security.api_key.CreateDefinition'),
@@ -242,7 +239,6 @@ class ZatoCommand:
         NOT_A_ZATO_SERVER = 23
         NOT_A_ZATO_WEB_ADMIN = 24
         NOT_A_ZATO_SCHEDULER = 26
-        CACHE_KEY_NOT_FOUND = 27
         SERVER_TIMEOUT = 28
         PARAMETER_MISSING = 29
         PATH_NOT_A_FILE = 30

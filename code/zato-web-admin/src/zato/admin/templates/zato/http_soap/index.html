@@ -77,7 +77,6 @@
             // 7, 8
             {% if connection == 'channel' %}
                 '_service',
-                '_cache',
             {% endif %}
 
             // 9, 9b
@@ -105,9 +104,6 @@
 
             // 17, 18, 19
             {% if connection == 'channel' %}
-                'cache_id',
-                'cache_type',
-                'cache_expiry',
             {% endif %}
 
             // 20
@@ -249,9 +245,6 @@
 
                         <!-- 17, 18, 19 -->
                         {% if connection == 'channel' %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} cache_id {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} cache_type {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} cache_expiry {% endcomment %}
                         {% endif %}
 
                         <!-- 20, 21 -->
@@ -353,13 +346,6 @@
                         <!-- 7, 8 -->
                         {% if connection == 'channel' %}
                             <td>{% if item.service_name in internal_services %}{{ item.service_name }}{% else %}<a href="{% url "service-ide" "service" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a>{% endif %}</td>
-                            <td class='ignore'>
-                            {% if item.cache_id %}
-                                <a href="/zato/cache/{{ item.cache_type }}/?cluster={{ cluster_id }}&amp;highlight={{ item.cache_id }}">{{ item.cache_name }}</a>
-                            {% else %}
-                                <span class="form_hint">---</span>
-                            {% endif %}
-                            </td>
                         {% endif %}
 
                         <!-- 9, 9b -->
@@ -400,9 +386,6 @@
 
                         <!-- 17, 18, 19 -->
                         {% if connection == 'channel' %}
-                            <td class='ignore'>{{ item.cache_id }}</td>
-                            <td class='ignore'>{{ item.cache_type }}</td>
-                            <td class='ignore'>{{ item.cache_expiry }}</td>
                         {% endif %}
 
                         <!-- 20 -->
@@ -606,27 +589,6 @@
 
                         {% endif %}
 
-                        {% if False %}
-                        <tr>
-                            <td style="vertical-align:middle">
-                            Cache
-                            </td>
-                            <td>
-                            <a href="javascript:$.fn.zato.toggle_visibility('.cache-options-block')">Toggle options</a>
-                            </td>
-                        </tr>
-                        <tr class="cache-options-block hidden">
-                            <td class="to-ignore"></td>
-                            <td>{{ create_form.cache_id }}
-                            |
-                            Expiry
-                            {{ create_form.cache_expiry }}
-                            <span class="form_hint">(in minutes, 0=unlimited)</span>
-                            </td>
-                        </tr>
-
-                        {% endif %}
-
                         {% if connection == 'channel' %}
                         <tr>
                             <td style="vertical-align:middle">
@@ -701,7 +663,6 @@
                         </tr>
                     </table>
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-                    <input type="hidden" id="id_cache_type" name="cache_type" />
                     <input type="hidden" name="connection" value="{{ connection }}" />
                     <input type="hidden" name="transport" value="{{ transport }}" />
 
@@ -920,7 +881,6 @@
                     </table>
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
-                    <input type="hidden" id="id_edit-cache_type" name="edit-cache_type" />
                     <input type="hidden" name="connection" value="{{ connection }}" />
                     <input type="hidden" name="transport" value="{{ transport }}" />
 
