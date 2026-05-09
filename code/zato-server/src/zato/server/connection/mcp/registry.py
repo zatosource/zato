@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 
 # Zato
-from zato.server.connection.mcp.schema import sio_to_json_schema
+from zato.server.connection.mcp.schema import io_to_json_schema
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,7 +92,7 @@ class ToolRegistry:
                 description = ''
 
             description = description.strip()
-            input_schema = sio_to_json_schema(service_class)
+            input_schema = io_to_json_schema(service_class)
 
             # .. build the MCP tool definition ..
             tool:'stranydict' = {

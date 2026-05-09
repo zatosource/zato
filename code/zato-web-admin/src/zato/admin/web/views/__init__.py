@@ -261,12 +261,11 @@ class BaseView:
         self.user_message = None
         self.user_message_class = 'failure'
 
-    class SimpleIO:
-        input_required = []
-        input_optional = []
-        output_required = []
-        output_optional = []
-        output_repeated = False
+    input_required = []
+    input_optional = []
+    output_required = []
+    output_optional = []
+    output_repeated = False
 
     def get_service_name(self, *_args, **_kwargs):
         raise NotImplementedError('May be implemented by subclasses')
@@ -299,7 +298,7 @@ class BaseView:
         self.populate_initial_input_dict(initial_input_dict)
         self.input.update(initial_input_dict)
 
-        for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional, default_attrs):
+        for name in chain(self.input_required, self.input_optional, default_attrs):
             if name != 'cluster_id':
 
                 value = req.GET.getlist(name)
@@ -352,7 +351,7 @@ class Index(BaseView):
             logger.info('Value missing; self.cluster_id `%s`', self.cluster_id)
             return False
 
-        for elem in self.SimpleIO.input_required:
+        for elem in self.input_required:
             if elem == 'cluster_id':
                 continue
             if not elem in input_elems:
@@ -405,7 +404,7 @@ class Index(BaseView):
         """ Creates a new instance of the model class for each of the element received
         and fills it in with received attributes.
         """
-        names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
+        names = tuple(chain(self.output_required, self.output_optional))
 
         for msg_item in item_list or []:
 
@@ -436,7 +435,7 @@ class Index(BaseView):
         """ Creates a new instance of the model class for each of the element received
         and fills it in with received attributes.
         """
-        sio_names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
+        sio_names = tuple(chain(self.output_required, self.output_optional))
 
         for msg_item in (item_list or []):
 
@@ -579,7 +578,7 @@ class CreateEdit(BaseView):
 
             logger.info('CreateEdit step 4: building input_dict from SIO, initial_input_dict=%s', initial_input_dict)
 
-            for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
+            for name in chain(self.input_required, self.input_optional):
                 if name not in input_dict and name not in self.input_dict:
                     value = self.input.get(name)
                     value = self.pre_process_item(name, value)
@@ -590,8 +589,8 @@ class CreateEdit(BaseView):
             self.pre_process_input_dict(self.input_dict)
 
             logger.info('CreateEdit step 5: input_dict=%s', self.input_dict)
-            logger.info('CreateEdit step 5: SimpleIO.input_required=%s', self.SimpleIO.input_required)
-            logger.info('CreateEdit step 5: SimpleIO.input_optional=%s', self.SimpleIO.input_optional)
+            logger.info('CreateEdit step 5: input_required=%s', self.input_required)
+            logger.info('CreateEdit step 5: input_optional=%s', self.input_optional)
             logger.info('CreateEdit step 5: self.input=%s', self.input)
             logger.info('CreateEdit step 5: POST=%s', dict(self.req.POST))
 
@@ -607,8 +606,8 @@ class CreateEdit(BaseView):
 
                 return_data.update(initial_return_data)
 
-                sio_output = tuple(chain(self.SimpleIO.output_optional, self.SimpleIO.output_required))
-                output_names = sio_output if sio_output else response.data.keys()
+                io_output = tuple(chain(self.output_optional, self.output_required))
+                output_names = io_output if io_output else response.data.keys()
 
                 logger.info('CreateEdit step 8: output_names=%s', output_names)
 

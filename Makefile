@@ -1,6 +1,6 @@
-.PHONY: build install clean server-build scheduler-build sio-build common-core-build queue-bridge-build \
-	server-clean scheduler-clean sio-clean common-core-clean queue-bridge-clean \
-	server-install scheduler-install sio-install common-core-install queue-bridge-install \
+.PHONY: build install clean server-build scheduler-build io-build common-core-build queue-bridge-build \
+	server-clean scheduler-clean io-clean common-core-clean queue-bridge-clean \
+	server-install scheduler-install io-install common-core-install queue-bridge-install \
 	ruff qa-reqs-install unify \
 	update cron-update stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener
@@ -14,7 +14,7 @@ ZATO_RUST := $(CURDIR)/code/zato-rust
 
 default: build
 
-build: common-core-build server-build scheduler-build sio-build queue-bridge-build
+build: common-core-build server-build scheduler-build io-build queue-bridge-build
 
 server-build:
 	@echo ">>> Building server"
@@ -32,11 +32,11 @@ scheduler-build:
 scheduler:
 	$(CURDIR)/code/bin/_zato_scheduler
 
-sio-build:
-	@echo ">>> Building sio"
+io-build:
+	@echo ">>> Building I/O"
 	$(LOAD_CARGO_ENV) && \
 	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
-	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_sio/Cargo.toml
+	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_input_output/Cargo.toml
 
 common-core-build:
 	@echo ">>> Building common-core"
@@ -76,8 +76,8 @@ server-clean:
 scheduler-clean:
 	rm -rf $(ZATO_RUST)/zato_scheduler_core/target
 
-sio-clean:
-	rm -rf $(ZATO_RUST)/zato_sio/target
+io-clean:
+	rm -rf $(ZATO_RUST)/zato_input_output/target
 
 common-core-clean:
 	rm -rf $(ZATO_RUST)/zato_common_core/target
@@ -89,7 +89,7 @@ server-install: server-build
 
 scheduler-install: scheduler-build
 
-sio-install: sio-build
+io-install: io-build
 
 common-core-install: common-core-build
 

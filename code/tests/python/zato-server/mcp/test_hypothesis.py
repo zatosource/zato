@@ -427,7 +427,7 @@ class _MockServiceClass:
     """
     def __init__(self, name):
         self.__doc__ = 'Mock service: ' + name
-        self._sio = None
+        self._io = None
 
 class _MockServiceStore:
     """ A minimal mock of ServiceStore with name_to_impl_name and services dicts.

@@ -101,10 +101,6 @@ class ChangePassword(ChangePasswordBase):
     """
     password_required = False
 
-    class SimpleIO(ChangePasswordBase.SimpleIO):
-        request_elem = 'zato_email_imap_change_password_request'
-        response_elem = 'zato_email_imap_change_password_response'
-
     def handle(self):
         def _auth(instance, password):
             instance.password = password
@@ -116,11 +112,8 @@ class ChangePassword(ChangePasswordBase):
 class Ping(AdminService):
     """ Pings an IMAP connection to check its configuration.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_email_imap_ping_request'
-        response_elem = 'zato_email_imap_ping_response'
-        input_required = 'id'
-        output_optional = 'info'
+    input = 'id'
+    output = '-info'
 
     def handle(self):
 

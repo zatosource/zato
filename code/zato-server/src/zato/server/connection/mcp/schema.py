@@ -17,18 +17,17 @@ from typing import get_args, get_origin, Union
 from uuid import UUID as stdlib_UUID
 
 # Zato
-from zato.common.marshal_.simpleio import DataClassSimpleIO
-from zato.cy.simpleio import AsIs, Bool, CSV, CySimpleIO, Date, DateTime, Decimal, Dict, DictList, Elem, Float, \
-    Int, List, Secret, Text, UTC, UUID
+from zato.common.marshal_.simpleio import DataClassIO
+from zato.input_output import AsIs, Bool, CSV, Date, DateTime, Decimal, Dict, DictList, Elem, Float, \
+    Int, IOProcessor, List, Secret, Text, UTC, UUID
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.typing_ import any_, anydict, stranydict
-    from zato.cy.simpleio import SIODefinition
-
-    SIODefinition = SIODefinition
+    from zato.common.typing_ import stranydict as _stranydict
+    _stranydict = _stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,7 +37,7 @@ logger = getLogger('zato')
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Maps each CySimpleIO Elem subclass to the JSON Schema dict
+# Maps each I/O Elem subclass to the JSON Schema dict
 # that describes values of that type in an MCP tool's inputSchema.
 _elem_class_to_json_schema:'anydict' = {
     AsIs:     {'type': 'string'},
@@ -79,7 +78,7 @@ _python_type_to_json_schema:'anydict' = {
 # ################################################################################################################################
 
 def _get_elem_json_schema(elem:'Elem') -> 'stranydict':
-    """ Returns the JSON Schema fragment for a single CySimpleIO Elem instance.
+    """ Returns the JSON Schema fragment for a single I/O Elem instance.
     Looks up the elem's class in the mapping, uses default for unknown types.
     """
 
@@ -106,8 +105,8 @@ def _get_elem_json_schema(elem:'Elem') -> 'stranydict':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def cy_sio_to_schema(definition:'SIODefinition') -> 'stranydict':
-    """ Converts a CySimpleIO SIODefinition into a JSON Schema dict.
+def io_definition_to_schema(definition:'any_') -> 'stranydict':
+    """ Converts an I/O definition into a JSON Schema dict.
     Walks the required and optional input element lists,
     maps each Elem to its JSON Schema type, and builds the schema.
     """
@@ -275,22 +274,22 @@ def dataclass_model_to_schema(input_class:'type') -> 'stranydict':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def sio_to_json_schema(service_class:'any_') -> 'stranydict':
+def io_to_json_schema(service_class:'any_') -> 'stranydict':
     """ Top-level dispatcher. Takes a service class and returns a JSON Schema dict
     for its input, suitable for use as an MCP tool's inputSchema.
     """
-    sio = getattr(service_class, '_sio', None)
+    io = getattr(service_class, '_io', None)
 
-    if sio is None:
+    if io is None:
         out:'stranydict' = {'type': 'object'}
         return out
 
-    if isinstance(sio, DataClassSimpleIO):
-        out = dataclass_model_to_schema(sio.user_declaration.input)
+    if isinstance(io, DataClassIO):
+        out = dataclass_model_to_schema(io.user_declaration.input)
         return out
 
-    if isinstance(sio, CySimpleIO):
-        out = cy_sio_to_schema(sio.definition)
+    if isinstance(io, IOProcessor):
+        out = io_definition_to_schema(io.definition)
         return out
 
     out:'stranydict' = {'type': 'object'}

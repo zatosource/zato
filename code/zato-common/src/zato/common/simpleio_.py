@@ -6,8 +6,8 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Zato - Cython
-from zato.simpleio import BoolConfig, Elem, IntConfig, SecretConfig, SIOServerConfig
+# Zato
+from zato.input_output import BoolConfig, Elem, IntConfig, SecretConfig, SIOServerConfig
 
 # Python 2/3 compatibility
 from zato.common.py23_.past.builtins import basestring, unicode
@@ -16,10 +16,10 @@ from zato.common.py23_.past.builtins import basestring, unicode
 
 if 0:
     from zato.common.typing_ import any_
-    from zato.cy.simpleio import BoolConfig as PyBoolConfig
-    from zato.cy.simpleio import IntConfig as PyIntConfig
-    from zato.cy.simpleio import SecretConfig as PySecretConfig
-    from zato.cy.simpleio import SIOServerConfig as PySIOServerConfig
+    from zato.input_output import BoolConfig as PyBoolConfig
+    from zato.input_output import IntConfig as PyIntConfig
+    from zato.input_output import SecretConfig as PySecretConfig
+    from zato.input_output import SIOServerConfig as PySIOServerConfig
     PyBoolConfig = PyBoolConfig
     PyIntConfig  = PyIntConfig
     PySecretConfig = PySecretConfig

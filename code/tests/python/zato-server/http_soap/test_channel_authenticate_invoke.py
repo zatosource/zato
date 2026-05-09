@@ -170,7 +170,6 @@ def _make_dispatcher(
         server=server,
         url_data=url_data,
         request_handler=request_handler,
-        simple_io_config={},
         return_tracebacks=False,
         default_error_message='Internal server error',
         http_methods_allowed=['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
@@ -500,7 +499,7 @@ class InvokeServiceTestCase(unittest.TestCase):
 
         ctx.mock_handle.assert_called_once_with(
             _test_cid, '/test/path', channel_item, wsgi_environ,
-            b'payload', worker_store, ctx.dispatcher.simple_io_config,
+            b'payload', worker_store,
             {'key': 'val'}, meta.path_info, {'param1': 'value1'}, headers_container)
 
 # ################################################################################################################################

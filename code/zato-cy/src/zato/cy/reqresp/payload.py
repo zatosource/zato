@@ -18,8 +18,8 @@ import cython as cy
 # Zato
 from zato.common.api import DATA_FORMAT
 
-# Zato - Cython
-from zato.simpleio import CySimpleIO
+# Zato
+from zato.input_output import IOProcessor
 
 # ################################################################################################################################
 
@@ -40,10 +40,10 @@ _not_given:object = object()
 # ################################################################################################################################
 
 @cy.cclass
-class SimpleIOPayload:
-    """ Represents a payload, i.e. individual response elements, set via SimpleIO.
+class IOPayload:
+    """ Represents a payload, i.e. individual response elements, set via I/O declaration.
     """
-    sio = cy.declare(cy.object, visibility='public')              # type: CySimpleIO
+    io = cy.declare(cy.object, visibility='public')              # type: IOProcessor
     all_output_elem_names = cy.declare(list, visibility='public') # type: list
     output_repeated = cy.declare(cy.bint, visibility='public')    # type: bool
 
@@ -59,10 +59,10 @@ class SimpleIOPayload:
 
 # ################################################################################################################################
 
-    def __cinit__(self, sio:CySimpleIO, all_output_elem_names:list, cid, data_format):
-        self.sio = sio
+    def __cinit__(self, io:IOProcessor, all_output_elem_names:list, cid, data_format):
+        self.io = io
         self.all_output_elem_names = all_output_elem_names
-        self.output_repeated = self.sio.definition.output_repeated
+        self.output_repeated = self.io.definition.output_repeated
         self.cid = cid
         self.data_format = data_format
         self.user_attrs_dict = {}
@@ -95,7 +95,7 @@ class SimpleIOPayload:
             return self.user_attrs_dict[key]
         except KeyError:
             raise KeyError('{}; No such key `{}` among `{}` ({})'.format(
-                self.sio.service_class, key, self.user_attrs_dict, hex(id(self))))
+                self.io.service_class, key, self.user_attrs_dict, hex(id(self))))
 
     def __getitem__(self, key):
         return self.__getattr__(key)
@@ -227,18 +227,18 @@ class SimpleIOPayload:
             search = self.zato_meta.get('search')
 
             if search:
-                output = self.sio.get_output(value, self.data_format, False)
+                output = self.io.get_output(value, self.data_format, False)
                 output['_meta'] = search
-                result = self.sio.serialise(output, self.data_format)
+                result = self.io.serialise(output, self.data_format)
                 return result
 
             # .. otherwise, with no search metadata provided,
             # we can data, serialised or not, immediately.
-            result = self.sio.get_output(value, self.data_format) if serialize else value
+            result = self.io.get_output(value, self.data_format) if serialize else value
             return result
 
         else:
-            out = self.sio.get_output(value, self.data_format) if serialize else value
+            out = self.io.get_output(value, self.data_format) if serialize else value
             return out
 
     def append(self, value):

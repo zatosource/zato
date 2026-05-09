@@ -319,7 +319,7 @@ class ConfigStore:
         # ODB
         self.odb_data = Bunch()
 
-        # SimpleIO
+        # I/O
         self.simple_io = None # type: stranydict
 
         # Services

@@ -6,7 +6,7 @@ use crate::compat::{Elem, Bool, Int, Secret, Text, AsIs, Float, CSV, Date, DateT
 /// Shorthand for a heap-allocated Python object reference.
 type PyObject = Py<PyAny>;
 
-/// Holds parsed metadata about a single SIO element - its name, inferred
+/// Holds parsed metadata about a single I/O element - its name, inferred
 /// or explicit type, and whether the element is required on input/output.
 #[derive(Clone)]
 pub struct ElemInfo {
@@ -20,11 +20,11 @@ pub struct ElemInfo {
     pub is_required: bool,
 }
 
-/// Processes SIO declarations on Zato service classes, parsing input/output
+/// Processes I/O declarations on Zato service classes, parsing input/output
 /// element definitions and handling type coercion between Python and the
 /// wire format during request/response processing.
 #[pyclass]
-pub struct SIOProcessor {
+pub struct IOProcessor {
     /// Parsed input element descriptors for the attached service.
     input_elems: Vec<ElemInfo>,
 
@@ -48,10 +48,10 @@ pub struct SIOProcessor {
     pub service_class: Option<PyObject>,
 }
 
-impl SIOProcessor {
+impl IOProcessor {
 
     /// Resolves the `ElemType` for a bound Python object by checking whether
-    /// it is an instance of one of the known SIO element classes.
+    /// it is an instance of one of the known I/O element classes.
     fn elem_type_from_instance(item: &Bound<'_, PyAny>) -> Option<ElemType> {
         if item.is_instance_of::<Bool>() { return Some(ElemType::Bool); }
         if item.is_instance_of::<Int>() { return Some(ElemType::Int); }
@@ -75,7 +75,7 @@ impl SIOProcessor {
         None
     }
 
-    /// Parses a single SIO element from either an Elem instance or a bare
+    /// Parses a single I/O element from either an Elem instance or a bare
     /// string name, extracting the element name, type, and required flag.
     fn parse_single_elem(item: &Bound<'_, PyAny>) -> PyResult<ElemInfo> {
         if let Some(elem_type) = Self::elem_type_from_instance(item) {
@@ -86,7 +86,7 @@ impl SIOProcessor {
 
         let name_str: String = item.extract().map_err(|_extract_err| {
             pyo3::exceptions::PyTypeError::new_err(
-                format!("SIO element must be a string or Elem instance, got {}", item.get_type())
+                format!("I/O element must be a string or Elem instance, got {}", item.get_type())
             )
         })?;
 
@@ -126,9 +126,9 @@ impl SIOProcessor {
 }
 
 #[pymethods]
-impl SIOProcessor {
+impl IOProcessor {
 
-    /// Creates a new, empty SIO processor with no declared elements.
+    /// Creates a new, empty I/O processor with no declared elements.
     #[new]
     const fn new() -> Self {
         Self {
@@ -142,14 +142,14 @@ impl SIOProcessor {
     }
 
     /// Inspects a Python service class for `input`/`output` attributes, builds
-    /// element metadata, and attaches the resulting processor as `_sio` on the class.
+    /// element metadata, and attaches the resulting processor as `_io` on the class.
     #[staticmethod]
-    fn attach_sio(py: Python<'_>, _server: &Bound<'_, PyAny>, _server_config: &Bound<'_, PyAny>, class: &Bound<'_, PyAny>) -> PyResult<()> {
-        let sio_input = class.getattr("input").ok();
-        let sio_output = class.getattr("output").ok();
+    fn attach_io(py: Python<'_>, _server: &Bound<'_, PyAny>, _server_config: &Bound<'_, PyAny>, class: &Bound<'_, PyAny>) -> PyResult<()> {
+        let io_input = class.getattr("input").ok();
+        let io_output = class.getattr("output").ok();
 
-        let has_input = sio_input.as_ref().is_some_and(|val| !val.is_none());
-        let has_output = sio_output.as_ref().is_some_and(|val| !val.is_none());
+        let has_input = io_input.as_ref().is_some_and(|val| !val.is_none());
+        let has_output = io_output.as_ref().is_some_and(|val| !val.is_none());
 
         if !has_input && !has_output {
             return Ok(());
@@ -160,7 +160,7 @@ impl SIOProcessor {
         proc.has_output_declared = has_output;
         proc.service_class = Some(class.clone().unbind());
 
-        if let Some(input) = sio_input.filter(|val| !val.is_none()) {
+        if let Some(input) = io_input.filter(|val| !val.is_none()) {
             proc.has_input_declared = true;
             if input.getattr("__dataclass_fields__").is_ok() {
                 proc.is_dataclass = true;
@@ -169,7 +169,7 @@ impl SIOProcessor {
             }
         }
 
-        if let Some(output) = sio_output.filter(|val| !val.is_none()) {
+        if let Some(output) = io_output.filter(|val| !val.is_none()) {
             proc.has_output_declared = true;
             if output.getattr("__dataclass_fields__").is_ok() {
                 proc.is_dataclass = true;
@@ -179,7 +179,7 @@ impl SIOProcessor {
         }
 
         let proc_obj = Py::new(py, proc)?;
-        class.setattr("_sio", &proc_obj)?;
+        class.setattr("_io", &proc_obj)?;
         Ok(())
     }
 
@@ -373,7 +373,7 @@ impl SIOProcessor {
     }
 }
 
-impl SIOProcessor {
+impl IOProcessor {
     /// Coerces a Python value to the target element type (int, bool, or pass-through).
     fn coerce_value(py: Python<'_>, value: &Bound<'_, PyAny>, elem_type: ElemType) -> PyResult<PyObject> {
         if value.is_none() {

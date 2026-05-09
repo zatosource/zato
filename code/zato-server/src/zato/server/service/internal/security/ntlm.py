@@ -32,11 +32,8 @@ class GetList(AdminService):
     """
     _filter_by = NTLM.name,
 
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_security_ntlm_get_list_request'
-        response_elem = 'zato_security_ntlm_get_list_response'
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'username')
+    input = 'cluster_id',
+    output = 'id', 'name', 'is_active', 'username'
 
     def get_data(self, session):
         return self._search(ntlm_list, session, self.request.input.cluster_id, False)
@@ -51,11 +48,8 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new NTLM definition.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_ntlm_create_request'
-        response_elem = 'zato_security_ntlm_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'username')
-        output_required = ('id', 'name')
+    input = 'cluster_id', 'name', 'is_active', 'username'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -103,11 +97,8 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an NTLM definition.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_ntlm_edit_request'
-        response_elem = 'zato_security_ntlm_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'username')
-        output_required = ('id', 'name')
+    input = 'id', 'cluster_id', 'name', 'is_active', 'username'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -155,10 +146,6 @@ class ChangePassword(ChangePasswordBase):
     """
     password_required = False
 
-    class SimpleIO(ChangePasswordBase.SimpleIO):
-        request_elem = 'zato_security_ntlm_change_password_request'
-        response_elem = 'zato_security_ntlm_change_password_response'
-
     def handle(self):
         def _auth(instance, password):
             instance.password = password
@@ -171,10 +158,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes an NTLM definition.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_ntlm_delete_request'
-        response_elem = 'zato_security_ntlm_delete_response'
-        input_required = ('id',)
+    input = 'id',
 
     def handle(self):
         with closing(self.odb.session()) as session:

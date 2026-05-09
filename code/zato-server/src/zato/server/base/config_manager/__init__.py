@@ -284,7 +284,6 @@ class ConfigManager(_ConfigManagerBase):
             server = self.server,
             url_data = url_data,
             request_handler = request_handler,
-            simple_io_config = self.config_store.simple_io,
             return_tracebacks = self.server.return_tracebacks,
             default_error_message = self.server.default_error_message,
             http_methods_allowed = self.server.http_methods_allowed
@@ -1322,7 +1321,7 @@ class ConfigManager(_ConfigManagerBase):
 
         response = service.update_handle(service.set_response_data, service, payload,
             channel, data_format, transport, self.server, self.config_dispatcher, self, cid,
-            self.config_store.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
+            job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
             environ=msg.get('environ'))
 
         if skip_response_elem:

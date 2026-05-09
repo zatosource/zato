@@ -156,7 +156,6 @@ def _make_dispatcher(
         server=server,
         url_data=url_data,
         request_handler=request_handler,
-        simple_io_config={},
         return_tracebacks=return_tracebacks,
         default_error_message=default_error_message,
         http_methods_allowed=http_methods_allowed if http_methods_allowed is not None else _default_http_methods_allowed,

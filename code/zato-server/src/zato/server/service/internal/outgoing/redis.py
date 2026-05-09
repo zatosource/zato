@@ -11,7 +11,7 @@ import os
 
 # Zato
 from zato.common.util.config import get_config_object, update_config_file
-from zato.server.service import AsIs, Bool, Int, SIOElem
+from zato.server.service import AsIs, Bool, Int, IOElem
 from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
@@ -47,12 +47,9 @@ def set_kvdb_config(server_config:'strdict', input_data:'Bunch', redis_sentinels
 
 class GetList(AdminService):
 
-    class SimpleIO:
-        input_optional = 'id', 'name'
-        output_optional = AsIs('id'), 'is_active', 'name', 'host', Int('port'), 'db', Bool('use_redis_sentinels'), \
-            AsIs('redis_sentinels'), 'redis_sentinels_master'
-        default_value = None
-        response_elem = None
+    input = '-id', '-name'
+    output = AsIs('-id'), '-is_active', '-name', '-host', Int('-port'), '-db', Bool('-use_redis_sentinels'), \
+        AsIs('-redis_sentinels'), '-redis_sentinels_master'
 
 # ################################################################################################################################
 
@@ -71,10 +68,11 @@ class GetList(AdminService):
         config = get_config_object(self.server.repo_location, 'server.conf')
         config = config['kvdb']
 
-        for elem in self.SimpleIO.output_optional:
+        for elem in self.output:
 
             # Extract the embedded name or use it as is
-            name = elem.name if isinstance(elem, SIOElem) else elem # type: ignore
+            name = elem.name if isinstance(elem, IOElem) else elem # type: ignore
+            name = name.lstrip('-')
 
             # These will not exist in server.conf
             if name in ('id', 'is_active', 'name'):
@@ -103,11 +101,9 @@ class GetList(AdminService):
 
 class Edit(AdminService):
 
-    class SimpleIO:
-        input_optional = AsIs('id'), 'name', Bool('use_redis_sentinels')
-        input_required = 'host', 'port', 'db', 'redis_sentinels', 'redis_sentinels_master'
-        output_required = 'id', 'name'
-        response_elem = None
+    input = 'host', 'port', 'db', 'redis_sentinels', 'redis_sentinels_master', \
+        AsIs('-id'), '-name', Bool('-use_redis_sentinels')
+    output = 'id', 'name'
 
     def handle(self) -> 'None':
 
@@ -146,9 +142,6 @@ class ChangePassword(ChangePasswordBase):
     """ Changes the password of a Redis connection
     """
     password_required = False
-
-    class SimpleIO(ChangePasswordBase.SimpleIO):
-        pass
 
     def handle(self):
 

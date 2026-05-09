@@ -50,13 +50,9 @@ class GetList(AdminService):
 class Edit(AdminService):
     """ Updates a server.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_server_edit_request'
-        response_elem = 'zato_server_edit_response'
-        input_required = ('id', 'name')
-        output_required = ('id', 'cluster_id', 'name', 'host')
-        output_optional = ('bind_host', 'bind_port', 'last_join_status',
-            'last_join_mod_date', 'last_join_mod_by', 'up_status', 'up_mod_date')
+    input = 'id', 'name'
+    output = 'id', 'cluster_id', 'name', 'host', '-bind_host', '-bind_port', '-last_join_status', \
+        '-last_join_mod_date', '-last_join_mod_by', '-up_status', '-up_mod_date'
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -94,13 +90,9 @@ class Edit(AdminService):
 class GetByID(AdminService):
     """ Returns a particular server
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_server_get_by_id_request'
-        response_elem = 'zato_server_get_by_id_response'
-        input_required = ('id',)
-        output_required = ('id', 'cluster_id', 'name', 'host')
-        output_optional = ('bind_host', 'bind_port', 'last_join_status',
-            'last_join_mod_date', 'last_join_mod_by', 'up_status', 'up_mod_date')
+    input = 'id',
+    output = 'id', 'cluster_id', 'name', 'host', '-bind_host', '-bind_port', '-last_join_status', \
+        '-last_join_mod_date', '-last_join_mod_by', '-up_status', '-up_mod_date'
 
     def get_data(self, session):
         return session.query(Server).\
@@ -121,10 +113,7 @@ class GetByID(AdminService):
 class Delete(AdminService):
     """ Deletes a server's definition from ODB (not from the filesystem).
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_server_delete_request'
-        response_elem = 'zato_server_delete_response'
-        input_required = ('id',)
+    input = 'id',
 
     def handle(self):
         with closing(self.odb.session()) as session:

@@ -139,10 +139,7 @@ class _CreateEdit(_BaseService):
     is_create: 'bool'
     is_edit:   'bool'
 
-    class SimpleIO(_CreateEditSIO):
-        output_required = ('id', 'name')
-        default_value = None
-        response_elem = None
+    output = 'id', 'name'
 
 # ################################################################################################################################
 
@@ -171,7 +168,7 @@ class _CreateEdit(_BaseService):
             if key not in data:
                 if key not in skip_simple_type:
                     value = parse_simple_type(value)
-                    value = self._sio.eval_(key, value, self.server.encrypt)
+                    value = self._io.eval_(key, value, self.server.encrypt)
 
             if key in extra_secret_keys:
                 if value is None:
@@ -325,9 +322,7 @@ class GetList(AdminService):
     """
     _filter_by = ModelGenericConn.name,
 
-    class SimpleIO(GetListAdminSIO):
-        input_required = ('cluster_id',)
-        input_optional = GetListAdminSIO.input_optional + ('type_',)
+    input = 'cluster_id', '-type_'
 
 # ################################################################################################################################
 
@@ -418,8 +413,6 @@ class ChangePassword(ChangePasswordBase):
     """
     password_required = False
 
-    class SimpleIO(ChangePasswordBase.SimpleIO):
-        response_elem = None
 
 # ################################################################################################################################
 
@@ -507,11 +500,8 @@ class ChangePassword(ChangePasswordBase):
 class Ping(_BaseService):
     """ Pings a generic connection.
     """
-    class SimpleIO(AdminSIO):
-        input_required = 'id'
-        output_required = 'info'
-        output_optional = 'is_success'
-        response_elem = None
+    input = 'id'
+    output = 'info', '-is_success'
 
     def handle(self) -> 'None':
         with closing(self.odb.session()) as session:
@@ -547,11 +537,8 @@ class Ping(_BaseService):
 class Invoke(AdminService):
     """ Invokes a generic connection by its name.
     """
-    class SimpleIO:
-        input_required = 'conn_type', 'conn_name'
-        input_optional = 'request_data'
-        output_optional = 'response_data'
-        response_elem = None
+    input = 'conn_type', 'conn_name', '-request_data'
+    output = '-response_data'
 
     def handle(self) -> 'None':
 

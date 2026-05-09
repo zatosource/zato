@@ -26,22 +26,14 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-output_required = 'id', 'name', 'is_active', 'sec_type'
-output_optional:'any_' = 'username', 'realm', 'password_type', Boolean('reject_empty_nonce_creat'), \
-    Boolean('reject_stale_tokens'), Integer('reject_expiry_limit'),  Integer('nonce_freshness_time'), 'proto_version', \
-        'sig_method', Integer('max_nonce_log')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class GetByID(AdminService):
     """ Returns a single security definition by its ID.
     """
-    class SimpleIO(GetListAdminSIO):
-        response_elem = None
-        input_required = 'cluster_id', 'id'
-        output_required = output_required
-        output_optional = output_optional
+    input = 'cluster_id', 'id'
+    output = 'id', 'name', 'is_active', 'sec_type', \
+        '-username', '-realm', '-password_type', Boolean('-reject_empty_nonce_creat'), \
+        Boolean('-reject_stale_tokens'), Integer('-reject_expiry_limit'), Integer('-nonce_freshness_time'), '-proto_version', \
+        '-sig_method', Integer('-max_nonce_log')
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -53,14 +45,11 @@ class GetByID(AdminService):
 class GetList(AdminService):
     """ Returns a list of all security definitions available.
     """
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_security_get_list_request'
-        response_elem = 'zato_security_get_list_response'
-        input_optional = 'cluster_id'
-        input_optional:'any_' = GetListAdminSIO.input_optional + (List('sec_type'), Boolean('needs_internal', default=True))
-        output_required = output_required
-        output_optional = output_optional
-        output_repeated = True
+    input = '-cluster_id', List('-sec_type'), Boolean('-needs_internal', default=True)
+    output = 'id', 'name', 'is_active', 'sec_type', \
+        '-username', '-realm', '-password_type', Boolean('-reject_empty_nonce_creat'), \
+        Boolean('-reject_stale_tokens'), Integer('-reject_expiry_limit'), Integer('-nonce_freshness_time'), '-proto_version', \
+        '-sig_method', Integer('-max_nonce_log')
 
     def handle(self):
 

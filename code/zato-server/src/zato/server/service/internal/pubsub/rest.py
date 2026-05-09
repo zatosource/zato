@@ -114,11 +114,8 @@ class Publish(PubSubRESTService):
     """
     name = 'pubsub.rest.publish'
 
-    class SimpleIO:
-        input_required = 'topic_name', AsIs('data')
-        input_optional = 'priority', 'expiration', AsIs('correl_id'), AsIs('in_reply_to'), AsIs('ext_client_id'), 'pub_time'
-        output_optional = AsIs('msg_id'), 'is_ok', 'cid', AsIs('status'), 'details'
-        skip_empty_keys = True
+    input = 'topic_name', AsIs('data'), '-priority', '-expiration', AsIs('-correl_id'), AsIs('-in_reply_to'), AsIs('-ext_client_id'), '-pub_time'
+    output = AsIs('-msg_id'), '-is_ok', '-cid', AsIs('-status'), '-details'
 
 # ################################################################################################################################
 

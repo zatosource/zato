@@ -31,7 +31,6 @@ def _make_dispatcher():
         server=server,
         url_data=url_data,
         request_handler=request_handler,
-        simple_io_config={},
         return_tracebacks=False,
         default_error_message='Internal error',
         http_methods_allowed=['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

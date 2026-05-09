@@ -52,14 +52,14 @@ from zato.server.pattern.api import ParallelExec
 from zato.server.service.reqresp import AMQPRequestData, Cloud, Outgoing, Request
 
 # Zato - Cython
-from zato.cy.reqresp.payload import SimpleIOPayload
+from zato.cy.reqresp.payload import IOPayload
 from zato.cy.reqresp.response import Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
 from zato.common.ext.dataclasses import dataclass
 from zato.common.marshal_.api import Model, ModelCtx
 from zato.server.connection.cloud.microsoft_dataverse import DataverseClient
-from zato.simpleio import AsIs, CSV, Bool, Date, DateTime, Dict, Decimal, DictList, Elem as SIOElem, Float, Int, List, \
+from zato.input_output import AsIs, CSV, Bool, Date, DateTime, Dict, Decimal, DictList, Elem as IOElem, Float, Int, List, \
      Opaque, Text, UTC, UUID
 
 # For pyflakes
@@ -101,7 +101,7 @@ if 0:
     from zato.server.base.config_manager import ConfigManager
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
-    from zato.simpleio import CySimpleIO
+    from zato.input_output import IOProcessor
     anydictnone = anydictnone
     callnone = callnone
     dictnone = dictnone
@@ -112,7 +112,7 @@ if 0:
     callable_ = callable_
     ConfigDict = ConfigDict
     ConfigStore = ConfigStore
-    CySimpleIO = CySimpleIO # type: ignore
+    IOProcessor = IOProcessor # type: ignore
     FTPStore = FTPStore
     ODBManager = ODBManager
     ParallelServer = ParallelServer
@@ -135,7 +135,7 @@ NOT_GIVEN = 'ZATO_NOT_GIVEN'
 # Backward compatibility
 Boolean = Bool
 Integer = Int
-ForceType = SIOElem
+ForceType = IOElem
 ListOfDicts = DictList
 Nested = Opaque
 Unicode = Text
@@ -375,10 +375,10 @@ class Service:
     _before_job_hooks = []
     _after_job_hooks = []
 
-    has_sio:'bool'
+    has_io:'bool'
 
-    # Cython based SimpleIO definition created by service store when the class is deployed
-    _sio:'CySimpleIO'
+    # I/O definition created by service store when the class is deployed
+    _io:'IOProcessor'
 
     # Crypto operations
     crypto:'ServerCryptoManager'
@@ -565,10 +565,10 @@ class Service:
         if may_have_wsgi_environ:
             self.request.http.init(self.wsgi_environ)
 
-        # self.has_sio attribute is set by ServiceStore during deployment
-        if self.has_sio:
-            self.request.init(True, self.cid, self._sio, self.data_format, self.transport, self.wsgi_environ, self.server.encrypt)
-            self.response.init(self.cid, self._sio, self.data_format)
+        # self.has_io attribute is set by ServiceStore during deployment
+        if self.has_io:
+            self.request.init(True, self.cid, self._io, self.data_format, self.transport, self.wsgi_environ, self.server.encrypt)
+            self.response.init(self.cid, self._io, self.data_format)
 
         # Cache is always enabled
         self.cache = self._config_manager.cache_api
@@ -674,7 +674,6 @@ class Service:
         config_dispatcher, # type: ConfigDispatcher | None
         config_manager,  # type: ConfigManager
         cid,           # type: str
-        simple_io_config, # type: anydict
         *args:'any_',
         **kwargs:'any_'
     ) -> 'any_':
@@ -704,7 +703,7 @@ class Service:
         params_priority = kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT)
 
         service.update(service, channel, server, config_dispatcher, # type: ignore
-            config_manager, cid, payload, raw_request, transport, simple_io_config, data_format, wsgi_environ,
+            config_manager, cid, payload, raw_request, transport, data_format, wsgi_environ,
             job_type=job_type, channel_params=channel_params,
             merge_channel_params=merge_channel_params, params_priority=params_priority,
             in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'),
@@ -771,7 +770,7 @@ class Service:
                             func = parallel.on_call_finished
                             exc_data = exc_formatted
 
-                        if isinstance(service.response.payload, SimpleIOPayload):
+                        if isinstance(service.response.payload, IOPayload):
                             payload = service.response.payload.getvalue()
                         else:
                             payload = service.response.payload
@@ -1155,7 +1154,6 @@ class Service:
         payload,               # type: any_
         raw_request,           # type: any_
         transport='',          # type: str
-        simple_io_config=None, # type: anydictnone
         data_format='',        # type: str
         wsgi_environ=None,     # type: dictnone
         job_type='',           # type: str

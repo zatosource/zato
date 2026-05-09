@@ -102,7 +102,7 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_
     elems = attrs.get(elems_name) or []
     columns = []
 
-    # Generate elems out of SQLAlchemy tables, including calls to SIOElem's subclasses, such as Bool or Int.
+    # Generate elems out of SQLAlchemy tables, including calls to IOElem subclasses, such as Bool or Int.
 
     if elems and isclass(elems) and issubclass(elems, Base):
 
@@ -115,7 +115,7 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_
             if column.name == 'cluster_id' and is_output:
                 continue
 
-            # We already have cluster_id and don't need a SIOElem'd one.
+            # We already have cluster_id and don't need an IOElem one.
             if column.name == 'cluster_id' and has_cluster_id:
                 continue
 
@@ -179,7 +179,7 @@ def update_attrs(cls, name, attrs):
     attrs.create_edit_force_rewrite = getattr(mod, 'create_edit_force_rewrite', set())
     attrs.check_existing_one = getattr(mod, 'check_existing_one', True)
     attrs.request_as_is = getattr(mod, 'request_as_is', [])
-    attrs.sio_default_value = getattr(mod, 'sio_default_value', None)
+    attrs.io_default_value = getattr(mod, 'io_default_value', None)
     attrs.get_list_docs = getattr(mod, 'get_list_docs', None)
     attrs.delete_require_instance = getattr(mod, 'delete_require_instance', True)
     attrs.skip_create_integrity_error = getattr(mod, 'skip_create_integrity_error', False)
@@ -244,7 +244,7 @@ class AdminServiceMeta(type):
             else:
                 input_required = ['cluster_id']
 
-        sio = {
+        io_def = {
             'input_required': input_required,
             'input_optional': input_optional,
             'output_required': output_required if output_required is not None else ['id', 'name'],
@@ -253,15 +253,15 @@ class AdminServiceMeta(type):
         class SimpleIO(_BaseClass):
             request_elem = 'zato_{}_{}_request'.format(attrs.elem, req_resp[name])
             response_elem = 'zato_{}_{}_response'.format(attrs.elem, req_resp[name])
-            default_value = attrs['sio_default_value']
-            input_required = sio['input_required'] + attrs['input_required_extra']
-            input_optional = sio['input_optional'] + attrs['input_optional_extra']
+            default_value = attrs['io_default_value']
+            input_required = io_def['input_required'] + attrs['input_required_extra']
+            input_optional = io_def['input_optional'] + attrs['input_optional_extra']
 
             for param in attrs['skip_input_params']:
                 if param in input_required:
                     input_required.remove(param)
 
-            output_required = sio['output_required'] + attrs['output_required_extra']
+            output_required = io_def['output_required'] + attrs['output_required_extra']
             output_optional = attrs['output_optional_extra']
 
         for io in 'input', 'output':

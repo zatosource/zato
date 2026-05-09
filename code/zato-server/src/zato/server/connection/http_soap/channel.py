@@ -33,7 +33,7 @@ from zato.common.util.api import as_bool, utcnow
 from zato.common.util.auth import enrich_with_sec_data, extract_basic_auth
 from zato.common.util.exception import pretty_format_exception
 from zato.common.util.http_ import get_form_data as util_get_form_data, QueryDict
-from zato.cy.reqresp.payload import SimpleIOPayload as CySimpleIOPayload
+from zato.cy.reqresp.payload import IOPayload
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, NotFound, Unauthorized
 from zato.server.groups.ctx import SecurityGroupsCtx
 from zato.server.service.internal import AdminService
@@ -114,8 +114,8 @@ class ModuleCtx:
     Channel = CHANNEL.HTTP_SOAP
     No_URL_Match = (None, False)
     Exception_Separator = '*' * 80
-    SIO_JSON = SIMPLE_IO.FORMAT.JSON
-    SIO_FORM_DATA = SIMPLE_IO.FORMAT.FORM_DATA
+    IO_JSON = SIMPLE_IO.FORMAT.JSON
+    IO_FORM_DATA = SIMPLE_IO.FORMAT.FORM_DATA
     Dict_Like = {DATA_FORMAT.JSON, DATA_FORMAT.DICT, DATA_FORMAT.FORM_DATA}
     Form_Data_Content_Type = ('application/x-www-form-urlencoded', 'multipart/form-data')
 
@@ -197,7 +197,6 @@ class RequestDispatcher:
         server:'ParallelServer',
         url_data:'URLData',
         request_handler:'RequestHandler',
-        simple_io_config:'stranydict',
         return_tracebacks:'bool',
         default_error_message:'str',
         http_methods_allowed:'strlist'
@@ -207,7 +206,6 @@ class RequestDispatcher:
         self.url_data = url_data
 
         self.request_handler = request_handler
-        self.simple_io_config = simple_io_config
         self.return_tracebacks = return_tracebacks
 
         self.default_error_message = default_error_message
@@ -262,7 +260,7 @@ class RequestDispatcher:
         """
         post_data:'anydict' = {}
 
-        if channel_item['data_format'] == ModuleCtx.SIO_FORM_DATA:
+        if channel_item['data_format'] == ModuleCtx.IO_FORM_DATA:
             if wsgi_environ.get('CONTENT_TYPE', '').startswith(ModuleCtx.Form_Data_Content_Type):
                 post_data = util_get_form_data(wsgi_environ)
                 wsgi_environ['zato.oauth.post_data'] = post_data
@@ -351,7 +349,7 @@ class RequestDispatcher:
             channel_params = {}
 
         out = self.request_handler.handle(cid, url_match, channel_item, wsgi_environ,
-            payload, config_manager, self.simple_io_config, post_data, meta.path_info, channel_params,
+            payload, config_manager, post_data, meta.path_info, channel_params,
             zato_response_headers_container)
 
         return out
@@ -359,7 +357,7 @@ class RequestDispatcher:
 # ################################################################################################################################
 
     def _format_response(self, channel_item:'anydict', wsgi_environ:'stranydict', response:'any_') -> 'any_':
-        """ Sets response headers, applies gzip if needed, and unwraps CySimpleIO.
+        """ Sets response headers, applies gzip if needed, and unwraps I/O payload.
         """
         wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
         wsgi_environ['zato.http.response.headers'].update(response.headers)
@@ -380,7 +378,7 @@ class RequestDispatcher:
 
             wsgi_environ['zato.http.response.headers']['Content-Encoding'] = 'gzip'
 
-        if isinstance(response.payload, CySimpleIOPayload):
+        if isinstance(response.payload, IOPayload):
             out = response.payload.getvalue()
             if isinstance(out, dict):
                 if 'response' in out:
@@ -914,7 +912,6 @@ class RequestHandler:
         wsgi_environ:'stranydict',
         raw_request:'bytes',
         config_manager:'ConfigManager',
-        simple_io_config:'stranydict',
         post_data:'dictnone',
         path_info:'str',
         channel_params:'stranydict',
@@ -932,14 +929,14 @@ class RequestHandler:
         wsgi_environ['zato.http.path_params'] = url_match
 
         # If this is a POST / form submission then it becomes our payload
-        if channel_item['data_format'] == ModuleCtx.SIO_FORM_DATA:
+        if channel_item['data_format'] == ModuleCtx.IO_FORM_DATA:
             wsgi_environ['zato.request.payload'] = post_data
 
         # Invoke the service ..
         response = service.update_handle(self._set_response_data, service, raw_request,
             CHANNEL.HTTP_SOAP, channel_item.data_format, channel_item.transport, self.server,
             cast_('ConfigDispatcher', config_manager.config_dispatcher),
-            config_manager, cid, simple_io_config, wsgi_environ=wsgi_environ,
+            config_manager, cid, wsgi_environ=wsgi_environ,
             url_match=url_match, channel_item=channel_item, channel_params=channel_params,
             merge_channel_params=channel_item.merge_url_params_req,
             params_priority=channel_item.params_pri,
@@ -975,7 +972,7 @@ class RequestHandler:
         """
 
         if self._needs_admin_response(service_instance):
-            if data_format in {ModuleCtx.SIO_JSON, ModuleCtx.SIO_FORM_DATA}:
+            if data_format in {ModuleCtx.IO_JSON, ModuleCtx.IO_FORM_DATA}:
                 zato_env = {'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details}}
                 is_not_str = not isinstance(response.payload, str)
                 if is_not_str and response.payload:

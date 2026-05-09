@@ -25,8 +25,8 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import make_repr
 from zato.common.util.http_ import get_form_data as util_get_form_data
 
-# Zato - Cython
-from zato.simpleio import ServiceInput
+# Zato
+from zato.input_output import ServiceInput
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,8 +51,8 @@ if 0:
     from zato.server.connection.search import SearchAPI
     from zato.server.service import AMQPFacade, Service
 
-    # Zato - Cython
-    from zato.simpleio import CySimpleIO
+    # Zato
+    from zato.input_output import IOProcessor
 
     callable_ = callable_
     strnone = strnone
@@ -60,7 +60,7 @@ if 0:
     Arrow = Arrow
     ConfigDict = ConfigDict
     ConfigStore = ConfigStore
-    CySimpleIO = CySimpleIO
+    IOProcessor = IOProcessor
     EMailAPI = EMailAPI
     FTPStore = FTPStore
     KombuAMQPMessage = KombuAMQPMessage
@@ -157,7 +157,6 @@ class Request:
     def __init__(
         self,
         service, # type: Service
-        simple_io_config=None, # type: any_
         data_format=None, # type: strnone
         transport=None    # type: strnone
     ) -> 'None':
@@ -182,9 +181,9 @@ class Request:
 
     def init(
         self,
-        is_sio,       # type: bool
+        is_io,       # type: bool
         cid,          # type: str
-        sio,          # type: CySimpleIO
+        io_processor,          # type: IOProcessor
         data_format,  # type: str
         transport,    # type: str
         wsgi_environ, # type: stranydict
@@ -195,9 +194,9 @@ class Request:
         self.input = ServiceInput()
         self.encrypt_func = encrypt_func
 
-        if is_sio:
+        if is_io:
 
-            parsed = sio.parse_input(self.payload or {}, data_format, extra=self.channel_params, service=self.service)
+            parsed = io_processor.parse_input(self.payload or {}, data_format, extra=self.channel_params, service=self.service)
 
             if isinstance(parsed, Model):
                 self.input = parsed

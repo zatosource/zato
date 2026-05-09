@@ -3,7 +3,7 @@ use pyo3::Borrowed;
 
 use crate::inference::ElemType;
 
-/// Base SIO element exposed to Python, carrying the element name, whether it
+/// Base I/O element exposed to Python, carrying the element name, whether it
 /// is required, and the inferred (or explicit) element type.
 #[pyclass(subclass, skip_from_py_object)]
 #[derive(Clone)]
@@ -14,7 +14,7 @@ pub struct Elem {
     /// Whether the element is required (`true`) or optional (name prefixed with `-`).
     #[pyo3(get, set)]
     pub is_required: bool,
-    /// Resolved SIO type for this element.
+    /// Resolved I/O type for this element.
     pub elem_type: ElemType,
 }
 
@@ -52,10 +52,10 @@ impl Elem {
     }
 }
 
-/// Defines a concrete SIO element subtype exposed to Python that extends `Elem`.
+/// Defines a concrete I/O element subtype exposed to Python that extends `Elem`.
 macro_rules! define_elem_type {
     ($name:ident, $variant:expr) => {
-        #[doc = concat!("SIO element subtype `", stringify!($name), "` exposed to Python.")]
+        #[doc = concat!("I/O element subtype `", stringify!($name), "` exposed to Python.")]
         #[allow(clippy::upper_case_acronyms, reason = "Python-visible type names must match existing API")]
         #[pyclass(extends=Elem, skip_from_py_object)]
         #[derive(Clone)]

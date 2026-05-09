@@ -1,7 +1,7 @@
-/// Name prefixes that indicate a boolean SIO element (e.g. `is_active`, `has_data`).
+/// Name prefixes that indicate a boolean I/O element (e.g. `is_active`, `has_data`).
 const BOOL_PREFIXES: &[&str] = &["by_", "has_", "is_", "may_", "needs_", "should_"];
 
-/// Name suffixes that indicate an integer SIO element (e.g. `retry_count`, `read_timeout`).
+/// Name suffixes that indicate an integer I/O element (e.g. `retry_count`, `read_timeout`).
 const INT_SUFFIXES: &[&str] = &["_count", "_timeout"];
 
 /// Exact element names that are always treated as secrets.
@@ -17,7 +17,7 @@ const SECRET_EXACT: &[&str] = &[
     "xApiKey",
 ];
 
-/// The type of a `SimpleIO` element, inferred from its name or declared explicitly.
+/// The type of an I/O element, inferred from its name or declared explicitly.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ElemType {
     /// Boolean value (Python `bool`).
@@ -32,7 +32,7 @@ pub enum ElemType {
     AsIs,
 }
 
-/// Infers the SIO element type from its name using prefix, suffix, and exact-match rules.
+/// Infers the I/O element type from its name using prefix, suffix, and exact-match rules.
 pub fn infer_type(name: &str) -> ElemType {
     for prefix in BOOL_PREFIXES {
         if name.starts_with(prefix) {
