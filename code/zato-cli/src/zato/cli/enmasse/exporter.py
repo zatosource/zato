@@ -10,7 +10,6 @@ import logging
 
 # Zato
 from zato.cli.enmasse.config import ModuleCtx
-from zato.cli.enmasse.exporters.cache import CacheExporter
 from zato.cli.enmasse.exporters.email_imap import IMAPExporter
 from zato.cli.enmasse.exporters.email_smtp import SMTPExporter
 from zato.cli.enmasse.exporters.group import GroupExporter
@@ -58,7 +57,6 @@ class EnmasseYAMLExporter:
         self.cluster:'any_' = None # To store the cluster object, similar to importer
 
         # Initialize exporters
-        self.cache_exporter = CacheExporter(self)
         self.email_imap_exporter = IMAPExporter(self)
         self.email_smtp_exporter = SMTPExporter(self)
         self.group_exporter = GroupExporter(self)
@@ -89,15 +87,6 @@ class EnmasseYAMLExporter:
             logger.info('Getting cluster by id=%s', self.cluster_id)
             self.cluster = session.query(Cluster).filter(Cluster.id == self.cluster_id).one() # type: ignore
         return self.cluster
-
-# ################################################################################################################################
-
-    def export_cache(self, session:'SASession') -> 'list':
-        """ Exports cache definitions.
-        """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
-        cache_list = self.cache_exporter.export(session, self.cluster_id)
-        return cache_list
 
 # ################################################################################################################################
 
@@ -288,11 +277,6 @@ class EnmasseYAMLExporter:
         logger.info('Starting export of Zato objects to dictionary format')
 
         output_dict: 'stranydict' = {}
-
-        # Export cache definitions
-        cache_defs = self.export_cache(session)
-        if cache_defs:
-            output_dict['cache'] = cache_defs
 
         # Export Odoo connection definitions
         odoo_defs = self.export_odoo(session)

@@ -214,7 +214,7 @@ class ConfigManager(_ConfigManagerBase):
         self.amqp_out_name_to_def = {} # Maps outgoing connection names to definition names, i.e. to connector names
 
         # Caches
-        self.cache_api = CacheAPI(self.server)
+        self.cache_api = self._build_cache_api()
 
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
@@ -262,9 +262,6 @@ class ConfigManager(_ConfigManagerBase):
 
         # SAP RFC
         self.init_sap()
-
-        # Caches
-        self.init_caches()
 
         # API keys
         self.update_apikeys()
@@ -613,12 +610,28 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def init_caches(self) -> 'None':
+    def _build_cache_api(self) -> 'CacheAPI':
+        """ Creates a Redis-backed CacheAPI using the server's [kvdb] configuration.
+        """
+        from redis import Redis
 
-        for name in ['builtin']:
-            cache = getattr(self.config_store, 'cache_{}'.format(name))
-            for value in cache.values():
-                self.cache_api.create(bunchify(value['config']))
+        kvdb_config = self.server.fs_server_config.kvdb
+
+        host = kvdb_config.host or 'localhost'
+        port = int(kvdb_config.port or 6379)
+        db = int(kvdb_config.get('db', 0))
+        password = kvdb_config.password if kvdb_config.password else None
+
+        redis_client = Redis(
+            host=host,
+            port=port,
+            db=db,
+            password=password,
+            decode_responses=True,
+        )
+
+        out = CacheAPI(redis_client)
+        return out
 
 # ################################################################################################################################
 

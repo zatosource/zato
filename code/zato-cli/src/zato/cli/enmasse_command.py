@@ -24,7 +24,6 @@ type_display_names = {
     'security': 'security definition',
     'groups': 'security group',
     'channel_rest': 'REST channel',
-    'cache': 'cache',
     'odoo': 'Odoo connection',
     'email_smtp': 'SMTP connection',
     'email_imap': 'IMAP connection',

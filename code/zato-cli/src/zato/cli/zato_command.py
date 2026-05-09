@@ -105,7 +105,6 @@ class CommandStore:
 
         # Zato
         from zato.cli import \
-             cache               as cache_mod,               \
              check_config        as check_config_mod,        \
              component_version   as component_version_mod,   \
              create_cluster      as create_cluster_mod,      \
@@ -135,25 +134,6 @@ class CommandStore:
 
         parser, base_parser, subs, formatter_class = self.build_core_parser()
         self._add_version(parser)
-
-        #
-        # cache
-        #
-        cache = subs.add_parser(
-            'cache', description='Cache keys - get, set, delete or expire keys and more', parents=[base_parser])
-        cache_subs = cache.add_subparsers()
-
-        cache_get = cache_subs.add_parser('get', description=cache_mod.CacheGet.__doc__, parents=[base_parser])
-        cache_get.set_defaults(command='cache_get')
-        self.add_opts(cache_get, cache_mod.CacheGet.opts)
-
-        cache_set = cache_subs.add_parser('set', description=cache_mod.CacheSet.__doc__, parents=[base_parser])
-        cache_set.set_defaults(command='cache_set')
-        self.add_opts(cache_set, cache_mod.CacheSet.opts)
-
-        cache_delete = cache_subs.add_parser('delete', description=cache_mod.CacheDelete.__doc__, parents=[base_parser])
-        cache_delete.set_defaults(command='cache_delete')
-        self.add_opts(cache_delete, cache_mod.CacheDelete.opts)
 
         #
         # change-password

@@ -20,7 +20,6 @@ from zato.cli.enmasse.client import wait_for_services, Default_Service_Wait_Time
 from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.cli.enmasse.importers.channel_rest import ChannelImporter
 from zato.cli.enmasse.importers.group import GroupImporter
-from zato.cli.enmasse.importers.cache import CacheImporter
 from zato.cli.enmasse.importers.email_smtp import SMTPImporter
 from zato.cli.enmasse.importers.email_imap import IMAPImporter
 from zato.cli.enmasse.importers.es import ElasticSearchImporter
@@ -60,7 +59,7 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 
 for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse.importers.channel_rest',
-                        'zato.cli.enmasse.importers.group', 'zato.cli.enmasse.importers.cache',
+                        'zato.cli.enmasse.importers.group',
                         'zato.cli.enmasse.importers.email_smtp', 'zato.cli.enmasse.importers.email_imap',
                         'zato.cli.enmasse.importers.es', 'zato.cli.enmasse.importers.odoo',
                         'zato.cli.enmasse.importers.scheduler', 'zato.cli.enmasse.importers.sql',
@@ -91,7 +90,6 @@ class EnmasseYAMLImporter:
 
         self.sec_defs = {}
         self.group_defs = {}
-        self.cache_defs = {}
         self.odoo_defs = {}
         self.smtp_defs = {}
         self.imap_defs = {}
@@ -122,7 +120,6 @@ class EnmasseYAMLImporter:
         self.security_importer = SecurityImporter(self)
         self.channel_importer = ChannelImporter(self)
         self.group_importer = GroupImporter(self)
-        self.cache_importer = CacheImporter(self)
         self.odoo_importer = OdooImporter(self)
         self.smtp_importer = SMTPImporter(self)
         self.imap_importer = IMAPImporter(self)
@@ -346,29 +343,6 @@ class EnmasseYAMLImporter:
         logger.info(f'Processed REST channels: created={created_count} updated={updated_count}')
 
         return channels_created, channels_updated
-
-# ################################################################################################################################
-
-    def sync_cache(self, cache_list:'list', session:'SASession') -> 'tuple':
-        """ Synchronizes cache definitions from a YAML configuration with the database.
-        """
-        if not cache_list:
-            return [], []
-
-        # Examine each cache item in detail
-        for idx, item in enumerate(cache_list):
-            if not item.get('name'):
-                # Skip items without a name or log them if needed
-                logger.warning('Cache item %d has no name, skipping', idx)
-                continue
-
-        cache_created, cache_updated = self.cache_importer.sync_cache_definitions(cache_list, session)
-
-        # Get cache definitions from the cache importer
-        self.cache_defs = self.cache_importer.cache_defs
-        logger.info('Processed cache definitions: created=%d updated=%d', len(cache_created), len(cache_updated))
-
-        return cache_created, cache_updated
 
 # ################################################################################################################################
 
@@ -819,13 +793,6 @@ class EnmasseYAMLImporter:
             self.created_objects['channel_rest'] = channels_created
         if channels_updated:
             self.updated_objects['channel_rest'] = channels_updated
-
-        # Process cache definitions
-        cache_created, cache_updated = self.sync_cache(yaml_config.get('cache', []), session)
-        if cache_created:
-            self.created_objects['cache'] = cache_created
-        if cache_updated:
-            self.updated_objects['cache'] = cache_updated
 
         # Process Odoo connection definitions
         odoo_created, odoo_updated = self.sync_odoo(yaml_config.get('odoo', []), session)

@@ -18,10 +18,10 @@ from sqlalchemy import and_, func, not_, or_
 from sqlalchemy.sql.expression import case
 
 # Zato
-from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, \
+from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, \
      PARAMS_PRIORITY, PubSub, URL_PARAMS_PRIORITY
 from zato.common.json_internal import loads
-from zato.common.odb.model import APIKeySecurity, CacheBuiltin, ChannelAMQP, Cluster, \
+from zato.common.odb.model import APIKeySecurity, ChannelAMQP, Cluster, \
     DeployedService, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, \
     NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, PubSubPermission, PubSubSubscription, PubSubSubscriptionTopic, \
     PubSubTopic, SecurityBase, Server, Service, SMTP, SQLConnectionPool, OutgoingSAP
@@ -434,12 +434,8 @@ def _http_soap(session, cluster_id):
             HTTPSOAP.serialization_type != None, HTTPSOAP.serialization_type)],
              else_=HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id).label('serialization_type'),
         HTTPSOAP.timeout,
-        HTTPSOAP.cache_id,
-        HTTPSOAP.cache_expiry,
         HTTPSOAP.content_encoding,
         HTTPSOAP.opaque1,
-        CacheBuiltin.name.label('cache_name'),
-        CacheBuiltin.cache_type,
         SecurityBase.sec_type,
         Service.name.label('service_name'),
         Service.id.label('service_id'),
@@ -449,7 +445,6 @@ def _http_soap(session, cluster_id):
         SecurityBase.password.label('password'),
         SecurityBase.password_type.label('password_type'),).\
         outerjoin(Service, Service.id==HTTPSOAP.service_id).\
-        outerjoin(CacheBuiltin, CacheBuiltin.id==HTTPSOAP.cache_id).\
         outerjoin(SecurityBase, HTTPSOAP.security_id==SecurityBase.id).\
         filter(Cluster.id==HTTPSOAP.cluster_id).\
         filter(Cluster.id==cluster_id).\
@@ -751,37 +746,6 @@ def email_imap_list(session, cluster_id, needs_columns=False):
     """ A list of IMAP connections.
     """
     return _email_imap(session, cluster_id)
-
-# ################################################################################################################################
-
-def cache_by_id(session, cluster_id, cache_id):
-    return session.query(CacheBuiltin).\
-        filter(CacheBuiltin.id==cluster_id).\
-        filter(Cluster.id==CacheBuiltin.cluster_id).\
-        filter(CacheBuiltin.id==cache_id).\
-        one()
-
-# ################################################################################################################################
-
-def _cache_builtin(session, cluster_id):
-    return session.query(CacheBuiltin).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==CacheBuiltin.cluster_id).\
-        filter(CacheBuiltin.cache_type==CACHE.TYPE.BUILTIN).\
-        order_by(CacheBuiltin.name)
-
-def cache_builtin(session, cluster_id, id):
-    """ An individual built-in cache definition.
-    """
-    return _cache_builtin(session, cluster_id).\
-        filter(CacheBuiltin.id==id).\
-        one()
-
-@query_wrapper
-def cache_builtin_list(session, cluster_id, needs_columns=False):
-    """ A list of built-in cache definitions.
-    """
-    return _cache_builtin(session, cluster_id)
 
 # ################################################################################################################################
 

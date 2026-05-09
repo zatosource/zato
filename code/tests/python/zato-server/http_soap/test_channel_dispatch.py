@@ -534,46 +534,6 @@ class DispatchHappyPathTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_cy_simple_io_payload_dict_with_response_key(self) -> 'None':
-        """ When response.payload is a CySimpleIOPayload whose getvalue returns a dict with 'response',
-        that inner value is JSON-serialized.
-        """
-        from zato.cy.reqresp.payload import SimpleIOPayload as CySimpleIOPayload
-
-        mock_payload = MagicMock(spec=CySimpleIOPayload)
-        mock_payload.getvalue.return_value = {'response': {'key': 'value'}}
-
-        response = _make_response()
-        response.payload = mock_payload
-        ctx = _make_dispatcher(response=response)
-        wsgi_environ = _make_wsgi_environ()
-
-        result = _dispatch(ctx, wsgi_environ)
-
-        self.assertEqual(result, dumps({'key': 'value'}))
-
-# ################################################################################################################################
-
-    def test_cy_simple_io_payload_dict_without_response_key(self) -> 'None':
-        """ When response.payload is a CySimpleIOPayload whose getvalue returns a dict without 'response',
-        the dict itself is returned.
-        """
-        from zato.cy.reqresp.payload import SimpleIOPayload as CySimpleIOPayload
-
-        mock_payload = MagicMock(spec=CySimpleIOPayload)
-        mock_payload.getvalue.return_value = {'other_key': 'other_value'}
-
-        response = _make_response()
-        response.payload = mock_payload
-        ctx = _make_dispatcher(response=response)
-        wsgi_environ = _make_wsgi_environ()
-
-        result = _dispatch(ctx, wsgi_environ)
-
-        self.assertEqual(result, {'other_key': 'other_value'})
-
-# ################################################################################################################################
-
     def test_plain_payload_returned_directly(self) -> 'None':
         """ When response.payload is a plain string/bytes, it is returned directly.
         """

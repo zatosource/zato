@@ -20,7 +20,7 @@ from zato.common.exception import ServiceMissingException
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service
 from zato.common.rate_limiting.cidr import SlottedCIDRRule
-from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
+from zato.common.odb.query import http_soap, http_soap_list
 from zato.common.util.api import as_bool
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
      set_instance_opaque_attrs
@@ -85,7 +85,7 @@ class _BaseGet(AdminService):
         output_optional = 'service_id', 'service_name', 'security_id', 'security_name', 'sec_type', \
             'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req', \
             'url_params_pri', 'params_pri', 'serialization_type', 'timeout', \
-            'content_type', 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type', \
+            'content_type', \
             'content_encoding', Boolean('match_slash'), 'http_accept', \
                 'should_parse_on_input', 'should_validate', 'should_return_errors', \
                 'data_encoding', 'username', 'is_wrapper', 'wrapper_type', AsIs('security_groups'), 'security_group_count', \
@@ -316,7 +316,7 @@ class Create(_CreateEdit):
         input_optional = 'service', 'service_id', AsIs('security_id'), 'method', 'soap_action', 'soap_version', 'data_format', \
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
             'serialization_type', 'timeout', 'content_type', \
-            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
+            'content_encoding', Boolean('match_slash'), 'http_accept', \
             'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
             'is_active', 'transport', 'is_internal', 'cluster_id', \
             'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups'), Boolean('validate_tls'), \
@@ -418,8 +418,6 @@ class Create(_CreateEdit):
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.timeout
                 item.content_type = input.content_type
-                item.cache_id = input.get('cache_id') or None
-                item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
                 item.is_wrapper = bool(input.is_wrapper)
                 item.wrapper_type = input.wrapper_type
@@ -449,14 +447,6 @@ class Create(_CreateEdit):
                     input.impl_name = service.impl_name
                     input.service_id = service.id
                     input.service_name = service.name
-
-                    cache = cache_by_id(session, input.cluster_id, item.cache_id) if item.cache_id else None
-                    if cache:
-                        input.cache_type = cache.cache_type
-                        input.cache_name = cache.name
-                    else:
-                        input.cache_type = None
-                        input.cache_name = None
 
                 input.id = item.id
                 input.update(sec_info)
@@ -489,7 +479,7 @@ class Edit(_CreateEdit):
         input_optional = 'service', 'service_id', AsIs('security_id'), 'method', 'soap_action', 'soap_version', \
             'data_format', 'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', \
             'params_pri', 'serialization_type', 'timeout', 'content_type', \
-            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
+            'content_encoding', Boolean('match_slash'), 'http_accept', \
             'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
             'cluster_id', 'is_active', 'transport', \
             'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups'), Boolean('validate_tls'), \
@@ -603,8 +593,6 @@ class Edit(_CreateEdit):
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.get('timeout')
                 item.content_type = input.content_type
-                item.cache_id = input.get('cache_id') or None
-                item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
                 item.is_wrapper = bool(input.is_wrapper)
                 item.wrapper_type = input.wrapper_type
@@ -632,14 +620,6 @@ class Edit(_CreateEdit):
                     input.merge_url_params_req = item.merge_url_params_req
                     input.url_params_pri = item.url_params_pri
                     input.params_pri = item.params_pri
-
-                    cache = cache_by_id(session, input.cluster_id, item.cache_id) if item.cache_id else None
-                    if cache:
-                        input.cache_type = cache.cache_type
-                        input.cache_name = cache.name
-                    else:
-                        input.cache_type = None
-                        input.cache_name = None
 
                 else:
                     input.ping_method = item.ping_method

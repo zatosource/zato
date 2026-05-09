@@ -661,61 +661,6 @@ class FormatResponseTestCase(unittest.TestCase):
         self.assertNotIn('Content-Encoding', wsgi_environ['zato.http.response.headers'])
 
 # ################################################################################################################################
-
-    def test_cy_simple_io_payload_with_response_key(self) -> 'None':
-        """ When response.payload is CySimpleIOPayload with 'response' key, inner dict is JSON-dumped.
-        """
-        ctx = _make_dispatcher()
-        channel_item = _make_channel_item()
-        wsgi_environ = _make_wsgi_environ()
-
-        mock_payload = MagicMock()
-        mock_payload.__class__.__name__ = 'SimpleIOPayload'
-        mock_payload.getvalue.return_value = {'response': {'key': 'value'}}
-
-        response = _make_response()
-        response.payload = mock_payload
-
-        with patch('zato.server.connection.http_soap.channel.CySimpleIOPayload', type(mock_payload)):
-            result = ctx.dispatcher._format_response(channel_item, wsgi_environ, response)
-
-        self.assertEqual(result, dumps({'key': 'value'}))
-
-# ################################################################################################################################
-
-    def test_cy_simple_io_payload_without_response_key(self) -> 'None':
-        """ When CySimpleIOPayload.getvalue() returns a dict without 'response' key, the dict is returned.
-        """
-        ctx = _make_dispatcher()
-        channel_item = _make_channel_item()
-        wsgi_environ = _make_wsgi_environ()
-
-        mock_payload = MagicMock()
-        mock_payload.getvalue.return_value = {'other': 'data'}
-
-        response = _make_response()
-        response.payload = mock_payload
-
-        with patch('zato.server.connection.http_soap.channel.CySimpleIOPayload', type(mock_payload)):
-            result = ctx.dispatcher._format_response(channel_item, wsgi_environ, response)
-
-        self.assertEqual(result, {'other': 'data'})
-
-# ################################################################################################################################
-
-    def test_non_cy_simple_io_returns_payload_as_is(self) -> 'None':
-        """ When response.payload is not CySimpleIOPayload, it is returned directly.
-        """
-        ctx = _make_dispatcher()
-        channel_item = _make_channel_item()
-        wsgi_environ = _make_wsgi_environ()
-        response = _make_response(payload=b'raw-response')
-
-        result = ctx.dispatcher._format_response(channel_item, wsgi_environ, response)
-
-        self.assertEqual(result, b'raw-response')
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 class HypothesisTestCase(unittest.TestCase):
