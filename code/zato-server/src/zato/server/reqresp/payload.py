@@ -7,11 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from zato.common.json_internal import dumps as json_dumps
 from logging import getLogger
 
 # Zato
-from zato.common.api import DATA_FORMAT
 from zato.input_output import IOProcessor
 
 # ################################################################################################################################
@@ -20,7 +18,6 @@ logger = getLogger('zato')
 
 # ################################################################################################################################
 
-DATA_FORMAT_DICT:str = DATA_FORMAT.DICT
 _not_given:object = object()
 
 # ################################################################################################################################
@@ -53,9 +50,13 @@ class IOPayload:
     def __setitem__(self, key, value):
 
         if isinstance(key, slice):
+            logger.info('INVOKE-TRACE payload.__setitem__ slice start=%s stop=%s type(value)=%s repr(value)=%s',
+                key.start, key.stop, type(value).__name__, repr(value))
             self.user_attrs_list[key.start:key.stop] = value
             object.__setattr__(self, 'output_repeated', True)
         else:
+            logger.info('INVOKE-TRACE payload.__setitem__ key=%s type(value)=%s repr(value)=%s',
+                key, type(value).__name__, repr(value))
             setattr(self, key, value)
 
     def __setattr__(self, key, value):
@@ -148,15 +149,22 @@ class IOPayload:
     def set_payload_attrs(self, value:object):
         """ Assigns user-defined attributes to what will eventually be a response.
         """
+        logger.info('INVOKE-TRACE payload.set_payload_attrs entry type(value)=%s repr(value)=%s',
+            type(value).__name__, repr(value))
+
         # Clear out anything we might have stored before in case .getvalue() get called more than once
         self.user_attrs_dict.clear()
         self.user_attrs_list.clear()
 
         value = self._preprocess_payload_attrs(value)
+        logger.info('INVOKE-TRACE payload.set_payload_attrs after preprocess type(value)=%s repr(value)=%s',
+            type(value).__name__, repr(value))
+
         is_dict = isinstance(value, dict)
 
         # Shortcut in case we know already this is a dict on input
         if is_dict:
+            logger.info('INVOKE-TRACE payload.set_payload_attrs branch=dict')
             dict_attrs:dict = self._extract_payload_attrs_dict(value)
             self.user_attrs_dict.update(dict_attrs)
         else:
@@ -165,41 +173,35 @@ class IOPayload:
                 value = value.to_zato()
 
             if isinstance(value, (list, tuple)):
+                logger.info('INVOKE-TRACE payload.set_payload_attrs branch=list/tuple len=%s', len(value))
                 for item in value:
                     self.user_attrs_list.append(self._extract_payload_attrs(item))
             else:
+                logger.info('INVOKE-TRACE payload.set_payload_attrs branch=other')
                 self.user_attrs_dict.update(self._extract_payload_attrs(value))
+
+        logger.info('INVOKE-TRACE payload.set_payload_attrs done user_attrs_dict=%s user_attrs_list=%s',
+            repr(self.user_attrs_dict), repr(self.user_attrs_list))
 
 # ################################################################################################################################
 
-    def getvalue(self, serialize:bool=True, force_dict_serialisation:bool=True): # noqa: E252
-        """ Returns a service's payload, either serialised or not.
+    def getvalue(self):
+        """ Returns a service's payload as a raw Python dict or list.
         """
-        # If data format is DICT, we force serialisation to that format
-        # unless overridden on input.
-        if self.data_format == DATA_FORMAT_DICT:
-            if force_dict_serialisation:
-                serialize = True
-
-        # No data format means no serialization is possible
-        if not self.data_format:
-            serialize = False
-
         value = self.user_attrs_list if self.output_repeated else self.user_attrs_dict
 
-        # Special-case internal services that return metadata (e.g GetList-like ones)
+        logger.info('INVOKE-TRACE payload.getvalue output_repeated=%s type=%s len=%s repr=%s',
+            self.output_repeated, type(value).__name__, len(value), repr(value))
+
         if self.zato_meta:
-
             search = self.zato_meta.get('search')
-
             if search:
                 if isinstance(value, dict):
                     value['_meta'] = search
                 else:
                     value = {'response': value, '_meta': search}
-                return json_dumps(value) if serialize else value
 
-        return json_dumps(value) if serialize else value
+        return value
 
     def append(self, value):
 

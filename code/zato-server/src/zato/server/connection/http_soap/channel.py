@@ -976,7 +976,7 @@ class RequestHandler:
                 zato_env = {'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details}}
                 is_not_str = not isinstance(response.payload, str)
                 if is_not_str and response.payload:
-                    payload = response.payload.getvalue(False)
+                    payload = response.payload.getvalue()
                     payload.update(zato_env)
                 else:
                     payload = zato_env
@@ -993,7 +993,7 @@ class RequestHandler:
                         else:
                             if hasattr(response.payload, 'getvalue'):
                                 value = response.payload.getvalue() # type: ignore
-                                if isinstance(value, dict):
+                                if isinstance(value, (dict, list)):
                                     value = dumps(value)
                             else:
                                 # Check if it's a list of models ..

@@ -5,6 +5,35 @@ use std::collections::HashMap;
 /// Shorthand alias for a heap-allocated Python object reference.
 type PyObject = Py<PyAny>;
 
+/// Python iterator that yields key names from a `ServiceInput` snapshot.
+#[pyclass]
+pub struct ServiceInputKeyIter {
+
+    /// Pre-collected key names taken at iteration start.
+    keys: Vec<String>,
+
+    /// Current position in the keys vector.
+    pos: usize,
+}
+
+#[pymethods]
+impl ServiceInputKeyIter {
+
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    fn __next__(&mut self) -> Option<String> {
+        if self.pos < self.keys.len() {
+            let key = self.keys[self.pos].clone();
+            self.pos += 1;
+            Some(key)
+        } else {
+            None
+        }
+    }
+}
+
 /// Dict-like Python container for incoming Zato service request parameters.
 ///
 /// Implements Python's mapping protocol (`__getitem__`, `__setitem__`, etc.)
@@ -96,6 +125,15 @@ impl ServiceInput {
             }
         }
         Ok(())
+    }
+
+    /// Iterates over key names, matching Python dict iteration semantics.
+    fn __iter__(&self, py: Python<'_>) -> PyResult<Py<ServiceInputKeyIter>> {
+        let iter = ServiceInputKeyIter {
+            keys: self.data.keys().cloned().collect(),
+            pos: 0,
+        };
+        Py::new(py, iter)
     }
 
     /// Returns `true` if the given key exists in the container.

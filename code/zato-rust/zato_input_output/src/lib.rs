@@ -51,6 +51,7 @@ fn zato_input_output(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<response::Response>()?;
     module.add_class::<io_processor::IOProcessor>()?;
     module.add_class::<service_input::ServiceInput>()?;
+    module.add_class::<service_input::ServiceInputKeyIter>()?;
 
     module.add_class::<compat::Elem>()?;
     module.add_class::<compat::Bool>()?;
