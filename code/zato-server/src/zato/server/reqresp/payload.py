@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from zato.common.json_internal import dumps as json_dumps
 from logging import getLogger
 
 # Zato
@@ -28,16 +29,21 @@ _not_given:object = object()
 class IOPayload:
     """ Represents a payload, i.e. individual response elements, set via I/O declaration.
     """
+    _internal_attrs = frozenset({
+        'io', 'all_output_elem_names', 'output_repeated',
+        'cid', 'data_format', 'user_attrs_dict', 'user_attrs_list', 'zato_meta',
+    })
 
     def __init__(self, io:IOProcessor, all_output_elem_names:list, cid, data_format):
-        self.io = io
-        self.all_output_elem_names = all_output_elem_names
-        self.output_repeated = self.io.definition.output_repeated
-        self.cid = cid
-        self.data_format = data_format
-        self.user_attrs_dict = {}
-        self.user_attrs_list = []
-        self.zato_meta = None
+        _set = object.__setattr__
+        _set(self, 'user_attrs_dict', {})
+        _set(self, 'user_attrs_list', [])
+        _set(self, 'io', io)
+        _set(self, 'all_output_elem_names', all_output_elem_names)
+        _set(self, 'output_repeated', False)
+        _set(self, 'cid', cid)
+        _set(self, 'data_format', data_format)
+        _set(self, 'zato_meta', None)
 
 # ################################################################################################################################
 
@@ -48,15 +54,14 @@ class IOPayload:
 
         if isinstance(key, slice):
             self.user_attrs_list[key.start:key.stop] = value
-            self.output_repeated = True
+            object.__setattr__(self, 'output_repeated', True)
         else:
             setattr(self, key, value)
 
     def __setattr__(self, key, value):
 
-        # Special-case Zato's own internal attributes
-        if key == 'zato_meta':
-            self.zato_meta = value
+        if key in IOPayload._internal_attrs:
+            object.__setattr__(self, key, value)
         else:
             self.user_attrs_dict[key] = value
 
@@ -185,24 +190,16 @@ class IOPayload:
         # Special-case internal services that return metadata (e.g GetList-like ones)
         if self.zato_meta:
 
-            # If search is provided, we need to first get output,
-            # append the search the metadata and then serialise ..
             search = self.zato_meta.get('search')
 
             if search:
-                output = self.io.get_output(value, self.data_format, False)
-                output['_meta'] = search
-                result = self.io.serialise(output, self.data_format)
-                return result
+                if isinstance(value, dict):
+                    value['_meta'] = search
+                else:
+                    value = {'response': value, '_meta': search}
+                return json_dumps(value) if serialize else value
 
-            # .. otherwise, with no search metadata provided,
-            # we can data, serialised or not, immediately.
-            result = self.io.get_output(value, self.data_format) if serialize else value
-            return result
-
-        else:
-            out = self.io.get_output(value, self.data_format) if serialize else value
-            return out
+        return json_dumps(value) if serialize else value
 
     def append(self, value):
 

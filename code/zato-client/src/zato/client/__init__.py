@@ -85,6 +85,8 @@ class _APIResponse:
             except ValueError:
                 raw_data = inner.text
 
+            mod_logger.info('_APIResponse raw_data type=%s, text[:500]=%r', type(raw_data).__name__, inner.text[:500])
+
             if to_bunch and isinstance(raw_data, (dict, list)):
                 self.data = bunchify(raw_data)
             else:
@@ -95,6 +97,7 @@ class _APIResponse:
 
         else:
             self.details = inner.text
+            mod_logger.info('_APIResponse NOT ok, status=%s, details=%r', inner.status_code, inner.text[:500])
 
     def __repr__(self):
         cid = '[{}]'.format(self.cid)
@@ -204,11 +207,13 @@ class ZatoClient:
         full_address = '{}{}'.format(self.address, url_path)
         data = dumps(payload, default=default_json_handler) if payload else None
 
-        raw_response = self.session.post(full_address, data=data, headers=headers, verify=self.tls_verify)
-        response = _APIResponse(raw_response, self.to_bunch)
+        self.logger.info('ZatoClient._post url=%s, payload_type=%s', full_address, type(payload).__name__)
 
-        if self.has_debug:
-            self.logger.debug('request:[%s]\ntext:[%s]\ndata:[%s]', payload, raw_response.text, response.data)
+        raw_response = self.session.post(full_address, data=data, headers=headers, verify=self.tls_verify)
+
+        self.logger.info('ZatoClient._post status=%s, text[:500]=%r', raw_response.status_code, raw_response.text[:500])
+
+        response = _APIResponse(raw_response, self.to_bunch)
 
         return response
 
