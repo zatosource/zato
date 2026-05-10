@@ -132,10 +132,6 @@ class AdminService(Service):
 
     def after_handle(self):
 
-        _logger = logging.getLogger('zato')
-        _logger.info('INVOKE-TRACE AdminService.after_handle entry service=%s type(payload)=%s repr(payload)=%s',
-            self.name, type(self.response.payload).__name__, repr(self.response.payload))
-
         if self.server.is_admin_enabled_for_info:
             logger.info('Response; service:`%s`, data:`%s` cid:`%s`, ',
                 self.name, get_response_value(self.response), self.cid)
@@ -147,11 +143,7 @@ class AdminService(Service):
         if needs_meta and hasattr(self, '_search_tool'):
             if not is_text:
                 if hasattr(payload, 'zato_meta'):
-                    _logger.info('INVOKE-TRACE AdminService.after_handle setting zato_meta service=%s', self.name)
                     payload.zato_meta = self._search_tool.output_meta
-
-        _logger.info('INVOKE-TRACE AdminService.after_handle done service=%s type(payload)=%s repr(payload)=%s',
-            self.name, type(self.response.payload).__name__, repr(self.response.payload))
 
 # ################################################################################################################################
 

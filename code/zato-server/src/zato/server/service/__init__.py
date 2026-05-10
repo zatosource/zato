@@ -590,39 +590,23 @@ class Service:
 
     def set_response_data(self, service:'Service', **kwargs:'any_') -> 'any_':
         response = service.response.payload
-        logger.info('INVOKE-TRACE set_response_data entry service=%s type(response)=%s repr(response)=%s kwargs=%s',
-            service.name, type(response).__name__, repr(response), repr(kwargs))
 
         if not isinstance(response, _response_raw_types):
-            logger.info('INVOKE-TRACE set_response_data response is NOT a raw type, processing it')
 
             if hasattr(response, 'getvalue'):
-                logger.info('INVOKE-TRACE set_response_data calling getvalue')
                 response = response.getvalue()
-                logger.info('INVOKE-TRACE set_response_data after getvalue type(response)=%s repr(response)=%s',
-                    type(response).__name__, repr(response))
                 if kwargs.get('as_bunch'):
                     response = bunchify(response)
 
             elif hasattr(response, 'to_dict'):
-                logger.info('INVOKE-TRACE set_response_data branch=to_dict')
                 response = response.to_dict()
 
             elif hasattr(response, 'to_json'):
-                logger.info('INVOKE-TRACE set_response_data branch=to_json')
                 response = response.to_json()
 
             if kwargs.get('serialize') is not False:
-                logger.info('INVOKE-TRACE set_response_data assigning response back to payload')
                 service.response.payload = response
-            else:
-                logger.info('INVOKE-TRACE set_response_data serialize is False, NOT assigning back')
 
-        else:
-            logger.info('INVOKE-TRACE set_response_data response IS a raw type (%s), passing through',
-                type(response).__name__)
-
-        logger.info('INVOKE-TRACE set_response_data returning type=%s repr=%s', type(response).__name__, repr(response))
         return response
 
 # ################################################################################################################################
@@ -756,20 +740,13 @@ class Service:
                     service.logger.addHandler(_scheduler_log_handler)
 
                 try:
-                    # This is the place where the service is invoked
-                    logger.info('INVOKE-TRACE update_handle before _invoke service=%s', service.name)
                     self._invoke(service, channel)
-                    logger.info('INVOKE-TRACE update_handle after _invoke service=%s type(payload)=%s repr(payload)=%s',
-                        service.name, type(service.response.payload).__name__, repr(service.response.payload))
                 finally:
                     if _scheduler_log_handler is not None:
                         service.logger.removeHandler(_scheduler_log_handler)
 
-                # Called after .handle - catches exceptions
                 if service.call_hooks and service.after_handle: # type: ignore
                     call_hook_no_service(service.after_handle)
-                    logger.info('INVOKE-TRACE update_handle after after_handle service=%s type(payload)=%s repr(payload)=%s',
-                        service.name, type(service.response.payload).__name__, repr(service.response.payload))
 
             except Exception as ex:
                 e = ex
@@ -777,12 +754,7 @@ class Service:
             finally:
                 try:
 
-                    # This obtains the response
-                    logger.info('INVOKE-TRACE update_handle calling set_response_func service=%s data_format=%s serialize=%s',
-                        service.name, data_format, kwargs.get('serialize'))
                     response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
-                    logger.info('INVOKE-TRACE update_handle after set_response_func service=%s type(response)=%s repr(response)=%s',
-                        service.name, type(response).__name__, repr(response))
 
                     # If this was fan-out/fan-in we need to always notify our callbacks no matter the result
                     if channel in ModuleCtx.Pattern_Call_Channels:
@@ -834,10 +806,6 @@ class Service:
         if _zato_needs_response_wrapper is False:
             kwargs['skip_response_elem'] = True
 
-        logger.info('INVOKE-TRACE update_handle skip_response_elem=%s has_keys=%s _zato_needs_response_wrapper=%s type(response)=%s repr(response)=%s',
-            kwargs.get('skip_response_elem'), hasattr(response, 'keys'), _zato_needs_response_wrapper,
-            type(response).__name__, repr(response))
-
         if kwargs.get('skip_response_elem') and hasattr(response, 'keys'):
 
             # If if has .keys, it means it is a dict.
@@ -854,34 +822,22 @@ class Service:
             # It is possible that the dictionary is empty
             response_elem = keys[0] if keys else None
 
-            logger.info('INVOKE-TRACE update_handle skip_response_elem processing keys=%s response_elem=%s',
-                keys, response_elem)
-
             # This covers responses that have only one top-level element
             # and that element's name is 'response' or, e.g. 'zato_amqp_...'
             if len(keys) == 1:
                 if response_elem == 'response' or (isinstance(response_elem, str) and response_elem.startswith('zato')):
-                    result = response[response_elem]
-                    logger.info('INVOKE-TRACE update_handle returning unwrapped response_elem=%s type=%s repr=%s',
-                        response_elem, type(result).__name__, repr(result))
-                    return result
+                    return response[response_elem]
 
                 # This may be a dict response from a service, in which case we return it as is
                 elif isinstance(response, dict): # type: ignore
-                    logger.info('INVOKE-TRACE update_handle returning dict as-is type=%s repr=%s',
-                        type(response).__name__, repr(response))
                     return response
 
             # .. otherwise, this could be a dictionary of elements other than the above
             # so we just return the dict as it is.
             else:
-                logger.info('INVOKE-TRACE update_handle returning multi-key dict type=%s repr=%s',
-                    type(response).__name__, repr(response))
                 return response
 
         else:
-            logger.info('INVOKE-TRACE update_handle returning response directly type=%s repr=%s',
-                type(response).__name__, repr(response))
             return response
 
 # ################################################################################################################################
@@ -936,17 +892,11 @@ class Service:
             'as_bunch': as_bunch,
         })
 
-        logger.info('INVOKE-TRACE invoke_by_impl_name service=%s serialize=%s data_format=%s',
-            service.name, serialize, data_format)
-
         if timeout:
             g = None
             try:
                 g = _gevent_spawn(self.update_handle, *invoke_args, **kwargs)
-                result = g.get(block=True, timeout=timeout)
-                logger.info('INVOKE-TRACE invoke_by_impl_name returning (timeout) service=%s type=%s repr=%s',
-                    service.name, type(result).__name__, repr(result))
-                return result
+                return g.get(block=True, timeout=timeout)
             except Timeout:
                 if g:
                     g.kill()
@@ -954,10 +904,7 @@ class Service:
                 if raise_timeout:
                     raise
         else:
-            result = self.update_handle(*invoke_args, **kwargs)
-            logger.info('INVOKE-TRACE invoke_by_impl_name returning service=%s type=%s repr=%s',
-                service.name, type(result).__name__, repr(result))
-            return result
+            return self.update_handle(*invoke_args, **kwargs)
 
 # ################################################################################################################################
 
@@ -970,11 +917,7 @@ class Service:
         if isclass(zato_name) and issubclass(zato_name, Service): # type: Service
             zato_name = zato_name.get_name()
 
-        logger.info('INVOKE-TRACE invoke entry caller=%s target=%s', self.name, zato_name)
-        result = self.invoke_by_impl_name(self.server.service_store.name_to_impl_name[zato_name], *args, **kwargs)
-        logger.info('INVOKE-TRACE invoke returning caller=%s target=%s type=%s repr=%s',
-            self.name, zato_name, type(result).__name__, repr(result))
-        return result
+        return self.invoke_by_impl_name(self.server.service_store.name_to_impl_name[zato_name], *args, **kwargs)
 
 # ################################################################################################################################
 
