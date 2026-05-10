@@ -92,12 +92,15 @@ class AdminService(Service):
                     data = loads(data)
             except Exception:
                 data = self.request.input
-            finally:
-                to_copy = {}
-                for k, v in data.items():
-                    to_copy[k] = v
 
-                data = deepcopy(to_copy)
+            if not data:
+                return
+
+            to_copy = {}
+            for k, v in data.items():
+                to_copy[k] = v
+
+            data = deepcopy(to_copy)
 
             for k in data:
                 if 'password' in k:

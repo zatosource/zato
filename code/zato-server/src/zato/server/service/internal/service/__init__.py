@@ -542,8 +542,8 @@ class ServiceInvoker(Service):
             self.logger.info('ServiceInvoker final response type=%s: %r',
                 type(response).__name__, str(response)[:500])
 
-            # Assign response to outgoing payload
-            self.response.payload = dumps(response)
+            # Assign response to outgoing payload - if it is already serialized, use it as-is
+            self.response.payload = response if isinstance(response, str) else dumps(response)
             self.response.data_format = 'application/json'
             self.response.headers.update(zato_response_headers_container)
 
