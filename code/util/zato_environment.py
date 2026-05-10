@@ -65,7 +65,7 @@ sys.path.append(r'{base_dir}/lib64/python3.6/site-packages/')
 sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
 from zato.cli.zato_command import main
 sys.exit(main())
-" "\$@"
+" "$@"
 """.strip() # noqa: W605
 
 zato_command_template_windows = r"""
