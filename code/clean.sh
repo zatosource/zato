@@ -50,7 +50,6 @@ rm -rf ./local
 rm -rf ./man
 rm -rf ./parts
 rm -rf ./share
-rm -rf ./tests
 rm -rf ./zato_extra_paths
 
 rm -rf ./zato-cli/build
