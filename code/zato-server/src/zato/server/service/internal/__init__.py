@@ -61,7 +61,6 @@ class SearchTool:
 class AdminService(Service):
     """ A Zato admin service, part of the Zato public API.
     """
-    output = '-_meta',
     skip_before_handle = False
 
     def __init__(self):
@@ -136,7 +135,7 @@ class AdminService(Service):
 
         payload = self.response.payload
         is_text = isinstance(payload, basestring)
-        needs_meta = self.request.input.get('needs_meta', True)
+        needs_meta = self.request.input.get('needs_meta', True) if self.request.input else True
 
         if needs_meta and hasattr(self, '_search_tool'):
             if not is_text:

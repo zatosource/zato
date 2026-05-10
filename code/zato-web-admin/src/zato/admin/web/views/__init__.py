@@ -493,16 +493,23 @@ class Index(BaseView):
                 self.before_invoke_admin_service()
                 response = self.invoke_admin_service()
 
-                logger.info('Response from service: ok=`%s`, data_type=`%s`, data=`%s`', response.ok, type(response.data), response.data)
+                logger.info('View response: ok=%s, data_type=%s, data=%r',
+                    response.ok, type(response.data).__name__,
+                    str(response.data)[:500] if response.data else '(None)')
+                logger.info('View response: has_data=%s, details=%r, inner_text=%r',
+                    response.has_data, response.details, response.inner.text[:500] if response.inner else '(None)')
 
                 if response and response.ok:
                     return_data['response_inner'] = response.inner_service_response
 
                     if isinstance(response.data, list):
+                        logger.info('View: handling as list, len=%d', len(response.data))
                         self.handle_item_list(response.data, True)
                     else:
+                        logger.info('View: handling as single item')
                         self._handle_item(response.data)
                 else:
+                    logger.info('View: response not ok, user_message=%r', response.details)
                     self.user_message = response.details
             else:
                 logger.info('can_invoke_admin_service returned False, not invoking an admin service:[%s]', self.service_name)

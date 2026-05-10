@@ -99,7 +99,13 @@ class Client(ZatoClient):
         headers = kwargs.pop('headers', {})
         headers['X-Zato-Forwarded-For'] = self.forwarded_for
 
+        logger.info('WebAdmin Client.invoke args=%r, kwargs_keys=%r', args, list(kwargs.keys()))
+
         response = super(Client, self).invoke(*args, headers=headers, **kwargs)
+
+        logger.info('WebAdmin Client.invoke response ok=%s, status=%s, data_type=%s, data=%r',
+            response.ok, response.inner.status_code, type(response.data).__name__,
+            str(response.data)[:500] if response.data else '(None)')
 
         if response.inner.status_code != OK:
 

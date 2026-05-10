@@ -226,27 +226,33 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def add_django_channel(self, session, cluster, admin_invoke_sec, django_sec):
-        """ Adds the Django invoke channel pointing at ServiceInvoker with its own security.
+        """ Adds the admin and Django invoke channels, both pointing at ServiceInvoker.
         """
 
         # Zato
-        from zato.common.api import DATA_FORMAT
+        from zato.common.api import DATA_FORMAT, MISC
         from zato.common.const import ServiceConst
         from zato.common.odb.model import HTTPSOAP, Service as ODBService
 
-        # Look up the ServiceInvoker service - it may already exist from default-objects
+        # Register the ServiceInvoker service in ODB
         service_impl = 'zato.server.service.internal.service.ServiceInvoker'
-        existing = session.query(ODBService).filter_by(impl_name=service_impl, cluster=cluster).first()
-        if not existing:
-            existing = ODBService(None, ServiceConst.ServiceInvokerName, True, service_impl, True, cluster)
-            session.add(existing)
-            session.flush()
+        service = ODBService(None, ServiceConst.ServiceInvokerName, True, service_impl, True, cluster)
+        session.add(service)
+        session.flush()
 
-        channel = HTTPSOAP(
+        # Admin invoke channel - used by web admin, CLI, and inter-server RPC
+        admin_channel = HTTPSOAP(
+            None, MISC.DefaultAdminInvokeChannel, True, True, 'channel',
+            'plain_http', None, '/zato/api/invoke/{service_name}', None, '', None, DATA_FORMAT.JSON,
+            service=service, cluster=cluster, security=admin_invoke_sec)
+        session.add(admin_channel)
+
+        # Django invoke channel - used by the Django plugin, with per-channel service allowlist
+        django_channel = HTTPSOAP(
             None, 'zato.django', True, True, 'channel',
             'plain_http', None, '/zato/api/invoke/django/{service_name}', None, '', None, DATA_FORMAT.JSON,
-            service=existing, cluster=cluster, security=django_sec)
-        session.add(channel)
+            service=service, cluster=cluster, security=django_sec)
+        session.add(django_channel)
 
 # ################################################################################################################################
 
@@ -351,8 +357,6 @@ class Create(ZatoCommand):
         from zato.common.api import DATA_FORMAT
         from zato.common.odb.model import HTTPSOAP, Service
 
-        self.logger.info('Creating pub/sub REST channels')
-
         # Create services
         publish_impl = 'zato.server.service.internal.pubsub.rest.Publish'
         publish_service = Service(None, 'pubsub.rest.publish', True, publish_impl, True, cluster)
@@ -376,27 +380,23 @@ class Create(ZatoCommand):
             'plain_http', None, '/pubsub/topic/{topic_name}', 'POST', '', None, DATA_FORMAT.JSON,
             service=publish_service, cluster=cluster)
         session.add(publish_channel)
-        self.logger.info('Created channel: POST /pubsub/topic/{topic_name}')
 
         get_messages_channel = HTTPSOAP(
             None, 'pubsub.rest.get-messages', True, True, 'channel',
             'plain_http', None, '/pubsub/messages/get', 'POST', '', None, DATA_FORMAT.JSON,
             service=get_messages_service, cluster=cluster)
         session.add(get_messages_channel)
-        self.logger.info('Created channel: POST /pubsub/messages/get')
 
         subscribe_channel = HTTPSOAP(
             None, 'pubsub.rest.subscribe', True, True, 'channel',
             'plain_http', None, '/pubsub/subscribe/topic/{topic_name}', 'POST', '', None, DATA_FORMAT.JSON,
             service=subscribe_service, cluster=cluster)
         session.add(subscribe_channel)
-        self.logger.info('Created channel: POST /pubsub/subscribe/topic/{topic_name}')
 
         unsubscribe_channel = HTTPSOAP(
             None, 'pubsub.rest.unsubscribe', True, True, 'channel',
             'plain_http', None, '/pubsub/unsubscribe/topic/{topic_name}', 'POST', '', None, DATA_FORMAT.JSON,
             service=unsubscribe_service, cluster=cluster)
         session.add(unsubscribe_channel)
-        self.logger.info('Created channel: POST /pubsub/unsubscribe/topic/{topic_name}')
 
 # ################################################################################################################################

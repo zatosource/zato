@@ -17,7 +17,6 @@ from uuid import uuid4
 
 # Python 2/3 compatibility
 from builtins import bytes
-from zato.common.ext.future.utils import iterkeys
 
 # Zato
 from zato.common.broker_message import SERVICE
@@ -443,7 +442,7 @@ class UploadPackage(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ServiceInvoker(AdminService):
+class ServiceInvoker(Service):
     """ A proxy service to invoke other services through via REST.
     """
     name = ServiceConst.ServiceInvokerName
@@ -534,13 +533,14 @@ class ServiceInvoker(AdminService):
                 zato_response_headers_container=zato_response_headers_container
                 )
 
-            # All internal services wrap their responses in top-level elements that we need to shed here ..
-            if is_internal and response:
-                top_level = list(iterkeys(response))[0]
-                response = response[top_level]
+            self.logger.info('ServiceInvoker raw response type=%s for service=%s: %r',
+                type(response).__name__, service_name, str(response)[:500])
 
             # Take dataclass-based models into account
             response = response.to_dict() if isinstance(response, Model) else response
+
+            self.logger.info('ServiceInvoker final response type=%s: %r',
+                type(response).__name__, str(response)[:500])
 
             # Assign response to outgoing payload
             self.response.payload = dumps(response)
@@ -548,12 +548,20 @@ class ServiceInvoker(AdminService):
             self.response.headers.update(zato_response_headers_container)
 
             # Compute and attach response time headers
-            response_time = str(self.time.utcnow(needs_format=False) - start_time)
-            _response_time = float(response_time)
-            _response_time = _response_time / 1000.0
-            _response_time = round(_response_time, 2)
-            self.response.headers['X-Zato-Response-Time'] = response_time
-            self.response.headers['X-Zato-Response-Time-Human'] = f'{_response_time} sec.'
+            elapsed = self.time.utcnow(needs_format=False) - start_time
+            total_ms = elapsed.total_seconds() * 1000
+
+            if total_ms < 1:
+                response_time_human = 'Below 1 ms'
+            elif total_ms < 10_000:
+                total_ms = int(total_ms)
+                response_time_human = f'{total_ms} ms'
+            else:
+                total_sec = round(total_ms / 1000.0, 2)
+                response_time_human = f'{total_sec} sec.'
+
+            self.response.headers['X-Zato-Response-Time'] = str(total_ms)
+            self.response.headers['X-Zato-Response-Time-Human'] = response_time_human
 
         # No such service as given on input
         else:
@@ -563,7 +571,7 @@ class ServiceInvoker(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class RPCServiceInvoker(AdminService):
+class RPCServiceInvoker(Service):
     """ An invoker making use of the API that Redis-based communication used to use.
     """
     def handle(self):
