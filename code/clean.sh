@@ -61,3 +61,4 @@ rm -rf ./zato-web-admin/build
 
 find . -name \*~ -delete
 find . -name \*.pyc -delete
+find . -path '*/target' -type d -prune -exec rm -rf {} +
