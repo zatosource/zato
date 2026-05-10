@@ -1354,7 +1354,7 @@ class ConfigManager(_ConfigManagerBase):
                 response = service.response.payload
 
                 if hasattr(response, 'getvalue'):
-                    response = response.getvalue(serialize=kwargs.get('serialize'))
+                    response = response.getvalue()
 
                 return response
 

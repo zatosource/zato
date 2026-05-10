@@ -513,7 +513,7 @@ class ServiceTestCase(TestCase):
 
         if response_data:
             if not isinstance(instance.response.payload, basestring):
-                response = loads(instance.response.payload.getvalue())[response_elem] # Raises KeyError if 'response_elem' doesn't match
+                response = instance.response.payload.getvalue()[response_elem] # Raises KeyError if 'response_elem' doesn't match
             else:
                 response = loads(instance.response.payload)[response_elem]
 
@@ -534,7 +534,7 @@ class ServiceTestCase(TestCase):
             expected.add(item)
 
         instance = self.invoke(service_class, request_data, expected, mock_data)
-        response = loads(instance.response.payload.getvalue())[response_elem]
+        response = instance.response.payload.getvalue()[response_elem]
 
         for idx, item in enumerate(response):
             expected = expected_data[idx]

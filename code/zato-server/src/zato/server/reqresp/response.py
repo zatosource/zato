@@ -79,10 +79,13 @@ class Response:
         # We get below only if there is an I/O definition, but not a dataclass-based one, and it has output declared
         if self.io:
             if not self.io.is_dataclass:
-                if bool(self.io.definition.has_output_declared):
-                    self._payload = IOPayload(self.io, self.io.definition.all_output_elem_names, self.cid,
+                if bool(self.io.has_output_declared):
+                    self._payload = IOPayload(self.io, self.io.all_output_elem_names, self.cid,
                         self.data_format)
                     self._has_io_output = True
+
+        logger.info('INVOKE-TRACE response.init io=%s data_format=%s _has_io_output=%s type(_payload)=%s',
+            self.io, self.data_format, self._has_io_output, type(self._payload).__name__)
 
 # ################################################################################################################################
 
@@ -105,9 +108,13 @@ class Response:
         the dicts are matched and transformed according to the I/O definition.
         Generators/iterators (used for SSE streaming) are stored directly without serialization.
         """
+        logger.info('INVOKE-TRACE response._set_payload entry type(value)=%s _has_io_output=%s repr(value)=%s',
+            type(value).__name__, self._has_io_output, repr(value))
+
         # 0)
         # Streaming iterators (e.g. SSE generators) bypass all serialization ..
         if hasattr(value, '__next__'):
+            logger.info('INVOKE-TRACE response._set_payload branch=0-iterator')
             self._payload = value
             return
 
@@ -118,11 +125,13 @@ class Response:
             # 1a)
             # If we are using I/O, extract elements from that dict ..
             if self._has_io_output:
+                logger.info('INVOKE-TRACE response._set_payload branch=1a-dict-with-io')
                 self._payload.set_payload_attrs(value)
 
             # 1b)
             # .. otherwise, assign the dict as-is.
             else:
+                logger.info('INVOKE-TRACE response._set_payload branch=1b-dict-no-io')
                 self._payload = value
 
         # 2)
@@ -131,6 +140,7 @@ class Response:
             # 2a)
             # Must be an object of a type that we do not serialise ourselves ..
             if isinstance(value, direct_payload) and not isinstance(value, KeyedTuple):
+                logger.info('INVOKE-TRACE response._set_payload branch=2a-direct-payload type=%s', type(value).__name__)
                 self._payload = value
 
             # 2b)
@@ -140,10 +150,12 @@ class Response:
                 # 2b1)
                 # .. if using I/O ..
                 if self._has_io_output:
+                    logger.info('INVOKE-TRACE response._set_payload branch=2b1-other-with-io')
                     self._payload.set_payload_attrs(value)
 
                 # 2b2)
                 else:
+                    logger.info('INVOKE-TRACE response._set_payload branch=2b2-other-no-io')
                     if value:
                         if isinstance(value, Model):
                             if self.data_format == _json:
@@ -161,6 +173,9 @@ class Response:
                             # .. someone assigned to self.response.payload an object that needs
                             # serialisation but we do not know how to do it.
                             raise Exception('Cannot serialise value without I/O output declaration ({})'.format(value))
+
+        logger.info('INVOKE-TRACE response._set_payload done type(_payload)=%s repr(_payload)=%s',
+            type(self._payload).__name__, repr(self._payload))
 
     payload = property(_get_payload, _set_payload) # type: any_
 
