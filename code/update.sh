@@ -7,11 +7,8 @@ N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
 # We never update base packages from this script
 export Zato_Should_Update_Base=False
 
-# Our default branch
-Zato_Default_Branch=support/4.1
-
-# Always switch to a support branch first
-git checkout "${Zato_Default_Branch}" 2>/dev/null || git checkout -b "${Zato_Default_Branch}" "origin/${Zato_Default_Branch}"
+# Stay on whatever branch the code is currently on
+Zato_Current_Branch=$(git -C "$CURDIR" rev-parse --abbrev-ref HEAD)
 
 echo "*** Downloading updates ***"
 git_pull_output=$(git -C $CURDIR pull 2>&1)

@@ -116,6 +116,7 @@ class Updater:
     """
     def __init__(self, config:'UpdaterConfig') -> 'None':
         self.config = config
+        self._is_zato_user = os.getenv('USER') == 'zato'
         self._setup_update_logger()
 
 # ################################################################################################################################
@@ -432,7 +433,7 @@ class Updater:
             git_root = git_root_result['stdout'].strip()
 
             result = self.run_command(
-                command=['git', 'diff', '--name-only', 'HEAD@{1}', 'HEAD'],
+                command=['git', 'diff', '--name-only', 'ORIG_HEAD', 'HEAD'],
                 cwd=git_root,
                 log_prefix='get_changed_files'
             )
@@ -547,14 +548,36 @@ class Updater:
 
 # ################################################################################################################################
 
+    def _get_current_branch(self) -> 'str':
+        """ Returns the current git branch name.
+        """
+        try:
+            result = subprocess.run(
+                ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                cwd=self.config.current_dir,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                branch = result.stdout.strip()
+                if branch:
+                    return branch
+        except Exception:
+            logger.error('_get_current_branch: exception: {}'.format(format_exc()))
+        return self.config.github_branch
+
     def check_latest_version(self) -> 'dict':
         """ Checks the latest version from GitHub.
         """
         commit_sha = None
         commit_date = None
 
+        current_branch = self._get_current_branch()
+        logger.info('check_latest_version: checking against branch %s', current_branch)
+
         try:
-            url = f'https://api.github.com/repos/{self.config.github_repo}/commits/{self.config.github_branch}'
+            url = f'https://api.github.com/repos/{self.config.github_repo}/commits/{current_branch}'
             request = Request(url)
             request.add_header('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0')
 
@@ -570,7 +593,7 @@ class Updater:
             temp_dir = tempfile.mkdtemp()
             try:
                 result = subprocess.run(
-                    ['git', 'clone', '--depth=1', f'--branch={self.config.github_branch}',
+                    ['git', 'clone', '--depth=1', f'--branch={current_branch}',
                      f'https://github.com/{self.config.github_repo}.git', temp_dir],
                     capture_output=True,
                     text=True,
@@ -1027,7 +1050,7 @@ class Updater:
                         logger.info(f'kill_process_by_port: killing process {pid} using port {port}')
                         kill_args = ['-9', str(pid)]
                         kill_result = subprocess.run(['kill'] + kill_args, capture_output=True)
-                        if kill_result.returncode != 0:
+                        if kill_result.returncode != 0 and self._is_zato_user:
                             logger.info(f'kill_process_by_port: kill failed for pid {pid}, trying with sudo')
                             kill_result = subprocess.run(['sudo', '-n', 'kill'] + kill_args, capture_output=True)
                             logger.info(f'kill_process_by_port: sudo kill result for pid {pid}: returncode={kill_result.returncode}')
@@ -1075,7 +1098,7 @@ class Updater:
                         kill_args = ['-9', str(pid)]
                         orphan_kill_result = subprocess.run(['kill'] + kill_args, capture_output=True)
 
-                        if orphan_kill_result.returncode != 0:
+                        if orphan_kill_result.returncode != 0 and self._is_zato_user:
                             logger.info('kill_orphaned_processes: kill failed for pid {}, trying with sudo'.format(pid))
                             orphan_kill_result = subprocess.run(['sudo', '-n', 'kill'] + kill_args, capture_output=True)
 
@@ -1129,7 +1152,7 @@ class Updater:
             logger.info('stop_component: kill result for {} (pid {}): returncode={}, stdout={}, stderr={}'.format(
                 component_name, pid, kill_result.returncode, kill_result.stdout, kill_result.stderr))
 
-            if kill_result.returncode != 0:
+            if kill_result.returncode != 0 and self._is_zato_user:
                 logger.info('stop_component: kill failed, trying with sudo')
                 kill_result = subprocess.run(['sudo', '-n', 'kill'] + kill_args, capture_output=True)
                 logger.info('stop_component: sudo kill result for {} (pid {}): returncode={}, stdout={}, stderr={}'.format(
@@ -1178,7 +1201,7 @@ class Updater:
                     logger.info('_stop_proxy_component: killing haproxy process {}'.format(pid))
                     kill_args = ['-9', str(pid)]
                     kill_result = subprocess.run(['kill'] + kill_args, capture_output=True)
-                    if kill_result.returncode != 0:
+                    if kill_result.returncode != 0 and self._is_zato_user:
                         logger.info('_stop_proxy_component: kill failed for pid {}, trying with sudo'.format(pid))
                         kill_result = subprocess.run(['sudo', '-n', 'kill'] + kill_args, capture_output=True)
                     logger.info('_stop_proxy_component: kill result for pid {}: returncode={}'.format(pid, kill_result.returncode))
@@ -1222,7 +1245,7 @@ class Updater:
                         logger.info('stop_pubsub_component: killing {} (pid {})'.format(component_name, pid))
                         kill_args = ['-9', str(pid)]
                         kill_result = subprocess.run(['kill'] + kill_args, capture_output=True)
-                        if kill_result.returncode != 0:
+                        if kill_result.returncode != 0 and self._is_zato_user:
                             logger.info('stop_pubsub_component: kill failed for pid {}, trying with sudo'.format(pid))
                             kill_result = subprocess.run(['sudo', '-n', 'kill'] + kill_args, capture_output=True)
                             logger.info('stop_pubsub_component: sudo kill result for pid {}: returncode={}'.format(pid, kill_result.returncode))
@@ -1278,14 +1301,13 @@ class Updater:
 # ################################################################################################################################
 
     def start_component(self, component_name:'str', component_path:'str') -> 'dict':
-        """ Starts a Zato component using the startup scripts.
+        """ Starts a Zato component.
         """
         logger.info('UPDATE-TRACE start_component: component_name=%s, component_path=%s', component_name, component_path)
         try:
             if component_name == 'proxy':
                 return self._start_proxy_component()
 
-            # Map component names to their startup script names
             script_name_map = {
                 'scheduler': 'start-scheduler-fg.sh',
                 'server': 'start-server1-fg.sh',
@@ -1300,16 +1322,6 @@ class Updater:
                     handler.flush()
                 return {'success': False, 'error': error}
 
-            startup_script = os.path.join(self.config.base_dir, script_name)
-            logger.info('start_component: looking for startup script at {}'.format(startup_script))
-
-            if not os.path.exists(startup_script):
-                error = 'Startup script not found: {}'.format(startup_script)
-                logger.error('start_component: {}'.format(error))
-                for handler in logger.handlers:
-                    handler.flush()
-                return {'success': False, 'error': error}
-
             pidfile = os.path.join(component_path, 'pidfile')
             logger.info('start_component: checking for pidfile at {}'.format(pidfile))
 
@@ -1319,17 +1331,35 @@ class Updater:
                     handler.flush()
                 return {'success': False, 'error': 'Component already running'}
 
-            logger.info('start_component: starting {} using script {}'.format(component_name, startup_script))
-            logger.info('start_component: cwd: {}'.format(self.config.base_dir))
-            logger.info('start_component: about to call _ = subprocess.Popen for {}'.format(component_name))
+            startup_script = os.path.join(self.config.base_dir, script_name)
+            has_startup_script = os.path.exists(startup_script)
 
-            process = _ = subprocess.Popen(
-                ['bash', startup_script],
-                cwd=self.config.base_dir,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=True
-            )
+            if has_startup_script:
+                logger.info('start_component: starting {} using script {}'.format(component_name, startup_script))
+                process = _ = subprocess.Popen(
+                    ['bash', startup_script],
+                    cwd=self.config.base_dir,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True
+                )
+            else:
+                zato_binary = self.find_file_in_parents(self.config.zato_path)
+                if not zato_binary:
+                    error = 'Neither startup script {} nor zato binary found'.format(startup_script)
+                    logger.error('start_component: {}'.format(error))
+                    for handler in logger.handlers:
+                        handler.flush()
+                    return {'success': False, 'error': error}
+
+                logger.info('start_component: starting {} using zato start at {}'.format(component_name, component_path))
+                process = _ = subprocess.Popen(
+                    [zato_binary, 'start', component_path],
+                    cwd=self.config.base_dir,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True
+                )
 
             logger.info('start_component: launched {} with pid {}'.format(component_name, process.pid))
             logger.info('start_component: waiting for pidfile to appear for {} (max_wait=40s)'.format(component_name))
