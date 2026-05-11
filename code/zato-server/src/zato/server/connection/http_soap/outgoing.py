@@ -28,9 +28,6 @@ from requests_ntlm import HttpNtlmAuth
 # requests-toolbelt
 from requests_toolbelt import MultipartEncoder
 
-# prometheus_client
-from prometheus_client import Counter, Histogram
-
 # Zato
 from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, NotGiven, SEC_DEF_TYPE, URL_TYPE
 from zato.common.exception import BadRequest, Inactive, BackendInvocationError
@@ -40,6 +37,8 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name, utcnow
 from zato.common.util.config import extract_param_placeholders
 from zato.common.util.open_ import open_rb
+from zato.server.metrics import get_error_source_from_status_class, get_status_code_class, \
+    zato_rest_outgoing_request_duration_seconds, zato_rest_outgoing_requests_total
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,20 +57,6 @@ if 0:
 
 logger = getLogger('zato_rest')
 has_debug = logger.isEnabledFor(DEBUG)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# Metrics
-try:
-    zato_outgoing_http_requests_total = Counter(
-        'zato_outgoing_http_requests_total', 'Total outgoing HTTP requests', ['connection_name', 'status_code'])
-    zato_outgoing_http_request_duration_seconds = Histogram(
-        'zato_outgoing_http_request_duration_seconds', 'Outgoing HTTP request duration', ['connection_name'])
-except ValueError:
-    from prometheus_client import REGISTRY
-    zato_outgoing_http_requests_total = REGISTRY._names_to_collectors['zato_outgoing_http_requests_total']
-    zato_outgoing_http_request_duration_seconds = REGISTRY._names_to_collectors['zato_outgoing_http_request_duration_seconds']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -176,18 +161,22 @@ class BaseHTTPSOAPWrapper:
 
 # ################################################################################################################################
 
-    def _push_metrics(self, start_time, status_code):
-        """ Updates outgoing HTTP metrics with duration and status code.
+    def _push_metrics(self, start_time:'any_', status_code:'str') -> 'None':
+        """ Updates outgoing REST metrics with duration, status class, and error source.
         """
         duration = (utcnow() - start_time).total_seconds()
         connection_name = self.config['name']
 
-        _ = zato_outgoing_http_requests_total.labels(
+        status_class = get_status_code_class(status_code)
+        error_source = get_error_source_from_status_class(status_class)
+
+        _ = zato_rest_outgoing_requests_total.labels(
             connection_name=connection_name,
-            status_code=status_code
+            status_code=status_class,
+            error_source=error_source,
         ).inc()
 
-        _ = zato_outgoing_http_request_duration_seconds.labels(
+        _ = zato_rest_outgoing_request_duration_seconds.labels(
             connection_name=connection_name
         ).observe(duration)
 

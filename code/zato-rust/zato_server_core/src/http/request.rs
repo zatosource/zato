@@ -185,6 +185,8 @@ pub fn handle_http_request(
         Err(_) => false,
     };
 
+    let dispatch_had_error = payload_result.is_err();
+
     // .. for streaming responses, pass the iterator object through as-is ..
     let payload_obj: Py<PyAny> = if is_streaming {
         payload_result?.unbind()
@@ -229,6 +231,10 @@ pub fn handle_http_request(
     let channel_item = http_environ.get_item("zato.channel_item")?;
     let channel_name: String = channel_item
         .and_then(|chan_item| chan_item.call_method1("get", ("name", "-")).ok())
+        .map_or_else(|| Ok("-".to_owned()), |val| val.extract())?;
+
+    let service_name: String = channel_item
+        .and_then(|chan_item| chan_item.call_method1("get", ("service_name", "-")).ok())
         .map_or_else(|| Ok("-".to_owned()), |val| val.extract())?;
 
     let status: String = http_environ
@@ -303,17 +309,40 @@ pub fn handle_http_request(
 
     let has_prometheus: bool = server.getattr("has_prometheus")?.extract()?;
     if has_prometheus {
-        let prom_mod = py.import("zato.server.base.parallel.http")?;
-        let counter = prom_mod.getattr("zato_http_requests_total")?;
-        let hist = prom_mod.getattr("zato_http_request_duration_seconds")?;
+        let prom_mod = py.import("zato.server.metrics")?;
+        let counter = prom_mod.getattr("zato_rest_channel_requests_total")?;
+        let hist = prom_mod.getattr("zato_rest_channel_request_duration_seconds")?;
         let response_time_secs = delta.num_milliseconds() as f64 / 1000.0;
+
+        let get_status_code_class = prom_mod.getattr("get_status_code_class")?;
+        let status_class: String = get_status_code_class.call1((status_code,))?.extract()?;
+
+        let get_error_source = prom_mod.getattr("get_error_source_from_status_class")?;
+        let error_source: String = get_error_source.call1((&status_class,))?.extract()?;
+
         let labels_kwargs = PyDict::new(py);
         labels_kwargs.set_item("channel_name", &channel_name)?;
-        labels_kwargs.set_item("status_code", status_code)?;
+        labels_kwargs.set_item("status_code", &status_class)?;
+        labels_kwargs.set_item("error_source", &error_source)?;
         counter.call_method("labels", (), Some(&labels_kwargs))?.call_method0("inc")?;
+
         let hist_kwargs = PyDict::new(py);
         hist_kwargs.set_item("channel_name", &channel_name)?;
         hist.call_method("labels", (), Some(&hist_kwargs))?
+            .call_method1("observe", (response_time_secs,))?;
+
+        let svc_counter = prom_mod.getattr("zato_service_invocations_total")?;
+        let svc_hist = prom_mod.getattr("zato_service_duration_seconds")?;
+        let outcome = if dispatch_had_error { "error" } else { "ok" };
+
+        let svc_labels = PyDict::new(py);
+        svc_labels.set_item("service_name", &service_name)?;
+        svc_labels.set_item("outcome", outcome)?;
+        svc_counter.call_method("labels", (), Some(&svc_labels))?.call_method0("inc")?;
+
+        let svc_hist_labels = PyDict::new(py);
+        svc_hist_labels.set_item("service_name", &service_name)?;
+        svc_hist.call_method("labels", (), Some(&svc_hist_labels))?
             .call_method1("observe", (response_time_secs,))?;
     }
 
