@@ -229,11 +229,11 @@ pub fn handle_http_request(
     };
 
     let channel_item = http_environ.get_item("zato.channel_item")?;
-    let channel_name: String = channel_item
+    let channel_name: String = channel_item.as_ref()
         .and_then(|chan_item| chan_item.call_method1("get", ("name", "-")).ok())
         .map_or_else(|| Ok("-".to_owned()), |val| val.extract())?;
 
-    let service_name: String = channel_item
+    let service_name: String = channel_item.as_ref()
         .and_then(|chan_item| chan_item.call_method1("get", ("service_name", "-")).ok())
         .map_or_else(|| Ok("-".to_owned()), |val| val.extract())?;
 
