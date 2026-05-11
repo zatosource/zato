@@ -804,6 +804,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Basic metadata
         self.id = server.id
         self.name = server.name
+
+        from zato.server.metrics import set_server_info
+        set_server_info(self.name)
+
         self.cluster = self.odb.cluster
         self.cluster_id = self.cluster.id
         self.cluster_name = self.cluster.name
