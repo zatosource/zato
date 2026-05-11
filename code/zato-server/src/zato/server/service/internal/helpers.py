@@ -157,6 +157,9 @@ class GetMetrics(Service):
     name = 'zato.metrics.get'
 
     def handle(self):
+        from zato.server.metrics import refresh_uptime
+        refresh_uptime()
+
         server_text = generate_latest().decode('utf-8')
 
         scheduler_text = ''

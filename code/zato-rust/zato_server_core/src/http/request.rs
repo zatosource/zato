@@ -135,6 +135,12 @@ pub fn handle_http_request(
         .and_then(|kwargs_dict| kwargs_dict.get_item("cid").ok().flatten())
         .map_or_else(|| new_cid_func.call0()?.extract(), |val| val.extract())?;
 
+    {
+        let prom_mod = py.import("zato.server.metrics")?;
+        let in_flight = prom_mod.getattr("zato_server_requests_in_flight")?;
+        in_flight.call_method0("inc")?;
+    }
+
     let request_ts_utc = Utc::now();
     let local_offset =
         FixedOffset::east_opt(local_tz_offset_secs).ok_or_else(|| pyo3::exceptions::PyValueError::new_err("invalid timezone offset"))?;
@@ -229,11 +235,13 @@ pub fn handle_http_request(
     };
 
     let channel_item = http_environ.get_item("zato.channel_item")?;
-    let channel_name: String = channel_item.as_ref()
+    let channel_name: String = channel_item
+        .as_ref()
         .and_then(|chan_item| chan_item.call_method1("get", ("name", "-")).ok())
         .map_or_else(|| Ok("-".to_owned()), |val| val.extract())?;
 
-    let service_name: String = channel_item.as_ref()
+    let service_name: String = channel_item
+        .as_ref()
         .and_then(|chan_item| chan_item.call_method1("get", ("service_name", "-")).ok())
         .map_or_else(|| Ok("-".to_owned()), |val| val.extract())?;
 
@@ -342,7 +350,8 @@ pub fn handle_http_request(
 
         let svc_hist_labels = PyDict::new(py);
         svc_hist_labels.set_item("service_name", &service_name)?;
-        svc_hist.call_method("labels", (), Some(&svc_hist_labels))?
+        svc_hist
+            .call_method("labels", (), Some(&svc_hist_labels))?
             .call_method1("observe", (response_time_secs,))?;
     }
 
@@ -367,6 +376,12 @@ pub fn handle_http_request(
             delta_usec,
             response_size,
         });
+    }
+
+    {
+        let prom_mod = py.import("zato.server.metrics")?;
+        let in_flight = prom_mod.getattr("zato_server_requests_in_flight")?;
+        in_flight.call_method0("dec")?;
     }
 
     Ok(PyTuple::new(

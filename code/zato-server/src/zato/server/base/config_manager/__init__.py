@@ -1662,7 +1662,22 @@ class ConfigManager(_ConfigManagerBase):
         msg.cid = new_cid_server()
         msg.service = service
         msg.payload = payload
-        return self.on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_{}'.format(action), args, **kwargs)
+
+        from zato.server.metrics import zato_server_config_last_reload_timestamp_seconds, \
+            zato_server_config_reloads_total
+
+        try:
+            result = self.on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_{}'.format(action), args, **kwargs)
+        except Exception:
+            _ = zato_server_config_reloads_total.labels(result='failure').inc()
+            raise
+        else:
+            _ = zato_server_config_reloads_total.labels(result='success').inc()
+
+            import time as time_mod
+            _ = zato_server_config_last_reload_timestamp_seconds.set(time_mod.time())
+
+            return result
 
 # ################################################################################################################################
 
