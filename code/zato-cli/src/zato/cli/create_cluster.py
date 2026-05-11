@@ -12,6 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import random
 from copy import deepcopy
+from uuid import uuid4
 
 # Zato
 from zato.cli import common_odb_opts, ZatoCommand
@@ -212,7 +213,7 @@ class Create(ZatoCommand):
         from zato.common.api import DATA_FORMAT
         from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP
 
-        metrics_password = os.environ['Zato_Server_Metrics_Password']
+        metrics_password = os.environ.get('Zato_Metrics_Password') or uuid4().hex
 
         security = HTTPBasicAuth(None, 'metrics', True, 'metrics', 'Metrics user', metrics_password, cluster)
         session.add(security)
