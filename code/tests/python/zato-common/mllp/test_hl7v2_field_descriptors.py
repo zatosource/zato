@@ -10,9 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import unittest
 
 # Zato
-from zato_hl7v2 import parse_message
-from zato_hl7v2.base import HL7Field
-from zato_hl7v2.v2_9.segments import EVN, PID
+from zato.hl7v2 import parse_message
+from zato.hl7v2.base import HL7Field
+from zato.hl7v2.v2_9.segments import EVN, PID
 
 # ################################################################################################################################
 # ################################################################################################################################

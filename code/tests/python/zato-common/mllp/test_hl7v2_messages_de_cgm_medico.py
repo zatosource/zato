@@ -12,10 +12,10 @@ import json
 import unittest
 
 # Zato
-from zato_hl7v2.v2_9 import parse_message
-from zato_hl7v2.v2_9.segments import *  # noqa: F403
-from zato_hl7v2.v2_9.datatypes import *  # noqa: F403
-from zato_hl7v2.v2_9.messages import *  # noqa: F403
+from zato.hl7v2.v2_9 import parse_message
+from zato.hl7v2.v2_9.segments import *  # noqa: F403
+from zato.hl7v2.v2_9.datatypes import *  # noqa: F403
+from zato.hl7v2.v2_9.messages import *  # noqa: F403
 
 # ################################################################################################################
 # ################################################################################################################

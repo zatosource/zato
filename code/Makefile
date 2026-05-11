@@ -107,6 +107,9 @@ io-build: ## Build the public I/O Rust extension.
 health-build: ## Build the healthcare Rust extensions and copy .so files into zato-libs.
 	$(MAKE) -C $(Zato_Health) build
 
+fhir-rust-build: ## Build the FHIR Rust extension (delegates to top-level Makefile).
+	$(MAKE) -C $(Zato_Base) fhir-rust-build
+
 build: scheduler-build server-build io-build health-build ## Build everything across all repos.
 
 ensure-io-built:
