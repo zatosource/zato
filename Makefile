@@ -1,7 +1,7 @@
 .PHONY: build install clean server-build scheduler-build io-build common-core-build queue-bridge-build \
 	server-clean scheduler-clean io-clean common-core-clean queue-bridge-clean \
 	server-install scheduler-install io-install common-core-install queue-bridge-install \
-	ruff qa-reqs-install unify \
+	ruff pyright qa-reqs-install unify \
 	update cron-update stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener
 
@@ -15,7 +15,7 @@ ZATO_HEALTH_RS := $(CURDIR)/code/zato-common/src/zato
 
 default: build
 
-build: common-core-build server-build scheduler-build io-build queue-bridge-build
+build: common-core-build server-build scheduler-build io-build queue-bridge-build pyright
 # build: ... fhir-rust-build  # FHIR commented out for now
 
 server-build:
@@ -126,6 +126,10 @@ unify:
 
 ruff:
 	$(CURDIR)/code/bin/ruff check $(CURDIR)/code
+
+pyright:
+	@echo "Running pyright from $(CURDIR)/code on zato-common/src/zato/hl7v2/"
+	cd $(CURDIR)/code && pyright zato-common/src/zato/hl7v2/
 
 update:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/updates_cli.py
