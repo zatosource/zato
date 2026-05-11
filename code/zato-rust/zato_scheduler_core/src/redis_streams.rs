@@ -405,6 +405,15 @@ fn handle_mark_complete(shared: &SchedulerShared, payload: &str) {
             parsed.duration_ms,
             parsed.job_id,
         );
+
+        crate::metrics::EXECUTIONS_TOTAL
+            .with_label_values(&[&running_job.name, &parsed.outcome])
+            .inc();
+
+        let duration_secs = parsed.duration_ms as f64 / 1000.0;
+        crate::metrics::EXECUTION_DURATION_SECONDS
+            .with_label_values(&[&running_job.name])
+            .observe(duration_secs);
         running_job.in_flight = false;
         running_job.in_flight_since = None;
         running_job.in_flight_run = None;

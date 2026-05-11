@@ -16,6 +16,7 @@ from logging import DEBUG, getLogger
 from tempfile import gettempdir
 from traceback import format_exc
 from unittest import TestCase
+from urllib.request import urlopen
 
 # Prometheus
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
@@ -151,12 +152,25 @@ class Echo(Service):
 # ################################################################################################################################
 
 class GetMetrics(Service):
-    """ Returns metrics in Prometheus format.
+    """ Returns metrics in Prometheus format, combining server and scheduler metrics.
     """
     name = 'zato.metrics.get'
 
     def handle(self):
-        self.response.payload = generate_latest().decode('utf-8')
+        server_text = generate_latest().decode('utf-8')
+
+        scheduler_text = ''
+        try:
+            with urlopen('http://127.0.0.1:35100/metrics', timeout=2) as resp:
+                scheduler_text = resp.read().decode('utf-8')
+        except Exception:
+            pass
+
+        if scheduler_text:
+            self.response.payload = server_text + '\n' + scheduler_text
+        else:
+            self.response.payload = server_text
+
         self.response.content_type = CONTENT_TYPE_LATEST
 
 # ################################################################################################################################
