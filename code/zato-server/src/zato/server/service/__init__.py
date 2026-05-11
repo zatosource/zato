@@ -343,7 +343,6 @@ class Service:
 
     process_name:'str' = 'No name'
 
-    kafka: 'KafkaFacade'
     rest: 'RESTFacade'
     schedule: 'SchedulerFacade'
     security: 'SecurityFacade'
@@ -451,6 +450,7 @@ class Service:
 
         self.out = self.outgoing = Outgoing(
             self.amqp,
+            KafkaFacade(),
             self._config_store.out_odoo,
             self._config_manager.config_store.out_plain_http,
             self._config_store.out_soap,
@@ -462,9 +462,6 @@ class Service:
 
         # REST facade for outgoing connections
         self.rest = RESTFacade()
-
-        # Kafka facade for outgoing connections
-        self.kafka = KafkaFacade()
 
         # MLLP facade for outgoing connections
         self.mllp = MLLPFacade()
@@ -577,7 +574,7 @@ class Service:
         self.rest.init(self.cid, self._config_manager.config_store.out_plain_http)
 
         # Kafka facade
-        self.kafka.init(self._config_manager)
+        self.out.kafka.init(self._config_manager)
 
         # MLLP facade
         self.mllp.init(self._config_manager)
