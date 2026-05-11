@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import unittest
 
 # Zato
-from zato_hl7v2.v2_9 import parse_message
+from zato.hl7v2.v2_9 import parse_message
 
 # ################################################################################################################################
 # ################################################################################################################################

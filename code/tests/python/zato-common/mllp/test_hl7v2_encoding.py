@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import TestCase
 
 # Zato
-from zato_hl7v2.encoding import decode_er7, encode_er7
+from zato.hl7v2.encoding import decode_er7, encode_er7
 
 # ################################################################################################################################
 # ################################################################################################################################

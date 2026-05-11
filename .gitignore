@@ -68,12 +68,15 @@ vscode
 *.so
 !code/support-linux/zato_hl7v2/*.so
 !code/support-linux/zato_broker_core/*.so
+!code/zato-common/src/zato/hl7v2_rs/*.so
+!code/zato-common/src/zato/fhir_r4_0_1_core/*.so
 *.swp
 *.*~
 ~
 
 # Rust build artifacts
 **/Cargo.lock
+!code/zato-common/src/zato/fhir_r4_0_1_core/Cargo.lock
 **/mutants*
 **/target/
 **/corpus/

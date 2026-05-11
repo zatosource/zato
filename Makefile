@@ -11,10 +11,12 @@ CARGO_ENV := $(HOME)/.cargo/env
 LOAD_CARGO_ENV := if [ -f $(CARGO_ENV) ]; then . $(CARGO_ENV); fi
 
 ZATO_RUST := $(CURDIR)/code/zato-rust
+ZATO_HEALTH_RS := $(CURDIR)/code/zato-common/src/zato
 
 default: build
 
 build: common-core-build server-build scheduler-build io-build queue-bridge-build
+# build: ... fhir-rust-build  # FHIR commented out for now
 
 server-build:
 	@echo ">>> Building server"
@@ -50,6 +52,17 @@ queue-bridge-build:
 	cargo build --release --manifest-path $(ZATO_RUST)/zato_queue_bridge/Cargo.toml --bin _zato_queue_bridge && \
 	rm -f $(CURDIR)/code/bin/_zato_queue_bridge && \
 	cp $(ZATO_RUST)/zato_queue_bridge/target/release/_zato_queue_bridge $(CURDIR)/code/bin/_zato_queue_bridge
+
+# FHIR commented out for now
+#fhir-rust-build:
+#	@echo ">>> Building FHIR Rust extension"
+#	$(LOAD_CARGO_ENV) && \
+#	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
+#	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_HEALTH_RS)/fhir_r4_0_1_core/Cargo.toml
+
+# FHIR commented out for now
+#fhir-rust-clean:
+#	rm -rf $(ZATO_HEALTH_RS)/fhir_r4_0_1_core/target
 
 queue-bridge:
 	$(CURDIR)/code/bin/_zato_queue_bridge
