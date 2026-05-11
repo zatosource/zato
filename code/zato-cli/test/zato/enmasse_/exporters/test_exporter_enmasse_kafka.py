@@ -15,7 +15,7 @@ from unittest import TestCase
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
-from zato.cli.enmasse.importers.kafka import KafkaChannelImporter, KafkaOutgoingImporter
+from zato.cli.enmasse.importers.kafka import ChannelKafkaImporter, OutgoingKafkaImporter
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 
@@ -29,7 +29,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestEnmasseKafkaChannelExport(TestCase):
+class TestEnmasseChannelKafkaExport(TestCase):
     """ Tests exporting Kafka channel definitions to YAML format.
     """
 
@@ -42,7 +42,7 @@ class TestEnmasseKafkaChannelExport(TestCase):
 
         self.importer = EnmasseYAMLImporter()
         self.exporter = EnmasseYAMLExporter()
-        self.kafka_importer = KafkaChannelImporter(self.importer)
+        self.kafka_importer = ChannelKafkaImporter(self.importer)
 
         self.yaml_config = cast_('stranydict', None)
         self.session = cast_('any_', None)
@@ -65,18 +65,18 @@ class TestEnmasseKafkaChannelExport(TestCase):
 
 # ################################################################################################################################
 
-    def test_kafka_channel_export(self):
+    def test_channel_kafka_export(self):
         self._setup_test_environment()
 
-        kafka_list_from_yaml = self.yaml_config['kafka_channel']
+        kafka_list_from_yaml = self.yaml_config['channel_kafka']
 
         created, _ = self.kafka_importer.sync_definitions(kafka_list_from_yaml, self.session)
         self.assertEqual(len(created), 2)
 
         exported_data = self.exporter.export_to_dict(self.session)
 
-        self.assertIn('kafka_channel', exported_data)
-        exported_kafka_list = exported_data['kafka_channel']
+        self.assertIn('channel_kafka', exported_data)
+        exported_kafka_list = exported_data['channel_kafka']
         self.assertEqual(len(exported_kafka_list), 2)
 
         exported_by_name = {item['name']: item for item in exported_kafka_list}
@@ -92,7 +92,7 @@ class TestEnmasseKafkaChannelExport(TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestEnmasseKafkaOutgoingExport(TestCase):
+class TestEnmasseOutgoingKafkaExport(TestCase):
     """ Tests exporting Kafka outgoing definitions to YAML format.
     """
 
@@ -105,7 +105,7 @@ class TestEnmasseKafkaOutgoingExport(TestCase):
 
         self.importer = EnmasseYAMLImporter()
         self.exporter = EnmasseYAMLExporter()
-        self.kafka_importer = KafkaOutgoingImporter(self.importer)
+        self.kafka_importer = OutgoingKafkaImporter(self.importer)
 
         self.yaml_config = cast_('stranydict', None)
         self.session = cast_('any_', None)
@@ -128,18 +128,18 @@ class TestEnmasseKafkaOutgoingExport(TestCase):
 
 # ################################################################################################################################
 
-    def test_kafka_outgoing_export(self):
+    def test_outgoing_kafka_export(self):
         self._setup_test_environment()
 
-        kafka_list_from_yaml = self.yaml_config['kafka_outgoing']
+        kafka_list_from_yaml = self.yaml_config['outgoing_kafka']
 
         created, _ = self.kafka_importer.sync_definitions(kafka_list_from_yaml, self.session)
         self.assertEqual(len(created), 2)
 
         exported_data = self.exporter.export_to_dict(self.session)
 
-        self.assertIn('kafka_outgoing', exported_data)
-        exported_kafka_list = exported_data['kafka_outgoing']
+        self.assertIn('outgoing_kafka', exported_data)
+        exported_kafka_list = exported_data['outgoing_kafka']
         self.assertEqual(len(exported_kafka_list), 2)
 
         exported_by_name = {item['name']: item for item in exported_kafka_list}

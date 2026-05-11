@@ -194,7 +194,7 @@ scheduler:
     start_date: '2025-04-21 23:19:47'
     days: 10
 
-kafka_channel:
+channel_kafka:
 
   - name: enmasse.kafka.channel.1
     is_active: true
@@ -235,7 +235,7 @@ channel_hl7_mllp:
     normalize_obx2_value_type: false
     allow_short_encoding_characters: false
 
-kafka_outgoing:
+outgoing_kafka:
 
   - name: enmasse.kafka.outgoing.1
     is_active: true

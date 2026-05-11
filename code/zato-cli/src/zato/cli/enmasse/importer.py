@@ -29,7 +29,7 @@ from zato.cli.enmasse.importers.sql import SQLImporter
 from zato.cli.enmasse.importers.confluence import ConfluenceImporter
 from zato.cli.enmasse.importers.jira import JiraImporter
 from zato.cli.enmasse.importers.channel_hl7_mllp import ChannelHL7MLLPImporter
-from zato.cli.enmasse.importers.kafka import KafkaChannelImporter, KafkaOutgoingImporter
+from zato.cli.enmasse.importers.kafka import ChannelKafkaImporter, OutgoingKafkaImporter
 from zato.cli.enmasse.importers.ldap import LDAPImporter
 from zato.cli.enmasse.importers.microsoft_365 import Microsoft365Importer
 from zato.cli.enmasse.importers.outgoing_rest import OutgoingRESTImporter
@@ -99,8 +99,8 @@ class EnmasseYAMLImporter:
         self.confluence_defs = {}
         self.jira_defs = {}
         self.channel_hl7_mllp_defs = {}
-        self.kafka_channel_defs = {}
-        self.kafka_outgoing_defs = {}
+        self.channel_kafka_defs = {}
+        self.outgoing_kafka_defs = {}
         self.ldap_defs = {}
         self.microsoft_365_defs = {}
         self.outgoing_rest_defs = {}
@@ -129,8 +129,8 @@ class EnmasseYAMLImporter:
         self.confluence_importer = ConfluenceImporter(self)
         self.jira_importer = JiraImporter(self)
         self.channel_hl7_mllp_importer = ChannelHL7MLLPImporter(self)
-        self.kafka_channel_importer = KafkaChannelImporter(self)
-        self.kafka_outgoing_importer = KafkaOutgoingImporter(self)
+        self.channel_kafka_importer = ChannelKafkaImporter(self)
+        self.outgoing_kafka_importer = OutgoingKafkaImporter(self)
         self.ldap_importer = LDAPImporter(self)
         self.microsoft_365_importer = Microsoft365Importer(self)
         self.outgoing_rest_importer = OutgoingRESTImporter(self)
@@ -560,38 +560,38 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
-    def sync_kafka_channel(self, kafka_channel_list:'list', session:'SASession') -> 'tuple':
-        if not kafka_channel_list:
+    def sync_channel_kafka(self, channel_kafka_list:'list', session:'SASession') -> 'tuple':
+        if not channel_kafka_list:
             return [], []
 
-        count = len(kafka_channel_list)
+        count = len(channel_kafka_list)
         noun = 'definition' if count == 1 else 'definitions'
         logger.info(f'Processing {count} Kafka channel {noun}')
 
-        for idx, item in enumerate(kafka_channel_list):
+        for idx, item in enumerate(channel_kafka_list):
             logger.info('Kafka channel item %d: %s', idx, item)
 
-        created, updated = self.kafka_channel_importer.sync_definitions(kafka_channel_list, session)
-        self.kafka_channel_defs = self.kafka_channel_importer.connection_defs
+        created, updated = self.channel_kafka_importer.sync_definitions(channel_kafka_list, session)
+        self.channel_kafka_defs = self.channel_kafka_importer.connection_defs
         logger.info('Processed Kafka channel definitions: created=%d updated=%d', len(created), len(updated))
 
         return created, updated
 
 # ################################################################################################################################
 
-    def sync_kafka_outgoing(self, kafka_outgoing_list:'list', session:'SASession') -> 'tuple':
-        if not kafka_outgoing_list:
+    def sync_outgoing_kafka(self, outgoing_kafka_list:'list', session:'SASession') -> 'tuple':
+        if not outgoing_kafka_list:
             return [], []
 
-        count = len(kafka_outgoing_list)
+        count = len(outgoing_kafka_list)
         noun = 'definition' if count == 1 else 'definitions'
         logger.info(f'Processing {count} Kafka outgoing {noun}')
 
-        for idx, item in enumerate(kafka_outgoing_list):
+        for idx, item in enumerate(outgoing_kafka_list):
             logger.info('Kafka outgoing item %d: %s', idx, item)
 
-        created, updated = self.kafka_outgoing_importer.sync_definitions(kafka_outgoing_list, session)
-        self.kafka_outgoing_defs = self.kafka_outgoing_importer.connection_defs
+        created, updated = self.outgoing_kafka_importer.sync_definitions(outgoing_kafka_list, session)
+        self.outgoing_kafka_defs = self.outgoing_kafka_importer.connection_defs
         logger.info('Processed Kafka outgoing definitions: created=%d updated=%d', len(created), len(updated))
 
         return created, updated
@@ -860,20 +860,20 @@ class EnmasseYAMLImporter:
             self.updated_objects['ldap'] = ldap_updated
 
         # Process Kafka channel definitions
-        kafka_channel_list = yaml_config.get('kafka_channel', [])
-        kafka_channel_created, kafka_channel_updated = self.sync_kafka_channel(kafka_channel_list, session)
-        if kafka_channel_created:
-            self.created_objects['kafka_channel'] = kafka_channel_created
-        if kafka_channel_updated:
-            self.updated_objects['kafka_channel'] = kafka_channel_updated
+        channel_kafka_list = yaml_config.get('channel_kafka', [])
+        channel_kafka_created, channel_kafka_updated = self.sync_channel_kafka(channel_kafka_list, session)
+        if channel_kafka_created:
+            self.created_objects['channel_kafka'] = channel_kafka_created
+        if channel_kafka_updated:
+            self.updated_objects['channel_kafka'] = channel_kafka_updated
 
         # Process Kafka outgoing definitions
-        kafka_outgoing_list = yaml_config.get('kafka_outgoing', [])
-        kafka_outgoing_created, kafka_outgoing_updated = self.sync_kafka_outgoing(kafka_outgoing_list, session)
-        if kafka_outgoing_created:
-            self.created_objects['kafka_outgoing'] = kafka_outgoing_created
-        if kafka_outgoing_updated:
-            self.updated_objects['kafka_outgoing'] = kafka_outgoing_updated
+        outgoing_kafka_list = yaml_config.get('outgoing_kafka', [])
+        outgoing_kafka_created, outgoing_kafka_updated = self.sync_outgoing_kafka(outgoing_kafka_list, session)
+        if outgoing_kafka_created:
+            self.created_objects['outgoing_kafka'] = outgoing_kafka_created
+        if outgoing_kafka_updated:
+            self.updated_objects['outgoing_kafka'] = outgoing_kafka_updated
 
         # Process HL7 MLLP channel definitions
         channel_hl7_mllp_list = yaml_config.get('channel_hl7_mllp', [])

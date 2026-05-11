@@ -1,4 +1,4 @@
-kafka_channel:
+channel_kafka:
 
   - name: demo.kafka.channel
     is_active: true
@@ -7,7 +7,7 @@ kafka_channel:
     group_id: zato-kafka-group
     service: demo.echo
 
-kafka_outgoing:
+outgoing_kafka:
 
   - name: demo.kafka.publisher
     is_active: true

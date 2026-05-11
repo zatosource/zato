@@ -14,7 +14,7 @@ from unittest import TestCase, main
 # Zato
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
-from zato.cli.enmasse.importers.kafka import KafkaChannelImporter, KafkaOutgoingImporter
+from zato.cli.enmasse.importers.kafka import ChannelKafkaImporter, OutgoingKafkaImporter
 from zato.common.api import GENERIC
 from zato.common.odb.model import GenericConn
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
@@ -30,7 +30,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestEnmasseKafkaChannelFromYAML(TestCase):
+class TestEnmasseChannelKafkaFromYAML(TestCase):
     """ Tests importing Kafka channel definitions from YAML files using enmasse.
     """
 
@@ -42,7 +42,7 @@ class TestEnmasseKafkaChannelFromYAML(TestCase):
         self.temp_file.close()
 
         self.importer = EnmasseYAMLImporter()
-        self.kafka_importer = KafkaChannelImporter(self.importer)
+        self.kafka_importer = ChannelKafkaImporter(self.importer)
 
         self.yaml_config = cast_('stranydict', None)
         self.session = cast_('any_', None)
@@ -65,10 +65,10 @@ class TestEnmasseKafkaChannelFromYAML(TestCase):
 
 # ################################################################################################################################
 
-    def test_kafka_channel_creation(self):
+    def test_channel_kafka_creation(self):
         self._setup_test_environment()
 
-        kafka_defs = self.yaml_config['kafka_channel']
+        kafka_defs = self.yaml_config['channel_kafka']
         created, updated = self.kafka_importer.sync_definitions(kafka_defs, self.session)
 
         self.assertEqual(len(created), 2)
@@ -83,10 +83,10 @@ class TestEnmasseKafkaChannelFromYAML(TestCase):
 
 # ################################################################################################################################
 
-    def test_kafka_channel_update(self):
+    def test_channel_kafka_update(self):
         self._setup_test_environment()
 
-        kafka_defs = self.yaml_config['kafka_channel']
+        kafka_defs = self.yaml_config['channel_kafka']
         kafka_def = kafka_defs[0]
 
         instance = self.kafka_importer.create_definition(kafka_def, self.session)
@@ -107,10 +107,10 @@ class TestEnmasseKafkaChannelFromYAML(TestCase):
 
 # ################################################################################################################################
 
-    def test_complete_kafka_channel_import_flow(self):
+    def test_complete_channel_kafka_import_flow(self):
         self._setup_test_environment()
 
-        kafka_list = self.yaml_config['kafka_channel']
+        kafka_list = self.yaml_config['channel_kafka']
         created, updated = self.kafka_importer.sync_definitions(kafka_list, self.session)
 
         self.assertEqual(len(created), 2)
@@ -123,7 +123,7 @@ class TestEnmasseKafkaChannelFromYAML(TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestEnmasseKafkaOutgoingFromYAML(TestCase):
+class TestEnmasseOutgoingKafkaFromYAML(TestCase):
     """ Tests importing Kafka outgoing definitions from YAML files using enmasse.
     """
 
@@ -135,7 +135,7 @@ class TestEnmasseKafkaOutgoingFromYAML(TestCase):
         self.temp_file.close()
 
         self.importer = EnmasseYAMLImporter()
-        self.kafka_importer = KafkaOutgoingImporter(self.importer)
+        self.kafka_importer = OutgoingKafkaImporter(self.importer)
 
         self.yaml_config = cast_('stranydict', None)
         self.session = cast_('any_', None)
@@ -158,10 +158,10 @@ class TestEnmasseKafkaOutgoingFromYAML(TestCase):
 
 # ################################################################################################################################
 
-    def test_kafka_outgoing_creation(self):
+    def test_outgoing_kafka_creation(self):
         self._setup_test_environment()
 
-        kafka_defs = self.yaml_config['kafka_outgoing']
+        kafka_defs = self.yaml_config['outgoing_kafka']
         created, updated = self.kafka_importer.sync_definitions(kafka_defs, self.session)
 
         self.assertEqual(len(created), 2)
@@ -176,10 +176,10 @@ class TestEnmasseKafkaOutgoingFromYAML(TestCase):
 
 # ################################################################################################################################
 
-    def test_kafka_outgoing_update(self):
+    def test_outgoing_kafka_update(self):
         self._setup_test_environment()
 
-        kafka_defs = self.yaml_config['kafka_outgoing']
+        kafka_defs = self.yaml_config['outgoing_kafka']
         kafka_def = kafka_defs[0]
 
         instance = self.kafka_importer.create_definition(kafka_def, self.session)
@@ -200,10 +200,10 @@ class TestEnmasseKafkaOutgoingFromYAML(TestCase):
 
 # ################################################################################################################################
 
-    def test_complete_kafka_outgoing_import_flow(self):
+    def test_complete_outgoing_kafka_import_flow(self):
         self._setup_test_environment()
 
-        kafka_list = self.yaml_config['kafka_outgoing']
+        kafka_list = self.yaml_config['outgoing_kafka']
         created, updated = self.kafka_importer.sync_definitions(kafka_list, self.session)
 
         self.assertEqual(len(created), 2)
