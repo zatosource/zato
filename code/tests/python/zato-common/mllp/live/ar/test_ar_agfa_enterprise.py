@@ -18,9 +18,13 @@ _md_path = md_path_for('ar', 'ar-agfa-enterprise.md')
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestMsg01:
+import unittest
+
+class TestMsg01(unittest.TestCase):
     """ Based on live/ar/ar-agfa-enterprise.md, message no. 1
     """
+
+    maxDiff = None
 
     def test_build(self) -> 'None':
 
@@ -50,29 +54,29 @@ class TestMsg01:
         pid.set_id_pid = '1'
 
         patient_id = CX()
-        patient_id.id_number = '28456712'
+        patient_id.id_number = '31245678'
         patient_id.assigning_authority = 'RENAPER'
         patient_id.identifier_type_code = 'NI'
         pid.patient_identifier_list = patient_id
 
         patient_name = XPN()
-        patient_name.family_name = 'GARCIA'
-        patient_name.given_name = 'MARIA ELENA'
+        patient_name.family_name = 'AGUIRRE'
+        patient_name.given_name = 'MARIANA SOLEDAD'
         pid.patient_name = patient_name
 
         pid.date_time_of_birth = '19780315'
         pid.administrative_sex = 'F'
 
         patient_address = XAD()
-        patient_address.street_address = 'AV CENTENARIO 1250'
+        patient_address.street_address = 'CALLE 47 NRO 825'
         patient_address.city = 'LA PLATA'
         patient_address.state_or_province = 'BUENOS AIRES'
         patient_address.zip_or_postal_code = '1900'
         patient_address.country = 'AR'
         pid.patient_address = patient_address
 
-        pid.pid_13 = '0221-4523890'  # Retired in v2.9, no semantic name
-        pid.patient_account_number = '28456712'
+        pid.pid_13 = '0221-4239012'  # Retired in v2.9, no semantic name
+        pid.patient_account_number = '31245678'
 
         # .. build PV1 ..
         pv1 = PV1()
@@ -86,9 +90,9 @@ class TestMsg01:
         pv1.assigned_patient_location = patient_location
 
         attending_doctor = XCN()
-        attending_doctor.person_identifier = '34567890'
-        attending_doctor.family_name = 'FERNANDEZ'
-        attending_doctor.given_name = 'CARLOS'
+        attending_doctor.person_identifier = '32145698'
+        attending_doctor.family_name = 'FERREYRA'
+        attending_doctor.given_name = 'GUSTAVO'
         attending_doctor.prefix = 'DR'
         pv1.attending_doctor = attending_doctor
 
@@ -104,16 +108,16 @@ class TestMsg01:
         orc.date_time_of_order_event = '20250312091500'
 
         orc_entered_by = XCN()
-        orc_entered_by.person_identifier = '34567890'
-        orc_entered_by.family_name = 'FERNANDEZ'
-        orc_entered_by.given_name = 'CARLOS'
+        orc_entered_by.person_identifier = '32145698'
+        orc_entered_by.family_name = 'FERREYRA'
+        orc_entered_by.given_name = 'GUSTAVO'
         orc_entered_by.prefix = 'DR'
         orc.orc_10 = orc_entered_by  # Retired in v2.9, no semantic name
 
         orc_ordering_provider = XCN()
-        orc_ordering_provider.person_identifier = '34567890'
-        orc_ordering_provider.family_name = 'FERNANDEZ'
-        orc_ordering_provider.given_name = 'CARLOS'
+        orc_ordering_provider.person_identifier = '32145698'
+        orc_ordering_provider.family_name = 'FERREYRA'
+        orc_ordering_provider.given_name = 'GUSTAVO'
         orc_ordering_provider.prefix = 'DR'
         orc.orc_12 = orc_ordering_provider  # Retired in v2.9, no semantic name
 
@@ -133,9 +137,9 @@ class TestMsg01:
         obr.observation_date_time = '20250312091500'
 
         obr_ordering_provider = XCN()
-        obr_ordering_provider.person_identifier = '34567890'
-        obr_ordering_provider.family_name = 'FERNANDEZ'
-        obr_ordering_provider.given_name = 'CARLOS'
+        obr_ordering_provider.person_identifier = '32145698'
+        obr_ordering_provider.family_name = 'FERREYRA'
+        obr_ordering_provider.given_name = 'GUSTAVO'
         obr_ordering_provider.prefix = 'DR'
         obr.obr_15 = obr_ordering_provider  # Retired in v2.9, no semantic name
 
@@ -172,7 +176,7 @@ class TestMsg01:
         # .. and assert exact match against the .md file.
         expected_er7 = load_message(_md_path, 1)
 
-        assert built_er7 == expected_er7
+        self.assertEqual(built_er7, expected_er7)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -189,15 +193,22 @@ class TestMsg01:
         reparsed = parse_message(serialized, validate=False)
 
         # .. and assert roundtrip fidelity.
-        assert serialized == reparsed.to_hl7v2()
+        reparsed_er7 = reparsed.to_hl7v2()
+        self.assertEqual(serialized, reparsed_er7)
 
         parsed_dict = parsed.to_dict(include_empty=False)
         reparsed_dict = reparsed.to_dict(include_empty=False)
-        assert parsed_dict == reparsed_dict
+        self.assertEqual(parsed_dict, reparsed_dict)
 
         parsed_dict_full = parsed.to_dict(include_empty=True)
         reparsed_dict_full = reparsed.to_dict(include_empty=True)
-        assert parsed_dict_full == reparsed_dict_full
+        self.assertEqual(parsed_dict_full, reparsed_dict_full)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if __name__ == '__main__':
+    _ = unittest.main()
 
 # ################################################################################################################################
 # ################################################################################################################################
