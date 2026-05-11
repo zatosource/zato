@@ -53,7 +53,7 @@ OUTGOING_OPAQUE_FIELDS = [
 # ################################################################################################################################
 # ################################################################################################################################
 
-class KafkaChannelExporter:
+class ChannelKafkaExporter:
 
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
@@ -100,7 +100,7 @@ class KafkaChannelExporter:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class KafkaOutgoingExporter:
+class OutgoingKafkaExporter:
 
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter

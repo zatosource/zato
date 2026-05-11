@@ -182,8 +182,8 @@ def get_top_level_order() -> 'strlist':
         'microsoft_365',
         'confluence',
         'jira',
-        'kafka_channel',
-        'kafka_outgoing',
+        'channel_kafka',
+        'outgoing_kafka',
         'channel_hl7_mllp',
         'email_imap',
         'email_smtp',
@@ -215,8 +215,8 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['microsoft_365'] = 'name', 'is_active', 'client_id', 'tenant_id', 'scopes:list',
     order['confluence'] = 'name', 'is_active', 'address', 'username',
     order['jira'] = 'name', 'is_active', 'address', 'username',
-    order['kafka_channel'] = 'name', 'is_active', 'address', 'topic', 'group_id', 'service',
-    order['kafka_outgoing'] = 'name', 'is_active', 'address', 'topic',
+    order['channel_kafka'] = 'name', 'is_active', 'address', 'topic', 'group_id', 'service',
+    order['outgoing_kafka'] = 'name', 'is_active', 'address', 'topic',
     order['channel_hl7_mllp'] = 'name', 'is_active', 'service', 'msh9_message_type', 'msh9_trigger_event', 'should_validate', \
         'normalize_line_endings', 'fix_off_by_one_field_index', 'dedup_ttl_value', 'dedup_ttl_unit', 'is_default',
     order['email_imap'] = 'name', 'is_active', 'type', 'host', 'port', 'username', 'tenant_id', 'client_id', # TODO: Implement type vs. server_type
