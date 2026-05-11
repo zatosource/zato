@@ -128,8 +128,8 @@ ruff:
 	$(CURDIR)/code/bin/ruff check $(CURDIR)/code
 
 pyright:
-	@echo "Running pyright from $(CURDIR)/code on zato-common/src/zato/hl7v2/"
-	cd $(CURDIR)/code && pyright zato-common/src/zato/hl7v2/
+	@echo "Running pyright from $(CURDIR)/code on zato-common/src/zato/hl7v2/ tests/python/"
+	cd $(CURDIR)/code && pyright zato-common/src/zato/hl7v2/ tests/python/
 
 update:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/updates_cli.py
