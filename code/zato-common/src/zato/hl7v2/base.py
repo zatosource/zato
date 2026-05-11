@@ -12,17 +12,17 @@ from __future__ import annotations
 import json
 
 from enum import Enum
-from typing import NamedTuple
+from typing import Generic, NamedTuple, TypeVar, overload
 
 # Zato
 from zato.hl7v2.registry import register_component, register_field, register_segment, resolve_component, resolve_field
-from zato.hl7v2_rs import serialize as _rust_serialize
+from zato.hl7v2_rs import serialize as _rust_serialize  # pyright: ignore[reportAttributeAccessIssue]
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from typing import Any, Optional  # noqa: F401
+    from typing import Any  # noqa: F401
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,6 +47,8 @@ intstrdict    = dict[int, str]
 strlist       = list[str]
 strlistlist   = list[list[str]]
 anylist       = list['Any']
+
+T = TypeVar('T')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -193,7 +195,7 @@ class HL7RepeatableList(list):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class HL7Component:
+class HL7Component(Generic[T]):
     """ Descriptor for a single component within an HL7 data type.
     """
 
@@ -262,6 +264,12 @@ class HL7Component:
 
 # ################################################################################################################################
 
+    @overload
+    def __get__(self, instance:'None', owner:'type') -> 'HL7Component[T]': ...
+
+    @overload
+    def __get__(self, instance:'any_', owner:'type') -> 'T | None': ...
+
     def __get__(self, instance:'any_', owner:'type') -> 'any_':
 
         if instance is None:
@@ -298,7 +306,7 @@ class HL7Component:
 
 # ################################################################################################################################
 
-    def __set__(self, instance:'any_', value:'any_') -> 'None':
+    def __set__(self, instance:'any_', value:'T | None') -> 'None':
 
         instance.__dict__[self.attr_name] = value
 
@@ -328,7 +336,7 @@ class HL7Component:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class HL7Field:
+class HL7Field(Generic[T]):
     """ Descriptor for a single field within an HL7 segment.
     """
 
@@ -355,6 +363,12 @@ class HL7Field:
             register_field(owner._segment_id, name, self.position, self.datatype)
 
 # ################################################################################################################################
+
+    @overload
+    def __get__(self, instance:'None', owner:'type') -> 'HL7Field[T]': ...
+
+    @overload
+    def __get__(self, instance:'any_', owner:'type') -> 'T': ...
 
     def __get__(self, instance:'any_', owner:'type') -> 'any_':
 
@@ -478,19 +492,19 @@ class HL7Field:
 
 # ################################################################################################################################
 
-    def __set__(self, instance:'any_', value:'any_') -> 'None':
+    def __set__(self, instance:'any_', value:'T') -> 'None':
 
         if self.repeatable:
             if value is not None:
                 if not isinstance(value, list):
-                    value = HL7RepeatableList([value])
+                    value = HL7RepeatableList([value])  # pyright: ignore[reportAssignmentType]
 
         instance.__dict__[self.attr_name] = value
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class HL7SegmentAttr:
+class HL7SegmentAttr(Generic[T]):
     """ Descriptor for a segment reference within a message or group.
     """
 
@@ -511,6 +525,12 @@ class HL7SegmentAttr:
         self.attr_name = name
 
 # ################################################################################################################################
+
+    @overload
+    def __get__(self, instance:'None', owner:'type') -> 'HL7SegmentAttr[T]': ...
+
+    @overload
+    def __get__(self, instance:'any_', owner:'type') -> 'T': ...
 
     def __get__(self, instance:'any_', owner:'type') -> 'any_':
 
@@ -568,13 +588,13 @@ class HL7SegmentAttr:
 
 # ################################################################################################################################
 
-    def __set__(self, instance:'any_', value:'any_') -> 'None':
+    def __set__(self, instance:'any_', value:'T') -> 'None':
         instance.__dict__[self.attr_name] = value
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class HL7GroupAttr:
+class HL7GroupAttr(Generic[T]):
     """ Descriptor for a group reference within a message.
     """
 
@@ -595,6 +615,12 @@ class HL7GroupAttr:
         self.attr_name = name
 
 # ################################################################################################################################
+
+    @overload
+    def __get__(self, instance:'None', owner:'type') -> 'HL7GroupAttr[T]': ...
+
+    @overload
+    def __get__(self, instance:'any_', owner:'type') -> 'T': ...
 
     def __get__(self, instance:'any_', owner:'type') -> 'any_':
 
@@ -641,7 +667,7 @@ class HL7GroupAttr:
 
 # ################################################################################################################################
 
-    def __set__(self, instance:'any_', value:'any_') -> 'None':
+    def __set__(self, instance:'any_', value:'T') -> 'None':
         instance.__dict__[self.attr_name] = value
 
 # ################################################################################################################################
@@ -831,7 +857,7 @@ class HL7DataType:
 
         while parts:
             if parts[-1] == '':
-                parts.pop()
+                _ = parts.pop()
             else:
                 break
 
