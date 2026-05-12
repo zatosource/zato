@@ -22,6 +22,7 @@ class GraphQLConfigObject:
     security_id: strnone = None
     security_name: strnone = None
     sec_type: strnone = None
+    auth_type: strnone = None
     username: strnone = None
     password: strnone = None
     default_query_timeout: intnone = None

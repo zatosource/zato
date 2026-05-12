@@ -44,6 +44,7 @@
             'extra',
             'default_query_timeout',
             'security_id',
+            'sec_type',
         ]
     }
     </script>
@@ -75,7 +76,7 @@
 
                         {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
-                        <th><a href="#">Active</a></th>
+                        <th style="text-align:left"><a href="#">Active</a></th>
                         <th><a href="#">Address</a></th>
 
                         {% comment %} 2 {% endcomment %}
@@ -93,6 +94,7 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -105,13 +107,21 @@
 
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
-                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td style="text-align:left">{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td><a href="{{ item.address }}">{{ item.address }}</a></td>
 
                         {% comment %} 2 {% endcomment %}
-                        <td style="text-align:center">
+                        <td>
                             {% if item.security_name %}
-                                {{ item.security_name }}
+                                {% if item.sec_type == 'oauth' %}
+                                <a href="/zato/security/oauth/outconn/client-credentials/?cluster={{ cluster_id }}&amp;query={{ item.security_name }}">{{ item.security_name }}</a>
+                                {% elif item.sec_type == 'basic_auth' %}
+                                <a href="/zato/security/basic-auth/?cluster={{ cluster_id }}&amp;query={{ item.security_name }}">{{ item.security_name }}</a>
+                                {% elif item.sec_type == 'apikey' %}
+                                <a href="/zato/security/apikey/?cluster={{ cluster_id }}&amp;query={{ item.security_name }}">{{ item.security_name }}</a>
+                                {% endif %}
+                            {% else %}
+                                <span class="form_hint">---</span>
                             {% endif %}
                         </td>
 
@@ -126,13 +136,14 @@
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.extra|default:"" }}</td>
                         <td class='ignore'>{{ item.default_query_timeout|default:"" }}</td>
-                        <td class='ignore'>{{ item.security_id|default:"" }}</td>
+                        <td class='ignore'>{% if item.sec_type %}{{ item.sec_type }}/{{ item.security_id }}{% endif %}</td>
+                        <td class='ignore'>{{ item.sec_type|default:"" }}</td>
 
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='15'>No results</td>
+                        <td colspan='16'>No results</td>
                     </tr>
                 {% endif %}
 
