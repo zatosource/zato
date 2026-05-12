@@ -59,6 +59,11 @@ _zato_opaque_skip_attrs = {'needs_details', 'paginate', 'cur_page', 'query'}
 def search(search_func, config, filter_by, session=None, cluster_id=None, *args, **kwargs):
     """ Adds search criteria to an SQLAlchemy query based on current search configuration.
     """
+
+    logger_zato.info('sql.search called: search_func=%s, config=%s, filter_by=%s, cluster_id=%s, args=%s, kwargs=%s',
+        search_func.__name__ if hasattr(search_func, '__name__') else search_func,
+        config, filter_by, cluster_id, args, kwargs)
+
     try:
         cur_page = int(config.get('cur_page', 1))
     except(ValueError, TypeError):
@@ -84,12 +89,20 @@ def search(search_func, config, filter_by, session=None, cluster_id=None, *args,
     }
 
     query = config.get('query')
+
+    logger_zato.info('sql.search: raw query from config=%r, type=%s', query, type(query).__name__)
+
     if query:
         query = query.strip().split()
+        logger_zato.info('sql.search: after strip/split query=%r', query)
         if query:
             kwargs['query'] = query
 
+    logger_zato.info('sql.search: final kwargs passed to search_func=%s', kwargs)
+
     result = search_func(session, cluster_id, *args, **kwargs)
+
+    logger_zato.info('sql.search: result type=%s, result=%s', type(result).__name__, result)
 
     # Fills out all the search-related information
     result.set_data(cur_page, page_size)
@@ -236,7 +249,17 @@ def elems_with_opaque(elems):
     """ Turns a list of SQLAlchemy elements into a list of Bunch instances,
     each possibly with its opaque elements already extracted to the level of each Bunch.
     """
-    return ElemsWithOpaqueMaker(elems).get()
+    logger_zato.info('elems_with_opaque: elems type=%s, isinstance tuple=%s',
+        type(elems).__name__, isinstance(elems, tuple))
+    if hasattr(elems, '__len__'):
+        logger_zato.info('elems_with_opaque: elems len=%d', len(elems))
+    if isinstance(elems, SearchResults):
+        logger_zato.info('elems_with_opaque: elems is SearchResults, result len=%d, total=%d',
+            len(elems.result), elems.total)
+    result = ElemsWithOpaqueMaker(elems).get()
+    logger_zato.info('elems_with_opaque: output type=%s, len=%s',
+        type(result).__name__, len(result) if hasattr(result, '__len__') else 'N/A')
+    return result
 
 # ################################################################################################################################
 
