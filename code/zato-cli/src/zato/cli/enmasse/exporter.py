@@ -25,6 +25,7 @@ from zato.cli.enmasse.exporters.microsoft_365 import Microsoft365Exporter
 from zato.cli.enmasse.exporters.confluence import ConfluenceExporter
 from zato.cli.enmasse.exporters.channel_hl7_mllp import ChannelHL7MLLPExporter
 from zato.cli.enmasse.exporters.es import ElasticSearchExporter
+from zato.cli.enmasse.exporters.graphql import OutgoingGraphQLExporter
 from zato.cli.enmasse.exporters.outgoing_rest import OutgoingRESTExporter
 from zato.cli.enmasse.exporters.outgoing_soap import OutgoingSOAPExporter
 from zato.cli.enmasse.exporters.pubsub_topic import PubSubTopicExporter
@@ -66,6 +67,7 @@ class EnmasseYAMLExporter:
         self.sql_exporter = SQLExporter(self)
         self.channel_exporter = ChannelExporter(self)
         self.channel_hl7_mllp_exporter = ChannelHL7MLLPExporter(self)
+        self.outgoing_graphql_exporter = OutgoingGraphQLExporter(self)
         self.jira_exporter = JiraExporter(self)
         self.ldap_exporter = LDAPExporter(self)
         self.microsoft_365_exporter = Microsoft365Exporter(self)
@@ -168,6 +170,15 @@ class EnmasseYAMLExporter:
         _ = self.get_cluster(session)
         channel_hl7_mllp_list = self.channel_hl7_mllp_exporter.export(session, self.cluster_id)
         return channel_hl7_mllp_list
+
+# ################################################################################################################################
+
+    def export_outgoing_graphql(self, session:'SASession') -> 'list':
+        """ Exports GraphQL outgoing definitions.
+        """
+        _ = self.get_cluster(session)
+        outgoing_graphql_list = self.outgoing_graphql_exporter.export(session, self.cluster_id)
+        return outgoing_graphql_list
 
 # ################################################################################################################################
 
@@ -322,6 +333,11 @@ class EnmasseYAMLExporter:
         channel_hl7_mllp_defs = self.export_channel_hl7_mllp(session)
         if channel_hl7_mllp_defs:
             output_dict['channel_hl7_mllp'] = channel_hl7_mllp_defs
+
+        # Export GraphQL outgoing definitions
+        outgoing_graphql_defs = self.export_outgoing_graphql(session)
+        if outgoing_graphql_defs:
+            output_dict['outgoing_graphql'] = outgoing_graphql_defs
 
         # Export outgoing REST connection definitions
         outgoing_rest_defs = self.export_outgoing_rest(session)

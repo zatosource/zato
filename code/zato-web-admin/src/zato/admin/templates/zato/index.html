@@ -326,6 +326,7 @@
                                                     <li class="child"><a class="menu-link" href="{% url "outgoing-hl7-mllp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-hl7-mllp">MLLP</a></li>
                                                 </ul>
                                             </li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-graphql" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-graphql">GraphQL</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-kafka" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-kafka">Kafka</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-ldap" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ldap">LDAP</a></li>
                                             {% if 0%}
