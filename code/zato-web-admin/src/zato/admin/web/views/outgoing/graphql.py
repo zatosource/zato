@@ -26,7 +26,7 @@ class Index(_Index):
 
     input_required = 'cluster_id', 'type_'
     output_required = 'id', 'name', 'is_active', 'is_internal', 'address', 'security_id', \
-        'pool_size', 'security_name'
+        'security_name'
     output_optional = ('extra', 'default_query_timeout') + generic_attrs
     output_repeated = True
 
@@ -53,7 +53,7 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    input_required = 'name', 'is_internal', 'address', 'security_id', 'pool_size'
+    input_required = 'name', 'is_internal', 'address', 'security_id'
     input_optional = ('is_active', 'extra', 'default_query_timeout') + generic_attrs
     output_required = 'id', 'name'
 
@@ -67,11 +67,7 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_outconn'] = False
         initial_input_dict['sec_use_rbac'] = False
         initial_input_dict['recv_timeout'] = 250
-
-# ################################################################################################################################
-
-    def pre_process_input_dict(self, input_dict):
-        input_dict['pool_size'] = int(input_dict['pool_size'])
+        initial_input_dict['pool_size'] = 1
 
 # ################################################################################################################################
 

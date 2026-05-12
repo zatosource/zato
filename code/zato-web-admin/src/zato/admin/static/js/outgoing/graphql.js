@@ -20,7 +20,6 @@ $(document).ready(function() {
     $.fn.zato.data_table.setup_forms([
         'name',
         'address',
-        'pool_size',
         'default_query_timeout',
         'security_id',
     ]);
@@ -38,6 +37,7 @@ $(document).ready(function() {
 $.fn.zato.outgoing.graphql.field_descriptions = {
     'id_name': 'A unique name for this GraphQL connection.<br>Used to identify it in logs and the dashboard.',
     'id_is_active': 'Whether this connection is active.<br>Inactive connections cannot be used by services.',
+    'id_default_query_timeout': 'How long to wait for a response,<br>in seconds.',
     'id_address': 'Full URL to the GraphQL endpoint,<br>including the path.',
     'id_security_id': 'Security definition used to authenticate<br>requests to the GraphQL server.',
     'id_extra': 'Custom HTTP headers sent with every request<br>as a JSON object, e.g. {"X-Tenant": "acme"}.',
@@ -96,7 +96,6 @@ $.fn.zato.outgoing.graphql.data_table.new_row = function(item, data, include_tr)
     // 4
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
-    row += String.format("<td class='ignore'>{0}</td>", item.pool_size);
     row += String.format("<td class='ignore'>{0}</td>", item.extra);
     row += String.format("<td class='ignore'>{0}</td>", item.default_query_timeout);
     row += String.format("<td class='ignore'>{0}</td>", item.security_id);
