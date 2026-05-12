@@ -27,6 +27,10 @@ fn make_job_at_offset(id: i64, offset_secs: i64) -> SchedulerJob {
         timezone: None,
         calendar: None,
         max_execution_time_ms: None,
+        on_success_service: None,
+        on_success_job: None,
+        on_error_service: None,
+        on_error_job: None,
     }
 }
 

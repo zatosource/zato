@@ -20,10 +20,33 @@ class _Base(forms.Form):
     service = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:100%'}))
     extra = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%'}))
     start_date = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:30%; height:19px'}))
+    on_success_service = forms.ChoiceField(required=False, widget=forms.Select(attrs={'style':'width:100%'}))
+    on_success_job = forms.ChoiceField(required=False, widget=forms.Select(attrs={'style':'width:100%'}))
+    on_error_service = forms.ChoiceField(required=False, widget=forms.Select(attrs={'style':'width:100%'}))
+    on_error_job = forms.ChoiceField(required=False, widget=forms.Select(attrs={'style':'width:100%'}))
 
     def __init__(self, prefix, req):
         super(_Base, self).__init__(prefix=prefix)
         add_services(self, req, should_include_scheduler=True)
+        self._populate_job_choices(req)
+
+    def _populate_job_choices(self, req):
+        """ Populates the on_success_job and on_error_job select fields with existing scheduler job names.
+        """
+        job_choices = [('', '------')]
+
+        if req.zato.cluster_id:
+            response = req.zato.client.invoke('zato.scheduler.job.get-list', {
+                'cluster_id': req.zato.cluster_id,
+                'paginate': False,
+                'query': '',
+            })
+
+            for job_elem in response.data:
+                job_choices.append([job_elem.name, job_elem.name])
+
+        self.fields['on_success_job'].choices = job_choices
+        self.fields['on_error_job'].choices = job_choices
 
 class OneTimeSchedulerJobForm(_Base):
     pass

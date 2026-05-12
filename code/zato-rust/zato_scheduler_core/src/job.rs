@@ -189,6 +189,14 @@ pub struct RunningJob {
     pub calendar: Option<String>,
     /// Kill threshold for long-running invocations (ms).
     pub max_execution_time_ms: u64,
+    /// Service to invoke when the job completes successfully.
+    pub on_success_service: Option<String>,
+    /// Scheduler job to execute when the job completes successfully.
+    pub on_success_job: Option<String>,
+    /// Service to invoke when the job raises an exception.
+    pub on_error_service: Option<String>,
+    /// Scheduler job to execute when the job raises an exception.
+    pub on_error_job: Option<String>,
 
     /// Next scheduled fire time in UTC.
     pub next_fire_utc: Option<DateTime<Utc>>,
@@ -278,6 +286,10 @@ impl RunningJob {
             timezone_str: tz_str,
             calendar: job.calendar.clone(),
             max_execution_time_ms: max_exec,
+            on_success_service: job.on_success_service.clone(),
+            on_success_job: job.on_success_job.clone(),
+            on_error_service: job.on_error_service.clone(),
+            on_error_job: job.on_error_job.clone(),
             next_fire_utc: None,
             next_fire_instant: None,
             in_flight: false,
@@ -305,6 +317,10 @@ impl RunningJob {
         self.max_execution_time_ms =
             clamp_max_execution_time(job.max_execution_time_ms.unwrap_or(DEFAULT_MAX_EXECUTION_TIME_MS), &job.name);
         self.repeats = job.repeats;
+        self.on_success_service.clone_from(&job.on_success_service);
+        self.on_success_job.clone_from(&job.on_success_job);
+        self.on_error_service.clone_from(&job.on_error_service);
+        self.on_error_job.clone_from(&job.on_error_job);
 
         let new_interval = Self::compute_interval_ms(job);
         let (new_timezone, _new_tz_str, new_start) = resolve_tz_and_start(job.timezone.as_deref(), &job.start_date, &self.name);
@@ -562,6 +578,10 @@ mod tests {
             timezone: None,
             calendar: None,
             max_execution_time_ms: None,
+            on_success_service: None,
+            on_success_job: None,
+            on_error_service: None,
+            on_error_job: None,
         };
         let interval = RunningJob::compute_interval_ms(&job);
         let expected = 7u64 * 86_400_000 + 2 * 86_400_000 + 3 * 3_600_000 + 4 * 60_000 + 5 * 1_000;

@@ -8,6 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 
+from json import loads as json_loads
+
 # Zato
 from zato.common.odb.model import to_json
 from zato.common.odb.query import job_list
@@ -86,6 +88,15 @@ class SchedulerExporter:
                 extra = extra.strip()
                 if extra:
                     item['extra'] = extra
+
+            opaque1 = row.get('opaque1')
+            if opaque1:
+                opaque_data = json_loads(opaque1) if isinstance(opaque1, str) else opaque1
+
+                for callback_field in ('on_success_service', 'on_success_job', 'on_error_service', 'on_error_job'):
+                    value = opaque_data.get(callback_field)
+                    if value:
+                        item[callback_field] = value
 
             exported_jobs.append(item)
 

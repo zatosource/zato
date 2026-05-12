@@ -94,6 +94,18 @@ pub struct SchedulerJob {
     /// Kill threshold for long-running invocations (ms).
     #[serde(default, deserialize_with = "deserialize_optional_number_or_string")]
     pub max_execution_time_ms: Option<u64>,
+    /// Service to invoke when the job completes successfully.
+    #[serde(default, deserialize_with = "deserialize_optional_empty_string")]
+    pub on_success_service: Option<String>,
+    /// Scheduler job to execute when the job completes successfully.
+    #[serde(default, deserialize_with = "deserialize_optional_empty_string")]
+    pub on_success_job: Option<String>,
+    /// Service to invoke when the job raises an exception.
+    #[serde(default, deserialize_with = "deserialize_optional_empty_string")]
+    pub on_error_service: Option<String>,
+    /// Scheduler job to execute when the job raises an exception.
+    #[serde(default, deserialize_with = "deserialize_optional_empty_string")]
+    pub on_error_job: Option<String>,
 }
 
 /// A named set of holidays and weekday rules.

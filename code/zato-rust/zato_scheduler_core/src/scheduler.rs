@@ -313,6 +313,10 @@ pub fn collect_due_jobs(
             extra: running_job.extra.clone(),
             job_type: running_job.job_type.clone(),
             current_run: running_job.current_run,
+            on_success_service: running_job.on_success_service.clone(),
+            on_success_job: running_job.on_success_job.clone(),
+            on_error_service: running_job.on_error_service.clone(),
+            on_error_job: running_job.on_error_job.clone(),
         });
 
         let mut rec = ExecutionRecord::new(&planned, &actual, outcome::RUNNING, running_job.current_run).with_delay(delay_ms_unsigned);
