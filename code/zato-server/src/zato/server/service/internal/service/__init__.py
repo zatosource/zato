@@ -533,14 +533,8 @@ class ServiceInvoker(Service):
                 zato_response_headers_container=zato_response_headers_container
                 )
 
-            self.logger.info('ServiceInvoker raw response type=%s for service=%s: %r',
-                type(response).__name__, service_name, str(response)[:500])
-
             # Take dataclass-based models into account
             response = response.to_dict() if isinstance(response, Model) else response
-
-            self.logger.info('ServiceInvoker final response type=%s: %r',
-                type(response).__name__, str(response)[:500])
 
             # Assign response to outgoing payload - if it is already serialized, use it as-is
             self.response.payload = response if isinstance(response, str) else dumps(response)

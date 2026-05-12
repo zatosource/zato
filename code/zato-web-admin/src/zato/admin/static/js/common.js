@@ -103,6 +103,8 @@ $.namespace('zato.outgoing.hl7.fhir.data_table');
 $.namespace('zato.outgoing.hl7.mllp');
 $.namespace('zato.outgoing.hl7.mllp.data_table');
 $.namespace('zato.outgoing.mongodb');
+$.namespace('zato.outgoing.graphql');
+$.namespace('zato.outgoing.graphql.data_table');
 $.namespace('zato.outgoing.kafka');
 $.namespace('zato.outgoing.kafka.data_table');
 $.namespace('zato.outgoing.ldap');

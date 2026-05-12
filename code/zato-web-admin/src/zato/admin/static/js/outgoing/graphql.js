@@ -35,14 +35,34 @@ $(document).ready(function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.outgoing.graphql.field_descriptions = {
+    'id_name': 'A unique name for this GraphQL connection.<br>Used to identify it in logs and the dashboard.',
+    'id_is_active': 'Whether this connection is active.<br>Inactive connections cannot be used by services.',
+    'id_address': 'Full URL to the GraphQL endpoint,<br>including the path.',
+    'id_security_id': 'Security definition used to authenticate<br>requests to the GraphQL server.',
+    'id_extra': 'Custom HTTP headers sent with every request<br>as a JSON object, e.g. {"X-Tenant": "acme"}.',
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.graphql.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new GraphQL connection', null);
+    $.fn.zato.how_it_works.init({
+        badge_id: 'create-how-it-works',
+        div_id: '#create-div',
+        descriptions: $.fn.zato.outgoing.graphql.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.graphql.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the GraphQL connection', id);
+    $.fn.zato.how_it_works.init({
+        badge_id: 'edit-how-it-works',
+        div_id: '#edit-div',
+        descriptions: $.fn.zato.outgoing.graphql.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -516,8 +516,14 @@ class GraphQLInvoker:
         address = config.config['address']
         timeout = config.config.get('default_query_timeout')
 
+        # .. extra headers ..
+        if extra_raw := config.config.get('extra'):
+            headers = json.loads(extra_raw)
+        else:
+            headers = {}
+
         # .. build the transport ..
-        transport = RequestsHTTPTransport(url=address, timeout=timeout)
+        transport = RequestsHTTPTransport(url=address, timeout=timeout, headers=headers)
 
         # .. build the client ..
         client = GQLClient(transport=transport)
@@ -537,6 +543,45 @@ class GraphQLInvoker:
             out = session.execute(query, **execute_kwargs)
 
         return out
+
+# ################################################################################################################################
+
+    def session(self) -> 'any_':
+        """ Returns a context manager that yields a (session, DSLSchema) pair for DSL-based queries.
+        """
+
+        # stdlib
+        from contextlib import contextmanager
+
+        # gql
+        from gql import Client as GQLClient
+        from gql.dsl import DSLSchema
+        from gql.transport.requests import RequestsHTTPTransport
+
+        # Get the connection's config ..
+        config = self._outconn_graphql[self._conn_name]
+        address = config.config['address']
+        timeout = config.config.get('default_query_timeout')
+
+        # .. extra headers ..
+        if extra_raw := config.config.get('extra'):
+            headers = json.loads(extra_raw)
+        else:
+            headers = {}
+
+        @contextmanager
+        def _session_ctx():
+
+            # Build the transport and client with schema fetching enabled ..
+            transport = RequestsHTTPTransport(url=address, timeout=timeout, headers=headers)
+            client = GQLClient(transport=transport, fetch_schema_from_transport=True)
+
+            # .. open the session ..
+            with client as gql_session:
+                ds = DSLSchema(client.schema)
+                yield gql_session, ds
+
+        return _session_ctx()
 
 # ################################################################################################################################
 

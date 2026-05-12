@@ -5,6 +5,7 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -15,6 +16,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/graphql.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
@@ -163,6 +165,7 @@
                                 Pool size
                                 {{ create_form.pool_size }}
                                 </label>
+                                <span class="form_hint">Number of connections kept open to the server</span>
 
                                 |
 
@@ -170,6 +173,7 @@
                                 Timeout
                                 {{ create_form.default_query_timeout }}
                                 </label>
+                                <span class="form_hint">How long to wait for a response, in seconds</span>
 
                             </td>
                         </tr>
@@ -181,6 +185,7 @@
                             </td>
                             <td>
                                 {{ create_form.address }}
+                                <span class="form_hint">Full URL to the GraphQL endpoint, including the path</span>
                             </td>
                         </tr>
                         <tr>
@@ -194,15 +199,18 @@
                             </td>
                         </tr>
                         <tr>
-                            <td colspan="2">
+                            <td style="vertical-align:middle">
                                 <label for="id_extra">
-                                Extra
+                                Extra headers
                                 </label>
-                                {{ create_form.extra }}
                             </td>
+                            <td>{{ create_form.extra }} <span class="form_hint">Custom HTTP headers sent with every request as a JSON object, e.g. {"X-Tenant": "acme"}</span></td>
                         </tr>
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -239,6 +247,7 @@
                                 Pool size
                                 {{ edit_form.pool_size }}
                                 </label>
+                                <span class="form_hint">Number of connections kept open to the server</span>
 
                                 |
 
@@ -246,6 +255,7 @@
                                 Timeout
                                 {{ edit_form.default_query_timeout }}
                                 </label>
+                                <span class="form_hint">How long to wait for a response, in seconds</span>
 
                             </td>
                         </tr>
@@ -257,6 +267,7 @@
                             </td>
                             <td>
                                 {{ edit_form.address }}
+                                <span class="form_hint">Full URL to the GraphQL endpoint, including the path</span>
                             </td>
                         </tr>
                         <tr>
@@ -270,15 +281,18 @@
                             </td>
                         </tr>
                         <tr>
-                            <td colspan="2">
+                            <td style="vertical-align:middle">
                                 <label for="id_edit-extra">
-                                Extra
+                                Extra headers
                                 </label>
-                                {{ edit_form.extra }}
                             </td>
+                            <td>{{ edit_form.extra }} <span class="form_hint">Custom HTTP headers sent with every request as a JSON object, e.g. {"X-Tenant": "acme"}</span></td>
                         </tr>
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>

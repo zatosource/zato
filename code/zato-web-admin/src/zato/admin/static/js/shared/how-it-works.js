@@ -385,7 +385,7 @@ $.fn.zato.how_it_works._collect_fields = function(div, config) {
     }
 
     if (!active_panel) {
-        return fields;
+        active_panel = div;
     }
 
     // .. walk each row in the form table ..
