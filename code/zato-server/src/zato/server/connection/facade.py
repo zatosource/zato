@@ -616,7 +616,11 @@ class GraphQLInvoker:
 
         transport = RequestsHTTPTransport(url=address, timeout=timeout, headers=headers)
         client = GQLClient(transport=transport)
-        _ = client.execute(gql_parse('{ __schema { queryType { name } } }'))
+
+        try:
+            _ = client.execute(gql_parse('{ __schema { queryType { name } } }'))
+        except Exception as e:
+            raise Exception(str(e)) from None
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -50,7 +50,7 @@ class Generic(ConfigManagerImpl):
 
         if item_id:
             search_key = 'id'
-            search_value = item_id
+            search_value = int(item_id)
         else:
             search_key = 'name'
             search_value = item_name

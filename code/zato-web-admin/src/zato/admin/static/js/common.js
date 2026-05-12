@@ -637,7 +637,7 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
             if(!post_data) {
                 post_data = {};
             }
-            $.fn.zato.post(url, _callback, post_data);
+            $.fn.zato.post(url, _callback, post_data, null, true);
             return false;
         }
     }
