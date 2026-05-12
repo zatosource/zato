@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 from contextlib import closing
 from traceback import format_exc
 from uuid import uuid4
@@ -31,17 +32,34 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+_logger = logging.getLogger('zato_admin')
+
 class GetList(AdminService):
     """ Returns a list of HTTP Basic Auth definitions available.
     """
     _filter_by = HTTPBasicAuth.name,
 
-    input = 'cluster_id', '-needs_password'
+    input = 'cluster_id', '-needs_password', '-paginate', '-cur_page', '-query'
     output = 'id', 'name', 'is_active', 'username', 'realm', '-password'
 
     def get_data(self, session): # type: ignore
 
-        data = elems_with_opaque(self._search(basic_auth_list, session, self.request.input.cluster_id, None, False))
+        _logger.info('GetList.get_data: cluster_id=%s, request.input=%s',
+            self.request.input.cluster_id, self.request.input)
+        _logger.info('GetList.get_data: _filter_by=%s', self._filter_by)
+
+        search_result = self._search(basic_auth_list, session, self.request.input.cluster_id, None, False)
+
+        _logger.info('GetList.get_data: search_result type=%s', type(search_result).__name__)
+
+        if hasattr(search_result, 'result'):
+            _logger.info('GetList.get_data: search_result.result len=%d, total=%s',
+                len(search_result.result), getattr(search_result, 'total', 'N/A'))
+
+        data = elems_with_opaque(search_result)
+
+        _logger.info('GetList.get_data: data after elems_with_opaque, type=%s, len=%s',
+            type(data).__name__, len(data) if hasattr(data, '__len__') else 'N/A')
 
         if self.request.input.needs_password:
             for item in data:
@@ -53,7 +71,10 @@ class GetList(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_data(session)
+            data = self.get_data(session)
+            _logger.info('GetList.handle: assigning items to response, type=%s, len=%s',
+                type(data).__name__, len(data) if isinstance(data, list) else 'not-a-list')
+            self.response.payload[:] = data
 
 # ################################################################################################################################
 # ################################################################################################################################
