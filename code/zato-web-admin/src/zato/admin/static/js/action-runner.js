@@ -64,7 +64,7 @@ $.fn.zato.highlight_response = function(pre_elem, text) {
     $.fn.zato.update_response_line_numbers(pre_elem);
 };
 
-var _spinner_svg = '<svg width="16" height="16" viewBox="0 0 16 16" style="animation:zato-spin .6s linear infinite;vertical-align:middle">' +
+var _spinner_svg = '<svg width="16" height="16" viewBox="0 0 16 16" style="animation:zato-spin .6s linear infinite;display:block">' +
     '<circle cx="8" cy="8" r="6" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2"/>' +
     '<path d="M8 2a6 6 0 0 1 6 6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>';
 
@@ -160,8 +160,8 @@ function _default_parse(jqXHR, textStatus) {
 }
 
 function _render_success(instance, label) {
-    var html = '<span style="display:inline-flex;align-items:center;white-space:nowrap;font-size:13px;color:#fff">' +
-        _escape_html(label) + '</span>';
+    var html = '<div style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:13px;color:#fff;margin:-5px -9px;padding:5px 9px">' +
+        _escape_html(label) + '</div>';
     instance.setContent(html);
     // #region agent log
     setTimeout(function() {
@@ -169,9 +169,9 @@ function _render_success(instance, label) {
         var _tcontent = _tbox ? _tbox.querySelector('.tippy-content') : null;
         var _boxR = _tbox ? _tbox.getBoundingClientRect() : {};
         var _contentR = _tcontent ? _tcontent.getBoundingClientRect() : {};
-        var _span = _tcontent ? _tcontent.querySelector('span') : null;
-        var _spanR = _span ? _span.getBoundingClientRect() : {};
-        console.log('[DBG-8ee04f] success_rendered ' + JSON.stringify({label:label,box:{t:_boxR.top,l:_boxR.left,w:_boxR.width,h:_boxR.height},content:{t:_contentR.top,l:_contentR.left,w:_contentR.width,h:_contentR.height},span:{t:_spanR.top,l:_spanR.left,w:_spanR.width,h:_spanR.height}}));
+        var _innerDiv = _tcontent ? _tcontent.querySelector('div') : null;
+        var _innerR = _innerDiv ? _innerDiv.getBoundingClientRect() : {};
+        console.log('[DBG-8ee04f] success_rendered ' + JSON.stringify({label:label,box:{t:_boxR.top,l:_boxR.left,w:_boxR.width,h:_boxR.height},content:{t:_contentR.top,l:_contentR.left,w:_contentR.width,h:_contentR.height},innerDiv:{t:_innerR.top,l:_innerR.left,w:_innerR.width,h:_innerR.height}}));
     }, 50);
     // #endregion
     _hide_timer = setTimeout(function() { instance.hide(); }, 800);
@@ -225,8 +225,8 @@ $.fn.zato.action_runner = {
 
         $.fn.zato.action_runner.close_details();
 
-        var _spinner_html = '<span style="display:inline-flex;align-items:center;white-space:nowrap;font-size:13px;color:#fff">' +
-            _spinner_svg + '<span style="margin-left:5px">Pinging</span></span>';
+        var _spinner_html = '<div style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:13px;color:#fff;margin:-5px -9px;padding:5px 9px">' +
+            _spinner_svg + '<span style="margin-left:5px">Pinging ..</span></div>';
 
         var instance = tippy(link_elem, {
             content: _spinner_html,
@@ -254,7 +254,12 @@ $.fn.zato.action_runner = {
             var _contentR = _tcontent ? _tcontent.getBoundingClientRect() : {};
             var _svgR = _tsvg ? _tsvg.getBoundingClientRect() : {};
             var _contentCS = _tcontent ? window.getComputedStyle(_tcontent) : {};
-            console.log('[DBG-8ee04f] spinner_shown ' + JSON.stringify({textContent:_tcontent?_tcontent.textContent:'N/A',box:{t:_boxR.top,l:_boxR.left,w:_boxR.width,h:_boxR.height},content:{t:_contentR.top,l:_contentR.left,w:_contentR.width,h:_contentR.height},svg:{t:_svgR.top,l:_svgR.left,w:_svgR.width,h:_svgR.height},pad:_contentCS.padding,display:_contentCS.display,lineH:_contentCS.lineHeight}));
+            var _innerDiv = _tcontent ? _tcontent.querySelector('div') : null;
+            var _innerR = _innerDiv ? _innerDiv.getBoundingClientRect() : {};
+            var _innerCS = _innerDiv ? window.getComputedStyle(_innerDiv) : {};
+            var _textSpan = _innerDiv ? _innerDiv.querySelector('span') : null;
+            var _textR = _textSpan ? _textSpan.getBoundingClientRect() : {};
+            console.log('[DBG-8ee04f] spinner_shown ' + JSON.stringify({textContent:_tcontent?_tcontent.textContent:'N/A',box:{t:_boxR.top,l:_boxR.left,w:_boxR.width,h:_boxR.height},content:{t:_contentR.top,l:_contentR.left,w:_contentR.width,h:_contentR.height},innerDiv:{t:_innerR.top,l:_innerR.left,w:_innerR.width,h:_innerR.height},svg:{t:_svgR.top,l:_svgR.left,w:_svgR.width,h:_svgR.height},text:{t:_textR.top,l:_textR.left,w:_textR.width,h:_textR.height},pad:_contentCS.padding,display:_contentCS.display,lineH:_contentCS.lineHeight,innerPad:_innerCS.padding,innerMargin:_innerCS.margin}));
         }, 80);
         // #endregion
 
