@@ -147,6 +147,11 @@ class _CreateEdit(_BaseService):
 
         data = deepcopy(self.request.input)
 
+        self.logger.info('GenericConn _CreateEdit step 1: is_create=%s, is_edit=%s, data.keys=%s',
+            self.is_create, self.is_edit, sorted(data.keys()))
+        self.logger.info('GenericConn _CreateEdit step 1b: type_=%s, name=%s',
+            data.get('type_'), data.get('name'))
+
         # Build a reusable flag indicating that a secret was sent on input.
         secret = data.get('secret', ZATO_NONE)
         if (secret is None) or (secret == ZATO_NONE):
@@ -190,6 +195,10 @@ class _CreateEdit(_BaseService):
         # Make sure that specific keys are integers
         ensure_ints(data)
 
+        self.logger.info('GenericConn _CreateEdit step 2: data after raw_request merge, keys=%s', sorted(data.keys()))
+        self.logger.info('GenericConn _CreateEdit step 2b: type_=%s, is_active=%s, security_id=%s',
+            data.get('type_'), data.get('is_active'), data.get('security_id'))
+
         # Break down security definitions into components
         security_id = data.get('security_id') or ''
         if sec_def_sep in security_id:
@@ -227,6 +236,8 @@ class _CreateEdit(_BaseService):
 
         conn = GenericConnection.from_dict(data)
 
+        self.logger.info('GenericConn _CreateEdit step 3: conn.type_=%s, conn.name=%s', conn.type_, conn.name)
+
         with closing(self.server.odb.session()) as session:
 
             # If this is the edit action, we need to find our instance in the database
@@ -257,6 +268,10 @@ class _CreateEdit(_BaseService):
 
             conn_dict = conn.to_sql_dict()
 
+            self.logger.info('GenericConn _CreateEdit step 4: conn_dict keys=%s', sorted(conn_dict.keys()))
+            self.logger.info('GenericConn _CreateEdit step 4b: conn_dict type_=%s, name=%s, cluster_id=%s',
+                conn_dict.get('type_'), conn_dict.get('name'), conn_dict.get('cluster_id'))
+
             # This will be needed in case this is a rename
             old_name = model.name
 
@@ -271,6 +286,9 @@ class _CreateEdit(_BaseService):
 
                 setattr(model, key, value)
 
+            self.logger.info('GenericConn _CreateEdit step 5: about to session.add + commit, model.type_=%s, model.name=%s',
+                getattr(model, 'type_', None), getattr(model, 'name', None))
+
             hook_func = hook.get(data.type_)
             if hook_func:
                 hook_func(self, data, model, old_name)
@@ -280,12 +298,19 @@ class _CreateEdit(_BaseService):
 
             instance = self._get_instance_by_name(session, ModelGenericConn, data.type_, data.name)
 
+            self.logger.info('GenericConn _CreateEdit step 6: committed, instance.id=%s, instance.name=%s, instance.type_=%s',
+                instance.id, instance.name, instance.type_)
+
             self.response.payload.id = instance.id
             self.response.payload.name = instance.name
 
         data['old_name'] = old_name
         data['action'] = GENERIC.CONNECTION_EDIT.value if self.is_edit else GENERIC.CONNECTION_CREATE.value
         data['id'] = instance.id
+
+        self.logger.info('GenericConn _CreateEdit step 7: publishing config event, action=%s, id=%s, type_=%s',
+            data['action'], data['id'], data.get('type_'))
+
         self.config_dispatcher.publish(data)
 
 # ################################################################################################################################
@@ -328,7 +353,9 @@ class GetList(AdminService):
 
     def get_data(self, session:'any_') -> 'any_':
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
+        self.logger.info('GenericConn GetList.get_data: cluster_id=%s, type_=%s', cluster_id, self.request.input.type_)
         data = self._search(connection_list, session, cluster_id, self.request.input.type_, False)
+        self.logger.info('GenericConn GetList.get_data: result count=%s', data.count() if hasattr(data, 'count') else 'N/A')
         return data
 
 # ################################################################################################################################
@@ -389,6 +416,8 @@ class GetList(AdminService):
         out = {'_meta':{}, 'response':[]}
         _meta = cast_('anydict', out['_meta'])
 
+        self.logger.info('GenericConn GetList.handle: type_=%s', self.request.input.type_)
+
         with closing(self.odb.session()) as session:
 
             search_result = self.get_data(session)
@@ -399,6 +428,9 @@ class GetList(AdminService):
                 conn_dict = conn.to_dict()
                 self._enrich_conn_dict(conn_dict)
                 cast_('anylist', out['response']).append(conn_dict)
+
+        response_count = len(cast_('anylist', out['response']))
+        self.logger.info('GenericConn GetList.handle: returning %s items for type_=%s', response_count, self.request.input.type_)
 
         # Results are already included in the list of out['response'] elements
         _ = _meta.pop('result', None)

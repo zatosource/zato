@@ -505,6 +505,13 @@ class Index(BaseView):
                     if isinstance(response.data, list):
                         logger.info('View: handling as list, len=%d', len(response.data))
                         self.handle_item_list(response.data, True)
+                    elif hasattr(response.data, 'get'):
+                        if response_list := response.data.get('response'):
+                            logger.info('View: handling as paginated response, len=%d', len(response_list))
+                            self.handle_item_list(response_list, True)
+                        else:
+                            logger.info('View: handling as single item (dict without response key)')
+                            self._handle_item(response.data)
                     else:
                         logger.info('View: handling as single item')
                         self._handle_item(response.data)

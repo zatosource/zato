@@ -513,7 +513,7 @@ class DeleteMeta(AdminServiceMeta):
             attrs=attrs,
             name=name,
             input_required=[],
-            input_optional=['id', 'name', 'should_raise_if_missing'],
+            input_optional=[IntIO('id'), 'name', 'should_raise_if_missing'],
             output_required=[],
             skip_input_required=True,
         )
