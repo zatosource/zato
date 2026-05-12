@@ -163,17 +163,6 @@ function _render_success(instance, label) {
     var html = '<div style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:13px;color:#fff;margin:-5px -9px;padding:5px 9px">' +
         _escape_html(label) + '</div>';
     instance.setContent(html);
-    // #region agent log
-    setTimeout(function() {
-        var _tbox = document.querySelector('.tippy-box');
-        var _tcontent = _tbox ? _tbox.querySelector('.tippy-content') : null;
-        var _boxR = _tbox ? _tbox.getBoundingClientRect() : {};
-        var _contentR = _tcontent ? _tcontent.getBoundingClientRect() : {};
-        var _innerDiv = _tcontent ? _tcontent.querySelector('div') : null;
-        var _innerR = _innerDiv ? _innerDiv.getBoundingClientRect() : {};
-        console.log('[DBG-8ee04f] success_rendered ' + JSON.stringify({label:label,box:{t:_boxR.top,l:_boxR.left,w:_boxR.width,h:_boxR.height},content:{t:_contentR.top,l:_contentR.left,w:_contentR.width,h:_contentR.height},innerDiv:{t:_innerR.top,l:_innerR.left,w:_innerR.width,h:_innerR.height}}));
-    }, 50);
-    // #endregion
     _hide_timer = setTimeout(function() { instance.hide(); }, 800);
 }
 
@@ -244,24 +233,6 @@ $.fn.zato.action_runner = {
 
         _active_instance = instance;
         instance.show();
-
-        // #region agent log
-        setTimeout(function() {
-            var _tbox = document.querySelector('.tippy-box');
-            var _tcontent = _tbox ? _tbox.querySelector('.tippy-content') : null;
-            var _tsvg = _tbox ? _tbox.querySelector('svg') : null;
-            var _boxR = _tbox ? _tbox.getBoundingClientRect() : {};
-            var _contentR = _tcontent ? _tcontent.getBoundingClientRect() : {};
-            var _svgR = _tsvg ? _tsvg.getBoundingClientRect() : {};
-            var _contentCS = _tcontent ? window.getComputedStyle(_tcontent) : {};
-            var _innerDiv = _tcontent ? _tcontent.querySelector('div') : null;
-            var _innerR = _innerDiv ? _innerDiv.getBoundingClientRect() : {};
-            var _innerCS = _innerDiv ? window.getComputedStyle(_innerDiv) : {};
-            var _textSpan = _innerDiv ? _innerDiv.querySelector('span') : null;
-            var _textR = _textSpan ? _textSpan.getBoundingClientRect() : {};
-            console.log('[DBG-8ee04f] spinner_shown ' + JSON.stringify({textContent:_tcontent?_tcontent.textContent:'N/A',box:{t:_boxR.top,l:_boxR.left,w:_boxR.width,h:_boxR.height},content:{t:_contentR.top,l:_contentR.left,w:_contentR.width,h:_contentR.height},innerDiv:{t:_innerR.top,l:_innerR.left,w:_innerR.width,h:_innerR.height},svg:{t:_svgR.top,l:_svgR.left,w:_svgR.width,h:_svgR.height},text:{t:_textR.top,l:_textR.left,w:_textR.width,h:_textR.height},pad:_contentCS.padding,display:_contentCS.display,lineH:_contentCS.lineHeight,innerPad:_innerCS.padding,innerMargin:_innerCS.margin}));
-        }, 80);
-        // #endregion
 
         var callback = function(jqXHR, textStatus) {
             console.log('[action_runner] callback: status=' + jqXHR.status + ' textStatus=' + textStatus);
