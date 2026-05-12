@@ -597,3 +597,68 @@ class Invoke(AdminService):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class InvokeGraphQL(_BaseService):
+    """ Invokes a GraphQL outgoing connection with a query and optional variables.
+    """
+    name = 'zato.generic.connection.invoke-graphql'
+    input = Int('id'), '-query', '-variables'
+    output = '-response_data', '-response_time'
+
+    def handle(self) -> 'None':
+
+        import json
+        import time
+
+        from gql import Client as GQLClient
+        from gql import gql as gql_parse
+        from gql.transport.requests import RequestsHTTPTransport
+
+        with closing(self.odb.session()) as session:
+            instance = self._get_instance_by_id(session, ModelGenericConn, self.request.input.id)
+            config = loads(instance.opaque1) if instance.opaque1 else {}
+            config['address'] = instance.address
+
+        query_text = self.request.input.get('query', '')
+        variables_text = self.request.input.get('variables', '')
+
+        if not query_text or not query_text.strip():
+            raise Exception('No query provided')
+
+        if variables_text and variables_text.strip():
+            variables = json.loads(variables_text)
+        else:
+            variables = None
+
+        timeout = config.get('default_query_timeout')
+        if timeout:
+            timeout = int(timeout)
+
+        if extra_raw := config.get('extra'):
+            headers = json.loads(extra_raw)
+        else:
+            headers = {}
+
+        transport = RequestsHTTPTransport(url=config['address'], timeout=timeout, headers=headers)
+        client = GQLClient(transport=transport)
+
+        parsed_query = gql_parse(query_text)
+
+        execute_kwargs = {}
+        if variables:
+            execute_kwargs['variable_values'] = variables
+
+        start = time.monotonic()
+
+        try:
+            with client as gql_session:
+                result = gql_session.execute(parsed_query, **execute_kwargs)
+        except Exception as e:
+            elapsed = time.monotonic() - start
+            self.response.payload.response_data = str(e)
+            self.response.payload.response_time = f'{elapsed:.3f}s'
+            raise Exception(str(e)) from None
+
+        elapsed = time.monotonic() - start
+        self.response.payload.response_data = json.dumps(result, indent=2)
+        self.response.payload.response_time = f'{elapsed:.3f}s'

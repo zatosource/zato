@@ -22,40 +22,79 @@
 
 $.fn.zato = $.fn.zato || {};
 
-$.fn.zato.update_response_line_numbers = function(pre_elem) {
-    var gutter = pre_elem.siblings('.invoker-modal-response-gutter');
+$.fn.zato.update_response_line_numbers = function(preElement) {
+    var gutter = preElement.siblings('.invoker-modal-response-gutter');
     if (gutter.length === 0) {
-        gutter = pre_elem.parent().find('.invoker-modal-response-gutter');
+        gutter = preElement.parent().find('.invoker-modal-response-gutter');
     }
     if (gutter.length === 0) {
         return;
     }
-    var rendered_text = pre_elem.text();
-    if (!rendered_text) {
+    var renderedText = preElement.text();
+    if (!renderedText) {
         gutter.html('');
         return;
     }
-    var line_count = rendered_text.split('\n').length;
+    var lineCount = renderedText.split('\n').length;
     var lines = [];
-    for (var i = 1; i <= line_count; i++) {
-        lines.push(i + ' ');
+
+    for (var lineIdx = 1; lineIdx <= lineCount; lineIdx++) {
+        lines.push(lineIdx + ' ');
     }
+
     gutter.text(lines.join('\n'));
 };
 
-$.fn.zato.highlight_response = function(pre_elem, text) {
+// Shared function to highlight an element via the server-side Pygments endpoint.
+// Renders escaped plain text immediately, then replaces with highlighted HTML.
+$.fn.zato.highlightElement = function(targetElement, text, lexer) {
     if (!text) {
-        pre_elem.html('');
-        pre_elem.removeClass('syntax-monokai');
-        $.fn.zato.update_response_line_numbers(pre_elem);
+        targetElement.html('');
+        targetElement.removeClass('syntax-monokai');
         return;
     }
 
     // Render escaped plain text immediately ..
-    var escaped_text = $('<span>').text(text).html();
-    pre_elem.html(escaped_text);
-    pre_elem.addClass('syntax-monokai');
-    $.fn.zato.update_response_line_numbers(pre_elem);
+    var escapedText = _escape_html(text);
+    targetElement.html(escapedText);
+    targetElement.addClass('syntax-monokai');
+
+    // .. build the POST data ..
+    var postData = {text: text};
+    if (lexer) {
+        postData.lexer = lexer;
+    }
+
+    // .. then replace with Pygments-highlighted HTML.
+    $.ajax({
+        type: 'POST',
+        url: '/zato/highlight/',
+        data: postData,
+        headers: {'X-CSRFToken': $.cookie('csrftoken')},
+        dataType: 'json',
+        success: function(data) {
+            targetElement.html(data.html);
+            targetElement.addClass('syntax-monokai');
+        },
+        error: function(jqXHR, textStatus, errorMessage) {
+            console.warn('[highlightElement] AJAX error:', textStatus, errorMessage);
+        }
+    });
+};
+
+$.fn.zato.highlight_response = function(preElement, text) {
+    if (!text) {
+        preElement.html('');
+        preElement.removeClass('syntax-monokai');
+        $.fn.zato.update_response_line_numbers(preElement);
+        return;
+    }
+
+    // Render escaped plain text immediately ..
+    var escapedText = _escape_html(text);
+    preElement.html(escapedText);
+    preElement.addClass('syntax-monokai');
+    $.fn.zato.update_response_line_numbers(preElement);
 
     // .. then replace with Pygments-highlighted HTML.
     $.ajax({
@@ -65,9 +104,12 @@ $.fn.zato.highlight_response = function(pre_elem, text) {
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
         dataType: 'json',
         success: function(data) {
-            pre_elem.html(data.html);
-            pre_elem.addClass('syntax-monokai');
-            $.fn.zato.update_response_line_numbers(pre_elem);
+            preElement.html(data.html);
+            preElement.addClass('syntax-monokai');
+            $.fn.zato.update_response_line_numbers(preElement);
+        },
+        error: function(jqXHR, textStatus, errorMessage) {
+            console.warn('[highlight_response] AJAX error:', textStatus, errorMessage);
         }
     });
 };
@@ -288,13 +330,13 @@ $.fn.zato.action_runner = {
         if (details.status_code) {
             title_text += ': ' + details.status_code;
         }
-        var escaped_title = _escape_html(title_text);
+        var escapedTitle = _escape_html(title_text);
 
         var $overlay = $('<div class="invoker-modal-overlay" data-action-runner-overlay="1" style="z-index:100001">' +
             '<div class="invoker-modal-backdrop"></div>' +
             '<div class="invoker-modal-content" style="width:750px;max-height:80vh;display:flex;flex-direction:column;resize:both;overflow:hidden">' +
                 '<div class="invoker-modal-header" style="flex-shrink:0">' +
-                    '<h2>' + escaped_title + '</h2>' +
+                    '<h2>' + escapedTitle + '</h2>' +
                     '<button class="invoker-modal-close-btn">\u00d7</button>' +
                 '</div>' +
                 '<div class="invoker-modal-body" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden">' +
