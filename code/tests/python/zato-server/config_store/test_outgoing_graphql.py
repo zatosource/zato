@@ -31,7 +31,6 @@ class TestOutgoingGraphQL:
             is_internal=False,
             is_channel=False,
             is_outconn=True,
-            pool_size=1,
         )
         assert 'id' in response
         assert response['name'] == 'test-graphql-1'
@@ -56,7 +55,6 @@ class TestOutgoingGraphQL:
                 is_internal=False,
                 is_channel=False,
                 is_outconn=True,
-                pool_size=1,
             )
             assert 'id' in response
             self.__class__.created_ids.append(response['id'])
@@ -82,7 +80,6 @@ class TestOutgoingGraphQL:
             is_internal=False,
             is_channel=False,
             is_outconn=True,
-            pool_size=1,
         )
         assert response['id'] == item_id
 

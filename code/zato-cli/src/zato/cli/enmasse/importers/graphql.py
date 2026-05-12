@@ -20,7 +20,6 @@ class OutgoingGraphQLImporter(GenericConnectionImporter):
         'is_internal': False,
         'is_channel': False,
         'is_outconn': True,
-        'pool_size': 1,
     }
 
     connection_extra_field_defaults = {

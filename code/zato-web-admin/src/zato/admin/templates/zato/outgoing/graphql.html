@@ -33,7 +33,6 @@
             '_ping',
             'id',
             'is_active',
-            'pool_size',
             'extra',
             'default_query_timeout',
             'security_id',
@@ -87,7 +86,6 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -120,7 +118,6 @@
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.pool_size }}</td>
                         <td class='ignore'>{{ item.extra|default:"" }}</td>
                         <td class='ignore'>{{ item.default_query_timeout|default:"" }}</td>
                         <td class='ignore'>{{ item.security_id|default:"" }}</td>
@@ -129,7 +126,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='15'>No results</td>
+                        <td colspan='14'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -144,7 +141,7 @@
                 <form novalidate action="{% url "out-graphql-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:17%">
+                            <td style="vertical-align:middle;width:13%">
                                 <label for="id_name">
                                 Name
                                 </label>
@@ -152,30 +149,20 @@
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
-                            <td></td>
                             <td>
-                                <label>
+                                <label for="id_is_active">
                                 Active
-                                {{ create_form.is_active }}
                                 </label>
-
-                                |
-
-                                <label>
-                                Pool size
-                                {{ create_form.pool_size }}
-                                </label>
-                                <span class="form_hint">Number of connections kept open to the server</span>
-
-                                |
-
-                                <label>
-                                Timeout
-                                {{ create_form.default_query_timeout }}
-                                </label>
-                                <span class="form_hint">How long to wait for a response, in seconds</span>
-
                             </td>
+                            <td>{{ create_form.is_active }}</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_default_query_timeout">
+                                Timeout
+                                </label>
+                            </td>
+                            <td>{{ create_form.default_query_timeout }}</td>
                         </tr>
                         <tr>
                             <td>
@@ -183,10 +170,7 @@
                                 Address
                                 </label>
                             </td>
-                            <td>
-                                {{ create_form.address }}
-                                <span class="form_hint">Full URL to the GraphQL endpoint, including the path</span>
-                            </td>
+                            <td>{{ create_form.address }}</td>
                         </tr>
                         <tr>
                             <td>
@@ -194,9 +178,7 @@
                                 Security
                                 </label>
                             </td>
-                            <td>
-                                {{ create_form.security_id }}
-                            </td>
+                            <td>{{ create_form.security_id }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">
@@ -204,13 +186,11 @@
                                 Extra headers
                                 </label>
                             </td>
-                            <td>{{ create_form.extra }} <span class="form_hint">Custom HTTP headers sent with every request as a JSON object, e.g. {"X-Tenant": "acme"}</span></td>
+                            <td>{{ create_form.extra }}</td>
                         </tr>
                         <tr>
-                            <td style="text-align:left;vertical-align:middle">
-                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
-                            </td>
-                            <td style="text-align:right">
+                            <td colspan="2" style="text-align:right">
+                                <span class="how-it-works-badge" id="create-how-it-works" style="float:left">How does it work?</span>
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -226,7 +206,7 @@
                 <form novalidate action="{% url "out-graphql-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:17%">
+                            <td style="vertical-align:middle;width:13%">
                                 <label for="id_edit-name">
                                 Name
                                 </label>
@@ -234,30 +214,20 @@
                             <td>{{ edit_form.name }}</td>
                         </tr>
                         <tr>
-                            <td></td>
                             <td>
-                                <label>
+                                <label for="id_edit-is_active">
                                 Active
-                                {{ edit_form.is_active }}
                                 </label>
-
-                                |
-
-                                <label>
-                                Pool size
-                                {{ edit_form.pool_size }}
-                                </label>
-                                <span class="form_hint">Number of connections kept open to the server</span>
-
-                                |
-
-                                <label>
-                                Timeout
-                                {{ edit_form.default_query_timeout }}
-                                </label>
-                                <span class="form_hint">How long to wait for a response, in seconds</span>
-
                             </td>
+                            <td>{{ edit_form.is_active }}</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_edit-default_query_timeout">
+                                Timeout
+                                </label>
+                            </td>
+                            <td>{{ edit_form.default_query_timeout }}</td>
                         </tr>
                         <tr>
                             <td>
@@ -265,10 +235,7 @@
                                 Address
                                 </label>
                             </td>
-                            <td>
-                                {{ edit_form.address }}
-                                <span class="form_hint">Full URL to the GraphQL endpoint, including the path</span>
-                            </td>
+                            <td>{{ edit_form.address }}</td>
                         </tr>
                         <tr>
                             <td>
@@ -276,9 +243,7 @@
                                 Security
                                 </label>
                             </td>
-                            <td>
-                                {{ edit_form.security_id }}
-                            </td>
+                            <td>{{ edit_form.security_id }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">
@@ -286,13 +251,11 @@
                                 Extra headers
                                 </label>
                             </td>
-                            <td>{{ edit_form.extra }} <span class="form_hint">Custom HTTP headers sent with every request as a JSON object, e.g. {"X-Tenant": "acme"}</span></td>
+                            <td>{{ edit_form.extra }}</td>
                         </tr>
                         <tr>
-                            <td style="text-align:left;vertical-align:middle">
-                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
-                            </td>
-                            <td style="text-align:right">
+                            <td colspan="2" style="text-align:right">
+                                <span class="how-it-works-badge" id="edit-how-it-works" style="float:left">How does it work?</span>
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>

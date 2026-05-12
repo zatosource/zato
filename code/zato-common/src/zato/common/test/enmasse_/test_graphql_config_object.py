@@ -34,7 +34,6 @@ class TestGraphQLConfigObject(TestCase):
         self.assertIsNone(config.password)
         self.assertIsNone(config.default_query_timeout)
         self.assertIsNone(config.extra)
-        self.assertEqual(config.pool_size, 1)
 
 # ################################################################################################################################
 
@@ -48,7 +47,6 @@ class TestGraphQLConfigObject(TestCase):
         config.security_name = 'ms365-oauth'
         config.sec_type = 'oauth'
         config.default_query_timeout = 30
-        config.pool_size = 5
 
         self.assertEqual(config.id, 42)
         self.assertEqual(config.name, 'ms365-graph')
@@ -58,7 +56,6 @@ class TestGraphQLConfigObject(TestCase):
         self.assertEqual(config.security_name, 'ms365-oauth')
         self.assertEqual(config.sec_type, 'oauth')
         self.assertEqual(config.default_query_timeout, 30)
-        self.assertEqual(config.pool_size, 5)
 
 # ################################################################################################################################
 
