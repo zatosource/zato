@@ -291,28 +291,44 @@ class BaseHTTPSOAPWrapper:
 
         try:
 
-            # Bearer tokens are obtained dynamically ..
+            # Bearer tokens are obtained dynamically or statically ..
             if is_bearer_token:
 
                 # .. this is reusable ..
                 sec_def = self.server.security_facade.get_bearer_token_by_name(sec_def_name)
 
-                # .. each OAuth definition will use a specific data format ..
-                data_format = sec_def['data_format']
+                # .. static tokens have their value defined directly in the definition ..
+                if static_value := sec_def.get('static_value'):
 
-                # .. otherwise, we can check if they are provided in the security definition itself ..
-                if not scopes:
-                    scopes = sec_def.get('scopes') or ''
-                    scopes = scopes.splitlines()
-                    scopes = ' '.join(scopes)
+                    # .. build the header from the static definition fields ..
+                    static_header = sec_def['static_header']
+                    static_prefix = sec_def['static_prefix']
 
-                # .. get a Bearer token ..
-                result = self._get_bearer_token_auth(sec_def_name, scopes, data_format)
+                    if static_prefix:
+                        headers[static_header] = f'{static_prefix} {static_value}'
+                    else:
+                        headers[static_header] = static_value
 
-                # .. populate headers ..
-                headers['Authorization'] = f'Bearer {result.info.token}'
+                    token_is_cache_hit = None
 
-                token_is_cache_hit = result.is_cache_hit
+                else:
+
+                    # .. each OAuth definition will use a specific data format ..
+                    data_format = sec_def['data_format']
+
+                    # .. otherwise, we can check if they are provided in the security definition itself ..
+                    if not scopes:
+                        scopes = sec_def.get('scopes') or ''
+                        scopes = scopes.splitlines()
+                        scopes = ' '.join(scopes)
+
+                    # .. get a Bearer token ..
+                    result = self._get_bearer_token_auth(sec_def_name, scopes, data_format)
+
+                    # .. populate headers ..
+                    headers['Authorization'] = f'Bearer {result.info.token}'
+
+                    token_is_cache_hit = result.is_cache_hit
 
                 # This is needed by request
                 auth = None
