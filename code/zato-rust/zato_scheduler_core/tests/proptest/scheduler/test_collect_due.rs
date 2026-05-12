@@ -26,6 +26,10 @@ fn make_due_job(id: i64, minutes_ago: u32) -> SchedulerJob {
         timezone: None,
         calendar: None,
         max_execution_time_ms: None,
+        on_success_service: None,
+        on_success_job: None,
+        on_error_service: None,
+        on_error_job: None,
     }
 }
 

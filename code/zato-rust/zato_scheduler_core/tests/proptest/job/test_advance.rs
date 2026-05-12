@@ -23,6 +23,10 @@ fn make_interval_job(minutes: u32) -> SchedulerJob {
         timezone: None,
         calendar: None,
         max_execution_time_ms: None,
+        on_success_service: None,
+        on_success_job: None,
+        on_error_service: None,
+        on_error_job: None,
     }
 }
 
@@ -46,6 +50,10 @@ fn make_one_time_job() -> SchedulerJob {
         timezone: None,
         calendar: None,
         max_execution_time_ms: None,
+        on_success_service: None,
+        on_success_job: None,
+        on_error_service: None,
+        on_error_job: None,
     }
 }
 

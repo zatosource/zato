@@ -67,6 +67,15 @@ scheduler:
     job_type: interval_based
     hours: 4
 
+  - name: enmasse.scheduler.callbacks.1
+    service: demo.ping
+    job_type: interval_based
+    start_date: '2026-01-01 00:00:00'
+    minutes: 5
+    on_success_service: demo.ping
+    on_error_service: demo.ping
+    on_error_job: enmasse.scheduler.future.1
+
 """
 
 # ################################################################################################################################
