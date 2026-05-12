@@ -37,6 +37,7 @@ class Index(_Index):
 
     def handle(self):
         return {
+            'show_search_form': True,
             'create_form': CreateForm(req=self.req),
             'edit_form': EditForm(prefix='edit', req=self.req),
         }

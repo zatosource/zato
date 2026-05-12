@@ -15,10 +15,12 @@ from unittest.mock import MagicMock, patch
 _mock_gql_module = MagicMock()
 _mock_gql_transport = MagicMock()
 _mock_gql_transport_requests = MagicMock()
+_mock_gql_dsl = MagicMock()
 
 sys.modules.setdefault('gql', _mock_gql_module)
 sys.modules.setdefault('gql.transport', _mock_gql_transport)
 sys.modules.setdefault('gql.transport.requests', _mock_gql_transport_requests)
+sys.modules.setdefault('gql.dsl', _mock_gql_dsl)
 
 # Zato
 from zato.server.connection.facade import GraphQLFacade, GraphQLInvoker # noqa: E402
@@ -136,6 +138,7 @@ class TestGraphQLInvokerExecute(TestCase):
         mock_transport_class.assert_called_once_with(
             url='https://graphql.example.com/api',
             timeout=5,
+            headers={},
         )
 
 # ################################################################################################################################
@@ -228,6 +231,64 @@ class TestGraphQLInvokerExecute(TestCase):
         mock_transport_class.assert_called_once_with(
             url='https://custom.graphql.io/v1/graphql',
             timeout=60,
+            headers={},
+        )
+
+# ################################################################################################################################
+
+    @patch('gql.Client')
+    @patch('gql.transport.requests.RequestsHTTPTransport')
+    @patch('gql.gql')
+    def test_execute_with_extra_headers(self, mock_gql_parse, mock_transport_class, mock_client_class):
+        outconn_graphql = {
+            'headers-conn': MagicMock(config={
+                'address': 'https://graphql.example.com/api',
+                'default_query_timeout': 30,
+                'extra': '{"X-Custom": "value", "X-Tenant": "acme"}',
+            })
+        }
+        invoker = GraphQLInvoker('headers-conn', outconn_graphql)
+
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=MagicMock())
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client_class.return_value = mock_client
+        mock_gql_parse.return_value = MagicMock()
+
+        invoker.execute('{ users { id } }')
+
+        mock_transport_class.assert_called_once_with(
+            url='https://graphql.example.com/api',
+            timeout=30,
+            headers={'X-Custom': 'value', 'X-Tenant': 'acme'},
+        )
+
+# ################################################################################################################################
+
+    @patch('gql.Client')
+    @patch('gql.transport.requests.RequestsHTTPTransport')
+    @patch('gql.gql')
+    def test_execute_with_no_extra_headers(self, mock_gql_parse, mock_transport_class, mock_client_class):
+        outconn_graphql = {
+            'no-headers-conn': MagicMock(config={
+                'address': 'https://graphql.example.com/api',
+                'default_query_timeout': 30,
+            })
+        }
+        invoker = GraphQLInvoker('no-headers-conn', outconn_graphql)
+
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=MagicMock())
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client_class.return_value = mock_client
+        mock_gql_parse.return_value = MagicMock()
+
+        invoker.execute('{ users { id } }')
+
+        mock_transport_class.assert_called_once_with(
+            url='https://graphql.example.com/api',
+            timeout=30,
+            headers={},
         )
 
 # ################################################################################################################################
@@ -292,6 +353,33 @@ class TestGraphQLInvokerExecute(TestCase):
 
         self.assertIn('GraphQLInvoker', repr_string)
         self.assertIn('my-conn', repr_string)
+
+# ################################################################################################################################
+
+    @patch('gql.Client')
+    @patch('gql.dsl.DSLSchema')
+    @patch('gql.transport.requests.RequestsHTTPTransport')
+    def test_session_returns_context_manager(self, mock_transport_class, mock_dsl_schema_class, mock_client_class):
+        invoker = self._get_invoker()
+
+        mock_gql_session = MagicMock()
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_gql_session)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.schema = MagicMock()
+        mock_client_class.return_value = mock_client
+
+        mock_ds = MagicMock()
+        mock_dsl_schema_class.return_value = mock_ds
+
+        with invoker.session() as (session, ds):
+            self.assertIs(session, mock_gql_session)
+            self.assertIs(ds, mock_ds)
+
+        mock_client_class.assert_called_once()
+        call_kwargs = mock_client_class.call_args
+        self.assertTrue(call_kwargs[1]['fetch_schema_from_transport'])
+        mock_dsl_schema_class.assert_called_once_with(mock_client.schema)
 
 # ################################################################################################################################
 # ################################################################################################################################

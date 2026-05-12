@@ -18,7 +18,11 @@ from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
 from zato.common.hl7.mllp.dedup import MessageDeduplicator, extract_control_id
 from zato.common.hl7.mllp.preprocess import BatchPayload, preprocess_message
 from zato.common.hl7.mllp.router import HL7MessageRouter
-from zato_hl7v2 import parse_message as hl7_parse_message
+
+try:
+    from zato_hl7v2 import parse_message as hl7_parse_message
+except ImportError:
+    pass
 
 # ################################################################################################################################
 # ################################################################################################################################
