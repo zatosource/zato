@@ -595,6 +595,30 @@ class GraphQLInvoker:
         return out
 
 # ################################################################################################################################
+
+    @staticmethod
+    def ping_config(config:'anydict') -> 'None':
+        """ Pings using a raw config dict (as stored in the config manager).
+        """
+        from gql import Client as GQLClient
+        from gql import gql as gql_parse
+        from gql.transport.requests import RequestsHTTPTransport
+
+        address = config['address']
+        timeout = config.get('default_query_timeout')
+        if timeout:
+            timeout = int(timeout)
+
+        if extra_raw := config.get('extra'):
+            headers = json.loads(extra_raw)
+        else:
+            headers = {}
+
+        transport = RequestsHTTPTransport(url=address, timeout=timeout, headers=headers)
+        client = GQLClient(transport=transport)
+        _ = client.execute(gql_parse('{ __schema { queryType { name } } }'))
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GraphQLFacade:
