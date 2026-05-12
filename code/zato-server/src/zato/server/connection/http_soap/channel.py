@@ -246,6 +246,8 @@ class RequestDispatcher:
         """ Logs a summary of the incoming REST request unless the path is explicitly ignored.
         """
         if meta.path_info not in self.server.rest_log_ignore:
+            if channel_name == 'zato.api.invoke' and meta.path_info.startswith('/zato'):
+                return
             service_name = channel_item['service_name'] if channel_item else '<no-channel>'
             logger.info(
                 f'REST cha \u2192 cid={cid}; {meta.http_method} {meta.wsgi_raw_uri} name={channel_name};'

@@ -363,7 +363,8 @@ pub fn handle_http_request(
         }
     }
 
-    let should_log_rest = !rest_log_ignore.iter().any(|prefix| path_info.starts_with(prefix));
+    let is_internal_invoke = channel_name == "zato.api.invoke" && path_info.starts_with("/zato");
+    let should_log_rest = !is_internal_invoke && !rest_log_ignore.iter().any(|prefix| path_info.starts_with(prefix));
     if should_log_rest {
         let delta_sec = delta.num_seconds();
         #[expect(clippy::as_conversions, reason = "modulo 1_000_000 guarantees the result fits in i32")]
