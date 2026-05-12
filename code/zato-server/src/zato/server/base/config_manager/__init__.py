@@ -767,6 +767,7 @@ class ConfigManager(_ConfigManagerBase):
         cloud_jira_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA, {})
         cloud_microsoft_365_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365, {})
         cloud_salesforce_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE, {})
+        outconn_graphql_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL, {})
         outconn_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA, {})
         outconn_ldap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
         outconn_mongodb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB, {})
@@ -781,6 +782,7 @@ class ConfigManager(_ConfigManagerBase):
             cloud_jira_map,
             cloud_microsoft_365_map,
             cloud_salesforce_map,
+            outconn_graphql_map,
             outconn_kafka_map,
             outconn_ldap_map,
             outconn_mongodb_map,
