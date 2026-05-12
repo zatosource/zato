@@ -688,6 +688,7 @@ class GENERIC:
             OUTCONN_LDAP = 'outconn-ldap'
             CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
             OUTCONN_HL7_MLLP = 'outconn-hl7-mllp'
+            OUTCONN_GRAPHQL = 'outconn-graphql'
             OUTCONN_KAFKA = 'outconn-kafka'
             OUTCONN_MONGODB = 'outconn-mongodb'
 

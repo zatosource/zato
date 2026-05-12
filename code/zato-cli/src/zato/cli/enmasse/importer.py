@@ -29,6 +29,7 @@ from zato.cli.enmasse.importers.sql import SQLImporter
 from zato.cli.enmasse.importers.confluence import ConfluenceImporter
 from zato.cli.enmasse.importers.jira import JiraImporter
 from zato.cli.enmasse.importers.channel_hl7_mllp import ChannelHL7MLLPImporter
+from zato.cli.enmasse.importers.graphql import OutgoingGraphQLImporter
 from zato.cli.enmasse.importers.kafka import ChannelKafkaImporter, OutgoingKafkaImporter
 from zato.cli.enmasse.importers.ldap import LDAPImporter
 from zato.cli.enmasse.importers.microsoft_365 import Microsoft365Importer
@@ -65,6 +66,7 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.scheduler', 'zato.cli.enmasse.importers.sql',
                         'zato.cli.enmasse.importers.confluence', 'zato.cli.enmasse.importers.jira',
                         'zato.cli.enmasse.importers.channel_hl7_mllp',
+                        'zato.cli.enmasse.importers.graphql',
                         'zato.cli.enmasse.importers.kafka',
                         'zato.cli.enmasse.importers.ldap', 'zato.cli.enmasse.importers.microsoft_365',
                         'zato.cli.enmasse.importers.outgoing_rest', 'zato.cli.enmasse.importers.outgoing_soap',
@@ -100,6 +102,7 @@ class EnmasseYAMLImporter:
         self.jira_defs = {}
         self.channel_hl7_mllp_defs = {}
         self.channel_kafka_defs = {}
+        self.outgoing_graphql_defs = {}
         self.outgoing_kafka_defs = {}
         self.ldap_defs = {}
         self.microsoft_365_defs = {}
@@ -130,6 +133,7 @@ class EnmasseYAMLImporter:
         self.jira_importer = JiraImporter(self)
         self.channel_hl7_mllp_importer = ChannelHL7MLLPImporter(self)
         self.channel_kafka_importer = ChannelKafkaImporter(self)
+        self.outgoing_graphql_importer = OutgoingGraphQLImporter(self)
         self.outgoing_kafka_importer = OutgoingKafkaImporter(self)
         self.ldap_importer = LDAPImporter(self)
         self.microsoft_365_importer = Microsoft365Importer(self)
@@ -598,6 +602,25 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_outgoing_graphql(self, outgoing_graphql_list:'list', session:'SASession') -> 'tuple':
+        if not outgoing_graphql_list:
+            return [], []
+
+        count = len(outgoing_graphql_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} GraphQL outgoing {noun}')
+
+        for idx, item in enumerate(outgoing_graphql_list):
+            logger.info('GraphQL outgoing item %d: %s', idx, item)
+
+        created, updated = self.outgoing_graphql_importer.sync_definitions(outgoing_graphql_list, session)
+        self.outgoing_graphql_defs = self.outgoing_graphql_importer.connection_defs
+        logger.info('Processed GraphQL outgoing definitions: created=%d updated=%d', len(created), len(updated))
+
+        return created, updated
+
+# ################################################################################################################################
+
     def sync_microsoft_365(self, microsoft_365_list:'list', session:'SASession') -> 'tuple':
         """ Synchronizes Microsoft 365 connection definitions from a YAML configuration with the database.
         """
@@ -874,6 +897,14 @@ class EnmasseYAMLImporter:
             self.created_objects['outgoing_kafka'] = outgoing_kafka_created
         if outgoing_kafka_updated:
             self.updated_objects['outgoing_kafka'] = outgoing_kafka_updated
+
+        # Process GraphQL outgoing definitions
+        outgoing_graphql_list = yaml_config.get('outgoing_graphql', [])
+        outgoing_graphql_created, outgoing_graphql_updated = self.sync_outgoing_graphql(outgoing_graphql_list, session)
+        if outgoing_graphql_created:
+            self.created_objects['outgoing_graphql'] = outgoing_graphql_created
+        if outgoing_graphql_updated:
+            self.updated_objects['outgoing_graphql'] = outgoing_graphql_updated
 
         # Process HL7 MLLP channel definitions
         channel_hl7_mllp_list = yaml_config.get('channel_hl7_mllp', [])

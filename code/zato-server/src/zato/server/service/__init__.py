@@ -44,7 +44,7 @@ from zato.common.util.time_ import utcnow
 from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
-from zato.server.connection.facade import KafkaFacade, KeysightContainer, MLLPFacade, RESTFacade, SchedulerFacade
+from zato.server.connection.facade import KafkaFacade, GraphQLFacade, KeysightContainer, MLLPFacade, RESTFacade, SchedulerFacade
 from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
@@ -450,6 +450,7 @@ class Service:
 
         self.out = self.outgoing = Outgoing(
             self.amqp,
+            GraphQLFacade(),
             KafkaFacade(),
             self._config_store.out_odoo,
             self._config_manager.config_store.out_plain_http,
@@ -575,6 +576,9 @@ class Service:
 
         # Kafka facade
         self.out.kafka.init(self._config_manager)
+
+        # GraphQL facade
+        self.out.graphql.init(self._config_manager)
 
         # MLLP facade
         self.mllp.init(self._config_manager)

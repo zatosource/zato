@@ -249,6 +249,18 @@ outgoing_kafka:
     ssl: true
     ssl_ca_file: /path/to/ca.pem
 
+outgoing_graphql:
+
+  - name: enmasse.graphql.outgoing.1
+    is_active: true
+    address: https://graph.microsoft.com/v1.0
+    default_query_timeout: 30
+
+  - name: enmasse.graphql.outgoing.2
+    is_active: true
+    address: https://api.github.com/graphql
+    default_query_timeout: 60
+
 ldap:
 
   - name: enmasse.ldap.1

@@ -483,3 +483,88 @@ class MLLPFacade:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class GraphQLInvoker:
+    """ Wraps a single GraphQL outgoing connection for use from services.
+    """
+    _conn_name: 'str'
+    _outconn_graphql: 'anydict'
+
+    def __init__(self, conn_name:'str', outconn_graphql:'anydict') -> 'None':
+        self._conn_name = conn_name
+        self._outconn_graphql = outconn_graphql
+
+# ################################################################################################################################
+
+    def __repr__(self) -> 'str':
+        out = f'GraphQLInvoker({self._conn_name} at {hex(id(self))})'
+        return out
+
+# ################################################################################################################################
+
+    def execute(self, query:'any_', params:'anydict | None'=None) -> 'anydict':
+        """ Executes a GraphQL query or mutation against the configured server.
+        """
+
+        # gql
+        from gql import Client as GQLClient
+        from gql import gql as gql_parse
+        from gql.transport.requests import RequestsHTTPTransport
+
+        # Get the connection's config ..
+        config = self._outconn_graphql[self._conn_name]
+        address = config.config['address']
+        timeout = config.config.get('default_query_timeout')
+
+        # .. build the transport ..
+        transport = RequestsHTTPTransport(url=address, timeout=timeout)
+
+        # .. build the client ..
+        client = GQLClient(transport=transport)
+
+        # .. if the query is a string, parse it ..
+        if isinstance(query, str):
+            query = gql_parse(query)
+
+        # .. build the request keyword arguments ..
+        execute_kwargs = {}
+
+        if params:
+            execute_kwargs['variable_values'] = params
+
+        # .. execute the query ..
+        with client as session:
+            out = session.execute(query, **execute_kwargs)
+
+        return out
+
+# ################################################################################################################################
+
+    def ping(self) -> 'bool':
+        """ Pings the GraphQL server using a schema introspection query.
+        """
+        _ping_query = '{ __schema { queryType { name } } }'
+        _ = self.execute(_ping_query)
+
+        out = True
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GraphQLFacade:
+    """ Provides dict-like access to GraphQL outgoing connections from services via self.out.graphql.
+    """
+    _outconn_graphql: 'anydict'
+
+    def init(self, config_manager:'ConfigManager') -> 'None':
+        self._outconn_graphql = config_manager.outconn_graphql
+
+# ################################################################################################################################
+
+    def __getitem__(self, name:'str') -> 'GraphQLInvoker':
+        self._outconn_graphql[name]
+        return GraphQLInvoker(name, self._outconn_graphql)
+
+# ################################################################################################################################
+# ################################################################################################################################

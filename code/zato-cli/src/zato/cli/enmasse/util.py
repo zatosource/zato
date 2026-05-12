@@ -183,6 +183,7 @@ def get_top_level_order() -> 'strlist':
         'confluence',
         'jira',
         'channel_kafka',
+        'outgoing_graphql',
         'outgoing_kafka',
         'channel_hl7_mllp',
         'email_imap',
@@ -216,6 +217,7 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['confluence'] = 'name', 'is_active', 'address', 'username',
     order['jira'] = 'name', 'is_active', 'address', 'username',
     order['channel_kafka'] = 'name', 'is_active', 'address', 'topic', 'group_id', 'service',
+    order['outgoing_graphql'] = 'name', 'is_active', 'address', 'security_name', 'default_query_timeout',
     order['outgoing_kafka'] = 'name', 'is_active', 'address', 'topic',
     order['channel_hl7_mllp'] = 'name', 'is_active', 'service', 'msh9_message_type', 'msh9_trigger_event', 'should_validate', \
         'normalize_line_endings', 'fix_off_by_one_field_index', 'dedup_ttl_value', 'dedup_ttl_unit', 'is_default',

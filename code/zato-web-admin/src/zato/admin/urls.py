@@ -31,6 +31,7 @@ from zato.admin.web.views.outgoing.hl7 import fhir as out_hl7_fhir
 from zato.admin.web.views.outgoing.hl7 import mllp as out_hl7_mllp
 from zato.admin.web.views.channel import kafka as channel_kafka
 from zato.admin.web.views.channel import mcp as channel_mcp
+from zato.admin.web.views.outgoing import graphql as out_graphql
 from zato.admin.web.views.outgoing import kafka as out_kafka
 from zato.admin.web.views.outgoing import ldap as out_ldap
 from zato.admin.web.views.outgoing import mongodb as out_mongodb
@@ -396,6 +397,26 @@ urlpatterns += [
         login_required(out_ldap.change_password), name='out-ldap-change-password'),
     url(r'^zato/outgoing/ldap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_ldap.ping), name='out-ldap-ping'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. GraphQL outgoing
+
+    url(r'^zato/outgoing/graphql/$',
+        login_required(out_graphql.Index()), name=out_graphql.Index.url_name),
+    url(r'^zato/outgoing/graphql/create/$',
+        login_required(out_graphql.Create()), name=out_graphql.Create.url_name),
+    url(r'^zato/outgoing/graphql/edit/$',
+        login_required(out_graphql.Edit()), name=out_graphql.Edit.url_name),
+    url(r'^zato/outgoing/graphql/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_graphql.Delete()), name=out_graphql.Delete.url_name),
+    url(r'^zato/outgoing/graphql/change-password/$',
+        login_required(out_graphql.change_password), name='out-graphql-change-password'),
+    url(r'^zato/outgoing/graphql/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_graphql.ping), name='out-graphql-ping'),
     ]
 
 # ################################################################################################################################

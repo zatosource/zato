@@ -47,7 +47,7 @@ if 0:
     from zato.common.typing_ import any_, callable_, stranydict, strnone
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.email import EMailAPI
-    from zato.server.connection.facade import KafkaFacade
+    from zato.server.connection.facade import GraphQLFacade, KafkaFacade
     from zato.server.connection.ftp import FTPStore
     from zato.server.connection.search import SearchAPI
     from zato.server.service import AMQPFacade, Service
@@ -249,12 +249,14 @@ class Outgoing:
     """ A container for various outgoing connections a service can access. This in fact is a thin wrapper around data
     fetched from the service's config manager.
     """
-    __slots__ = ('amqp', 'ftp', 'kafka', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'sap', 'ldap', 'mongodb', 'redis')
+    __slots__ = ('amqp', 'ftp', 'graphql', 'kafka', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'sap', 'ldap', 'mongodb', 'redis')
 
-    def __init__(self, amqp=None, kafka=None, odoo=None, plain_http=None, soap=None, sql=None,
+    def __init__(self, amqp=None, graphql=None, kafka=None, odoo=None, plain_http=None, soap=None, sql=None,
             sap=None, ldap=None, mongodb=None, redis=None):
 
         self.amqp = cast_('AMQPFacade', amqp)
+
+        self.graphql = cast_('GraphQLFacade', graphql)
 
         self.kafka = cast_('KafkaFacade', kafka)
 
