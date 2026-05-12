@@ -36,10 +36,15 @@ class Index(_Index):
     input_required = 'cluster_id', 'type_'
     output_required = 'id', 'name', 'is_active', 'is_internal', 'address', 'security_id', \
         'security_name'
-    output_optional = ('extra', 'default_query_timeout') + generic_attrs
+    output_optional = ('extra', 'default_query_timeout', 'auth_type') + generic_attrs
     output_repeated = True
 
 # ################################################################################################################################
+
+    def on_before_append_item(self, item):
+        if item.auth_type:
+            item.sec_type = item.auth_type
+        return item
 
     def handle(self):
 

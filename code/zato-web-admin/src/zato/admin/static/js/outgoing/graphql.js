@@ -79,9 +79,27 @@ $.fn.zato.outgoing.graphql.data_table.new_row = function(item, data, includeTR) 
     }
 
     let isActive = item.is_active == true;
-    var securityName = item.security_id ? item.security_select : '<span class="form_hint">---</span>';
-    if (!securityName) {
-        securityName = $.fn.zato.empty_value;
+
+    var securityCell = '<span class="form_hint">---</span>';
+    var secType = '';
+    var selectedValue = $('#id_security_id').val() || $('#id_edit-security_id').val() || '';
+
+    if(item.security_id && selectedValue && selectedValue.indexOf('/') > -1) {
+        secType = selectedValue.split('/')[0];
+        var secName = item.security_id_select ? item.security_id_select.split('/').slice(1).join('/') : '';
+
+        var secHref = '/zato/security/';
+        if(secType === 'oauth') {
+            secHref += 'oauth/outconn/client-credentials/';
+        }
+        else if(secType === 'basic_auth') {
+            secHref += 'basic-auth/';
+        }
+        else if(secType === 'apikey') {
+            secHref += 'apikey/';
+        }
+        secHref += '?cluster=1&query=' + encodeURIComponent(secName);
+        securityCell = String.format('<a href=\'{0}\'>{1}</a>', secHref, secName);
     }
 
     row += '<td class=\'numbering\'>&nbsp;</td>';
@@ -93,7 +111,7 @@ $.fn.zato.outgoing.graphql.data_table.new_row = function(item, data, includeTR) 
     row += String.format('<td><a href=\'{0}\'>{0}</a></td>', item.address);
 
     // 2
-    row += String.format('<td>{0}</td>', securityName);
+    row += String.format('<td>{0}</td>', securityCell);
 
     // 3
     var editLink = String.format('<a href=\'javascript:$.fn.zato.outgoing.graphql.edit(\x27{0}\x27)\'>Edit</a>', item.id);
@@ -114,6 +132,7 @@ $.fn.zato.outgoing.graphql.data_table.new_row = function(item, data, includeTR) 
     row += String.format('<td class=\'ignore\'>{0}</td>', item.extra);
     row += String.format('<td class=\'ignore\'>{0}</td>', item.default_query_timeout);
     row += String.format('<td class=\'ignore\'>{0}</td>', item.security_id);
+    row += String.format('<td class=\'ignore\'>{0}</td>', secType);
 
     if(includeTR) {
         row += '</tr>';
