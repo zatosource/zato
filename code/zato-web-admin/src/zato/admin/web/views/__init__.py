@@ -235,7 +235,6 @@ class BaseView:
     def __init__(self):
         self.req = None # type: any_
         self.cluster_id = None
-        self.clear_user_message()
         self.ctx = {}
 
     def __call__(self, req, *args, **kwargs):
@@ -256,10 +255,6 @@ class BaseView:
 
     def on_after_set_input(self):
         pass
-
-    def clear_user_message(self):
-        self.user_message = None
-        self.user_message_class = 'failure'
 
     input_required = []
     input_optional = []
@@ -338,7 +333,6 @@ class Index(BaseView):
         self.input = Bunch()
         self.items = []
         self.item = None
-        self.clear_user_message()
 
     def can_invoke_admin_service(self):
         """ Returns a boolean flag indicating that we know what service to invoke, what cluster it is on
@@ -473,8 +467,6 @@ class Index(BaseView):
         """ Handles the request, taking care of common things and delegating
         control to the subclass for fetching this view-specific data.
         """
-        self.clear_user_message()
-
         try:
             super(Index, self).__call__(req, *args, **kwargs)
 
@@ -516,8 +508,7 @@ class Index(BaseView):
                         logger.info('View: handling as single item')
                         self._handle_item(response.data)
                 else:
-                    logger.info('View: response not ok, user_message=%r', response.details)
-                    self.user_message = response.details
+                    logger.info('View: response not ok, details=%r', response.details)
             else:
                 logger.info('can_invoke_admin_service returned False, not invoking an admin service:[%s]', self.service_name)
 
@@ -527,8 +518,6 @@ class Index(BaseView):
             return_data['items'] = self.items
             return_data['item'] = self.item
             return_data['input'] = self.input
-            return_data['user_message'] = self.user_message
-            return_data['user_message_class'] = self.user_message_class
             return_data['zato_clusters'] = req.zato.clusters
             return_data['search_form'] = req.zato.search_form
             return_data['meta'] = response.meta if response else {}
@@ -570,7 +559,6 @@ class CreateEdit(BaseView):
         initial_input_dict = initial_input_dict or {}
         initial_return_data = initial_return_data or {}
         self.input_dict.clear()
-        self.clear_user_message()
 
         try:
             logger.info('CreateEdit step 1: calling super().__call__')

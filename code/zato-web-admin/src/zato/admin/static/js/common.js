@@ -140,17 +140,13 @@ $.namespace('zato.vendors.keysight.vision');
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.post = function(url, callback, data, data_type, suppress_user_message, context) {
+$.fn.zato.post = function(url, callback, data, data_type, context) {
     if(!data) {
         data = '';
     }
 
     if(!data_type) {
         data_type = 'json';
-    }
-
-    if(!suppress_user_message && !$('#zato-action-overlay').length) {
-        $.fn.zato.user_message(false, '', true);
     }
 
     if(!context) {
@@ -170,35 +166,6 @@ $.fn.zato.post = function(url, callback, data, data_type, suppress_user_message,
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.user_message = function(is_success, msg, loading) {
-    var pre = $('#user-message');
-    var new_css_class = ''
-
-    if(!loading) {
-        $.fn.zato.hide_action_overlay();
-        if(is_success) {
-            css_class = 'user-message-success';
-        }
-        else {
-            css_class = 'user-message-failure';
-        }
-    }
-    else {
-        css_class = 'loading';
-    }
-
-    pre.removeClass('user-message-success').
-        removeClass('user-message-failure').
-        removeClass('loading').
-        addClass(css_class);
-    pre.text(msg);
-
-    var div = $('#user-message-div');
-    div.fadeOut(100, function() {
-        div.fadeIn(250);
-    });
-}
-
 $.fn.zato.show_action_overlay = function(label) {
 }
 
@@ -206,20 +173,6 @@ $.fn.zato.hide_action_overlay = function() {
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-$.fn.zato.post_with_user_message = function(url, on_callback_done) {
-
-    var callback = function(data, status) {
-        var success = status == 'success';
-        $.fn.zato.user_message(success, data.responseText);
-
-        if(on_callback_done) {
-            on_callback_done(success);
-        }
-    }
-
-    $.fn.zato.post(url, callback, '', 'text');
-}
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Forms
@@ -478,13 +431,6 @@ $.fn.zato.data_table._on_submit_complete = function(data, status) {
     }
 
     $.fn.zato.hide_action_overlay();
-
-    if(!success) {
-        $.fn.zato.user_message(false, msg);
-    }
-    else {
-        $('#user-message-div').hide();
-    }
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -613,12 +559,6 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
             if(on_success_callback) {
                 on_success_callback();
             }
-
-            $('#user-message-div').hide();
-        }
-        else {
-            msg = data.responseText;
-            $.fn.zato.user_message(false, msg);
         }
     }
 
@@ -637,7 +577,7 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
             if(!post_data) {
                 post_data = {};
             }
-            $.fn.zato.post(url, _callback, post_data, null, true);
+            $.fn.zato.post(url, _callback, post_data);
             return false;
         }
     }
@@ -696,7 +636,7 @@ $.fn.zato.data_table.on_change_password_submit = function() {
             }
         }
 
-        $.fn.zato.post(form.attr('action'), _callback, form.serialize(), null, true);
+        $.fn.zato.post(form.attr('action'), _callback, form.serialize());
         $('#change_password-div').dialog('close');
 
         return false;
