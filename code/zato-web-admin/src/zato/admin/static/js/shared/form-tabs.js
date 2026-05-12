@@ -87,6 +87,34 @@ $.fn.zato.form_tabs._restore_hidden_validation = function(form) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.form_tabs._clear_hidden_panels = function(form) {
+
+    // Collect IDs of inputs that are mirror targets - these must not be cleared
+    // because they receive their value from the active tab's mirror input.
+    var mirror_targets = {};
+    form.find('.form-tab-mirror').each(function() {
+        mirror_targets[$(this).attr('data-mirror-target')] = true;
+    });
+
+    // Clear all input values in hidden tab panels so they are not submitted.
+    form.find('.dashboard-tab-panel[hidden]').each(function() {
+        $(this).find('input[type="text"], input[type="hidden"], textarea').each(function() {
+            if ($(this).hasClass('form-tab-mirror')) {
+                return;
+            }
+            if (mirror_targets[$(this).attr('id')]) {
+                return;
+            }
+            $(this).val('');
+        });
+        $(this).find('select').each(function() {
+            $(this).prop('selectedIndex', 0);
+        });
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.form_tabs._init_mirrors = function(div_id) {
 
     // Mirror inputs (class form-tab-mirror) sync bi-directionally with a
@@ -178,11 +206,13 @@ $.fn.zato.form_tabs.reset = function(config) {
             }
         };
 
-        // Install a before_submit_hook that suppresses hidden-tab validation ..
+        // Install a before_submit_hook that suppresses hidden-tab validation
+        // and clears values in hidden panels so they are not submitted.
         var previous_hook = $.fn.zato.data_table.before_submit_hook;
 
         $.fn.zato.data_table.before_submit_hook = function(form) {
             $.fn.zato.form_tabs._suppress_hidden_validation(form);
+            $.fn.zato.form_tabs._clear_hidden_panels(form);
             if (previous_hook) {
                 return previous_hook(form);
             }
@@ -204,7 +234,8 @@ $.fn.zato.form_tabs.reset = function(config) {
         tab_selector: div_id + ' .dashboard-tab',
         panel_prefix: panel_prefix,
         default_tab: default_tab,
-        on_change: on_change
+        on_change: on_change,
+        no_scroll_lock: true
     });
 
     // Focus the first visible input in the default tab panel

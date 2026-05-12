@@ -298,16 +298,16 @@ class BaseHTTPSOAPWrapper:
                 sec_def = self.server.security_facade.get_bearer_token_by_name(sec_def_name)
 
                 # .. static tokens have their value defined directly in the definition ..
-                if static_value := sec_def.get('static_value'):
+                if static_token := sec_def.get('static_token'):
 
                     # .. build the header from the static definition fields ..
                     static_header = sec_def['static_header']
                     static_prefix = sec_def['static_prefix']
 
                     if static_prefix:
-                        headers[static_header] = f'{static_prefix} {static_value}'
+                        headers[static_header] = f'{static_prefix} {static_token}'
                     else:
-                        headers[static_header] = static_value
+                        headers[static_header] = static_token
 
                     token_is_cache_hit = None
 

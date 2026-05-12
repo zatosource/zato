@@ -25,26 +25,26 @@ class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
 
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:60%'}))
-    username = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
+    username = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
     secret = forms.CharField(required=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
 
-    auth_server_url = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.Auth_Server_URL)
-    scopes = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:30px'}), initial='\n'.join(_default.Scopes))
+    auth_server_url = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.Auth_Server_URL)
+    scopes = forms.CharField(required=False, widget=forms.Textarea(attrs={'style':'width:100%; height:30px'}), initial='\n'.join(_default.Scopes))
 
-    client_id_field = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.Client_ID_Field)
+    client_id_field = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.Client_ID_Field)
     client_secret_field = forms.CharField(
-        widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.Client_Secret_Field)
+        required=False, widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.Client_Secret_Field)
 
-    grant_type = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.Grant_Type)
-    extra_fields = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:30px'}))
+    grant_type = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.Grant_Type)
+    extra_fields = forms.CharField(required=False, widget=forms.Textarea(attrs={'style':'width:100%; height:30px'}))
 
     data_format = forms.ChoiceField(widget=forms.Select())
 
     # Static token fields
     static_header = forms.CharField(
         required=False, widget=forms.TextInput(attrs={'style':'width:100%'}), initial='Authorization')
-    static_value = forms.CharField(
-        required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    static_token = forms.CharField(
+        required=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
     static_prefix = forms.CharField(
         required=False, widget=forms.TextInput(attrs={'style':'width:100%'}), initial='bearer')
 

@@ -35,7 +35,8 @@ class GetList(AdminService):
 
     input = 'cluster_id',
     output = 'id', 'name', 'is_active', 'username', 'client_id_field', 'client_secret_field', 'grant_type', \
-        '-auth_server_url', '-scopes', '-extra_fields', '-data_format'
+        '-auth_server_url', '-scopes', '-extra_fields', '-data_format', \
+        '-static_header', '-static_token', '-static_prefix'
 
     def get_data(self, session:'any_') -> 'anylist':
         return elems_with_opaque(self._search(oauth_list, session, self.request.input.cluster_id, False)) # type: ignore
@@ -51,8 +52,9 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new Bearer token definition.
     """
-    input = 'cluster_id', 'name', 'is_active', 'username', 'client_id_field', \
-        'client_secret_field', 'grant_type', 'data_format', '-auth_server_url', '-scopes', '-extra_fields'
+    input = 'cluster_id', 'name', 'is_active', '-username', '-client_id_field', \
+        '-client_secret_field', '-grant_type', '-data_format', '-auth_server_url', '-scopes', '-extra_fields', \
+        '-static_header', '-static_token', '-static_prefix'
     output = 'id', 'name'
 
     def handle(self):
@@ -110,8 +112,9 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an Bearer token definition.
     """
-    input = 'id', 'cluster_id', 'name', 'is_active', 'username', 'client_id_field', \
-        'client_secret_field', 'grant_type', 'data_format', '-auth_server_url', '-scopes', '-extra_fields'
+    input = 'id', 'cluster_id', 'name', 'is_active', '-username', '-client_id_field', \
+        '-client_secret_field', '-grant_type', '-data_format', '-auth_server_url', '-scopes', '-extra_fields', \
+        '-static_header', '-static_token', '-static_prefix'
     output = 'id', 'name'
 
     def handle(self):

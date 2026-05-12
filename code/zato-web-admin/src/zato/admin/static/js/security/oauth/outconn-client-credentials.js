@@ -20,7 +20,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(
         ['name', 'username', 'auth_server_url', 'client_id_field', 'client_secret_field', 'grant_type', 'data_format',
-         'static_header', 'static_value', 'static_prefix']
+         'static_header', 'static_token', 'static_prefix']
     );
     var unique_constraints = [
         {field: 'name', entity_type: 'security', attr_name: 'name'}
@@ -77,18 +77,33 @@ $.fn.zato.security.oauth.data_table.new_row = function(item, data, include_tr) {
 
     var is_active = item.is_active == true
 
+    var is_static = item.static_token ? true : false;
+    var token_type = is_static ? 'Static' : 'Dynamic';
+    var hint = '<span class="form_hint">---</span>';
+
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
+    row += String.format('<td>{0}</td>', token_type);
 
-    row += String.format('<td>{0}</td>', item.username);
-    row += String.format("<td>{0}</td>", item.auth_server_url);
-    row += String.format("<td style='text-align:center'>{0}</td>", item.client_id_field);
+    row += String.format('<td>{0}</td>', is_static ? hint : item.username);
+    row += String.format("<td>{0}</td>", is_static ? hint : item.auth_server_url);
+    row += String.format("<td style='text-align:center'>{0}</td>", is_static ? hint : item.client_id_field);
 
-    row += String.format("<td style='text-align:center'>{0}</td>", item.client_secret_field);
-    row += String.format("<td style='text-align:center'>{0}</td>", item.grant_type);
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.security.oauth.get_token('{0}', this)\">Get token</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Change secret')\">Change secret</a>", item.id));
+    row += String.format("<td style='text-align:center'>{0}</td>", is_static ? hint : item.client_secret_field);
+    row += String.format("<td style='text-align:center'>{0}</td>", is_static ? hint : item.grant_type);
+    if (is_static) {
+        row += String.format('<td>{0}</td>', hint);
+    }
+    else {
+        row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.security.oauth.get_token('{0}', this)\">Get token</a>", item.id));
+    }
+    if (is_static) {
+        row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Change token', 'Token', 'token')\">Change token</a>", item.id));
+    }
+    else {
+        row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Change secret', 'Secret', 'secret')\">Change secret</a>", item.id));
+    }
 
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.security.oauth.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.security.oauth.delete_('{0}');\">Delete</a>", item.id));
@@ -101,7 +116,7 @@ $.fn.zato.security.oauth.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.data_format);
 
     row += String.format("<td class='ignore'>{0}</td>", item.static_header);
-    row += String.format("<td class='ignore'>{0}</td>", item.static_value);
+    row += String.format("<td class='ignore'>{0}</td>", item.static_token);
     row += String.format("<td class='ignore'>{0}</td>", item.static_prefix);
 
     if(include_tr) {
