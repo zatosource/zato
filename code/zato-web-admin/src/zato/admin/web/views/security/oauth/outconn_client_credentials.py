@@ -40,11 +40,13 @@ class Index(_Index):
 
     input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'username', 'auth_server_url', 'scopes', \
-        'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format'
+        'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format', \
+        'static_header', 'static_value', 'static_prefix'
     output_repeated = True
 
     def handle(self):
         return {
+            'show_search_form': True,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'change_password_form': ChangePasswordForm(),
@@ -57,7 +59,8 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     input_required = 'name', 'is_active', 'username', 'auth_server_url', 'scopes', \
-        'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format'
+        'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format', \
+        'static_header', 'static_value', 'static_prefix'
     output_required = 'id', 'name'
 
     def success_message(self, item):

@@ -87,6 +87,7 @@ class Index(_Index):
             item.delivery_mode_text = delivery_friendly_name[item.delivery_mode]
 
         return {
+            'show_search_form': True,
             'create_form': create_form,
             'edit_form': edit_form,
         }

@@ -85,12 +85,10 @@ class SecurityExporter:
     def _process_bearer_tokens(self, items, excluded_names, excluded_prefixes):
         result = []
 
-        # Known required fields for bearer tokens that must be included
-        required_fields = ['auth_endpoint']
-
-        # Fields that might be in opaque data
+        # Fields that might be in opaque data for dynamic tokens
         possible_fields = [
-            'auth_endpoint', 'client_id_field', 'client_secret_field', 'grant_type', 'data_format', 'extra_fields'
+            'auth_endpoint', 'client_id_field', 'client_secret_field', 'grant_type', 'data_format', 'extra_fields',
+            'static_header', 'static_value', 'static_prefix',
         ]
 
         for item in items:
@@ -112,7 +110,6 @@ class SecurityExporter:
 
             # Get opaque data from various sources and merge them
             opaque_data = {}
-            missing_fields = []
 
             # Try to access as opaque1 attribute (SQLAlchemy objects)
             if hasattr(item, 'opaque1') and item.opaque1:
@@ -144,13 +141,16 @@ class SecurityExporter:
                     opaque_data['auth_endpoint'] = opaque_data.pop('auth_server_url')
                 oauth.update(opaque_data)
 
-            # Check for missing required fields
-            for field in required_fields:
-                if field not in oauth:
-                    missing_fields.append(field)
+            # Warn about missing fields based on token type ..
+            is_static = 'static_value' in oauth
 
-            if missing_fields:
-                logger.warning('Bearer token %s is missing required fields: %s', item['name'], missing_fields)
+            # .. static tokens need static_value, dynamic tokens need auth_endpoint.
+            if is_static:
+                if not oauth.get('static_value'):
+                    logger.warning('Static bearer token %s is missing static_value', name)
+            else:
+                if 'auth_endpoint' not in oauth:
+                    logger.warning('Dynamic bearer token %s is missing auth_endpoint', name)
 
             result.append(oauth)
 

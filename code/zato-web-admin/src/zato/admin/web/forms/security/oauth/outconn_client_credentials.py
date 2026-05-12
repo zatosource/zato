@@ -40,6 +40,14 @@ class CreateForm(forms.Form):
 
     data_format = forms.ChoiceField(widget=forms.Select())
 
+    # Static token fields
+    static_header = forms.CharField(
+        required=False, widget=forms.TextInput(attrs={'style':'width:100%'}), initial='Authorization')
+    static_value = forms.CharField(
+        required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    static_prefix = forms.CharField(
+        required=False, widget=forms.TextInput(attrs={'style':'width:100%'}), initial='bearer')
+
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
 

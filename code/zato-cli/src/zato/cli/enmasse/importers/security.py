@@ -118,14 +118,24 @@ class SecurityImporter:
                 item['password'] = f'Zato-Auto-Password-{uuid4().hex}'
 
             if sec_type == 'bearer_token':
-                if 'client_id_field' not in item:
-                    item['client_id_field'] = 'client_id'
-                if 'client_secret_field' not in item:
-                    item['client_secret_field'] = 'client_secret'
-                if 'grant_type' not in item:
-                    item['grant_type'] = 'client_credentials'
-                if 'data_format' not in item:
-                    item['data_format'] = 'form'
+
+                # Detect static vs dynamic bearer tokens by the presence of static fields
+                is_static = 'static_header' in item or 'static_value' in item or 'static_prefix' in item
+
+                if is_static:
+                    if 'static_header' not in item:
+                        item['static_header'] = 'Authorization'
+                    if 'static_prefix' not in item:
+                        item['static_prefix'] = 'bearer'
+                else:
+                    if 'client_id_field' not in item:
+                        item['client_id_field'] = 'client_id'
+                    if 'client_secret_field' not in item:
+                        item['client_secret_field'] = 'client_secret'
+                    if 'grant_type' not in item:
+                        item['grant_type'] = 'client_credentials'
+                    if 'data_format' not in item:
+                        item['data_format'] = 'form'
 
             logger.info('Checking YAML def: name=%s type=%s', name, sec_type)
 

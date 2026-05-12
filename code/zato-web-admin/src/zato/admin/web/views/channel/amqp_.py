@@ -64,6 +64,7 @@ class Index(_Index):
         edit_form = EditForm(prefix='edit', req=self.req)
 
         return {
+            'show_search_form': True,
             'create_form': create_form,
             'edit_form': edit_form,
         }
