@@ -141,6 +141,7 @@ $.fn.zato.form_tabs.reset = function(config) {
 
     var caller_on_change = config.on_change || null;
     var on_change = null;
+    var tab_focus = {};
 
     if (independent_tabs) {
 
@@ -148,6 +149,30 @@ $.fn.zato.form_tabs.reset = function(config) {
             var form = $(div_id).find('form');
             $.fn.zato.form_tabs._restore_hidden_validation(form);
             $.fn.zato.form_tabs._suppress_hidden_validation(form);
+
+            // Remember which field had focus in the panel we are leaving
+            var focused = document.activeElement;
+            if (focused) {
+                var $panel = $(focused).closest('.dashboard-tab-panel');
+                if ($panel.length) {
+                    var leaving_tab = $panel.attr('id').replace(panel_prefix, '');
+                    tab_focus[leaving_tab] = focused.id || null;
+                }
+            }
+
+            // Restore focus in the panel we are entering
+            var remembered = tab_focus[tab];
+            if (remembered) {
+                $('#' + remembered).focus();
+            }
+            else {
+                var $active_panel = $('#' + panel_prefix + tab);
+                var $first = $active_panel.find('input:visible, select:visible, textarea:visible').first();
+                if ($first.length) {
+                    $first.focus();
+                }
+            }
+
             if (caller_on_change) {
                 caller_on_change(tab);
             }
@@ -181,4 +206,11 @@ $.fn.zato.form_tabs.reset = function(config) {
         default_tab: default_tab,
         on_change: on_change
     });
+
+    // Focus the first visible input in the default tab panel
+    var $default_panel = $('#' + panel_prefix + default_tab);
+    var $first = $default_panel.find('input:visible, select:visible, textarea:visible').first();
+    if ($first.length) {
+        $first.focus();
+    }
 };
