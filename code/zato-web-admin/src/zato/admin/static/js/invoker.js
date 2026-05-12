@@ -487,6 +487,31 @@ $.fn.zato.invoker.populate_history_list = function(list_container, history, is_s
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.invoker._highlight_history_items = function(list_container) {
+    list_container.find('[data-highlight-pending=true]').each(function() {
+        var el = this;
+        el.removeAttribute('data-highlight-pending');
+        var text = el.textContent;
+        var lexer = el.getAttribute('data-highlight-lexer') || '';
+        var post_data = {text: text};
+        if (lexer) {
+            post_data.lexer = lexer;
+        }
+        $.ajax({
+            type: 'POST',
+            url: '/zato/highlight/',
+            data: post_data,
+            headers: {'X-CSRFToken': $.cookie('csrftoken')},
+            dataType: 'json',
+            success: function(data) {
+                el.innerHTML = data.html;
+            }
+        });
+    });
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.invoker._render_history_item = function(list_container, history, i, callbacks) {
     let item = history[i];
     let request_text = typeof item === 'string' ? item : item.text;
@@ -498,8 +523,15 @@ $.fn.zato.invoker._render_history_item = function(list_container, history, i, ca
     wrapper.attr("data-index", i);
 
     let number_box = $('<div class="invoker-history-item-number"></div>').text(i + 1);
-    let text_box = $('<div class="invoker-history-item-text"></div>');
-    text_box.text(request_text && request_text.trim() !== '' ? request_text : '(No request)');
+    let text_box = $('<pre class="invoker-history-item-text syntax-monokai"></pre>');
+    let raw_text = request_text && request_text.trim() !== '' ? request_text : '(No request)';
+    text_box.text(raw_text);
+    text_box.attr('data-highlight-pending', 'true');
+
+    var config = $.fn.zato.invoker._modal_config;
+    if (config && config.highlight_lexer) {
+        text_box.attr('data-highlight-lexer', config.highlight_lexer);
+    }
 
     let show_response_box = $('<div class="invoker-history-item-show-response"></div>');
     show_response_box.text(has_response ? "Show response" : "(No response)");
@@ -780,12 +812,14 @@ $.fn.zato.invoker._bind_history_events = function() {
         let config = $.fn.zato.invoker._modal_config;
         if (!config) return;
         let result = $.fn.zato.invoker.filter_history(config.history_key, $(this).val());
+        var list = $("#invoker-modal-history-list");
         $.fn.zato.invoker.populate_history_list(
-            $("#invoker-modal-history-list"),
+            list,
             result.history,
             result.is_search_result,
             $.fn.zato.invoker._get_modal_history_callbacks()
         );
+        $.fn.zato.invoker._highlight_history_items(list);
     });
 }
 
@@ -905,6 +939,7 @@ $.fn.zato.invoker._save_overlay_state = function(history_key) {
         method: $("#invoker-modal-method").val() || 'POST',
         query_params: $("#invoker-modal-query-params").val() || '',
         path_params: $("#invoker-modal-path-params").val() || '',
+        variables: $("#invoker-modal-variables").val() || '',
         response_raw: $("#invoker-modal-response").data("raw-response") || '',
         status: $("#invoker-modal-status").text() || '',
         more_options_open: !$("#invoker-more-options").hasClass("hidden")
@@ -942,7 +977,8 @@ $.fn.zato.invoker._on_modal_invoke = function() {
     let config = $.fn.zato.invoker._modal_config;
     if (!config) return;
 
-    let form_data = $.fn.zato.invoker.collect_form_data();
+    let collect_func = config.collect_form_data_func || $.fn.zato.invoker.collect_form_data;
+    let form_data = collect_func();
     let url = config.get_invoke_url_func(config.id);
 
     $.fn.zato.invoker.save_to_history(config.history_key, form_data['data-request']);
@@ -1202,6 +1238,9 @@ $.fn.zato.invoker._open_modal_history = function() {
     $(".invoker-history-overlay-content").css({"position": "", "left": "", "top": "", "margin": "", "transform": ""});
     $("#invoker-modal-history-overlay").removeClass("hidden");
     $("#invoker-modal-history-search").val("").focus();
+
+    // Trigger lazy highlighting now that the overlay is visible
+    $.fn.zato.invoker._highlight_history_items($("#invoker-modal-history-list"));
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

@@ -22,6 +22,7 @@
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/invoker.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/graphql.js"></script>
 
@@ -37,6 +38,7 @@
             '_edit',
             '_delete',
             '_ping',
+            '_invoke',
             'id',
             'is_active',
             'extra',
@@ -52,8 +54,6 @@
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
 {% else %}
-
-    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
     {% if cluster_id %}
         <div id="markup">
@@ -85,6 +85,7 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
 
                         {% comment %} 4 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
@@ -108,10 +109,8 @@
                         <td><a href="{{ item.address }}">{{ item.address }}</a></td>
 
                         {% comment %} 2 {% endcomment %}
-                        <td>
+                        <td style="text-align:center">
                             {% if item.security_name %}
-                                {{ item.sec_def_type_name }}
-                                <br/>
                                 {{ item.security_name }}
                             {% endif %}
                         </td>
@@ -120,6 +119,7 @@
                         <td><a href="javascript:$.fn.zato.outgoing.graphql.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.graphql.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)">Ping</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.graphql.invoke('{{ item.id }}')">Invoke</a></td>
 
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -132,7 +132,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='14'>No results</td>
+                        <td colspan='15'>No results</td>
                     </tr>
                 {% endif %}
 

@@ -398,50 +398,6 @@ def _build_invoke_response(service_response):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def highlight(req):
-    """ Uses Pygments to syntax-highlight the given text, auto-detecting the lexer. """
-    from pygments import highlight as pyg_highlight
-    from pygments.formatters import HtmlFormatter
-    from pygments.lexers import JsonLexer, XmlLexer, HtmlLexer, TextLexer, guess_lexer
-
-    text = req.POST.get('text', '')
-    if not text.strip():
-        return JsonResponse({'html': '', 'lexer': 'text'})
-
-    lexer = _guess_pygments_lexer(text, guess_lexer, JsonLexer, XmlLexer, HtmlLexer, TextLexer)
-    formatter = HtmlFormatter(nowrap=True)
-    html = pyg_highlight(text, lexer, formatter)
-    lexer_name = type(lexer).__name__
-    return JsonResponse({'html': html, 'lexer': lexer_name})
-
-# ################################################################################################################################
-
-def _guess_pygments_lexer(text, guess_lexer, JsonLexer, XmlLexer, HtmlLexer, TextLexer):
-    trimmed = text.strip()
-
-    if (trimmed.startswith('{') and trimmed.endswith('}')) or \
-       (trimmed.startswith('[') and trimmed.endswith(']')):
-        try:
-            import json
-            json.loads(trimmed)
-            return JsonLexer()
-        except (ValueError, TypeError):
-            pass
-
-    if trimmed.startswith('<') and '>' in trimmed:
-        if '<!doctype' in trimmed.lower() or '<html' in trimmed.lower():
-            return HtmlLexer()
-        return XmlLexer()
-
-    try:
-        return guess_lexer(text)
-    except Exception:
-        return TextLexer()
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
 def invoke_channel(req, id):
     try:
         params = _extract_invoke_params(req)

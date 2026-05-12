@@ -6,12 +6,21 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import logging
+from traceback import format_exc
+
+# Django
+from django.http import JsonResponse
+
 # Zato
 from zato.admin.web.forms.outgoing.graphql import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
     method_allowed, ping_connection, SecurityList
 from zato.common.api import GENERIC, generic_attrs, SEC_DEF_TYPE
 from zato.common.model.graphql_ import GraphQLConfigObject
+
+logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -109,5 +118,26 @@ def change_password(req):
 @method_allowed('POST')
 def ping(req, id, cluster_id):
     return ping_connection(req, 'zato.generic.connection.ping', id, 'GraphQL connection')
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def invoke(req, id):
+    try:
+        params = {
+            'id': id,
+            'query': req.POST.get('data-request', ''),
+            'variables': req.POST.get('variables', ''),
+        }
+        response = req.zato.client.invoke('zato.generic.connection.invoke-graphql', params)
+        if response.ok:
+            return JsonResponse({
+                'data': response.data.response_data,
+                'response_time_human': response.data.response_time,
+            })
+        return JsonResponse({'data': str(response.details), 'response_time_human': ''}, status=500)
+    except Exception as e:
+        logger.error('invoke error: %s', format_exc())
+        return JsonResponse({'data': str(e), 'response_time_human': ''}, status=500)
 
 # ################################################################################################################################
