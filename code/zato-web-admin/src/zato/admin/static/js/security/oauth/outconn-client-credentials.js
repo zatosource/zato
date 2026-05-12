@@ -57,15 +57,45 @@ $.fn.zato.security.oauth.create = function() {
 }
 
 $.fn.zato.security.oauth.edit = function(id) {
+    var instance = $.fn.zato.data_table.data[id];
+    var is_static = instance.static_token ? true : false;
+    var default_tab = is_static ? 'static' : 'dynamic';
+
     $.fn.zato.form_tabs.reset({
         div_id: '#edit-div',
         panel_prefix: 'bearer-edit-tab-panel-',
         tab_labels: {dynamic: 'Dynamic tokens', static: 'Static tokens'},
-        default_tab: 'dynamic',
+        default_tab: default_tab,
         independent_tabs: true,
         on_change: $.fn.zato.security.oauth._on_tab_change('#edit-div')
     });
-    $.fn.zato.data_table._create_edit('edit', 'Edit Bearer token definition', id);
+
+    // Hide/show the Get token link based on token type
+    $.fn.zato.security.oauth._on_tab_change('#edit-div')(default_tab);
+
+    // Populate only the relevant fields before the dialog opens
+    $('#id_edit-name').val(instance.name);
+    $('#id_edit-id').val(instance.id);
+
+    if (is_static) {
+        $('#id_edit-static_header').val(instance.static_header);
+        $('#id_edit-static_prefix').val(instance.static_prefix);
+        $('#id_edit-static_token').val(instance.static_token);
+        $('#id_edit_static_name').val(instance.name);
+    }
+    else {
+        $('#id_edit-auth_server_url').val(instance.auth_server_url);
+        $('#id_edit-username').val(instance.username);
+        $('#id_edit-client_id_field').val(instance.client_id_field);
+        $('#id_edit-client_secret_field').val(instance.client_secret_field);
+        $('#id_edit-grant_type').val(instance.grant_type);
+        $('#id_edit-extra_fields').val(instance.extra_fields);
+        $('#id_edit-scopes').val(instance.scopes);
+        $('#id_edit-data_format').val(instance.data_format);
+    }
+
+    // Open the dialog without auto-populate
+    $.fn.zato.data_table._create_edit('edit', 'Edit Bearer token definition', id, undefined, false);
 }
 
 $.fn.zato.security.oauth.data_table.new_row = function(item, data, include_tr) {

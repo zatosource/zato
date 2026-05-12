@@ -137,6 +137,16 @@ $.fn.zato.form_tabs._init_mirrors = function(div_id) {
             $mirror.val($target.val());
         });
     });
+
+    // Re-seed mirrors when the dialog opens (after form.populate has run)
+    $(div_id).on('dialogopen', function() {
+        $(div_id).find('.form-tab-mirror').each(function() {
+            var $mirror = $(this);
+            var target_id = $mirror.attr('data-mirror-target');
+            var $target = $('#' + target_id);
+            $mirror.val($target.val());
+        });
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -222,6 +232,7 @@ $.fn.zato.form_tabs.reset = function(config) {
         // .. and suppress right away for the initial state.
         var form = $(div_id).find('form');
         $.fn.zato.form_tabs._suppress_hidden_validation(form);
+        $.fn.zato.form_tabs._clear_hidden_panels(form);
     }
     else if (caller_on_change) {
         on_change = caller_on_change;
