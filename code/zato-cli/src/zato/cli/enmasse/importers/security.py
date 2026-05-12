@@ -120,7 +120,7 @@ class SecurityImporter:
             if sec_type == 'bearer_token':
 
                 # Detect static vs dynamic bearer tokens by the presence of static fields
-                is_static = 'static_header' in item or 'static_value' in item or 'static_prefix' in item
+                is_static = 'static_header' in item or 'static_token' in item or 'static_prefix' in item
 
                 if is_static:
                     if 'static_header' not in item:

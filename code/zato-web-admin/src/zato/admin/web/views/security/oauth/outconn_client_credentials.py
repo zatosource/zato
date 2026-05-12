@@ -41,7 +41,7 @@ class Index(_Index):
     input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'username', 'auth_server_url', 'scopes', \
         'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format', \
-        'static_header', 'static_value', 'static_prefix'
+        'static_header', 'static_token', 'static_prefix'
     output_repeated = True
 
     def handle(self):
@@ -58,9 +58,10 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    input_required = 'name', 'is_active', 'username', 'auth_server_url', 'scopes', \
+    input_required = 'name', 'is_active'
+    input_optional = 'username', 'auth_server_url', 'scopes', \
         'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format', \
-        'static_header', 'static_value', 'static_prefix'
+        'static_header', 'static_token', 'static_prefix'
     output_required = 'id', 'name'
 
     def success_message(self, item):
