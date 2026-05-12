@@ -243,7 +243,7 @@ class _CreateEdit(_SchedulerAdmin):
     """ A base class for both creating and editing scheduler jobs.
     """
     input = 'cluster_id', 'name', 'is_active', 'job_type', 'service', 'start_date', \
-        '-id', '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', \
+        Int('-id'), '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', \
         '-cron_definition', '-should_ignore_existing', \
         '-jitter_ms', '-timezone', '-calendar', '-max_execution_time_ms', \
         '-on_success_service', '-on_success_job', '-on_error_service', '-on_error_job'
