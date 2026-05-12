@@ -41,15 +41,77 @@
  *   tab_names    - Optional array override; derived from tab_labels keys
  *                  when omitted.
  *   default_tab  - Which tab to activate on open (must be in tab_names)
+ *   independent_tabs - If true, each tab is treated as an independent
+ *                  form. Validation is only applied to the active tab's
+ *                  fields; required markers on hidden tabs are suppressed
+ *                  before submit and restored on tab switch.
  *
  * The function:
  *   1. Resets all tabs to inactive and hides all panels
  *   2. Activates the default tab and shows its panel
  *   3. Calls dashboard_kit.tabs.init() to wire up click handlers
+ *   4. If independent_tabs is true, installs a before_submit_hook
+ *      that suppresses validation on hidden tab panels
  */
 
 if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
 if (typeof $.fn.zato.form_tabs === 'undefined') { $.fn.zato.form_tabs = {}; }
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.form_tabs._suppress_hidden_validation = function(form) {
+
+    var required_attr = $.fn.zato.validate_required_attr;
+
+    // Find all hidden tab panels inside this form ..
+    form.find('.dashboard-tab-panel[hidden]').each(function() {
+
+        // .. and strip required markers from their inputs, saving the original value.
+        $(this).find('[' + required_attr + ']').each(function() {
+            $(this).attr('data-zato-tab-suppressed', $(this).attr(required_attr));
+            $(this).removeAttr(required_attr);
+        });
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.form_tabs._restore_hidden_validation = function(form) {
+
+    // Restore any previously suppressed required markers
+    form.find('[data-zato-tab-suppressed]').each(function() {
+        $(this).attr($.fn.zato.validate_required_attr, $(this).attr('data-zato-tab-suppressed'));
+        $(this).removeAttr('data-zato-tab-suppressed');
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.form_tabs._init_mirrors = function(div_id) {
+
+    // Mirror inputs (class form-tab-mirror) sync bi-directionally with a
+    // target field specified by data-mirror-target (the id of the real input).
+    $(div_id).find('.form-tab-mirror').each(function() {
+        var $mirror = $(this);
+        var target_id = $mirror.attr('data-mirror-target');
+        var $target = $('#' + target_id);
+
+        // Seed mirror from target
+        $mirror.val($target.val());
+
+        // Mirror -> target
+        $mirror.on('input', function() {
+            $target.val($mirror.val());
+        });
+
+        // Target -> mirror
+        $target.on('input', function() {
+            $mirror.val($target.val());
+        });
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.form_tabs.reset = function(config) {
 
@@ -58,6 +120,7 @@ $.fn.zato.form_tabs.reset = function(config) {
     var tab_labels = config.tab_labels;
     var tab_names = config.tab_names || Object.keys(tab_labels);
     var default_tab = config.default_tab;
+    var independent_tabs = config.independent_tabs || false;
 
     $(div_id + ' .dashboard-tab').each(function() {
         var tab_name = $(this).data('tab');
@@ -76,9 +139,46 @@ $.fn.zato.form_tabs.reset = function(config) {
         }
     }
 
+    var caller_on_change = config.on_change || null;
+    var on_change = null;
+
+    if (independent_tabs) {
+
+        on_change = function(tab) {
+            var form = $(div_id).find('form');
+            $.fn.zato.form_tabs._restore_hidden_validation(form);
+            $.fn.zato.form_tabs._suppress_hidden_validation(form);
+            if (caller_on_change) {
+                caller_on_change(tab);
+            }
+        };
+
+        // Install a before_submit_hook that suppresses hidden-tab validation ..
+        var previous_hook = $.fn.zato.data_table.before_submit_hook;
+
+        $.fn.zato.data_table.before_submit_hook = function(form) {
+            $.fn.zato.form_tabs._suppress_hidden_validation(form);
+            if (previous_hook) {
+                return previous_hook(form);
+            }
+            return true;
+        };
+
+        // .. and suppress right away for the initial state.
+        var form = $(div_id).find('form');
+        $.fn.zato.form_tabs._suppress_hidden_validation(form);
+    }
+    else if (caller_on_change) {
+        on_change = caller_on_change;
+    }
+
+    // Initialize mirror fields that sync between tabs
+    $.fn.zato.form_tabs._init_mirrors(div_id);
+
     $.fn.zato.dashboard_kit.tabs.init({
         tab_selector: div_id + ' .dashboard-tab',
         panel_prefix: panel_prefix,
-        default_tab: default_tab
+        default_tab: default_tab,
+        on_change: on_change
     });
 };

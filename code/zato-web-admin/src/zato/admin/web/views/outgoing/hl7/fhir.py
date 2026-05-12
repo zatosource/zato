@@ -45,6 +45,7 @@ class Index(_Index):
         )
 
         return {
+            'show_search_form': True,
             'create_form': CreateForm(self.req, security_list),
             'edit_form': EditForm(self.req, security_list, prefix='edit'),
         }

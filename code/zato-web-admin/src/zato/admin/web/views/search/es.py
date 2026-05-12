@@ -34,6 +34,7 @@ class Index(_Index):
 
     def handle(self):
         return {
+            'show_search_form': True,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'default_timeout': 90,

@@ -50,6 +50,7 @@ class Index(_Index):
     def handle(self):
         security_list = self.get_sec_def_list(SEC_DEF_TYPE.BASIC_AUTH)
         return {
+            'show_search_form': True,
             'create_form': CreateForm(security_list, req=self.req),
             'edit_form': EditForm(security_list, prefix='edit', req=self.req),
         }

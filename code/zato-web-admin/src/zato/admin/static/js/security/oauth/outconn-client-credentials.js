@@ -19,7 +19,8 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.security.oauth.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(
-        ['name', 'username', 'auth_server_url', 'client_id_field', 'client_secret_field', 'grant_type', 'data_format']
+        ['name', 'username', 'auth_server_url', 'client_id_field', 'client_secret_field', 'grant_type', 'data_format',
+         'static_header', 'static_value', 'static_prefix']
     );
     var unique_constraints = [
         {field: 'name', entity_type: 'security', attr_name: 'name'}
@@ -31,11 +32,39 @@ $(document).ready(function() {
 })
 
 
+$.fn.zato.security.oauth._on_tab_change = function(div_id) {
+    return function(tab) {
+        var $link = $(div_id).find('.bearer-get-token-link');
+        if (tab === 'dynamic') {
+            $link.show();
+        }
+        else {
+            $link.hide();
+        }
+    };
+};
+
 $.fn.zato.security.oauth.create = function() {
+    $.fn.zato.form_tabs.reset({
+        div_id: '#create-div',
+        panel_prefix: 'bearer-create-tab-panel-',
+        tab_labels: {dynamic: 'Dynamic tokens', static: 'Static tokens'},
+        default_tab: 'dynamic',
+        independent_tabs: true,
+        on_change: $.fn.zato.security.oauth._on_tab_change('#create-div')
+    });
     $.fn.zato.data_table._create_edit('create', 'Create Bearer token definition', null);
 }
 
 $.fn.zato.security.oauth.edit = function(id) {
+    $.fn.zato.form_tabs.reset({
+        div_id: '#edit-div',
+        panel_prefix: 'bearer-edit-tab-panel-',
+        tab_labels: {dynamic: 'Dynamic tokens', static: 'Static tokens'},
+        default_tab: 'dynamic',
+        independent_tabs: true,
+        on_change: $.fn.zato.security.oauth._on_tab_change('#edit-div')
+    });
     $.fn.zato.data_table._create_edit('edit', 'Edit Bearer token definition', id);
 }
 
@@ -70,6 +99,10 @@ $.fn.zato.security.oauth.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.extra_fields);
 
     row += String.format("<td class='ignore'>{0}</td>", item.data_format);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.static_header);
+    row += String.format("<td class='ignore'>{0}</td>", item.static_value);
+    row += String.format("<td class='ignore'>{0}</td>", item.static_prefix);
 
     if(include_tr) {
         row += '</tr>';

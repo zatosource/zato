@@ -40,6 +40,7 @@ class Index(_Index):
 
     def handle(self) -> 'strdict':
         return {
+            'show_search_form': True,
             'create_form': CreateForm(req=self.req),
             'edit_form': EditForm(req=self.req, prefix='edit'),
             'change_password_form': ChangePasswordForm()

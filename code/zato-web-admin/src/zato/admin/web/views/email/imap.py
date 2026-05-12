@@ -45,6 +45,7 @@ class Index(_Index):
 
     def handle(self):
         return {
+            'show_search_form': True,
             'default_debug_level': EMAIL.DEFAULT.IMAP_DEBUG_LEVEL,
             'default_get_criteria': EMAIL.DEFAULT.GET_CRITERIA,
             'default_filter_criteria': EMAIL.DEFAULT.FILTER_CRITERIA,

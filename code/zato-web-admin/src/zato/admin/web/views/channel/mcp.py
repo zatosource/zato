@@ -71,6 +71,7 @@ class Index(_Index):
 
     def handle(self) -> 'strdict':
         out = {
+            'show_search_form': True,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'mcp_path_prefix': _mcp_path_prefix,

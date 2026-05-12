@@ -40,6 +40,7 @@ class Index(_Index):
 
     def handle(self):
         return {
+            'show_search_form': True,
             'default_ping_address': EMAIL.DEFAULT.PING_ADDRESS,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
