@@ -500,7 +500,7 @@ class ChangePassword(ChangePasswordBase):
 class Ping(_BaseService):
     """ Pings a generic connection.
     """
-    input = 'id'
+    input = Int('id')
     output = 'info', '-is_success'
 
     def handle(self) -> 'None':

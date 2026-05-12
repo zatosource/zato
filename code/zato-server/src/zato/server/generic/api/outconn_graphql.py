@@ -43,4 +43,12 @@ class OutconnGraphQLWrapper:
         pass
 
 # ################################################################################################################################
+
+    def ping(self) -> 'None':
+        from zato.server.connection.facade import GraphQLInvoker
+        logger.info('Pinging GraphQL connection `%s` at `%s`', self.config['name'], self.config['address'])
+        GraphQLInvoker.ping_config(self.config)
+        logger.info('GraphQL connection `%s` pinged successfully', self.config['name'])
+
+# ################################################################################################################################
 # ################################################################################################################################
