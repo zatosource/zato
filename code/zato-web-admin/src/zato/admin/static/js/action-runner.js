@@ -51,17 +51,25 @@ $.fn.zato.highlight_response = function(pre_elem, text) {
         return;
     }
 
-    var escaped = _escape_html(text);
-    var html = escaped
-        .replace(/^(Traceback \(most recent call last\):)$/gm, '<span class="k">$1</span>')
-        .replace(/^(  File &quot;)(.*?)(&quot;, line )(\d+)(, in .*)$/gm,
-            '<span class="n">$1</span><span class="s">$2</span><span class="n">$3</span><span class="mi">$4</span><span class="n">$5</span>')
-        .replace(/^(\w+(?:\.\w+)*(?:Error|Exception|Warning))(:.*)?$/gm,
-            '<span class="ne">$1</span><span class="n">$2</span>');
-
-    pre_elem.html(html);
+    // Render escaped plain text immediately ..
+    var escaped_text = $('<span>').text(text).html();
+    pre_elem.html(escaped_text);
     pre_elem.addClass('syntax-monokai');
     $.fn.zato.update_response_line_numbers(pre_elem);
+
+    // .. then replace with Pygments-highlighted HTML.
+    $.ajax({
+        type: 'POST',
+        url: '/zato/highlight/',
+        data: {text: text},
+        headers: {'X-CSRFToken': $.cookie('csrftoken')},
+        dataType: 'json',
+        success: function(data) {
+            pre_elem.html(data.html);
+            pre_elem.addClass('syntax-monokai');
+            $.fn.zato.update_response_line_numbers(pre_elem);
+        }
+    });
 };
 
 var _spinner_svg = '<svg width="16" height="16" viewBox="0 0 16 16" style="animation:zato-spin .6s linear infinite;display:block">' +

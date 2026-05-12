@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 # Zato
 from zato.admin import settings
 from zato.admin.web.util import static_serve
-from zato.admin.web.views import account, datadog, env_variables, grafana_cloud, http_soap, live_form_updates, log_streaming, main, news, openapi_, python_packages, scheduler, service, updates
+from zato.admin.web.views import account, datadog, env_variables, grafana_cloud, highlight as highlight_view, http_soap, live_form_updates, log_streaming, main, news, openapi_, python_packages, scheduler, service, updates
 from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel.hl7 import mllp as channel_hl7_mllp
 from zato.admin.web.views.channel.hl7 import rest as channel_hl7_rest
@@ -417,6 +417,8 @@ urlpatterns += [
         login_required(out_graphql.change_password), name='out-graphql-change-password'),
     url(r'^zato/outgoing/graphql/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_graphql.ping), name='out-graphql-ping'),
+    url(r'^zato/outgoing/graphql/invoke/(?P<id>.*)/$',
+        login_required(out_graphql.invoke), name='out-graphql-invoke'),
     ]
 
 # ################################################################################################################################
@@ -617,8 +619,8 @@ urlpatterns += [
         login_required(http_soap.invoke_channel), name='http-soap-invoke-channel'),
     url(r'^zato/http-soap/invoke-outconn/(?P<id>.*)/$',
         login_required(http_soap.invoke_outconn), name='http-soap-invoke-outconn'),
-    url(r'^zato/http-soap/highlight/$',
-        login_required(http_soap.highlight), name='http-soap-highlight'),
+    url(r'^zato/highlight/$',
+        login_required(highlight_view.highlight), name='highlight'),
 
     url(r'^zato/http-soap/openapi/parse/$',
         login_required(openapi_.parse), name='http-soap-openapi-parse'),
