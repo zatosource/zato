@@ -1136,6 +1136,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         job_id = ctx['job_id']
         job_name = ctx['name']
         current_run = ctx['current_run']
+
+        on_success_service = ctx.get('on_success_service')
+        on_success_job = ctx.get('on_success_job')
+        on_error_service = ctx.get('on_error_service')
+        on_error_job = ctx.get('on_error_job')
+
         logger.info('Invoking service for job: id=%s name=%s run=%s', job_id, job_name, current_run)
 
         extra = ctx.get('extra')
@@ -1161,20 +1167,109 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             },
         })
 
+        # Run the main service and capture the outcome ..
         outcome = SCHEDULER.OUTCOME.OK
+        error_traceback = ''
         _t0 = _time.monotonic()
+
         try:
             self.config_manager.on_message_invoke_service(msg, 'scheduler', 'SCHEDULER_JOB_EXECUTED')
         except Exception:
             outcome = SCHEDULER.OUTCOME.ERROR
-            logger.warning('Scheduler job_id=%s; name=%s; outcome=error; traceback=%s', job_id, job_name, format_exc())
+            error_traceback = format_exc()
+            logger.warning('Scheduler job_id=%s; name=%s; outcome=error; traceback=%s', job_id, job_name, error_traceback)
 
         duration_ms = int((_time.monotonic() - _t0) * 1000)
 
+        # .. report the outcome to the Rust scheduler ..
         try:
             self._scheduler.mark_complete(job_id, outcome, duration_ms, current_run)
         except Exception:
             logger.warning('Scheduler mark_complete failed; job_id=%s; name=%s; traceback=%s', job_id, job_name, format_exc())
+
+        # .. and spawn callback greenlets based on the outcome.
+        callback_context = {
+            'job_id': job_id,
+            'job_name': job_name,
+            'outcome': outcome,
+            'duration_ms': duration_ms,
+            'error_traceback': error_traceback,
+            'current_run': current_run,
+        }
+
+        if outcome == SCHEDULER.OUTCOME.OK:
+            on_callback_service = on_success_service
+            on_callback_job = on_success_job
+        else:
+            on_callback_service = on_error_service
+            on_callback_job = on_error_job
+
+        if on_callback_service:
+            spawn(self._invoke_callback_service, on_callback_service, callback_context)
+
+        if on_callback_job:
+            spawn(self._invoke_callback_job, on_callback_job, callback_context)
+
+    def _invoke_callback_service(self, service_name:'str', callback_context:'dict') -> 'None':
+        """ Invokes a Zato service as a scheduler job callback, passing the original job's context.
+        """
+        from json import dumps as json_dumps
+        from zato.common.ext.bunch import Bunch
+        from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
+
+        job_id = callback_context['job_id']
+        job_name = callback_context['job_name']
+
+        logger.info('Invoking callback service=%s for job_id=%s name=%s', service_name, job_id, job_name)
+
+        payload = json_dumps(callback_context)
+
+        message = Bunch({
+            'action': SCHEDULER_MSG.JOB_EXECUTED.value,
+            'name': f'callback:{job_name}',
+            'service': service_name,
+            'payload': payload,
+            'cid': new_cid_server(),
+            'job_type': 'interval_based',
+            'zato_ctx': {
+                'scheduler_job_id': job_id,
+                'scheduler_current_run': callback_context['current_run'],
+                'is_scheduler_callback': True,
+            },
+        })
+
+        try:
+            self.config_manager.on_message_invoke_service(message, 'scheduler', 'SCHEDULER_JOB_EXECUTED')
+        except Exception:
+            logger.warning('Callback service=%s failed for job_id=%s; traceback=%s', service_name, job_id, format_exc())
+
+    def _invoke_callback_job(self, target_job_name:'str', callback_context:'dict') -> 'None':
+        """ Executes another scheduler job as a callback by looking up its ID and triggering it.
+        """
+        from contextlib import closing
+        from zato.common.odb.model import Job
+
+        source_job_id = callback_context['job_id']
+        source_job_name = callback_context['job_name']
+
+        logger.info(
+            'Triggering callback job=%s for source job_id=%s name=%s', target_job_name, source_job_id, source_job_name)
+
+        try:
+            with closing(self.odb.session()) as session:
+                target_job = session.query(Job).filter_by(name=target_job_name, cluster_id=1).first()
+
+            if target_job is None:
+                logger.warning(
+                    'Callback job=%s not found for source job_id=%s name=%s', target_job_name, source_job_id, source_job_name)
+                return
+
+            target_job_id = target_job.id
+            self._scheduler.execute_job(target_job_id)
+
+        except Exception:
+            logger.warning(
+                'Callback job=%s failed for source job_id=%s; traceback=%s', target_job_name, source_job_id, format_exc())
 
     def _handle_timeout_event(self, fields:'dict') -> 'None':
         """ Processes a timeout event from the scheduler.
