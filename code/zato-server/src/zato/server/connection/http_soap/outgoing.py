@@ -297,6 +297,10 @@ class BaseHTTPSOAPWrapper:
                 # .. this is reusable ..
                 sec_def = self.server.security_facade.get_bearer_token_by_name(sec_def_name)
 
+                logger.info('Bearer token sec_def keys=%s', list(sec_def.keys()))
+                logger.info('Bearer token sec_def static_token=%r, static_header=%r, static_prefix=%r',
+                    sec_def.get('static_token'), sec_def.get('static_header'), sec_def.get('static_prefix'))
+
                 # .. static tokens have their value defined directly in the definition ..
                 if static_token := sec_def.get('static_token'):
 
@@ -304,10 +308,15 @@ class BaseHTTPSOAPWrapper:
                     static_header = sec_def['static_header']
                     static_prefix = sec_def['static_prefix']
 
+                    logger.info('Static bearer token: header=%r, prefix=%r, token_len=%d',
+                        static_header, static_prefix, len(static_token))
+
                     if static_prefix:
                         headers[static_header] = f'{static_prefix} {static_token}'
                     else:
                         headers[static_header] = static_token
+
+                    logger.info('Static bearer token: final header %r=%r', static_header, headers[static_header][:20])
 
                     token_is_cache_hit = None
 
