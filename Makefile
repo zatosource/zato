@@ -15,7 +15,7 @@ ZATO_HEALTH_RS := $(CURDIR)/code/zato-common/src/zato
 
 default: build
 
-build: common-core-build server-build scheduler-build io-build queue-bridge-build pyright
+build: common-core-build server-build scheduler-build io-build queue-bridge-build
 # build: ... fhir-rust-build  # FHIR commented out for now
 
 server-build:
@@ -71,14 +71,11 @@ file-listener:
 	$(CURDIR)/code/bin/py $(CURDIR)/code/zato-common/src/zato/common/file_transfer/listener.py
 
 install:
-	@if [ "$(filter-out install,$(MAKECMDGOALS))" = "" ]; then \
+	@if [ -z "$(MAKEOVERRIDES)" ]; then \
 		$(CURDIR)/code/install.sh; \
 	else \
-		$(CURDIR)/code/support-linux/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python $(filter-out install,$(MAKECMDGOALS)); \
+		$(CURDIR)/code/support-linux/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python $(MAKEOVERRIDES); \
 	fi
-
-%:
-	@:
 
 clean:
 	$(CURDIR)/code/clean.sh

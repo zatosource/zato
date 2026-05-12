@@ -73,9 +73,9 @@ pygments==2.20.0
 pymongo==4.13.0
 PyMySQL==1.1.1
 pyOpenSSL==26.0.0
+pyotp==2.9.0
 python-dateutil==2.9.0.post0
 python-editor==1.0.1
-tabulate==0.9.0
 pytz==2025.2
 pyyaml==6.0.2
 redis==6.1.0
@@ -92,6 +92,7 @@ SQLAlchemy==1.4.54
 stroll==1.1.0
 stevedore==3.5.0
 sumy==0.12.0
+tabulate==0.9.0s
 texttable==1.6.1
 typing-utils==0.1.0
 tzlocal==5.3.1
