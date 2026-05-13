@@ -35,6 +35,7 @@ from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC a
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
+from zato.common.facade import _service_name_to_topic, _service_sub_key_prefix
 from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.typing_ import cast_
@@ -1951,6 +1952,34 @@ class ConfigManager(_ConfigManagerBase):
                             'access_type': PubSub.API_Client.Subscriber,
                         })
             self.server.pubsub_pattern_matcher.set_permissions(msg.username, permissions)
+
+# ################################################################################################################################
+
+    def invalidate_service_topic(self, service_name:'str') -> 'None':
+
+        # Get a reference to the server ..
+        server = self.server
+
+        # .. acquire the lock to prevent races with the setup path ..
+        with server._service_topic_lock:
+
+            # .. if this service was never set up, there is nothing to do ..
+            if service_name not in server._service_topic_cache:
+                return
+
+            # .. build the subscription key and topic name ..
+            sub_key = _service_sub_key_prefix + service_name
+            topic_name = _service_name_to_topic(service_name)
+
+            # .. remove the Redis consumer group and subscription sets ..
+            if server._has_pubsub_redis:
+                server.pubsub_redis.unsubscribe(sub_key, topic_name)
+
+            # .. remove push delivery config ..
+            server._push_subs.pop(sub_key, None)
+
+            # .. and remove from cache.
+            server._service_topic_cache.discard(service_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

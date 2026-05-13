@@ -167,6 +167,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.odb_data = Bunch()
         self._has_pubsub_redis = False
         self._push_subs = {} # type: dict[str, list]
+        self._service_topic_cache = set() # type: set[str]
+        self._service_topic_lock = RLock()
         self.repo_location = ''
         self.user_conf_location:'strlist' = []
         self.user_conf_location_extra:'strset' = set()
