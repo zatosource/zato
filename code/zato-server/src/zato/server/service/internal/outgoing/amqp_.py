@@ -11,11 +11,12 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
+from zato.common.api import query_parameters
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import OutgoingAMQP
 from zato.common.odb.query import out_amqp_list
 from zato.server.service import AsIs
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 _delivery_mode_map = {
     'non_persistent': 1,
@@ -36,12 +37,9 @@ class GetList(AdminService):
     name = 'zato.outgoing.amqp.get-list'
     _filter_by = OutgoingAMQP.name,
 
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_outgoing_amqp_get_list_request'
-        response_elem = 'zato_outgoing_amqp_get_list_response'
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'address', 'username', 'password', 'is_active', 'delivery_mode', 'priority', 'pool_size')
-        output_optional = ('content_type', 'content_encoding', 'expiration', AsIs('user_id'), AsIs('app_id'))
+    input = 'cluster_id', *query_parameters
+    output = 'id', 'name', 'address', 'username', 'password', 'is_active', 'delivery_mode', 'priority', 'pool_size', \
+        '-content_type', '-content_encoding', '-expiration', AsIs('-user_id'), AsIs('-app_id')
 
     def get_data(self, session):
         return self._search(out_amqp_list, session, self.request.input.cluster_id, False)
@@ -58,13 +56,10 @@ class Create(AdminService):
     """
     name = 'zato.outgoing.amqp.create'
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_amqp_create_request'
-        response_elem = 'zato_outgoing_amqp_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'delivery_mode', 'priority', 'pool_size')
-        input_optional = ('address', 'username', 'password', 'content_type', 'content_encoding',
-            'expiration', AsIs('user_id'), AsIs('app_id'))
-        output_required = ('id', 'name')
+    input = 'cluster_id', 'name', 'is_active', 'delivery_mode', 'priority', 'pool_size', \
+        '-address', '-username', '-password', '-content_type', '-content_encoding', \
+        '-expiration', AsIs('-user_id'), AsIs('-app_id')
+    output = 'id', 'name'
 
     def handle(self):
 
@@ -132,13 +127,10 @@ class Edit(AdminService):
     """
     name = 'zato.outgoing.amqp.edit'
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_amqp_edit_request'
-        response_elem = 'zato_outgoing_amqp_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'delivery_mode', 'priority', 'pool_size')
-        input_optional = ('address', 'username', 'password', 'content_type', 'content_encoding',
-            'expiration', AsIs('user_id'), AsIs('app_id'))
-        output_required = ('id', 'name')
+    input = 'id', 'cluster_id', 'name', 'is_active', 'delivery_mode', 'priority', 'pool_size', \
+        '-address', '-username', '-password', '-content_type', '-content_encoding', \
+        '-expiration', AsIs('-user_id'), AsIs('-app_id')
+    output = 'id', 'name'
 
     def handle(self):
 
@@ -204,10 +196,7 @@ class Delete(AdminService):
     """
     name = 'zato.outgoing.amqp.delete'
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_amqp_delete_request'
-        response_elem = 'zato_outgoing_amqp_delete_response'
-        input_required = ('id',)
+    input = 'id',
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -241,10 +230,8 @@ class Publish(AdminService):
     """
     name = 'zato.outgoing.amqp.publish'
 
-    class SimpleIO:
-        input_required = 'request_data', 'conn_name', 'exchange', 'routing_key'
-        output_optional = 'response_data'
-        response_elem = None
+    input = 'request_data', 'conn_name', 'exchange', 'routing_key'
+    output = '-response_data',
 
     def handle(self):
         input = self.request.input

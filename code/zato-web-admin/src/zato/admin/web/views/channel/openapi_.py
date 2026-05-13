@@ -137,16 +137,16 @@ class Index(_Index):
     output_class = OpenAPIChannelConfigObject
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name', 'is_active'
-        output_optional = generic_attrs
-        output_repeated = True
+    input_required = 'cluster_id', 'type_'
+    output_required = 'id', 'name', 'is_active'
+    output_optional = generic_attrs
+    output_repeated = True
 
 # ################################################################################################################################
 
     def handle(self):
         return {
+            'show_search_form': True,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'openapi_path_prefix': get_openapi_path_prefix(),
@@ -158,11 +158,10 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'id', 'name', 'is_active', 'url_path'
-        input_optional = 'is_public',
-        output_required = 'id', 'name'
-        output_optional = 'rest_channel_list',
+    input_required = 'id', 'name', 'is_active', 'url_path'
+    input_optional = 'is_public',
+    output_required = 'id', 'name'
+    output_optional = 'rest_channel_list',
 
 # ################################################################################################################################
 

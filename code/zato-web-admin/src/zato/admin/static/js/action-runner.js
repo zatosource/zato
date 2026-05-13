@@ -22,55 +22,99 @@
 
 $.fn.zato = $.fn.zato || {};
 
-$.fn.zato.update_response_line_numbers = function(pre_elem) {
-    var gutter = pre_elem.siblings('.invoker-modal-response-gutter');
+$.fn.zato.update_response_line_numbers = function(preElement) {
+    var gutter = preElement.siblings('.invoker-modal-response-gutter');
     if (gutter.length === 0) {
-        gutter = pre_elem.parent().find('.invoker-modal-response-gutter');
+        gutter = preElement.parent().find('.invoker-modal-response-gutter');
     }
     if (gutter.length === 0) {
         return;
     }
-    var rendered_text = pre_elem.text();
-    if (!rendered_text) {
+    var renderedText = preElement.text();
+    if (!renderedText) {
         gutter.html('');
         return;
     }
-    var line_count = rendered_text.split('\n').length;
+    var lineCount = renderedText.split('\n').length;
     var lines = [];
-    for (var i = 1; i <= line_count; i++) {
-        lines.push(i + ' ');
+
+    for (var lineIdx = 1; lineIdx <= lineCount; lineIdx++) {
+        lines.push(lineIdx + ' ');
     }
+
     gutter.text(lines.join('\n'));
 };
 
-$.fn.zato.highlight_response = function(pre_elem, text) {
+// Shared function to highlight an element via the server-side Pygments endpoint.
+// Renders escaped plain text immediately, then replaces with highlighted HTML.
+$.fn.zato.highlightElement = function(targetElement, text, lexer) {
     if (!text) {
-        pre_elem.html('');
-        pre_elem.removeClass('syntax-monokai');
-        $.fn.zato.update_response_line_numbers(pre_elem);
+        targetElement.html('');
+        targetElement.removeClass('syntax-monokai');
         return;
     }
 
-    pre_elem.text(text);
-    pre_elem.removeClass('syntax-monokai');
-    $.fn.zato.update_response_line_numbers(pre_elem);
+    // Render escaped plain text immediately ..
+    var escapedText = _escape_html(text);
+    targetElement.html(escapedText);
+    targetElement.addClass('syntax-monokai');
 
+    // .. build the POST data ..
+    var postData = {text: text};
+    if (lexer) {
+        postData.lexer = lexer;
+    }
+
+    // .. then replace with Pygments-highlighted HTML.
     $.ajax({
         type: 'POST',
-        url: '/zato/http-soap/highlight/',
-        data: {text: text},
+        url: '/zato/highlight/',
+        data: postData,
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
+        dataType: 'json',
         success: function(data) {
-            if (data.html) {
-                pre_elem.html(data.html);
-                pre_elem.addClass('syntax-monokai');
-                $.fn.zato.update_response_line_numbers(pre_elem);
-            }
+            targetElement.html(data.html);
+            targetElement.addClass('syntax-monokai');
+        },
+        error: function(jqXHR, textStatus, errorMessage) {
+            console.warn('[highlightElement] AJAX error:', textStatus, errorMessage);
         }
     });
 };
 
-var _spinner_svg = '<svg width="16" height="16" viewBox="0 0 16 16" style="animation:zato-spin .6s linear infinite;vertical-align:middle">' +
+$.fn.zato.highlight_response = function(preElement, text) {
+    if (!text) {
+        preElement.html('');
+        preElement.removeClass('syntax-monokai');
+        $.fn.zato.update_response_line_numbers(preElement);
+        return;
+    }
+
+    // Render escaped plain text immediately ..
+    var escapedText = _escape_html(text);
+    preElement.html(escapedText);
+    preElement.addClass('syntax-monokai');
+    $.fn.zato.update_response_line_numbers(preElement);
+
+    // .. then replace with Pygments-highlighted HTML.
+    $.ajax({
+        type: 'POST',
+        url: '/zato/highlight/',
+        data: {text: text},
+        headers: {'X-CSRFToken': $.cookie('csrftoken')},
+        dataType: 'json',
+        success: function(data) {
+            preElement.html(data.html);
+            preElement.addClass('syntax-monokai');
+            $.fn.zato.update_response_line_numbers(preElement);
+        },
+        error: function(jqXHR, textStatus, errorMessage) {
+            console.warn('[highlight_response] AJAX error:', textStatus, errorMessage);
+        }
+    });
+};
+
+var _spinner_svg = '<svg width="16" height="16" viewBox="0 0 16 16" style="animation:zato-spin .6s linear infinite;display:block">' +
     '<circle cx="8" cy="8" r="6" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2"/>' +
     '<path d="M8 2a6 6 0 0 1 6 6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>';
 
@@ -166,8 +210,8 @@ function _default_parse(jqXHR, textStatus) {
 }
 
 function _render_success(instance, label) {
-    var html = '<span style="display:inline-flex;align-items:center;white-space:nowrap;font-size:13px;color:#fff">' +
-        _escape_html(label) + '</span>';
+    var html = '<div style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:13px;color:#fff;margin:-5px -9px;padding:5px 9px">' +
+        _escape_html(label) + '</div>';
     instance.setContent(html);
     _hide_timer = setTimeout(function() { instance.hide(); }, 800);
 }
@@ -220,8 +264,11 @@ $.fn.zato.action_runner = {
 
         $.fn.zato.action_runner.close_details();
 
+        var _spinner_html = '<div style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:13px;color:#fff;margin:-5px -9px;padding:5px 9px">' +
+            _spinner_svg + '<span style="margin-left:5px">Pinging ..</span></div>';
+
         var instance = tippy(link_elem, {
-            content: _spinner_svg,
+            content: _spinner_html,
             allowHTML: true,
             placement: 'top',
             trigger: 'manual',
@@ -283,13 +330,13 @@ $.fn.zato.action_runner = {
         if (details.status_code) {
             title_text += ': ' + details.status_code;
         }
-        var escaped_title = _escape_html(title_text);
+        var escapedTitle = _escape_html(title_text);
 
         var $overlay = $('<div class="invoker-modal-overlay" data-action-runner-overlay="1" style="z-index:100001">' +
             '<div class="invoker-modal-backdrop"></div>' +
             '<div class="invoker-modal-content" style="width:750px;max-height:80vh;display:flex;flex-direction:column;resize:both;overflow:hidden">' +
                 '<div class="invoker-modal-header" style="flex-shrink:0">' +
-                    '<h2>' + escaped_title + '</h2>' +
+                    '<h2>' + escapedTitle + '</h2>' +
                     '<button class="invoker-modal-close-btn">\u00d7</button>' +
                 '</div>' +
                 '<div class="invoker-modal-body" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden">' +

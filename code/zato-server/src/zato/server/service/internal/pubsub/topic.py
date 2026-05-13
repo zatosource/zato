@@ -11,16 +11,17 @@ from contextlib import closing
 from traceback import format_exc
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Zato
+from zato.common.api import query_parameters
 from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import Cluster, PubSubTopic
 from zato.common.odb.query import pubsub_topic_list
 from zato.common.pubsub.matcher import PatternMatcher
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,12 +31,8 @@ class GetList(AdminService):
     """
     _filter_by = PubSubTopic.name, PubSubTopic.description,
 
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_pubsub_topic_get_list_request'
-        response_elem = 'zato_pubsub_topic_get_list_response'
-        input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active'
-        output_optional = 'description', 'publisher_count', 'subscriber_count'
+    input = 'cluster_id', *query_parameters
+    output = 'id', 'name', 'is_active', '-description', '-publisher_count', '-subscriber_count'
 
     def get_data(self, session):
         result = self._search(pubsub_topic_list, session, self.request.input.cluster_id, None, False)
@@ -61,12 +58,8 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new pub/sub topic.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_topic_create_request'
-        response_elem = 'zato_pubsub_topic_create_response'
-        input_required = 'name', 'is_active'
-        input_optional = 'cluster_id', 'description'
-        output_required = 'id', 'name'
+    input = 'name', 'is_active', '-cluster_id', '-description'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -119,12 +112,8 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a pub/sub topic.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_topic_edit_request'
-        response_elem = 'zato_pubsub_topic_edit_response'
-        input_required = 'name', 'is_active'
-        input_optional = 'id', 'cluster_id', 'description'
-        output_required = 'id', 'name'
+    input = 'name', 'is_active', '-id', '-cluster_id', '-description'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -193,10 +182,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a pub/sub topic.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_topic_delete_request'
-        response_elem = 'zato_pubsub_topic_delete_response'
-        input_required = 'id',
+    input = 'id',
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -227,11 +213,8 @@ class Delete(AdminService):
 class GetMatches(AdminService):
     """ Returns a list of pub/sub topics matching a given pattern.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_topic_get_matches_request'
-        response_elem = 'zato_pubsub_topic_get_matches_response'
-        input_required = 'cluster_id', 'pattern'
-        output_optional = 'id', 'name', 'description'
+    input = 'cluster_id', 'pattern'
+    output = '-id', '-name', '-description'
 
     def handle(self):
 

@@ -31,7 +31,7 @@ class SecurityFacade:
         self.server = server
 
     def get_bearer_token_by_name(self, key:'str') -> 'anydict':
-        item:'anydictnone' = self.server.worker_store.request_dispatcher.url_data.oauth_config.get(key)
+        item:'anydictnone' = self.server.config_manager.request_dispatcher.url_data.oauth_config.get(key)
         if item:
             return item['config']
         else:
@@ -39,7 +39,7 @@ class SecurityFacade:
 
     def get_bearer_token_by_id(self, id:'int') -> 'anydict':
 
-        for value in self.server.worker_store.request_dispatcher.url_data.oauth_config.values():
+        for value in self.server.config_manager.request_dispatcher.url_data.oauth_config.values():
             if value['config']['id'] == id:
                 return value['config']
         else:

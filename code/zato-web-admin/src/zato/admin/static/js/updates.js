@@ -287,6 +287,7 @@ $.fn.zato.updates.handleSaveSchedule = function() {
 };
 
 $.fn.zato.updates.handleUpdateClick = function() {
+    console.log('UPDATE-TRACE handleUpdateClick: install updates clicked');
     const button = $(this);
     button.prop('disabled', true);
 
@@ -295,6 +296,7 @@ $.fn.zato.updates.handleUpdateClick = function() {
     $('#progress-install .info-message').removeClass('show');
     $.fn.zato.settings.updateProgress('download', 'processing', 'Downloading updates...');
 
+    console.log('UPDATE-TRACE handleUpdateClick: POSTing to /zato/updates/download-and-install');
     $.ajax({
         url: '/zato/updates/download-and-install',
         type: 'POST',
@@ -302,9 +304,11 @@ $.fn.zato.updates.handleUpdateClick = function() {
             'X-CSRFToken': $.cookie('csrftoken')
         },
         success: function(response) {
+            console.log('UPDATE-TRACE handleUpdateClick: download success, response=' + JSON.stringify(response));
             $.fn.zato.settings.updateProgress('download', 'completed', 'Download complete');
 
             $('#progress-install').removeClass('hidden');
+            console.log('UPDATE-TRACE handleUpdateClick: calling runRestartSteps, version_to=' + response.version_to);
             $.fn.zato.updates.runRestartSteps(button, response.version_to);
         },
         error: function(xhr) {
@@ -346,6 +350,7 @@ $.fn.zato.updates.handleUpdateClick = function() {
 };
 
 $.fn.zato.updates.runRestartSteps = function(button, latestVersion) {
+    console.log('UPDATE-TRACE runRestartSteps: latestVersion=' + latestVersion);
     const config = {};
     config.progressKey = 'install';
     config.button = button;

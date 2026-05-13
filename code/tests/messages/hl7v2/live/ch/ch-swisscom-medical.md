@@ -1,0 +1,243 @@
+# Swisscom Medical Connector - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - stationäre Aufnahme (inpatient admission)
+
+```
+MSH|^~\&|HIS_SRC|SPITAL_BIEL|SWISSCOM_MC|EHEALTH|20260301080000||ADT^A01^ADT_A01|SMC00001|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+EVN|A01|20260301080000
+PID|||PAT950001^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR~7560777888999^^^&2.16.756.5.31&ISO^SS||Gerber^Daniel^Rosa^^Herr||19580318|M|||Rosenbergstrasse 153^^Chur^^7000^CH||^^PH^0817946947~^^CP^0792957793
+PV1||I|MED^Zimmer 201^Bett A^Innere Medizin||||ARZ500^Eberle^Erich^^^Dr.^med.||||||||||||FALL50001|||||||||||||||||||||||||||20260301080000
+IN1|1|KVG|KPT001|KPT Krankenkasse|Wankdorfallee 3^^Bern^^3014^CH||||||||||||||||||||||||||||||||||||||||||||756.5555.6666.77
+```
+
+---
+
+## 2. ADT^A03 - Austritt (discharge)
+
+```
+MSH|^~\&|HIS_SRC|SPITAL_BIEL|SWISSCOM_MC|EHEALTH|20260310140000||ADT^A03^ADT_A03|SMC00002|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+EVN|A03|20260310140000
+PID|||PAT950001^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR||Gerber^Daniel^Rosa^^Herr||19580318|M|||Rosenbergstrasse 153^^Chur^^7000^CH||^^PH^0817946947
+PV1||I|MED^Zimmer 201^Bett A^Innere Medizin||||ARZ500^Eberle^Erich^^^Dr.^med.||||||||||||FALL50001|||||||||||||||||||||||||||20260310140000
+```
+
+---
+
+## 3. ADT^A04 - ambulante Registrierung (outpatient registration)
+
+```
+MSH|^~\&|HIS_SRC|SPITAL_BIEL|SWISSCOM_MC|EHEALTH|20260315100000||ADT^A04^ADT_A01|SMC00003|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+EVN|A04|20260315100000
+PID|||PAT950002^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR||Marti^Nicole^Beat^^Frau||19820620|F|||Buchenstrasse 100^^Baden^^5400^CH||^^CP^0787257719
+PV1||O|AMB^Sprechzimmer 4^^Ambulatorium||||ARZ501^Schmid^Esther^^^Dr.^med.||||||||||||FALL50002|||||||||||||||||||||||||||20260315100000
+```
+
+---
+
+## 4. ADT^A08 - Patientendaten-Änderung (patient update)
+
+```
+MSH|^~\&|HIS_SRC|SPITAL_BIEL|SWISSCOM_MC|EHEALTH|20260318110000||ADT^A08^ADT_A01|SMC00004|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+EVN|A08|20260318110000
+PID|||PAT950001^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR||Gerber^Daniel^Rosa^^Herr||19580318|M|||Rosenbergstrasse 153^^Chur^^7000^CH||^^PH^0817946947~^^CP^0792957793~^^Internet^daniel.gerber@swissonline.ch
+PV1||N
+```
+
+---
+
+## 5. ORM^O01 - Laborauftrag (laboratory order)
+
+```
+MSH|^~\&|HIS_SRC|SPITAL_BIEL|SWISSCOM_MC|EHEALTH|20260320083000||ORM^O01^ORM_O01|SMC00005|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+PID|||PAT950003^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR||Senn^Urs^Rosa^^Herr||19700905|M|||Marktgasse 12^^Basel^^4001^CH||^^CP^0766806730
+PV1||I|CHIR^Zimmer 305^Bett A^Chirurgie||||ARZ502^Keller^Rita^^^Dr.^med.||||||||||||FALL50003
+ORC|NW|ORD950^^^HIS_SRC|||||^^^20260320090000^^R||20260320083000|ARZ502^Keller^Rita^^^Dr.^med.
+OBR|1|ORD950^^^HIS_SRC||CBC^Blutbild komplett^LN|||20260320083000||||A|||||ARZ502^Keller^Rita^^^Dr.^med.
+```
+
+---
+
+## 6. ORU^R01 - Laborbefund (laboratory result)
+
+```
+MSH|^~\&|SWISSCOM_MC|EHEALTH|HIS_DST|SPITAL_BIEL|20260320150000||ORU^R01^ORU_R01|SMC00006|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+PID|||PAT950003^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR||Senn^Urs^Rosa^^Herr||19700905|M|||Marktgasse 12^^Basel^^4001^CH||^^CP^0766806730
+PV1||I|CHIR^Zimmer 305^Bett A^Chirurgie||||ARZ502^Keller^Rita^^^Dr.^med.||||||||||||FALL50003
+OBR|1|ORD950^^^HIS_SRC|RES950^^^LABSYS|CBC^Blutbild komplett^LN|||20260320083000|||||||||ARZ502^Keller^Rita^^^Dr.^med.||||||20260320150000|||F
+OBX|1|NM|718-7^Hämoglobin^LN||145|g/L|135-175|N|||F
+OBX|2|NM|6690-2^Leukozyten^LN||12.8|10*9/L|4.0-10.0|H|||F
+OBX|3|NM|789-8^Thrombozyten^LN||265|10*9/L|150-400|N|||F
+OBX|4|NM|17861-6^CRP^LN||58|mg/L|0-5|HH|||F
+```
+
+---
+
+## 7. ORU^R01 - Befund mit PDF (result with embedded PDF)
+
+```
+MSH|^~\&|SWISSCOM_MC|EHEALTH|HIS_DST|SPITAL_BIEL|20260321110000||ORU^R01^ORU_R01|SMC00007|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+PID|||PAT950001^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR||Gerber^Daniel^Rosa^^Herr||19580318|M|||Rosenbergstrasse 153^^Chur^^7000^CH||^^PH^0817946947
+PV1||I|MED^Zimmer 201^Bett A^Innere Medizin||||ARZ500^Eberle^Erich^^^Dr.^med.||||||||||||FALL50001
+OBR|1|ORD951^^^HIS_SRC|RES951^^^LABSYS|11502-2^Laborbericht^LN|||20260321090000|||||||||ARZ500^Eberle^Erich^^^Dr.^med.||||||20260321110000|||F
+OBX|1|ED|11502-2^Laborbericht^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA0NCA+PgpzdHJlYW0KQlQgL0YxIDEyIFRmIDEwMCA3MDAgVGQgKExhYm9yYmVyaWNodCkgVGogRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA3NCAwMDAwMCBuIAowMDAwMDAwMTQyIDAwMDAwIG4gCjAwMDAwMDAyNDIgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA1IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgozMzYKJSVFT0YK||||||F
+```
+
+---
+
+## 8. MDM^T02 - Arztbrief (discharge letter with embedded PDF)
+
+```
+MSH|^~\&|SWISSCOM_MC|EHEALTH|ARCHIV|SPITAL_BIEL|20260322140000||MDM^T02^MDM_T02|SMC00008|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+EVN|T02|20260322140000
+PID|||PAT950002^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR||Marti^Nicole^Beat^^Frau||19820620|F|||Buchenstrasse 100^^Baden^^5400^CH||^^CP^0787257719
+PV1||O|AMB^Sprechzimmer 4^^Ambulatorium||||ARZ501^Schmid^Esther^^^Dr.^med.||||||||||||FALL50002
+TXA|1|AR|AP|20260322140000|ARZ501^Schmid^Esther^^^Dr.^med.||||||||DOC500010||||||AU
+OBX|1|ED|18842-5^Arztbrief^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA0NCA+PgpzdHJlYW0KQlQgL0YxIDEyIFRmIDEwMCA3MDAgVGQgKEFyenRicmllZikgVGogRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA3NCAwMDAwMCBuIAowMDAwMDAwMTQyIDAwMDAwIG4gCjAwMDAwMDAyNDIgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA1IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgozMzYKJSVFT0YK||||||F
+```
+
+---
+
+## 9. ADT^A40 - Zusammenführung (patient merge)
+
+```
+MSH|^~\&|HIS_SRC|SPITAL_BIEL|SWISSCOM_MC|EHEALTH|20260405080000||ADT^A40^ADT_A39|SMC00009|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+EVN|A40|20260405080000
+PID|||PAT950001^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR||Gerber^Daniel^Rosa^^Herr||19580318|M|||Rosenbergstrasse 153^^Chur^^7000^CH||^^PH^0817946947
+MRG|PAT959999^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR
+```
+
+---
+
+## 10. ORM^O01 - Radiologieauftrag (radiology order)
+
+```
+MSH|^~\&|HIS_SRC|SPITAL_BIEL|SWISSCOM_MC|EHEALTH|20260402110000||ORM^O01^ORM_O01|SMC00010|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+PID|||PAT950003^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR||Senn^Urs^Rosa^^Herr||19700905|M|||Marktgasse 12^^Basel^^4001^CH||^^CP^0766806730
+PV1||I|CHIR^Zimmer 305^Bett A^Chirurgie||||ARZ502^Keller^Rita^^^Dr.^med.||||||||||||FALL50003
+ORC|NW|ORD952^^^HIS_SRC|||||^^^20260402120000^^S||20260402110000|ARZ502^Keller^Rita^^^Dr.^med.
+OBR|1|ORD952^^^HIS_SRC||71020^Thorax 2 Ebenen^CPT|||20260402110000||||A|||||ARZ502^Keller^Rita^^^Dr.^med.|||XRAY
+```
+
+---
+
+## 11. SIU^S12 - Terminbuchung (appointment scheduling)
+
+```
+MSH|^~\&|HIS_SRC|SPITAL_BIEL|SWISSCOM_MC|EHEALTH|20260406090000||SIU^S12^SIU_S12|SMC00011|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+SCH|TERM500^^^HIS_SRC|||||ROUTINE^Routine-Termin^HL70276|NACHKONTROLLE^Nachkontrolle^HL70277|20|MIN|^^20^20260420140000^20260420142000|ARZ500^Eberle^Erich^^^Dr.^med.
+PID|||PAT950001^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR||Gerber^Daniel^Rosa^^Herr||19580318|M|||Rosenbergstrasse 153^^Chur^^7000^CH||^^PH^0817946947
+PV1||O|AMB^Sprechzimmer 2^^Ambulatorium||||ARZ500^Eberle^Erich^^^Dr.^med.
+RGS|1
+AIS|1|A|NACHKONTROLLE^Nachkontrolle|||20260420140000|20|MIN
+```
+
+---
+
+## 12. ADT^A02 - Verlegung (patient transfer)
+
+```
+MSH|^~\&|HIS_SRC|SPITAL_BIEL|SWISSCOM_MC|EHEALTH|20260407090000||ADT^A02^ADT_A02|SMC00012|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+EVN|A02|20260407090000
+PID|||PAT950003^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR||Senn^Urs^Rosa^^Herr||19700905|M|||Marktgasse 12^^Basel^^4001^CH||^^CP^0766806730
+PV1||I|MED^Zimmer 210^Bett A^Innere Medizin||||ARZ500^Eberle^Erich^^^Dr.^med.||||||||||||FALL50003||||||||||||||||||||||CHIR^Zimmer 305^Bett A^Chirurgie||20260407090000
+```
+
+---
+
+## 13. ORU^R01 - Klinische Chemie (clinical chemistry result)
+
+```
+MSH|^~\&|SWISSCOM_MC|EHEALTH|HIS_DST|SPITAL_BIEL|20260408150000||ORU^R01^ORU_R01|SMC00013|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+PID|||PAT950001^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR||Gerber^Daniel^Rosa^^Herr||19580318|M|||Rosenbergstrasse 153^^Chur^^7000^CH||^^PH^0817946947
+PV1||I|MED^Zimmer 201^Bett A^Innere Medizin||||ARZ500^Eberle^Erich^^^Dr.^med.||||||||||||FALL50001
+OBR|1|ORD953^^^HIS_SRC|RES953^^^LABSYS|24323-8^Leberprofil^LN|||20260408090000|||||||||ARZ500^Eberle^Erich^^^Dr.^med.||||||20260408150000|||F
+OBX|1|NM|1742-6^ALAT (GPT)^LN||28|U/L|7-56|N|||F
+OBX|2|NM|1920-8^ASAT (GOT)^LN||22|U/L|10-40|N|||F
+OBX|3|NM|6768-6^Alkalische Phosphatase^LN||85|U/L|44-147|N|||F
+OBX|4|NM|1975-2^Gesamtbilirubin^LN||15|umol/L|3-22|N|||F
+```
+
+---
+
+## 14. ADT^A31 - Personendaten-Aktualisierung (update person)
+
+```
+MSH|^~\&|HIS_SRC|SPITAL_BIEL|SWISSCOM_MC|EHEALTH|20260409120000||ADT^A31^ADT_A05|SMC00014|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+EVN|A31|20260409120000
+PID|||PAT950002^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR~7560888999000^^^&2.16.756.5.31&ISO^SS||Marti^Nicole^Beat^^Frau||19820620|F|||Buchenstrasse 100^^Baden^^5400^CH||^^CP^0787257719~^^Internet^nicole.marti@bluewin.ch
+PV1||N
+```
+
+---
+
+## 15. ADT^A11 - Storno Aufnahme (cancel admit)
+
+```
+MSH|^~\&|HIS_SRC|SPITAL_BIEL|SWISSCOM_MC|EHEALTH|20260410070000||ADT^A11^ADT_A09|SMC00015|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+EVN|A11|20260410070000
+PID|||PAT950004^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR||Mueller^Reto^Verena^^Herr||19750420|M|||Universitaetstrasse 38^^St. Gallen^^9000^CH||^^CP^0766296603
+PV1||I|CHIR^Zimmer 202^Bett A^Chirurgie||||ARZ502^Keller^Rita^^^Dr.^med.||||||||||||FALL50004|||||||||||||||||||||||||||20260410070000
+```
+
+---
+
+## 16. ORU^R01 - Mikrobiologie (microbiology result)
+
+```
+MSH|^~\&|SWISSCOM_MC|EHEALTH|HIS_DST|SPITAL_BIEL|20260411160000||ORU^R01^ORU_R01|SMC00016|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+PID|||PAT950003^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR||Senn^Urs^Rosa^^Herr||19700905|M|||Marktgasse 12^^Basel^^4001^CH||^^CP^0766806730
+PV1||I|MED^Zimmer 210^Bett A^Innere Medizin||||ARZ500^Eberle^Erich^^^Dr.^med.||||||||||||FALL50003
+OBR|1|ORD954^^^HIS_SRC|RES954^^^LABSYS|87186^Antibiogramm^LN|||20260411060000|||||||||ARZ500^Eberle^Erich^^^Dr.^med.||||||20260411160000|||F
+OBX|1|ST|600-7^Bakterien identifiziert^LN||Enterococcus faecalis||||||F
+OBX|2|ST|18862-3^Amoxicillin^LN||S||||||F
+OBX|3|ST|18961-3^Vancomycin^LN||S||||||F
+OBX|4|ST|18928-2^Gentamicin^LN||R||||||F
+```
+
+---
+
+## 17. ADT^A28 - Neuanlage Person (add person)
+
+```
+MSH|^~\&|HIS_SRC|SPITAL_BIEL|SWISSCOM_MC|EHEALTH|20260412080000||ADT^A28^ADT_A05|SMC00017|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+EVN|A28|20260412080000
+PID|||PAT950005^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR~7568901234567^^^&2.16.756.5.31&ISO^SS||Schneider^Ruth^Fritz^^Frau||19931115|F|||Seefeldstrasse 34^^Olten^^4600^CH||^^CP^0783218614~^^Internet^ruth.schneider@gmail.com
+PV1||N
+```
+
+---
+
+## 18. ORU^R01 - Pathologiebefund (pathology result)
+
+```
+MSH|^~\&|SWISSCOM_MC|EHEALTH|HIS_DST|SPITAL_BIEL|20260413110000||ORU^R01^ORU_R01|SMC00018|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+PID|||PAT950002^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR||Marti^Nicole^Beat^^Frau||19820620|F|||Buchenstrasse 100^^Baden^^5400^CH||^^CP^0787257719
+PV1||O|AMB^Sprechzimmer 4^^Ambulatorium||||ARZ501^Schmid^Esther^^^Dr.^med.||||||||||||FALL50002
+OBR|1|ORD955^^^HIS_SRC|RES955^^^PATHO|88305^Histologie^CPT|||20260412140000|||||||||ARZ501^Schmid^Esther^^^Dr.^med.||||||20260413110000|||F
+OBX|1|FT|22637-3^Pathologiebefund^LN||Makroskopie: Zervixbiopsie, 0.5 x 0.4 x 0.3 cm\.br\Mikroskopie: Chronische Zervizitis, keine Dysplasie\.br\HPV-Zytologie: Negativ\.br\Beurteilung: Benigner Befund||||||F
+```
+
+---
+
+## 19. ORU^R01 - Gerinnung (coagulation result)
+
+```
+MSH|^~\&|SWISSCOM_MC|EHEALTH|HIS_DST|SPITAL_BIEL|20260414150000||ORU^R01^ORU_R01|SMC00019|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+PID|||PAT950001^^^SPITAL_BIEL&2.16.756.5.30.1.200.1&ISO^MR||Gerber^Daniel^Rosa^^Herr||19580318|M|||Rosenbergstrasse 153^^Chur^^7000^CH||^^PH^0817946947
+PV1||I|MED^Zimmer 201^Bett A^Innere Medizin||||ARZ500^Eberle^Erich^^^Dr.^med.||||||||||||FALL50001
+OBR|1|ORD956^^^HIS_SRC|RES956^^^LABSYS|COAG^Gerinnungsprofil^LN|||20260414090000|||||||||ARZ500^Eberle^Erich^^^Dr.^med.||||||20260414150000|||F
+OBX|1|NM|5902-2^Prothrombinzeit (Quick)^LN||92|%|70-120|N|||F
+OBX|2|NM|6301-6^INR^LN||1.0||0.8-1.2|N|||F
+OBX|3|NM|3173-2^aPTT^LN||28|s|25-37|N|||F
+```
+
+---
+
+## 20. ACK - Bestätigung (acknowledgment)
+
+```
+MSH|^~\&|SWISSCOM_MC|EHEALTH|HIS_SRC|SPITAL_BIEL|20260415080100||ACK^A01^ACK|ACK50001|P|2.5|||AL|NE|CHE|UNICODE UTF-8
+MSA|AA|SMC00001|Nachricht erfolgreich übermittelt
+```

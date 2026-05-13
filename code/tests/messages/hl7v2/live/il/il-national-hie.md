@@ -1,0 +1,253 @@
+# National HIE (Ministry of Health) - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A28 - new person registration to national EMPI
+
+```
+MSH|^~\&|CLALIT_CDR|CLALIT|IL_HIE|IL_MOH|20260301080000||ADT^A28^ADT_A05|HIE000001|P|2.5
+EVN|A28|20260301080000
+PID|||382716495^^^IL_MOH^NI~P10001^^^CLALIT^MR||Levi^Itzhak^Haim^^Mr.||19681024|M|||Sderot Yerushalayim 5^^Ramat Gan^^5221050^IL||^PRN^PH^03-612-2334~^PRN^CP^050-381-7264~^NET^Internet^itzhak.levi@walla.co.il
+PV1||N
+NK1|1|Levi^Dina^^^Mrs.|SPO|Sderot Yerushalayim 5^^Ramat Gan^^5221050^IL|^PRN^CP^050-234-5678
+```
+
+---
+
+## 2. ADT^A31 - person demographics update
+
+```
+MSH|^~\&|MACCABI_CDR|MACCABI|IL_HIE|IL_MOH|20260302090000||ADT^A31^ADT_A05|HIE000002|P|2.5
+EVN|A31|20260302090000
+PID|||517384926^^^IL_MOH^NI~M20002^^^MACCABI^MR||Almog^Shira^Tehila^^Mrs.||19850503|F|||HaYarkon 120^^Tel Aviv^^6355618^IL||^PRN^CP^054-628-3741~^NET^Internet^shira.almog@gmail.com
+PV1||N
+```
+
+---
+
+## 3. ADT^A40 - patient merge at national level
+
+```
+MSH|^~\&|IL_HIE|IL_MOH|CLALIT_CDR|CLALIT|20260303110000||ADT^A40^ADT_A39|HIE000003|P|2.5
+EVN|A40|20260303110000
+PID|||628495173^^^IL_MOH^NI||Ohana^David^Yair^^Mr.||19750610|M|||Bialik 18^^Ramat Gan^^5228001^IL||^PRN^CP^052-738-2691
+MRG|628495172^^^IL_MOH^NI||VN33003
+PV1||N
+```
+
+---
+
+## 4. QBP^Q22 - PDQ patient demographics query
+
+```
+MSH|^~\&|LEUMIT_CDR|LEUMIT|IL_HIE|IL_MOH|20260304080000||QBP^Q22^QBP_Q21|HIE000004|P|2.5
+QPD|Q22^Find Candidates^HL7|Q0001|@PID.3.1^794816253~@PID.3.4^IL_MOH~@PID.3.5^NI
+RCP|I|10^RD
+```
+
+---
+
+## 5. RSP^K22 - PDQ response with patient demographics
+
+```
+MSH|^~\&|IL_HIE|IL_MOH|LEUMIT_CDR|LEUMIT|20260304080100||RSP^K22^RSP_K21|HIE000005|P|2.5
+MSA|AA|HIE000004
+QAK|Q0001|OK|Q22^Find Candidates^HL7|1
+QPD|Q22^Find Candidates^HL7|Q0001|@PID.3.1^794816253~@PID.3.4^IL_MOH~@PID.3.5^NI
+PID|||794816253^^^IL_MOH^NI~P30003^^^CLALIT^MR~L40003^^^LEUMIT^MR||Hadad^Maya^Noa^^Mrs.||19920818|F|||Yigal Alon 55^^Tel Aviv^^6739202^IL||^PRN^CP^050-558-4729
+```
+
+---
+
+## 6. VXU^V04 - immunization update to national registry
+
+```
+MSH|^~\&|CLALIT_CDR|CLALIT|IL_HIE|IL_MOH_IMMUN|20260305090000||VXU^V04^VXU_V04|HIE000006|P|2.5.1
+PID|||415927638^^^IL_MOH^NI||Zohar^Meir^Yehuda^^Mr.||19600425|M|||Ussishkin 30^^Netanya^^4230402^IL||^PRN^CP^058-117-2943
+NK1|1|Zohar^Aliza^^^Mrs.|SPO|Ussishkin 30^^Netanya^^4230402^IL|^PRN^CP^058-223-3445
+ORC|RE|ORD5001^CLALIT_CDR|||||^^^20260305090000
+RXA|0|1|20260305090000|20260305090000|141^Influenza, seasonal, injectable^CVX|0.5|mL|IM|LA^Left Arm^HL70163||||Z12345^Batch A||SKB^GlaxoSmithKline^MVX|||CP|A
+```
+
+---
+
+## 7. VXU^V04 - COVID-19 booster immunization
+
+```
+MSH|^~\&|MACCABI_CDR|MACCABI|IL_HIE|IL_MOH_IMMUN|20260306090000||VXU^V04^VXU_V04|HIE000007|P|2.5.1
+PID|||826413579^^^IL_MOH^NI||Koren^Esther^Hannah^^Mrs.||19770215|F|||Nordau 25^^Haifa^^3329525^IL||^PRN^CP^052-446-5728
+ORC|RE|ORD5002^MACCABI_CDR|||||^^^20260306090000
+RXA|0|1|20260306090000|20260306090000|213^SARS-COV-2 (COVID-19) vaccine, mRNA, bivalent^CVX|0.3|mL|IM|RA^Right Arm^HL70163||||ZZ9876^Batch B||PFR^Pfizer^MVX|||CP|A
+RXR|IM^Intramuscular^HL70162|RA^Right Arm^HL70163
+OBX|1|CE|30956-7^Vaccine Type^LN||213^SARS-COV-2 vaccine, mRNA, bivalent^CVX||||||F
+OBX|2|NM|30973-2^Dose Number^LN||5||||||F
+```
+
+---
+
+## 8. ADT^A01 - admission notification to HIE
+
+```
+MSH|^~\&|CHAMELEON|SHEBA_MC|IL_HIE|IL_MOH|20260307080000||ADT^A01^ADT_A01|HIE000008|P|2.5
+EVN|A01|20260307080000
+PID|||317648925^^^IL_MOH^NI||Petrov^Boris^Yuri^^Mr.||19580820|M|||Kaplan 12^^Petah Tikva^^4951200^IL||^PRN^CP^052-789-3614
+PV1||I|CARD^500^A^SHEBA||||30456^Khoury^Samir^^^Dr.||40567^Goldstein^Daniel^^^Dr.||CARD||||||||VN77001|||||||||||||||||||||||20260307080000
+IN1|1||101|Clalit Health Services|Arlozorov 101^^Tel Aviv^^6209801^IL
+```
+
+---
+
+## 9. ADT^A03 - discharge notification to HIE
+
+```
+MSH|^~\&|CHAMELEON|SHEBA_MC|IL_HIE|IL_MOH|20260314160000||ADT^A03^ADT_A03|HIE000009|P|2.5
+EVN|A03|20260314160000
+PID|||317648925^^^IL_MOH^NI||Petrov^Boris^Yuri^^Mr.||19580820|M|||Kaplan 12^^Petah Tikva^^4951200^IL||^PRN^CP^052-789-3614
+PV1||I|CARD^500^A^SHEBA||||30456^Khoury^Samir^^^Dr.||40567^Goldstein^Daniel^^^Dr.||CARD||||||||VN77001||||||||||||||||||||||||||20260314160000
+DG1|1||I25.1^Atherosclerotic heart disease^ICD10||20260307||||||||||||1
+```
+
+---
+
+## 10. MDM^T02 - discharge summary to HIE with embedded CDA (base64 ED)
+
+```
+MSH|^~\&|CHAMELEON|SHEBA_MC|IL_HIE|IL_MOH|20260315100000||MDM^T02|HIE000010|P|2.5
+EVN|T02|20260315100000
+PID|||317648925^^^IL_MOH^NI||Petrov^Boris^Yuri^^Mr.||19580820|M|||Kaplan 12^^Petah Tikva^^4951200^IL||^PRN^CP^052-789-3614
+PV1||I|CARD^500^A^SHEBA||||30456^Khoury^Samir^^^Dr.||||||||||||VN77001
+TXA|1|DS^Discharge Summary^L|TX|20260314150000|30456^Khoury^Samir^^^Dr.|20260315100000||||DOC40001||||||LA
+OBX|1|ED|DS^Discharge Summary CDA^L||^text^xml^Base64^PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPENsaW5pY2FsRG9jdW1lbnQgeG1sbnM9InVybjpobDctb3JnOnYzIj4KICA8dHlwZUlkIHJvb3Q9IjIuMTYuODQwLjEuMTEzODgzLjEuMyIgZXh0ZW5zaW9uPSJQT0NEX0hEMDAwMDQwIi8+CiAgPGlkIHJvb3Q9IjIuMTYuODQwLjEuMTEzODgzLjIuNi45LjEiIGV4dGVuc2lvbj0iRE9DNDAwMDEiLz4KICA8Y29kZSBjb2RlPSIxODg0Mi01IiBjb2RlU3lzdGVtPSIyLjE2Ljg0MC4xLjExMzg4My42LjEiLz4KICA8dGl0bGU+RGlzY2hhcmdlIFN1bW1hcnk8L3RpdGxlPgo8L0NsaW5pY2FsRG9jdW1lbnQ+Cg==||||||F
+```
+
+---
+
+## 11. ORU^R01 - reportable disease notification
+
+```
+MSH|^~\&|LABOS|HADASSAH_LAB|IL_HIE|IL_MOH_PH|20260316140000||ORU^R01|HIE000011|P|2.5
+PID|||598427163^^^IL_MOH^NI||Abutbul^Yafit^Liat^^Mrs.||19830722|F|||HaGalil 8^^Tiberias^^1423002^IL||^PRN^CP^054-336-4583
+PV1||I|INF^301^A^HADASSAH||||50678^Friedman^Sigalit^^^Dr.||||||||||||VN88002
+ORC|RE|ORD6001^LABOS|RES6001^LABOS
+OBR|1|ORD6001^LABOS|RES6001^LABOS|87040^Blood Culture^CPT|||20260315060000|||||||||50678^Friedman^Sigalit^^^Dr.|||||||F
+OBX|1|CE|87040^Organism^CPT||SAL^Salmonella typhi^L||||||F
+OBX|2|CE|REPORT^Reportable Condition^L||002.0^Typhoid fever^ICD9||||||F
+```
+
+---
+
+## 12. QBP^Q23 - PIX patient identifier cross-reference query
+
+```
+MSH|^~\&|LEUMIT_CDR|LEUMIT|IL_HIE|IL_MOH|20260317080000||QBP^Q23^QBP_Q21|HIE000012|P|2.5
+QPD|IHE PIX Query|Q0002|716394285^^^IL_MOH^NI|^^^CLALIT~^^^MACCABI~^^^LEUMIT~^^^MEUHEDET
+RCP|I
+```
+
+---
+
+## 13. RSP^K23 - PIX cross-reference response
+
+```
+MSH|^~\&|IL_HIE|IL_MOH|LEUMIT_CDR|LEUMIT|20260317080100||RSP^K23^RSP_K23|HIE000013|P|2.5
+MSA|AA|HIE000012
+QAK|Q0002|OK|IHE PIX Query
+QPD|IHE PIX Query|Q0002|716394285^^^IL_MOH^NI|^^^CLALIT~^^^MACCABI~^^^LEUMIT~^^^MEUHEDET
+PID|||716394285^^^IL_MOH^NI~P60006^^^CLALIT^MR~L50005^^^LEUMIT^MR||Malka^Ronen^Eli^^Mr.
+```
+
+---
+
+## 14. ORU^R01 - lab result with embedded PDF to HIE (base64 ED)
+
+```
+MSH|^~\&|LABOS|RAMBAM_LAB|IL_HIE|IL_MOH|20260318140000||ORU^R01|HIE000014|P|2.5
+PID|||893716425^^^IL_MOH^NI||Edri^Shimon^Avraham^^Mr.||19950512|M|||Allenby 77^^Tel Aviv^^6513215^IL||^PRN^CP^053-446-5728
+PV1||I|ONCO^700^A^RAMBAM||||10234^Levi^Yaakov^^^Dr.||||||||||||VN10003
+ORC|RE|ORD7001^LABOS|RES7001^LABOS
+OBR|1|ORD7001^LABOS|RES7001^LABOS|FLOW^Flow Cytometry^L|||20260318080000|||||||||10234^Levi^Yaakov^^^Dr.|||||||F
+OBX|1|NM|8116-7^CD4 Count^LN||320|cells/uL|500-1500|L|||F
+OBX|2|NM|8122-5^CD8 Count^LN||580|cells/uL|150-1000|N|||F
+OBX|3|NM|54218-3^CD4/CD8 Ratio^LN||0.55||1.0-3.5|L|||F
+OBX|4|ED|PDF^Flow Cytometry Report PDF^L||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvUmVzb3VyY2VzIDw8ID4+ID4+CmVuZG9iagp4cmVmCjAgNAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTE1IDAwMDAwIG4gCnRyYWlsZXIKPDwgL1NpemUgNCAvUm9vdCAxIDAgUiA+PgpzdGFydHhyZWYKMjE2CiUlRU9GCg==||||||F
+```
+
+---
+
+## 15. VXU^V04 - childhood immunization (MMR)
+
+```
+MSH|^~\&|MEUHEDET_CDR|MEUHEDET|IL_HIE|IL_MOH_IMMUN|20260319090000||VXU^V04^VXU_V04|HIE000015|P|2.5.1
+PID|||472691538^^^IL_MOH^NI||Vaknin^Noa^Maya^^Ms.||20250219|F|||Arlozorov 35^^Haifa^^3301521^IL||^PRN^CP^050-668-2734
+NK1|1|Vaknin^Oded^^^Mr.|FTH|Arlozorov 35^^Haifa^^3301521^IL|^PRN^CP^050-668-2734
+ORC|RE|ORD5003^MEUHEDET_CDR|||||^^^20260319090000
+RXA|0|1|20260319090000|20260319090000|03^MMR^CVX|0.5|mL|SC|LA^Left Arm^HL70163||||ZB1234^Batch C||MSD^Merck^MVX|||CP|A
+OBX|1|NM|30973-2^Dose Number^LN||1||||||F
+OBX|2|DT|29769-7^VIS Date^LN||20260101||||||F
+```
+
+---
+
+## 16. ADT^A08 - insurance change notification
+
+```
+MSH|^~\&|MACCABI_CDR|MACCABI|IL_HIE|IL_MOH|20260320090000||ADT^A08^ADT_A01|HIE000016|P|2.5
+EVN|A08|20260320090000
+PID|||618472395^^^IL_MOH^NI||Aslan^Yaron^Tomer^^Mr.||19880315|M|||Balfour 22^^Bat Yam^^5930002^IL||^PRN^CP^052-218-4936
+PV1||N
+IN1|1||102|Maccabi Healthcare Services|Hamered 27^^Tel Aviv^^6812507^IL
+IN1|2||105|Maccabi Supplementary Gold|Hamered 27^^Tel Aviv^^6812507^IL
+```
+
+---
+
+## 17. ORU^R01 - birth notification
+
+```
+MSH|^~\&|CHAMELEON|WOLFSON_MC|IL_HIE|IL_MOH_VITAL|20260321060000||ORU^R01|HIE000017|P|2.5
+PID|||TEMP00001^^^WOLFSON^MR||Peretz^Baby Girl^^^Ms.||20260321|F|||Weizmann 8^^Rehovot^^7610001^IL
+NK1|1|Peretz^Sarah^Leah^^Mrs.|MTH|||^PRN^CP^058-345-7218|||||||825619473^^^IL_MOH^NI
+NK1|2|Peretz^Yaron^^^Mr.|FTH|||^PRN^CP^058-987-6543|||||||825619474^^^IL_MOH^NI
+OBR|1|||BIRTH^Birth Notification^L|||20260321053000
+OBX|1|NM|3141-9^Birth Weight^LN||3250|g||||F
+OBX|2|NM|8302-2^Birth Length^LN||50|cm||||F
+OBX|3|NM|9272-6^APGAR 1min^LN||8||||||F
+OBX|4|NM|9274-2^APGAR 5min^LN||9||||||F
+OBX|5|CE|DELIVERY^Delivery Method^L||NVD^Normal Vaginal Delivery^L||||||F
+```
+
+---
+
+## 18. ORU^R01 - death notification
+
+```
+MSH|^~\&|CHAMELEON|HADASSAH_MC|IL_HIE|IL_MOH_VITAL|20260322140000||ORU^R01|HIE000018|P|2.5
+PID|||357128649^^^IL_MOH^NI||Sabag^Daniel^Michael^^Mr.||19910203|M|||Herzl 100^^Be'er Sheva^^8410901^IL||^PRN^CP^058-991-2374||||||||||Y|20260322130000
+PV1||I|ICU^401^A^HADASSAH||||50678^Friedman^Sigalit^^^Dr.||||||||||||VN50004
+OBR|1|||DEATH^Death Notification^L|||20260322130000
+OBX|1|TS|31211-6^Date of Death^LN||20260322130000||||||F
+OBX|2|CE|69453-9^Cause of Death^LN||I21.0^Acute transmural MI of anterior wall^ICD10||||||F
+OBX|3|CE|DEATH_PLACE^Place of Death^L||HOSP^Hospital^L||||||F
+```
+
+---
+
+## 19. ADT^A24 - patient link (mother-baby)
+
+```
+MSH|^~\&|CHAMELEON|WOLFSON_MC|IL_HIE|IL_MOH|20260323080000||ADT^A24^ADT_A24|HIE000019|P|2.5
+EVN|A24|20260323080000
+PID|||825619473^^^IL_MOH^NI||Peretz^Sarah^Leah^^Mrs.||19881205|F|||Weizmann 8^^Rehovot^^7610001^IL||^PRN^CP^058-345-7218
+PV1||I|OBS^100^A^WOLFSON||||80901^Harari^Tomer^^^Dr.||||||||||||VN60005
+PID|||NEW001234^^^IL_MOH^NI||Peretz^Baby Girl^^^Ms.||20260321|F
+PV1||I|NICU^200^B^WOLFSON||||80901^Harari^Tomer^^^Dr.||||||||||||VN60006
+```
+
+---
+
+## 20. ACK - HIE acknowledgment
+
+```
+MSH|^~\&|IL_HIE|IL_MOH|CLALIT_CDR|CLALIT|20260324080100||ACK|HIE000020|P|2.5
+MSA|AA|HIE000001|Person registered successfully in national EMPI
+```

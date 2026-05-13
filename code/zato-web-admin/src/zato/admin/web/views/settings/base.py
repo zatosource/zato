@@ -6,10 +6,17 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from logging import getLogger
+
+# Django
 from django.template.response import TemplateResponse
 
+# Zato
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.settings.handlers import RestartHandler
+
+logger = getLogger(__name__)
 
 class SettingsBaseView:
 
@@ -31,16 +38,20 @@ class SettingsBaseView:
 
     @method_allowed('POST')
     def restart_scheduler(self, req):
+        logger.info('UPDATE-TRACE base.restart_scheduler: entering')
         return self.restart_handler.restart_scheduler(req)
 
     @method_allowed('POST')
     def restart_server(self, req):
+        logger.info('UPDATE-TRACE base.restart_server: entering')
         return self.restart_handler.restart_server(req)
 
     @method_allowed('POST')
     def restart_proxy(self, req):
+        logger.info('UPDATE-TRACE base.restart_proxy: entering')
         return self.restart_handler.restart_proxy(req)
 
     @method_allowed('POST')
     def restart_dashboard(self, req):
+        logger.info('UPDATE-TRACE base.restart_dashboard: entering')
         return self.restart_handler.restart_dashboard(req)

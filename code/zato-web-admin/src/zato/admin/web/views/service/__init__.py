@@ -25,7 +25,7 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index,
 from zato.admin.middleware import HeadersEnrichedException
 from zato.common.ext.validate_ import is_boolean
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -89,14 +89,14 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id',
-        input_optional = 'query',
-        output_required = 'id', 'name', 'is_active', 'is_internal', 'impl_name', 'may_be_deleted', 'usage', 'slow_threshold'
-        output_repeated = True
+    input_required = 'cluster_id',
+    input_optional = 'query',
+    output_required = 'id', 'name', 'is_active', 'is_internal', 'impl_name', 'may_be_deleted', 'usage', 'slow_threshold'
+    output_repeated = True
 
     def handle(self):
         return {
+            'show_search_form': True,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit')
         }
@@ -123,9 +123,8 @@ class Edit(CreateEdit):
     form_prefix = 'edit-'
     service_name = 'zato.service.edit'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'id', 'is_active', 'slow_threshold'
-        output_required = 'id', 'name', 'impl_name', 'is_internal', 'usage', 'may_be_deleted'
+    input_required = 'id', 'is_active', 'slow_threshold'
+    output_required = 'id', 'name', 'impl_name', 'is_internal', 'usage', 'may_be_deleted'
 
     def success_message(self, item:'any_') -> 'str':
         return 'Successfully {} service `{}`'.format(self.verb, item.name)
@@ -243,12 +242,8 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
     }
 
     try:
-        input_dict = {}
-        input_dict['payload'] = req.POST.get('data-request', '')
-        input_dict['to_json'] = True
-        input_dict['needs_response_time'] = True
-
-        response = req.zato.client.invoke(name, **input_dict) # type: ignore
+        payload = req.POST.get('data-request', '')
+        response = req.zato.client.invoke(name, payload) # type: ignore
 
     except HeadersEnrichedException as enriched_exc:
         content['response_time_human'] = enriched_exc.headers.get('X-Zato-Response-Time-Human') # type: ignore
@@ -263,12 +258,8 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
         try:
             content['response_time_human'] = response.inner.headers.get('X-Zato-Response-Time-Human')
             if response.ok:
-                if data := response.inner_service_response:
-                    try:
-                        data = loads(data)
-                    except ValueError:
-                        pass
-                else:
+                data = response.data
+                if data is None:
                     data = '(None)'
                 status_code = HTTPStatus.OK
             else:

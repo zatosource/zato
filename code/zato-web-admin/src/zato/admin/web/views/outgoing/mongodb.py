@@ -18,7 +18,7 @@ from zato.admin.web.forms.outgoing.mongodb import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
      method_allowed, ping_connection
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # ################################################################################################################################
 
@@ -34,23 +34,23 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id', 'type_')
+    input_required = 'cluster_id', 'type_'
 
-        output_required = ('id', 'name', 'server_list', 'pool_size_max', 'connect_timeout',
+    output_required = ('id', 'name', 'server_list', 'pool_size_max', 'connect_timeout',
         'socket_timeout', 'server_select_timeout', 'wait_queue_timeout', 'max_idle_time', 'hb_frequency')
 
-        output_optional = ('is_active',  'username', 'app_name', 'replica_set', 'auth_source',  'auth_mechanism',
-            'is_tz_aware',  'document_class', 'compressor_list', 'zlib_level', 'write_to_replica', 'write_timeout',
-            'is_write_journal_enabled', 'is_write_fsync_enabled', 'read_pref_type', 'read_pref_tag_list',
-            'read_pref_max_stale', 'is_tls_enabled', 'tls_private_key_file', 'tls_cert_file', 'tls_ca_certs_file',
-            'tls_crl_file', 'tls_version', 'tls_validate', 'tls_pem_passphrase', 'is_tls_match_hostname_enabled',
-            'tls_ciphers')
+    output_optional = ('is_active', 'username', 'app_name', 'replica_set', 'auth_source', 'auth_mechanism',
+        'is_tz_aware', 'document_class', 'compressor_list', 'zlib_level', 'write_to_replica', 'write_timeout',
+        'is_write_journal_enabled', 'is_write_fsync_enabled', 'read_pref_type', 'read_pref_tag_list',
+        'read_pref_max_stale', 'is_tls_enabled', 'tls_private_key_file', 'tls_cert_file', 'tls_ca_certs_file',
+        'tls_crl_file', 'tls_version', 'tls_validate', 'tls_pem_passphrase', 'is_tls_match_hostname_enabled',
+        'tls_ciphers')
 
-        output_repeated = True
+    output_repeated = True
 
     def handle(self):
         return {
+            'show_search_form': True,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'change_password_form': ChangePasswordForm()
@@ -61,18 +61,17 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'server_list', 'pool_size_max', 'connect_timeout',
+    input_required = ('name', 'server_list', 'pool_size_max', 'connect_timeout',
         'socket_timeout', 'server_select_timeout', 'wait_queue_timeout', 'max_idle_time', 'hb_frequency')
 
-        input_optional = ('is_active',  'username', 'app_name', 'replica_set', 'auth_source',  'auth_mechanism',
-            'is_tz_aware',  'document_class', 'compressor_list', 'zlib_level', 'write_to_replica', 'write_timeout',
-            'is_write_journal_enabled', 'is_write_fsync_enabled', 'should_retry_write', 'read_pref_type', 'read_pref_tag_list',
-            'read_pref_max_stale', 'is_tls_enabled', 'tls_private_key_file', 'tls_cert_file', 'tls_ca_certs_file',
-            'tls_crl_file', 'tls_version', 'tls_validate', 'tls_pem_passphrase', 'is_tls_match_hostname_enabled',
-            'tls_ciphers')
+    input_optional = ('is_active', 'username', 'app_name', 'replica_set', 'auth_source', 'auth_mechanism',
+        'is_tz_aware', 'document_class', 'compressor_list', 'zlib_level', 'write_to_replica', 'write_timeout',
+        'is_write_journal_enabled', 'is_write_fsync_enabled', 'should_retry_write', 'read_pref_type', 'read_pref_tag_list',
+        'read_pref_max_stale', 'is_tls_enabled', 'tls_private_key_file', 'tls_cert_file', 'tls_ca_certs_file',
+        'tls_crl_file', 'tls_version', 'tls_validate', 'tls_pem_passphrase', 'is_tls_match_hostname_enabled',
+        'tls_ciphers')
 
-        output_required = 'id', 'name'
+    output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict):
         initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB

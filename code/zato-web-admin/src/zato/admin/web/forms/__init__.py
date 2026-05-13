@@ -16,7 +16,7 @@ from zato.common.ext.future.utils import iteritems
 from zato.common.py23_.past.builtins import basestring
 
 # Zato
-from zato.common.api import SIMPLE_IO, ZATO_NONE
+from zato.common.api import IO, ZATO_NONE
 
 # ################################################################################################################################
 
@@ -31,7 +31,9 @@ SELECT_SERVICE_FIELDS = [
     'hook_service_name',
     'on_close_service_name',
     'on_connect_service_name',
+    'on_error_service',
     'on_message_service_name',
+    'on_success_service',
     'service',
     'service_id',
     'service_list',
@@ -234,7 +236,7 @@ class DataFormatForm(forms.Form):
         self.fields['data_format'].choices = []
         self.fields['data_format'].choices.append(INITIAL_CHOICES)
 
-        for code, name in iteritems(self.data_formats_allowed or SIMPLE_IO.COMMON_FORMAT):
+        for code, name in iteritems(self.data_formats_allowed or IO.COMMON_FORMAT):
             self.fields['data_format'].choices.append([code, name])
 
 # ################################################################################################################################

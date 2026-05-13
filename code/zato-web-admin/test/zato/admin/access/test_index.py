@@ -97,7 +97,6 @@ class IndexTestCase(BaseTestCase):
             'basic/save/',
             'cache/builtin/clear',
             'favicon.ico',
-            'generate-totp-key',
 
             '/accounts/login',
             '/create/',

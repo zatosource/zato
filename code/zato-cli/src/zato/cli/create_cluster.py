@@ -12,6 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import random
 from copy import deepcopy
+from uuid import uuid4
 
 # Zato
 from zato.cli import common_odb_opts, ZatoCommand
@@ -102,10 +103,6 @@ class Create(ZatoCommand):
             session.flush()
 
             # Create services
-            admin_invoke_service_name = 'zato.server.service.internal.service.Invoke'
-            admin_invoke_service = Service(None, admin_invoke_service_name, True, admin_invoke_service_name, True, cluster)
-            session.add(admin_invoke_service)
-
             ide_publisher_service_name = 'zato.server.service.internal.hot_deploy.Create'
             ide_publisher_service = Service(None, ide_publisher_service_name, True, ide_publisher_service_name, True, cluster)
             session.add(ide_publisher_service)
@@ -120,13 +117,14 @@ class Create(ZatoCommand):
 
             ping_service = self.add_ping_service(session, cluster)
 
-            django_gateway_service_name = 'zato.server.service.internal.helpers.DjangoServiceGateway'
-            django_gateway_service = Service(None, django_gateway_service_name, True, django_gateway_service_name, True, cluster)
-            session.add(django_gateway_service)
+            # Create Django security definition
+            django_password = os.environ.get('Zato_Django_Password') or self.generate_password()
+            django_sec = HTTPBasicAuth(
+                None, 'django', True, 'django', 'Django plugin', django_password, cluster)
+            session.add(django_sec)
 
             # Create channels
-            self.add_admin_invoke(session, cluster, admin_invoke_service, admin_invoke_sec)
-            self.add_django_channel(session, cluster, django_gateway_service)
+            self.add_django_channel(session, cluster, admin_invoke_sec, django_sec)
             self.add_ide_publisher_channel(session, cluster, ide_publisher_service, ide_publisher_sec)
             self.add_metrics_channel(session, cluster, metrics_service)
             self.add_streaming_channels(session, cluster, ping_service, streaming_sec)
@@ -134,7 +132,6 @@ class Create(ZatoCommand):
             self.add_pubsub_rest_channels(session, cluster)
 
             # Add other configurations
-            self.add_default_caches(session, cluster)
             self.add_rule_engine_configuration(session, cluster, ping_service)
 
             # Run ODB post-processing tasks
@@ -193,7 +190,7 @@ class Create(ZatoCommand):
         """
 
         # Zato
-        from zato.common.api import SIMPLE_IO
+        from zato.common.api import IO
         from zato.common.odb.model import HTTPSOAP, Service
 
         ping_impl_name = 'zato.server.service.internal.Ping'
@@ -203,7 +200,7 @@ class Create(ZatoCommand):
 
         ping_no_sec_channel = HTTPSOAP(
             None, 'zato.ping', True, True, 'channel',
-            'plain_http', None, '/zato/ping', None, '', None, SIMPLE_IO.FORMAT.JSON, service=ping_service, cluster=cluster)
+            'plain_http', None, '/zato/ping', None, '', None, IO.FORMAT.JSON, service=ping_service, cluster=cluster)
         session.add(ping_no_sec_channel)
 
         return ping_service
@@ -216,7 +213,7 @@ class Create(ZatoCommand):
         from zato.common.api import DATA_FORMAT
         from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP
 
-        metrics_password = os.environ['Zato_Server_Metrics_Password']
+        metrics_password = os.environ.get('Zato_Metrics_Password') or uuid4().hex
 
         security = HTTPBasicAuth(None, 'metrics', True, 'metrics', 'Metrics user', metrics_password, cluster)
         session.add(security)
@@ -229,20 +226,34 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def add_admin_invoke(self, session, cluster, service, security):
-        """ Adds an admin channel for invoking services from web admin and CLI.
+    def add_django_channel(self, session, cluster, admin_invoke_sec, django_sec):
+        """ Adds the admin and Django invoke channels, both pointing at ServiceInvoker.
         """
 
         # Zato
-        from zato.common.api import MISC, SIMPLE_IO
-        from zato.common.odb.model import HTTPSOAP
+        from zato.common.api import DATA_FORMAT, MISC
+        from zato.common.const import ServiceConst
+        from zato.common.odb.model import HTTPSOAP, Service as ODBService
 
-        channel = HTTPSOAP(
-            None, MISC.DefaultAdminInvokeChannel, True, True, 'channel', 'plain_http',
-            None, ServiceConst.API_Admin_Invoke_Url_Path, None, '', None,
-            SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster,
-            security=security)
-        session.add(channel)
+        # Register the ServiceInvoker service in ODB
+        service_impl = 'zato.server.service.internal.service.ServiceInvoker'
+        service = ODBService(None, ServiceConst.ServiceInvokerName, True, service_impl, True, cluster)
+        session.add(service)
+        session.flush()
+
+        # Admin invoke channel - used by web admin, CLI, and inter-server RPC
+        admin_channel = HTTPSOAP(
+            None, MISC.DefaultAdminInvokeChannel, True, True, 'channel',
+            'plain_http', None, '/zato/api/invoke/{service_name}', None, '', None, DATA_FORMAT.JSON,
+            service=service, cluster=cluster, security=admin_invoke_sec)
+        session.add(admin_channel)
+
+        # Django invoke channel - used by the Django plugin, with per-channel service allowlist
+        django_channel = HTTPSOAP(
+            None, 'zato.django', True, True, 'channel',
+            'plain_http', None, '/zato/api/invoke/django/{service_name}', None, '', None, DATA_FORMAT.JSON,
+            service=service, cluster=cluster, security=django_sec)
+        session.add(django_channel)
 
 # ################################################################################################################################
 
@@ -251,56 +262,15 @@ class Create(ZatoCommand):
         """
 
         # Zato
-        from zato.common.api import SIMPLE_IO
+        from zato.common.api import IO
         from zato.common.odb.model import HTTPSOAP
 
         channel = HTTPSOAP(
             None, 'zato.ide_publisher', True, True, 'channel', 'plain_http',
             None, '/ide-deploy', None, '', None,
-            SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster,
+            IO.FORMAT.JSON, service=service, cluster=cluster,
             security=security)
         session.add(channel)
-
-# ################################################################################################################################
-
-    def add_default_caches(self, session, cluster):
-        """ Adds default caches to the cluster.
-        """
-
-        # Zato
-        from zato.common.api import CACHE
-        from zato.common.odb.model import CacheBuiltin
-
-        # This is the default cache that is used if a specific one is not selected by users
-        item = CacheBuiltin()
-        item.cluster = cluster
-        item.name = CACHE.Default_Name.Main
-        item.is_active = True
-        item.is_default = True
-        item.max_size = CACHE.DEFAULT.MAX_SIZE
-        item.max_item_size = CACHE.DEFAULT.MAX_ITEM_SIZE
-        item.extend_expiry_on_get = True
-        item.extend_expiry_on_set = True
-        item.cache_type = CACHE.TYPE.BUILTIN
-        item.sync_method = CACHE.SYNC_METHOD.IN_BACKGROUND.id
-        item.persistent_storage = CACHE.PERSISTENT_STORAGE.SQL.id
-        session.add(item)
-
-        # This is used for Bearer tokens - note that it does not extend the key's expiration on .get.
-        # Otherwise, it is the same as the default one.
-        item = CacheBuiltin()
-        item.cluster = cluster
-        item.name = CACHE.Default_Name.Bearer_Token
-        item.is_active = True
-        item.is_default = True
-        item.max_size = CACHE.DEFAULT.MAX_SIZE
-        item.max_item_size = CACHE.DEFAULT.MAX_ITEM_SIZE
-        item.extend_expiry_on_get = False
-        item.extend_expiry_on_set = True
-        item.cache_type = CACHE.TYPE.BUILTIN
-        item.sync_method = CACHE.SYNC_METHOD.IN_BACKGROUND.id
-        item.persistent_storage = CACHE.PERSISTENT_STORAGE.SQL.id
-        session.add(item)
 
 # ################################################################################################################################
 
@@ -380,22 +350,6 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def add_django_channel(self, session, cluster, service):
-        """ Adds a channel for Django gateway.
-        """
-
-        # Zato
-        from zato.common.api import DATA_FORMAT
-        from zato.common.odb.model import HTTPSOAP
-
-        channel = HTTPSOAP(
-            None, 'zato.django', True, True, 'channel',
-            'plain_http', None, '/django', None, '', None, DATA_FORMAT.JSON,
-            service=service, cluster=cluster)
-        session.add(channel)
-
-# ################################################################################################################################
-
     def add_pubsub_rest_channels(self, session, cluster):
         """ Adds REST channels for pub/sub operations.
         """
@@ -403,8 +357,6 @@ class Create(ZatoCommand):
         # Zato
         from zato.common.api import DATA_FORMAT
         from zato.common.odb.model import HTTPSOAP, Service
-
-        self.logger.info('Creating pub/sub REST channels')
 
         # Create services
         publish_impl = 'zato.server.service.internal.pubsub.rest.Publish'
@@ -429,27 +381,23 @@ class Create(ZatoCommand):
             'plain_http', None, '/pubsub/topic/{topic_name}', 'POST', '', None, DATA_FORMAT.JSON,
             service=publish_service, cluster=cluster)
         session.add(publish_channel)
-        self.logger.info('Created channel: POST /pubsub/topic/{topic_name}')
 
         get_messages_channel = HTTPSOAP(
             None, 'pubsub.rest.get-messages', True, True, 'channel',
             'plain_http', None, '/pubsub/messages/get', 'POST', '', None, DATA_FORMAT.JSON,
             service=get_messages_service, cluster=cluster)
         session.add(get_messages_channel)
-        self.logger.info('Created channel: POST /pubsub/messages/get')
 
         subscribe_channel = HTTPSOAP(
             None, 'pubsub.rest.subscribe', True, True, 'channel',
             'plain_http', None, '/pubsub/subscribe/topic/{topic_name}', 'POST', '', None, DATA_FORMAT.JSON,
             service=subscribe_service, cluster=cluster)
         session.add(subscribe_channel)
-        self.logger.info('Created channel: POST /pubsub/subscribe/topic/{topic_name}')
 
         unsubscribe_channel = HTTPSOAP(
             None, 'pubsub.rest.unsubscribe', True, True, 'channel',
             'plain_http', None, '/pubsub/unsubscribe/topic/{topic_name}', 'POST', '', None, DATA_FORMAT.JSON,
             service=unsubscribe_service, cluster=cluster)
         session.add(unsubscribe_channel)
-        self.logger.info('Created channel: POST /pubsub/unsubscribe/topic/{topic_name}')
 
 # ################################################################################################################################

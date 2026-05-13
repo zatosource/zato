@@ -8,7 +8,7 @@ mypy-extensions>=1.0.0,<2.0.0
 openapi-spec-validator
 openapi3==1.8.2
 pyright==1.1.408
-pytest==9.0.2
+pytest==9.0.3
 ruff
 pytest-cov==7.1.0
 requests-openapi

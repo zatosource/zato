@@ -263,17 +263,9 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     /* 6 */
     row += String.format('<td>{0}</td>', item.url_path);
 
-    /* 7, 8 */
+    /* 7 */
     if(is_channel) {
         row += service_tr;
-
-        if(item.cache_id) {
-            row += String.format('<td class="ignore"><a href="/zato/cache/{0}/?cluster={1}&amp;highlight={2}">{3}</a></td>',
-                    data.cache_type, cluster_id, item.cache_id, data.cache_name);
-        }
-        else {
-            row += '<td class="ignore"><span class="form_hint">---</span></td>';
-        }
     }
 
     /* 9, 9b */
@@ -300,11 +292,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", item.security_id);
 
-    /* 17, 18, 19 */
     if(is_channel) {
-        row += String.format("<td class='ignore'>{0}</td>", item.cache_id);
-        row += String.format("<td class='ignore'>{0}</td>", item.cache_type);
-        row += String.format("<td class='ignore'>{0}</td>", item.cache_expiry);
     }
 
     /* 20 */

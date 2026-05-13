@@ -18,7 +18,7 @@ from zato.admin.web.forms.outgoing.kafka import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -30,14 +30,14 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id', 'type_')
-        output_required = ('id', 'name', 'is_active', 'address', 'topic')
-        output_optional = ('ssl', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file')
-        output_repeated = True
+    input_required = 'cluster_id', 'type_'
+    output_required = 'id', 'name', 'is_active', 'address', 'topic'
+    output_optional = 'ssl', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file'
+    output_repeated = True
 
     def handle(self):
         return {
+            'show_search_form': True,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
         }
@@ -45,10 +45,9 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'address', 'topic')
-        input_optional = ('is_active', 'ssl', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file')
-        output_required = ('id', 'name')
+    input_required = 'name', 'address', 'topic'
+    input_optional = 'is_active', 'ssl', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file'
+    output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict):
         initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA

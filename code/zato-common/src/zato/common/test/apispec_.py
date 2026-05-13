@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # PyYAML
 from yaml import FullLoader, load as yaml_load
@@ -27,20 +27,20 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-sio_config = Bunch()
+io_config = Bunch()
 
-sio_config.int = Bunch()
-sio_config.bool = Bunch()
-sio_config.secret = Bunch()
-sio_config.bytes_to_str = Bunch()
+io_config.int = Bunch()
+io_config.bool = Bunch()
+io_config.secret = Bunch()
+io_config.bytes_to_str = Bunch()
 
-sio_config.int.prefix = set()
-sio_config.int.exact = set()
-sio_config.int.suffix = {'_id'}
+io_config.int.prefix = set()
+io_config.int.exact = set()
+io_config.int.suffix = {'_id'}
 
-sio_config.bool.prefix = set()
-sio_config.bool.exact = set()
-sio_config.bool.suffix = set()
+io_config.bool.prefix = set()
+io_config.bool.exact = set()
+io_config.bool.suffix = set()
 
 service_name = 'helpers.dataclass-service'
 
@@ -52,28 +52,8 @@ class CyMyService(Service):
 
     It has a docstring.
     """
-    class SimpleIO:
-        """
-        * input_req_user_id - This is the first line.
-
-        Here is another.
-
-        And here
-        are some
-        more lines.
-
-        * input_opt_user_name - b111
-
-        * output_req_address_id - c111 c222 c333 c444
-
-        * output_opt_address_name - d111
-
-          d222
-        """
-        input_required = 'input_req_user_id', 'input_req_customer_id'
-        input_optional = 'input_opt_user_name', 'input_opt_customer_name'
-        output_required = 'output_req_address_id', 'output_req_address_name'
-        output_optional = 'output_opt_address_type', 'output_opt_address_subtype'
+    input = 'input_req_user_id', 'input_req_customer_id', '-input_opt_user_name', '-input_opt_customer_name'
+    output = 'output_req_address_id', 'output_req_address_name', '-output_opt_address_type', '-output_opt_address_subtype'
 
 # ################################################################################################################################
 # ################################################################################################################################

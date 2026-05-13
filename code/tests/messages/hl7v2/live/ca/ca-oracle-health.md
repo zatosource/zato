@@ -1,0 +1,266 @@
+# Oracle Health (Cerner Millennium) - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - inpatient admission with Ontario health card
+
+```
+MSH|^~\&|MILLENNIUM|SUNNYBROOK_HIS|ADT_RECV|PACS_SYS|20260509081500||ADT^A01^ADT_A01|MSG00001|P|2.5
+EVN|A01|20260509081500
+PID|||7812345678^^^ON_HN^JHN||Thompson^Margaret^Anne^^Mrs.||19580312|F|||2075 Bayview Ave^^Toronto^ON^M4N 3M5^CA||^PRN^PH^^1^416^4804100|^WPN^PH^^1^416^4804200||||AC100234567
+PV1||I|4EAST^401^A^SUNNYBROOK||||12345^Chen^David^^^Dr.^^MD|67890^Patel^Anita^^^Dr.^^MD|||MED||||7||VIS2026050901|||||||||||||||||||||||||||20260509081500
+IN1|1||OHIPplan|Ontario Health Insurance Plan|49 Place d'Armes^^Kingston^ON^K7L 5J3^CA||||||||||||||||||||||||||||||||||||||||7812345678
+```
+
+---
+
+## 2. ADT^A02 - patient transfer between units
+
+```
+MSH|^~\&|MILLENNIUM|SUNNYBROOK_HIS|ADT_RECV|PACS_SYS|20260509093000||ADT^A02^ADT_A02|MSG00002|P|2.5
+EVN|A02|20260509093000
+PID|||7812345678^^^ON_HN^JHN||Thompson^Margaret^Anne^^Mrs.||19580312|F|||2075 Bayview Ave^^Toronto^ON^M4N 3M5^CA||^PRN^PH^^1^416^4804100
+PV1||I|5ICU^501^A^SUNNYBROOK||||12345^Chen^David^^^Dr.^^MD|67890^Patel^Anita^^^Dr.^^MD|||MED||||7||VIS2026050901|||||||||||||||||||||||||||20260509093000
+```
+
+---
+
+## 3. ADT^A03 - patient discharge
+
+```
+MSH|^~\&|MILLENNIUM|SUNNYBROOK_HIS|ADT_RECV|PACS_SYS|20260512140000||ADT^A03^ADT_A03|MSG00003|P|2.5
+EVN|A03|20260512140000
+PID|||7812345678^^^ON_HN^JHN||Thompson^Margaret^Anne^^Mrs.||19580312|F|||2075 Bayview Ave^^Toronto^ON^M4N 3M5^CA||^PRN^PH^^1^416^4804100
+PV1||I|4EAST^401^A^SUNNYBROOK||||12345^Chen^David^^^Dr.^^MD|67890^Patel^Anita^^^Dr.^^MD|||MED||||7||VIS2026050901|||||||||||||||||||||||||||20260512140000
+DG1|1||J18.9^Pneumonia unspecified organism^I10||20260509|A
+```
+
+---
+
+## 4. ADT^A04 - outpatient registration
+
+```
+MSH|^~\&|MILLENNIUM|AHS_HOSP|ADT_RECV|LAB_SYS|20260509100000||ADT^A04^ADT_A01|MSG00004|P|2.4
+EVN|A04|20260509100000
+PID|||123456789^^^AB_PHN^JHN||MacDonald^James^Robert||19750823|M|||14520 Stony Plain Rd NW^^Edmonton^AB^T5N 3Z4^CA||^PRN^PH^^1^780^5551234
+PV1||O|OUTPT^CLINIC3^1^AHS_ROYAL_ALEX||||33445^Singh^Harpreet^^^Dr.^^MD|||ORTHO||||9||VIS2026050902|||||||||||||||||||||||||||20260509100000
+```
+
+---
+
+## 5. ADT^A08 - patient information update
+
+```
+MSH|^~\&|MILLENNIUM|SUNNYBROOK_HIS|ADT_RECV|PACS_SYS|20260510083000||ADT^A08^ADT_A01|MSG00005|P|2.5
+EVN|A08|20260510083000
+PID|||7812345678^^^ON_HN^JHN||Thompson^Margaret^Anne^^Mrs.||19580312|F|||100 Wellesley St E^^Toronto^ON^M4Y 1H5^CA||^PRN^PH^^1^416^9221234|^WPN^PH^^1^416^9225678||||AC100234567
+PV1||I|4EAST^401^A^SUNNYBROOK||||12345^Chen^David^^^Dr.^^MD|67890^Patel^Anita^^^Dr.^^MD|||MED||||7||VIS2026050901|||||||||||||||||||||||||||20260510083000
+NK1|1|Thompson^Harold||^PRN^PH^^1^416^4804300|||||||||||||||||||||||||||||SPO
+```
+
+---
+
+## 6. ADT^A31 - update person information
+
+```
+MSH|^~\&|MILLENNIUM|AHS_HOSP|PROV_REG|AB_AHW|20260510090000||ADT^A31^ADT_A05|MSG00006|P|2.4
+EVN|A31|20260510090000
+PID|||987654321^^^AB_PHN^JHN||Leblanc^Marie^Claire||19901115|F|||238 11 Ave SE^^Calgary^AB^T2G 0X8^CA||^PRN^PH^^1^403^5559876
+PV1||N
+```
+
+---
+
+## 7. ADT^A40 - merge patient
+
+```
+MSH|^~\&|MILLENNIUM|SUNNYBROOK_HIS|MPI_SYS|REG_SYS|20260511100000||ADT^A40^ADT_A39|MSG00007|P|2.5
+EVN|A40|20260511100000
+PID|||7812345678^^^ON_HN^JHN||Thompson^Margaret^Anne^^Mrs.||19580312|F|||2075 Bayview Ave^^Toronto^ON^M4N 3M5^CA||^PRN^PH^^1^416^4804100
+MRG|9988776655^^^ON_HN^JHN||VIS2025120301
+```
+
+---
+
+## 8. ORU^R01 - CBC lab result
+
+```
+MSH|^~\&|MILLENNIUM|SUNNYBROOK_HIS|LAB_RECV|EMR_SYS|20260509113000||ORU^R01^ORU_R01|MSG00008|P|2.5
+PID|||7812345678^^^ON_HN^JHN||Thompson^Margaret^Anne^^Mrs.||19580312|F|||2075 Bayview Ave^^Toronto^ON^M4N 3M5^CA
+ORC|RE|ORD100234|FIL200567||CM||||20260509080000|||12345^Chen^David^^^Dr.^^MD
+OBR|1|ORD100234|FIL200567|58410-2^CBC panel^LN|||20260509073000|||||||||12345^Chen^David^^^Dr.^^MD||||||20260509110000|||F
+OBX|1|NM|718-7^Hemoglobin^LN||128|g/L|120-160|N|||F
+OBX|2|NM|6690-2^Leukocytes^LN||7.2|x10E9/L|4.0-11.0|N|||F
+OBX|3|NM|789-8^Erythrocytes^LN||4.15|x10E12/L|3.80-5.20|N|||F
+OBX|4|NM|787-2^MCV^LN||88.5|fL|80.0-100.0|N|||F
+OBX|5|NM|777-3^Platelets^LN||245|x10E9/L|150-400|N|||F
+```
+
+---
+
+## 9. ORU^R01 - radiology report with embedded PDF
+
+```
+MSH|^~\&|MILLENNIUM|SUNNYBROOK_HIS|RAD_RECV|EMR_SYS|20260509153000||ORU^R01^ORU_R01|MSG00009|P|2.5
+PID|||7812345678^^^ON_HN^JHN||Thompson^Margaret^Anne^^Mrs.||19580312|F|||2075 Bayview Ave^^Toronto^ON^M4N 3M5^CA
+ORC|RE|ORD100300|FIL200700||CM||||20260509120000|||55667^Nguyen^Thi^^^Dr.^^MD
+OBR|1|ORD100300|FIL200700|71046-8^CT Chest^LN|||20260509120000|||||||||55667^Nguyen^Thi^^^Dr.^^MD||||||20260509150000|||F
+OBX|1|ED|PDF^Radiology Report^MILLENNIUM||^AP^^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2Jq||||||F
+OBX|2|FT|71046-8^CT Chest Impression^LN||No acute cardiopulmonary process. Mild dependent atelectasis bilateral bases.||||||F
+```
+
+---
+
+## 10. ORU^R01 - pathology report with embedded JPEG image
+
+```
+MSH|^~\&|MILLENNIUM|AHS_HOSP|PATH_RECV|EMR_SYS|20260510091500||ORU^R01^ORU_R01|MSG00010|P|2.4
+PID|||987654321^^^AB_PHN^JHN||Leblanc^Marie^Claire||19901115|F|||238 11 Ave SE^^Calgary^AB^T2G 0X8^CA
+ORC|RE|ORD100400|FIL200800||CM||||20260509140000|||77889^Roy^Francois^^^Dr.^^MD
+OBR|1|ORD100400|FIL200800|88305-8^Surgical pathology^LN|||20260509140000|||||||||77889^Roy^Francois^^^Dr.^^MD||||||20260510090000|||F
+OBX|1|ED|IMG^Pathology Slide Image^AHS||^IM^JPEG^Base64^/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMCwsKCwsNCwsMDQ4SEA0OEQ4LCxAWEBETFBUVFRQOFxcXFBT/2wBDAQMEBAUEBQkFBQkUDQsNFBQ||||||F
+OBX|2|FT|88305-8^Surgical pathology interpretation^LN||Left breast excision: Invasive ductal carcinoma, grade 2, 1.8 cm. Margins clear. ER positive, PR positive, HER2 negative.||||||F
+```
+
+---
+
+## 11. ORM^O01 - laboratory order
+
+```
+MSH|^~\&|MILLENNIUM|SUNNYBROOK_HIS|LAB_SYS|CORE_LAB|20260509070000||ORM^O01^ORM_O01|MSG00011|P|2.5
+PID|||7812345678^^^ON_HN^JHN||Thompson^Margaret^Anne^^Mrs.||19580312|F|||2075 Bayview Ave^^Toronto^ON^M4N 3M5^CA
+PV1||I|4EAST^401^A^SUNNYBROOK||||12345^Chen^David^^^Dr.^^MD
+ORC|NW|ORD100500||GRP001|||||20260509065500|||12345^Chen^David^^^Dr.^^MD
+OBR|1|ORD100500||58410-2^CBC panel^LN|||20260509070000|||||||||12345^Chen^David^^^Dr.^^MD
+ORC|NW|ORD100501||GRP001|||||20260509065500|||12345^Chen^David^^^Dr.^^MD
+OBR|2|ORD100501||24323-8^CMP^LN|||20260509070000|||||||||12345^Chen^David^^^Dr.^^MD
+```
+
+---
+
+## 12. ORM^O01 - radiology order
+
+```
+MSH|^~\&|MILLENNIUM|AHS_HOSP|RIS_SYS|RAD_DEPT|20260510080000||ORM^O01^ORM_O01|MSG00012|P|2.4
+PID|||123456789^^^AB_PHN^JHN||MacDonald^James^Robert||19750823|M|||14520 Stony Plain Rd NW^^Edmonton^AB^T5N 3Z4^CA
+PV1||O|OUTPT^CLINIC3^1^AHS_ROYAL_ALEX||||33445^Singh^Harpreet^^^Dr.^^MD
+ORC|NW|ORD100600|||||||20260510075000|||33445^Singh^Harpreet^^^Dr.^^MD
+OBR|1|ORD100600||71046-8^CT Chest with contrast^LN|||20260510080000|||||||||33445^Singh^Harpreet^^^Dr.^^MD||||||||||||ROUTINE
+```
+
+---
+
+## 13. SIU^S12 - new appointment notification
+
+```
+MSH|^~\&|MILLENNIUM|SUNNYBROOK_HIS|SCHED_RECV|CLINIC_SYS|20260511140000||SIU^S12^SIU_S12|MSG00013|P|2.5
+SCH|APT20260515001||||||ROUTINE^Routine^HL70276|FOLLOWUP^Follow-up visit^HL70277|30|MIN|^^30^20260515090000^20260515093000|12345^Chen^David^^^Dr.^^MD
+PID|||7812345678^^^ON_HN^JHN||Thompson^Margaret^Anne^^Mrs.||19580312|F|||2075 Bayview Ave^^Toronto^ON^M4N 3M5^CA
+PV1||O|OUTPT^CARDIO^1^SUNNYBROOK||||12345^Chen^David^^^Dr.^^MD
+RGS|1
+AIS|1||CARDIO_CONSULT^Cardiology Consultation^LOCAL|20260515090000|0|MIN|30|MIN
+AIP|1||12345^Chen^David^^^Dr.^^MD|||||20260515090000|0|MIN|30|MIN
+```
+
+---
+
+## 14. MDM^T02 - original document with embedded PDF
+
+```
+MSH|^~\&|MILLENNIUM|SUNNYBROOK_HIS|DOC_RECV|EMR_SYS|20260512100000||MDM^T02^MDM_T02|MSG00014|P|2.5
+EVN|T02|20260512100000
+PID|||7812345678^^^ON_HN^JHN||Thompson^Margaret^Anne^^Mrs.||19580312|F|||2075 Bayview Ave^^Toronto^ON^M4N 3M5^CA
+PV1||I|4EAST^401^A^SUNNYBROOK||||12345^Chen^David^^^Dr.^^MD
+TXA|1|DS^Discharge Summary^HL70270|TX|20260512090000||20260512100000|||||12345^Chen^David^^^Dr.^^MD||DOC3456789||||||AU
+OBX|1|ED|PDF^Discharge Summary Document^MILLENNIUM||^AP^^Base64^JVBERi0xLjUKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PgplbmRvYmoKMyAwIG9iago8PC9UeXBl||||||F
+```
+
+---
+
+## 15. ORU^R01 - comprehensive metabolic panel
+
+```
+MSH|^~\&|MILLENNIUM|AHS_HOSP|LAB_RECV|EMR_SYS|20260510160000||ORU^R01^ORU_R01|MSG00015|P|2.4
+PID|||123456789^^^AB_PHN^JHN||MacDonald^James^Robert||19750823|M|||14520 Stony Plain Rd NW^^Edmonton^AB^T5N 3Z4^CA
+ORC|RE|ORD100700|FIL200900||CM||||20260510080000|||33445^Singh^Harpreet^^^Dr.^^MD
+OBR|1|ORD100700|FIL200900|24323-8^Comprehensive metabolic panel^LN|||20260510073000|||||||||33445^Singh^Harpreet^^^Dr.^^MD||||||20260510153000|||F
+OBX|1|NM|2345-7^Glucose^LN||5.8|mmol/L|3.3-5.5|H|||F
+OBX|2|NM|2160-0^Creatinine^LN||92|umol/L|62-115|N|||F
+OBX|3|NM|3094-0^Urea nitrogen^LN||6.1|mmol/L|2.5-8.0|N|||F
+OBX|4|NM|17861-6^Calcium^LN||2.35|mmol/L|2.10-2.55|N|||F
+OBX|5|NM|2951-2^Sodium^LN||140|mmol/L|136-145|N|||F
+OBX|6|NM|2823-3^Potassium^LN||4.2|mmol/L|3.5-5.0|N|||F
+OBX|7|NM|1742-6^ALT^LN||28|U/L|7-56|N|||F
+OBX|8|NM|1920-8^AST^LN||24|U/L|10-40|N|||F
+```
+
+---
+
+## 16. ORU^R01 - microbiology culture result
+
+```
+MSH|^~\&|MILLENNIUM|SUNNYBROOK_HIS|MICRO_RECV|EMR_SYS|20260511120000||ORU^R01^ORU_R01|MSG00016|P|2.5
+PID|||7812345678^^^ON_HN^JHN||Thompson^Margaret^Anne^^Mrs.||19580312|F|||2075 Bayview Ave^^Toronto^ON^M4N 3M5^CA
+ORC|RE|ORD100800|FIL201000||CM||||20260509090000|||12345^Chen^David^^^Dr.^^MD
+OBR|1|ORD100800|FIL201000|87040-2^Blood culture^LN|||20260509090000|||||||||12345^Chen^David^^^Dr.^^MD||||||20260511113000|||F
+OBX|1|CWE|600-7^Bacteria identified^LN||No growth^^L||||||F
+OBX|2|ST|19146-0^Reference lab^LN||Aerobic bottle: No growth after 5 days incubation.||||||F
+```
+
+---
+
+## 17. SIU^S12 - surgical scheduling notification
+
+```
+MSH|^~\&|MILLENNIUM|AHS_HOSP|SCHED_RECV|OR_SYS|20260512083000||SIU^S12^SIU_S12|MSG00017|P|2.4
+SCH|APT20260520001||||||ELECTIVE^Elective^HL70276|SURGERY^Surgical procedure^HL70277|120|MIN|^^120^20260520073000^20260520093000|77889^Roy^Francois^^^Dr.^^MD
+PID|||987654321^^^AB_PHN^JHN||Leblanc^Marie^Claire||19901115|F|||238 11 Ave SE^^Calgary^AB^T2G 0X8^CA
+PV1||P|SURG^OR3^1^AHS_FOOTHILLS||||77889^Roy^Francois^^^Dr.^^MD
+RGS|1
+AIS|1||KNEE_ARTHRO^Knee Arthroscopy^LOCAL|20260520073000|0|MIN|120|MIN
+AIP|1||77889^Roy^Francois^^^Dr.^^MD|||||20260520073000|0|MIN|120|MIN
+```
+
+---
+
+## 18. MDM^T02 - consultation note
+
+```
+MSH|^~\&|MILLENNIUM|SUNNYBROOK_HIS|DOC_RECV|EMR_SYS|20260511160000||MDM^T02^MDM_T02|MSG00018|P|2.5
+EVN|T02|20260511160000
+PID|||7812345678^^^ON_HN^JHN||Thompson^Margaret^Anne^^Mrs.||19580312|F|||2075 Bayview Ave^^Toronto^ON^M4N 3M5^CA
+PV1||I|4EAST^401^A^SUNNYBROOK||||12345^Chen^David^^^Dr.^^MD
+TXA|1|CN^Consultation Note^HL70270|TX|20260511150000||20260511160000|||||67890^Patel^Anita^^^Dr.^^MD||DOC3456790||||||AU
+OBX|1|FT|CN^Consultation Note Text^LOCAL||Consultation requested for management of new-onset atrial fibrillation in setting of pneumonia. Rate control with metoprolol recommended. Anticoagulation to be addressed after acute infection resolved.||||||F
+```
+
+---
+
+## 19. ORU^R01 - ECG report with embedded TIFF image
+
+```
+MSH|^~\&|MILLENNIUM|SUNNYBROOK_HIS|CARDIO_RECV|EMR_SYS|20260510144500||ORU^R01^ORU_R01|MSG00019|P|2.5
+PID|||7812345678^^^ON_HN^JHN||Thompson^Margaret^Anne^^Mrs.||19580312|F|||2075 Bayview Ave^^Toronto^ON^M4N 3M5^CA
+ORC|RE|ORD100900|FIL201100||CM||||20260510140000|||12345^Chen^David^^^Dr.^^MD
+OBR|1|ORD100900|FIL201100|93000-1^Electrocardiogram^LN|||20260510140000|||||||||12345^Chen^David^^^Dr.^^MD||||||20260510143000|||F
+OBX|1|ED|IMG^ECG Tracing^MILLENNIUM||^IM^TIFF^Base64^SUkqAAgAAAAIAAABAwABAAAAgAcAAAEBAwABAAAAXAUAAAIBAwABAAAAAQAAAwEDAAEAAAABAAAABgEDAAEAAAACAAAAEQEEAAEAAAAIAAAAFQEDAAEAAAABAAAAFgED||||||F
+OBX|2|FT|93000-1^ECG Interpretation^LN||Normal sinus rhythm. Rate 78 bpm. Normal axis. No ST changes. QTc 420 ms.||||||F
+```
+
+---
+
+## 20. ORU^R01 - urinalysis result
+
+```
+MSH|^~\&|MILLENNIUM|AHS_HOSP|LAB_RECV|EMR_SYS|20260511093000||ORU^R01^ORU_R01|MSG00020|P|2.4
+PID|||123456789^^^AB_PHN^JHN||MacDonald^James^Robert||19750823|M|||14520 Stony Plain Rd NW^^Edmonton^AB^T5N 3Z4^CA
+ORC|RE|ORD101000|FIL201200||CM||||20260511070000|||33445^Singh^Harpreet^^^Dr.^^MD
+OBR|1|ORD101000|FIL201200|24356-8^Urinalysis complete^LN|||20260511070000|||||||||33445^Singh^Harpreet^^^Dr.^^MD||||||20260511090000|||F
+OBX|1|CWE|5767-9^Appearance^LN||Clear^^L||||||F
+OBX|2|CWE|5778-6^Color^LN||Yellow^^L||||||F
+OBX|3|NM|2756-5^pH^LN||6.0||5.0-8.0|N|||F
+OBX|4|NM|2965-2^Specific gravity^LN||1.015||1.005-1.030|N|||F
+OBX|5|CWE|5792-7^Glucose UA^LN||Negative^^L||||||F
+OBX|6|CWE|20405-7^Leukocytes UA^LN||Negative^^L||||||F
+OBX|7|CWE|5802-4^Nitrite UA^LN||Negative^^L||||||F
+```

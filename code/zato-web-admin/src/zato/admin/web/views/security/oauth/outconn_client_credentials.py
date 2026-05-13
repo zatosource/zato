@@ -20,7 +20,7 @@ from zato.admin.web.forms.security.oauth.outconn_client_credentials import Creat
 from zato.admin.web.views import change_password as _change_password, \
      CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,14 +38,15 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active', 'username', 'auth_server_url', 'scopes', \
-            'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format'
-        output_repeated = True
+    input_required = 'cluster_id',
+    output_required = 'id', 'name', 'is_active', 'username', 'auth_server_url', 'scopes', \
+        'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format', \
+        'static_header', 'static_token', 'static_prefix'
+    output_repeated = True
 
     def handle(self):
         return {
+            'show_search_form': True,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'change_password_form': ChangePasswordForm(),
@@ -57,10 +58,11 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_active', 'username', 'auth_server_url', 'scopes', \
-            'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format'
-        output_required = 'id', 'name'
+    input_required = 'name', 'is_active'
+    input_optional = 'username', 'auth_server_url', 'scopes', \
+        'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format', \
+        'static_header', 'static_token', 'static_prefix'
+    output_required = 'id', 'name'
 
     def success_message(self, item):
         return 'Bearer token definition `{}` {} successfully'.format(item.name, self.verb)

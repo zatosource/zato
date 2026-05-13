@@ -213,7 +213,10 @@ $.fn.zato.settings.executeSteps = function(options) {
     let currentStep = 0;
     const totalSteps = stepsArray.length;
 
+    console.log('UPDATE-TRACE executeSteps: totalSteps=' + totalSteps + ', baseUrl=' + baseUrl + ', steps=' + JSON.stringify(Object.keys(steps)));
+
     const runNextStep = function() {
+        console.log('UPDATE-TRACE runNextStep: currentStep=' + currentStep + '/' + totalSteps + ', url=' + (stepsArray[currentStep] ? stepsArray[currentStep].url : 'DONE'));
         if (currentStep >= totalSteps) {
             $.fn.zato.settings.updateProgress(progressKey, 'completed', completedText);
             if (completionBadgeSelector && completionBadgeText) {
@@ -235,6 +238,8 @@ $.fn.zato.settings.executeSteps = function(options) {
 
         $.fn.zato.settings.updateProgress(progressKey, 'processing', progressText, statusText);
 
+        console.log('UPDATE-TRACE runNextStep: POSTing to ' + step.url);
+
         $.ajax({
             url: step.url,
             type: 'POST',
@@ -242,11 +247,13 @@ $.fn.zato.settings.executeSteps = function(options) {
                 'X-CSRFToken': $.cookie('csrftoken')
             },
             success: function(response) {
+                console.log('UPDATE-TRACE runNextStep: success from ' + step.url + ', response=' + JSON.stringify(response));
                 if (options.onStepComplete) {
                     options.onStepComplete(step, response);
                 }
 
                 if (pollUrl && step.url.includes('dashboard')) {
+                    console.log('UPDATE-TRACE runNextStep: entering dashboard poll branch, pollUrl=' + pollUrl);
                     let pollAttempts = 0;
 
                     const pollDashboard = function() {
@@ -278,10 +285,12 @@ $.fn.zato.settings.executeSteps = function(options) {
                     setTimeout(pollDashboard, pollDelay);
                 } else {
                     currentStep++;
+                    console.log('UPDATE-TRACE runNextStep: advancing to step ' + currentStep + ', delay=' + stepDelay + 'ms');
                     setTimeout(runNextStep, stepDelay);
                 }
             },
             error: function(xhr) {
+                console.error('UPDATE-TRACE runNextStep: error from ' + step.url + ', status=' + xhr.status + ', statusText=' + xhr.statusText + ', responseText=' + xhr.responseText);
                 let errorMsg = step.text + ' failed';
                 try {
                     const response = JSON.parse(xhr.responseText);

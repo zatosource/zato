@@ -1,0 +1,152 @@
+/*
+ * Form tabs - reusable tabbed navigation for jQuery UI dialog forms.
+ *
+ * Provides a dark, high-contrast tab strip designed to sit between
+ * a dialog's title bar and its form content. The look is intentionally
+ * distinct from the dashboard-kit tabs: dark background with light text,
+ * a subtle glow on the active tab, and a solid bottom border that
+ * bridges visually into the form body below.
+ *
+ * ---------------------------------------------------------------
+ * How to use
+ * ---------------------------------------------------------------
+ *
+ * 1. Include this CSS file in your template's extra_css block:
+ *
+ *      <link rel="stylesheet" href="/static/css/shared/form-tabs.css">
+ *
+ * 2. Include the companion JS file in your extra_js block:
+ *
+ *      <script src="/static/js/shared/form-tabs.js"></script>
+ *
+ * 3. Add the standard dashboard-tabs markup inside a .data-popup div:
+ *
+ *      <div class="dashboard-tabs" role="tablist">
+ *          <button type="button" class="dashboard-tab" data-tab="main"
+ *              role="tab">Main</button>
+ *          <button type="button" class="dashboard-tab" data-tab="details"
+ *              role="tab">Details</button>
+ *      </div>
+ *
+ *      <div class="dashboard-tab-panel" id="my-create-tab-panel-main"
+ *          role="tabpanel"> ... </div>
+ *      <div class="dashboard-tab-panel" id="my-create-tab-panel-details"
+ *          role="tabpanel" hidden> ... </div>
+ *
+ * 4. In your page JS, call the form-tab reset before opening a dialog:
+ *
+ *      $.fn.zato.form_tabs.reset({
+ *          div_id:       '#create-div',
+ *          panel_prefix: 'my-create-tab-panel-',
+ *          tab_names:    ['main', 'details'],
+ *          default_tab:  'main'
+ *      });
+ *
+ * ---------------------------------------------------------------
+ * Customisation
+ * ---------------------------------------------------------------
+ *
+ * Every color and dimension is controlled by CSS custom properties
+ * defined on .data-popup. Override any of them in a page-level
+ * <style> block or on a specific .data-popup element to adjust
+ * the appearance without editing this file.
+ *
+ * Variable                   Purpose
+ * --form-tab-bg              Tab strip background
+ * --form-tab-color           Inactive tab text
+ * --form-tab-color-bright    Active / hovered tab text
+ * --form-tab-hover-bg        Hovered tab background
+ * --form-tab-active-bg       Active tab background
+ * --form-tab-active-border   Active tab bottom border
+ * --form-tab-glow            Active tab text glow
+ * --form-tab-font-size       Tab label font size
+ * --form-tab-border-width    Bottom border thickness
+ */
+
+/* Variables scoped to .data-popup so they never leak to the dashboard. */
+.data-popup {
+    --form-tab-bg: #052238;
+    --form-tab-color: #ffffffb3;
+    --form-tab-color-bright: #ffffffe6;
+    --form-tab-hover-bg: #ffffff14;
+    --form-tab-active-bg: #ffffff33;
+    --form-tab-active-border: #ccc;
+    --form-tab-glow: #d4af3733;
+    --form-tab-font-size: 0.59rem;
+    --form-tab-border-width: 3px;
+}
+
+/* Reset form-data border and dialog box-shadow for a clean join. */
+.data-popup .form-data {
+    border: none;
+}
+
+.data-popup .bd {
+    box-shadow: none;
+}
+
+/* Tab strip container. */
+.data-popup .dashboard-tabs {
+    display: flex;
+    background: var(--form-tab-bg);
+    border: 0;
+    outline: 0;
+    padding: 0;
+    gap: 0;
+    border-radius: 0;
+    margin-bottom: 0;
+}
+
+/* Inactive tab buttons. The bottom border matches the strip
+   background to reserve space and prevent layout shift. */
+.data-popup .dashboard-tabs > .dashboard-tab {
+    color: var(--form-tab-color);
+    font-size: var(--form-tab-font-size);
+    font-weight: 500;
+    padding: 8px 20px;
+    border-radius: 0;
+    border: 1px solid transparent;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+
+/* Hover state. */
+.data-popup .dashboard-tabs > .dashboard-tab:hover {
+    color: var(--form-tab-color-bright);
+    background: var(--form-tab-hover-bg);
+    border: 1px solid transparent;
+}
+
+/* Active tab. All four pseudo-states covered to prevent
+   browser defaults from overriding the selected appearance. */
+.data-popup .dashboard-tabs > .dashboard-tab-active,
+.data-popup .dashboard-tabs > .dashboard-tab-active:hover,
+.data-popup .dashboard-tabs > .dashboard-tab-active:focus,
+.data-popup .dashboard-tabs > .dashboard-tab-active:active {
+    color: var(--form-tab-color-bright);
+    background: var(--form-tab-active-bg);
+    border: 1px solid transparent;
+    border-radius: 0;
+    box-shadow: none;
+    text-shadow: 0 0 8px var(--form-tab-glow);
+}
+
+/* Smaller toggle switch inside dialog forms. The off-state track
+   uses a darker shade so it stands out against the form background. */
+.data-popup {
+    --toggle-width: 32px;
+    --toggle-height: 16px;
+    --toggle-knob-size: 12px;
+    --toggle-knob-offset: 2px;
+    --toggle-travel: 16px;
+    --toggle-off-bg: #999;
+    --toggle-on-bg: #2d6392;
+}
+
+/* Read-only inputs in the routing tab when "Default" is active. */
+.data-popup input.routing-disabled {
+    background-color: #e8e8e8;
+    color: #888;
+    cursor: not-allowed;
+}
+

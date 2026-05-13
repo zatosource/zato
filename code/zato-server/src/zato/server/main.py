@@ -13,53 +13,6 @@ warnings.filterwarnings('ignore', category=UserWarning, message='.*pkg_resources
 
 import os
 
-# Reusable
-true_values = {'true', '1', 'y', 'yes'}
-
-# Datadog monitoring - must be initialized before gevent monkey-patching
-# per ddtrace docs: "import ddtrace.auto before calling gevent.monkey.patch_all()"
-datadog_main_agent = os.environ.get('Zato_Datadog_Main_Agent')
-datadog_metrics_agent = os.environ.get('Zato_Datadog_Metrics_Agent')
-datadog_service_name = os.environ.get('Zato_Datadog_Service_Name') or 'zato.server'
-
-datadog_enabled_env = os.environ.get('Zato_Datadog_Enabled')
-datadog_enabled_env = datadog_enabled_env.lower() in true_values if datadog_enabled_env else False
-
-is_datadog_enabled = datadog_enabled_env or bool(datadog_main_agent or datadog_metrics_agent)
-
-if is_datadog_enabled:
-
-    # Check if we need DD debug logs ..
-    has_debug = os.environ.get('Zato_Datadog_Debug_Enabled')
-    has_debug = has_debug.lower() in {'true', '1'} if has_debug else False
-    has_debug = str(has_debug).lower()
-
-    # .. and assign that accordingly ..
-    os.environ['DD_TRACE_DEBUG'] = has_debug
-
-    # .. set agent host if configured - must be done before importing ddtrace ..
-    if datadog_main_agent:
-        main_host, main_port = datadog_main_agent.split(':')
-        os.environ['DD_AGENT_HOST'] = main_host
-        os.environ['DD_TRACE_AGENT_PORT'] = main_port
-
-    # .. set dogstatsd host if configured ..
-    if datadog_metrics_agent:
-        metrics_host, metrics_port = datadog_metrics_agent.split(':')
-        os.environ['DD_DOGSTATSD_HOST'] = metrics_host
-        os.environ['DD_DOGSTATSD_PORT'] = metrics_port
-
-    # .. set service name - always ensure it exists ..
-    os.environ['DD_SERVICE'] = datadog_service_name
-
-    # .. import ddtrace.auto before gevent patching ..
-    try:
-        import ddtrace.auto # noqa: F401
-    except ImportError as e:
-        from logging import getLogger
-        logger = getLogger('zato')
-        logger.warning(f'Datadog not available: {e}')
-
 # Monkey-patching modules individually can be about 20% faster,
 # or, in absolute terms, instead of 275 ms it may take 220 ms.
 from gevent.monkey import patch_builtins, patch_contextvars, patch_thread, patch_time, patch_os, patch_queue, patch_select, \
@@ -90,14 +43,6 @@ else:
 
 # stdlib
 import logging
-
-# Grafana Cloud monitoring - values read later in run() after logging is configured
-grafana_cloud_instance_id = None
-grafana_cloud_api_key = None
-grafana_cloud_endpoint = None
-is_grafana_cloud_enabled = False
-
-# stdlib
 import locale
 import sys
 from logging.config import dictConfig
@@ -117,25 +62,26 @@ from zato.common.ext.configobj_ import ConfigObj
 from zato.common.ipaddress_ import get_preferred_ip
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
-from zato.common.simpleio_ import get_sio_server_config
-from zato.common.util.api import asbool, get_config, is_encrypted, parse_cmd_line_options, \
+from zato.common.ext.bunch import Bunch
+from zato.common.defaults import secret_fields_exact, secret_fields_prefix, secret_fields_suffix
+from zato.common.util.api import asbool, get_config, is_encrypted, new_cid_server, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.platform_ import is_linux, is_mac, is_windows
 from zato.common.util.open_ import open_r
 from zato.server.base.parallel import ParallelServer
-from zato.server.ext import zunicorn
-from zato.server.ext.zunicorn.app.base import Application
 from zato.server.service.store import ServiceStore
 from zato.server.startup_callable import StartupCallableTool
+
+# Rust core
+from zato_server_core import HTTPServer, handle_http_request, init_rest_log, init_access_log
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import any_, callable_, dictnone, strintnone
-    from zato.server.ext.zunicorn.config import Config as ZunicornConfig
     callable_ = callable_
 
 # ################################################################################################################################
@@ -177,9 +123,7 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ZatoGunicornApplication(Application):
-
-    cfg: 'ZunicornConfig'
+class ZatoApplication:
 
     def __init__(
         self,
@@ -187,8 +131,6 @@ class ZatoGunicornApplication(Application):
         repo_location:'str',
         config_main:'Bunch',
         crypto_config:'Bunch',
-        *args:'any_',
-        **kwargs:'any_'
     ) -> 'None':
         self.zato_wsgi_app = zato_wsgi_app
         self.repo_location = repo_location
@@ -197,83 +139,96 @@ class ZatoGunicornApplication(Application):
         self.zato_host = ''
         self.zato_port = -1
         self.zato_config = {}
-        super(ZatoGunicornApplication, self).__init__(*args, **kwargs)
+        self._http_server:'HTTPServer | None' = None
+        self._init_config()
 
 # ################################################################################################################################
 
-    def get_config_value(self, config_key:'str') -> 'strintnone':
+    def _get_config_value(self, config_key:'str') -> 'strintnone':
 
         # First, map the config key to its corresponding environment variable
         env_key = ModuleCtx.Env_Map[config_key]
 
         # First, check if we have such a value among environment variables ..
         if value := os.environ.get(env_key):
-
-            # .. if yes, we can return it now ..
             return value
 
         # .. we are here if there was no such environment variable ..
         # .. but maybe there is a config key on its own ..
         if value := self.config_main.get(config_key): # type: ignore
-
-            # ..if yes, we can return it ..
             return value # type: ignore
 
-        # .. we are here if we have nothing to return, so let's do it explicitly.
         return None
 
 # ################################################################################################################################
 
-    def init(self, *ignored_args:'any_', **ignored_kwargs:'any_') -> 'None':
-
-        self.cfg.set('post_fork', self.zato_wsgi_app.post_fork) # Initializes a worker
-        self.cfg.set('on_starting', self.zato_wsgi_app.on_starting) # Generates the deployment key
-        self.cfg.set('before_pid_kill', self.zato_wsgi_app.before_pid_kill) # Cleans up before the worker exits
-        self.cfg.set('worker_exit', self.zato_wsgi_app.worker_exit) # Cleans up after the worker exits
+    def _init_config(self) -> 'None':
 
         for k, v in self.config_main.items():
-            if k.startswith('gunicorn') and v:
-                k = k.replace('gunicorn_', '')
-                if k == 'bind':
-                    if not ':' in v:
-                        raise ValueError('No port found in main.gunicorn_bind')
-                    else:
-                        host, port = v.split(':')
-                        self.zato_host = host
-                        self.zato_port = port
-                self.cfg.set(k, v)
+            if k == 'bind' and v:
+                if ':' not in v:
+                    raise ValueError('No port found in main.bind')
+                else:
+                    host, port = v.split(':')
+                    self.zato_host = host
+                    self.zato_port = port
             else:
                 if 'deployment_lock' in k:
                     v = int(v)
-
                 self.zato_config[k] = v
 
-        # Override pre-3.2 names with non-gunicorn specific ones ..
-
-        # .. number of processes / threads ..
-        if num_threads := self.get_config_value('num_threads'):
-            self.cfg.set('workers', num_threads)
-
         # .. what interface to bind to ..
-        if bind_host := self.get_config_value('bind_host'): # type: ignore
+        if bind_host := self._get_config_value('bind_host'): # type: ignore
             self.zato_host = bind_host
 
         # .. what is our main TCP port ..
-        if bind_port := self.get_config_value('bind_port'): # type: ignore
+        if bind_port := self._get_config_value('bind_port'): # type: ignore
             self.zato_port = bind_port
-
-        # .. now, set the bind config value once more in self.cfg  ..
-        # .. because it could have been overwritten via bind_host or bind_port ..
-        bind = f'{self.zato_host}:{self.zato_port}'
-        self.cfg.set('bind', bind)
 
         for name in('deployment_lock_expires', 'deployment_lock_timeout'):
             setattr(self.zato_wsgi_app, name, self.zato_config[name])
 
-        self.zato_wsgi_app.has_gevent = 'gevent' in self.cfg.settings['worker_class'].value
+        self.zato_wsgi_app.has_gevent = True
 
-    def load(self):
-        return self.zato_wsgi_app.on_wsgi_request
+# ################################################################################################################################
+
+    def run(self) -> 'None':
+
+        # tzlocal
+        from tzlocal import get_localzone
+
+        server = self.zato_wsgi_app
+
+        # Generate the deployment key
+        from uuid import uuid4
+        from datetime import datetime, timezone
+        deployment_key = '{}.{}'.format(datetime.now(timezone.utc).isoformat(), uuid4().hex)
+
+        # Initialize the server
+        ParallelServer.start_server_process(server, deployment_key)
+
+        # Build the request handler for the Rust HTTP server
+        local_tz = get_localzone()
+        utc_offset = local_tz.utcoffset(datetime.now(timezone.utc))
+        local_tz_offset_secs = int(utc_offset.total_seconds())
+
+        def request_handler(environ:'dict') -> 'tuple':
+            return handle_http_request(server, environ, new_cid_server, local_tz_offset_secs)
+
+        # Build server software header
+        server_software = server.fs_server_config.misc.get('http_server_header', 'Apache')
+
+        host = str(self.zato_host)
+        port = int(self.zato_port)
+
+        self._http_server = HTTPServer(host, port, request_handler, server_software)
+
+        try:
+            self._http_server.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            server.cleanup_on_stop()
 
 # ################################################################################################################################
 
@@ -316,7 +271,7 @@ def get_env_manager_base_dir(code_dir:'str') -> 'str':
 
 # ################################################################################################################################
 
-def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None) -> 'ParallelServer | None':
+def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'ParallelServer | None':
 
     # Zato
     from zato.common.util.cli import read_stdin_data
@@ -389,33 +344,16 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
 
     logger = logging.getLogger(__name__)
 
-    # Read Grafana Cloud config
-    global grafana_cloud_instance_id, grafana_cloud_api_key, grafana_cloud_endpoint, is_grafana_cloud_enabled
-
-    grafana_cloud_instance_id = os.environ.get('Zato_Grafana_Cloud_Instance_ID')
-    grafana_cloud_api_key = os.environ.get('Zato_Grafana_Cloud_API_Key')
-    grafana_cloud_endpoint = os.environ.get('Zato_Grafana_Cloud_Endpoint')
-
-    if not (grafana_cloud_instance_id and grafana_cloud_api_key and grafana_cloud_endpoint):
-        try:
-            import redis as redis_lib
-            redis_client = redis_lib.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-            if redis_client.get('zato:grafana_cloud:is_enabled') == 'true':
-                grafana_cloud_instance_id = grafana_cloud_instance_id or redis_client.get('zato:grafana_cloud:instance_id')
-                grafana_cloud_api_key = grafana_cloud_api_key or redis_client.get('zato:grafana_cloud:runtime_token')
-                grafana_cloud_endpoint = grafana_cloud_endpoint or redis_client.get('zato:grafana_cloud:endpoint')
-        except Exception:
-            pass
-
-    is_grafana_cloud_enabled = bool(grafana_cloud_instance_id and grafana_cloud_api_key and grafana_cloud_endpoint)
-
     crypto_manager = ServerCryptoManager(repo_location, secret_key=options['secret_key'], stdin_data=read_stdin_data())
     secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
     server_config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_config)
     pickup_config = get_config(repo_location, 'pickup.conf')
 
-    sio_config = get_config(repo_location, 'simple-io.conf', needs_user_config=False)
-    sio_config = get_sio_server_config(sio_config)
+    io_config = Bunch()
+    io_config.secret = Bunch()
+    io_config.secret.exact = secret_fields_exact
+    io_config.secret.prefix = secret_fields_prefix
+    io_config.secret.suffix = secret_fields_suffix
 
     server_config.main.token = server_config.main.token.encode('utf8')
 
@@ -423,7 +361,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     preferred_address = server_config.preferred_address.get('address') or ''
 
     if not preferred_address:
-        preferred_address = get_preferred_ip(server_config.main.gunicorn_bind, server_config.preferred_address)
+        preferred_address = get_preferred_ip(server_config.main.bind, server_config.preferred_address)
 
     if not preferred_address and not server_config.server_to_server.boot_if_preferred_not_found:
         msg = 'Unable to start the server. Could not obtain a preferred address, please configure [bind_options] in server.conf'
@@ -437,11 +375,11 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     startup_callable_tool.invoke(SERVER_STARTUP.PHASE.FS_CONFIG_ONLY, kwargs={
         'server_config': server_config,
         'pickup_config': pickup_config,
-        'sio_config': sio_config,
+        'io_config': io_config,
         'base_dir': base_dir,
     })
 
-    zunicorn.SERVER_SOFTWARE = server_config.misc.get('http_server_header', 'Apache')
+    server_software = server_config.misc.get('http_server_header', 'Apache')
 
     user_locale = server_config.misc.get('locale', None)
     if user_locale:
@@ -481,7 +419,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     if stop_after:
         stop_after = int(stop_after)
 
-    zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
+    zato_app = ZatoApplication(server, repo_location, server_config.main, server_config.crypto)
 
     server.has_fg = options.get('fg') or False
     server.env_file = env_file
@@ -489,8 +427,8 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.deploy_auto_from = options.get('deploy_auto_from') or ''
     server.crypto_manager = crypto_manager
     server.odb_data = server_config.odb
-    server.host = zato_gunicorn_app.zato_host
-    server.port = zato_gunicorn_app.zato_port
+    server.host = zato_app.zato_host
+    server.port = zato_app.zato_port
     server.use_tls = server_config.crypto.use_tls
     server.repo_location = repo_location
     server.pickup_config = pickup_config
@@ -503,7 +441,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
     server.logging_config = logging_config
     server.logging_conf_path = logging_conf_path
-    server.sio_config = sio_config
+    server.io_config = io_config
     server.user_config.update(server_config.user_config_items)
     server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']
@@ -512,9 +450,6 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.startup_callable_tool = startup_callable_tool
     server.stop_after = stop_after # type: ignore
 
-    # Monitoring
-    server.is_datadog_enabled = is_datadog_enabled
-    server.is_grafana_cloud_enabled = is_grafana_cloud_enabled
     server.env_name = os.environ.get('Zato_Env_Name', '')
 
     if scheduler_api_password := server.fs_server_config.scheduler.get('scheduler_api_password'):
@@ -531,22 +466,20 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     for key, value in os_environ.items():
         os.environ[key] = value
 
-    # Run the hook right before the Gunicorn-level server actually starts
+    # Run the hook right before the server actually starts
     startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IMPL_BEFORE_RUN, kwargs={
-        'zato_gunicorn_app': zato_gunicorn_app,
+        'zato_app': zato_app,
     })
 
-    # .. no memory profiler here.
-    start_wsgi_app(zato_gunicorn_app, start_gunicorn_app)
+    # Initialize Rust-based loggers (10 MB rotation)
+    _log_max_bytes = 10 * 1024 * 1024
+    init_rest_log(os.path.join(server.logs_dir, 'rest.log'), _log_max_bytes)
+    init_access_log(os.path.join(server.logs_dir, 'access.log'), _log_max_bytes)
 
-# ################################################################################################################################
-
-def start_wsgi_app(zato_gunicorn_app:'any_', start_gunicorn_app:'bool') -> 'None':
-
-    if start_gunicorn_app:
-        zato_gunicorn_app.run()
+    if start_server:
+        zato_app.run()
     else:
-        return zato_gunicorn_app.zato_wsgi_app
+        return server
 
 # ################################################################################################################################
 

@@ -1,0 +1,261 @@
+# Swedwise Healthcare Suite (SHS) - HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - inpatient admission routed through SHS from TakeCare to national NPÖ
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|NPO|INERA^1.2.752.129^ISO|20260114084500||ADT^A01^ADT_A01|SHS20260114084500001|P|2.5.1|||AL|NE||8859/1|||2.16.840.1.113883.2.32
+EVN|A01|20260114083000|||SE481726^Fält^Rebecka^^^sjuksköterska
+PID|||194711062538^^^1.2.752.129.2.1.3.1^NI||Hedström^Göran^Vilhelm^^herr||19471106|M|||Hantverkargatan 34^^Stockholm^^11221^SE^H||^^PH^0816239847~^^CP^0703948216||SWE|M||||||||N
+PV1||I|KARH^AVD42^S3^SE2321000016-1003^^^^Karolinska Huddinge||||SE652184^Åkerman^Nils^^^Dr.^leg. läkare|SE652185^Sandberg^Helena^^^Dr.^leg. läkare|||MED||||7|||SE652184^Åkerman^Nils^^^Dr.^leg. läkare||FALL20260114001|||||||||||||||||||20260114083000
+IN1|1|0|FK001|FÖRSÄKRINGSKASSAN|Klara Östra Kyrkogata 18^^Stockholm^^10451^SE
+```
+
+---
+
+## 2. ADT^A04 - outpatient registration forwarded by SHS to external systems
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|EXTCONSUMER|SE5560010750^1.2.752.29.4.19^ISO|20260221102000||ADT^A04^ADT_A01|SHS20260221102000015|P|2.5.1|||AL|NE||8859/1|||2.16.840.1.113883.2.32
+EVN|A04|20260221101500|||SE374519^Wikström^Josefin^^^sjuksköterska
+PID|||198204173692^^^1.2.752.129.2.1.3.1^NI||Löfgren^Cecilia^Annika^^fru||19820417|F|||Folkungagatan 91^^Stockholm^^11662^SE^H||^^PH^0856781234~^^CP^0736481927||SWE|O||||||||N
+PV1||O|SOS^MOT3^1^SE2321000016-1HWF^^^^Södersjukhuset||||SE839274^Dahlberg^Mattias^^^Dr.^leg. läkare|||ORT||||1|||SE839274^Dahlberg^Mattias^^^Dr.^leg. läkare||FALL20260221002
+```
+
+---
+
+## 3. ORU^R01 - lab result routed by SHS from Karolinska lab to TakeCare
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|TAKECARE|SE2321000016-1003^1.2.752.29.4.19^ISO|20260203153500||ORU^R01^ORU_R01|SHS20260203153500044|P|2.5.1|||AL|NE||8859/1|||2.16.840.1.113883.2.32
+PID|||196509284173^^^1.2.752.129.2.1.3.1^NI||Söderqvist^Inga^Marianne^^fru||19650928|F
+ORC|RE|REM20260203001||FLR20260203001
+OBR|1|REM20260203001|FLR20260203001|CHEM^Klinisk kemi panel^KUL|||20260203094500|||||||||SE652184^Åkerman^Nils^^^Dr.^leg. läkare||||20260203150000|||F
+OBX|1|NM|NPU01370^B-Hemoglobin (Hb)^NPU||138|g/L^gram per liter^ISO+|120-160||||F|||20260203140000
+OBX|2|NM|NPU03429^P-Glukos^NPU||5.4|mmol/L^millimol per liter^ISO+|3.5-5.6||||F|||20260203140000
+OBX|3|NM|NPU01459^P-Kreatinin^NPU||72|umol/L^mikromol per liter^ISO+|45-90||||F|||20260203141500
+OBX|4|NM|NPU04144^P-TSH^NPU||2.1|mIU/L^milli internationella enheter per liter^ISO+|0.4-4.0||||F|||20260203142000
+```
+
+---
+
+## 4. ORM^O01 - lab order routed by SHS from TakeCare to Karolinska lab
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|KUL_LIS|SE2321000016-H72G^1.2.752.29.4.19^ISO|20260203094600||ORM^O01^ORM_O01|SHS20260203094600022|P|2.5.1|||ER|NE||8859/1|||2.16.840.1.113883.2.32
+PID|||196509284173^^^1.2.752.129.2.1.3.1^NI||Söderqvist^Inga^Marianne^^fru||19650928|F|||Kungsholmsgatan 24^^Stockholm^^11235^SE^H||^^CP^0728365190
+PV1||O|KARH^MOT7^1||||SE652184^Åkerman^Nils^^^Dr.^leg. läkare
+ORC|NW|REM20260203001|||||^^^20260203094500^^R
+OBR|1|REM20260203001||CHEM^Klinisk kemi panel^KUL|||20260203094500|||SE652184^Åkerman^Nils^^^Dr.^leg. läkare||||Blod&Serum
+OBX|1|NM|NPU01370^B-Hemoglobin (Hb)^NPU||||||||||F
+OBX|2|NM|NPU03429^P-Glukos^NPU||||||||||F
+OBX|3|NM|NPU01459^P-Kreatinin^NPU||||||||||F
+```
+
+---
+
+## 5. ADT^A08 - patient update broadcast by SHS to all subscribing systems
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|SUBSCRIBER_ALL|BROADCAST^1.2.752.29.4.19^ISO|20260305140500||ADT^A08^ADT_A01|SHS20260305140500033|P|2.5.1|||AL|NE||8859/1|||2.16.840.1.113883.2.32
+EVN|A08|20260305140200
+PID|||193807254891^^^1.2.752.129.2.1.3.1^NI||Wännström^Britta^Elisabet^^fru||19380725|F|||Roslagsgatan 44 lgh 1201^^Solna^^17163^SE^H||^^PH^0854091726~^^CP^0764819235||SWE|M||||||||N
+PV1||N
+```
+
+---
+
+## 6. ORU^R01 - microbiology result with antibiogram routed by SHS
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|TAKECARE|SE2321000016-1003^1.2.752.29.4.19^ISO|20260219112000||ORU^R01^ORU_R01|SHS20260219112000018|P|2.5.1|||AL|NE||8859/1|||2.16.840.1.113883.2.32
+PID|||195306189247^^^1.2.752.129.2.1.3.1^NI||Häggström^Rolf^Ingemar^^herr||19530618|M
+ORC|RE|REM20260215001||FLR20260219001
+OBR|1|REM20260215001|FLR20260219001|UCULT^Urinodling^KUL|||20260215080000|||||||||SE716493^Berglund^Tomas^^^Dr.^leg. läkare||||20260219110000|||F
+OBX|1|CWE|BACT^Bakterie^KUL||ECO^Escherichia coli^KUL||||||F
+OBX|2|NM|CCNT^Koloniantal^KUL||100000|CFU/mL|>10000||||F
+OBX|3|CWE|ABXR^Ampicillin^KUL||R^Resistent^HL70078||||||F
+OBX|4|CWE|ABXR^Ciprofloxacin^KUL||S^Känslig^HL70078||||||F
+OBX|5|CWE|ABXR^Nitrofurantoin^KUL||S^Känslig^HL70078||||||F
+OBX|6|CWE|ABXR^Trimetoprim^KUL||R^Resistent^HL70078||||||F
+NTE|1||Rekommendation: Mecillinam 200 mg x 3 i 5 dagar
+```
+
+---
+
+## 7. ORM^O01 - radiology order routed by SHS from TakeCare to Sectra RIS
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|SECTRA_RIS|SE2321000016-1003^1.2.752.29.4.19^ISO|20260310080100||ORM^O01^ORM_O01|SHS20260310080100007|P|2.5.1|||ER|NE||8859/1|||2.16.840.1.113883.2.32
+PID|||197402083516^^^1.2.752.129.2.1.3.1^NI||Nordlund^Viktor^Sten^^herr||19740208|M|||Karlavägen 61^^Stockholm^^11449^SE^H||^^CP^0702637418
+PV1||O|KARH^RTG1^1||||SE839274^Dahlberg^Mattias^^^Dr.^leg. läkare
+ORC|NW|RAD20260310001|||||^^^20260310^^R
+OBR|1|RAD20260310001||XRTHX^Lungröntgen^SECTRA|||20260310080000|||||Hosta > 6 veckor, feber||||SE839274^Dahlberg^Mattias^^^Dr.^leg. läkare
+```
+
+---
+
+## 8. ORU^R01 - radiology report routed by SHS from Sectra RIS to TakeCare
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|TAKECARE|SE2321000016-1003^1.2.752.29.4.19^ISO|20260311142500||ORU^R01^ORU_R01|SHS20260311142500011|P|2.5.1|||AL|NE||8859/1|||2.16.840.1.113883.2.32
+PID|||197402083516^^^1.2.752.129.2.1.3.1^NI||Nordlund^Viktor^Sten^^herr||19740208|M
+ORC|RE|RAD20260310001||RADFLR20260311001
+OBR|1|RAD20260310001|RADFLR20260311001|XRTHX^Lungröntgen^SECTRA|||20260310080000|||||||||SE839274^Dahlberg^Mattias^^^Dr.^leg. läkare||||20260311140000|||F
+OBX|1|FT|RAD_RPT^Röntgenutlåtande^SECTRA||Frontal lungröntgen.\.br\\.br\Hjärta normalstort. Lungor utan pleurautgjutning.\.br\Inga fokala förtätningar. Fri sinus bilateralt.\.br\\.br\Bedömning: Normalt fynd.||||||F
+```
+
+---
+
+## 9. ADT^A40 - patient merge propagated by SHS to all downstream systems
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|ALL_SUBSCRIBERS|BROADCAST^1.2.752.29.4.19^ISO|20260412091600||ADT^A40^ADT_A39|SHS20260412091600002|P|2.5.1|||AL|NE||8859/1|||2.16.840.1.113883.2.32
+EVN|A40|20260412091500
+PID|||199108267451^^^1.2.752.129.2.1.3.1^NI||Västerberg^Oskar^Daniel^^^^L||19910826|M|||Götgatan 38^^Stockholm^^11826^SE^H
+MRG|199108267469^^^1.2.752.129.2.1.3.1^NI||TC98765
+```
+
+---
+
+## 10. ACK - SHS acknowledgement for received ORU result
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|KUL_LIS|SE2321000016-H72G^1.2.752.29.4.19^ISO|20260203153501||ACK^R01^ACK|SHS20260203153501001|P|2.5.1|||AL|NE||8859/1|||2.16.840.1.113883.2.32
+MSA|AA|KUL20260203153012088
+```
+
+---
+
+## 11. ORU^R01 - pathology result routed by SHS from Karolinska pathology to TakeCare
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|TAKECARE|SE2321000016-1003^1.2.752.29.4.19^ISO|20260225165000||ORU^R01^ORU_R01|SHS20260225165000008|P|2.5.1|||AL|NE||8859/1|||2.16.840.1.113883.2.32
+PID|||194503298176^^^1.2.752.129.2.1.3.1^NI||Öberg^Lennart^Harald^^herr||19450329|M
+ORC|RE|PAT20260218001||PATFLR20260225001
+OBR|1|PAT20260218001|PATFLR20260225001|HISTOL^Histopatologi^KUL|||20260218100000|||||Misstänkt malignitet, colon||||SE652184^Åkerman^Nils^^^Dr.^leg. läkare||||20260225160000|||F
+OBX|1|FT|PATH_RPT^Patologiutlåtande^KUL||Makroskopi: Polypliknande tumör i colon ascendens, 3.2 x 2.8 cm.\.br\Mikroskopi: Måttligt differentierat adenocarcinom med invasion genom muscularis propria.\.br\pT3 N0 (0/12 lymfkörtlar). Radikalt exciderat.\.br\SNOMED: M-81403, T-67000||||||F
+OBX|2|CWE|DIAG^Diagnos^KUL||C182^Malign tumör i colon ascendens^ICD-10-SE||||||F
+```
+
+---
+
+## 12. ORM^O01 - pharmacy order routed by SHS from TakeCare to pharmacy system
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|APOTEKET|SE5560010750^1.2.752.29.4.19^ISO|20260122102100||ORM^O01^ORM_O01|SHS20260122102100019|P|2.5.1|||ER|NE||8859/1|||2.16.840.1.113883.2.32
+PID|||197001146823^^^1.2.752.129.2.1.3.1^NI||Granberg^Elisabet^Katarina^^fru||19700114|F|||Tegnérgatan 29^^Stockholm^^11161^SE^H||^^CP^0731947285
+PV1||I|DS^AVD14^B2^SE2321000016-4G3R^^^^Danderyds sjukhus||||SE716493^Berglund^Tomas^^^Dr.^leg. läkare
+ORC|NW|RX20260122001|||||^^^20260122102000^^R
+RXO|ATC:N02BE01^Paracetamol^ATC|||500 mg|mg^milligram^ISO+|1 tablett var 6:e timme vid behov||||G||30^tablett
+```
+
+---
+
+## 13. SIU^S12 - scheduling notification forwarded by SHS
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|BOOKING_SYS|SE2321000016-EXT1^1.2.752.29.4.19^ISO|20260405090500||SIU^S12^SIU_S12|SHS20260405090500009|P|2.5.1|||AL|NE||8859/1|||2.16.840.1.113883.2.32
+SCH|BK20260415001||||||RUTIN^Rutinbesök^TC_BTYP|30^min||||||||||SE652184^Åkerman^Nils^^^Dr.^leg. läkare|^^PH^0816239000|SE652184^Åkerman^Nils^^^Dr.^leg. läkare|^^PH^0816239000|||BOOKED
+PID|||194711062538^^^1.2.752.129.2.1.3.1^NI||Hedström^Göran^Vilhelm^^herr||19471106|M|||Hantverkargatan 34^^Stockholm^^11221^SE^H||^^CP^0703948216
+RGS|1|A
+AIS|1|A|MED_MOT^Medicinsk mottagning^TC_SRV||20260415100000|30^min
+AIL|1|A|KARH^MOT7^1^SE2321000016-1003
+```
+
+---
+
+## 14. MDM^T02 - clinical document routed by SHS to document archive
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|DOC_ARCHIVE|SE2321000016-ARCH^1.2.752.29.4.19^ISO|20260201162000||MDM^T02^MDM_T02|SHS20260201162000055|P|2.5.1|||AL|NE||8859/1|||2.16.840.1.113883.2.32
+EVN|T02|20260201161500
+PID|||198204173692^^^1.2.752.129.2.1.3.1^NI||Löfgren^Cecilia^Annika^^fru||19820417|F
+PV1||O|SOS^MOT3^1^SE2321000016-1HWF^^^^Södersjukhuset||||SE839274^Dahlberg^Mattias^^^Dr.^leg. läkare
+TXA|1|NOTE^Journalanteckning^TC_DOC|TX|20260201161500||20260201161500|||||SE839274^Dahlberg^Mattias|||AU||||||
+OBX|1|TX|JOURNALNOTE^Journalanteckning^TAKECARE||Patienten söker för knäsmärta vänster sida sedan 3 veckor.\.br\Status: Svullnad lateralt. Ömhet vid palpation. Stabil sidoled.\.br\Bedömning: Misstänkt lateral meniskskada.\.br\Åtgärd: Remiss MR knä. Återbesök 3 veckor.||||||F
+```
+
+---
+
+## 15. ADT^A03 - discharge event distributed by SHS to multiple receivers
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|NPO|INERA^1.2.752.129^ISO|20260118163500||ADT^A03^ADT_A03|SHS20260118163500012|P|2.5.1|||AL|NE||8859/1|||2.16.840.1.113883.2.32
+EVN|A03|20260118163000
+PID|||197001146823^^^1.2.752.129.2.1.3.1^NI||Granberg^Elisabet^Katarina^^fru||19700114|F|||Tegnérgatan 29^^Stockholm^^11161^SE^H||^^CP^0731947285||SWE|M||||||||N
+PV1||I|DS^AVD14^B2^SE2321000016-4G3R^^^^Danderyds sjukhus||||SE716493^Berglund^Tomas^^^Dr.^leg. läkare|||KIR||||7|||SE716493^Berglund^Tomas^^^Dr.^leg. läkare||FALL20260110008|||||||||||||||||||20260110120000|20260118163000
+```
+
+---
+
+## 16. ORU^R01 - lab result with embedded PDF report routed by SHS (base64)
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|TAKECARE|SE2321000016-1003^1.2.752.29.4.19^ISO|20260228120500||ORU^R01^ORU_R01|SHS20260228120500037|P|2.5.1|||AL|NE||8859/1|||2.16.840.1.113883.2.32
+PID|||196509284173^^^1.2.752.129.2.1.3.1^NI||Söderqvist^Inga^Marianne^^fru||19650928|F
+ORC|RE|REM20260225001||FLR20260228001
+OBR|1|REM20260225001|FLR20260228001|LIPID^Lipidstatus^KUL|||20260225080000|||||||||SE652184^Åkerman^Nils^^^Dr.^leg. läkare||||20260228110000|||F
+OBX|1|NM|NPU01568^P-Kolesterol^NPU||5.8|mmol/L^millimol per liter^ISO+|<5.0|H|||F|||20260228100000
+OBX|2|NM|NPU01567^P-HDL-Kolesterol^NPU||1.4|mmol/L^millimol per liter^ISO+|>1.0||||F|||20260228100000
+OBX|3|NM|NPU01566^P-LDL-Kolesterol^NPU||3.6|mmol/L^millimol per liter^ISO+|<3.0|H|||F|||20260228100000
+OBX|4|NM|NPU04094^P-Triglycerider^NPU||1.7|mmol/L^millimol per liter^ISO+|<2.0||||F|||20260228100000
+OBX|5|ED|PDF^Lipidstatus sammanfattning^KUL||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNTk1IDg0Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovQ29udGVudHMgNCAwIFIKL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4KPj4KZW5kb2JqCjQgMCBvYmoKPDwKL0xlbmd0aCA5NQo+PgpzdHJlYW0KQlQKL0YxIDEyIFRmCjUwIDc5MiBUZAooU0hTIExpcGlkc3RhdHVzIFNhbW1hbmZhdHRuaW5nIC0gQW5uYSBCam9yaykgVGoKRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8Ci9UeXBlIC9Gb250Ci9TdWJ0eXBlIC9UeXBlMQovQmFzZUZvbnQgL0hlbHZldGljYQo+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDE1NSAwMDAwMCBuIAowMDAwMDAwMjk2IDAwMDAwIG4gCjAwMDAwMDA0NDIgMDAwMDAgbiAKdHJhaWxlcgo8PAovU2l6ZSA2Ci9Sb290IDEgMCBSCj4+CnN0YXJ0eHJlZgo1MjUKJSVFT0YK||||||F
+```
+
+---
+
+## 17. ORU^R01 - radiology result with embedded PDF routed by SHS (base64)
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|TAKECARE|SE2321000016-1003^1.2.752.29.4.19^ISO|20260312093500||ORU^R01^ORU_R01|SHS20260312093500014|P|2.5.1|||AL|NE||8859/1|||2.16.840.1.113883.2.32
+PID|||197402083516^^^1.2.752.129.2.1.3.1^NI||Nordlund^Viktor^Sten^^herr||19740208|M
+ORC|RE|RAD20260310001||RADFLR20260311001
+OBR|1|RAD20260310001|RADFLR20260311001|XRTHX^Lungröntgen^SECTRA|||20260310080000|||||||||SE839274^Dahlberg^Mattias^^^Dr.^leg. läkare||||20260311140000|||F
+OBX|1|FT|RAD_RPT^Röntgenutlåtande^SECTRA||Frontal lungröntgen.\.br\\.br\Hjärta normalstort. Lungor utan pleurautgjutning.\.br\Inga fokala förtätningar. Fri sinus bilateralt.\.br\\.br\Bedömning: Normalt fynd.||||||F
+OBX|2|ED|PDF^Röntgenutlåtande PDF^SECTRA||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNTk1IDg0Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovQ29udGVudHMgNCAwIFIKL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4KPj4KZW5kb2JqCjQgMCBvYmoKPDwKL0xlbmd0aCAxMzAKPj4Kc3RyZWFtCkJUCi9GMSAxMiBUZgo1MCA3OTIgVGQKKFNIUyBSb250Z2VudXRsYXRhbmRlIC0gS2FybCBFcmlrc3NvbikgVGoKMCA3NzIgVGQKKE5vcm1hbHQgZnluZC4gSGphcnRhIG5vcm1hbHN0b3J0LikgVGoKRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8Ci9UeXBlIC9Gb250Ci9TdWJ0eXBlIC9UeXBlMQovQmFzZUZvbnQgL0hlbHZldGljYQo+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDE1NSAwMDAwMCBuIAowMDAwMDAwMjk2IDAwMDAwIG4gCjAwMDAwMDA0NzcgMDAwMDAgbiAKdHJhaWxlcgo8PAovU2l6ZSA2Ci9Sb290IDEgMCBSCj4+CnN0YXJ0eHJlZgo1NjAKJSVFT0YK||||||F
+```
+
+---
+
+## 18. ORU^R01 - immunology/allergy result with embedded PDF routed by SHS (base64)
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|TAKECARE|SE2321000016-1003^1.2.752.29.4.19^ISO|20260401110500||ORU^R01^ORU_R01|SHS20260401110500031|P|2.5.1|||AL|NE||8859/1|||2.16.840.1.113883.2.32
+PID|||200309241748^^^1.2.752.129.2.1.3.1^NI||Sjöblom^Tuva^Linnéa^^fröken||20030924|F
+ORC|RE|REM20260328001||FLR20260401001
+OBR|1|REM20260328001|FLR20260401001|ALLERGY^Allergipanel^KUL|||20260328090000|||||||||SE839274^Dahlberg^Mattias^^^Dr.^leg. läkare||||20260401100000|||F
+OBX|1|NM|NPU19657^S-IgE, totalt^NPU||245|kU/L^kilo enheter per liter^ISO+|<100|H|||F|||20260401090000
+OBX|2|NM|NPU19792^S-IgE, björk (t3)^NPU||34.5|kUA/L^kilo allergen enheter per liter^ISO+|<0.35|H|||F|||20260401090000
+OBX|3|NM|NPU19810^S-IgE, gräspollen (g6)^NPU||18.2|kUA/L^kilo allergen enheter per liter^ISO+|<0.35|H|||F|||20260401090000
+OBX|4|NM|NPU19815^S-IgE, katt (e1)^NPU||0.12|kUA/L^kilo allergen enheter per liter^ISO+|<0.35||||F|||20260401090000
+OBX|5|ED|PDF^Allergipanel sammanfattning^KUL||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNTk1IDg0Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovQ29udGVudHMgNCAwIFIKL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4KPj4KZW5kb2JqCjQgMCBvYmoKPDwKL0xlbmd0aCAxMDUKPj4Kc3RyZWFtCkJUCi9GMSAxMiBUZgo1MCA3OTIgVGQKKFNIUyBBbGxlcmdpcGFuZWwgU2FtbWFuZmF0dG5pbmcgLSBTYWdhIE9sc3NvbikgVGoKMCA3NzIgVGQKKEZvcmhvamRhIHZhcmRlbiBmb3IgYmpvcmsgb2NoIGdyYXNwb2xsZW4uKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCjUgMCBvYmoKPDwKL1R5cGUgL0ZvbnQKL1N1YnR5cGUgL1R5cGUxCi9CYXNlRm9udCAvSGVsdmV0aWNhCj4+CmVuZG9iagp4cmVmCjAgNgowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTU1IDAwMDAwIG4gCjAwMDAwMDAyOTYgMDAwMDAgbiAKMDAwMDAwMDQ1MiAwMDAwMCBuIAp0cmFpbGVyCjw8Ci9TaXplIDYKL1Jvb3QgMSAwIFIKPj4Kc3RhcnR4cmVmCjUzNQolJUVPRgo=||||||F
+```
+
+---
+
+## 19. ADT^A28 - new patient registration propagated by SHS from population registry
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|ALL_SUBSCRIBERS|BROADCAST^1.2.752.29.4.19^ISO|20260501080500||ADT^A28^ADT_A05|SHS20260501080500003|P|2.5.1|||AL|NE||8859/1|||2.16.840.1.113883.2.32
+EVN|A28|20260501080000
+PID|||202604150913^^^1.2.752.129.2.1.3.1^NI||Kjellberg^Axel^William^^^^L||20260415|M|||Bondegatan 17^^Stockholm^^11633^SE^H||^^PH^0813926478~^^CP^0724831956||SWE|S
+NK1|1|Kjellberg^Frida^Louise^^fru|MTH^Moder^HL70063|Bondegatan 17^^Stockholm^^11633^SE||^^CP^0724831957||EC
+```
+
+---
+
+## 20. ORU^R01 - coagulation lab result with abnormal flag routed by SHS
+
+```
+MSH|^~\&|SHS|SE2321000016-39KJ^1.2.752.29.4.19^ISO|TAKECARE|SE2321000016-1003^1.2.752.29.4.19^ISO|20260315161000||ORU^R01^ORU_R01|SHS20260315161000099|P|2.5.1|||AL|NE||8859/1|||2.16.840.1.113883.2.32
+PID|||194108175362^^^1.2.752.129.2.1.3.1^NI||Månsson^Torbjörn^Åke^^herr||19410817|M|||Valhallavägen 52^^Stockholm^^11427^SE^H||^^CP^0709152634
+ORC|RE|REM20260315001||FLR20260315001
+OBR|1|REM20260315001|FLR20260315001|COAG^Koagulationspanel^KUL|||20260315080000|||||||||SE652184^Åkerman^Nils^^^Dr.^leg. läkare||||20260315155000|||F
+OBX|1|NM|NPU01685^P-PK (INR)^NPU||4.8|INR||0.9-1.2|HH|||F|||20260315150000
+OBX|2|NM|NPU03625^P-APT-tid^NPU||52|s^sekunder^ISO+|25-38|H|||F|||20260315150000
+OBX|3|NM|NPU01681^P-Fibrinogen^NPU||1.2|g/L^gram per liter^ISO+|2.0-4.0|L|||F|||20260315151000
+OBX|4|NM|NPU03117^B-Trombocyter^NPU||85|x10*9/L|150-400|L|||F|||20260315151500
+NTE|1||VARNING: Kraftigt förhöjt INR. Kontakta beställande läkare omedelbart.
+```

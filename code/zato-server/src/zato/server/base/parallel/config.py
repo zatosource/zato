@@ -11,14 +11,14 @@ from contextlib import closing
 from logging import getLogger
 
 # Zato
-from zato.bunch import Bunch
+from zato.common.ext.bunch import Bunch
 from zato.common.const import SECRETS, ServiceConst
 from zato.common.json_internal import loads
 from zato.common.util.config import resolve_name
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.config import ConfigDict
-from zato.url_dispatcher import Matcher
+from zato.server.connection.http_soap.url_dispatcher import Matcher
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -147,10 +147,6 @@ class ConfigLoader:
         query = self.odb.get_out_amqp_list(server.cluster.id, True)
         self.config.out_amqp = ConfigDict.from_query('out_amqp', query, decrypt_func=self.decrypt)
 
-        # Caches
-        query = self.odb.get_cache_builtin_list(server.cluster.id, True)
-        self.config.cache_builtin = ConfigDict.from_query('cache_builtin', query, decrypt_func=self.decrypt)
-
         # FTP
         query = self.odb.get_out_ftp_list(server.cluster.id, True)
         self.config.out_ftp = ConfigDict.from_query('out_ftp', query, decrypt_func=self.decrypt)
@@ -246,19 +242,6 @@ class ConfigLoader:
             else:
                 logger.info('Startup rate limiting; channel_id:%s, name:%s, no rate_limiting', channel_id, channel_name)
 
-        # SimpleIO
-        # In preparation for a SIO rewrite, we loaded SIO config from a file
-        # but actual code paths require the pre-3.0 format so let's prepare it here.
-        self.config.simple_io = ConfigDict('simple_io', Bunch())
-
-        int_exact = self.sio_config.int_config.exact
-        int_suffixes = self.sio_config.int_config.suffixes
-        bool_prefixes = self.sio_config.bool_config.prefixes
-
-        self.config.simple_io['int_parameters'] = int_exact
-        self.config.simple_io['int_parameter_suffixes'] = int_suffixes
-        self.config.simple_io['bool_parameter_prefixes'] = bool_prefixes
-
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         # E-mail - SMTP
@@ -285,7 +268,7 @@ class ConfigLoader:
         _has_rest_log_ignore = 'rest_log_ignore' in _logging_stanza
 
         if not _has_rest_log_ignore:
-            rest_log_ignore = [ServiceConst.API_Admin_Invoke_Url_Path, '/metrics', '/zato/ping']
+            rest_log_ignore = ['/zato/api/invoke', '/metrics', '/zato/ping']
         else:
             rest_log_ignore = _logging_stanza['rest_log_ignore']
             rest_log_ignore = rest_log_ignore if isinstance(rest_log_ignore, list) else [rest_log_ignore]
@@ -293,8 +276,8 @@ class ConfigLoader:
         # .. now, update the set of channels to ignore the REST log for ..
         self.rest_log_ignore.update(rest_log_ignore)
 
-        # Assign config to worker
-        self.worker_store.worker_config = self.config
+        # Assign config to config manager
+        self.config_manager.config_store = self.config
 
 # ################################################################################################################################
 

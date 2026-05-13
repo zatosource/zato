@@ -13,7 +13,7 @@ from copy import deepcopy
 from unittest import TestCase
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Zato
 from zato.common.api import FALSE_TRUE, TRUE_FALSE

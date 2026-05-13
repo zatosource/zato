@@ -14,7 +14,7 @@ from copy import deepcopy
 from traceback import format_exc
 
 # Bunch
-from bunch import Bunch, bunchify
+from zato.common.ext.bunch import Bunch, bunchify
 
 # Zato
 from zato.common.api import SECRET_SHADOW

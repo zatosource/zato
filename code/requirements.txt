@@ -14,7 +14,6 @@ cryptography==46.0.7
 curl-cffi==0.15.0b3
 dacite==1.6.0
 dateparser==0.7.6
-# ddtrace==4.8.0rc5
 decorator==5.1.0
 distro==1.5.0
 Django==4.2.30
@@ -30,6 +29,7 @@ globre==0.1.5
 google-api-python-client==2.52.0
 google-auth-httplib2==0.1.0
 google-auth-oauthlib==0.5.2
+gql==4.0.0
 gunicorn==23.0.0
 hiredis==3.3.1
 httplib2==0.19.0
@@ -39,7 +39,7 @@ ipaddress==1.0.16
 iso8601==0.1.10
 kombu==5.5.4
 ldap3==2.10.2rc2
-lxml==5.3.0
+lxml==6.1.0
 more-itertools==9.0.0
 msal==1.34
 multipart==1.2.2
@@ -74,10 +74,9 @@ pygments==2.20.0
 pymongo==4.13.0
 PyMySQL==1.1.1
 pyOpenSSL==26.0.0
-pyotp==2.6.0
+pyotp==2.9.0
 python-dateutil==2.9.0.post0
 python-editor==1.0.1
-tabulate==0.9.0
 pytz==2025.2
 pyyaml==6.0.2
 redis==6.1.0
@@ -94,6 +93,7 @@ SQLAlchemy==1.4.54
 stroll==1.1.0
 stevedore==3.5.0
 sumy==0.12.0
+tabulate==0.9.0s
 texttable==1.6.1
 typing-utils==0.1.0
 tzlocal==5.3.1

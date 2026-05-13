@@ -1,0 +1,290 @@
+# ASUS xHIS - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - 住院登記 (inpatient admission) with NHI insurance
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|EMR-EXCHANGE|MOHW-EMR|20260509073000||ADT^A01^ADT_A01|SKMH20260509073001|P|2.5|||AL|NE||BIG5|zh-TW
+EVN|A01|20260509073000
+PID|||PAT400100^^^新光吳火獅紀念醫院^PI||蘇^志遠^^^先生||19720130|M|||新竹市東區光復路一段101號^^新竹市^^30013^TW||^^PH^03-5731234~^^CP^0919876543||zh-TW|M|||G246801357^^^ROC^NNT
+PV1||I|胃腸肝膽科^401^A^新光吳火獅紀念醫院||||D400100^彭瑞芳^^^醫師||||||||||VN20260509001|||||||||||||||||||||||||||20260509073000
+IN1|1|NHI001|BNHI|全民健康保險|濟南路一段4-1號^^台北市^^10041^TW||02-21912006||||||||||蘇^志遠|Self|19720130|新竹市東區光復路一段101號^^新竹市^^30013^TW
+```
+
+---
+
+## 2. ADT^A04 - 門診報到 (outpatient registration)
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|EMR-EXCHANGE|MOHW-EMR|20260509090000||ADT^A04^ADT_A01|SKMH20260509090001|P|2.5|||AL|NE||BIG5|zh-TW
+EVN|A04|20260509090000
+PID|||PAT400200^^^新光吳火獅紀念醫院^PI||葉^佳琳^^^女士||19880618|F|||新竹縣竹北市光明六路88號^^新竹縣^^30266^TW||^^PH^03-5501234~^^CP^0935678901||zh-TW|S|||H258901346^^^ROC^NNT
+PV1||O|婦產科門診^診間08^^新光吳火獅紀念醫院||||D400200^廖明哲^^^醫師||||||||||VN20260509002|||||||||||||||||||||||||||20260509090000
+IN1|1|NHI001|BNHI|全民健康保險|濟南路一段4-1號^^台北市^^10041^TW||02-21912006
+```
+
+---
+
+## 3. ADT^A03 - 出院通知 (discharge)
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|EMR-EXCHANGE|MOHW-EMR|20260516140000||ADT^A03^ADT_A03|SKMH20260516140001|P|2.5|||AL|NE||BIG5|zh-TW
+EVN|A03|20260516140000
+PID|||PAT400100^^^新光吳火獅紀念醫院^PI||蘇^志遠^^^先生||19720130|M|||新竹市東區光復路一段101號^^新竹市^^30013^TW||^^PH^03-5731234~^^CP^0919876543||zh-TW|M|||G246801357^^^ROC^NNT
+PV1||I|胃腸肝膽科^401^A^新光吳火獅紀念醫院||||D400100^彭瑞芳^^^醫師||||||||||VN20260509001||||||||||||||||||||9||||20260516140000
+DG1|1||K80.2^膽囊結石伴急性膽囊炎^ICD-10-CM||20260509|F
+```
+
+---
+
+## 4. ADT^A08 - 病患資料更新 (patient update)
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|EMR-EXCHANGE|MOHW-EMR|20260510100000||ADT^A08^ADT_A01|SKMH20260510100001|P|2.5|||AL|NE||BIG5|zh-TW
+EVN|A08|20260510100000
+PID|||PAT400200^^^新光吳火獅紀念醫院^PI||葉^佳琳^^^女士||19880618|F|||新竹縣竹北市光明六路88號^^新竹縣^^30266^TW||^^PH^03-5501234~^^CP^0935678901||zh-TW|S|||H258901346^^^ROC^NNT
+PV1||O|婦產科門診^診間08^^新光吳火獅紀念醫院||||D400200^廖明哲^^^醫師||||||||||VN20260509002|||||||||||||||||||||||||||20260510100000
+```
+
+---
+
+## 5. ADT^A02 - 轉床通知 (patient transfer)
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|EMR-EXCHANGE|MOHW-EMR|20260511060000||ADT^A02^ADT_A02|SKMH20260511060001|P|2.5|||AL|NE||BIG5|zh-TW
+EVN|A02|20260511060000
+PID|||PAT400100^^^新光吳火獅紀念醫院^PI||蘇^志遠^^^先生||19720130|M|||新竹市東區光復路一段101號^^新竹市^^30013^TW||^^PH^03-5731234~^^CP^0919876543||zh-TW|M|||G246801357^^^ROC^NNT
+PV1||I|外科病房^502^B^新光吳火獅紀念醫院||||D400100^彭瑞芳^^^醫師||||||||||VN20260509001||||||||||||||||||胃腸肝膽科^401^A^新光吳火獅紀念醫院||||20260511060000
+```
+
+---
+
+## 6. ORM^O01 - 藥局處方開立 (pharmacy order)
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|PHARMACY|新光吳火獅紀念醫院|20260509080000||ORM^O01^ORM_O01|SKMH20260509080001|P|2.5|||AL|NE||BIG5|zh-TW
+PID|||PAT400100^^^新光吳火獅紀念醫院^PI||蘇^志遠^^^先生||19720130|M|||新竹市東區光復路一段101號^^新竹市^^30013^TW
+PV1||I|胃腸肝膽科^401^A^新光吳火獅紀念醫院||||D400100^彭瑞芳^^^醫師
+ORC|NW|ORD20260509030|||||^^^20260509080000^^R||20260509080000|N400100^護理師曾雅雯|||D400100^彭瑞芳^^^醫師
+RXO|J01DD04^Ceftriaxone 2g^NHI||2|g|IV^靜脈注射^HL70162||^^^20260509^^Q12H|||||||D400100^彭瑞芳
+RXR|IV^靜脈注射^HL70162
+ORC|NW|ORD20260509031|||||^^^20260509080000^^R||20260509080000|N400100^護理師曾雅雯|||D400100^彭瑞芳^^^醫師
+RXO|A03BA01^Atropine 0.5mg^NHI||0.5|mg|IV^靜脈注射^HL70162||^^^20260509^^PRN|||||||D400100^彭瑞芳
+RXR|IV^靜脈注射^HL70162
+```
+
+---
+
+## 7. ORM^O01 - 腹部超音波醫囑 (abdominal ultrasound order)
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|RADIOLOGY|新光吳火獅紀念醫院|20260509083000||ORM^O01^ORM_O01|SKMH20260509083001|P|2.5|||AL|NE||BIG5|zh-TW
+PID|||PAT400100^^^新光吳火獅紀念醫院^PI||蘇^志遠^^^先生||19720130|M|||新竹市東區光復路一段101號^^新竹市^^30013^TW
+PV1||I|胃腸肝膽科^401^A^新光吳火獅紀念醫院||||D400100^彭瑞芳^^^醫師
+ORC|NW|RAD20260509030|||||^^^20260509083000^^R||20260509083000|||D400100^彭瑞芳^^^醫師
+OBR|1|RAD20260509030||79103-8^腹部超音波^LN|||20260509083000||||||||D400100^彭瑞芳^^^醫師||||||||||^URGENT
+```
+
+---
+
+## 8. ORU^R01 - 實驗室檢驗報告 (lab results - liver and inflammation panel)
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|LAB|新光吳火獅紀念醫院|20260509110000||ORU^R01^ORU_R01|SKMH20260509110001|P|2.5|||AL|NE||BIG5|zh-TW
+PID|||PAT400100^^^新光吳火獅紀念醫院^PI||蘇^志遠^^^先生||19720130|M|||新竹市東區光復路一段101號^^新竹市^^30013^TW
+PV1||I|胃腸肝膽科^401^A^新光吳火獅紀念醫院||||D400100^彭瑞芳^^^醫師
+ORC|RE|LAB20260509030||||||||||D400100^彭瑞芳^^^醫師
+OBR|1|LAB20260509030||24325-3^肝功能及發炎指標^LN|||20260509075000|||||||20260509075000|血液^Blood|D400100^彭瑞芳^^^醫師
+OBX|1|NM|1742-6^ALT (GPT)^LN||185|U/L|7-56|H|||F|||20260509110000
+OBX|2|NM|1920-8^AST (GOT)^LN||210|U/L|10-40|H|||F|||20260509110000
+OBX|3|NM|6768-6^鹼性磷酸酶(ALP)^LN||320|U/L|44-147|H|||F|||20260509110000
+OBX|4|NM|1975-2^膽紅素(總)^LN||3.8|mg/dL|0.1-1.2|H|||F|||20260509110000
+OBX|5|NM|1968-7^膽紅素(直接)^LN||2.5|mg/dL|0.0-0.3|H|||F|||20260509110000
+OBX|6|NM|6690-2^白血球計數^LN||15.8|10*3/uL|4.0-10.0|H|||F|||20260509110000
+OBX|7|NM|1988-5^C反應蛋白^LN||85|mg/L|0.0-5.0|H|||F|||20260509110000
+```
+
+---
+
+## 9. ORU^R01 - 腹部超音波報告含嵌入PDF (abdominal ultrasound with embedded PDF)
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|RADIOLOGY|新光吳火獅紀念醫院|20260509140000||ORU^R01^ORU_R01|SKMH20260509140001|P|2.5|||AL|NE||BIG5|zh-TW
+PID|||PAT400100^^^新光吳火獅紀念醫院^PI||蘇^志遠^^^先生||19720130|M|||新竹市東區光復路一段101號^^新竹市^^30013^TW
+PV1||I|胃腸肝膽科^401^A^新光吳火獅紀念醫院||||D400100^彭瑞芳^^^醫師
+ORC|RE|RAD20260509030||||||||||D400100^彭瑞芳^^^醫師
+OBR|1|RAD20260509030||79103-8^腹部超音波^LN|||20260509083000|||||||20260509083000||D400100^彭瑞芳^^^醫師||||||||F
+OBX|1|FT|79103-8^腹部超音波^LN||膽囊壁增厚(6mm), 膽囊內多發結石, 最大約1.5cm。膽總管輕度擴張(8mm)。肝臟實質回音略增, 餘無特殊。脾臟及雙腎正常。||||||F|||20260509140000
+OBX|2|ED|PDF^腹部超音波報告PDF^L||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovQ29udGVudHMgNCAwIFIKL1Jlc291cmNlcyA8PAovRm9udCA8PCAvRjEgNSAwIFIgPj4KPj4KPj4KZW5kb2JqCjQgMCBvYmoKPDwKL0xlbmd0aCA0MDAKPj4Kc3RyZWFtCkJUCi9GMSAxMiBUZgoxIDAgMCAxIDcyIDcyMCBUbQoo6IWg6YOo6LaF6Z+z5rOi5aCx5ZGKIC0g6Ie65aSn6Yar6Zmi6Zu75p6X5YiG6ZmiKSBUagowIC0yMCBUZAoo6IaG5Zun5aOB5aKe5Y6aKDZtbSksIOiGh+WbiumFp+Wkmuecvue1kOedtikgVGoKMCAtMjAgVGQKKOacgOWkp+e0hDEuNWNtKSBUagowIC0yMCBUZAoo6IaG57i957Wh6Lyv5bqm5pO05byjKDhtbSkpIFRqCjAgLTIwIFRkCijogrboh4/lr6boqajlm57pn7PnlaXlop4pIFRqCjAgLTIwIFRkCijohL7oh4/lj4rpl5vojoTmraPluLgpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iago8PAovVHlwZSAvRm9udAovU3VidHlwZSAvVHlwZTEKL0Jhc2VGb250IC9IZWx2ZXRpY2EKPj4KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKMDAwMDAwMDI2NiAwMDAwMCBuIAowMDAwMDAwNzE2IDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgNgovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKNzgxCiUlRU9GCg==||||||F|||20260509140000
+```
+
+---
+
+## 10. ORU^R01 - 婦科檢驗報告 (gynecology lab results)
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|LAB|新光吳火獅紀念醫院|20260509153000||ORU^R01^ORU_R01|SKMH20260509153001|P|2.5|||AL|NE||BIG5|zh-TW
+PID|||PAT400200^^^新光吳火獅紀念醫院^PI||葉^佳琳^^^女士||19880618|F|||新竹縣竹北市光明六路88號^^新竹縣^^30266^TW
+PV1||O|婦產科門診^診間08^^新光吳火獅紀念醫院||||D400200^廖明哲^^^醫師
+ORC|RE|LAB20260509040||||||||||D400200^廖明哲^^^醫師
+OBR|1|LAB20260509040||53959-5^婦科檢驗^LN|||20260509091000|||||||20260509091000|血液^Blood|D400200^廖明哲^^^醫師
+OBX|1|NM|15067-2^FSH^LN||6.5|mIU/mL|3.5-12.5||||F|||20260509153000
+OBX|2|NM|14715-7^LH^LN||5.8|mIU/mL|2.4-12.6||||F|||20260509153000
+OBX|3|NM|2243-4^Estradiol (E2)^LN||95|pg/mL|12.5-166||||F|||20260509153000
+OBX|4|NM|2839-9^Progesterone^LN||0.8|ng/mL|0.2-1.5||||F|||20260509153000
+OBX|5|NM|19080-1^hCG定量^LN||<2|mIU/mL|0-5||||F|||20260509153000
+```
+
+---
+
+## 11. RDE^O11 - 住院處方調劑 (inpatient prescription dispense)
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|PHARMACY|新光吳火獅紀念醫院|20260509085000||RDE^O11^RDE_O11|SKMH20260509085001|P|2.5|||AL|NE||BIG5|zh-TW
+PID|||PAT400100^^^新光吳火獅紀念醫院^PI||蘇^志遠^^^先生||19720130|M|||新竹市東區光復路一段101號^^新竹市^^30013^TW
+PV1||I|胃腸肝膽科^401^A^新光吳火獅紀念醫院||||D400100^彭瑞芳^^^醫師
+ORC|NW|RX20260509030|||||^^^20260509085000^^R||20260509085000|||D400100^彭瑞芳^^^醫師
+RXE|^^^20260509^^Q12H^5^Day||J01DD04^Ceftriaxone 2g^NHI|2|g||||||||||||||||||||2|Vial
+RXR|IV^靜脈注射^HL70162
+ORC|NW|RX20260509031|||||^^^20260509085000^^R||20260509085000|||D400100^彭瑞芳^^^醫師
+RXE|^^^20260509^^TID^5^Day||A02BC01^Omeprazole 40mg^NHI|40|mg||||||||||||||||||||3|Cap
+RXR|PO^口服^HL70162
+```
+
+---
+
+## 12. SIU^S12 - 手術排程 (surgery scheduling)
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|SCHEDULING|新光吳火獅紀念醫院|20260510080000||SIU^S12^SIU_S12|SKMH20260510080001|P|2.5|||AL|NE||BIG5|zh-TW
+SCH|APT20260512010||||||||120|min|^^120^20260512080000^20260512100000||D400100^彭瑞芳^^^醫師|^^PH^03-5731234|新竹市東區光復路一段101號^^新竹市^^30013^TW|D400100^彭瑞芳^^^醫師
+PID|||PAT400100^^^新光吳火獅紀念醫院^PI||蘇^志遠^^^先生||19720130|M|||新竹市東區光復路一段101號^^新竹市^^30013^TW||^^CP^0919876543
+PV1||I|胃腸肝膽科^401^A^新光吳火獅紀念醫院||||D400100^彭瑞芳^^^醫師
+RGS|1
+AIS|1||手術室^OR-3^L|20260512080000|120|min
+AIP|1||D400100^彭瑞芳^^^醫師|||||20260512080000|120|min
+```
+
+---
+
+## 13. DFT^P03 - NHI費用申報 (charge posting for NHI billing)
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|BILLING|新光吳火獅紀念醫院|20260516160000||DFT^P03^DFT_P03|SKMH20260516160001|P|2.5|||AL|NE||BIG5|zh-TW
+EVN|P03|20260516160000
+PID|||PAT400100^^^新光吳火獅紀念醫院^PI||蘇^志遠^^^先生||19720130|M|||新竹市東區光復路一段101號^^新竹市^^30013^TW
+PV1||I|胃腸肝膽科^401^A^新光吳火獅紀念醫院||||D400100^彭瑞芳^^^醫師||||||||||VN20260509001
+FT1|1|20260509|20260516|CG|D|^^^J01DD04^Ceftriaxone 2g^NHI||10|2|g||||||||||K80.2^膽囊結石伴急性膽囊炎^ICD-10-CM
+FT1|2|20260509|20260516|CG|D|^^^09002C^腹部超音波^NHI||1|1|EA||||||||||K80.2^膽囊結石伴急性膽囊炎^ICD-10-CM
+FT1|3|20260512|20260512|CG|D|^^^62012B^腹腔鏡膽囊切除術^NHI||1|1|EA||||||||||K80.2^膽囊結石伴急性膽囊炎^ICD-10-CM
+FT1|4|20260509|20260516|CG|D|^^^00201A^住院診察費^NHI||7|1|EA||||||||||K80.2^膽囊結石伴急性膽囊炎^ICD-10-CM
+```
+
+---
+
+## 14. MDM^T02 - 手術記錄文件 (operative note document)
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|EMR-EXCHANGE|MOHW-EMR|20260512150000||MDM^T02^MDM_T02|SKMH20260512150001|P|2.5|||AL|NE||BIG5|zh-TW
+EVN|T02|20260512150000
+PID|||PAT400100^^^新光吳火獅紀念醫院^PI||蘇^志遠^^^先生||19720130|M|||新竹市東區光復路一段101號^^新竹市^^30013^TW
+PV1||I|外科病房^502^B^新光吳火獅紀念醫院||||D400100^彭瑞芳^^^醫師||||||||||VN20260509001
+TXA|1|OP^手術記錄^L|FT|20260512150000|D400100^彭瑞芳^^^醫師||20260512150000||D400100^彭瑞芳^^^醫師||||DOC20260512001||||||AU
+OBX|1|FT|28570-0^手術記錄^LN||手術名稱: 腹腔鏡膽囊切除術\.br\手術日期: 2026/05/12\.br\麻醉: 全身麻醉\.br\術中所見: 膽囊壁充血水腫, 與大網膜輕度粘連, 膽囊內多發結石\.br\手術過程: 順利完成膽囊切除, 無膽管損傷。出血量約30mL\.br\術後診斷: 急性膽囊炎合併膽囊結石 (K80.2)\.br\主治醫師: 彭瑞芳||||||F|||20260512150000
+```
+
+---
+
+## 15. ORU^R01 - 術後檢驗報告 (post-operative lab results)
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|LAB|新光吳火獅紀念醫院|20260513090000||ORU^R01^ORU_R01|SKMH20260513090001|P|2.5|||AL|NE||BIG5|zh-TW
+PID|||PAT400100^^^新光吳火獅紀念醫院^PI||蘇^志遠^^^先生||19720130|M|||新竹市東區光復路一段101號^^新竹市^^30013^TW
+PV1||I|外科病房^502^B^新光吳火獅紀念醫院||||D400100^彭瑞芳^^^醫師
+ORC|RE|LAB20260513001||||||||||D400100^彭瑞芳^^^醫師
+OBR|1|LAB20260513001||24325-3^術後肝功能追蹤^LN|||20260513070000|||||||20260513070000|血液^Blood|D400100^彭瑞芳^^^醫師
+OBX|1|NM|1742-6^ALT (GPT)^LN||68|U/L|7-56|H|||F|||20260513090000
+OBX|2|NM|1920-8^AST (GOT)^LN||55|U/L|10-40|H|||F|||20260513090000
+OBX|3|NM|1975-2^膽紅素(總)^LN||1.5|mg/dL|0.1-1.2|H|||F|||20260513090000
+OBX|4|NM|6690-2^白血球計數^LN||10.2|10*3/uL|4.0-10.0|H|||F|||20260513090000
+OBX|5|NM|1988-5^C反應蛋白^LN||25|mg/L|0.0-5.0|H|||F|||20260513090000
+```
+
+---
+
+## 16. OML^O33 - 檢體送檢 (specimen-based lab order)
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|LAB|新光吳火獅紀念醫院|20260509074000||OML^O33^OML_O33|SKMH20260509074001|P|2.5|||AL|NE||BIG5|zh-TW
+PID|||PAT400200^^^新光吳火獅紀念醫院^PI||葉^佳琳^^^女士||19880618|F|||新竹縣竹北市光明六路88號^^新竹縣^^30266^TW
+PV1||O|婦產科門診^診間08^^新光吳火獅紀念醫院||||D400200^廖明哲^^^醫師
+SPM|1|||BLD^全血^HL70487||||||||||||20260509074000|20260509074500
+SAC|||TUBE20260509030||||||||||||||||||||||||BLD
+ORC|NW|LAB20260509040|||||^^^20260509074000^^R||20260509074000|||D400200^廖明哲^^^醫師
+OBR|1|LAB20260509040||53959-5^婦科檢驗^LN|||20260509074000
+ORC|NW|LAB20260509041|||||^^^20260509074000^^R||20260509074000|||D400200^廖明哲^^^醫師
+OBR|2|LAB20260509041||58410-2^全血球計數^LN|||20260509074000
+```
+
+---
+
+## 17. ORU^R01 - 子宮頸抹片報告含嵌入PDF (Pap smear report with embedded PDF)
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|PATHOLOGY|新光吳火獅紀念醫院|20260515100000||ORU^R01^ORU_R01|SKMH20260515100001|P|2.5|||AL|NE||BIG5|zh-TW
+PID|||PAT400200^^^新光吳火獅紀念醫院^PI||葉^佳琳^^^女士||19880618|F|||新竹縣竹北市光明六路88號^^新竹縣^^30266^TW
+PV1||O|婦產科門診^診間08^^新光吳火獅紀念醫院||||D400200^廖明哲^^^醫師
+ORC|RE|PATH20260515001||||||||||D400200^廖明哲^^^醫師
+OBR|1|PATH20260515001||10524-7^子宮頸細胞學檢查^LN|||20260509092000|||||||20260509092000|子宮頸分泌物^Cervical|D400200^廖明哲^^^醫師||||||||F
+OBX|1|FT|10524-7^子宮頸細胞學檢查^LN||檢體適當性: 滿意。\.br\一般分類: 上皮細胞異常。\.br\描述: 低度鱗狀上皮內病變(LSIL)。\.br\建議: 6個月後追蹤抹片或HPV檢測。\.br\病理醫師: 陳惠美醫師||||||F|||20260515100000
+OBX|2|ED|PDF^子宮頸抹片報告PDF^L||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovQ29udGVudHMgNCAwIFIKL1Jlc291cmNlcyA8PAovRm9udCA8PCAvRjEgNSAwIFIgPj4KPj4KPj4KZW5kb2JqCjQgMCBvYmoKPDwKL0xlbmd0aCAzNTAKPj4Kc3RyZWFtCkJUCi9GMSAxMiBUZgoxIDAgMCAxIDcyIDcyMCBUbQoo5a2Q5a6u6aCC5oq55Lmz5aCx5ZGKIC0g6Ie65aSn6Yar6Zmi6Zu66p6X5YiG6ZmiKSBUagowIC0yMCBUZAoo5qqh5pys6YGp55W25oCnOiDmu7/mhI8pIFRqCjAgLTIwIFRkCijkuIDoiKzliIbpoZ46IOS4iuear+e0sOiDnuexguW4uCkgVGoKMCAtMjAgVGQKKOaPj+i/sDog5L2O5bqm6bqf54uA5LiK55qu5YaF55eF6K6KIChMU0lMKSkgVGoKMCAtMjAgVGQKKOW7uuittjog5pyI5YCL5pyI5b6M6L+96Lmk5oq55Lmz5oiWSFBW5qqh5ris5L6LKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCjUgMCBvYmoKPDwKL1R5cGUgL0ZvbnQKL1N1YnR5cGUgL1R5cGUxCi9CYXNlRm9udCAvSGVsdmV0aWNhCj4+CmVuZG9iagp4cmVmCjAgNgowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTE1IDAwMDAwIG4gCjAwMDAwMDAyNjYgMDAwMDAgbiAKMDAwMDAwMDY2NiAwMDAwMCBuIAp0cmFpbGVyCjw8Ci9TaXplIDYKL1Jvb3QgMSAwIFIKPj4Kc3RhcnR4cmVmCjczMQolJUVPRgo=||||||F|||20260515100000
+```
+
+---
+
+## 18. ORU^R01 - 全血球計數報告 (CBC results)
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|LAB|新光吳火獅紀念醫院|20260509152000||ORU^R01^ORU_R01|SKMH20260509152001|P|2.5|||AL|NE||BIG5|zh-TW
+PID|||PAT400200^^^新光吳火獅紀念醫院^PI||葉^佳琳^^^女士||19880618|F|||新竹縣竹北市光明六路88號^^新竹縣^^30266^TW
+PV1||O|婦產科門診^診間08^^新光吳火獅紀念醫院||||D400200^廖明哲^^^醫師
+ORC|RE|LAB20260509041||||||||||D400200^廖明哲^^^醫師
+OBR|1|LAB20260509041||58410-2^全血球計數^LN|||20260509091500|||||||20260509091500|血液^Blood|D400200^廖明哲^^^醫師
+OBX|1|NM|6690-2^白血球計數^LN||7.2|10*3/uL|4.0-10.0||||F|||20260509152000
+OBX|2|NM|789-8^紅血球計數^LN||4.15|10*6/uL|3.80-5.10||||F|||20260509152000
+OBX|3|NM|718-7^血色素^LN||12.8|g/dL|12.0-16.0||||F|||20260509152000
+OBX|4|NM|4544-3^血比容^LN||38.5|%|36.0-46.0||||F|||20260509152000
+OBX|5|NM|777-3^血小板計數^LN||268|10*3/uL|150-400||||F|||20260509152000
+```
+
+---
+
+## 19. ORU^R01 - 病理組織報告含嵌入PDF (surgical pathology with embedded PDF)
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|PATHOLOGY|新光吳火獅紀念醫院|20260516100000||ORU^R01^ORU_R01|SKMH20260516100001|P|2.5|||AL|NE||BIG5|zh-TW
+PID|||PAT400100^^^新光吳火獅紀念醫院^PI||蘇^志遠^^^先生||19720130|M|||新竹市東區光復路一段101號^^新竹市^^30013^TW
+PV1||I|外科病房^502^B^新光吳火獅紀念醫院||||D400100^彭瑞芳^^^醫師
+ORC|RE|PATH20260516001||||||||||D400100^彭瑞芳^^^醫師
+OBR|1|PATH20260516001||22637-3^手術病理檢查^LN|||20260512120000|||||||20260512120000|組織^Tissue|D400100^彭瑞芳^^^醫師||||||||F
+OBX|1|FT|22637-3^手術病理檢查^LN||檢體: 膽囊切除標本\.br\肉眼觀: 膽囊7.5x3.0cm, 壁厚5mm, 漿膜面充血。腔內含多發黃綠色結石\.br\鏡檢: 黏膜慢性發炎合併急性炎症反應, 肌層水腫, 漿膜下充血\.br\診斷: 急性膽囊炎合併慢性膽囊炎, 膽囊結石。無惡性細胞\.br\病理醫師: 陳惠美醫師||||||F|||20260516100000
+OBX|2|ED|PDF^手術病理報告PDF^L||^application^pdf^Base64^JVBERi0xLjUKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovQ29udGVudHMgNCAwIFIKL1Jlc291cmNlcyA8PAovRm9udCA8PCAvRjEgNSAwIFIgPj4KPj4KPj4KZW5kb2JqCjQgMCBvYmoKPDwKL0xlbmd0aCA0NTAKPj4Kc3RyZWFtCkJUCi9GMSAxMiBUZgoxIDAgMCAxIDcyIDcyMCBUbQoo5omL6KGT55eF55CG5aCx5ZGKIC0g6Ie65aSn6Yar6Zmi6Zu66p6X5YiG6ZmiKSBUagowIC0yMCBUZAoo5qqh5pysOiDohobm5aGK5YiH6Zmk5qiZ5pysKSBUagowIC0yMCBUZAoo6IaG5ZunNy41eDMuMGNtLCDlo4HljpU1bW0pIFRqCjAgLTIwIFRkCijogZTog5zmhKLmgKfnmLflkIjmgKXmgKfngonmgKflj43mh5MpIFRqCjAgLTIwIFRkCijogqTlsaTmsLTohq4sIOmFhiDohpzkuIvlhYXooYApIFRqCjAgLTIwIFRkCijoo7rmlrfml6Xmgqfmgqfph4Y6IOeEoeaDoeaAp+e0sOiDnikgVGoKMCAtMjAgVGQKKOeXheeQhuirlOW4qzog5by16oOg55C06Yar5birKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCjUgMCBvYmoKPDwKL1R5cGUgL0ZvbnQKL1N1YnR5cGUgL1R5cGUxCi9CYXNlRm9udCAvSGVsdmV0aWNhCj4+CmVuZG9iagp4cmVmCjAgNgowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTE1IDAwMDAwIG4gCjAwMDAwMDAyNjYgMDAwMDAgbiAKMDAwMDAwMDc2NiAwMDAwMCBuIAp0cmFpbGVyCjw8Ci9TaXplIDYKL1Jvb3QgMSAwIFIKPj4Kc3RhcnR4cmVmCjgzMQolJUVPRgo=||||||F|||20260516100000
+```
+
+---
+
+## 20. ORU^R01 - 出院前檢驗報告 (pre-discharge lab results)
+
+```
+MSH|^~\&|ASUS-xHIS|新光吳火獅紀念醫院|LAB|新光吳火獅紀念醫院|20260515160000||ORU^R01^ORU_R01|SKMH20260515160001|P|2.5|||AL|NE||BIG5|zh-TW
+PID|||PAT400100^^^新光吳火獅紀念醫院^PI||蘇^志遠^^^先生||19720130|M|||新竹市東區光復路一段101號^^新竹市^^30013^TW
+PV1||I|外科病房^502^B^新光吳火獅紀念醫院||||D400100^彭瑞芳^^^醫師
+ORC|RE|LAB20260515001||||||||||D400100^彭瑞芳^^^醫師
+OBR|1|LAB20260515001||24325-3^出院前檢驗^LN|||20260515070000|||||||20260515070000|血液^Blood|D400100^彭瑞芳^^^醫師
+OBX|1|NM|1742-6^ALT (GPT)^LN||42|U/L|7-56||||F|||20260515160000
+OBX|2|NM|1920-8^AST (GOT)^LN||35|U/L|10-40||||F|||20260515160000
+OBX|3|NM|1975-2^膽紅素(總)^LN||0.9|mg/dL|0.1-1.2||||F|||20260515160000
+OBX|4|NM|6690-2^白血球計數^LN||7.8|10*3/uL|4.0-10.0||||F|||20260515160000
+OBX|5|NM|1988-5^C反應蛋白^LN||8|mg/L|0.0-5.0|H|||F|||20260515160000
+```

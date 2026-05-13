@@ -1,0 +1,274 @@
+# Oracle Health (Cerner Millennium) - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - Patient admission at Augusta University Medical Center
+
+```
+MSH|^~\&|CERNER|AUMC|NURSESYS|AUMC_NURS|20260401064500||ADT^A01|MSG10001|P|2.3|||AL|NE
+EVN|A01|20260401064000||01|KTHOMAS^Thomas^Keisha^D^^RN
+PID|1||AU8301742^^^AUMC_MRN^MR||Whitfield^Terrence^Lamar||19731024|M|||1120 15th St^^Augusta^GA^30912||^PRN^PH^^1^706^7219834|||S||AU8301742001|314-58-2971
+PV1|1|I|6ICU^6104^A^AUMC|||11001^Patel^Anand^R^^^MD|11002^Hoffman^Diane^L^^^MD||ICU|||A|||11001^Patel^Anand^R^^^MD|IN||BCBS||||||||||||||||||AUMC||||||20260401064000
+DG1|1||410.71^Acute myocardial infarction, subendocardial, initial^I9||20260401|A
+IN1|1|BCBS001^Blue Cross Blue Shield of Georgia|54321|Blue Cross Blue Shield
+NK1|1|Whitfield^Sandra^Michelle|SPO^Spouse|1120 15th St^^Augusta^GA^30912|^PRN^PH^^1^706^7219847
+```
+
+---
+
+## 2. ADT^A02 - Patient transfer at Northeast Georgia Medical Center
+
+```
+MSH|^~\&|MILLENNIUM|NGMC|BEDSYS|NGMC_BED|20260402101500||ADT^A02|MSG10002|P|2.3|||AL|NE
+EVN|A02|20260402101000||01|AJENKINS^Jenkins^Alicia^R^^RN
+PID|1||NG7205831^^^NGMC_MRN^MR||Beasley^Natasha^Renee||19860317|F|||743 Spring St NE^^Gainesville^GA^30501||^PRN^PH^^1^770^4183902|||M||NG7205831001|427-61-8534
+PV1|1|I|4STEP^4208^B^NGMC|||12001^Okafor^Samuel^W^^^MD|12002^Velasquez^Theresa^E^^^MD||MED|||T|||12001^Okafor^Samuel^W^^^MD|IN||AETNA||||||||||||||||||NGMC||||||20260330180000
+```
+
+---
+
+## 3. ADT^A03 - Patient discharge from Augusta University Medical Center
+
+```
+MSH|^~\&|CERNER|AUMC|BILLING|AUMC_FIN|20260403140000||ADT^A03|MSG10003|P|2.3|||AL|NE
+EVN|A03|20260403135500||01|CMORRIS^Morris^Christina^N^^RN
+PID|1||AU8403519^^^AUMC_MRN^MR||Calhoun^Demetrius^Bernard||19650811|M|||2803 Wrightsboro Rd^^Augusta^GA^30909||^PRN^PH^^1^706^8254017|||M||AU8403519001|538-72-4196
+PV1|1|I|5MED^5320^A^AUMC|||13001^Mehta^Priya^K^^^MD|||MED|||D|||13001^Mehta^Priya^K^^^MD|IN||MEDICARE||||||||||||||||||AUMC||||||20260401093000|20260403135500
+DG1|1||428.0^Congestive heart failure, unspecified^I9||20260401|A
+DG1|2||250.00^Diabetes mellitus type II, not stated^I9||20260401|S
+```
+
+---
+
+## 4. ADT^A04 - Outpatient registration at NGMC Braselton
+
+```
+MSH|^~\&|MILLENNIUM|NGMC_BRAS|REGSYS|NGMC_REG|20260404080000||ADT^A04|MSG10004|P|2.3|||AL|NE
+EVN|A04|20260404075500||01|SYSTEM
+PID|1||NG7304826^^^NGMC_MRN^MR||Tran^Vivian^Huong||19920205|F|||4545 Falcon Pkwy^^Flowery Branch^GA^30542||^PRN^PH^^1^770^6390214|||S||NG7304826001|641-83-5072
+PV1|1|O|ORTHO^EXAM1^^NGMC_BRAS|||14001^Caldwell^Marcus^R^^^MD|||ORTHO|||N|||14001^Caldwell^Marcus^R^^^MD|OP||UHC||||||||||||||||||NGMC_BRAS||||||20260404080000
+```
+
+---
+
+## 5. ADT^A08 - Patient update at Augusta University Medical Center
+
+```
+MSH|^~\&|CERNER|AUMC|MPI|AUMC_MPI|20260405111500||ADT^A08|MSG10005|P|2.3|||AL|NE
+EVN|A08|20260405111000||01|DGRIFFIN^Griffin^Denise^L^^REG
+PID|1||AU8505394^^^AUMC_MRN^MR||Holloway^Priscilla^Joanne||19780614|F|||3040 Wheeler Rd^^Augusta^GA^30909||^PRN^PH^^1^706^5930218~^PRN^CP^^1^762^4157603|||D||AU8505394001|752-49-6138
+PV1|1|I|7SURG^7102^A^AUMC|||15001^Nakamura^Hiroshi^T^^^MD|||SURG|||A|||15001^Nakamura^Hiroshi^T^^^MD|IN||CIGNA||||||||||||||||||AUMC||||||20260404060000
+NK1|1|Holloway^Warren^Douglas|SPO^Spouse|3040 Wheeler Rd^^Augusta^GA^30909|^PRN^PH^^1^706^5930241
+```
+
+---
+
+## 6. ORM^O01 - Lab order at Northeast Georgia Medical Center
+
+```
+MSH|^~\&|MILLENNIUM|NGMC|LABSYS|NGMC_LAB|20260406073000||ORM^O01|MSG10006|P|2.3|||AL|NE
+PID|1||NG7406158^^^NGMC_MRN^MR||Greer^Malcolm^Antoine||19880429|M|||1020 Jesse Jewell Pkwy^^Gainesville^GA^30501||^PRN^PH^^1^770^8312076|||S||NG7406158001|863-24-7501
+PV1|1|I|3MED^3116^B^NGMC|||16001^Navarro^Lucia^A^^^MD|||MED|||A|||16001^Navarro^Lucia^A^^^MD|IN||ANTHEM||||||||||||||||||NGMC||||||20260405190000
+ORC|NW|ORD2938475^CERNER||||||^^^20260406080000^^R||20260406072500|RHARRIS^Harris^Rosalind^J^^RN||16001^Navarro^Lucia^A^^^MD|||||NGMC
+OBR|1|ORD2938475^CERNER||80053^Comprehensive Metabolic Panel^CPT|||20260406080000|||N|||||16001^Navarro^Lucia^A^^^MD||||||||^^^20260406080000^^R
+OBR|2|ORD2938475^CERNER||85025^CBC with Differential^CPT|||20260406080000|||N|||||16001^Navarro^Lucia^A^^^MD||||||||^^^20260406080000^^R
+```
+
+---
+
+## 7. ORU^R01 - Hematology results from Augusta University Medical Center
+
+```
+MSH|^~\&|ORACLEHEALTH|AUMC|LABSYS|AUMC_LAB|20260407142000||ORU^R01|MSG10007|P|2.3|||AL|NE
+PID|1||AU8607283^^^AUMC_MRN^MR||Perkins^Gloria^Elaine||19560709|F|||1465 Walton Way^^Augusta^GA^30901||^PRN^PH^^1^706^3281754|||W||AU8607283001|975-16-4283
+PV1|1|I|4HEM^4210^A^AUMC|||17001^Yoon^Sang^W^^^MD|||HEM|||A|||17001^Yoon^Sang^W^^^MD|IN||MEDICARE
+ORC|RE|ORD1847362^CERNER|LAB293847^AUMC_LAB||CM|||||||||17001^Yoon^Sang^W^^^MD
+OBR|1|ORD1847362^CERNER|LAB293847^AUMC_LAB|85025^CBC with Differential^CPT|||20260407100000||||||20260407101500||17001^Yoon^Sang^W^^^MD||||||||LAB|F
+OBX|1|NM|6690-2^WBC^LN||12.8|10*3/uL|4.5-11.0|H|||F|||20260407141500
+OBX|2|NM|789-8^RBC^LN||3.21|10*6/uL|4.20-5.40|L|||F|||20260407141500
+OBX|3|NM|718-7^Hemoglobin^LN||9.8|g/dL|12.0-16.0|L|||F|||20260407141500
+OBX|4|NM|4544-3^Hematocrit^LN||29.5|%|36.0-46.0|L|||F|||20260407141500
+OBX|5|NM|787-2^MCV^LN||91.9|fL|80.0-100.0|N|||F|||20260407141500
+OBX|6|NM|777-3^Platelets^LN||89|10*3/uL|150-400|L|||F|||20260407141500
+OBX|7|NM|770-8^Neutrophils %^LN||78.5|%|40.0-70.0|H|||F|||20260407141500
+```
+
+---
+
+## 8. ORU^R01 - Radiology report with embedded PDF from NGMC
+
+```
+MSH|^~\&|CRNR_GA|NGMC|RADSYS|NGMC_RAD|20260408163000||ORU^R01|MSG10008|P|2.3|||AL|NE
+PID|1||NG7508462^^^NGMC_MRN^MR||Stafford^Jolene^Marie||19700123|F|||856 Green St NE^^Gainesville^GA^30501||^PRN^PH^^1^770^9024183|||M||NG7508462001|186-43-7920
+PV1|1|O|RADOL^WAIT1^^NGMC|||18001^Cho^Bryan^L^^^MD|||RAD|||N|||18001^Cho^Bryan^L^^^MD|OP||BCBS
+ORC|RE|ORD7364829^CERNER|RAD485726^NGMC_RAD||CM|||||||||18001^Cho^Bryan^L^^^MD
+OBR|1|ORD7364829^CERNER|RAD485726^NGMC_RAD|71046^Chest X-Ray 2 Views^CPT|||20260408150000||||||20260408151000||18001^Cho^Bryan^L^^^MD||||||||RAD|F
+OBX|1|ED|71046^Chest X-Ray Report^CPT||^application^pdf^Base64^JVBERi0xLjMKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2Jq||||||F
+OBX|2|TX|71046^Chest X-Ray Impression^CPT||No acute cardiopulmonary disease. Heart size normal. Lungs clear bilaterally.||||||F
+```
+
+---
+
+## 9. SIU^S12 - Appointment scheduling at Augusta University Ambulatory
+
+```
+MSH|^~\&|MILLENNIUM|AUMC_AMB|SCHEDSYS|AUMC_SCHED|20260409083000||SIU^S12|MSG10009|P|2.3|||AL|NE
+SCH|APT3847562^CERNER||||||OFFICE^Office Visit|FOLLOWUP^Follow-up|30|MIN|^^30^20260416093000^20260416100000||||||19001^Dominguez^Rosa^M^^^MD|^PRN^PH^^1^706^4127593|AUMC_AMB_CARD^^AUMC_AMB|19001^Dominguez^Rosa^M^^^MD|^PRN^PH^^1^706^4127608|AUMC_AMB_CARD^^AUMC_AMB
+PID|1||AU8709537^^^AUMC_MRN^MR||Langford^Clifton^Jerome||19530318|M|||927 Broad St^^Augusta^GA^30901||^PRN^PH^^1^706^2519843|||M||AU8709537001|293-07-8154
+PV1|1|O|CARD^EXAM3^^AUMC_AMB|||19001^Dominguez^Rosa^M^^^MD|||CARD|||N
+RGS|1||AUMC_AMB_CARD^^AUMC_AMB
+AIS|1||CARDFOLLOW^Cardiology Follow-up|20260416093000|||30|MIN
+AIP|1||19001^Dominguez^Rosa^M^^^MD|ATND|20260416093000|||30|MIN
+```
+
+---
+
+## 10. MDM^T02 - Operative report from Augusta University Medical Center
+
+```
+MSH|^~\&|CERNER|AUMC|DOCSYS|AUMC_DOCS|20260410110000||MDM^T02|MSG10010|P|2.3|||AL|NE
+EVN|T02|20260410105500
+PID|1||AU8810625^^^AUMC_MRN^MR||Sutton^Reginald^Earl||19600425|M|||1801 Tobacco Rd^^Augusta^GA^30906||^PRN^PH^^1^706^3847512|||M||AU8810625001|407-25-8163
+PV1|1|I|8SURG^8104^A^AUMC|||20001^Ortiz^Gabriel^R^^^MD|||SURG|||A|||20001^Ortiz^Gabriel^R^^^MD|IN||TRICARE
+TXA|1|OP^Operative Report|TX|20260410100000|20001^Ortiz^Gabriel^R^^^MD||20260410105500||||DOC8473625^CERNER||||AU||AV
+OBX|1|TX|28570-0^Procedure Note^LN||Procedure: Right total hip arthroplasty. Anesthesia: General. Findings: Advanced osteoarthritis of right hip. Prosthesis: DePuy Pinnacle acetabular cup, S-ROM femoral stem. EBL: 350 mL. Complications: None.||||||F
+```
+
+---
+
+## 11. RDE^O11 - Pharmacy order at NGMC
+
+```
+MSH|^~\&|MILLENNIUM|NGMC|PHARMSYS|NGMC_PHARM|20260411090000||RDE^O11|MSG10011|P|2.3|||AL|NE
+PID|1||NG7611573^^^NGMC_MRN^MR||Pittman^Shanice^Latoya||19720916|F|||312 Bradford St NE^^Gainesville^GA^30501||^PRN^PH^^1^770^6038214|||M||NG7611573001|519-36-7042
+PV1|1|I|5MED^5202^A^NGMC|||21001^Bergstrom^Erik^D^^^MD|||MED|||A|||21001^Bergstrom^Erik^D^^^MD|IN||HUMANA
+ORC|NW|ORD6948372^CERNER||||||^^^20260411093000^^R||20260411085500|||21001^Bergstrom^Erik^D^^^MD|||||NGMC
+RXE|^^^20260411093000^^R|00069-3150-83^Metoprolol Tartrate 25mg Tab^NDC|25||mg|TAB|PO||||||30||0|20260411093000
+RXR|PO^Oral
+```
+
+---
+
+## 12. DFT^P03 - Charge posting at Augusta University Medical Center
+
+```
+MSH|^~\&|ORACLEHEALTH|AUMC|FINSYS|AUMC_FIN|20260412143000||DFT^P03|MSG10012|P|2.3|||AL|NE
+EVN|P03|20260412142500
+PID|1||AU8912748^^^AUMC_MRN^MR||Massey^Jacqueline^Faye||19680207|F|||2722 Peach Orchard Rd^^Augusta^GA^30906||^PRN^PH^^1^706^9384127|||W||AU8912748001|634-81-2957
+PV1|1|I|4MED^4318^B^AUMC|||22001^Salazar^Adriana^L^^^MD|||MED|||A|||22001^Salazar^Adriana^L^^^MD|IN||MEDICARE
+FT1|1|20260412|20260412142500|CG|D|1|150.00||||||99213^Office Visit Level 3^CPT|22001^Salazar^Adriana^L^^^MD||||||AU8912748001
+FT1|2|20260412|20260412142500|CG|D|1|45.00||||||36415^Venipuncture^CPT|22001^Salazar^Adriana^L^^^MD||||||AU8912748001
+```
+
+---
+
+## 13. ORU^R01 - Chemistry results from NGMC Braselton
+
+```
+MSH|^~\&|CRNR_GA|NGMC_BRAS|LABSYS|NGMC_LAB|20260413151500||ORU^R01|MSG10013|P|2.3|||AL|NE
+PID|1||NG7713694^^^NGMC_MRN^MR||Blackwell^DeAndre^Marquis||19830610|M|||5200 Gainesville Hwy^^Flowery Branch^GA^30542||^PRN^PH^^1^770^5241893|||S||NG7713694001|748-52-3019
+PV1|1|O|LABDRW^DRAW1^^NGMC_BRAS|||23001^Fitzgerald^Lauren^C^^^MD|||LAB|||N|||23001^Fitzgerald^Lauren^C^^^MD|OP||ANTHEM
+ORC|RE|ORD5829374^CERNER|LAB584937^NGMC_LAB||CM|||||||||23001^Fitzgerald^Lauren^C^^^MD
+OBR|1|ORD5829374^CERNER|LAB584937^NGMC_LAB|80053^Comprehensive Metabolic Panel^CPT|||20260413130000||||||20260413131500||23001^Fitzgerald^Lauren^C^^^MD||||||||LAB|F
+OBX|1|NM|2345-7^Glucose^LN||112|mg/dL|70-100|H|||F|||20260413151000
+OBX|2|NM|3094-0^BUN^LN||22|mg/dL|7-20|H|||F|||20260413151000
+OBX|3|NM|2160-0^Creatinine^LN||1.1|mg/dL|0.7-1.3|N|||F|||20260413151000
+OBX|4|NM|2951-2^Sodium^LN||138|mmol/L|136-145|N|||F|||20260413151000
+OBX|5|NM|2823-3^Potassium^LN||4.5|mmol/L|3.5-5.1|N|||F|||20260413151000
+OBX|6|NM|1742-6^ALT^LN||35|U/L|7-56|N|||F|||20260413151000
+OBX|7|NM|1920-8^AST^LN||28|U/L|10-40|N|||F|||20260413151000
+OBX|8|NM|1975-2^Total Bilirubin^LN||0.8|mg/dL|0.1-1.2|N|||F|||20260413151000
+```
+
+---
+
+## 14. ADT^A01 - Admission at NGMC Gainesville
+
+```
+MSH|^~\&|MILLENNIUM|NGMC|EDSYS|NGMC_ED|20260414021500||ADT^A01|MSG10014|P|2.3|||AL|NE
+EVN|A01|20260414021000||01|LGRANT^Grant^Latasha^J^^RN
+PID|1||NG7814529^^^NGMC_MRN^MR||Fuentes^Alejandro^Miguel||19950803|M|||215 Athens St^^Gainesville^GA^30501||^PRN^PH^^1^770^3624187|||S||NG7814529001|582-17-4390
+PV1|1|E|ED^BAY12^A^NGMC|||24001^Ingram^Valerie^K^^^MD|||EM|||A|||24001^Ingram^Valerie^K^^^MD|IN||PEACHSTATE||||||||||||||||||NGMC||||||20260414021000
+NK1|1|Fuentes^Elena^Sofia|MTH^Mother|215 Athens St^^Gainesville^GA^30501|^PRN^PH^^1^770^3624195
+DG1|1||823.00^Fracture of shaft of tibia, closed^I9||20260414|A
+```
+
+---
+
+## 15. ORM^O01 - Radiology order at Augusta University Medical Center
+
+```
+MSH|^~\&|CERNER|AUMC|RADSYS|AUMC_RAD|20260415084500||ORM^O01|MSG10015|P|2.3|||AL|NE
+PID|1||AU9015836^^^AUMC_MRN^MR||Hatcher^Loretta^Denise||19610512|F|||624 Boy Scout Rd^^Augusta^GA^30909||^PRN^PH^^1^706^2843691|||M||AU9015836001|817-39-6425
+PV1|1|O|RADOL^WAIT2^^AUMC|||25001^Thornton^Marcus^M^^^MD|||RAD|||N|||25001^Thornton^Marcus^M^^^MD|OP||CIGNA
+ORC|NW|ORD4738291^CERNER||||||^^^20260415100000^^R||20260415084000|||25001^Thornton^Marcus^M^^^MD|||||AUMC
+OBR|1|ORD4738291^CERNER||74177^CT Abdomen Pelvis with Contrast^CPT|||20260415100000|||N|||||25001^Thornton^Marcus^M^^^MD||||||||^^^20260415100000^^R
+```
+
+---
+
+## 16. ORU^R01 - Radiology report with embedded PDF from AUMC
+
+```
+MSH|^~\&|ORACLEHEALTH|AUMC|RADSYS|AUMC_RAD|20260416113000||ORU^R01|MSG10016|P|2.3|||AL|NE
+PID|1||AU9015836^^^AUMC_MRN^MR||Hatcher^Loretta^Denise||19610512|F|||624 Boy Scout Rd^^Augusta^GA^30909||^PRN^PH^^1^706^2843691|||M||AU9015836001|817-39-6425
+PV1|1|O|RADOL^WAIT2^^AUMC|||25001^Thornton^Marcus^M^^^MD|||RAD|||N|||25001^Thornton^Marcus^M^^^MD|OP||CIGNA
+ORC|RE|ORD4738291^CERNER|RAD594837^AUMC_RAD||CM|||||||||25001^Thornton^Marcus^M^^^MD
+OBR|1|ORD4738291^CERNER|RAD594837^AUMC_RAD|74177^CT Abdomen Pelvis with Contrast^CPT|||20260415100000||||||20260415103000||25001^Thornton^Marcus^M^^^MD||||||||RAD|F
+OBX|1|ED|74177^CT Abdomen Pelvis Report^CPT||^application^pdf^Base64^JVBERi0xLjUKJeLjz9MKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgL01hcmtJbmZvIDw8IC9NYXJrZWQgdHJ1ZSA+PiA+PgplbmRvYmoKMiAwIG9iago8PCAvVHlwZQ||||||F
+OBX|2|TX|74177^CT Impression^CPT||No acute intra-abdominal or pelvic pathology. Liver, spleen, pancreas, and kidneys unremarkable.||||||F
+```
+
+---
+
+## 17. SIU^S12 - Surgical scheduling at Augusta University
+
+```
+MSH|^~\&|MILLENNIUM|AUMC|ORSCHED|AUMC_OR|20260417094500||SIU^S12|MSG10017|P|2.3|||AL|NE
+SCH|APT6374859^CERNER||||||SURGERY^Surgical Procedure|ELECTIVE^Elective|180|MIN|^^180^20260424070000^20260424100000||||||26001^Winslow^Gregory^R^^^MD|^PRN^PH^^1^706^8194320|AUMC_OR^^AUMC|26001^Winslow^Gregory^R^^^MD|^PRN^PH^^1^706^8194335|AUMC_OR^^AUMC
+PID|1||AU9117942^^^AUMC_MRN^MR||Pruitt^Leonard^Carlton||19570614|M|||3355 Washington Rd^^Augusta^GA^30907||^PRN^PH^^1^706^4582013|||M
+PV1|1|P|PREOP^PRE2^^AUMC|||26001^Winslow^Gregory^R^^^MD|||SURG|||P
+RGS|1||AUMC_OR^^AUMC
+AIS|1||33533^CABG x3^CPT|20260424070000|||180|MIN
+AIP|1||26001^Winslow^Gregory^R^^^MD|ATND|20260424070000|||180|MIN
+```
+
+---
+
+## 18. MDM^T02 - Consultation note from NGMC
+
+```
+MSH|^~\&|CRNR_GA|NGMC|DOCSYS|NGMC_DOCS|20260418143000||MDM^T02|MSG10018|P|2.3|||AL|NE
+EVN|T02|20260418142500
+PID|1||NG7918347^^^NGMC_MRN^MR||Gentry^Pauline^Rochelle||19740829|F|||1005 Dawsonville Hwy^^Gainesville^GA^30501||^PRN^PH^^1^770^2918453|||D||NG7918347001|861-04-5237
+PV1|1|I|6MED^6108^A^NGMC|||27001^Hargrove^Winston^D^^^MD|||MED|||A|||27001^Hargrove^Winston^D^^^MD|IN||BCBS
+TXA|1|CN^Consultation Note|TX|20260418140000|27001^Hargrove^Winston^D^^^MD||20260418142500||||DOC6482937^CERNER||||AU||AV
+OBX|1|TX|11488-4^Consultation Note^LN||Consulted for evaluation of persistent abdominal pain. History of cholecystectomy 2019. CT abdomen shows small bowel adhesions. Recommend conservative management with dietary modification and follow-up in 2 weeks.||||||F
+```
+
+---
+
+## 19. DFT^P03 - Detailed charges from NGMC Braselton
+
+```
+MSH|^~\&|MILLENNIUM|NGMC_BRAS|FINSYS|NGMC_FIN|20260419101500||DFT^P03|MSG10019|P|2.3|||AL|NE
+EVN|P03|20260419101000
+PID|1||NG8019475^^^NGMC_MRN^MR||Mcintyre^Gerald^Raymond||19810303|M|||6060 Spout Springs Rd^^Flowery Branch^GA^30542||^PRN^PH^^1^770^8471329|||M||NG8019475001|942-30-7618
+PV1|1|O|ORTHO^EXAM2^^NGMC_BRAS|||28001^Kemp^Bridgette^S^^^MD|||ORTHO|||N|||28001^Kemp^Bridgette^S^^^MD|OP||UHC
+FT1|1|20260419|20260419101000|CG|D|1|275.00||||||99214^Office Visit Level 4^CPT|28001^Kemp^Bridgette^S^^^MD||||||NG8019475001
+FT1|2|20260419|20260419101000|CG|D|1|120.00||||||73560^Knee X-Ray 3 Views^CPT|28001^Kemp^Bridgette^S^^^MD||||||NG8019475001
+FT1|3|20260419|20260419101000|CG|D|1|35.00||||||20610^Joint Injection^CPT|28001^Kemp^Bridgette^S^^^MD||||||NG8019475001
+```
+
+---
+
+## 20. RDE^O11 - Pharmacy order at Augusta University Medical Center
+
+```
+MSH|^~\&|CERNER|AUMC|PHARMSYS|AUMC_PHARM|20260420073000||RDE^O11|MSG10020|P|2.3|||AL|NE
+PID|1||AU9220158^^^AUMC_MRN^MR||Barfield^Ernestine^Lucille||19590117|F|||501 Greene St^^Augusta^GA^30901||^PRN^PH^^1^706^7152834|||W||AU9220158001|103-48-6712
+PV1|1|I|5ICU^5208^A^AUMC|||29001^Cho^Daniel^H^^^MD|||ICU|||A|||29001^Cho^Daniel^H^^^MD|IN||MEDICARE
+ORC|NW|ORD3948271^CERNER||||||^^^20260420080000^^R||20260420072500|||29001^Cho^Daniel^H^^^MD|||||AUMC
+RXE|^^^20260420080000^^R|00006-0749-31^Vancomycin 1g IV^NDC|1000||mg|VIAL|IV|Q12H|||||1||0|20260420080000
+RXR|IV^Intravenous
+```

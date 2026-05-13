@@ -17,6 +17,7 @@ from redis.exceptions import ResponseError
 
 # Zato
 from zato.common.util.api import new_msg_id, utcnow
+from zato.server.metrics import zato_pubsub_messages_delivered_total, zato_pubsub_messages_published_total
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -127,6 +128,8 @@ class RedisPubSubBackend:
         # Add to stream
         stream_key = self._get_stream_key(topic_name)
         _ = self.redis.xadd(stream_key, message, maxlen=ModuleCtx.Default_Max_Len)
+
+        _ = zato_pubsub_messages_published_total.labels(topic_name=topic_name).inc()
 
         return PublishResult(msg_id=msg_id)
 
@@ -269,6 +272,10 @@ class RedisPubSubBackend:
                 # Acknowledge the message for this consumer group
                 stream_name_str = stream_name.decode('utf-8') if isinstance(stream_name, bytes) else stream_name
                 _ = self.redis.xack(stream_name_str, sub_key, redis_msg_id)
+
+                delivered_topic = decoded.get('topic_name', '')
+                if delivered_topic:
+                    _ = zato_pubsub_messages_delivered_total.labels(topic_name=delivered_topic).inc()
 
         # Sort by priority desc, then by pub_time asc
         messages.sort(key=lambda m: (-m['priority'], m.get('pub_time_iso', '')))

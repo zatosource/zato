@@ -16,7 +16,7 @@ from time import sleep
 from traceback import format_exc
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Zato
 from zato.common.typing_ import cast_
@@ -25,7 +25,7 @@ from zato.common.util.file_system import fs_safe_now
 from zato.common.util.open_ import open_w
 from zato.common.util.python_ import import_module_by_path
 from zato.server.service import AsIs
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 
@@ -55,10 +55,8 @@ class DeploymentCtx:
 class Create(AdminService):
     """ Creates all the filesystem directories and files out of a deployment package stored in the ODB.
     """
-    class SimpleIO(AdminSIO):
-        input_required = 'payload', 'payload_name'
-        input_optional = 'is_startup'
-        output_optional = AsIs('services_deployed'), 'zato_ide_deploy_create_response'
+    input = 'payload', 'payload_name', '-is_startup'
+    output = AsIs('-services_deployed'), '-zato_ide_deploy_create_response'
 
 # ################################################################################################################################
 
@@ -381,6 +379,10 @@ class Create(AdminService):
                         delattr(class_, needs_post_deploy_attr)
 
                 self.response.payload.services_deployed = services_deployed
+
+                # Notify MCP channels that tools may have changed
+                if services_deployed:
+                    self.server.notify_mcp_tools_changed()
 
             except OSError as e:
                 if e.errno == ENOENT:

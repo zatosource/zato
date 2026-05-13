@@ -1,0 +1,257 @@
+# Chameleon EMR (Elad Health) - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - inpatient admission with Israeli insurance
+
+```
+MSH|^~\&|CHAMELEON|RAMBAM_MC|ADT_RCV|RAMBAM_LAB|20260301080000||ADT^A01^ADT_A01|CHA000001|P|2.4
+EVN|A01|20260301080000
+PID|||291847563^^^IL_MOH^NI||Abramov^Neta^Shira^^Mrs.||19830412|F|||Nordau 18^^Haifa^^3300514^IL||^PRN^PH^04-831-2245~^PRN^CP^052-744-8816
+PV1||I|MED^301^A^RAMBAM||||10312^Haddad^Fadi^^^Dr.||20419^Kravitz^Ilana^^^Dr.||MED||||||||VN10001|||||||||||||||||||||||20260301080000
+IN1|1||101|Clalit Health Services|Arlozorov 101^^Tel Aviv^^6209801^IL
+```
+
+---
+
+## 2. ADT^A02 - patient transfer between departments
+
+```
+MSH|^~\&|CHAMELEON|RAMBAM_MC|ADT_RCV|RAMBAM_LAB|20260302093000||ADT^A02^ADT_A02|CHA000002|P|2.4
+EVN|A02|20260302093000
+PID|||291847563^^^IL_MOH^NI||Abramov^Neta^Shira^^Mrs.||19830412|F|||Nordau 18^^Haifa^^3300514^IL||^PRN^PH^04-831-2245
+PV1||I|SURG^405^B^RAMBAM||||10312^Haddad^Fadi^^^Dr.||20419^Kravitz^Ilana^^^Dr.||SURG||MED^301^A^RAMBAM|||||||VN10001|||||||||||||||||||||||20260302093000
+```
+
+---
+
+## 3. ADT^A03 - patient discharge
+
+```
+MSH|^~\&|CHAMELEON|RAMBAM_MC|ADT_RCV|RAMBAM_LAB|20260308140000||ADT^A03^ADT_A03|CHA000003|P|2.4
+EVN|A03|20260308140000
+PID|||291847563^^^IL_MOH^NI||Abramov^Neta^Shira^^Mrs.||19830412|F|||Nordau 18^^Haifa^^3300514^IL||^PRN^PH^04-831-2245
+PV1||I|SURG^405^B^RAMBAM||||10312^Haddad^Fadi^^^Dr.||20419^Kravitz^Ilana^^^Dr.||MED^301^A^RAMBAM|||||||VN10001||||||||||||||||||||||||||20260308140000
+```
+
+---
+
+## 4. ADT^A04 - outpatient registration
+
+```
+MSH|^~\&|CHAMELEON|SHEBA_MC|ADT_RCV|SHEBA_LAB|20260310100000||ADT^A04^ADT_A01|CHA000004|P|2.4
+EVN|A04|20260310100000
+PID|||476253918^^^IL_MOH^NI||Shapiro^Gideon^Omer^^Mr.||19710609|M|||Weizmann 33^^Rishon LeZion^^7524408^IL||^PRN^PH^03-942-1876~^PRN^CP^054-302-7154
+PV1||O|CARD^102^^SHEBA||||30781^Nasser^Rami^^^Dr.||||||||||||VN20002|||||||||||||||||||||||20260310100000
+IN1|1||102|Maccabi Healthcare Services|Hamered 27^^Tel Aviv^^6812507^IL
+```
+
+---
+
+## 5. ADT^A08 - patient information update
+
+```
+MSH|^~\&|CHAMELEON|SHEBA_MC|ADT_RCV|SHEBA_LAB|20260311090000||ADT^A08^ADT_A01|CHA000005|P|2.4
+EVN|A08|20260311090000
+PID|||476253918^^^IL_MOH^NI||Shapiro^Gideon^Omer^^Mr.||19710609|M|||Dizengoff 55^^Tel Aviv^^6433222^IL||^PRN^PH^03-623-4567~^PRN^CP^054-302-7154~^NET^Internet^gideon.shapiro@walla.co.il
+PV1||O|CARD^102^^SHEBA||||30781^Nasser^Rami^^^Dr.||||||||||||VN20002|||||||||||||||||||||||20260311090000
+IN1|1||102|Maccabi Healthcare Services|Hamered 27^^Tel Aviv^^6812507^IL
+```
+
+---
+
+## 6. ORM^O01 - laboratory order
+
+```
+MSH|^~\&|CHAMELEON|ICHILOV_MC|LAB_SYS|ICHILOV_LAB|20260312080000||ORM^O01|CHA000006|P|2.4
+PID|||834162759^^^IL_MOH^NI||Tessema^Hana^Meron^^Mrs.||19920225|F|||Ben Gurion 7^^Petah Tikva^^4951006^IL||^PRN^CP^050-613-8472
+PV1||I|INT^210^A^ICHILOV||||40298^Segal^Orna^^^Dr.||||||||||||VN30003
+ORC|NW|ORD5001^CHAMELEON|||||^^^20260312080000^^R
+OBR|1|ORD5001^CHAMELEON||CBC^Complete Blood Count^L|||20260312073000||||A|||||40298^Segal^Orna^^^Dr.
+```
+
+---
+
+## 7. ORU^R01 - CBC laboratory result
+
+```
+MSH|^~\&|LAB_SYS|ICHILOV_LAB|CHAMELEON|ICHILOV_MC|20260312140000||ORU^R01|LAB000007|P|2.4
+PID|||834162759^^^IL_MOH^NI||Tessema^Hana^Meron^^Mrs.||19920225|F|||Ben Gurion 7^^Petah Tikva^^4951006^IL||^PRN^CP^050-613-8472
+PV1||I|INT^210^A^ICHILOV||||40298^Segal^Orna^^^Dr.||||||||||||VN30003
+ORC|RE|ORD5001^CHAMELEON|RES9001^LAB_SYS
+OBR|1|ORD5001^CHAMELEON|RES9001^LAB_SYS|CBC^Complete Blood Count^L|||20260312073000|||||||||40298^Segal^Orna^^^Dr.|||||||F
+OBX|1|NM|WBC^White Blood Cell Count^L||7.2|10*3/uL|4.0-11.0|N|||F
+OBX|2|NM|RBC^Red Blood Cell Count^L||4.8|10*6/uL|3.8-5.2|N|||F
+OBX|3|NM|HGB^Hemoglobin^L||13.5|g/dL|12.0-16.0|N|||F
+OBX|4|NM|PLT^Platelet Count^L||245|10*3/uL|150-400|N|||F
+```
+
+---
+
+## 8. ORU^R01 - chemistry panel with abnormal flags
+
+```
+MSH|^~\&|LAB_SYS|HADASSAH_LAB|CHAMELEON|HADASSAH_MC|20260315103000||ORU^R01|LAB000008|P|2.4
+PID|||615297348^^^IL_MOH^NI||Magal^Zvi^Reuven^^Mr.||19600118|M|||King George 22^^Jerusalem^^9426107^IL||^PRN^PH^02-563-8842
+PV1||I|NEPH^501^C^HADASSAH||||50914^Barkai^Revital^^^Dr.||||||||||||VN40004
+ORC|RE|ORD6001^CHAMELEON|RES9002^LAB_SYS
+OBR|1|ORD6001^CHAMELEON|RES9002^LAB_SYS|CHEM14^Comprehensive Metabolic Panel^L|||20260315080000|||||||||50914^Barkai^Revital^^^Dr.|||||||F
+OBX|1|NM|GLU^Glucose^L||185|mg/dL|70-100|HH|||F
+OBX|2|NM|BUN^Blood Urea Nitrogen^L||42|mg/dL|7-20|HH|||F
+OBX|3|NM|CREAT^Creatinine^L||2.8|mg/dL|0.6-1.2|HH|||F
+OBX|4|NM|NA^Sodium^L||138|mmol/L|136-145|N|||F
+OBX|5|NM|K^Potassium^L||5.8|mmol/L|3.5-5.0|H|||F
+```
+
+---
+
+## 9. ADT^A28 - new person notification to national registry
+
+```
+MSH|^~\&|CHAMELEON|BEILINSON_MC|EMPI|IL_MOH_REG|20260316080000||ADT^A28^ADT_A05|CHA000009|P|2.4
+EVN|A28|20260316080000
+PID|||528914673^^^IL_MOH^NI||Volkov^Tatiana^Rivka^^Mrs.||19870930|F|||HaAtzmaut 12^^Netanya^^4244008^IL||^PRN^CP^058-224-6139
+PV1||N
+NK1|1|Volkov^Maxim^^^Mr.|SPO|HaAtzmaut 12^^Netanya^^4244008^IL|^PRN^CP^058-907-3152
+```
+
+---
+
+## 10. ADT^A31 - update person information
+
+```
+MSH|^~\&|CHAMELEON|BEILINSON_MC|EMPI|IL_MOH_REG|20260317090000||ADT^A31^ADT_A05|CHA000010|P|2.4
+EVN|A31|20260317090000
+PID|||528914673^^^IL_MOH^NI||Volkov^Tatiana^Rivka^^Mrs.||19870930|F|||Sokolov 8^^Netanya^^4230501^IL||^PRN^CP^058-224-6139~^NET^Internet^tatiana.volkov@gmail.com
+PV1||N
+```
+
+---
+
+## 11. ADT^A40 - patient merge
+
+```
+MSH|^~\&|CHAMELEON|SOROKA_MC|EMPI|IL_MOH_REG|20260318110000||ADT^A40^ADT_A39|CHA000011|P|2.4
+EVN|A40|20260318110000
+PID|||742361895^^^IL_MOH^NI||Ohana^Yoav^Aviel^^Mr.||19750520|M|||Rager 17^^Be'er Sheva^^8489312^IL||^PRN^CP^052-991-3746
+MRG|742361894^^^IL_MOH^NI||VN50005
+PV1||I|ORTH^601^A^SOROKA||||60453^Azaria^Nir^^^Dr.||||||||||||VN50006
+```
+
+---
+
+## 12. ORM^O01 - radiology order
+
+```
+MSH|^~\&|CHAMELEON|ASSUTA_MC|RIS_SYS|ASSUTA_RAD|20260319090000||ORM^O01|CHA000012|P|2.4
+PID|||953718264^^^IL_MOH^NI||Blau^Michal^Avigail^^Mrs.||19850714|F|||Jabotinsky 22^^Ramat Gan^^5252115^IL||^PRN^CP^050-778-4126
+PV1||O|RAD^100^^ASSUTA||||70562^Zilberman^Alon^^^Dr.||||||||||||VN60007
+ORC|NW|ORD7001^CHAMELEON|||||^^^20260319090000^^R
+OBR|1|ORD7001^CHAMELEON||71020^Chest X-Ray PA and Lateral^CPT|||20260319083000||||A|||||70562^Zilberman^Alon^^^Dr.
+```
+
+---
+
+## 13. ORU^R01 - radiology report with embedded PDF (base64 ED)
+
+```
+MSH|^~\&|RIS_SYS|ASSUTA_RAD|CHAMELEON|ASSUTA_MC|20260319150000||ORU^R01|RAD000013|P|2.4
+PID|||953718264^^^IL_MOH^NI||Blau^Michal^Avigail^^Mrs.||19850714|F|||Jabotinsky 22^^Ramat Gan^^5252115^IL||^PRN^CP^050-778-4126
+PV1||O|RAD^100^^ASSUTA||||70562^Zilberman^Alon^^^Dr.||||||||||||VN60007
+ORC|RE|ORD7001^CHAMELEON|RES9003^RIS_SYS
+OBR|1|ORD7001^CHAMELEON|RES9003^RIS_SYS|71020^Chest X-Ray PA and Lateral^CPT|||20260319083000|||||||||70562^Zilberman^Alon^^^Dr.|||||||F
+OBX|1|FT|71020^Chest X-Ray Report^CPT||Chest X-Ray PA and Lateral\.br\Findings: No acute cardiopulmonary disease\.br\Heart size normal\.br\Lungs are clear bilaterally\.br\No pleural effusion or pneumothorax\.br\Impression: Normal chest radiograph||||||F
+OBX|2|ED|PDF^Radiology Report PDF^L||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSA+PgplbmRvYmoKeHJlZgowIDQKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAp0cmFpbGVyCjw8IC9TaXplIDQgL1Jvb3QgMSAwIFIgPj4Kc3RhcnR4cmVmCjIxMQolJUVPRgo=||||||F
+```
+
+---
+
+## 14. MDM^T02 - clinical document notification with embedded PDF (base64 ED)
+
+```
+MSH|^~\&|CHAMELEON|WOLFSON_MC|DOC_REPO|IL_MOH_REG|20260320100000||MDM^T02|CHA000014|P|2.4
+EVN|T02|20260320100000
+PID|||317569842^^^IL_MOH^NI||Gonen^Tal^Erez^^Mr.||19680814|M|||Ussishkin 5^^Holon^^5840207^IL||^PRN^CP^054-901-2237
+PV1||I|GEN^202^B^WOLFSON||||80345^Peled^Dafna^^^Dr.||||||||||||VN70008
+TXA|1|DS^Discharge Summary^L|TX|20260320090000|80345^Peled^Dafna^^^Dr.|20260320100000||||DOC20001||||||LA
+OBX|1|ED|DS^Discharge Summary PDF^L||^application^pdf^Base64^JVBERi0xLjUKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvUmVzb3VyY2VzIDw8ID4+ID4+CmVuZG9iagp4cmVmCjAgNAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTE1IDAwMDAwIG4gCnRyYWlsZXIKPDwgL1NpemUgNCAvUm9vdCAxIDAgUiA+PgpzdGFydHhyZWYKMjE2CiUlRU9GCg==||||||F
+```
+
+---
+
+## 15. ORU^R01 - microbiology culture result
+
+```
+MSH|^~\&|MICRO_LAB|HADASSAH_LAB|CHAMELEON|HADASSAH_MC|20260321160000||ORU^R01|MIC000015|P|2.4
+PID|||483926175^^^IL_MOH^NI||Kashua^Samira^Huda^^Mrs.||19740216|F|||Aza 9^^Jerusalem^^9310205^IL||^PRN^CP^052-481-7693
+PV1||I|INF^301^A^HADASSAH||||50914^Barkai^Revital^^^Dr.||||||||||||VN80009
+ORC|RE|ORD8001^CHAMELEON|RES9004^MICRO_LAB
+OBR|1|ORD8001^CHAMELEON|RES9004^MICRO_LAB|87040^Blood Culture^CPT|||20260320060000|||||||||50914^Barkai^Revital^^^Dr.|||||||F
+OBX|1|CE|87040^Organism Identified^CPT||ECO^Escherichia coli^L||||||F
+OBX|2|ST|18769-0^Gram Stain^LN||Gram-negative rods||||||F
+OBX|3|SN|28-1^Ampicillin MIC^LN||>32|ug/mL||||R|||F
+OBX|4|SN|185-9^Ciprofloxacin MIC^LN||<=0.25|ug/mL||||S|||F
+```
+
+---
+
+## 16. ADT^A05 - pre-admission
+
+```
+MSH|^~\&|CHAMELEON|KAPLAN_MC|ADT_RCV|KAPLAN_LAB|20260322070000||ADT^A05^ADT_A05|CHA000016|P|2.4
+EVN|A05|20260322070000
+PID|||629483715^^^IL_MOH^NI||Amar^Dvir^Noam^^Mr.||19980317|M|||Allenby 44^^Tel Aviv^^6513101^IL||^PRN^CP^053-182-6794
+PV1||P|SURG^400^^KAPLAN||||90217^Zoabi^Amal^^^Dr.||||||||||||VN90010
+IN1|1||103|Leumit Health Services|Struma 11^^Tel Aviv^^6525003^IL
+```
+
+---
+
+## 17. ORM^O01 - medication order
+
+```
+MSH|^~\&|CHAMELEON|RAMBAM_MC|PHARM_SYS|RAMBAM_PHARM|20260323080000||ORM^O01|CHA000017|P|2.4
+PID|||718493652^^^IL_MOH^NI||Gabay^Liron^Eitan^^Mr.||19770823|M|||HaCarmel 60^^Haifa^^3436512^IL||^PRN^CP^050-334-7129
+PV1||I|ONCO^700^A^RAMBAM||||10312^Haddad^Fadi^^^Dr.||||||||||||VN10011
+ORC|NW|ORD9001^CHAMELEON|||||^^^20260323080000^^R
+RXO|1|00069-3060-01^Cisplatin 50mg/50mL^NDC|50|mg|IV|||G|||2||20260323090000|20260323120000
+```
+
+---
+
+## 18. ORU^R01 - coagulation panel
+
+```
+MSH|^~\&|LAB_SYS|SHEBA_LAB|CHAMELEON|SHEBA_MC|20260324110000||ORU^R01|LAB000018|P|2.4
+PID|||847219365^^^IL_MOH^NI||Feldman^Orly^Bracha^^Mrs.||19800502|F|||Sokolov 60^^Ramat HaSharon^^4724503^IL||^PRN^CP^054-667-2341
+PV1||I|CARD^500^B^SHEBA||||30781^Nasser^Rami^^^Dr.||||||||||||VN20012
+ORC|RE|ORD1002^CHAMELEON|RES9005^LAB_SYS
+OBR|1|ORD1002^CHAMELEON|RES9005^LAB_SYS|COAG^Coagulation Panel^L|||20260324080000|||||||||30781^Nasser^Rami^^^Dr.|||||||F
+OBX|1|NM|5902-2^Prothrombin Time^LN||14.2|sec|11.0-13.5|H|||F
+OBX|2|NM|6301-6^INR^LN||1.3||0.9-1.1|H|||F
+OBX|3|NM|3173-2^aPTT^LN||32.0|sec|25.0-35.0|N|||F
+OBX|4|NM|3255-7^Fibrinogen^LN||280|mg/dL|200-400|N|||F
+```
+
+---
+
+## 19. ADT^A11 - cancel admission
+
+```
+MSH|^~\&|CHAMELEON|SOROKA_MC|ADT_RCV|SOROKA_LAB|20260325070000||ADT^A11^ADT_A09|CHA000019|P|2.4
+EVN|A11|20260325070000
+PID|||365814297^^^IL_MOH^NI||Saba^Yosef^Ariel^^Mr.||19890614|M|||Rager 55^^Be'er Sheva^^8489403^IL||^PRN^CP^058-773-4218
+PV1||I|ORTH^601^A^SOROKA||||60453^Azaria^Nir^^^Dr.||||||||||||VN50013|||||||||||||||||||||||20260325070000
+```
+
+---
+
+## 20. SIU^S12 - scheduling notification for outpatient visit
+
+```
+MSH|^~\&|CHAMELEON|MEIR_MC|SCHED_SYS|MEIR_CLINIC|20260326080000||SIU^S12|CHA000020|P|2.4
+SCH|APT80001|APT80001||||ROUTINE^Routine^HL70276|FOLLOWUP^Follow-up Visit^L|||||30|min|^^^20260402093000^20260402100000
+PID|||519274836^^^IL_MOH^NI||Deri^Inbal^Shani^^Mrs.||19810929|F|||Ben Gurion 20^^Kfar Saba^^4433501^IL||^PRN^CP^052-116-9835
+PV1||O|DERM^100^^MEIR||||11078^Toledano^Yossi^^^Dr.||||||||||||VN30014
+AIS|1||DERM_CONSULT^Dermatology Consultation^L|20260402093000|||30|min
+```

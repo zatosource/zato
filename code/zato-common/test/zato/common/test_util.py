@@ -13,7 +13,7 @@ from tempfile import TemporaryDirectory
 from unittest import TestCase
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Zato
 from zato.common.util import api as util_api, StaticConfig

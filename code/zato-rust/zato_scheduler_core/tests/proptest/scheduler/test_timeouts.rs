@@ -25,6 +25,10 @@ fn make_active_job() -> SchedulerJob {
         timezone: None,
         calendar: None,
         max_execution_time_ms: Some(1_000),
+        on_success_service: None,
+        on_success_job: None,
+        on_error_service: None,
+        on_error_job: None,
     }
 }
 

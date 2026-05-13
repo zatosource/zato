@@ -42,7 +42,7 @@ from zato.common.api import DONT_DEPLOY_ATTR_NAME, SourceCodeInfo, TRACE1
 from zato.common.facade import PubSubFacade, SecurityFacade
 from zato.common.json_internal import dumps
 from zato.common.marshal_.api import Model as DataClassModel
-from zato.common.marshal_.simpleio import DataClassSimpleIO
+from zato.common.marshal_.io import DataClassIO
 from zato.common.odb.model.base import Base as ModelBase
 from zato.common.typing_ import cast_, list_
 from zato.common.util.api import deployment_info, import_module_from_path, is_python_file, visit_py_source
@@ -52,8 +52,8 @@ from zato.server.config import ConfigDict
 from zato.server.service import SchedulerFacade, Service
 from zato.server.service.internal import AdminService
 
-# Zato - Cython
-from zato.simpleio import CySimpleIO
+# Zato
+from zato.input_output import IOProcessor
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,7 +65,7 @@ if 0:
     from zato.common.typing_ import any_, anydict, anylist, callable_, intstrdict, module_, stranydict, \
         strdictdict, strint, strintdict, strlist, stroriter, tuple_
     from zato.server.base.parallel import ParallelServer
-    from zato.server.base.worker import WorkerStore
+    from zato.server.base.config_manager import ConfigManager
     from zato.server.config import ConfigStore
     callable_ = callable_
     intstrdict = intstrdict
@@ -76,7 +76,7 @@ if 0:
     HotDeployProject = HotDeployProject
     ODBManager       = ODBManager
     ParallelServer   = ParallelServer
-    WorkerStore      = WorkerStore
+    ConfigManager    = ConfigManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -107,7 +107,7 @@ data_class_model_class_name = 'zato.server.service.Model'
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _TestingWorkerStore:
+class _TestingConfigManager:
     sql_pool_store = None
     outconn_ldap = None
     outconn_mongodb = None
@@ -117,7 +117,7 @@ class _TestingWorkerStore:
     cache_api = None
 
     def __init__(self):
-        self.worker_config = cast_('ConfigStore', None)
+        self.config_store = cast_('ConfigStore', None)
 
 # ################################################################################################################################
 
@@ -278,8 +278,8 @@ class ServiceStore:
         self.action_internal_done  = 'Deployed'
 
         if self.is_testing:
-            self._testing_worker_store = cast_('WorkerStore', _TestingWorkerStore())
-            self._testing_worker_store.worker_config = cast_('ConfigStore', _TestingWorkerConfig())
+            self._testing_config_manager = cast_('ConfigManager', _TestingConfigManager())
+            self._testing_config_manager.config_store = cast_('ConfigStore', _TestingWorkerConfig())
 
 # ################################################################################################################################
 
@@ -436,8 +436,8 @@ class ServiceStore:
 
         # Local aliases
         service_name = class_.get_name()
-        _Class_SimpleIO = None # type: ignore
-        _Class_SimpleIO = _Class_SimpleIO # type: ignore
+        _Class_IO = None # type: ignore
+        _Class_IO = _Class_IO # type: ignore
 
         # Set up enforcement of what other services a given service can invoke
         try:
@@ -446,49 +446,49 @@ class ServiceStore:
             class_.invokes = []
 
         # If the class has input or output declared directly as class attributes,
-        # we need to ensure they end up in a SimpleIO wrapper.
-        _direct_sio_input  = getattr(class_, 'input', None)
-        _direct_sio_output = getattr(class_, 'output', None)
+        # we need to ensure they end up in an I/O wrapper.
+        _direct_io_input  = getattr(class_, 'input', None)
+        _direct_io_output = getattr(class_, 'output', None)
 
-        if _direct_sio_input or _direct_sio_output:
+        if _direct_io_input or _direct_io_output:
 
             class_._zato_needs_response_wrapper = False # type: ignore
 
-            if not hasattr(class_, 'SimpleIO') or not getattr(class_.SimpleIO, 'input', None):
+            if not hasattr(class_, 'IO') or not getattr(class_.IO, 'input', None):
 
-                class _Class_SimpleIO:
+                class _Class_IO:
                     pass
 
-                if _direct_sio_input:
-                    _Class_SimpleIO.input = _direct_sio_input # type: ignore
+                if _direct_io_input:
+                    _Class_IO.input = _direct_io_input # type: ignore
 
-                if _direct_sio_output:
-                    _Class_SimpleIO.output = _direct_sio_output # type: ignore
+                if _direct_io_output:
+                    _Class_IO.output = _direct_io_output # type: ignore
 
-                class_.SimpleIO = _Class_SimpleIO # type: ignore
+                class_.IO = _Class_IO # type: ignore
 
         try:
-            class_.SimpleIO # type: ignore
-            class_.has_sio = True
+            class_.IO # type: ignore
+            class_.has_io = True
         except AttributeError:
-            class_.has_sio = False
+            class_.has_io = False
 
-        if class_.has_sio:
+        if class_.has_io:
 
-            sio_input  = getattr(
-                class_.SimpleIO, # type: ignore
+            io_input  = getattr(
+                class_.IO, # type: ignore
                 'input',
                  None
                 )
 
-            sio_output = getattr(
-                class_.SimpleIO, # type: ignore
+            io_output = getattr(
+                class_.IO, # type: ignore
                 'output',
                 None
             )
 
-            has_input_data_class  = self._has_io_data_class(class_, sio_input,  'Input')
-            has_output_data_class = self._has_io_data_class(class_, sio_output, 'Output')
+            has_input_data_class  = self._has_io_data_class(class_, io_input,  'Input')
+            has_output_data_class = self._has_io_data_class(class_, io_output, 'Output')
 
             # If either input or output is a dataclass but the other one is not,
             # we need to turn the latter into a dataclass as well.
@@ -497,7 +497,7 @@ class ServiceStore:
             if has_output_data_class:
 
                 # .. but input is not and it should be ..
-                if (not has_input_data_class) and sio_input:
+                if (not has_input_data_class) and io_input:
 
                     # .. create a name for the dynamically-generated input model class ..
                     name = class_.__module__ + '_' + class_.__name__
@@ -507,21 +507,20 @@ class ServiceStore:
                     # .. generate the input model class now ..
                     model_input = DataClassModel.build_model_from_flat_input(
                         service_store.server,
-                        service_store.server.sio_config,
-                        CySimpleIO,
+                        IOProcessor,
                         name,
-                        sio_input
+                        io_input
                     )
 
                     # .. and assign it as input.
-                    if _Class_SimpleIO:
-                        _Class_SimpleIO.input = model_input # type: ignore
+                    if _Class_IO:
+                        _Class_IO.input = model_input # type: ignore
 
             # We are here if input is a dataclass ..
             if has_input_data_class:
 
                 # .. but output is not and it should be.
-                if (not has_output_data_class) and sio_output:
+                if (not has_output_data_class) and io_output:
 
                     # .. create a name for the dynamically-generated output model class ..
                     name = class_.__module__ + '_' + class_.__name__
@@ -531,21 +530,20 @@ class ServiceStore:
                     # .. generate the input model class now ..
                     model_output = DataClassModel.build_model_from_flat_input(
                         service_store.server,
-                        service_store.server.sio_config,
-                        CySimpleIO,
+                        IOProcessor,
                         name,
-                        sio_output
+                        io_output
                     )
 
-                    if _Class_SimpleIO:
-                        _Class_SimpleIO.output = model_output # type: ignore
+                    if _Class_IO:
+                        _Class_IO.output = model_output # type: ignore
 
             if has_input_data_class or has_output_data_class:
-                SIOClass = DataClassSimpleIO
+                IOClass = DataClassIO
             else:
-                SIOClass = CySimpleIO # type: ignore
+                IOClass = IOProcessor # type: ignore
 
-            _ = SIOClass.attach_sio(service_store.server, service_store.server.sio_config, class_) # type: ignore
+            _ = IOClass.attach_io(service_store.server, class_) # type: ignore
 
         # May be None during unit-tests - not every test provides it.
         if service_store:
@@ -555,8 +553,8 @@ class ServiceStore:
 
             if self.is_testing:
 
-                class_._worker_store = self._testing_worker_store
-                class_._worker_config = self._testing_worker_store.worker_config
+                class_._config_manager = self._testing_config_manager
+                class_._config_store = self._testing_config_manager.config_store
                 class_.component_enabled_email = True
                 class_.component_enabled_search = True
                 class_.component_enabled_odoo = True
@@ -564,29 +562,23 @@ class ServiceStore:
             else:
 
                 class_.add_http_method_handlers()
-                class_._worker_store = service_store.server.worker_store
+                class_._config_manager = service_store.server.config_manager
                 class_._enforce_service_invokes = service_store.server.enforce_service_invokes # type: ignore
                 class_.odb = service_store.server.odb
                 class_.schedule = SchedulerFacade(service_store.server)
-                class_.cloud.confluence = service_store.server.worker_store.cloud_confluence
-                class_.cloud.jira = service_store.server.worker_store.cloud_jira
-                class_.cloud.salesforce = service_store.server.worker_store.cloud_salesforce
-                class_.cloud.ms365 = service_store.server.worker_store.cloud_microsoft_365
-                class_.amqp.publish = service_store.server.worker_store.amqp_invoke
+                class_.cloud.confluence = service_store.server.config_manager.cloud_confluence
+                class_.cloud.jira = service_store.server.config_manager.cloud_jira
+                class_.cloud.salesforce = service_store.server.config_manager.cloud_salesforce
+                class_.cloud.ms365 = service_store.server.config_manager.cloud_microsoft_365
+                class_.amqp.publish = service_store.server.config_manager.amqp_invoke
                 class_.commands.init(service_store.server)
 
-                class_._worker_config = service_store.server.worker_store.worker_config
+                class_._config_store = service_store.server.config_manager.config_store
                 class_.rules = service_store.server.rules
 
                 class_.component_enabled_email = service_store.server.fs_server_config.component_enabled.email
                 class_.component_enabled_search = service_store.server.fs_server_config.component_enabled.search
                 class_.component_enabled_odoo = service_store.server.fs_server_config.component_enabled.odoo
-
-            # Monitoring
-            zato_prefixes = ('zato', 'pub.zato')
-            is_zato_service = service_name.startswith(zato_prefixes)
-            is_excluded_service = service_name == 'demo.ping'
-            class_.needs_datadog_logging = self.server.is_datadog_enabled and (not is_zato_service) and (not is_excluded_service)
 
             # Crypto operations
             class_.crypto = service_store.server.crypto_manager
@@ -596,14 +588,14 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def has_sio(self, service_name:'str') -> 'bool':
-        """ Returns True if service indicated by service_name has a SimpleIO definition.
+    def has_io(self, service_name:'str') -> 'bool':
+        """ Returns True if service indicated by service_name has an I/O definition.
         """
         with self.update_lock:
             service_id = self.get_service_id_by_name(service_name)
             service_info = self.get_service_info_by_id(service_id) # type: stranydict
             class_ = service_info['service_class'] # type: Service
-            return getattr(class_, 'has_sio', False)
+            return getattr(class_, 'has_io', False)
 
 # ################################################################################################################################
 
@@ -1519,8 +1511,8 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def on_worker_initialized(self) -> 'None':
-        """ Executed after a worker has been fully initialized, e.g. all connectors are started and references to these objects
+    def on_server_initialized(self) -> 'None':
+        """ Executed after the server has been fully initialized, e.g. all connectors are started and references to these objects
         can be assigned as class-wide attributes to services.
         """
 

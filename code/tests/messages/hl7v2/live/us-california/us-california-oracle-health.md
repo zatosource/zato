@@ -1,0 +1,221 @@
+# Oracle Health (Cerner) - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - Inpatient admission at UC Davis Medical Center
+
+```
+MSH|^~\&|CERNERMILL|UCDAVIS_MC|ADT_RECV|UCDAVIS_MC|20260508061500||ADT^A01|CRN00001|P|2.3
+EVN|A01|20260508061500
+PID|||MRN56780001^^^UCDAVIS_MC^MR||Vargas^Ricardo^Manuel^^Mr.||19550318|M||H|2345 Alhambra Blvd^^Sacramento^CA^95817||^PRN^PH^^1^916^5551234||||M|||619-43-7281
+PV1||I|5NORTH^5N02^01^UCDAVIS_MC|U|||1122334^Nakagawa^David^K^^^MD|2233445^Estrada^Maria^M^^^MD|||CAR|||||1122334^Nakagawa^David^K^^^MD|IN||||||||||||||||||||||||||20260508061500
+IN1|1|BCBS001|CA789012|Anthem Blue Cross|21555 Oxnard St^^Woodland Hills^CA^91367||^PRN^PH^^1^800^3312273|||||||Vargas^Ricardo^Manuel|01|19550318|2345 Alhambra Blvd^^Sacramento^CA^95817
+```
+
+## 2. ADT^A02 - Transfer at Loma Linda University Medical Center
+
+```
+MSH|^~\&|MILLENNIUM|LOMALINDA_MC|ADT_RECV|LOMALINDA_MC|20260507142000||ADT^A02|CRN00002|P|2.3
+EVN|A02|20260507142000
+PID|||MRN56780002^^^LOMALINDA_MC^MR||Ito^Keiko^Sachiko^^Mrs.||19680724|F||A|8901 Pepper Ave^^Redlands^CA^92374||^PRN^PH^^1^909^5556789||||M|||538-71-9024
+PV1||I|CCU^CCU03^01^LOMALINDA_MC|U|||3344556^Whitaker^Jonathan^A^^^MD||||||||3344556^Whitaker^Jonathan^A^^^MD|IN|||||||||||||||||||4EAST^4E11^01^LOMALINDA_MC||||20260505091000
+```
+
+## 3. ADT^A03 - Discharge from Riverside Community Hospital
+
+```
+MSH|^~\&|CERNER|RIVERSIDE_CH|ADT_RECV|RIVERSIDE_CH|20260507170000||ADT^A03|CRN00003|P|2.3
+EVN|A03|20260507170000
+PID|||MRN56780003^^^RIVERSIDE_CH^MR||Coleman^DeShawn^Marcus^^Mr.||19790402|M||B|6789 Magnolia Ave^^Riverside^CA^92506||^PRN^PH^^1^951^5553456||||S|||427-86-1953
+PV1||I|3WEST^3W07^01^RIVERSIDE_CH|U|||4455667^Bose^Rajesh^L^^^MD||||||||4455667^Bose^Rajesh^L^^^MD|IN||||||||||||||||||||||||||20260504083000|20260507170000
+DG1|1||486^Pneumonia, organism unspecified|||A
+```
+
+## 4. ADT^A04 - Outpatient registration at Eisenhower Health
+
+```
+MSH|^~\&|CERNERMILL|EISENHOWER_HC|ADT_RECV|EISENHOWER_HC|20260508090000||ADT^A04|CRN00004|P|2.3
+EVN|A04|20260508090000
+PID|||MRN56780004^^^EISENHOWER_HC^MR||Donovan^Margaret^Claire^^Mrs.||19470815|F||W|3456 Bob Hope Dr^^Rancho Mirage^CA^92270||^PRN^PH^^1^760^5557890||||W|||753-28-4610
+PV1||O|ONCCLN^ONC01^01^EISENHOWER_HC|R|||5566778^Calloway^Reginald^R^^^MD||||||||5566778^Calloway^Reginald^R^^^MD|OP||||||||||||||||||||||||||20260508090000
+IN1|1|MEDICARE001|MC567890|Medicare Part B|PO Box 100000^^San Francisco^CA^94100||^PRN^PH^^1^800^6334227|||||||Donovan^Margaret^Claire|01|19470815|3456 Bob Hope Dr^^Rancho Mirage^CA^92270
+```
+
+## 5. ADT^A05 - Pre-admit at UC Davis Medical Center
+
+```
+MSH|^~\&|CERNERMILL|UCDAVIS_MC|ADT_RECV|UCDAVIS_MC|20260506140000||ADT^A05|CRN00005|P|2.3
+EVN|A05|20260506140000
+PID|||MRN56780005^^^UCDAVIS_MC^MR||Choi^Hana^Minjung^^Ms.||19910613|F||A|1234 Florin Rd^^Sacramento^CA^95831||^PRN^PH^^1^916^5551098||||S|||841-59-3267
+PV1||I|LABOR^LDR01^01^UCDAVIS_MC|E|||6677889^Richter^Anna^S^^^MD||||||||6677889^Richter^Anna^S^^^MD|IN||||||||||||||||||||||||||20260510060000
+DG1|1||O80^Encounter for full-term uncomplicated delivery|||A
+```
+
+## 6. ADT^A08 - Update patient at Loma Linda
+
+```
+MSH|^~\&|MILLENNIUM|LOMALINDA_MC|ADT_RECV|LOMALINDA_MC|20260508101500||ADT^A08|CRN00006|P|2.3
+EVN|A08|20260508101500
+PID|||MRN56780002^^^LOMALINDA_MC^MR||Ito^Keiko^Sachiko^^Mrs.||19680724|F||A|8901 Pepper Ave^^Redlands^CA^92374||^PRN^PH^^1^909^5556789~^PRN^CP^^1^909^5551234||||M|||538-71-9024
+PV1||I|CCU^CCU03^01^LOMALINDA_MC|U|||3344556^Whitaker^Jonathan^A^^^MD||||||||3344556^Whitaker^Jonathan^A^^^MD|IN||||||||||||||||||||||||||20260505091000
+NK1|1|Ito^Takeshi^R|SPO|8901 Pepper Ave^^Redlands^CA^92374|^PRN^PH^^1^909^5552345
+```
+
+## 7. ORM^O01 - Lab order from UC Davis
+
+```
+MSH|^~\&|CERNERMILL|UCDAVIS_MC|LABSYS|UCDAVIS_MC|20260508070000||ORM^O01|CRN00007|P|2.3
+PID|||MRN56780001^^^UCDAVIS_MC^MR||Vargas^Ricardo^Manuel^^Mr.||19550318|M||H|2345 Alhambra Blvd^^Sacramento^CA^95817||^PRN^PH^^1^916^5551234
+PV1||I|5NORTH^5N02^01^UCDAVIS_MC|U|||1122334^Nakagawa^David^K^^^MD
+ORC|NW|ORD89015100||||^^^20260508070000^^R||20260508070000|RN001^Hall^Susan||1122334^Nakagawa^David^K^^^MD
+OBR|1|ORD89015100||BNP^B-Type Natriuretic Peptide|||20260508070000|||||A||||1122334^Nakagawa^David^K^^^MD
+OBR|2|ORD89015101||TROPI^Troponin I|||20260508070000|||||A||||1122334^Nakagawa^David^K^^^MD
+```
+
+## 8. ORU^R01 - Cardiac markers from UC Davis lab
+
+```
+MSH|^~\&|CERNER|UCDAVIS_MC|CERNERMILL|UCDAVIS_MC|20260508093000||ORU^R01|CRN00008|P|2.3
+PID|||MRN56780001^^^UCDAVIS_MC^MR||Vargas^Ricardo^Manuel^^Mr.||19550318|M||H|2345 Alhambra Blvd^^Sacramento^CA^95817||^PRN^PH^^1^916^5551234
+PV1||I|5NORTH^5N02^01^UCDAVIS_MC|U|||1122334^Nakagawa^David^K^^^MD
+ORC|RE|ORD89015100||||^^^20260508070000^^R||20260508093000|LAB016^Martinez^Victor
+OBR|1|ORD89015100||BNP^B-Type Natriuretic Peptide|||20260508070000||||||20260508075000|B^Blood|1122334^Nakagawa^David^K^^^MD|||||||F
+OBX|1|NM|42637-9^BNP^LN||892|pg/mL|<100|HH|||F|||20260508092000
+OBR|2|ORD89015101||TROPI^Troponin I|||20260508070000||||||20260508075000|B^Blood|1122334^Nakagawa^David^K^^^MD|||||||F
+OBX|2|NM|10839-9^Troponin I^LN||0.03|ng/mL|0.00-0.04|N|||F|||20260508092000
+```
+
+## 9. ORU^R01 - Radiology report with encapsulated PDF from Loma Linda
+
+```
+MSH|^~\&|ORACLEHEALTH|LOMALINDA_MC|CERNERMILL|LOMALINDA_MC|20260507160000||ORU^R01|CRN00009|P|2.3
+PID|||MRN56780002^^^LOMALINDA_MC^MR||Ito^Keiko^Sachiko^^Mrs.||19680724|F||A|8901 Pepper Ave^^Redlands^CA^92374||^PRN^PH^^1^909^5556789
+PV1||I|CCU^CCU03^01^LOMALINDA_MC|U|||3344556^Whitaker^Jonathan^A^^^MD
+ORC|RE|ORD89015200||||^^^20260507100000^^R||20260507160000|RAD002^Foster^James
+OBR|1|ORD89015200||71275^CT Angiography Chest^CPT|||20260507100000||||||20260507110000||3344556^Whitaker^Jonathan^A^^^MD|||||||F
+OBX|1|ED|71275^CT Angiography Chest^CPT||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCg==||||||F
+OBX|2|FT|71275^CT Angiography Chest^CPT||IMPRESSION: No evidence of pulmonary embolism. Mild cardiomegaly. Small bilateral pleural effusions.||||||F
+```
+
+## 10. ORU^R01 - MRI report with encapsulated PDF from Eisenhower
+
+```
+MSH|^~\&|ORACLEHEALTH|EISENHOWER_HC|CERNERMILL|EISENHOWER_HC|20260506154500||ORU^R01|CRN00010|P|2.3
+PID|||MRN56780004^^^EISENHOWER_HC^MR||Donovan^Margaret^Claire^^Mrs.||19470815|F||W|3456 Bob Hope Dr^^Rancho Mirage^CA^92270||^PRN^PH^^1^760^5557890
+PV1||O|ONCCLN^ONC01^01^EISENHOWER_HC|R|||5566778^Calloway^Reginald^R^^^MD
+ORC|RE|ORD89015300||||^^^20260506090000^^R||20260506154500|RAD003^Nakamura^Lisa
+OBR|1|ORD89015300||70553^MRI Brain with and without contrast^CPT|||20260506090000||||||20260506100000||5566778^Calloway^Reginald^R^^^MD|||||||F
+OBX|1|ED|70553^MRI Brain with and without contrast^CPT||^application^pdf^Base64^JVBERi0xLjUKJcOkw7zDtsOfCjEgMCBvYmoKPDwgL1R5cGUgL0NhdGFsb2cKL1BhZ2VzIDIgMCBSCj4+CmVuZG9iagoyIDAgb2JqCjw8IC9UeXBlIC9QYWdlcwovS2lkcyBbMyAwIFJdCi9Db3VudCAxCj4+CmVuZG9iagozIDAgb2Jq||||||F
+OBX|2|FT|70553^MRI Brain with and without contrast^CPT||IMPRESSION: Stable 1.2 cm meningioma right frontal convexity. No new intracranial lesions. No evidence of metastatic disease.||||||F
+```
+
+## 11. SIU^S12 - Appointment scheduled at Riverside Community
+
+```
+MSH|^~\&|CERNERMILL|RIVERSIDE_CH|SCHED|RIVERSIDE_CH|20260508100000||SIU^S12|CRN00011|P|2.3
+SCH|APT2026050805||||||ROUTINE|FOLLOWUP^Follow Up||||30|min|^^^20260520090000^20260520093000||||4455667^Bose^Rajesh^L^^^MD||||BOOKED
+PID|||MRN56780003^^^RIVERSIDE_CH^MR||Coleman^DeShawn^Marcus^^Mr.||19790402|M||B|6789 Magnolia Ave^^Riverside^CA^92506||^PRN^PH^^1^951^5553456
+PV1||O|PULM^PUL01^01^RIVERSIDE_CH||||4455667^Bose^Rajesh^L^^^MD
+```
+
+## 12. SIU^S12 - Surgery scheduling at Loma Linda
+
+```
+MSH|^~\&|MILLENNIUM|LOMALINDA_MC|SCHED|LOMALINDA_MC|20260507150000||SIU^S12|CRN00012|P|2.3
+SCH|APT2026050706||||||ROUTINE|SURGERY^Surgical Procedure||||120|min|^^^20260514070000^20260514090000||||7788990^Estrada^Maria^D^^^MD||||BOOKED
+PID|||MRN56780006^^^LOMALINDA_MC^MR||Soto^Gabriela^Lucia^^Mrs.||19730221|F||H|4567 Mountain View Ave^^San Bernardino^CA^92407||^PRN^PH^^1^909^5553456
+PV1||O|SURG^SR01^01^LOMALINDA_MC||||7788990^Estrada^Maria^D^^^MD
+```
+
+## 13. MDM^T02 - Operative report from Riverside
+
+```
+MSH|^~\&|CERNER|RIVERSIDE_CH|DOCMGMT|RIVERSIDE_CH|20260506180000||MDM^T02|CRN00013|P|2.3
+EVN|T02|20260506180000
+PID|||MRN56780003^^^RIVERSIDE_CH^MR||Coleman^DeShawn^Marcus^^Mr.||19790402|M||B|6789 Magnolia Ave^^Riverside^CA^92506||^PRN^PH^^1^951^5553456
+PV1||I|3WEST^3W07^01^RIVERSIDE_CH|U|||4455667^Bose^Rajesh^L^^^MD
+TXA|1|OP^Operative Note|TX|20260506180000|4455667^Bose^Rajesh^L^^^MD||20260506180000|||||DOC20260506002||||AU||AV|||4455667^Bose^Rajesh^L^^^MD
+OBX|1|TX|28570-0^Procedure Note^LN||PROCEDURE: Bronchoscopy with BAL. INDICATION: Bilateral pneumonia not responding to empiric antibiotics. FINDINGS: Purulent secretions in RML and RLL. BAL obtained from RML.||||||F
+```
+
+## 14. RDE^O11 - Pharmacy order from UC Davis
+
+```
+MSH|^~\&|CERNERMILL|UCDAVIS_MC|PHARMACY|UCDAVIS_MC|20260508072000||RDE^O11|CRN00014|P|2.3
+PID|||MRN56780001^^^UCDAVIS_MC^MR||Vargas^Ricardo^Manuel^^Mr.||19550318|M||H|2345 Alhambra Blvd^^Sacramento^CA^95817||^PRN^PH^^1^916^5551234
+PV1||I|5NORTH^5N02^01^UCDAVIS_MC|U|||1122334^Nakagawa^David^K^^^MD
+ORC|NW|ORD89015400||||^^^20260508072000^^R||20260508072000|RN001^Hall^Susan||1122334^Nakagawa^David^K^^^MD
+RXE|^^^20260508080000^^BID|FUROSEMIDE^Furosemide 40mg^RXNORM|40||mg|TAB^Tablet|30||||||||||||PO^Oral
+RXR|PO^Oral
+```
+
+## 15. DFT^P03 - Charge posting from Eisenhower Health
+
+```
+MSH|^~\&|CERNERMILL|EISENHOWER_HC|BILLING|EISENHOWER_HC|20260508170000||DFT^P03|CRN00015|P|2.3
+EVN|P03|20260508170000
+PID|||MRN56780004^^^EISENHOWER_HC^MR||Donovan^Margaret^Claire^^Mrs.||19470815|F||W|3456 Bob Hope Dr^^Rancho Mirage^CA^92270||^PRN^PH^^1^760^5557890
+PV1||O|ONCCLN^ONC01^01^EISENHOWER_HC|R|||5566778^Calloway^Reginald^R^^^MD
+FT1|1|CHG20260508003||20260508|20260508|CG|99215^Office visit, est patient, level 5^CPT||||1||||||5566778^Calloway^Reginald^R^^^MD
+FT1|2|CHG20260508004||20260508|20260508|CG|96413^Chemotherapy infusion, first hour^CPT||||1||||||5566778^Calloway^Reginald^R^^^MD
+FT1|3|CHG20260508005||20260508|20260508|CG|96415^Chemotherapy infusion, each additional hour^CPT||||2||||||5566778^Calloway^Reginald^R^^^MD
+```
+
+## 16. MDM^T02 - Consultation note from UC Davis
+
+```
+MSH|^~\&|CERNER|UCDAVIS_MC|DOCMGMT|UCDAVIS_MC|20260508130000||MDM^T02|CRN00016|P|2.3
+EVN|T02|20260508130000
+PID|||MRN56780001^^^UCDAVIS_MC^MR||Vargas^Ricardo^Manuel^^Mr.||19550318|M||H|2345 Alhambra Blvd^^Sacramento^CA^95817||^PRN^PH^^1^916^5551234
+PV1||I|5NORTH^5N02^01^UCDAVIS_MC|U|||1122334^Nakagawa^David^K^^^MD
+TXA|1|CN^Consultation Note|TX|20260508130000|8899001^Richter^Anna^K^^^MD||20260508130000|||||DOC20260508003||||AU||AV|||8899001^Richter^Anna^K^^^MD
+OBX|1|TX|11488-4^Consultation Note^LN||REASON FOR CONSULT: Heart failure management. IMPRESSION: Decompensated systolic heart failure, EF 30%. Elevated BNP at 892. Recommend aggressive diuresis, cardiology follow-up post discharge, consider ICD evaluation.||||||F
+```
+
+## 17. ORM^O01 - Radiology order from Riverside
+
+```
+MSH|^~\&|CERNERMILL|RIVERSIDE_CH|RADIS|RIVERSIDE_CH|20260508080000||ORM^O01|CRN00017|P|2.3
+PID|||MRN56780003^^^RIVERSIDE_CH^MR||Coleman^DeShawn^Marcus^^Mr.||19790402|M||B|6789 Magnolia Ave^^Riverside^CA^92506||^PRN^PH^^1^951^5553456
+PV1||I|3WEST^3W07^01^RIVERSIDE_CH|U|||4455667^Bose^Rajesh^L^^^MD
+ORC|NW|ORD89015500||||^^^20260508080000^^R||20260508080000|RN002^Kim^Julie||4455667^Bose^Rajesh^L^^^MD
+OBR|1|ORD89015500||71046^Chest X-ray PA and Lateral^CPT|||20260508080000|||||A||||4455667^Bose^Rajesh^L^^^MD
+```
+
+## 18. ORU^R01 - ABG results from Loma Linda ICU
+
+```
+MSH|^~\&|CERNER|LOMALINDA_MC|CERNERMILL|LOMALINDA_MC|20260507183000||ORU^R01|CRN00018|P|2.3
+PID|||MRN56780002^^^LOMALINDA_MC^MR||Ito^Keiko^Sachiko^^Mrs.||19680724|F||A|8901 Pepper Ave^^Redlands^CA^92374||^PRN^PH^^1^909^5556789
+PV1||I|CCU^CCU03^01^LOMALINDA_MC|U|||3344556^Whitaker^Jonathan^A^^^MD
+ORC|RE|ORD89015600||||^^^20260507175000^^S||20260507183000|LAB017^Garcia^Roberto
+OBR|1|ORD89015600||ABG^Arterial Blood Gas|||20260507175000||||||20260507180000|ABG^Arterial Blood|3344556^Whitaker^Jonathan^A^^^MD|||||||F
+OBX|1|NM|2744-1^pH Arterial^LN||7.38||7.35-7.45|N|||F
+OBX|2|NM|2019-8^pCO2 Arterial^LN||42|mmHg|35-45|N|||F
+OBX|3|NM|2703-7^pO2 Arterial^LN||78|mmHg|80-100|L|||F
+OBX|4|NM|1959-6^Bicarbonate^LN||24|mmol/L|22-26|N|||F
+OBX|5|NM|2708-6^O2 Saturation^LN||95|%|95-100|N|||F
+```
+
+## 19. DFT^P03 - ED charge from Riverside Community
+
+```
+MSH|^~\&|CERNER|RIVERSIDE_CH|BILLING|RIVERSIDE_CH|20260507173000||DFT^P03|CRN00019|P|2.3
+EVN|P03|20260507173000
+PID|||MRN56780003^^^RIVERSIDE_CH^MR||Coleman^DeShawn^Marcus^^Mr.||19790402|M||B|6789 Magnolia Ave^^Riverside^CA^92506||^PRN^PH^^1^951^5553456
+PV1||I|3WEST^3W07^01^RIVERSIDE_CH|U|||4455667^Bose^Rajesh^L^^^MD
+FT1|1|CHG20260507003||20260504|20260504|CG|99285^ED visit, level 5^CPT||||1||||||9900112^Nakagawa^David^W^^^MD
+FT1|2|CHG20260507004||20260504|20260504|CG|71046^Chest X-ray 2 views^CPT||||1||||||9900112^Nakagawa^David^W^^^MD
+FT1|3|CHG20260507005||20260504|20260504|CG|85025^CBC with differential^CPT||||1||||||9900112^Nakagawa^David^W^^^MD
+```
+
+## 20. ADT^A01 - Admission to Eisenhower Health oncology
+
+```
+MSH|^~\&|ORACLEHEALTH|EISENHOWER_HC|ADT_RECV|EISENHOWER_HC|20260508141500||ADT^A01|CRN00020|P|2.3
+EVN|A01|20260508141500
+PID|||MRN56780007^^^EISENHOWER_HC^MR||Barrett^Kenneth^Thomas^^Mr.||19600911|M||W|7890 Date Palm Dr^^Cathedral City^CA^92234||^PRN^PH^^1^760^5551234||||M|||362-94-7158
+PV1||I|ONCINPT^ONC04^01^EISENHOWER_HC|U|||5566778^Calloway^Reginald^R^^^MD|0011223^Richter^Anna^M^^^MD|||ONC|||||5566778^Calloway^Reginald^R^^^MD|IN||||||||||||||||||||||||||20260508141500
+DG1|1||C34.11^Malignant neoplasm of upper lobe, right bronchus or lung|||A
+IN1|1|AETNA001|AET234567|Aetna Senior Supplemental|151 Farmington Ave^^Hartford^CA^92270||^PRN^PH^^1^800^8722862|||||||Barrett^Kenneth^Thomas|01|19600911|7890 Date Palm Dr^^Cathedral City^CA^92234
+```

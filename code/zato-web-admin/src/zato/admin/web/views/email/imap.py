@@ -19,7 +19,7 @@ from zato.admin.web.views import change_password as _change_password, CreateEdit
      Index as _Index, method_allowed
 from zato.common.api import EMAIL
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,15 +37,15 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'debug_level', 'mode', \
-             'get_criteria', 'server_type', 'server_type_human'
-        output_optional = 'username', 'tenant_id', 'client_id', 'search_criteria', 'filter_criteria'
-        output_repeated = True
+    input_required = 'cluster_id',
+    output_required = 'id', 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'debug_level', 'mode', \
+         'get_criteria', 'server_type', 'server_type_human'
+    output_optional = 'username', 'tenant_id', 'client_id', 'search_criteria', 'filter_criteria'
+    output_repeated = True
 
     def handle(self):
         return {
+            'show_search_form': True,
             'default_debug_level': EMAIL.DEFAULT.IMAP_DEBUG_LEVEL,
             'default_get_criteria': EMAIL.DEFAULT.GET_CRITERIA,
             'default_filter_criteria': EMAIL.DEFAULT.FILTER_CRITERIA,
@@ -60,10 +60,9 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'debug_level', 'mode', 'get_criteria', \
-            'server_type', 'tenant_id', 'client_id', 'search_criteria', 'filter_criteria'
-        output_required = 'id', 'name'
+    input_required = 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'debug_level', 'mode', 'get_criteria', \
+        'server_type', 'tenant_id', 'client_id', 'search_criteria', 'filter_criteria'
+    output_required = 'id', 'name'
 
     def success_message(self, item):
         return 'Successfully {} IMAP connection `{}`'.format(self.verb, item.name)

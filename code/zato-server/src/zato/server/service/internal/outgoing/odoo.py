@@ -21,7 +21,7 @@ from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import OutgoingOdoo
 from zato.common.odb.query import out_odoo_list
 from zato.common.util.api import ping_odoo
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
+from zato.server.service.internal import AdminService, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
@@ -78,10 +78,6 @@ class ChangePassword(ChangePasswordBase):
     """
     password_required = False
 
-    class SimpleIO(ChangePasswordBase.SimpleIO):
-        request_elem = 'zato_outgoing_odoo_change_password_request'
-        response_elem = 'zato_outgoing_odoo_change_password_response'
-
     def handle(self):
         def _auth(instance, password):
             instance.password = password
@@ -94,11 +90,8 @@ class ChangePassword(ChangePasswordBase):
 class Ping(AdminService):
     """ Pings an Odoo connection to check its configuration.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_odoo_ping_request'
-        response_elem = 'zato_outgoing_odoo_ping_response'
-        input_required = ('id',)
-        output_required = ('info',)
+    input = 'id',
+    output = 'info',
 
     def handle(self):
 

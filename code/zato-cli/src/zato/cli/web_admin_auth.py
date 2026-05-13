@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 
 # Zato
-from zato.cli import common_totp_opts, ManageCommand
+from zato.cli import ManageCommand
 from zato.common.const import ServiceConst
 from zato.common.util.open_ import open_r, open_w
 
@@ -185,56 +185,6 @@ class UpdatePassword(_WebAdminAuthCommand):
 
         if not called_from_wrapper:
             self._ok(args)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ResetTOTPKey(_WebAdminAuthCommand):
-    """ Resets a user's TOTP secret key. Returns the key on output unless it was given on input.
-    """
-    opts = common_totp_opts
-
-    def before_execute(self, args):
-        super(ResetTOTPKey, self).before_execute(args)
-        self._prepare(args)
-        self.reset_logger(args, True)
-
-    def execute(self, args):
-
-        # Zato
-        from zato.admin.web.util import set_user_profile_totp_key
-        from zato.admin.web.models import User
-        from zato.admin.web.util import get_user_profile
-        from zato.admin.zato_settings import zato_secret_key
-        from zato.cli.util import get_totp_info_from_args
-        from zato.common.json_internal import dumps
-
-        # Extract or generate a new TOTP key and label
-        key, key_label = get_totp_info_from_args(args)
-        self.reset_logger(args, True)
-
-        try:
-            user = User.objects.get(username=args.username)
-        except User.DoesNotExist:
-            self.logger.warning('No such user `%s` found in `%s`', args.username, args.path)
-            return
-
-        # Here we know we have the user and key for sure, now we need to get the person's profile
-        user_profile = get_user_profile(user, False)
-
-        # Everything is ready, we can reset the key ..
-        opaque_attrs = set_user_profile_totp_key(user_profile, zato_secret_key, key, key_label)
-
-        # .. and save the modified profile.
-        user_profile.opaque1 = dumps(opaque_attrs)
-        user_profile.save()
-
-        # Log the key only if it was not given on input. Otherwise the user is expected to know it already
-        # and may perhaps want not to disclose it.
-        if self.args.key:
-            self.logger.info('OK')
-        else:
-            self.logger.info(key)
 
 # ################################################################################################################################
 # ################################################################################################################################

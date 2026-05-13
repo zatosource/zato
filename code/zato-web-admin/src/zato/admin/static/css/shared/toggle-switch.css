@@ -1,0 +1,74 @@
+/*
+ * Toggle switch - reusable slider control that replaces a checkbox.
+ *
+ * Markup:
+ *
+ *   <label class="toggle-switch">
+ *       <input type="checkbox" id="my-id" name="my-name">
+ *       <span class="toggle-slider"></span>
+ *   </label>
+ *
+ * The <input> is visually hidden but remains accessible.
+ *
+ * ---------------------------------------------------------------
+ * Customisation
+ * ---------------------------------------------------------------
+ *
+ * Override any of these CSS custom properties on a parent element
+ * to adjust size and colors per page.
+ *
+ * Variable                      Purpose
+ * --toggle-width                Track width
+ * --toggle-height               Track height
+ * --toggle-knob-size            Knob diameter
+ * --toggle-knob-offset          Knob inset from track edge
+ * --toggle-off-bg               Track background when off
+ * --toggle-on-bg                Track background when on
+ * --toggle-knob-color           Knob fill color
+ * --toggle-travel               Knob horizontal travel when on
+ */
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: var(--toggle-width, 48px);
+    height: var(--toggle-height, 24px);
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--toggle-off-bg, #ccc);
+    transition: 0.24s;
+    border-radius: var(--toggle-height, 24px);
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: var(--toggle-knob-size, 18px);
+    width: var(--toggle-knob-size, 18px);
+    left: var(--toggle-knob-offset, 3px);
+    bottom: var(--toggle-knob-offset, 3px);
+    background-color: var(--toggle-knob-color, white);
+    transition: 0.24s;
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+    background-color: var(--toggle-on-bg, var(--primary-dark));
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(var(--toggle-travel, 24px));
+}

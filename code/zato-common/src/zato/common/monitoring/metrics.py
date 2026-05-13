@@ -9,14 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from threading import RLock
 
-# ddtrace
-try:
-    from ddtrace.vendor.dogstatsd.base import statsd
-except ImportError as e:
-    from logging import getLogger
-    logger = getLogger('zato')
-    logger.debug(f'Datadog not available: {e}')
-
 # Zato
 from zato.common.typing_ import anydict, floatnone
 from zato.common.util.time_ import utcnow_as_ms
@@ -144,34 +136,10 @@ class ServiceMetrics:
     def push(self, event_name:'str', value:'float') -> 'None':
         """ Push a metric with a numeric value.
         """
-        service_name = self.service.name
-        server = self.service.server
-
-        if server.is_datadog_enabled:
-            tags = [f'service:{service_name}']
-            statsd.gauge(event_name, value, tags=tags)
-
-        if server.is_grafana_cloud_enabled:
-            with server.otlp_gauges_lock:
-                gauge = server.otlp_gauges.get(event_name)
-                if not gauge:
-                    gauge = server.otlp_meter.create_gauge(event_name)
-                    server.otlp_gauges[event_name] = gauge
-            gauge.set(value, {'service': service_name})
 
     def incr(self, event_name:'str', value:'int'=1) -> 'None':
         """ Increment a counter metric.
         """
-        service_name = self.service.name
-        server = self.service.server
-
-        if server.is_grafana_cloud_enabled:
-            with server.otlp_counters_lock:
-                counter = server.otlp_counters.get(event_name)
-                if not counter:
-                    counter = server.otlp_meter.create_counter(event_name)
-                    server.otlp_counters[event_name] = counter
-            counter.add(value, {'service': service_name})
 
 # ################################################################################################################################
 # ################################################################################################################################

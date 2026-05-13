@@ -16,6 +16,7 @@ from logging import DEBUG, getLogger
 from tempfile import gettempdir
 from traceback import format_exc
 from unittest import TestCase
+from urllib.request import urlopen
 
 # Prometheus
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
@@ -151,12 +152,28 @@ class Echo(Service):
 # ################################################################################################################################
 
 class GetMetrics(Service):
-    """ Returns metrics in Prometheus format.
+    """ Returns metrics in Prometheus format, combining server and scheduler metrics.
     """
     name = 'zato.metrics.get'
 
     def handle(self):
-        self.response.payload = generate_latest().decode('utf-8')
+        from zato.server.metrics import refresh_uptime
+        refresh_uptime()
+
+        server_text = generate_latest().decode('utf-8')
+
+        scheduler_text = ''
+        try:
+            with urlopen('http://127.0.0.1:35100/metrics', timeout=2) as resp:
+                scheduler_text = resp.read().decode('utf-8')
+        except Exception:
+            pass
+
+        if scheduler_text:
+            self.response.payload = server_text + '\n' + scheduler_text
+        else:
+            self.response.payload = server_text
+
         self.response.content_type = CONTENT_TYPE_LATEST
 
 # ################################################################################################################################
@@ -203,100 +220,12 @@ class HTMLService(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BaseServiceGateway:
-    """ Common functionality for service gateway classes.
-    """
-
-    def _check_service_allowed(self, service, channel_id):
-
-        with self.server.gateway_services_allowed_lock:
-            allowed_services = self.server.gateway_services_allowed[channel_id]
-
-        if service not in allowed_services:
-            raise Unauthorized(self.cid, 'Unauthorized', 'gateway')
-
-    def _set_sec_def(self, username):
-        self.wsgi_environ['zato.sec_def'] = {
-            'id': None,
-            'name': None,
-            'type': SEC_DEF_TYPE.BASIC_AUTH,
-            'username': username,
-            'impl': None,
-        }
-
-    def _invoke_service(self, service, request):
-        return self.invoke(service, request, wsgi_environ=self.wsgi_environ)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ServiceGateway(BaseServiceGateway, Service):
-    """ Dispatches incoming requests to target services.
-    """
-    name = 'helpers.service-gateway'
-
-    def handle(self) -> 'None':
-        service = self.request.http.params.get('service')
-        request = self.request.raw_request
-        channel_id = self.channel.id
-
-        self._check_service_allowed(service, channel_id)
-
-        username = self.wsgi_environ.get('HTTP_X_ZATO_USERNAME', '')
-        self._set_sec_def(username)
-
-        self.response.payload = self._invoke_service(service, request)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class DjangoServiceGateway(BaseServiceGateway, Service):
-    """ Dispatches incoming requests to target services for Django clients.
-    """
-    name = 'helpers.django-service-gateway'
-    username = 'django'
-
-    def handle(self) -> 'None':
-
-        password = os.environ.get('Zato_Django_Password') or os.environ.get('Zato_Password')
-        if not password:
-            raise Forbidden(self.cid)
-
-        auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
-        if not auth_header:
-            raise Forbidden(self.cid)
-
-        is_valid = check_basic_auth(self.cid, auth_header, self.username, password)
-        if is_valid is not True:
-            raise Forbidden(self.cid)
-
-        service = self.request.http.params.get('service')
-        request = self.request.raw_request
-
-        django_user = self.wsgi_environ.get('HTTP_X_ZATO_USER', '')
-        correlation_id = self.wsgi_environ.get('HTTP_X_ZATO_CORRELATION_ID', '')
-        forwarded_for = self.wsgi_environ.get('HTTP_X_ZATO_FORWARDED_FOR', '')
-
-        self.wsgi_environ['zato.request_ctx'] = {
-            'django_user': django_user,
-            'correlation_id': correlation_id,
-            'forwarded_for': forwarded_for,
-        }
-
-        username_for_sec_def = django_user if django_user else self.username
-        self._set_sec_def(username_for_sec_def)
-
-        self.response.payload = self._invoke_service(service, request)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class APISpecHelperUser(Service):
     """ Test support services - User.
     """
     name = 'helpers.api-spec.user'
 
-    class SimpleIO:
+    class IO:
         input  = GetUserRequest
         output = GetUserResponse
 
@@ -405,7 +334,7 @@ class MyDataclassService(Service):
     """
     name = 'helpers.dataclass-service'
 
-    class SimpleIO:
+    class IO:
         input  = MyRequest
         output = MyResponse
 
@@ -419,7 +348,7 @@ class CommandsService(Service):
 
     name = 'helpers.commands-service'
 
-    class SimpleIO:
+    class IO:
         output = CommandResult
 
     class _CommandsServiceTestCase(TestCase):
@@ -735,8 +664,8 @@ class OpenAPIHandler(Service):
         """ Validates auth header against any of the basic auth definitions.
         """
         for security_id in basic_auth_security_ids:
-            # Get the security definition from the worker store
-            sec_def = self.server.worker_store.basic_auth_get_by_id(security_id)
+            # Get the security definition from the config manager
+            sec_def = self.server.config_manager.basic_auth_get_by_id(security_id)
             if sec_def:
                 # Decrypt password if encrypted
                 password = sec_def['password']

@@ -31,6 +31,24 @@
             '_delete',
             'id',
             'is_active',
+            'should_log_messages',
+            'logging_level',
+            'max_msg_size',
+            'read_buffer_size',
+            'recv_timeout',
+            'start_seq',
+            'end_seq',
+            'max_wait_time',
+            'max_retries',
+            'backoff_base_seconds',
+            'backoff_cap_seconds',
+            'backoff_jitter_percent',
+            'circuit_breaker_threshold_percent',
+            'circuit_breaker_window_seconds',
+            'circuit_breaker_reset_seconds',
+            'tls_cert_path',
+            'tls_key_path',
+            'tls_ca_path',
         ]
     }
     </script>
@@ -112,6 +130,31 @@
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
 
                         <td class='ignore'>{{ item.is_active }}</td>
+
+                        <td class='ignore'>{{ item.should_log_messages }}</td>
+                        <td class='ignore'>{{ item.logging_level }}</td>
+
+                        <td class='ignore'>{{ item.max_msg_size }}</td>
+                        <td class='ignore'>{{ item.read_buffer_size }}</td>
+                        <td class='ignore'>{{ item.recv_timeout }}</td>
+
+                        <td class='ignore'>{{ item.start_seq }}</td>
+                        <td class='ignore'>{{ item.end_seq }}</td>
+
+                        <td class='ignore'>{{ item.max_wait_time }}</td>
+
+                        <td class='ignore'>{{ item.max_retries }}</td>
+                        <td class='ignore'>{{ item.backoff_base_seconds }}</td>
+                        <td class='ignore'>{{ item.backoff_cap_seconds }}</td>
+                        <td class='ignore'>{{ item.backoff_jitter_percent }}</td>
+
+                        <td class='ignore'>{{ item.circuit_breaker_threshold_percent }}</td>
+                        <td class='ignore'>{{ item.circuit_breaker_window_seconds }}</td>
+                        <td class='ignore'>{{ item.circuit_breaker_reset_seconds }}</td>
+
+                        <td class='ignore'>{{ item.tls_cert_path }}</td>
+                        <td class='ignore'>{{ item.tls_key_path }}</td>
+                        <td class='ignore'>{{ item.tls_ca_path }}</td>
 
                     </tr>
                 {% endfor %}
@@ -224,6 +267,126 @@
                         </tr>
 
                         <tr>
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Recv. tmt.
+                                {{ create_form.recv_timeout }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Log level
+                                {{ create_form.logging_level }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Retry</td>
+                            <td>
+
+                                <label>
+                                Max retries
+                                {{ create_form.max_retries }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Backoff base
+                                <span class="form_hint">(s)</span>
+                                {{ create_form.backoff_base_seconds }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Backoff cap
+                                <span class="form_hint">(s)</span>
+                                {{ create_form.backoff_cap_seconds }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Jitter
+                                <span class="form_hint">(%)</span>
+                                {{ create_form.backoff_jitter_percent }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Circuit breaker</td>
+                            <td>
+
+                                <label>
+                                Threshold
+                                <span class="form_hint">(%)</span>
+                                {{ create_form.circuit_breaker_threshold_percent }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Window
+                                <span class="form_hint">(s)</span>
+                                {{ create_form.circuit_breaker_window_seconds }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Reset
+                                <span class="form_hint">(s)</span>
+                                {{ create_form.circuit_breaker_reset_seconds }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>TLS</td>
+                            <td>
+
+                                <label>
+                                Cert
+                                {{ create_form.tls_cert_path }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Key
+                                {{ create_form.tls_key_path }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td></td>
+                            <td>
+
+                                <label>
+                                CA
+                                {{ create_form.tls_ca_path }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
@@ -328,6 +491,126 @@
                                 <label>
                                 End
                                 {{ edit_form.end_seq }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Recv. tmt.
+                                {{ edit_form.recv_timeout }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Log level
+                                {{ edit_form.logging_level }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Retry</td>
+                            <td>
+
+                                <label>
+                                Max retries
+                                {{ edit_form.max_retries }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Backoff base
+                                <span class="form_hint">(s)</span>
+                                {{ edit_form.backoff_base_seconds }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Backoff cap
+                                <span class="form_hint">(s)</span>
+                                {{ edit_form.backoff_cap_seconds }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Jitter
+                                <span class="form_hint">(%)</span>
+                                {{ edit_form.backoff_jitter_percent }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Circuit breaker</td>
+                            <td>
+
+                                <label>
+                                Threshold
+                                <span class="form_hint">(%)</span>
+                                {{ edit_form.circuit_breaker_threshold_percent }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Window
+                                <span class="form_hint">(s)</span>
+                                {{ edit_form.circuit_breaker_window_seconds }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Reset
+                                <span class="form_hint">(s)</span>
+                                {{ edit_form.circuit_breaker_reset_seconds }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>TLS</td>
+                            <td>
+
+                                <label>
+                                Cert
+                                {{ edit_form.tls_cert_path }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Key
+                                {{ edit_form.tls_key_path }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td></td>
+                            <td>
+
+                                <label>
+                                CA
+                                {{ edit_form.tls_ca_path }}
                                 </label>
 
                             </td>

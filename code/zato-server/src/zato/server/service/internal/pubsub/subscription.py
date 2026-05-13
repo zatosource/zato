@@ -14,20 +14,20 @@ from traceback import format_exc
 from urllib.parse import quote
 
 # Bunch
-from bunch import Bunch, bunchify
+from zato.common.ext.bunch import Bunch, bunchify
 
 # Zato
 from zato.common.broker_message import PUBSUB
 
 logger = getLogger(__name__)
-from zato.common.api import PubSub
+from zato.common.api import PubSub, query_parameters
 from zato.common.odb.model import Cluster, HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 from zato.common.odb.query import pubsub_subscription_list
 from zato.common.pubsub.util import evaluate_pattern_match, get_security_definition, set_time_since
 from zato.common.util.api import as_bool, new_sub_key, utcnow
 from zato.common.util.sql import elems_with_opaque
 from zato.server.service import AsIs, PubSubMessage, Service
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,7 +83,7 @@ def _build_topic_objects_list(topic_data_list=None, topics=None, topic_data_by_n
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import strdict, strlist
 
 # ################################################################################################################################
@@ -118,15 +118,10 @@ class GetList(AdminService):
     """
     _filter_by = PubSubSubscription.sub_key,
 
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_pubsub_subscription_get_list_request'
-        response_elem = 'zato_pubsub_subscription_get_list_response'
-        input_required = 'cluster_id'
-        input_optional = 'needs_password'
-        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', AsIs('topic_link_list'), 'sec_base_id', \
-            'sec_name', 'security', 'username', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_optional = 'rest_push_endpoint_name', AsIs('topic_name_list'), 'password'
-        output_repeated = True
+    input = 'cluster_id', '-needs_password', *query_parameters
+    output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', AsIs('topic_link_list'), 'sec_base_id', \
+        'sec_name', 'security', 'username', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name', \
+        '-rest_push_endpoint_name', AsIs('-topic_name_list'), '-password'
 
     def get_data(self, session):
 
@@ -215,13 +210,10 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new pub/sub subscription.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_subscription_create_request'
-        response_elem = 'zato_pubsub_subscription_create_response'
-        input_required = 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type'
-        input_optional = 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name', 'sub_key'
-        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_name', 'security', 'delivery_type'
-        output_optional = AsIs('topic_name_list'), AsIs('topic_link_list')
+    input = 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type', \
+        '-is_delivery_active', '-is_pub_active', '-push_type', '-rest_push_endpoint_id', '-push_service_name', '-sub_key'
+    output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_name', 'security', 'delivery_type', \
+        AsIs('-topic_name_list'), AsIs('-topic_link_list')
 
     def handle(self):
 
@@ -370,7 +362,7 @@ class Create(AdminService):
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_CREATE.value
 
                 # .. our own process we invoke directly ..
-                self.server.worker_store.on_config_event_PUBSUB_SUBSCRIPTION_CREATE(pubsub_msg)
+                self.server.config_manager.on_config_event_PUBSUB_SUBSCRIPTION_CREATE(pubsub_msg)
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
@@ -392,13 +384,10 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a pub/sub subscription.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_subscription_edit_request'
-        response_elem = 'zato_pubsub_subscription_edit_response'
-        input_required = 'sub_key', 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type'
-        input_optional = 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'sec_name', 'security', 'delivery_type'
-        output_optional = AsIs('topic_name_list'), AsIs('topic_link_list')
+    input = 'sub_key', 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type', \
+        '-is_delivery_active', '-is_pub_active', '-push_type', '-rest_push_endpoint_id', '-push_service_name'
+    output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'sec_name', 'security', 'delivery_type', \
+        AsIs('-topic_name_list'), AsIs('-topic_link_list')
 
     def handle(self):
 
@@ -421,7 +410,7 @@ class Edit(AdminService):
                 sub.sec_base_id = input.sec_base_id
                 sub.delivery_type = input.delivery_type
 
-                for key in self.SimpleIO.input_optional:
+                for key in ('is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'):
                     if key in input:
                         value = input[key]
                         setattr(sub, key, value)
@@ -550,7 +539,7 @@ class Edit(AdminService):
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_EDIT.value
 
                 # .. our own process we invoke directly ..
-                self.server.worker_store.on_config_event_PUBSUB_SUBSCRIPTION_EDIT(pubsub_msg)
+                self.server.config_manager.on_config_event_PUBSUB_SUBSCRIPTION_EDIT(pubsub_msg)
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
@@ -571,10 +560,7 @@ class Delete(AdminService):
     """
     skip_before_handle = True
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_subscription_delete_request'
-        response_elem = 'zato_pubsub_subscription_delete_response'
-        input_optional = 'id', 'sub_key', 'should_call_pubsub_consumer_backend', AsIs('session'),
+    input = '-id', '-sub_key', '-should_call_pubsub_consumer_backend', AsIs('-session')
 
     def handle(self):
 
@@ -626,7 +612,7 @@ class Delete(AdminService):
 
         # .. our own consumer task (from the same process) we want to stop synchronously so we call the handler directly ..
         #if should_call_pubsub_consumer_backend:
-        self.server.worker_store.on_config_event_PUBSUB_SUBSCRIPTION_DELETE(pubsub_msg)
+        self.server.config_manager.on_config_event_PUBSUB_SUBSCRIPTION_DELETE(pubsub_msg)
 
         # .. and now we can notify the pub/sub server, knowing that the consumer is already stopped.
 
@@ -638,12 +624,9 @@ class _BaseModifyTopicList(AdminService):
     """
     action = '<Action-Not-Set>'
 
-    class SimpleIO(AdminSIO):
-        input_required = AsIs('topic_name_list')
-        input_optional = 'username', 'sec_name', 'is_delivery_active', 'delivery_type', 'push_type', \
-            'rest_push_endpoint_id', 'push_service_name', 'sub_key'
-        output_optional = AsIs('topic_name_list')
-        response_elem = None
+    input = AsIs('topic_name_list'), '-username', '-sec_name', '-is_delivery_active', '-delivery_type', '-push_type', \
+        '-rest_push_endpoint_id', '-push_service_name', '-sub_key'
+    output = AsIs('-topic_name_list'),
 
 # ################################################################################################################################
 
@@ -929,7 +912,7 @@ class HandleDelivery(Service):
             if input_key == 'publisher':
 
                 # .. go through all the Basic Auth definitions ..
-                for sec_config in self.server.worker_store.worker_config.basic_auth.values():
+                for sec_config in self.server.config_manager.config_store.basic_auth.values():
 
                     # .. dive deeper ..
                     sec_config = sec_config['config']
@@ -972,7 +955,7 @@ class HandleDelivery(Service):
         delivery_count = meta['delivery_count']
 
         # Get the detailed configuration of the subscriber ..
-        config = self.server.worker_store.get_pubsub_sub_config(sub_key)
+        config = self.server.config_manager.get_pubsub_sub_config(sub_key)
 
         push_type = config['push_type']
 

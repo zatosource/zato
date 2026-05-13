@@ -1,0 +1,281 @@
+# ChipSoft HiX (Belgium) - real HL7v2 ER7 messages
+
+## 1. ADT^A01 - inpatient admission (ZNA Middelheim, Antwerpen)
+
+```
+MSH|^~\&|HIX|ZNA_MIDDELHEIM|CDR|ZNA|20220923080100||ADT^A01^ADT_A01|ZNA20220923080100001|P|2.5|||AL|NE|NLD|8859/1|||IHE_PAM^IHE
+EVN|A01|20220923080000|||admin01^Bogaert^Leen
+PID|1||314789256^^^ZNA^PI~81061534217^^^NISS_BE^NNNLD||PEETERS^Wim^J^^^Mr||19810123|M|||Turnhoutsebaan 87^^Antwerpen^^2140^BE^H||^PRN^PH^^32^3^2481736~^NET^Internet^wim.peeters@example.be||NL|M|KAT|||||||||||N|||BE
+PV1|1|I|MIDH^0312^001^ZNA||||41827365^Coppens^Marc^^Dr^^^RIZIV||58203946^Michiels^Hilde^^Dr^^^RIZIV|INT||||1|||41827365^Coppens^Marc^^Dr^^^RIZIV|IN||||||||||||||||||||||20220923080000
+IN1|1|311^^^MUTBE|CM412|CM Brabant||||||||20220101|20221231||||PEETERS^Wim||19810123|Turnhoutsebaan 87^^Antwerpen^^2140^BE|||1||||||||||||||314-7892561-45
+```
+
+---
+
+## 2. ADT^A03 - patient discharge (ZNA Stuivenberg, Antwerpen)
+
+```
+MSH|^~\&|HIX|ZNA_STUIVENBERG|CDR|ZNA|20221015143000||ADT^A03^ADT_A03|ZNA20221015143000042|P|2.5|||AL|NE|NLD|8859/1
+EVN|A03|20221015142800|||admin02^Wouters^Griet
+PID|1||482916730^^^ZNA^PI~88061223145^^^NISS_BE^NNNLD||JANSSENS^Marie^L^^^Mevr||19880612|F|||Lange Kievitstraat 40^^Antwerpen^^2018^BE^H||^PRN^PH^^32^3^7614829||NL|S||||||||||||||||N|||BE
+PV1|1|I|STUV^0501^003^ZNA||||62937418^Aerts^Dirk^^Dr^^^RIZIV||73048291^Lenaerts^Sabine^^Dr^^^RIZIV|GER||||7|||62937418^Aerts^Dirk^^Dr^^^RIZIV|IN||||||||||||||||||20221005120000|||20221015142800|||||
+PV2|||||||||||||||||||||||Y||||||||||20221005
+DG1|1||J18.9^Pneumonie, niet gespecificeerd^ICD10BE|||F
+```
+
+---
+
+## 3. ADT^A08 - patient information update (GZA Sint-Augustinus, Wilrijk)
+
+```
+MSH|^~\&|HIX|GZA_AUGUSTINUS|MPI|GZA|20221110091500||ADT^A08^ADT_A01|GZA20221110091500017|P|2.5|||AL|NE|NLD|8859/1
+EVN|A08|20221110091400|||admin03^Hendrickx^Ilse
+PID|1||539274816^^^GZA^PI~93030912478^^^NISS_BE^NNNLD||MAES^Bram^T^^^Dhr||19930309|M|||Boomsesteenweg 152^^Wilrijk^^2610^BE^H~Postbus 17^^Wilrijk^^2610^BE^M||^PRN^PH^^32^3^8295147~^ORN^CP^^32^477^381926||NL|M|KAT|||||||||||N|||BE
+PV1|1|O|AUGW^CONS^001^GZA||||84516273^De Smedt^Veronique^^Dr^^^RIZIV|||||AMB||||5||||||||||||||||||||||||||20221110091500
+```
+
+---
+
+## 4. ADT^A02 - patient transfer between wards (ZNA Middelheim)
+
+```
+MSH|^~\&|HIX|ZNA_MIDDELHEIM|CDR|ZNA|20230215163000||ADT^A02^ADT_A02|ZNA20230215163000008|P|2.5|||AL|NE|NLD|8859/1
+EVN|A02|20230215162800|||admin04^Jacobs^Elien
+PID|1||617283940^^^ZNA^PI~78082536214^^^NISS_BE^NNNLD||WILLEMS^Geert^P^^^Dhr||19780825|M|||Brederodestraat 19^^Antwerpen^^2018^BE^H||^PRN^PH^^32^3^4172835||NL|M||||||||||||||||N|||BE
+PV1|1|I|MIDH^ICU^002^ZNA||||95061248^Van Damme^Inge^^Dr^^^RIZIV|||||MED||||3|||95061248^Van Damme^Inge^^Dr^^^RIZIV|IN||||||||||||||||||20230210090000
+PV2||||||||||||||||||||||||||||||||||20230210
+```
+
+---
+
+## 5. ORM^O01 - radiology order from HiX to PACS (Ziekenhuis Oost-Limburg)
+
+```
+MSH|^~\&|HIX|ZOL_GENK|PACS|ZOL|20230310141500||ORM^O01^ORM_O01|ZOL20230310141500003|P|2.5|||AL|NE|NLD|8859/1
+PID|1||725816394^^^ZOL^PI~85110523176^^^NISS_BE^NNNLD||GOOSSENS^Raf^^Dhr||19851105|M|||Vennestraat 61^^Genk^^3600^BE^H||^PRN^PH^^32^89^517382||NL|M||||||||||||||||N|||BE
+PV1|1|O|ZOL^RAD^001^ZOL||||36281947^Claes^Pieter^^Dr^^^RIZIV|||||RAD||||1
+ORC|NW|ORD20230001|ORD20230001||SC|||1^^^20230310142000^^R||20230310141500|admin05^Mertens^Katja||36281947^Claes^Pieter^^Dr^^^RIZIV|^WPN^PH^^32^89^294173|||ZOL_GENK|Vennestraat 61^^Genk^^3600^BE
+OBR|1|ORD20230001|ORD20230001|459003^RX Thorax PA+LAT^RIZIV_NOM||20230310142000|||||L||pijn op de borst na inspanning||||36281947^Claes^Pieter^^Dr^^^RIZIV||RAD001||||||1^^^20230310142000^^R
+```
+
+---
+
+## 6. ORU^R01 - laboratory result CBC (ZNA centraal lab, Antwerpen)
+
+```
+MSH|^~\&|LIS|ZNA_LAB|HIX|ZNA|20230412100500||ORU^R01^ORU_R01|ZNA_LAB20230412100500012|P|2.5|||AL|NE|NLD|8859/1
+PID|1||836192475^^^ZNA^PI~91051523698^^^NISS_BE^NNNLD||DE SMEDT^Elke^^Mevr||19910515|F|||Belgiëlei 72^^Antwerpen^^2018^BE^H
+PV1|1|I|MIDH^0312^002^ZNA||||41827365^Coppens^Marc^^Dr^^^RIZIV
+ORC|RE|LAB20230001|LAB20230001||CM
+OBR|1|LAB20230001|LAB20230001|58410-2^CBC panel^LN||20230412080000|||||||||||41827365^Coppens^Marc^^Dr^^^RIZIV||||||F
+OBX|1|NM|6690-2^Leukocyten^LN||7.2|10*9/L|4.0-10.0||||F|||20230412093000
+OBX|2|NM|789-8^Erytrocyten^LN||4.55|10*12/L|3.80-5.50||||F|||20230412093000
+OBX|3|NM|718-7^Hemoglobine^LN||13.8|g/dL|11.5-16.0||||F|||20230412093000
+OBX|4|NM|4544-3^Hematocriet^LN||41.2|%|36.0-46.0||||F|||20230412093000
+OBX|5|NM|777-3^Trombocyten^LN||245|10*9/L|150-400||||F|||20230412093000
+```
+
+---
+
+## 7. ORU^R01 - metabolic panel results (GZA lab, Wilrijk)
+
+```
+MSH|^~\&|LIS|GZA_LAB|HIX|GZA|20230520093000||ORU^R01^ORU_R01|GZA_LAB20230520093000007|P|2.5|||AL|NE|NLD|8859/1
+PID|1||948362517^^^GZA^PI~94021814263^^^NISS_BE^NNNLD||BOGAERT^Robbe^^Dhr||19940218|M|||Edegem Drie Eikenstraat 12^^Wilrijk^^2650^BE^H
+PV1|1|O|AUGW^CONS^002^GZA||||84516273^De Smedt^Veronique^^Dr^^^RIZIV
+ORC|RE|LAB20230100|LAB20230100||CM
+OBR|1|LAB20230100|LAB20230100|24323-8^CMP^LN||20230520080000|||||||||||84516273^De Smedt^Veronique^^Dr^^^RIZIV||||||F
+OBX|1|NM|2345-7^Glucose^LN||5.6|mmol/L|3.9-5.8||||F|||20230520090000
+OBX|2|NM|2160-0^Creatinine^LN||88|umol/L|62-106||||F|||20230520090000
+OBX|3|NM|3094-0^Ureum^LN||6.1|mmol/L|2.5-7.5||||F|||20230520090000
+OBX|4|NM|2951-2^Natrium^LN||141|mmol/L|136-145||||F|||20230520090000
+OBX|5|NM|2823-3^Kalium^LN||4.3|mmol/L|3.5-5.1||||F|||20230520090000
+OBX|6|NM|1742-6^ALAT^LN||28|U/L|0-41||||F|||20230520090000
+OBX|7|NM|1920-8^ASAT^LN||24|U/L|0-40||||F|||20230520090000
+```
+
+---
+
+## 8. ORM^O01 - laboratory order from HiX to LIS (ZNA Stuivenberg)
+
+```
+MSH|^~\&|HIX|ZNA_STUIVENBERG|LIS|ZNA_LAB|20230601110000||ORM^O01^ORM_O01|ZNA20230601110000005|P|2.5|||AL|NE|NLD|8859/1
+PID|1||159374826^^^ZNA^PI~98070312589^^^NISS_BE^NNNLD||CLAES^Eva^^Mevr||19980703|F|||Van Schoonhovenstraat 8^^Antwerpen^^2000^BE^H||^PRN^PH^^32^3^6381247
+PV1|1|I|STUV^0601^001^ZNA||||27493861^Wouters^Jan^^Dr^^^RIZIV|||||MED||||2
+ORC|NW|ORD20230501|ORD20230501||IP|||1^^^20230601113000^^R||20230601110000|admin06^Michiels^Tine||27493861^Wouters^Jan^^Dr^^^RIZIV
+OBR|1|ORD20230501||58410-2^CBC + Diff^LN||20230601113000|||||L||koorts en vermoeidheid||||27493861^Wouters^Jan^^Dr^^^RIZIV
+OBR|2|ORD20230501||24323-8^CMP^LN||20230601113000|||||L||||||27493861^Wouters^Jan^^Dr^^^RIZIV
+OBR|3|ORD20230501||30341-2^ESR^LN||20230601113000|||||L||||||27493861^Wouters^Jan^^Dr^^^RIZIV
+OBR|4|ORD20230501||1988-5^CRP^LN||20230601113000|||||L||||||27493861^Wouters^Jan^^Dr^^^RIZIV
+```
+
+---
+
+## 9. SIU^S12 - appointment scheduling (ZOL, Genk)
+
+```
+MSH|^~\&|HIX|ZOL_GENK|AGENDA|ZOL|20230705090000||SIU^S12^SIU_S12|ZOL20230705090000001|P|2.5|||AL|NE|NLD|8859/1
+SCH|APT20230501||||||ROUTINE|30|MIN|^^30^20230710140000^20230710143000|||||48173926^Hendrickx^Filip^^Dr^^^RIZIV
+PID|1||261847395^^^ZOL^PI~83122236914^^^NISS_BE^NNNLD||VAN DAMME^Kris^^Dhr||19831222|M|||Stalenstraat 27^^Genk^^3600^BE^H||^PRN^PH^^32^89^174293
+PV1|1|O|ZOL^CARD^001^ZOL||||48173926^Hendrickx^Filip^^Dr^^^RIZIV|||||CAR||||1
+RGS|1
+AIS|1||CARDCONS^Consultatie Cardiologie^L|20230710140000|||30|MIN
+AIL|1||ZOL^CARD^001^ZOL|||||||||F
+```
+
+---
+
+## 10. ADT^A28 - add person information to MPI (ZNA, via IHE PAM ITI-30)
+
+```
+MSH|^~\&|HIX|ZNA|MPI|ZNA_REG|20230801100000||ADT^A28^ADT_A05|ZNA20230801100000003|P|2.5|||AL|NE|NLD|8859/1|||IHE_PAM^IHE
+EVN|A28|20230801100000|||admin07^Lenaerts^Sarah
+PID|1||371649258^^^ZNA^PI~03062923185^^^NISS_BE^NNNLD||MERTENS^Lotte^R^^^Mevr||20030629|F|||Borsbeeksebrug 14^^Deurne^^2100^BE^H||^PRN^PH^^32^3^9317428~^ORN^CP^^32^468^271849~^NET^Internet^lotte.mertens@example.be||NL|S|KAT|||||||||||N|||BE
+PD1||||59274183^Jacobs^Ruben^^Dr^^^RIZIV
+NK1|1|MERTENS^Frank^^^Dhr|FTH|Borsbeeksebrug 14^^Deurne^^2100^BE^H|^PRN^PH^^32^3^9317455
+```
+
+---
+
+## 11. ORU^R01 - microbiology culture result (ZNA Lab)
+
+```
+MSH|^~\&|LIS|ZNA_MICRO|HIX|ZNA|20230905153000||ORU^R01^ORU_R01|ZNA_MICRO20230905153000019|P|2.5|||AL|NE|NLD|8859/1
+PID|1||314789256^^^ZNA^PI~81061534217^^^NISS_BE^NNNLD||PEETERS^Wim^J^^^Mr||19810123|M|||Turnhoutsebaan 87^^Antwerpen^^2140^BE^H
+PV1|1|I|MIDH^0312^001^ZNA||||41827365^Coppens^Marc^^Dr^^^RIZIV
+ORC|RE|MICRO20230001|MICRO20230001||CM
+OBR|1|MICRO20230001|MICRO20230001|630-4^Urinekweek^LN||20230904080000|||||||||||41827365^Coppens^Marc^^Dr^^^RIZIV||||||F
+OBX|1|CE|630-4^Bacterie identificatie^LN||112283005^Escherichia coli^SCT||||||F|||20230905140000
+OBX|2|ST|18769-0^Antibiogram^LN|1|Amoxicilline/Clavulaanzuur: S||||||F|||20230905140000
+OBX|3|ST|18769-0^Antibiogram^LN|2|Ciprofloxacine: R||||||F|||20230905140000
+OBX|4|ST|18769-0^Antibiogram^LN|3|Nitrofurantoine: S||||||F|||20230905140000
+OBX|5|ST|18769-0^Antibiogram^LN|4|Trimethoprim/Sulfamethoxazol: I||||||F|||20230905140000
+```
+
+---
+
+## 12. ORU^R01 - pathology report with embedded PDF (GZA Pathologie)
+
+```
+MSH|^~\&|PATH|GZA_PATH|HIX|GZA|20231010160000||ORU^R01^ORU_R01|GZA_PATH20231010160000004|P|2.5|||AL|NE|NLD|8859/1
+PID|1||539274816^^^GZA^PI~93030912478^^^NISS_BE^NNNLD||MAES^Bram^T^^^Dhr||19930309|M|||Boomsesteenweg 152^^Wilrijk^^2610^BE^H
+PV1|1|I|AUGW^CHIR^003^GZA||||58203946^Michiels^Hilde^^Dr^^^RIZIV
+ORC|RE|PATH20230050|PATH20230050||CM
+OBR|1|PATH20230050|PATH20230050|22634-0^Pathologisch onderzoek^LN||20231005120000|||||||||||58203946^Michiels^Hilde^^Dr^^^RIZIV||||||F
+OBX|1|FT|22634-0^Pathologie conclusie^LN||Colon biopsie: chronische actieve colitis, geen dysplasie, geen maligniteit||||||F|||20231010150000
+OBX|2|ED|PDF^Pathologie verslag^L||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVGl0bGUgKFBhdGhvbG9naXNjaCB2ZXJzbGFnKQovQ3JlYXRvciAoR1pBIFBhdGhvbG9naWUpCi9Qcm9kdWNlciAoQ2hpcFNvZnQgSGlYKQovQ3JlYXRpb25EYXRlIChEOjIwMjMxMDEwMTUwMDAwKzAxJzAwJykKPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL0NhdGFsb2cgL1BhZ2VzIDMgMCBSID4+CmVuZG9iagozIDAgb2JqCjw8IC9UeXBlIC9QYWdlcyAvS2lkcyBbNCAwIFJdIC9Db3VudCAxID4+CmVuZG9iago0IDAgb2JqCjw8IC9UeXBlIC9QYWdlIC9QYXJlbnQgMyAwIFIgL01lZGlhQm94IFswIDAgNTk1IDg0Ml0gPj4KZW5kb2JqCnhyZWYKMCA1CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMTcwIDAwMDAwIG4gCjAwMDAwMDAyMjEgMDAwMDAgbiAKMDAwMDAwMDI4MCAwMDAwMCBuIAp0cmFpbGVyCjw8IC9TaXplIDUgL1Jvb3QgMiAwIFIgPj4Kc3RhcnR4cmVmCjM3MAolJUVPRgo=||||||F|||20231010150000
+```
+
+---
+
+## 13. ORU^R01 - radiology report with embedded PDF (ZOL Radiologie)
+
+```
+MSH|^~\&|RIS|ZOL_RAD|HIX|ZOL|20231115110000||ORU^R01^ORU_R01|ZOL_RAD20231115110000022|P|2.5|||AL|NE|NLD|8859/1
+PID|1||725816394^^^ZOL^PI~85110523176^^^NISS_BE^NNNLD||GOOSSENS^Raf^^Dhr||19851105|M|||Vennestraat 61^^Genk^^3600^BE^H
+PV1|1|O|ZOL^RAD^001^ZOL||||36281947^Claes^Pieter^^Dr^^^RIZIV
+ORC|RE|RAD20230300|RAD20230300||CM
+OBR|1|RAD20230300|RAD20230300|459003^RX Thorax PA+LAT^RIZIV_NOM||20230310142000|||||||||||36281947^Claes^Pieter^^Dr^^^RIZIV||||||F
+OBX|1|FT|59776-5^Radiologisch verslag^LN||Thorax PA en LAT: geen aanwijzingen voor infiltraat of pneumothorax. Normaal hartsilhouet. Geen pleurale effusie.||||||F|||20231115100000
+OBX|2|ED|PDF^Radiologisch verslag^L||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVGl0bGUgKFJhZGlvbG9naXNjaCB2ZXJzbGFnKQovQ3JlYXRvciAoWk9MIFJhZGlvbG9naWUpCi9Qcm9kdWNlciAoQ2hpcFNvZnQgSGlYKQovQ3JlYXRpb25EYXRlIChEOjIwMjMxMTE1MTAwMDAwKzAxJzAwJykKPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL0NhdGFsb2cgL1BhZ2VzIDMgMCBSID4+CmVuZG9iagozIDAgb2JqCjw8IC9UeXBlIC9QYWdlcyAvS2lkcyBbNCAwIFJdIC9Db3VudCAxID4+CmVuZG9iago0IDAgb2JqCjw8IC9UeXBlIC9QYWdlIC9QYXJlbnQgMyAwIFIgL01lZGlhQm94IFswIDAgNTk1IDg0Ml0gPj4KZW5kb2JqCnhyZWYKMCA1CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMTcyIDAwMDAwIG4gCjAwMDAwMDAyMjMgMDAwMDAgbiAKMDAwMDAwMDI4MiAwMDAwMCBuIAp0cmFpbGVyCjw8IC9TaXplIDUgL1Jvb3QgMiAwIFIgPj4Kc3RhcnR4cmVmCjM3MgolJUVPRgo=||||||F|||20231115100000
+```
+
+---
+
+## 14. OML^O21 - laboratory order via ZorgDomein (ChipSoft HiX Flanders)
+
+```
+MSH|^~\&|ZorgDomein||||20210407153459+0200||OML^O21^OML_O21|23c517a5fc6a437cb05b|P|2.5.1|||||NLD|8859/1
+NTE|1|P|KC en MMB|ZD_CLUSTER_NAME^ZorgDomein clusternaam^L
+PID|1||222333444^^^NLMINBIZA^NNNLD~ZD345671140^^^ZorgDomein^VN||de Teststam - van Proefnaam&van&Proefnaam&de&Teststam^G^A^^^^L||20030101|F|||Proefstraat 22 B&Proefstraat&22^B^WoonplaatsProef^^2222BB^NL^M~Woonadresweg 33 C&Woonadresweg&33^C^WoonplaatsProef^^3333CC^NL^H||07-23456789^ORN^CP~021-5826394^PRN^PH~^NET^Internet^prullenbak@zorgdomein.nl||||||||||||||||||Y|NNNLD
+PV1|1|O|||||||||||||||||||||||||||||||||||||||||||||||||V
+PV2|||LABEDG001^klinische chemie en medische microbiologie onderzoek^L
+IN1|1|^null|0102^^^VEKTIS^UZOVI|Zorgverzekeraarnaam||||||||||||||||||||||||||||||||953513
+ORC|NW|ZD345671140||ZD345671140|||^^^^^C||20210407153428+0200|^de Proefassistent^A.B.C.||02115678^van Proefhuisarts^A.B.^^^^^^VEKTIS|^^^^^^^^Huisartspraktijk Proefdomein, locatie Breukelen^02123451&VEKTIS|0212345673^WPN^PH~0212345674^WPN^FX|||02123452^Huisartspraktijk Proefdomein^VEKTIS||||Huisartspraktijk Proefdomein^^02123452^^^VEKTIS|Besteldersweg 88 B&Besteldersweg&88^B^Besteldersplaats^^3333CC^NL|0212345671^WPN^PH~0212345672^WPN^FX
+OBR|1|ZD345671140||LABEDG001^klinische chemie en medische microbiologie^L|||||||L|||||02115678^van Proefhuisarts^A.B.^^^^^^VEKTIS|0212345673^WPN^PH~0212345674^WPN^FX|||||||||||02115679^Proefbehandelaar^A.^^^^^^VEKTIS^^^^^^^Verpleeghuis Proefdomein^^^^^Specialisme
+OBX|1|ST|AI^opmerkingen / klinische gegevens^L||opmerking van verwijzer||||||F
+```
+
+---
+
+## 15. ORU^R01 - referral letter with embedded PDF via ZorgDomein (ChipSoft HiX)
+
+```
+MSH|^~\&|ZorgDomein||||20160324163509+0100||ORU^R01|ZD200046119|P|2.4
+PID|1||^^^NLMINBIZA^NNNLD||de Teststam&de&Teststam^G^A^^^^L||20030101|M|||StraatnaamProef 777  ter&StraatnaamProef&777^ter^WoonplaatsProef^^2222BB^NL^H||021-5826394_^NET^Internet^prullenbak@zorgdomein.nl
+PV1|1|O
+ORC|NW|ZD200046119|||||||20160324163432+0100|^&&het Proefassistent^A.B.C.||02115678^&&van Proefhuisarts^A.B.^^^^^^VEKTIS||016-3333333
+OBR|1|ZD200046119||CIS^Cardiologie^ZORGDOMEIN|||20160324163432+0100|||||||||02115678^&&van Proefhuisarts^A.B.^^^^^^VEKTIS
+OBX|1|NM|VB^^123||||||||F
+OBX|2|ED|CARHAR^Hartfalen^ZORGDOMEIN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVGl0bGUgKFZlcndpanpicmllZikKPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL0NhdGFsb2cgL1BhZ2VzIDMgMCBSID4+CmVuZG9iagozIDAgb2JqCjw8IC9UeXBlIC9QYWdlcyAvS2lkcyBbNCAwIFJdIC9Db3VudCAxID4+CmVuZG9iago0IDAgb2JqCjw8IC9UeXBlIC9QYWdlIC9QYXJlbnQgMyAwIFIgL01lZGlhQm94IFswIDAgNTk1IDg0Ml0gPj4KZW5kb2JqCnhyZWYKMCA1CnRyYWlsZXIKPDwgL1NpemUgNSAvUm9vdCAyIDAgUiA+PgpzdGFydHhyZWYKMjUwCiUlRU9GCg==||||||F
+OBX|3|FT|CARCOA001^consult cardioloog^ZORGDOMEIN||||||||F
+```
+
+---
+
+## 16. MFN^M02 - practitioner master file notification (ZNA HiX to MPI)
+
+```
+MSH|^~\&|HIX|ZNA|MPI|ZNA_REG|20231201080000||MFN^M02^MFN_M02|ZNA20231201080000001|P|2.5|||AL|NE|NLD|8859/1
+MFI|PRA^Practitioners^HL70175|ZNA_ARTS|UPD|||NE
+MFE|MAD|20231201080000|20231201||41827365^Coppens^Marc^^Dr
+STF|41827365^Coppens^Marc^^Dr^^RIZIV|41827365|INT^Interne Geneeskunde^L~CAR^Cardiologie^L|Dr|M|19730515|A||^WPN^PH^^32^3^7182934|Italielei 44^^Antwerpen^^2000^BE^B|20000101
+MFE|MAD|20231201080000|20231201||62937418^Aerts^Dirk^^Dr
+STF|62937418^Aerts^Dirk^^Dr^^RIZIV|62937418|GER^Geriatrie^L|Dr|M|19780310|A||^WPN^PH^^32^3^2839174|Kipdorpvest 30^^Antwerpen^^2000^BE^B|20050601
+```
+
+---
+
+## 17. ADT^A40 - merge patient identifiers (ZNA MPI)
+
+```
+MSH|^~\&|HIX|ZNA|MPI|ZNA_REG|20231215120000||ADT^A40^ADT_A39|ZNA20231215120000006|P|2.5|||AL|NE|NLD|8859/1|||IHE_PAM^IHE
+EVN|A40|20231215120000|||admin08^Aerts^Yannick
+PID|1||314789256^^^ZNA^PI~81061534217^^^NISS_BE^NNNLD||PEETERS^Wim^J^^^Mr||19810123|M|||Turnhoutsebaan 87^^Antwerpen^^2140^BE^H
+MRG|999888777^^^ZNA^PI|
+```
+
+---
+
+## 18. ORU^R01 - attachment via ZorgDomein with embedded Word doc and PNG (ChipSoft HiX Flanders)
+
+```
+MSH|^~\&|ZorgDomein||||20160324163507+0100||ORU^R01|ZD200046119|P|2.4
+PID|1||^^^NLMINBIZA^NNNLD||de Teststam&de&Teststam^G^A^^^^L||20030101|M|||StraatnaamProef 777  ter&StraatnaamProef&777^ter^WoonplaatsProef^^2222BB^NL^H||021-5826394
+PV1|1|O
+ORC|XO|ZD200046119|||||||20160324163432+0100|^&&het Proefassistent^A.B.C.||02115678^&&van Proefhuisarts^A.B.^^^^^^VEKTIS||016-3333333
+OBR|1|ZD200046119||CARCOA001^zorgproductcode^ZORGDOMEIN|||20160324163432+0100||||||Mijn toelichting op de bijlagen.|||02115678^&&van Proefhuisarts^A.B.^^^^^^VEKTIS|||||||||F|||||||||||||||||||||^Overzicht van de bijlagen:\.br\De volgende bijlage(n) behorend bij de verwijzing met ZD200046119 is/zijn verzonden\.br\- HL7.doc\.br\- logo.png\.br\
+OBX|1|ED|BLOB^Bijlage^ZORGDOMEIN|1|^application^msword^Base64^0M8R4KGxGuEAAAAAAAAAAAAAAAAAAAAAPgADAP7/CQAGAAAAAAAAAAAAAAABAAAA||||||F
+NTE|1|P|HL7.doc|RE
+OBX|2|ED|BLOB^Bijlage^ZORGDOMEIN|2|^image^png^Base64^iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==||||||F
+NTE|2|P|logo.png|RE
+```
+
+---
+
+## 19. VXU^V04 - vaccination administration (ZNA, Belgian eHealth VXU mapping)
+
+```
+MSH|^~\&|HIX|ZNA|VACCINNET|EHEALTH_BE|20230915100000||VXU^V04^VXU_V04|ZNA20230915100000001|P|2.5|||AL|NE|NLD|8859/1
+PID|1||314789256^^^ZNA^PI~81061534217^^^NISS_BE^NNNLD||PEETERS^Wim^J^^^Mr||19810123|M|||Turnhoutsebaan 87^^Antwerpen^^2140^BE^H
+PV1|1|O|ZNA^VACC^001^ZNA
+ORC|RE|VACC20230001|||CM||||||41827365^Coppens^Marc^^Dr^^^RIZIV
+RXA|0|1|20230915093000|20230915093000|08^Hepatitis B^CVX|1|mL|IM|||||LOT2023HB01|20241231|MSD^Merck Sharp and Dohme^MVX
+RXR|IM^Intramuscular^HL70162|LD^Left Deltoid^HL70163
+OBX|1|CE|64994-7^Vaccine funding source^LN||VXC30^State Other^CDCPHINVS||||||F
+```
+
+---
+
+## 20. ORU^R01 - ECG result with embedded Base64 PDF (ZNA Cardiologie)
+
+```
+MSH|^~\&|CARDIO|ZNA_CARD|HIX|ZNA|20240115140000||ORU^R01^ORU_R01|ZNA_CARD20240115140000011|P|2.5|||AL|NE|NLD|8859/1
+PID|1||617283940^^^ZNA^PI~78082536214^^^NISS_BE^NNNLD||WILLEMS^Geert^P^^^Dhr||19780825|M|||Brederodestraat 19^^Antwerpen^^2018^BE^H
+PV1|1|I|MIDH^CARD^001^ZNA||||95061248^Van Damme^Inge^^Dr^^^RIZIV
+ORC|RE|ECG20240001|ECG20240001||CM
+OBR|1|ECG20240001|ECG20240001|93000^Electrocardiogram^RIZIV_NOM||20240115130000|||||||||||95061248^Van Damme^Inge^^Dr^^^RIZIV||||||F
+OBX|1|FT|93000^ECG Interpretatie^L||Sinusritme 72/min. Normale as. Geen ST-elevatie of -depressie. Geen geleidingsstoornissen. Conclusie: normaal ECG.||||||F|||20240115133000
+OBX|2|ED|PDF^ECG Rapport^L||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVGl0bGUgKEVDRyBSYXBwb3J0KQovQ3JlYXRvciAoWk5BIENhcmRpb2xvZ2llKQovUHJvZHVjZXIgKENoaXBTb2Z0IEhpWCkKL0NyZWF0aW9uRGF0ZSAoRDoyMDI0MDExNTEzMDAwMCswMScwMCcpCj4+CmVuZG9iagoyIDAgb2JqCjw8IC9UeXBlIC9DYXRhbG9nIC9QYWdlcyAzIDAgUiA+PgplbmRvYmoKMyAwIG9iago8PCAvVHlwZSAvUGFnZXMgL0tpZHMgWzQgMCBSXSAvQ291bnQgMSA+PgplbmRvYmoKNCAwIG9iago8PCAvVHlwZSAvUGFnZSAvUGFyZW50IDMgMCBSIC9NZWRpYUJveCBbMCAwIDU5NSA4NDJdID4+CmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDE3MCAwMDAwMCBuIAowMDAwMDAwMjIxIDAwMDAwIG4gCjAwMDAwMDAyODAgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA1IC9Sb290IDIgMCBSID4+CnN0YXJ0eHJlZgozNjkKJSVFT0YK||||||F|||20240115133000
+OBX|3|NM|8867-4^Hartfrequentie^LN||72|/min|60-100||||F|||20240115133000
+```

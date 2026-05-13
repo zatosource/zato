@@ -11,7 +11,7 @@ from errno import ENETUNREACH
 from http.client import OK
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # gevent
 from gevent import spawn

@@ -14,7 +14,7 @@ from time import sleep
 from traceback import format_exc
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Zato
 from zato.common.api import EnvFile
@@ -145,8 +145,7 @@ class _OnUpdate(Service):
     """
     update_type = '<update-type-_OnUpdate>'
 
-    class SimpleIO:
-        input_required = ('data', 'full_path', 'file_name', 'relative_dir')
+    input = 'data', 'full_path', 'file_name', 'relative_dir'
 
     def handle(self) -> 'None':
 

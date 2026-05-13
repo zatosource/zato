@@ -1,0 +1,212 @@
+# TELUS Health EMR (Wolf/PS Suite/Med Access) - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - inpatient admission from clinic referral
+
+```
+MSH|^~\&|TELUS_PSSUITE|MAPLE LEAF FAMILY CLINIC|HIS_RCV|TORONTO GENERAL|20260501080000||ADT^A01^ADT_A01|TH00001|P|2.5
+EVN|A01|20260501080000
+PID|||1234567890^^^ON_HCN^JHN||Bouchard^Marie^Claire^^Mme||19750612|F|||88 Bloor St W^^Toronto^ON^M5S 1M4^CA||^^PH^4165551234~^^CP^4165559876||F|CAT||||||||||||||||||||
+PV1||I|MED^402^A^Toronto General||||54321^Patel^Anita^^^Dr.^^CPSO|67890^Liu^Wei^^^Dr.^^CPSO|||MED||||||||VN20260501001|||||||||||||||||||||||||||20260501080000
+IN1|1||OHIP|Ontario Health Insurance Plan|49 Place d'Armes^^Kingston^ON^K7L 5J2^CA||||||||||||||||||||||||||||||||||||||||1234567890
+```
+
+## 2. ADT^A04 - outpatient registration at walk-in clinic
+
+```
+MSH|^~\&|WOLF_EMR|QUEEN ST WALK-IN|HIS_RCV|VANCOUVER GENERAL|20260502093000||ADT^A04^ADT_A01|TH00002|P|2.3
+EVN|A04|20260502093000
+PID|||9876543210^^^BC_PHN^JHN||Chan^David^Wei^^Mr||19880304|M|||250 Robson St^^Vancouver^BC^V6B 1A6^CA||^^PH^6045551234~^^CP^6045559876||M||||||||||||||||||||
+PV1||O|WALKIN^RM1^1^Queen St Walk-In||||78901^Singh^Gurpreet^^^Dr.^^CPSBC|||GEN||||||||VN20260502001|||||||||||||||||||||||||||20260502093000
+```
+
+## 3. ADT^A08 - patient demographics update
+
+```
+MSH|^~\&|TELUS_PSSUITE|RIDEAU FAMILY MEDICINE|HIS_RCV|OTTAWA CIVIC|20260503140000||ADT^A08^ADT_A01|TH00003|P|2.5
+EVN|A08|20260503140000
+PID|||3456789012^^^ON_HCN^JHN||Lavoie^Jean-Pierre^^^Mr||19700918|M|||55 Sparks St^^Ottawa^ON^K1P 5A5^CA||^^PH^6135553456~^^CP^6135558765~^^Internet^jp.lavoie@mail.ca||M|CAT||||||||||||||||||||
+PV1||O|CLINIC^RM4^1^Rideau Family Medicine||||12345^Morin^Catherine^^^Dr.^^CPSO|||FAM||||||||VN20260503001|||||||||||||||||||||||||||20260503140000
+```
+
+## 4. ORM^O01 - lab order for metabolic panel
+
+```
+MSH|^~\&|TELUS_PSSUITE|PRAIRIE HEALTH CLINIC|LIFELABS|LIFELABS_AB|20260504101500||ORM^O01^ORM_O01|TH00004|P|2.5
+PID|||4567890123^^^AB_PHN^JHN||Olsen^Karen^Marie^^Ms||19820207|F|||320 4th Ave SW^^Calgary^AB^T2P 0H5^CA||^^PH^4035554567~^^CP^4035558901||F||||||||||||||||||||
+ORC|NW|ORD20260504001^TELUS_PSSUITE||||||20260504101500|||23456^Hansen^Erik^^^Dr.^^CPSA
+OBR|1|ORD20260504001^TELUS_PSSUITE||BMP^Basic Metabolic Panel^LN|||20260504101500||||N|||||23456^Hansen^Erik^^^Dr.^^CPSA
+```
+
+## 5. ORU^R01 - CBC results from provincial lab
+
+```
+MSH|^~\&|TELUS_PSSUITE|COASTAL MEDICAL|LIFELABS|LIFELABS_BC|20260505113000||ORU^R01^ORU_R01|TH00005|P|2.5
+PID|||5678901234^^^BC_PHN^JHN||Nakamura^Yuki^^^Ms||19930815|F|||1420 West 12th Ave^^Vancouver^BC^V6H 1M8^CA||^^PH^6045555678
+OBR|1|ORD20260505001^TELUS_PSSUITE|SPE20260505001^LIFELABS_BC|CBC^Complete Blood Count^LN|||20260505080000|||||||||5678901234^Nakamura^Yuki^^^^||||||20260505113000||LAB|F
+OBX|1|NM|6690-2^WBC^LN||6.8|x10*9/L|4.0-11.0|N|||F
+OBX|2|NM|789-8^RBC^LN||4.25|x10*12/L|3.80-5.80|N|||F
+OBX|3|NM|718-7^Hemoglobin^LN||128|g/L|120-160|N|||F
+OBX|4|NM|4544-3^Hematocrit^LN||0.38|L/L|0.36-0.46|N|||F
+OBX|5|NM|777-3^Platelets^LN||198|x10*9/L|150-400|N|||F
+```
+
+## 6. ORU^R01 - chemistry panel with renal markers
+
+```
+MSH|^~\&|WOLF_EMR|FOOTHILLS MEDICAL|DLM|DLM_AB|20260506140000||ORU^R01^ORU_R01|TH00006|P|2.3
+PID|||6789012345^^^AB_PHN^JHN||MacDougall^Ian^Robert^^Mr||19580330|M|||78 Centre St N^^Calgary^AB^T2E 2P8^CA||^^PH^4035556789
+OBR|1|ORD20260506001^WOLF_EMR|SPE20260506001^DLM_AB|CHEM^Chemistry Panel^LN|||20260506074500|||||||||6789012345^MacDougall^Ian R^^^^||||||20260506140000||LAB|F
+OBX|1|NM|2345-7^Glucose^LN||5.1|mmol/L|3.3-5.5|N|||F
+OBX|2|NM|2160-0^Creatinine^LN||98|umol/L|62-115|N|||F
+OBX|3|NM|3094-0^Urea^LN||6.8|mmol/L|2.1-8.5|N|||F
+OBX|4|NM|2951-2^Sodium^LN||141|mmol/L|136-145|N|||F
+OBX|5|NM|2823-3^Potassium^LN||4.2|mmol/L|3.5-5.1|N|||F
+```
+
+## 7. ORM^O01 - lab order for prenatal screen
+
+```
+MSH|^~\&|TELUS_PSSUITE|WOMEN'S HEALTH CLINIC|OLIS|ONTARIO_HIS|20260507090000||ORM^O01^ORM_O01|TH00007|P|2.5
+PID|||7890123456^^^ON_HCN^JHN||Giroux^Amelie^Rose^^Mme||19950614|F|||33 Laurier Ave^^Ottawa^ON^K1N 6N5^CA||^^PH^6135557890~^^CP^6135551234||F||||||||||||||||||||
+ORC|NW|ORD20260507001^TELUS_PSSUITE||||||20260507090000|||34567^Cote^Brigitte^^^Dr.^^CPSO
+OBR|1|ORD20260507001^TELUS_PSSUITE||PNS^Prenatal Screening^LN|||20260507090000||||N|||||34567^Cote^Brigitte^^^Dr.^^CPSO
+```
+
+## 8. ORU^R01 - HbA1c with PDF report attachment
+
+```
+MSH|^~\&|TELUS_PSSUITE|DOWNTOWN MEDICAL|GAMMA_DYNACARE|DYNACARE_ON|20260508103000||ORU^R01^ORU_R01|TH00008|P|2.5
+PID|||8901234567^^^ON_HCN^JHN||Tremblay^Louis^Andre^^Mr||19630425|M|||100 King St W^^Hamilton^ON^L8P 4S6^CA||^^PH^9055558901
+OBR|1|ORD20260508001^TELUS_PSSUITE|SPE20260508001^DYNACARE_ON|HBA1C^Hemoglobin A1c^LN|||20260508080000|||||||||8901234567^Tremblay^Louis A^^^^||||||20260508103000||LAB|F
+OBX|1|NM|4548-4^Hemoglobin A1c^LN||0.068|fraction|<=0.070|N|||F
+OBX|2|NM|2345-7^Glucose Fasting^LN||6.2|mmol/L|3.3-5.5|H|||F
+OBX|3|ED|PDF^Lab Summary Report^LN||^AP^^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2Jq||||||F
+```
+
+## 9. ADT^A01 - admission from Manitoba clinic
+
+```
+MSH|^~\&|WOLF_EMR|PORTAGE FAMILY HEALTH|HIS_RCV|ST BONIFACE GENERAL|20260509071500||ADT^A01^ADT_A01|TH00009|P|2.3
+EVN|A01|20260509071500
+PID|||9012345678^^^MB_PHN^JHN||Flett^Thomas^James^^Mr||19550728|M|||45 Main St^^Winnipeg^MB^R3C 1A3^CA||^^PH^2045559012~^^CP^2045558765||M||||||||||||||||||||
+PV1||I|CARD^201^A^St Boniface General||||45678^Fehr^Marcus^^^Dr.^^CPSM|||CARD||||||||VN20260509001|||||||||||||||||||||||||||20260509071500
+IN1|1||MB_HEALTH|Manitoba Health, Seniors and Long-Term Care|300 Carlton St^^Winnipeg^MB^R3B 3M9^CA||||||||||||||||||||||||||||||||||||||||9012345678
+```
+
+## 10. ORU^R01 - lipid panel with flag
+
+```
+MSH|^~\&|TELUS_PSSUITE|LAKE SHORE CLINIC|LIFELABS|LIFELABS_ON|20260510091500||ORU^R01^ORU_R01|TH00010|P|2.5
+PID|||0123456789^^^ON_HCN^JHN||Beauchemin^Danielle^Helene^^Mme||19780213|F|||160 Lakeshore Rd^^Burlington^ON^L7S 1E1^CA||^^PH^9055550123
+OBR|1|ORD20260510001^TELUS_PSSUITE|SPE20260510001^LIFELABS_ON|LIPID^Lipid Panel^LN|||20260510074500|||||||||0123456789^Beauchemin^Danielle H^^^^||||||20260510091500||LAB|F
+OBX|1|NM|2093-3^Total Cholesterol^LN||5.0|mmol/L|<5.2|N|||F
+OBX|2|NM|2571-8^Triglycerides^LN||1.3|mmol/L|<1.7|N|||F
+OBX|3|NM|2085-9^HDL Cholesterol^LN||1.55|mmol/L|>1.0|N|||F
+OBX|4|NM|13457-7^LDL Cholesterol^LN||2.86|mmol/L|<3.4|N|||F
+```
+
+## 11. ORM^O01 - radiology order for chest xray
+
+```
+MSH|^~\&|TELUS_PSSUITE|MAIN ST MEDICAL|RIS_RCV|KINGSTON GENERAL RAD|20260511100000||ORM^O01^ORM_O01|TH00011|P|2.5
+PID|||1122334455^^^ON_HCN^JHN||Gervais^Simon^Paul^^Mr||19690401|M|||22 Princess St^^Kingston^ON^K7L 1A4^CA||^^PH^6135551122
+ORC|NW|ORD20260511001^TELUS_PSSUITE||||||20260511100000|||56789^Roy^Genevieve^^^Dr.^^CPSO
+OBR|1|ORD20260511001^TELUS_PSSUITE||XCHEST^Chest Xray PA and Lateral^LN|||20260511100000||||N|||||56789^Roy^Genevieve^^^Dr.^^CPSO|||||||||||^Persistent cough x 3 weeks
+```
+
+## 12. ORU^R01 - thyroid panel from Saskatchewan
+
+```
+MSH|^~\&|WOLF_EMR|PRAIRIE HEALTH CENTRE|PROV_LAB|SK_PROV_LAB|20260512133000||ORU^R01^ORU_R01|TH00012|P|2.3
+PID|||2233445566^^^SK_PHN^JHN||Fehr^Margaret^Ann^^Ms||19850520|F|||410 Spadina Cres^^Saskatoon^SK^S7K 3G9^CA||^^PH^3065552233
+OBR|1|ORD20260512001^WOLF_EMR|SPE20260512001^SK_PROV_LAB|THYR^Thyroid Panel^LN|||20260512080000|||||||||2233445566^Fehr^Margaret A^^^^||||||20260512133000||LAB|F
+OBX|1|NM|3016-3^TSH^LN||2.15|mIU/L|0.35-5.50|N|||F
+OBX|2|NM|3026-2^Free T4^LN||16.8|pmol/L|10.0-25.0|N|||F
+```
+
+## 13. ADT^A08 - update patient address after relocation
+
+```
+MSH|^~\&|TELUS_PSSUITE|BAYVIEW CLINIC|HIS_RCV|SUNNYBROOK HSC|20260513150000||ADT^A08^ADT_A01|TH00013|P|2.5
+EVN|A08|20260513150000
+PID|||3344556677^^^ON_HCN^JHN||Kim^Soo-Yeon^^^Ms||19910814|F|||200 Bayview Ave^^Toronto^ON^M4G 3E8^CA||^^PH^4165553344~^^CP^4165557890~^^Internet^sooyeon.kim@mail.ca||F||||||||||||||||||||
+PV1||O|CLINIC^RM2^1^Bayview Clinic||||67890^Lee^Michael^^^Dr.^^CPSO|||FAM||||||||VN20260513001|||||||||||||||||||||||||||20260513150000
+```
+
+## 14. ORU^R01 - diagnostic imaging with embedded JPEG
+
+```
+MSH|^~\&|TELUS_PSSUITE|RIVERSIDE MEDICAL|RAD_RCV|CIVIC RAD DEPT|20260514141500||ORU^R01^ORU_R01|TH00014|P|2.5
+PID|||4455667788^^^ON_HCN^JHN||Pelletier^Jacques^Michel^^Mr||19720508|M|||340 Richmond Rd^^Ottawa^ON^K2A 0E5^CA||^^PH^6135554455
+OBR|1|ORD20260514001^TELUS_PSSUITE|RAD20260514001^CIVIC_RAD|XHAND^Hand Xray^LN|||20260514110000|||||||||4455667788^Pelletier^Jacques M^^^^||||||20260514141500||RAD|F
+OBX|1|FT|18748-4^Diagnostic Imaging Report^LN||AP and oblique views of the right hand. Comminuted fracture of the 5th metacarpal neck. No other fractures. Soft tissue swelling over the ulnar aspect.||||||F
+OBX|2|ED|IMG^Hand Xray Image^LN||^IM^JPEG^Base64^/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL||||||F
+```
+
+## 15. ORU^R01 - microbiology urine culture
+
+```
+MSH|^~\&|TELUS_PSSUITE|CENTRETOWN CHC|LIFELABS|LIFELABS_ON|20260515160000||ORU^R01^ORU_R01|TH00015|P|2.5
+PID|||5566778899^^^ON_HCN^JHN||Duval^Monique^Rose^^Mme||19450917|F|||180 Metcalfe St^^Ottawa^ON^K2P 1P5^CA||^^PH^6135555566
+OBR|1|ORD20260515001^TELUS_PSSUITE|SPE20260515001^LIFELABS_ON|UCUL^Urine Culture^LN|||20260515083000|||||||||5566778899^Duval^Monique R^^^^||||||20260515160000||MB|F
+OBX|1|ST|630-4^Bacteria identified^LN||Klebsiella pneumoniae||||||F
+OBX|2|ST|18900-1^Colony count^LN||>100,000 CFU/mL||||||F
+OBX|3|ST|18864-9^Ampicillin^LN||Resistant||||||F
+OBX|4|ST|18865-6^Ciprofloxacin^LN||Susceptible||||||F
+OBX|5|ST|18906-8^Ceftriaxone^LN||Susceptible||||||F
+```
+
+## 16. ADT^A04 - registration at Nova Scotia clinic
+
+```
+MSH|^~\&|WOLF_EMR|HALIFAX FAMILY PRACTICE|HIS_RCV|QEII HSC|20260516090000||ADT^A04^ADT_A01|TH00016|P|2.3
+EVN|A04|20260516090000
+PID|||6677889900^^^NS_PHN^JHN||MacLeod^Fiona^Elizabeth^^Ms||19830322|F|||55 Spring Garden Rd^^Halifax^NS^B3J 1G1^CA||^^PH^9025556677~^^CP^9025558899||F||||||||||||||||||||
+PV1||O|CLINIC^RM1^1^Halifax Family Practice||||78901^MacDonald^Angus^^^Dr.^^CPSNS|||FAM||||||||VN20260516001|||||||||||||||||||||||||||20260516090000
+```
+
+## 17. ORU^R01 - coagulation results
+
+```
+MSH|^~\&|TELUS_PSSUITE|HEART HEALTH CLINIC|LIFELABS|LIFELABS_ON|20260517111500||ORU^R01^ORU_R01|TH00017|P|2.5
+PID|||7788990011^^^ON_HCN^JHN||Arsenault^Roger^Paul^^Mr||19500811|M|||72 Elgin St^^Ottawa^ON^K1P 5K6^CA||^^PH^6135557788
+OBR|1|ORD20260517001^TELUS_PSSUITE|SPE20260517001^LIFELABS_ON|COAG^Coagulation Panel^LN|||20260517074500|||||||||7788990011^Arsenault^Roger P^^^^||||||20260517111500||LAB|F
+OBX|1|NM|5902-2^PT^LN||15.2|s|11.0-13.5|H|||F
+OBX|2|NM|6301-6^INR^LN||2.3||2.0-3.0|N|||F
+OBX|3|NM|3173-2^aPTT^LN||32|s|25-38|N|||F
+```
+
+## 18. ORU^R01 - scanned specialist letter with embedded PDF
+
+```
+MSH|^~\&|TELUS_PSSUITE|NEPEAN MEDICAL|REPO|DOC_REPO|20260518150000||ORU^R01^ORU_R01|TH00018|P|2.5
+PID|||8899001122^^^ON_HCN^JHN||Desrosiers^Helene^Marie^^Mme||19680910|F|||400 Hunt Club Rd^^Ottawa^ON^K1V 1C1^CA||^^PH^6135558899
+OBR|1|ORD20260518001^TELUS_PSSUITE|DOC20260518001^DOC_REPO|SPEC^Specialist Letter^LN|||20260518120000|||||||||8899001122^Desrosiers^Helene M^^^^||||||20260518150000||DOC|F
+OBX|1|FT|11488-4^Consultation Note^LN||Rheumatology assessment for polyarthralgia. Exam findings consistent with early rheumatoid arthritis. Starting methotrexate 15mg weekly.||||||F
+OBX|2|ED|PDF^Specialist Report PDF^LN||^AP^^Base64^JVBERi0xLjUKJeLjz9MKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKL01hcmtJbmZvIDw8IC9NYXJrZWQgdHJ1ZSA+PgovU3RydWN0VHJlZVJvb3QgMyAwIFIKPj4KZW5kb2Jq||||||F
+```
+
+## 19. ADT^A01 - admission from New Brunswick facility
+
+```
+MSH|^~\&|WOLF_EMR|MONCTON MEDICAL|HIS_RCV|DR EVERETT CHALMERS|20260519063000||ADT^A01^ADT_A01|TH00019|P|2.3
+EVN|A01|20260519063000
+PID|||9900112233^^^NB_MCN^JHN||LeBlanc^Andre^Joseph^^Mr||19680115|M|||120 Main St^^Moncton^NB^E1C 1B8^CA||^^PH^5065559900~^^CP^5065558811||M||||||||||||||||||||
+PV1||I|SURG^301^A^Dr Everett Chalmers||||89012^Landry^Lise^^^Dr.^^CPSNB|||SURG||||||||VN20260519001|||||||||||||||||||||||||||20260519063000
+IN1|1||NB_MEDICARE|New Brunswick Medicare|520 King St^^Fredericton^NB^E3B 6G3^CA||||||||||||||||||||||||||||||||||||||||9900112233
+```
+
+## 20. ORU^R01 - electrolytes with critical potassium
+
+```
+MSH|^~\&|TELUS_PSSUITE|URGENCE CLINIC|LIFELABS|LIFELABS_ON|20260520161500||ORU^R01^ORU_R01|TH00020|P|2.5
+PID|||0011223344^^^ON_HCN^JHN||Nadeau^Claude^Pierre^^Mr||19470603|M|||85 Somerset St^^Ottawa^ON^K1R 6R1^CA||^^PH^6135550011
+OBR|1|ORD20260520001^TELUS_PSSUITE|SPE20260520001^LIFELABS_ON|ELEC^Electrolyte Panel^LN|||20260520081000|||||||||0011223344^Nadeau^Claude P^^^^||||||20260520161500||LAB|F
+OBX|1|NM|2951-2^Sodium^LN||139|mmol/L|136-145|N|||F
+OBX|2|NM|2823-3^Potassium^LN||6.1|mmol/L|3.5-5.1|HH|||F
+OBX|3|NM|2075-0^Chloride^LN||101|mmol/L|98-106|N|||F
+OBX|4|NM|1963-8^Bicarbonate^LN||23|mmol/L|22-29|N|||F
+OBX|5|NM|17861-6^Calcium^LN||2.35|mmol/L|2.15-2.55|N|||F
+```

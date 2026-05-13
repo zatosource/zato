@@ -12,12 +12,12 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
-from zato.common.api import SEC_DEF_TYPE
+from zato.common.api import query_parameters, SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, APIKeySecurity
 from zato.common.odb.query import apikey_security_list
 from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,12 +34,8 @@ class GetList(AdminService):
     """
     _filter_by = APIKeySecurity.name,
 
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_security_apikey_get_list_request'
-        response_elem = 'zato_security_apikey_get_list_response'
-        input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active', 'username'
-        output_optional:'any_' = 'header'
+    input = 'cluster_id', *query_parameters
+    output = 'id', 'name', 'is_active', 'username', '-header'
 
     def get_data(self, session:'SASession') -> 'any_':
         search_result = self._search(apikey_security_list, session, self.request.input.cluster_id, False)
@@ -56,12 +52,8 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new API key.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_apikey_create_request'
-        response_elem = 'zato_security_apikey_create_response'
-        input_required = 'name', 'is_active'
-        input_optional:'any_' = 'cluster_id', 'header'
-        output_required = 'id', 'name', 'header'
+    input = 'name', 'is_active', '-cluster_id', '-header'
+    output = 'id', 'name', 'header'
 
     def handle(self) -> 'None':
 
@@ -107,7 +99,7 @@ class Create(AdminService):
                 self.response.payload.header = input.header
 
         # Make sure the object has been created
-        _:'any_' = self.server.worker_store.wait_for_apikey(input.name)
+        _:'any_' = self.server.config_manager.wait_for_apikey(input.name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -115,12 +107,8 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an API key.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_apikey_edit_request'
-        response_elem = 'zato_security_apikey_edit_response'
-        input_required = 'id', 'name', 'is_active'
-        input_optional:'any_' = 'cluster_id', 'header'
-        output_required = 'id', 'name', 'header'
+    input = 'id', 'name', 'is_active', '-cluster_id', '-header'
+    output = 'id', 'name', 'header'
 
     def handle(self) -> 'None':
 
@@ -176,10 +164,6 @@ class ChangePassword(ChangePasswordBase):
     """
     password_required = False
 
-    class SimpleIO(ChangePasswordBase.SimpleIO):
-        request_elem = 'zato_security_apikey_change_password_request'
-        response_elem = 'zato_security_apikey_change_password_response'
-
     def handle(self) -> 'None':
 
         def _auth(instance:'any_', password:'str') -> 'None':
@@ -193,10 +177,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes an API key.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_apikey_delete_request'
-        response_elem = 'zato_security_apikey_delete_response'
-        input_required = 'id'
+    input = 'id',
 
     def handle(self) -> 'None':
         with closing(self.odb.session()) as session:

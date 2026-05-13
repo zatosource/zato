@@ -1,0 +1,361 @@
+# Clinisys GLIMS (Belgium) - real HL7v2 ER7 messages
+
+---
+
+## 1. ORM^O01 - clinical chemistry order (klinische chemie aanvraag), AZ Turnhout
+
+```
+MSH|^~\&|ORBIS|AZ_TURNHOUT|GLIMS|AZ_TURNHOUT|20250410083000||ORM^O01^ORM_O01|ORM001|P|2.5|||AL|NE
+PID|1||612345^^^AZ_TURNHOUT^PI~85061234567^^^SSIN&2.16.840.1.113883.3.6777.5.1&ISO^NNNBE||Janssens^Griet^^^^^L||19850612|F
+PV1|1|I|MED^204^1^AZ_TURNHOUT||||22315678901^Coppens^Dirk^^^Dr.^^^AZ_TURNHOUT^L^^^NIHDI
+ORC|NW|ORD1001^ORBIS||GRP001^ORBIS|||||20250410083000|||22315678901^Coppens^Dirk^^^Dr.^^^AZ_TURNHOUT^L^^^NIHDI
+OBR|1|ORD1001^ORBIS||24323-8^CMP^LN|||20250410083000|||||||||22315678901^Coppens^Dirk^^^Dr.^^^AZ_TURNHOUT^L^^^NIHDI|||||||||||^ROUTINE
+DG1|1||E11.9^Diabetes mellitus type 2^ICD10BE
+NTE|1||Nuchtere bloedafname. Controle diabetesinstellingen.
+```
+
+---
+
+## 2. ORM^O01 - haematology order (hematologie aanvraag), UZ Gent
+
+```
+MSH|^~\&|EPD|UZ_GENT|GLIMS|UZ_GENT|20250512090000||ORM^O01^ORM_O01|ORM002|P|2.5|||AL|NE
+PID|1||H890567^^^UZ_GENT^PI~78052345678^^^SSIN&2.16.840.1.113883.3.6777.5.1&ISO^NNNBE||Goossens^Pieter^^^^^L||19780523|M
+PV1|1|I|HEMA^301^2^UZ_GENT||||22319876543^De Smet^Katrien^^^Prof.Dr.^^^UZ_GENT^L^^^NIHDI
+ORC|NW|ORD2001^EPD||GRP002^EPD|||||20250512090000|||22319876543^De Smet^Katrien^^^Prof.Dr.^^^UZ_GENT^L^^^NIHDI
+OBR|1|ORD2001^EPD||58410-2^CBC with Diff^LN|||20250512090000|||||||||22319876543^De Smet^Katrien^^^Prof.Dr.^^^UZ_GENT^L^^^NIHDI|||||||||||^STAT
+OBR|2|ORD2001^EPD||34714-6^INR^LN|||20250512090000|||||||||22319876543^De Smet^Katrien^^^Prof.Dr.^^^UZ_GENT^L^^^NIHDI|||||||||||^STAT
+NTE|1||Spoedaanvraag. Patient onder anticoagulantia.
+```
+
+---
+
+## 3. ORU^R01 - clinical chemistry result (klinische chemie resultaat), AZ Turnhout
+
+```
+MSH|^~\&|GLIMS|AZ_TURNHOUT|ORBIS|AZ_TURNHOUT|20250410153000||ORU^R01^ORU_R01|LAB001|P|2.5|||AL|NE
+PID|1||612345^^^AZ_TURNHOUT^PI~85061234567^^^SSIN&2.16.840.1.113883.3.6777.5.1&ISO^NNNBE||Janssens^Griet^^^^^L||19850612|F
+PV1|1|I|MED^204^1^AZ_TURNHOUT
+ORC|RE|ORD1001^ORBIS|FIL3001^GLIMS||CM
+OBR|1|ORD1001^ORBIS|FIL3001^GLIMS|24323-8^CMP^LN|||20250410083000|||||||||22315678901^Coppens^Dirk^^^Dr.^^^AZ_TURNHOUT^L^^^NIHDI||||||20250410150000||LAB|F
+OBX|1|NM|2345-7^Glucose^LN||8.2|mmol/L|3.9-6.1|H|||F
+OBX|2|NM|4548-4^HbA1c^LN||58|mmol/mol|20-42|H|||F
+OBX|3|NM|2160-0^Creatinine^LN||72|umol/L|45-84|N|||F
+OBX|4|NM|3094-0^Ureum^LN||6.1|mmol/L|2.5-7.5|N|||F
+OBX|5|NM|2951-2^Natrium^LN||141|mmol/L|136-145|N|||F
+OBX|6|NM|2823-3^Kalium^LN||4.5|mmol/L|3.5-5.1|N|||F
+OBX|7|NM|17861-6^Calcium^LN||2.38|mmol/L|2.15-2.55|N|||F
+OBX|8|NM|1742-6^ALAT^LN||32|U/L|7-56|N|||F
+OBX|9|NM|1920-8^ASAT^LN||25|U/L|10-40|N|||F
+```
+
+---
+
+## 4. ORU^R01 - haematology result (hematologie resultaat), UZ Gent
+
+```
+MSH|^~\&|GLIMS|UZ_GENT|EPD|UZ_GENT|20250512141500||ORU^R01^ORU_R01|LAB002|P|2.5|||AL|NE
+PID|1||H890567^^^UZ_GENT^PI~78052345678^^^SSIN&2.16.840.1.113883.3.6777.5.1&ISO^NNNBE||Goossens^Pieter^^^^^L||19780523|M
+PV1|1|I|HEMA^301^2^UZ_GENT
+ORC|RE|ORD2001^EPD|FIL4001^GLIMS||CM
+OBR|1|ORD2001^EPD|FIL4001^GLIMS|58410-2^CBC with Diff^LN|||20250512090000|||||||||22319876543^De Smet^Katrien^^^Prof.Dr.^^^UZ_GENT^L^^^NIHDI||||||20250512140000||LAB|F
+OBX|1|NM|718-7^Hemoglobine^LN||9.8|g/dL|13.5-17.5|L|||F
+OBX|2|NM|4544-3^Hematocriet^LN||30.2|%|38.3-48.6|L|||F
+OBX|3|NM|6690-2^Leukocyten^LN||12.5|10*9/L|4.5-11.0|H|||F
+OBX|4|NM|787-2^Erytrocyten^LN||3.42|10*12/L|4.50-5.90|L|||F
+OBX|5|NM|777-3^Trombocyten^LN||156|10*9/L|150-400|N|||F
+OBX|6|NM|770-8^Neutrofielen^LN||8.9|10*9/L|1.8-7.7|H|||F
+OBX|7|NM|731-0^Lymfocyten^LN||1.8|10*9/L|1.0-4.8|N|||F
+OBX|8|NM|742-7^Monocyten^LN||1.2|10*9/L|0.2-0.8|H|||F
+OBX|9|NM|713-8^Eosinofielen^LN||0.4|10*9/L|0.0-0.5|N|||F
+OBX|10|NM|704-7^Basofielen^LN||0.2|10*9/L|0.0-0.1|H|||F
+ORC|RE|ORD2001^EPD|FIL4002^GLIMS||CM
+OBR|2|ORD2001^EPD|FIL4002^GLIMS|34714-6^INR^LN|||20250512090000|||||||||22319876543^De Smet^Katrien^^^Prof.Dr.^^^UZ_GENT^L^^^NIHDI||||||20250512140500||LAB|F
+OBX|11|NM|6301-6^INR^LN||2.8|{INR}|2.0-3.0|N|||F
+OBX|12|NM|5902-2^PT^LN||28.5|sec|11.0-15.0|H|||F
+```
+
+---
+
+## 5. ORU^R01 - thyroid function panel (schildklierfunctie), CHU Charleroi
+
+```
+MSH|^~\&|GLIMS|CHU_CHARLEROI|EPD|CHU_CHARLEROI|20250318110000||ORU^R01^ORU_R01|LAB003|P|2.5|||AL|NE
+PID|1||D567890^^^CHU_CHARLEROI^PI~72111567890^^^SSIN&2.16.840.1.113883.3.6777.5.1&ISO^NNNBE||Dupont^Claudine^^^^^L||19721115|F
+PV1|1|O|CONS^ENDO^01^CHU_CHARLEROI||||22324567890^Simon^Philippe^^^Dr.^^^CHU_CHARLEROI^L^^^NIHDI
+ORC|RE|ORD3001^EPD|FIL5001^GLIMS||CM
+OBR|1|ORD3001^EPD|FIL5001^GLIMS|34528-0^Bilan thyroïdien^LN|||20250318083000|||||||||22324567890^Simon^Philippe^^^Dr.^^^CHU_CHARLEROI^L^^^NIHDI||||||20250318105000||LAB|F
+OBX|1|NM|3016-3^TSH^LN||6.8|mIU/L|0.27-4.20|H|||F
+OBX|2|NM|3024-7^T4 Libre^LN||10.2|pmol/L|12.0-22.0|L|||F
+OBX|3|NM|3053-6^T3 Libre^LN||3.8|pmol/L|3.1-6.8|N|||F
+NTE|1||Hypothyroïdie subclinique. Contrôle recommandé dans 6 semaines.
+```
+
+---
+
+## 6. ORU^R01 - urinalysis result (urine-analyse), AZ Herentals
+
+```
+MSH|^~\&|GLIMS|AZ_HERENTALS|ORBIS|AZ_HERENTALS|20250605143000||ORU^R01^ORU_R01|LAB004|P|2.5|||AL|NE
+PID|1||J223344^^^AZ_HERENTALS^PI~97050312345^^^SSIN&2.16.840.1.113883.3.6777.5.1&ISO^NNNBE||Mertens^Elien^^^^^L||19970503|F
+PV1|1|I|MED^110^1^AZ_HERENTALS||||22354321987^Willems^Tom^^^Dr.^^^AZ_HERENTALS^L^^^NIHDI
+ORC|RE|ORD6001^ORBIS|FIL7001^GLIMS||CM
+OBR|1|ORD6001^ORBIS|FIL7001^GLIMS|24356-8^Urineonderzoek^LN|||20250605080000|||||||||22354321987^Willems^Tom^^^Dr.^^^AZ_HERENTALS^L^^^NIHDI||||||20250605140000||LAB|F
+OBX|1|ST|5778-6^Kleur^LN||Donkergeel||Strohalm-geel||||F
+OBX|2|ST|5767-9^Aspect^LN||Troebel||Helder||||F
+OBX|3|NM|2756-5^pH^LN||5.5||5.0-8.0|N|||F
+OBX|4|NM|2965-2^Soortelijk gewicht^LN||1.025||1.005-1.030|N|||F
+OBX|5|ST|20454-5^Eiwit^LN||2+||Negatief|A|||F
+OBX|6|ST|5792-7^Glucose^LN||Negatief||Negatief|N|||F
+OBX|7|NM|5811-5^Leukocyten^LN||25|/HPF|0-5|H|||F
+OBX|8|NM|5804-0^Erytrocyten^LN||15|/HPF|0-3|H|||F
+OBX|9|ST|5802-4^Nitriet^LN||Positief||Negatief|A|||F
+```
+
+---
+
+## 7. ORU^R01 - microbiology culture result with antibiogram, CHU Charleroi
+
+```
+MSH|^~\&|GLIMS|CHU_CHARLEROI|EPD|CHU_CHARLEROI|20250322163000||ORU^R01^ORU_R01|MICRO001|P|2.5|||AL|NE
+PID|1||D901234^^^CHU_CHARLEROI^PI~74030967890^^^SSIN&2.16.840.1.113883.3.6777.5.1&ISO^NNNBE||Lejeune^Thierry^^^^^L||19740309|M
+PV1|1|I|CHIR^205^3^CHU_CHARLEROI||||22327890123^Dubois^Veronique^^^Dr.^^^CHU_CHARLEROI^L^^^NIHDI
+ORC|RE|ORD7001^EPD|FIL8001^GLIMS||CM
+OBR|1|ORD7001^EPD|FIL8001^GLIMS|87040^Hémoculture^LN|||20250320090000|||||||||22327890123^Dubois^Veronique^^^Dr.^^^CHU_CHARLEROI^L^^^NIHDI||||||20250322160000||MB|F
+OBX|1|CE|11475-1^Identification micro-organisme^LN||91302008^Escherichia coli^SCT||||||F
+OBX|2|ST|18769-0^Profil de sensibilité^LN||Voir antibiogramme||||||F
+OBX|3|ST|18862-3^Amoxicilline^LN||R^Résistant||||||F
+OBX|4|ST|18900-1^Amoxicilline-clavulanate^LN||S^Sensible||||||F
+OBX|5|ST|18928-2^Gentamicine^LN||S^Sensible||||||F
+OBX|6|ST|18903-5^Ciprofloxacine^LN||I^Intermédiaire||||||F
+OBX|7|ST|18961-3^Vancomycine^LN||S^Sensible||||||F
+OBX|8|NM|35659-2^CMI Ciprofloxacine^LN||0.5|ug/mL|<=0.25|H|||F
+NTE|1||BLSE négatif. Recommandation: Amoxicilline-clavulanate IV.
+```
+
+---
+
+## 8. ORU^R01 - liver function panel (leverfunctie), AZ Alma
+
+```
+MSH|^~\&|GLIMS|AZ_ALMA|EPD|AZ_ALMA|20250714110000||ORU^R01^ORU_R01|LAB005|P|2.5|||AL|NE
+PID|1||B445566^^^AZ_ALMA^PI~62081245678^^^SSIN&2.16.840.1.113883.3.6777.5.1&ISO^NNNBE||Claes^Hilde^^^^^L||19620812|F
+PV1|1|O|CONS^GASTRO^01^AZ_ALMA||||22368901234^Maes^Joris^^^Dr.^^^AZ_ALMA^L^^^NIHDI
+ORC|RE|ORD8001^EPD|FIL9001^GLIMS||CM
+OBR|1|ORD8001^EPD|FIL9001^GLIMS|24325-3^Leverfunctie panel^LN|||20250714083000|||||||||22368901234^Maes^Joris^^^Dr.^^^AZ_ALMA^L^^^NIHDI||||||20250714105000||LAB|F
+OBX|1|NM|1742-6^ALAT^LN||125|U/L|7-56|H|||F
+OBX|2|NM|1920-8^ASAT^LN||98|U/L|10-40|H|||F
+OBX|3|NM|6768-6^Alkalische fosfatase^LN||310|U/L|44-147|H|||F
+OBX|4|NM|1975-2^Totaal bilirubine^LN||42|umol/L|5-21|H|||F
+OBX|5|NM|1968-7^Direct bilirubine^LN||28|umol/L|0-5|H|||F
+OBX|6|NM|2324-2^GGT^LN||185|U/L|8-61|H|||F
+OBX|7|NM|1751-7^Albumine^LN||32|g/L|35-52|L|||F
+OBX|8|NM|2885-2^Totaal eiwit^LN||62|g/L|64-83|L|||F
+NTE|1||Cholestasebeeld. Echografie lever aangevraagd.
+```
+
+---
+
+## 9. ORU^R01 - cardiac markers (cardiale merkers), AZ Delta Roeselare
+
+```
+MSH|^~\&|GLIMS|AZ_DELTA|EPD|AZ_DELTA|20250901220000||ORU^R01^ORU_R01|LAB006|P|2.5|||AL|NE
+PID|1||E667788^^^AZ_DELTA^PI~57061245678^^^SSIN&2.16.840.1.113883.3.6777.5.1&ISO^NNNBE||Peeters^Hendrik^^^^^L||19570612|M
+PV1|1|E|SPOED^01^1^AZ_DELTA||||22379012345^Vermeersch^Anja^^^Dr.^^^AZ_DELTA^L^^^NIHDI
+ORC|RE|ORD9001^EPD|FIL1101^GLIMS||CM
+OBR|1|ORD9001^EPD|FIL1101^GLIMS|89579-7^Cardiale merkers^LN|||20250901210000|||||||||22379012345^Vermeersch^Anja^^^Dr.^^^AZ_DELTA^L^^^NIHDI||||||20250901215500||LAB|F
+OBX|1|NM|6598-7^Troponine T hs^LN||285|ng/L|0-14|H|||F
+OBX|2|NM|30522-7^CRP hs^LN||18.5|mg/L|0-5.0|H|||F
+OBX|3|NM|42637-9^NT-proBNP^LN||1250|pg/mL|0-125|H|||F
+OBX|4|NM|2157-6^CK^LN||420|U/L|30-200|H|||F
+OBX|5|NM|13969-1^CK-MB^LN||45|U/L|0-25|H|||F
+NTE|1||Verhoogde cardiale merkers. Klinisch beeld suggestief voor acuut coronair syndroom.
+```
+
+---
+
+## 10. ORU^R01 - coagulation panel (stollingsonderzoek), CHU UCL Namur
+
+```
+MSH|^~\&|GLIMS|CHU_UCL_NAMUR|EPD|CHU_UCL_NAMUR|20250220143000||ORU^R01^ORU_R01|LAB007|P|2.5|||AL|NE
+PID|1||P889900^^^CHU_UCL_NAMUR^PI~90121534567^^^SSIN&2.16.840.1.113883.3.6777.5.1&ISO^NNNBE||Michel^Aurelie^^^^^L||19901215|F
+PV1|1|I|CHIR^110^2^CHU_UCL_NAMUR||||22390123456^Lambert^Etienne^^^Dr.^^^CHU_UCL_NAMUR^L^^^NIHDI
+ORC|RE|ORD1101^EPD|FIL1201^GLIMS||CM
+OBR|1|ORD1101^EPD|FIL1201^GLIMS|62854-0^Panel coagulation^LN|||20250220090000|||||||||22390123456^Lambert^Etienne^^^Dr.^^^CHU_UCL_NAMUR^L^^^NIHDI||||||20250220141500||LAB|F
+OBX|1|NM|5902-2^TP (temps de prothrombine)^LN||18.5|sec|11.0-15.0|H|||F
+OBX|2|NM|6301-6^INR^LN||1.5|{INR}|0.8-1.2|H|||F
+OBX|3|NM|3173-2^TCA (temps de céphaline activée)^LN||42|sec|25-35|H|||F
+OBX|4|NM|3255-7^Fibrinogène^LN||1.8|g/L|2.0-4.0|L|||F
+OBX|5|NM|5942-8^D-dimères^LN||2.4|mg/L|0-0.5|H|||F
+NTE|1||Coagulopathie. Bilan pré-opératoire à compléter.
+```
+
+---
+
+## 11. ORU^R01 - blood gas analysis (bloedgasanalyse), AZ Turnhout
+
+```
+MSH|^~\&|GLIMS|AZ_TURNHOUT|ORBIS|AZ_TURNHOUT|20250615162000||ORU^R01^ORU_R01|LAB008|P|2.5|||AL|NE
+PID|1||U001122^^^AZ_TURNHOUT^PI~72031245678^^^SSIN&2.16.840.1.113883.3.6777.5.1&ISO^NNNBE||Maes^Bram^^^^^L||19720312|M
+PV1|1|E|SPOED^02^1^AZ_TURNHOUT||||22316789012^Vandenberghe^Liesbeth^^^Dr.^^^AZ_TURNHOUT^L^^^NIHDI
+ORC|RE|ORD1201^ORBIS|FIL1301^GLIMS||CM
+OBR|1|ORD1201^ORBIS|FIL1301^GLIMS|24336-0^Arteriële bloedgas^LN|||20250615160000|||||||||22316789012^Vandenberghe^Liesbeth^^^Dr.^^^AZ_TURNHOUT^L^^^NIHDI||||||20250615161500||LAB|F
+OBX|1|NM|2744-1^pH^LN||7.32||7.35-7.45|L|||F
+OBX|2|NM|2019-8^pCO2^LN||52|mmHg|35-45|H|||F
+OBX|3|NM|2703-7^pO2^LN||68|mmHg|80-100|L|||F
+OBX|4|NM|1959-6^HCO3^LN||26|mmol/L|22-26|N|||F
+OBX|5|NM|2708-6^Base Excess^LN||-1.5|mmol/L|-2.0-2.0|N|||F
+OBX|6|NM|2713-6^SaO2^LN||91|%|95-100|L|||F
+OBX|7|NM|2947-0^Lactaat^LN||3.8|mmol/L|0.5-2.2|H|||F
+NTE|1||Respiratoire acidose met hypoxemie. Verhoogd lactaat.
+```
+
+---
+
+## 12. ORU^R01 - laboratory result with embedded PDF report (base64), AZ Turnhout
+
+```
+MSH|^~\&|GLIMS|AZ_TURNHOUT|ORBIS|AZ_TURNHOUT|20250411160000||ORU^R01^ORU_R01|LAB009|P|2.5|||AL|NE
+PID|1||612345^^^AZ_TURNHOUT^PI~85061234567^^^SSIN&2.16.840.1.113883.3.6777.5.1&ISO^NNNBE||Janssens^Griet^^^^^L||19850612|F
+PV1|1|I|MED^204^1^AZ_TURNHOUT
+ORC|RE|ORD1001^ORBIS|FIL3001^GLIMS||CM
+OBR|1|ORD1001^ORBIS|FIL3001^GLIMS|24323-8^CMP^LN|||20250410083000|||||||||22315678901^Coppens^Dirk^^^Dr.^^^AZ_TURNHOUT^L^^^NIHDI||||||20250411155000||LAB|F
+OBX|1|NM|2345-7^Glucose^LN||8.2|mmol/L|3.9-6.1|H|||F
+OBX|2|NM|4548-4^HbA1c^LN||58|mmol/mol|20-42|H|||F
+OBX|3|ED|PDF^Laboratoriumrapport^LOCAL||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNTk1IDg0Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA1OTUgODQyXQovQ29udGVudHMgNCAwIFIKL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4KPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA0NCA+PgpzdHJlYW0KQlQKL0YxIDEyIFRmCjEwMCA3MDAgVGQKKEFaIFR1cm5ob3V0IC0gTGFib3JhdG9yaXVtcmFwcG9ydCkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250Ci9TdWJ0eXBlIC9UeXBlMQovQmFzZUZvbnQgL0hlbHZldGljYQo+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDE1MyAwMDAwMCBuIAowMDAwMDAwMzE0IDAwMDAwIG4gCjAwMDAwMDA0MTIgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2Ci9Sb290IDEgMCBSCj4+CnN0YXJ0eHJlZgo0OTMKJSVFT0YK||||||F
+```
+
+---
+
+## 13. ORU^R01 - immunology/serology result (immunologie), UZ Gent
+
+```
+MSH|^~\&|GLIMS|UZ_GENT|EPD|UZ_GENT|20250620110000||ORU^R01^ORU_R01|LAB010|P|2.5|||AL|NE
+PID|1||H445566^^^UZ_GENT^PI~94071545678^^^SSIN&2.16.840.1.113883.3.6777.5.1&ISO^NNNBE||Willems^Jolien^^^^^L||19940715|F
+PV1|1|O|CONS^REUMA^01^UZ_GENT||||22311234567^Baert^Frederik^^^Prof.Dr.^^^UZ_GENT^L^^^NIHDI
+ORC|RE|ORD1301^EPD|FIL1401^GLIMS||CM
+OBR|1|ORD1301^EPD|FIL1401^GLIMS|57021-8^Immunologisch panel^LN|||20250620083000|||||||||22311234567^Baert^Frederik^^^Prof.Dr.^^^UZ_GENT^L^^^NIHDI||||||20250620105000||LAB|F
+OBX|1|NM|13965-9^CRP^LN||45|mg/L|0-5|H|||F
+OBX|2|NM|4537-7^BSE^LN||68|mm/h|0-20|H|||F
+OBX|3|ST|5130-0^ANA (IF)^LN||Positief 1:320 homogeen||Negatief|A|||F
+OBX|4|NM|11572-5^Anti-dsDNA^LN||85|IU/mL|0-25|H|||F
+OBX|5|ST|33935-8^Anti-SSA/Ro^LN||Positief||Negatief|A|||F
+OBX|6|ST|31695-9^Anti-SSB/La^LN||Negatief||Negatief|N|||F
+OBX|7|NM|4485-9^Complement C3^LN||0.55|g/L|0.90-1.80|L|||F
+OBX|8|NM|4498-2^Complement C4^LN||0.08|g/L|0.10-0.40|L|||F
+NTE|1||ANA positief met anti-dsDNA en laag complement. Suggestief voor SLE.
+```
+
+---
+
+## 14. ORU^R01 - toxicology/drug screening (toxicologie), CHU Charleroi
+
+```
+MSH|^~\&|GLIMS|CHU_CHARLEROI|EPD|CHU_CHARLEROI|20250802230000||ORU^R01^ORU_R01|LAB011|P|2.5|||AL|NE
+PID|1||D223344^^^CHU_CHARLEROI^PI~92050112345^^^SSIN&2.16.840.1.113883.3.6777.5.1&ISO^NNNBE||Renard^Maxime^^^^^L||19920501|M
+PV1|1|E|URGENCES^01^1^CHU_CHARLEROI||||22328901234^Collin^Sandrine^^^Dr.^^^CHU_CHARLEROI^L^^^NIHDI
+ORC|RE|ORD1401^EPD|FIL1501^GLIMS||CM
+OBR|1|ORD1401^EPD|FIL1501^GLIMS|75695-2^Screening toxicologique^LN|||20250802220000|||||||||22328901234^Collin^Sandrine^^^Dr.^^^CHU_CHARLEROI^L^^^NIHDI||||||20250802225500||LAB|F
+OBX|1|ST|3426-4^Ethanol^LN||1.85|g/L|0-0|A|||F
+OBX|2|ST|19659-2^Benzodiazépines (urine)^LN||Positif||Négatif|A|||F
+OBX|3|ST|14314-4^Opiacés (urine)^LN||Négatif||Négatif|N|||F
+OBX|4|ST|16254-0^Cannabis (urine)^LN||Négatif||Négatif|N|||F
+OBX|5|ST|19658-4^Cocaïne métabolites (urine)^LN||Négatif||Négatif|N|||F
+OBX|6|ST|14325-0^Amphétamines (urine)^LN||Négatif||Négatif|N|||F
+OBX|7|NM|1558-6^Glucose (sang)^LN||4.8|mmol/L|3.9-6.1|N|||F
+NTE|1||Alcoolémie élevée. Benzodiazépines détectés. Confirmer par méthode quantitative.
+```
+
+---
+
+## 15. ORU^R01 - HLA typing (genetics), UZ Gent
+
+```
+MSH|^~\&|GLIMS|UZ_GENT|EPD|UZ_GENT|20250905160000||ORU^R01^ORU_R01|GEN001|P|2.5|||AL|NE
+PID|1||H001122^^^UZ_GENT^PI~87032145678^^^SSIN&2.16.840.1.113883.3.6777.5.1&ISO^NNNBE||Claes^Stef^^^^^L||19870321|M
+PV1|1|I|HEMA^305^1^UZ_GENT||||22312345098^Peeters^Annelies^^^Prof.Dr.^^^UZ_GENT^L^^^NIHDI
+ORC|RE|ORD1501^EPD|FIL1601^GLIMS||CM
+OBR|1|ORD1501^EPD|FIL1601^GLIMS|13303-3^HLA typing panel^LN|||20250903090000|||||||||22312345098^Peeters^Annelies^^^Prof.Dr.^^^UZ_GENT^L^^^NIHDI||||||20250905155000||GEN|F
+OBX|1|ST|59021-7^HLA-A^LN||A*02:01, A*24:02||||||F
+OBX|2|ST|46995-7^HLA-B^LN||B*07:02, B*44:02||||||F
+OBX|3|ST|59022-5^HLA-C^LN||C*05:01, C*07:02||||||F
+OBX|4|ST|46996-5^HLA-DRB1^LN||DRB1*04:01, DRB1*15:01||||||F
+OBX|5|ST|59023-3^HLA-DQB1^LN||DQB1*03:02, DQB1*06:02||||||F
+NTE|1||HLA-typering voor transplantatie-evaluatie.
+```
+
+---
+
+## 16. ORM^O01 - microbiology order (microbiologie aanvraag), CHU Charleroi
+
+```
+MSH|^~\&|EPD|CHU_CHARLEROI|GLIMS|CHU_CHARLEROI|20250320083000||ORM^O01^ORM_O01|ORM003|P|2.5|||AL|NE
+PID|1||D901234^^^CHU_CHARLEROI^PI~74030967890^^^SSIN&2.16.840.1.113883.3.6777.5.1&ISO^NNNBE||Lejeune^Thierry^^^^^L||19740309|M
+PV1|1|I|CHIR^205^3^CHU_CHARLEROI||||22327890123^Dubois^Veronique^^^Dr.^^^CHU_CHARLEROI^L^^^NIHDI
+ORC|NW|ORD7001^EPD||GRP003^EPD|||||20250320083000|||22327890123^Dubois^Veronique^^^Dr.^^^CHU_CHARLEROI^L^^^NIHDI
+OBR|1|ORD7001^EPD||87040^Hémoculture^LN|||20250320083000|||||||||22327890123^Dubois^Veronique^^^Dr.^^^CHU_CHARLEROI^L^^^NIHDI|||||||||||^STAT
+OBR|2|ORD7001^EPD||87070^Culture de plaie^LN|||20250320083000|||||||||22327890123^Dubois^Veronique^^^Dr.^^^CHU_CHARLEROI^L^^^NIHDI|||||||||||^STAT
+NTE|1||Patient fébrile à 39.2. Plaie abdominale post-opératoire suspecte d'infection.
+```
+
+---
+
+## 17. ORU^R01 - lipid panel (lipidenprofiel), AZ Alma
+
+```
+MSH|^~\&|GLIMS|AZ_ALMA|EPD|AZ_ALMA|20250718143000||ORU^R01^ORU_R01|LAB012|P|2.5|||AL|NE
+PID|1||B667788^^^AZ_ALMA^PI~74050545678^^^SSIN&2.16.840.1.113883.3.6777.5.1&ISO^NNNBE||Coppens^Ruben^^^^^L||19740505|M
+PV1|1|O|CONS^CARDIO^01^AZ_ALMA||||22369012345^Goossens^Veerle^^^Dr.^^^AZ_ALMA^L^^^NIHDI
+ORC|RE|ORD1601^EPD|FIL1701^GLIMS||CM
+OBR|1|ORD1601^EPD|FIL1701^GLIMS|57698-3^Lipidenprofiel^LN|||20250718083000|||||||||22369012345^Goossens^Veerle^^^Dr.^^^AZ_ALMA^L^^^NIHDI||||||20250718141500||LAB|F
+OBX|1|NM|2093-3^Totaal cholesterol^LN||6.8|mmol/L|0-5.2|H|||F
+OBX|2|NM|2571-8^Triglyceriden^LN||2.9|mmol/L|0-1.7|H|||F
+OBX|3|NM|2085-9^HDL-cholesterol^LN||0.95|mmol/L|1.0-999|L|||F
+OBX|4|NM|13457-7^LDL-cholesterol (berekend)^LN||4.53|mmol/L|0-3.0|H|||F
+OBX|5|NM|9830-1^Cholesterol/HDL ratio^LN||7.2||0-5.0|H|||F
+NTE|1||Uitgesproken dyslipidemie. Starten met statines overwegen.
+```
+
+---
+
+## 18. ORU^R01 - anatomic pathology result with embedded PDF (base64), CHU UCL Namur
+
+```
+MSH|^~\&|GLIMS|CHU_UCL_NAMUR|EPD|CHU_UCL_NAMUR|20250305160000||ORU^R01^ORU_R01|PATH001|P|2.5|||AL|NE
+PID|1||P334455^^^CHU_UCL_NAMUR^PI~67071234567^^^SSIN&2.16.840.1.113883.3.6777.5.1&ISO^NNNBE||Bodart^Mireille^^^^^L||19670712|F
+PV1|1|I|CHIR^201^1^CHU_UCL_NAMUR||||22391234567^Renard^Guillaume^^^Dr.^^^CHU_UCL_NAMUR^L^^^NIHDI
+ORC|RE|ORD1701^EPD|FIL1801^GLIMS||CM
+OBR|1|ORD1701^EPD|FIL1801^GLIMS|11529-5^Examen anatomopathologique^LN|||20250303100000|||||||||22391234567^Renard^Guillaume^^^Dr.^^^CHU_UCL_NAMUR^L^^^NIHDI||||||20250305155000||AP|F
+OBX|1|TX|22637-3^Diagnostic anatomopathologique^LN||Macroscopie: Fragment colique, 12 cm\.br\Microscopie: Adénocarcinome modérément différencié, infiltrant la sous-muqueuse\.br\Marges de résection libres\.br\Classification pTNM: pT2 N0 Mx||||||F
+OBX|2|ED|PDF^Rapport anatomopathologique^LOCAL||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNTk1IDg0Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA1OTUgODQyXQovQ29udGVudHMgNCAwIFIKL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4KPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA2MCA+PgpzdHJlYW0KQlQKL0YxIDEyIFRmCjEwMCA3MDAgVGQKKENIVSBVQ0wgTmFtdXIgLSBSYXBwb3J0IGFuYXRvbW9wYXRob2xvZ2lxdWUpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iago8PCAvVHlwZSAvRm9udAovU3VidHlwZSAvVHlwZTEKL0Jhc2VGb250IC9IZWx2ZXRpY2EKPj4KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxNTMgMDAwMDAgbiAKMDAwMDAwMDMxNCAwMDAwMCBuIAowMDAwMDAwNDI4IDAwMDAwIG4gCnRyYWlsZXIKPDwgL1NpemUgNgovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKNTA5CiUlRU9GCg==||||||F
+```
+
+---
+
+## 19. ORU^R01 - renal function panel (nierfunctie), AZ Delta Roeselare
+
+```
+MSH|^~\&|GLIMS|AZ_DELTA|EPD|AZ_DELTA|20250910110000||ORU^R01^ORU_R01|LAB013|P|2.5|||AL|NE
+PID|1||E990011^^^AZ_DELTA^PI~60031245678^^^SSIN&2.16.840.1.113883.3.6777.5.1&ISO^NNNBE||Vandamme^Roger^^^^^L||19600312|M
+PV1|1|O|CONS^NEFRO^01^AZ_DELTA||||22370123456^Declercq^Nele^^^Dr.^^^AZ_DELTA^L^^^NIHDI
+ORC|RE|ORD1801^EPD|FIL1901^GLIMS||CM
+OBR|1|ORD1801^EPD|FIL1901^GLIMS|34555-3^Nierfunctie panel^LN|||20250910083000|||||||||22370123456^Declercq^Nele^^^Dr.^^^AZ_DELTA^L^^^NIHDI||||||20250910105000||LAB|F
+OBX|1|NM|2160-0^Creatinine^LN||185|umol/L|62-106|H|||F
+OBX|2|NM|3094-0^Ureum^LN||18.5|mmol/L|2.5-7.5|H|||F
+OBX|3|NM|33914-3^eGFR (CKD-EPI)^LN||28|mL/min/1.73m2|>60|L|||F
+OBX|4|NM|14959-1^Albumine/creatinine ratio (urine)^LN||45|mg/mmol|0-3|H|||F
+OBX|5|NM|2951-2^Natrium^LN||138|mmol/L|136-145|N|||F
+OBX|6|NM|2823-3^Kalium^LN||5.4|mmol/L|3.5-5.1|H|||F
+OBX|7|NM|17861-6^Calcium^LN||2.05|mmol/L|2.15-2.55|L|||F
+OBX|8|NM|2777-1^Fosfaat^LN||1.85|mmol/L|0.81-1.45|H|||F
+NTE|1||CKD stadium 4. Fosfaat verhoogd, calcium verlaagd. Nefrologisch advies.
+```
+
+---
+
+## 20. ACK - acknowledgment (response to ORU result), AZ Turnhout
+
+```
+MSH|^~\&|ORBIS|AZ_TURNHOUT|GLIMS|AZ_TURNHOUT|20250410153100||ACK^R01^ACK|ACK001|P|2.5|||AL|NE
+MSA|CA|LAB001
+```

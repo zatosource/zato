@@ -1,0 +1,280 @@
+# ConnectVirginia HIE - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - Patient admission to Inova Fairfax Hospital
+
+```
+MSH|^~\&|INOVA_ADT|INOVA_FAIRFAX|CONNECTVA|VA_HIE|20260508143022||ADT^A01^ADT_A01|MSG20260508143022001|P|2.5.1|||AL|NE
+EVN|A01|20260508143022|||DR_SUBRAMANIAM^Vikram^Subramaniam^MD
+PID|1||MRN10045623^^^INOVA^MR||PEMBERTON^Vivian^Ruth^^Mrs.||19600508|F||2106-3^White^CDCREC|2045 Maple Creek Dr^^Falls Church^VA^22042^US||^PRN^PH^^^703^5554182|^WPN^PH^^^703^5559876||M||ACCT20260508001|315-62-8947|||N^Non-Hispanic^HL70189
+PD1|||Inova Fairfax Hospital^^12345|1234567890^Subramaniam^Vikram^MD
+NK1|1|PEMBERTON^Gerald^E^^Mr.|SPO^Spouse^HL70063||^PRN^PH^^^703^5554183
+PV1|1|I|4EAST^412^A^INOVA_FAIRFAX^^^^NURS|||1234567890^Subramaniam^Vikram^MD^^Dr.||5678901234^Kim^Susan^MD^^Dr.|MED||||ADM|||1234567890^Subramaniam^Vikram^MD^^Dr.|IN||||||||||||||||||AI||A|||20260508143000
+PV2|||^Chest pain with shortness of breath||||||20260510|3
+IN1|1|BCBS_VA^Blue Cross Blue Shield of Virginia|54321|Blue Cross Blue Shield of Virginia|PO Box 27401^^Richmond^VA^23261|^PRN^PH^^^804^5552000|GRP-887432|||||||PEMBERTON^Vivian^Ruth|SEL|19600508|2045 Maple Creek Dr^^Falls Church^VA^22042^US|||||||||||||||||XYZ123456789
+DG1|1||R07.9^Chest pain, unspecified^I10|||A
+```
+
+---
+
+## 2. ADT^A03 - Patient discharge from VCU Medical Center
+
+```
+MSH|^~\&|VCU_ADT|VCU_MEDICAL|CONNECTVA|VA_HIE|20260507161500||ADT^A03^ADT_A03|MSG20260507161500042|P|2.5.1|||AL|NE
+EVN|A03|20260507161500|||DR_PETROSYAN^Armen^Petrosyan^MD
+PID|1||MRN20089345^^^VCU^MR||GAINES^Demetrius^Anton||19780119|M||2054-5^Black or African American^CDCREC|2918 Broad Rock Blvd^^Richmond^VA^23224^US||^PRN^PH^^^804^5557293||S||ACCT20260504002|426-53-1874|||N^Non-Hispanic^HL70189
+PV1|1|I|ICU^204^B^VCU_MED^^^^NURS|||9876543210^Petrosyan^Armen^MD^^Dr.||2345678901^Briggs^Thomas^MD^^Dr.|SUR||||ADM|||9876543210^Petrosyan^Armen^MD^^Dr.|IN||||||||||||||||||DC||A|||20260504083000|20260507161500
+PV2|||^Post-operative recovery after appendectomy||||||20260507|3
+DG1|1||K35.80^Unspecified acute appendicitis without abscess^I10|||A
+DG1|2||Z48.812^Encounter for surgical aftercare following surgery on the digestive system^I10|||S
+```
+
+---
+
+## 3. ORU^R01 - Lab results from Sentara Norfolk General
+
+```
+MSH|^~\&|SENTARA_LAB|SENTARA_NORFOLK|CONNECTVA|VA_HIE|20260509080030||ORU^R01^ORU_R01|MSG20260509080030007|P|2.5.1|||AL|NE
+PID|1||MRN30012876^^^SENTARA^MR||SALAZAR^Marisol^Elena||19870923|F||2106-3^White^CDCREC|617 Granby St^^Norfolk^VA^23510^US||^PRN^PH^^^757^5558461||M||ACCT20260509001|537-41-6285|||H^Hispanic or Latino^HL70189
+PV1|1|O|LAB^001^A^SENTARA_NORFOLK||||3456789012^Afolabi^Tunde^MD^^Dr.|||LAB||||PHY
+ORC|RE|ORD20260509001|LAB20260509001||CM||||20260509073000|||3456789012^Afolabi^Tunde^MD^^Dr.
+OBR|1|ORD20260509001|LAB20260509001|24323-8^Comprehensive Metabolic Panel^LN|||20260509070000|||||||||3456789012^Afolabi^Tunde^MD^^Dr.||||||20260509080000||LAB|F
+OBX|1|NM|2345-7^Glucose^LN||98|mg/dL|70-100|N|||F|||20260509075500
+OBX|2|NM|3094-0^BUN^LN||15|mg/dL|7-20|N|||F|||20260509075500
+OBX|3|NM|2160-0^Creatinine^LN||0.9|mg/dL|0.6-1.2|N|||F|||20260509075500
+OBX|4|NM|2951-2^Sodium^LN||140|mmol/L|136-145|N|||F|||20260509075500
+OBX|5|NM|2823-3^Potassium^LN||4.2|mmol/L|3.5-5.1|N|||F|||20260509075500
+OBX|6|NM|2075-0^Chloride^LN||102|mmol/L|98-106|N|||F|||20260509075500
+OBX|7|NM|2028-9^CO2^LN||24|mmol/L|21-32|N|||F|||20260509075500
+OBX|8|NM|17861-6^Calcium^LN||9.4|mg/dL|8.5-10.5|N|||F|||20260509075500
+OBX|9|NM|1751-7^Albumin^LN||4.1|g/dL|3.5-5.0|N|||F|||20260509075500
+OBX|10|NM|1975-2^Total Bilirubin^LN||0.8|mg/dL|0.1-1.2|N|||F|||20260509075500
+OBX|11|NM|6768-6^Alkaline Phosphatase^LN||72|U/L|44-147|N|||F|||20260509075500
+OBX|12|NM|1742-6^ALT^LN||22|U/L|7-56|N|||F|||20260509075500
+OBX|13|NM|1920-8^AST^LN||28|U/L|10-40|N|||F|||20260509075500
+OBX|14|NM|2885-2^Total Protein^LN||7.0|g/dL|6.0-8.3|N|||F|||20260509075500
+```
+
+---
+
+## 4. ADT^A04 - Patient registration at Carilion Roanoke Memorial
+
+```
+MSH|^~\&|CARILION_REG|CARILION_ROANOKE|CONNECTVA|VA_HIE|20260508091530||ADT^A04^ADT_A01|MSG20260508091530018|P|2.5.1|||AL|NE
+EVN|A04|20260508091530|||CLERK_WEBB^Carolyn^Webb
+PID|1||MRN40023567^^^CARILION^MR||WHITAKER^Vernon^Lee^^Mr.||19510302|M||2106-3^White^CDCREC|4815 Brambleton Ave^^Roanoke^VA^24018^US||^PRN^PH^^^540^5552839|^WPN^PH^^^540^5553344||W||ACCT20260508003|648-74-3196|||N^Non-Hispanic^HL70189
+NK1|1|WHITAKER^Doris^Mae^^Mrs.|SPO^Spouse^HL70063||^PRN^PH^^^540^5552840
+PV1|1|O|ED^TRIAGE^01^CARILION_ROANOKE^^^^ED|||4567890123^Volkov^Sergei^MD^^Dr.|||EM||||PHY|||4567890123^Volkov^Sergei^MD^^Dr.|EM||||||||||||||||||V||A|||20260508091530
+PV2|||^Severe lower back pain radiating to left leg
+DG1|1||M54.5^Low back pain^I10|||A
+IN1|1|MEDICARE^Medicare|CMS001|Medicare|PO Box 100141^^Columbia^SC^29202||GRP-MCARE|||||||WHITAKER^Vernon^Lee|SEL|19510302|4815 Brambleton Ave^^Roanoke^VA^24018^US|||||||||||||||||1EG4-TE5-MK72
+```
+
+---
+
+## 5. VXU^V04 - Immunization update from Virginia Department of Health
+
+```
+MSH|^~\&|VIIS_IMM|VA_DOH|CONNECTVA|VA_HIE|20260509100000||VXU^V04^VXU_V04|MSG20260509100000033|P|2.5.1|||ER|AL
+PID|1||IMM78901234^^^VIIS^MR||BEAUMONT^Aria^Grace||20230621|F||2106-3^White^CDCREC|2415 Princess Anne Rd^^Virginia Beach^VA^23456^US||^PRN^PH^^^757^5556148||S||ACCT20260509004||||N^Non-Hispanic^HL70189
+NK1|1|BEAUMONT^Nathan^Christopher^^Mr.|FTH^Father^HL70063||^PRN^PH^^^757^5556149
+PV1|1|R||||||5678901234^Henderson^Claire^MD^^Dr.
+RXA|0|1|20260509095500|20260509095500|03^MMR^CVX|0.5|mL||00^New immunization record^NIP001||||||U4938JD||MSD^Merck Sharp and Dohme^MVX|||CP|A
+RXR|SC^Subcutaneous^HL70162|RA^Right Arm^HL70163
+OBX|1|CE|64994-7^Vaccine Funding Source^LN||VXC50^Public^CDCPHINVS||||||F
+OBX|2|CE|30956-7^Vaccine Type^LN||03^MMR^CVX||||||F
+OBX|3|TS|29768-9^Date Vaccine Information Statement Published^LN||20200814||||||F
+OBX|4|TS|29769-7^Date Vaccine Information Statement Presented^LN||20260509||||||F
+```
+
+---
+
+## 6. ORU^R01 - Pathology report with embedded PDF from UVA Health
+
+```
+MSH|^~\&|UVA_PATH|UVA_HEALTH|CONNECTVA|VA_HIE|20260507142200||ORU^R01^ORU_R01|MSG20260507142200055|P|2.5.1|||AL|NE
+PID|1||MRN50034567^^^UVA^MR||CHANDLER^Monique^Alise||19740507|F||2054-5^Black or African American^CDCREC|1320 Jefferson Park Ave^^Charlottesville^VA^22903^US||^PRN^PH^^^434^5553927||M||ACCT20260507005|759-83-4217|||N^Non-Hispanic^HL70189
+PV1|1|I|ONCO^302^A^UVA_HEALTH||||6789012345^Volkov^Dmitri^MD^^Dr.||7890123456^Walsh^Jennifer^MD^^Dr.|PATH||||ADM|||6789012345^Volkov^Dmitri^MD^^Dr.|IN
+ORC|RE|ORD20260507002|PATH20260507002||CM||||20260507100000|||6789012345^Volkov^Dmitri^MD^^Dr.
+OBR|1|ORD20260507002|PATH20260507002|88305-0^Surgical Pathology^LN|||20260507093000|||||||||6789012345^Volkov^Dmitri^MD^^Dr.||||||20260507142000||PATH|F
+OBX|1|ED|PDF^Pathology Report^AUSPDI||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4gPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCAyMzQgPj4Kc3RyZWFtCkJUCi9GMSAxMiBUZgoxMDAgNzAwIFRkCihQYXRob2xvZ3kgUmVwb3J0IC0gU3VyZ2ljYWwgUGF0aG9sb2d5KSBUagowIC0yMCBUZAooUGF0aWVudDogQnJvd24sIEFuZ2VsYSBNYXJpZSkgVGoKMCAtMjAgVGQKKERpYWdub3NpczogSW52YXNpdmUgZHVjdGFsIGNhcmNpbm9tYSkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMzA2IDAwMDAwIG4gCjAwMDAwMDA1OTIgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgo2NzEKJSVFT0YK||||||F
+OBX|2|ST|22637-3^Pathology report final diagnosis^LN||Invasive ductal carcinoma, grade 2, left breast. Margins negative. Tumor size 1.8 cm.||||||F
+OBX|3|ST|22636-5^Pathology report gross description^LN||Left breast lumpectomy specimen, 4.2 x 3.1 x 2.8 cm, with firm tan-white mass measuring 1.8 x 1.5 x 1.4 cm.||||||F
+```
+
+---
+
+## 7. ADT^A08 - Patient information update at Centra Lynchburg General
+
+```
+MSH|^~\&|CENTRA_ADT|CENTRA_LYNCHBURG|CONNECTVA|VA_HIE|20260509113045||ADT^A08^ADT_A01|MSG20260509113045022|P|2.5.1|||AL|NE
+EVN|A08|20260509113045|||CLERK_FOSTER^Melinda^Foster
+PID|1||MRN60045678^^^CENTRA^MR||FUENTES^Rodrigo^Antonio^^Mr.||19700614|M||2106-3^White^CDCREC|915 Church St^^Lynchburg^VA^24504^US||^PRN^PH^^^434^5555281|^WPN^PH^^^434^5554455||M||ACCT20260509006|860-92-5328|||H^Hispanic or Latino^HL70189
+PV1|1|I|MED^510^A^CENTRA_LYNCH^^^^NURS|||8901234567^Nakamura^Hiroshi^MD^^Dr.|||MED||||ADM|||8901234567^Nakamura^Hiroshi^MD^^Dr.|IN||||||||||||||||||AI||A|||20260507090000
+IN1|1|ANTHEM_VA^Anthem Blue Cross Blue Shield Virginia|67890|Anthem BCBS Virginia|PO Box 27401^^Richmond^VA^23261||GRP-ANT5567|||||||FUENTES^Rodrigo^Antonio|SEL|19700614|915 Church St^^Lynchburg^VA^24504^US|||||||||||||||||VA-ANT-778899
+```
+
+---
+
+## 8. ORM^O01 - Lab order from Augusta Health
+
+```
+MSH|^~\&|AUGUSTA_OE|AUGUSTA_HEALTH|CONNECTVA|VA_HIE|20260508154500||ORM^O01^ORM_O01|MSG20260508154500029|P|2.5.1|||AL|NE
+PID|1||MRN70056789^^^AUGUSTA^MR||PIERCE^Loretta^Jean||19570325|F||2106-3^White^CDCREC|418 Churchville Ave^^Staunton^VA^24401^US||^PRN^PH^^^540^5557394||W||ACCT20260508007|971-15-6439|||N^Non-Hispanic^HL70189
+PV1|1|O|LAB^002^A^AUGUSTA_HEALTH||||9012345678^Okafor^Chisom^MD^^Dr.|||LAB||||PHY
+ORC|NW|ORD20260508003||||||20260508154000|||9012345678^Okafor^Chisom^MD^^Dr.
+OBR|1|ORD20260508003||58410-2^CBC with Differential^LN|||20260508154000|||||||||9012345678^Okafor^Chisom^MD^^Dr.||||||||LAB
+OBR|2|ORD20260508003||2093-3^Total Cholesterol^LN|||20260508154000|||||||||9012345678^Okafor^Chisom^MD^^Dr.||||||||LAB
+OBR|3|ORD20260508003||4548-4^Hemoglobin A1c^LN|||20260508154000|||||||||9012345678^Okafor^Chisom^MD^^Dr.||||||||LAB
+```
+
+---
+
+## 9. ADT^A02 - Patient transfer at Riverside Regional Medical Center
+
+```
+MSH|^~\&|RIVERSIDE_ADT|RIVERSIDE_REGIONAL|CONNECTVA|VA_HIE|20260509072000||ADT^A02^ADT_A02|MSG20260509072000011|P|2.5.1|||AL|NE
+EVN|A02|20260509072000|||DR_PETROV^Nikolai^Petrov^MD
+PID|1||MRN80067890^^^RIVERSIDE^MR||ASHFORD^Raymond^Lee^^Mr.||19451103|M||2106-3^White^CDCREC|820 Denbigh Blvd^^Newport News^VA^23608^US||^PRN^PH^^^757^5554617||W||ACCT20260507008|182-26-7541|||N^Non-Hispanic^HL70189
+PV1|1|I|ICU^108^A^RIVERSIDE_REG^^^^NURS|U|||0123456789^Petrov^Nikolai^MD^^Dr.||1234509876^Adams^Patricia^MD^^Dr.|MED||||ADM|||0123456789^Petrov^Nikolai^MD^^Dr.|IN|||||||||||||||ICU|TF||A|||20260507180000
+PV2|||^Stabilized after acute myocardial infarction, transfer to step-down unit
+```
+
+---
+
+## 10. SIU^S12 - Appointment scheduling at Virginia Mason Orthopaedics
+
+```
+MSH|^~\&|VMASON_SCHED|VMASON_ORTHO|CONNECTVA|VA_HIE|20260509103000||SIU^S12^SIU_S12|MSG20260509103000044|P|2.5.1|||AL|NE
+SCH|APPT2026051200123||||||ROUTINE^Routine^HL70277|FOLLOWUP^Follow-up^HL70276|30|MIN|^^30^20260512140000^20260512143000|2345670987^Oyelaran^Dayo^MD^^Dr.
+PID|1||MRN90078901^^^VMASON^MR||NAKAGAWA^Suki^Mei||19900115|F||2028-9^Asian^CDCREC|4720 N Fairfax Dr^^Arlington^VA^22203^US||^PRN^PH^^^571^5558392||S||ACCT20260509009|293-37-8652|||N^Non-Hispanic^HL70189
+PV1|1|O|ORTHO^EXAM3^A^VMASON_ORTHO||||2345670987^Oyelaran^Dayo^MD^^Dr.|||ORT||||PHY
+AIS|1||ORTHO_FOLLOWUP^Orthopedic Follow-up^LOCAL|20260512140000|30|MIN
+AIG|1||2345670987^Oyelaran^Dayo^MD^^Dr.
+AIL|1||ORTHO^EXAM3^A^VMASON_ORTHO
+```
+
+---
+
+## 11. MDM^T02 - Document notification from Mary Washington Healthcare
+
+```
+MSH|^~\&|MWHC_DOC|MARY_WASHINGTON|CONNECTVA|VA_HIE|20260508172000||MDM^T02^MDM_T02|MSG20260508172000061|P|2.5.1|||AL|NE
+EVN|T02|20260508172000
+PID|1||MRN10089012^^^MWHC^MR||HARRINGTON^Gloria^Faye||19670204|F||2106-3^White^CDCREC|1905 College Ave^^Fredericksburg^VA^22401^US||^PRN^PH^^^540^5553148||D||ACCT20260508010|304-48-9763|||N^Non-Hispanic^HL70189
+PV1|1|O|CARD^EXAM1^A^MWHC^^^^CARD|||3456701234^Subramaniam^Pradeep^MD^^Dr.|||CAR||||PHY
+TXA|1|HP^History and Physical^HL70270|TX^Text^HL70191||20260508171500|||||3456701234^Subramaniam^Pradeep^MD^^Dr.|||||AU^Authenticated^HL70271||AV^Available^HL70273
+OBX|1|ST|11488-4^Consultation Note^LN||History and Physical - 65-year-old female presenting with progressive dyspnea on exertion over the past 3 weeks. Past medical history significant for hypertension, type 2 diabetes mellitus, and hyperlipidemia. Physical exam reveals bilateral lower extremity edema and bibasilar crackles. Assessment: Congestive heart failure, likely new onset. Plan: Echocardiogram, BNP, chest X-ray, initiate diuretic therapy.||||||F
+```
+
+---
+
+## 12. RDE^O11 - Pharmacy order from Winchester Medical Center
+
+```
+MSH|^~\&|WINCHESTER_RX|WINCHESTER_MED|CONNECTVA|VA_HIE|20260509081500||RDE^O11^RDE_O11|MSG20260509081500077|P|2.5.1|||AL|NE
+PID|1||MRN11090123^^^WINCHESTER^MR||OSTROWSKI^Raymond^Paul^^Mr.||19730518|M||2106-3^White^CDCREC|290 Cork St^^Winchester^VA^22601^US||^PRN^PH^^^540^5556275||M||ACCT20260509011|415-59-1874|||N^Non-Hispanic^HL70189
+PV1|1|I|MED^402^B^WINCHESTER_MED^^^^NURS|||4567812345^Adeyemi^Folashade^MD^^Dr.|||MED||||ADM|||4567812345^Adeyemi^Folashade^MD^^Dr.|IN||||||||||||||||||AI||A|||20260508190000
+ORC|NW|RX20260509001||||||20260509081000|||4567812345^Adeyemi^Folashade^MD^^Dr.
+RXE|1^BID^HL70335|311989^Metformin 500 mg oral tablet^RxNorm|500|mg|TAB^Tablet^HL70329||N||0|EA|||0|||||||||||20260509|20260523
+RXR|PO^Oral^HL70162
+```
+
+---
+
+## 13. DFT^P03 - Charge posting from Bon Secours St. Mary's Hospital
+
+```
+MSH|^~\&|BONSECOURS_FIN|BS_STMARYS|CONNECTVA|VA_HIE|20260508200000||DFT^P03^DFT_P03|MSG20260508200000088|P|2.5.1|||AL|NE
+EVN|P03|20260508200000
+PID|1||MRN12001234^^^BONSECOURS^MR||MBEKI^Thando^Sipho^^Mr.||19820408|M||2106-3^White^CDCREC|6100 Huguenot Rd^^Richmond^VA^23226^US||^PRN^PH^^^804^5557386||M||ACCT20260508012|526-61-2985|||N^Non-Hispanic^HL70189
+PV1|1|I|SURG^301^A^BS_STMARYS||||5678923456^Castellano^Diego^MD^^Dr.|||SUR||||ADM|||5678923456^Castellano^Diego^MD^^Dr.|IN||||||||||||||||||DC||A|||20260506100000|20260508180000
+FT1|1|20260508|20260508200000||CG|99213^Office or other outpatient visit, established patient^CPT4|Charge for surgical follow-up visit||1||5678923456^Castellano^Diego^MD^^Dr.||||||250.00|||||SURG
+FT1|2|20260506|20260508200000||CG|27447^Total knee arthroplasty^CPT4|Charge for total knee replacement surgery||1||5678923456^Castellano^Diego^MD^^Dr.||||||45200.00|||||SURG
+DG1|1||M17.11^Primary osteoarthritis, right knee^I10|||A
+```
+
+---
+
+## 14. ADT^A28 - New person added to Chesapeake Regional Medical Center
+
+```
+MSH|^~\&|CHESAPEAKE_ADT|CHESAPEAKE_REG|CONNECTVA|VA_HIE|20260509140000||ADT^A28^ADT_A05|MSG20260509140000099|P|2.5.1|||AL|NE
+EVN|A28|20260509140000|||REG_SYSTEM
+PID|1||MRN13012345^^^CHESAPEAKE^MR||CHOWDHURY^Priya^Lakshmi||19940827|F||2054-5^Black or African American^CDCREC|1312 Cedar Rd^^Chesapeake^VA^23322^US||^PRN^PH^^^757^5554197||S||ACCT20260509013|637-72-3196|||N^Non-Hispanic^HL70189
+PD1|||Chesapeake Regional Medical Center^^67890|6789034567^Volkov^Alexei^MD
+NK1|1|CHOWDHURY^Ananya^Devi^^Mrs.|MTH^Mother^HL70063||^PRN^PH^^^757^5554198
+```
+
+---
+
+## 15. ORU^R01 - Microbiology result with embedded PDF from Centra Health
+
+```
+MSH|^~\&|CENTRA_MICRO|CENTRA_HEALTH|CONNECTVA|VA_HIE|20260508093000||ORU^R01^ORU_R01|MSG20260508093000102|P|2.5.1|||AL|NE
+PID|1||MRN14023456^^^CENTRA^MR||MACGREGOR^Angus^Donald||19610409|M||2106-3^White^CDCREC|2108 Timberlake Rd^^Lynchburg^VA^24502^US||^PRN^PH^^^434^5555418||M||ACCT20260508014|748-83-4217|||N^Non-Hispanic^HL70189
+PV1|1|I|MED^305^A^CENTRA_LYNCH||||7890145678^Petrov^Yuri^MD^^Dr.|||MED||||ADM
+ORC|RE|ORD20260508004|MICRO20260508001||CM||||20260508070000|||7890145678^Petrov^Yuri^MD^^Dr.
+OBR|1|ORD20260508004|MICRO20260508001|87040^Culture, Blood^LN|||20260507230000|||||||||7890145678^Petrov^Yuri^MD^^Dr.||||||20260508093000||MB|F
+OBX|1|ST|600-7^Bacteria identified in Blood by Culture^LN||Staphylococcus aureus||||||F|||20260508090000
+OBX|2|ST|18907-2^Susceptibility panel^LN||Oxacillin: Resistant, Vancomycin: Sensitive, Gentamicin: Sensitive, Trimethoprim-Sulfamethoxazole: Sensitive||||||F|||20260508090000
+OBX|3|ED|PDF^Microbiology Report^AUSPDI||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4gPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCAzMTIgPj4Kc3RyZWFtCkJUCi9GMSAxMiBUZgoxMDAgNzAwIFRkCihNaWNyb2Jpb2xvZ3kgUmVwb3J0IC0gQmxvb2QgQ3VsdHVyZSkgVGoKMCAtMjAgVGQKKFBhdGllbnQ6IEhhcnJpcywgS2V2aW4gV2F5bmUpIFRqCjAgLTIwIFRkCihPcmdhbmlzbTogU3RhcGh5bG9jb2NjdXMgYXVyZXVzIChNUlNBKSkgVGoKMCAtMjAgVGQKKFN1c2NlcHRpYmlsaXR5OiBPeGFjaWxsaW4tUiwgVmFuY29teWNpbi1TKSBUZA0KRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMzA2IDAwMDAwIG4gCjAwMDAwMDA2NzAgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgo3NDkKJSVFT0YK||||||F
+```
+
+---
+
+## 16. ADT^A31 - Person update at Sentara Healthcare
+
+```
+MSH|^~\&|SENTARA_ADT|SENTARA_HEALTH|CONNECTVA|VA_HIE|20260509152000||ADT^A31^ADT_A05|MSG20260509152000115|P|2.5.1|||AL|NE
+EVN|A31|20260509152000|||REG_SYSTEM
+PID|1||MRN15034567^^^SENTARA^MR||DELACROIX^Camille^Renee^^Mrs.||19800119|F||2106-3^White^CDCREC|1530 Kempsville Rd^^Virginia Beach^VA^23464^US||^PRN^PH^^^757^5556529|^WPN^PH^^^757^5556688||M||ACCT20260509015|859-94-5328|||N^Non-Hispanic^HL70189
+PD1|||Sentara Virginia Beach General Hospital^^11111|8901256789^Okafor^Nkechi^MD
+```
+
+---
+
+## 17. ADT^A40 - Patient merge at Inova Health System
+
+```
+MSH|^~\&|INOVA_ADT|INOVA_HEALTH|CONNECTVA|VA_HIE|20260509164500||ADT^A40^ADT_A39|MSG20260509164500128|P|2.5.1|||AL|NE
+EVN|A40|20260509164500|||ADMIN_BANKS^Teresa^Banks
+PID|1||MRN16045678^^^INOVA^MR||ASHWORTH^Geoffrey^Michael^^Mr.||19850531|M||2106-3^White^CDCREC|3205 Clarendon Blvd^^Arlington^VA^22201^US||^PRN^PH^^^703^5557641||S||ACCT20260509016|960-15-6439|||N^Non-Hispanic^HL70189
+MRG|MRN16045679^^^INOVA^MR||ACCT20260102099
+```
+
+---
+
+## 18. ACK - Acknowledgment for ADT message
+
+```
+MSH|^~\&|CONNECTVA|VA_HIE|INOVA_ADT|INOVA_FAIRFAX|20260508143025||ACK^A01^ACK|ACK20260508143025001|P|2.5.1|||AL|NE
+MSA|AA|MSG20260508143022001||
+```
+
+---
+
+## 19. MFN^M02 - Staff/practitioner master file update
+
+```
+MSH|^~\&|CONNECTVA|VA_HIE|STATEWIDE|VA_PROVIDERS|20260509180000||MFN^M02^MFN_M02|MSG20260509180000131|P|2.5.1|||AL|NE
+MFI|PRA^Practitioner Master File^HL70175||UPD|||NE
+MFE|MAD|20260509180000||PRA0012345^PL
+STF|PRA0012345|1234567890^NPI|MEHTA^Priya^Sunita^^MD||F|19780512|A|MED^Medicine^HL70182||^WPN^PH^^^571^5558752|4300 Wilson Blvd^^Arlington^VA^22203^US
+PRA|PRA0012345||IN^Inpatient^HL70186|IC^Internal Medicine^HL70184||VA^Active^HL70187|20150601
+```
+
+---
+
+## 20. ORU^R01 - Radiology result from Bon Secours Mercy Health
+
+```
+MSH|^~\&|BONSECOURS_RAD|BS_MERCY|CONNECTVA|VA_HIE|20260509091200||ORU^R01^ORU_R01|MSG20260509091200140|P|2.5.1|||AL|NE
+PID|1||MRN17056789^^^BONSECOURS^MR||OBIORA^Adaeze^Chidinma||19920603|F||2028-9^Asian^CDCREC|9400 Arboretum Pkwy^^Richmond^VA^23236^US||^PRN^PH^^^804^5553861||S||ACCT20260509017|171-26-7541|||N^Non-Hispanic^HL70189
+PV1|1|O|RAD^001^A^BS_MERCY||||9012367890^Castellano^Alejandro^MD^^Dr.|||RAD||||PHY
+ORC|RE|ORD20260509005|RAD20260509005||CM||||20260509083000|||9012367890^Castellano^Alejandro^MD^^Dr.
+OBR|1|ORD20260509005|RAD20260509005|71046-8^Chest X-ray 2 views^LN|||20260509083000|||||||||9012367890^Castellano^Alejandro^MD^^Dr.||||||20260509091000||RAD|F
+OBX|1|FT|71046-8^Chest X-ray 2 views^LN||CHEST X-RAY, 2 VIEWS\.br\\.br\CLINICAL INDICATION: Cough and fever for 5 days.\.br\\.br\FINDINGS:\.br\The heart size is normal. The mediastinal contours are unremarkable.\.br\There is a patchy opacity in the right lower lobe consistent with pneumonia.\.br\No pleural effusion or pneumothorax identified.\.br\\.br\IMPRESSION:\.br\Right lower lobe pneumonia.||||||F|||20260509090500
+OBX|2|ST|59776-5^Procedure findings^LN||Right lower lobe consolidation suggestive of community-acquired pneumonia.||||||F|||20260509090500
+```

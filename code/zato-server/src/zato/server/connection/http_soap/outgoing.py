@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from contextvars import ContextVar
 from copy import deepcopy
 from http.client import OK
 from io import StringIO
@@ -16,13 +15,6 @@ from logging import DEBUG, getLogger
 from time import sleep
 from traceback import format_exc
 from urllib.parse import urlencode
-
-# Datadog - import conditionally to avoid tokio errors when not enabled
-_datadog_enabled = os.environ.get('Zato_Datadog_Enabled', '').lower() in ('true', '1', 'yes')
-if _datadog_enabled:
-    from ddtrace import tracer as datadog_tracer
-else:
-    datadog_tracer = None
 
 # requests
 from requests import Response as _RequestsResponse
@@ -36,9 +28,6 @@ from requests_ntlm import HttpNtlmAuth
 # requests-toolbelt
 from requests_toolbelt import MultipartEncoder
 
-# prometheus_client
-from prometheus_client import Counter, Histogram
-
 # Zato
 from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, NotGiven, SEC_DEF_TYPE, URL_TYPE
 from zato.common.exception import BadRequest, Inactive, BackendInvocationError
@@ -48,6 +37,8 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name, utcnow
 from zato.common.util.config import extract_param_placeholders
 from zato.common.util.open_ import open_rb
+from zato.server.metrics import get_error_source_from_status_class, get_status_code_class, \
+    zato_rest_outgoing_request_duration_seconds, zato_rest_outgoing_requests_total
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,27 +57,6 @@ if 0:
 
 logger = getLogger('zato_rest')
 has_debug = logger.isEnabledFor(DEBUG)
-
-# Datadog context variables - set by service, read by http_request
-current_datadog_context:'ContextVar' = ContextVar('current_datadog_context', default=None)
-current_datadog_service_name:'ContextVar' = ContextVar('current_datadog_service_name', default=None)
-current_datadog_process_name:'ContextVar' = ContextVar('current_datadog_process_name', default=None)
-current_datadog_cid:'ContextVar' = ContextVar('current_datadog_cid', default=None)
-current_datadog_env_name:'ContextVar' = ContextVar('current_datadog_env_name', default='')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# Metrics
-try:
-    zato_outgoing_http_requests_total = Counter(
-        'zato_outgoing_http_requests_total', 'Total outgoing HTTP requests', ['connection_name', 'status_code'])
-    zato_outgoing_http_request_duration_seconds = Histogram(
-        'zato_outgoing_http_request_duration_seconds', 'Outgoing HTTP request duration', ['connection_name'])
-except ValueError:
-    from prometheus_client import REGISTRY
-    zato_outgoing_http_requests_total = REGISTRY._names_to_collectors['zato_outgoing_http_requests_total']
-    zato_outgoing_http_request_duration_seconds = REGISTRY._names_to_collectors['zato_outgoing_http_request_duration_seconds']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -191,18 +161,22 @@ class BaseHTTPSOAPWrapper:
 
 # ################################################################################################################################
 
-    def _push_metrics(self, start_time, status_code):
-        """ Updates outgoing HTTP metrics with duration and status code.
+    def _push_metrics(self, start_time:'any_', status_code:'str') -> 'None':
+        """ Updates outgoing REST metrics with duration, status class, and error source.
         """
         duration = (utcnow() - start_time).total_seconds()
         connection_name = self.config['name']
 
-        _ = zato_outgoing_http_requests_total.labels(
+        status_class = get_status_code_class(status_code)
+        error_source = get_error_source_from_status_class(status_class)
+
+        _ = zato_rest_outgoing_requests_total.labels(
             connection_name=connection_name,
-            status_code=status_code
+            status_code=status_class,
+            error_source=error_source,
         ).inc()
 
-        _ = zato_outgoing_http_request_duration_seconds.labels(
+        _ = zato_rest_outgoing_request_duration_seconds.labels(
             connection_name=connection_name
         ).observe(duration)
 
@@ -317,31 +291,53 @@ class BaseHTTPSOAPWrapper:
 
         try:
 
-            # Bearer tokens are obtained dynamically ..
+            # Bearer tokens are obtained dynamically or statically ..
             if is_bearer_token:
 
                 # .. this is reusable ..
                 sec_def = self.server.security_facade.get_bearer_token_by_name(sec_def_name)
 
-                # .. each OAuth definition will use a specific data format ..
-                data_format = sec_def['data_format']
+                logger.info('Bearer token sec_def keys=%s', list(sec_def.keys()))
+                logger.info('Bearer token sec_def static_token=%r, static_header=%r, static_prefix=%r',
+                    sec_def.get('static_token'), sec_def.get('static_header'), sec_def.get('static_prefix'))
 
-                # .. otherwise, we can check if they are provided in the security definition itself ..
-                if not scopes:
-                    scopes = sec_def.get('scopes') or ''
-                    scopes = scopes.splitlines()
-                    scopes = ' '.join(scopes)
+                # .. static tokens have their value defined directly in the definition ..
+                if static_token := sec_def.get('static_token'):
 
-                # .. get a Bearer token ..
-                result = self._get_bearer_token_auth(sec_def_name, scopes, data_format)
+                    # .. build the header from the static definition fields ..
+                    static_header = sec_def['static_header']
+                    static_prefix = sec_def['static_prefix']
 
-                # .. populate headers ..
-                headers['Authorization'] = f'Bearer {result.info.token}'
+                    logger.info('Static bearer token: header=%r, prefix=%r, token_len=%d',
+                        static_header, static_prefix, len(static_token))
 
-                # .. this is needed for later use ..
-                token_expires_in_sec = result.cache_expiry
-                token_is_cache_hit = result.is_cache_hit
-                token_cache_hits = result.cache_hits
+                    if static_prefix:
+                        headers[static_header] = f'{static_prefix} {static_token}'
+                    else:
+                        headers[static_header] = static_token
+
+                    logger.info('Static bearer token: final header %r=%r', static_header, headers[static_header][:20])
+
+                    token_is_cache_hit = None
+
+                else:
+
+                    # .. each OAuth definition will use a specific data format ..
+                    data_format = sec_def['data_format']
+
+                    # .. otherwise, we can check if they are provided in the security definition itself ..
+                    if not scopes:
+                        scopes = sec_def.get('scopes') or ''
+                        scopes = scopes.splitlines()
+                        scopes = ' '.join(scopes)
+
+                    # .. get a Bearer token ..
+                    result = self._get_bearer_token_auth(sec_def_name, scopes, data_format)
+
+                    # .. populate headers ..
+                    headers['Authorization'] = f'Bearer {result.info.token}'
+
+                    token_is_cache_hit = result.is_cache_hit
 
                 # This is needed by request
                 auth = None
@@ -354,20 +350,18 @@ class BaseHTTPSOAPWrapper:
                 auth = getattr(self, 'requests_auth', None)
 
                 # .. we have no token to report about.
-                token_expires_in_sec = None
                 token_is_cache_hit = None
-                token_cache_hits = None
 
             # .. basic details about what we are sending what we are sending ..
-            msg = f'REST out → cid={cid}; {method} {address}; name:{self.config["name"]}; params={params}; len={len(data)}' + \
+            message = f'REST out -> cid={cid}; {method} {address}; name:{self.config["name"]}; params={params}; len={len(data)}' + \
                   f'; sec={sec_def_name} ({_sec_type})'
 
             # .. optionally, log details of the Bearer token ..
             if is_bearer_token:
-                msg += f'; expiry={token_expires_in_sec}; tok-from-cache={token_is_cache_hit}; tok-cache-hits={token_cache_hits}'
+                message += f'; tok-from-cache={token_is_cache_hit}'
 
             # .. log the information about our request ..
-            logger.info(msg)
+            logger.info(message)
 
             # .. extract retry parameters ..
             max_retries = kwargs.pop('max_retries', None) or 0
@@ -660,13 +654,6 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         # Pop it here for later use because we cannot pass it to the requests module
         model = kwargs.pop('model', None)
 
-        # Get datadog context from contextvar (set by service)
-        datadog_context = current_datadog_context.get()
-        datadog_service_name = current_datadog_service_name.get()
-        datadog_process_name = current_datadog_process_name.get()
-        datadog_cid = current_datadog_cid.get()
-        datadog_env_name = current_datadog_env_name.get()
-
         # We do not serialize ourselves data based on this content type,
         # leaving it up to the underlying HTTP library to do it ..
         needs_serialize_based_on_content_type = self.config.get('content_type') != ContentType.FormURLEncoded
@@ -701,11 +688,6 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         # .. build a default set of headers now ..
         headers = self._create_headers(cid, headers)
 
-        # .. inject datadog tracing headers if context is available ..
-        # if datadog_context:
-        #    from ddtrace.propagation.http import HTTPPropagator
-        #    HTTPPropagator.inject(datadog_context, headers)
-
         # .. SOAP requests need to be specifically formatted now ..
         if _is_soap:
             data, headers = self._soap_data(data, headers)
@@ -725,26 +707,8 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 data = data.encode('utf-8')
 
         # .. do invoke the connection ..
-        conn_name = self.config['name']
-        if datadog_context:
-            with datadog_tracer.start_span(
-                name='zato.http.request',
-                service=datadog_service_name,
-                resource=f'REST Outgoing: {conn_name}',
-                child_of=datadog_context
-            ) as span:
-                span.set_tag('cid', datadog_cid)
-                span.set_tag('zato_process', datadog_process_name)
-                span.set_tag('zato_service', datadog_service_name)
-                span.set_tag('zato_env_name', datadog_env_name)
-                span.set_tag('zato_message_level', 'INFO')
-                response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
-                response = cast_('Response', response)
-                full_url = address + ('?' + '&'.join(f'{k}={v}' for k, v in qs_params.items()) if qs_params else '')
-                span.set_tag('zato_message', f'{response.status_code} {method} {full_url}')
-        else:
-            response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
-            response = cast_('Response', response)
+        response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
+        response = cast_('Response', response)
 
         # .. by default, we have no parsed response at all, ..
         # .. which means that we can assume it will be the same as the raw, text response ..

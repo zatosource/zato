@@ -46,7 +46,7 @@ from types import ModuleType
 from uuid import uuid4
 
 # Bunch
-from bunch import Bunch, bunchify
+from zato.common.ext.bunch import Bunch, bunchify
 
 # ciso8601
 try:
@@ -97,7 +97,7 @@ if PY3:
 
 # Zato
 from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, MISC, \
-     Secret_Shadow, SIMPLE_IO, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN
+     Secret_Shadow, IO, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN
 from zato.common.broker_message import HOT_DEPLOY, SERVICE
 from zato.common.const import SECRETS, ServiceConst
 from zato.common.crypto.api import CryptoManager
@@ -574,7 +574,7 @@ def get_body_payload(body):
 # ################################################################################################################################
 
 def payload_from_request(json_parser, cid, request, data_format, transport, channel_item=None):
-    """ Converts a raw request to a payload suitable for usage with SimpleIO.
+    """ Converts a raw request to a payload suitable for usage with I/O.
     """
     if request is not None:
 
@@ -1203,7 +1203,7 @@ def get_basic_auth_credentials(auth):
 
 def get_http_json_channel(name, service, cluster, security):
     return HTTPSOAP(None, '{}.json'.format(name), True, True, 'channel', 'plain_http', None, '/zato/json/{}'.format(name),
-        None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster, security=security)
+        None, '', None, IO.FORMAT.JSON, service=service, cluster=cluster, security=security)
 
 # ################################################################################################################################
 
@@ -1276,53 +1276,25 @@ def get_server_client_auth(
     *,
     url_path=None,
 ) -> 'any_':
-    """ Returns credentials to authenticate with against Zato's own inocation channels.
+    """ Returns credentials to authenticate with against Zato's own invocation channels.
     """
-    # This is optional on input
-    url_path = url_path or ServiceConst.API_Admin_Invoke_Url_Path
-
     session = get_odb_session_from_server_config(config, cm, odb_password_encrypted)
 
     with closing(session) as session:
 
-        # This will exist if config is read from server.conf,
-        # otherwise, it means that it is based on scheduler.conf.
-        token = config.get('main', {}).get('token')
+        security = session.query(HTTPBasicAuth).\
+            filter(HTTPBasicAuth.username == ServiceConst.API_Admin_Invoke_Username).\
+            first()
 
-        # This is server.conf ..
-        if token:
-            cluster = session.query(Server).\
-                filter(Server.token == config.main.token).\
-                one().cluster
-
-        # .. this will be scheduler.conf.
-        else:
-            cluster_id = config.get('cluster', {}).get('id')
-            cluster_id = cluster_id or 1
-            cluster = session.query(Cluster).\
-                filter(Cluster.id == cluster_id).\
-                one()
-
-        channel = session.query(HTTPSOAP).\
-            filter(HTTPSOAP.cluster_id == cluster.id).\
-            filter(HTTPSOAP.url_path == url_path).\
-            filter(HTTPSOAP.connection== 'channel').\
-            one()
-
-        if channel.security_id:
-            security = session.query(HTTPBasicAuth).\
-                filter(HTTPBasicAuth.id == channel.security_id).\
-                first()
-
-            if security:
-                if password:= security.password:
-                    password = security.password.replace(SECRETS.PREFIX, '')
-                    if password.startswith(SECRETS.Encrypted_Indicator):
-                        if cm:
-                            password = cm.decrypt(password)
-                else:
-                    password = ''
-                return (security.username, password)
+        if security:
+            if password := security.password:
+                password = security.password.replace(SECRETS.PREFIX, '')
+                if password.startswith(SECRETS.Encrypted_Indicator):
+                    if cm:
+                        password = cm.decrypt(password)
+            else:
+                password = ''
+            return (security.username, password)
 
 # ################################################################################################################################
 
@@ -1457,11 +1429,9 @@ def startup_service_payload_from_path(name, value, repo_location):
 # ################################################################################################################################
 
 def invoke_startup_services(source, key, fs_server_config, repo_location, config_dispatcher=None, service_name=None,
-    skip_include=True, worker_store=None):
-    """ Invoked when we are the first worker and we know we have a broker client and all the other config is ready
-    so we can publish the request to execute startup services. In the worst case the requests will get back to us but it's
-    also possible that other workers are already running. In short, there is no guarantee that any server or worker in particular
-    will receive the requests, only that there will be exactly one.
+    skip_include=True, config_manager=None):
+    """ Invoked when we are the first server and we know we have a broker client and all the other config is ready
+    so we can publish the request to execute startup services.
     """
     for name, payload in iteritems(fs_server_config.get(key, {})):
 
@@ -1494,7 +1464,7 @@ def invoke_startup_services(source, key, fs_server_config, repo_location, config
         if config_dispatcher:
             config_dispatcher.invoke_async(msg)
         else:
-            worker_store.on_message_invoke_service(msg, msg['channel'], msg['action'])
+            config_manager.on_message_invoke_service(msg, msg['channel'], msg['action'])
 
 # ################################################################################################################################
 
@@ -1552,7 +1522,7 @@ def get_logger_for_class(class_):
 
 # ################################################################################################################################
 
-def get_worker_pids_by_parent(parent_pid:'int') -> 'intlist':
+def get_server_pids_by_parent(parent_pid:'int') -> 'intlist':
     """ Returns all children PIDs of the process whose PID is given on input.
     """
     # psutil
@@ -1562,8 +1532,8 @@ def get_worker_pids_by_parent(parent_pid:'int') -> 'intlist':
 
 # ################################################################################################################################
 
-def get_worker_pids():
-    """ Returns all sibling worker PIDs of the server process we are being invoked on, including our own worker too.
+def get_server_pids():
+    """ Returns all sibling server PIDs of the server process we are being invoked on, including our own process too.
     """
     # psutil
     import psutil
@@ -1574,8 +1544,8 @@ def get_worker_pids():
     # .. and this is its parent PID ..
     parent_pid = current_process.ppid()
 
-    # .. now, we can return PIDs of all the workers.
-    return get_worker_pids_by_parent(parent_pid)
+    # .. now, we can return PIDs of all the server processes.
+    return get_server_pids_by_parent(parent_pid)
 
 # ################################################################################################################################
 
@@ -1589,10 +1559,10 @@ def update_bind_port(data, idx):
 
 # ################################################################################################################################
 
-def start_connectors(worker_store, service_name, data):
+def start_connectors(config_manager, service_name, data):
 
-    for pid in get_worker_pids():
-        worker_store.server.invoke(service_name, data, pid=pid, is_async=True, data_format=DATA_FORMAT.DICT)
+    for pid in get_server_pids():
+        config_manager.server.invoke(service_name, data, pid=pid, is_async=True, data_format=DATA_FORMAT.DICT)
 
 # ################################################################################################################################
 

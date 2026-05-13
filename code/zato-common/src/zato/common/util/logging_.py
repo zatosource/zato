@@ -21,7 +21,7 @@ loggers:
     '':
         level: INFO
         handlers: [stdout, default]
-    'gunicorn.main':
+    'zato.server.main':
         level: INFO
         handlers: [stdout, default]
     'pytds':

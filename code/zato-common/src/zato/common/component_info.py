@@ -73,8 +73,8 @@ def format_connections(conns, format):
 
     return out
 
-def get_worker_pids(component_path):
-    """ Returns PIDs of all workers of a given server, which must be already started.
+def get_server_pids(component_path):
+    """ Returns PIDs of a given server, which must be already started.
     """
     master_proc_pid = int(open_r(os.path.join(component_path, MISC.PIDFILE)).read())
     try:
@@ -104,8 +104,8 @@ def get_info(component_path, format, _now=datetime.utcnow) -> 'stranydict':
         'master_proc_create_time': None,
         'master_proc_create_time_utc': None,
         'master_proc_username': None,
-        'master_proc_workers_no': None,
-        'master_proc_workers_pids': None,
+        'master_proc_servers_no': None,
+        'master_proc_servers_pids': None,
     }
 
     master_proc_pid = None
@@ -122,7 +122,7 @@ def get_info(component_path, format, _now=datetime.utcnow) -> 'stranydict':
     if master_proc_pid:
         out['component_running'] = True
         master_proc = Process(master_proc_pid)
-        workers_pids = sorted(elem.pid for elem in master_proc.children())
+        server_pids = sorted(elem.pid for elem in master_proc.children())
 
         now = datetime.fromtimestamp(time(), UTC)
         mater_proc_create_time = master_proc.create_time()
@@ -137,21 +137,21 @@ def get_info(component_path, format, _now=datetime.utcnow) -> 'stranydict':
         out['master_proc_create_time_utc'] = mater_proc_create_time_utc.isoformat()
         out['master_proc_username'] = master_proc.username()
         out['master_proc_name'] = master_proc.name()
-        out['master_proc_workers_no'] = len(workers_pids)
-        out['master_proc_workers_pids'] = workers_pids
+        out['master_proc_servers_no'] = len(server_pids)
+        out['master_proc_servers_pids'] = server_pids
 
-        for pid in workers_pids:
-            worker = Process(pid)
+        for pid in server_pids:
+            server_process = Process(pid)
 
-            worker_create_time = worker.create_time()
-            worker_create_time_utc = datetime.fromtimestamp(worker_create_time, UTC)
+            server_create_time = server_process.create_time()
+            server_create_time_utc = datetime.fromtimestamp(server_create_time, UTC)
 
-            out['worker_{}_uptime'.format(pid)] = now - worker_create_time_utc
-            out['worker_{}_uptime_seconds'.format(pid)] = int(out['worker_{}_uptime'.format(pid)].total_seconds())
+            out['server_{}_uptime'.format(pid)] = now - server_create_time_utc
+            out['server_{}_uptime_seconds'.format(pid)] = int(out['server_{}_uptime'.format(pid)].total_seconds())
 
-            out['worker_{}_create_time'.format(pid)] = datetime.fromtimestamp(worker_create_time).isoformat()
-            out['worker_{}_create_time_utc'.format(pid)] = worker_create_time_utc.isoformat()
-            out['worker_{}_connections'.format(pid)] = format_connections(worker.connections(), format)
+            out['server_{}_create_time'.format(pid)] = datetime.fromtimestamp(server_create_time).isoformat()
+            out['server_{}_create_time_utc'.format(pid)] = server_create_time_utc.isoformat()
+            out['server_{}_connections'.format(pid)] = format_connections(server_process.connections(), format)
 
     # Final cleanup
     component_details_file.close()

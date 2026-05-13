@@ -27,6 +27,10 @@ fn make_interval_job(minutes: u32, future_start: bool, is_active: bool) -> Sched
         timezone: None,
         calendar: None,
         max_execution_time_ms: None,
+        on_success_service: None,
+        on_success_job: None,
+        on_error_service: None,
+        on_error_job: None,
     }
 }
 

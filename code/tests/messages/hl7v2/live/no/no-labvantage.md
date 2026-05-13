@@ -1,0 +1,310 @@
+# LabVantage Medical Suite (LVMS) - real HL7v2 ER7 messages
+
+---
+
+## 1. ORU^R01 - Hematologi fullblodtelling (CBC results)
+
+```
+MSH|^~\&|LVMS|HAUKELAND_US|DIPS_ARENA|HAUKELAND_US|20260508091500||ORU^R01^ORU_R01|LVMS20260508001|P|2.5|||AL|NE||UNICODE UTF-8
+PID|||12038549872^^^HAUKELAND&2.16.578.1.12.4.1.4&ISO^FNR||Hansen^Ingrid^Marie^^Fru||19830512|F|||Nygårdsgaten 14^^Bergen^^5015^^NOR||^^PH^55123456
+PV1||I|MED3^Rom204^Seng1^Medisinsk avdeling||||LEG100^Strand^Erik^^^Dr.^^L|LEG200^Berge^Kristin^^^Dr.^^L|||||||||||BES202605001
+ORC|RE|ORD20260508001|LVMS20260508001||CM||||20260508091500|||LEG100^Strand^Erik^^^Dr.^^L
+OBR|1|ORD20260508001|LVMS20260508001|CBC^Fullblodtelling^NLK|||20260508080000|||||||||LEG100^Strand^Erik^^^Dr.^^L||||||20260508091500|||F
+OBX|1|NM|HGB^Hemoglobin^NLK||14.2|g/dL|13.0-17.0|N|||F|||20260508091500
+OBX|2|NM|WBC^Leukocytter^NLK||7.8|10*9/L|4.0-11.0|N|||F|||20260508091500
+OBX|3|NM|RBC^Erytrocytter^NLK||4.95|10*12/L|4.5-5.5|N|||F|||20260508091500
+OBX|4|NM|PLT^Trombocytter^NLK||245|10*9/L|150-400|N|||F|||20260508091500
+OBX|5|NM|HCT^Hematokrit^NLK||42.1|%|38.0-50.0|N|||F|||20260508091500
+OBX|6|NM|MCV^Middel cellevol.^NLK||85.1|fL|80.0-100.0|N|||F|||20260508091500
+OBX|7|NM|MCH^Middel Hb konsentr.^NLK||28.7|pg|27.0-33.0|N|||F|||20260508091500
+```
+
+---
+
+## 2. ORU^R01 - Klinisk kjemi (clinical chemistry panel)
+
+```
+MSH|^~\&|LVMS|OUS_RIKSHOSP|DIPS_ARENA|OUS_RIKSHOSP|20260508103000||ORU^R01^ORU_R01|LVMS20260508002|P|2.5|||AL|NE||UNICODE UTF-8
+PID|||15067834921^^^OUS&2.16.578.1.12.4.1.4&ISO^FNR||Johansen^Lars^Petter^^Hr||19780615|M|||Kirkegata 22^^Oslo^^0153^^NOR||^^PH^22345678
+PV1||O|POLIKL^Poliklinikk^^^^^^^Medisinsk avdeling||||LEG300^Ødegård^Morten^^^Dr.^^L|||||||||||BES202605002
+ORC|RE|ORD20260508002|LVMS20260508002||CM||||20260508103000|||LEG300^Ødegård^Morten^^^Dr.^^L
+OBR|1|ORD20260508002|LVMS20260508002|CHEM^Klinisk kjemi panel^NLK|||20260508090000|||||||||LEG300^Ødegård^Morten^^^Dr.^^L||||||20260508103000|||F
+OBX|1|NM|GLU^Glukose^NLK||5.8|mmol/L|4.0-6.0|N|||F|||20260508103000
+OBX|2|NM|KREA^Kreatinin^NLK||88|umol/L|60-105|N|||F|||20260508103000
+OBX|3|NM|ALAT^Alanin aminotransferase^NLK||32|U/L|10-70|N|||F|||20260508103000
+OBX|4|NM|ASAT^Aspartat aminotransferase^NLK||28|U/L|15-45|N|||F|||20260508103000
+OBX|5|NM|ALP^Alkalisk fosfatase^NLK||78|U/L|35-105|N|||F|||20260508103000
+OBX|6|NM|NA^Natrium^NLK||141|mmol/L|137-145|N|||F|||20260508103000
+OBX|7|NM|K^Kalium^NLK||4.3|mmol/L|3.5-5.0|N|||F|||20260508103000
+OBX|8|NM|CRP^C-reaktivt protein^NLK||3.2|mg/L|0.0-5.0|N|||F|||20260508103000
+```
+
+---
+
+## 3. ORM^O01 - Laboratoriebestilling hematologi (lab order for CBC)
+
+```
+MSH|^~\&|DIPS_ARENA|ST_OLAVS|LVMS|ST_OLAVS|20260509070000||ORM^O01^ORM_O01|DIPS20260509001|P|2.5|||AL|NE||UNICODE UTF-8
+PID|||08129145632^^^ST_OLAVS&2.16.578.1.12.4.1.4&ISO^FNR||Olsen^Kari^Bjørg^^Fru||19910812|F|||Munkegata 5^^Trondheim^^7013^^NOR||^^PH^73456789
+PV1||I|KIR2^Rom310^Seng2^Kirurgisk avdeling||||LEG400^Haugen^Anders^^^Dr.^^L|||||||||||BES202605003
+ORC|NW|ORD20260509001||||||20260509070000|||LEG400^Haugen^Anders^^^Dr.^^L
+OBR|1|ORD20260509001||CBC^Fullblodtelling^NLK|||20260509070000|||||||||LEG400^Haugen^Anders^^^Dr.^^L
+NTE|1||Pasienten er fastende. Kontroll etter operasjon.
+```
+
+---
+
+## 4. ORU^R01 - Blodgass med avvikende verdier (blood gas with abnormal values)
+
+```
+MSH|^~\&|LVMS|AHUS|DIPS_ARENA|AHUS|20260509082000||ORU^R01^ORU_R01|LVMS20260509001|P|2.5|||AL|NE||UNICODE UTF-8
+PID|||22045678901^^^AHUS&2.16.578.1.12.4.1.4&ISO^FNR||Larsen^Bjørn^Arne^^Hr||19560422|M|||Strømsveien 102^^Lørenskog^^1470^^NOR||^^PH^67890123
+PV1||E|AKM^Akuttmottak^^^^^^^Akuttmedisin||||LEG500^Dahl^Silje^^^Dr.^^L|||||||||||BES202605004
+ORC|RE|ORD20260509002|LVMS20260509002||CM||||20260509082000|||LEG500^Dahl^Silje^^^Dr.^^L
+OBR|1|ORD20260509002|LVMS20260509002|BGA^Blodgassanalyse^NLK|||20260509075500|||||||||LEG500^Dahl^Silje^^^Dr.^^L||||||20260509082000|||F
+OBX|1|NM|PH^pH arteriell^NLK||7.28|pH|7.35-7.45|L|||F|||20260509082000
+OBX|2|NM|PCO2^pCO2^NLK||7.8|kPa|4.7-6.0|H|||F|||20260509082000
+OBX|3|NM|PO2^pO2^NLK||8.1|kPa|10.0-13.3|L|||F|||20260509082000
+OBX|4|NM|HCO3^Bikarbonat^NLK||18.5|mmol/L|22.0-26.0|L|||F|||20260509082000
+OBX|5|NM|BE^Base excess^NLK||-6.2|mmol/L|-3.0-3.0|L|||F|||20260509082000
+OBX|6|NM|LACT^Laktat^NLK||3.8|mmol/L|0.5-2.2|H|||F|||20260509082000
+OBX|7|ST|BGA_KOMM^Kommentar^NLK||Metabolsk acidose med respiratorisk kompensasjonssvikt||||||F|||20260509082000
+```
+
+---
+
+## 5. ORU^R01 - Mikrobiologi dyrkningssvar (microbiology culture result)
+
+```
+MSH|^~\&|LVMS|HAUKELAND_US|DIPS_ARENA|HAUKELAND_US|20260507153000||ORU^R01^ORU_R01|LVMS20260507001|P|2.5|||AL|NE||UNICODE UTF-8
+PID|||01019534782^^^HAUKELAND&2.16.578.1.12.4.1.4&ISO^FNR||Andersen^Marit^Solveig^^Fru||19950101|F|||Torgallmenningen 8^^Bergen^^5014^^NOR||^^PH^55234567
+PV1||I|INF1^Rom105^Seng1^Infeksjonsavdelingen||||LEG600^Bakke^Thomas^^^Dr.^^L|||||||||||BES202605005
+ORC|RE|ORD20260507001|LVMS20260507001||CM||||20260507153000|||LEG600^Bakke^Thomas^^^Dr.^^L
+OBR|1|ORD20260507001|LVMS20260507001|BLKULT^Blodkultur^NLK|||20260505100000|||||||||LEG600^Bakke^Thomas^^^Dr.^^L||||||20260507153000|||F
+OBX|1|CE|BAKT^Bakteriefunn^NLK||70461^Staphylococcus aureus^SCT||||||F|||20260507153000
+OBX|2|ST|MIKRO_KOMM^Mikroskopi kommentar^NLK||Grampositive kokker i klaser||||||F|||20260507153000
+OBX|3|CE|ABRES^Resistens Oksacillin^NLK||S^Sensitiv^HL70078||||||F|||20260507153000
+OBX|4|CE|ABRES^Resistens Vancomycin^NLK||S^Sensitiv^HL70078||||||F|||20260507153000
+OBX|5|CE|ABRES^Resistens Gentamicin^NLK||S^Sensitiv^HL70078||||||F|||20260507153000
+OBX|6|CE|ABRES^Resistens Klindamycin^NLK||R^Resistent^HL70078||||||F|||20260507153000
+OBX|7|ST|MIKRO_KONK^Konklusjon^NLK||MSSA bakteriemi. Anbefaler kloksacillin iv.||||||F|||20260507153000
+```
+
+---
+
+## 6. ORM^O01 - Bestilling klinisk kjemi (clinical chemistry order)
+
+```
+MSH|^~\&|DIPS_ARENA|OUS_ULLEVAAL|LVMS|OUS_ULLEVAAL|20260509083000||ORM^O01^ORM_O01|DIPS20260509002|P|2.5|||AL|NE||UNICODE UTF-8
+PID|||14117856439^^^OUS&2.16.578.1.12.4.1.4&ISO^FNR||Pedersen^Geir^Håkon^^Hr||19781114|M|||Grønlandsleiret 44^^Oslo^^0190^^NOR||^^PH^22567890
+PV1||I|MED1^Rom112^Seng1^Medisinsk avdeling||||LEG700^Vestby^Anne^^^Dr.^^L|||||||||||BES202605006
+ORC|NW|ORD20260509003||||||20260509083000|||LEG700^Vestby^Anne^^^Dr.^^L
+OBR|1|ORD20260509003||CHEM^Klinisk kjemi panel^NLK|||20260509083000|||||||||LEG700^Vestby^Anne^^^Dr.^^L
+OBR|2|ORD20260509003||TSH^Thyroideastimulerende hormon^NLK|||20260509083000|||||||||LEG700^Vestby^Anne^^^Dr.^^L
+NTE|1||Utredning av hypotyreose. Vennligst inkluder fritt T4.
+```
+
+---
+
+## 7. ORU^R01 - Koagulasjon INR-kontroll (coagulation INR check)
+
+```
+MSH|^~\&|LVMS|ST_OLAVS|DIPS_ARENA|ST_OLAVS|20260509101500||ORU^R01^ORU_R01|LVMS20260509003|P|2.5|||AL|NE||UNICODE UTF-8
+PID|||30034589012^^^ST_OLAVS&2.16.578.1.12.4.1.4&ISO^FNR||Nilsen^Astrid^Helene^^Fru||19450330|F|||Kongens gate 18^^Trondheim^^7011^^NOR||^^PH^73567890
+PV1||O|POLIKL^Poliklinikk^^^^^^^Hjertemedisinsk avdeling||||LEG800^Lund^Pål^^^Dr.^^L|||||||||||BES202605007
+ORC|RE|ORD20260509004|LVMS20260509004||CM||||20260509101500|||LEG800^Lund^Pål^^^Dr.^^L
+OBR|1|ORD20260509004|LVMS20260509004|KOAG^Koagulasjonsanalyse^NLK|||20260509093000|||||||||LEG800^Lund^Pål^^^Dr.^^L||||||20260509101500|||F
+OBX|1|NM|INR^INR^NLK||2.8|ratio|2.0-3.0|N|||F|||20260509101500
+OBX|2|NM|PT^Protrombintid^NLK||28.5|sek|11.0-15.0|H|||F|||20260509101500
+OBX|3|NM|APTT^Aktivert partiell tromboplastintid^NLK||34.2|sek|25.0-38.0|N|||F|||20260509101500
+```
+
+---
+
+## 8. ADT^A01 - Innleggelse med forsikringsdata (admission with insurance)
+
+```
+MSH|^~\&|DIPS_ARENA|UNN_TROMSOE|LVMS|UNN_TROMSOE|20260509060000||ADT^A01^ADT_A01|DIPS20260509003|P|2.5|||AL|NE||UNICODE UTF-8
+EVN|A01|20260509060000
+PID|||17068923456^^^UNN&2.16.578.1.12.4.1.4&ISO^FNR||Kristiansen^Øyvind^Torbjørn^^Hr||19890617|M|||Storgata 7^^Tromsø^^9008^^NOR||^^PH^77123456
+PV1||I|KIR1^Rom208^Seng1^Kirurgisk avdeling||||LEG900^Moe^Ragnhild^^^Dr.^^L|LEG910^Aas^Trond^^^Dr.^^L|||||||||||BES202605008
+IN1|1|1|HELFO001|Helfo - Helseøkonomiforvaltningen|Postboks 2415^^Oslo^^0213^^NOR
+```
+
+---
+
+## 9. ORL^O22 - Ordrebekreftelse fra laboratoriet (lab order acknowledgement)
+
+```
+MSH|^~\&|LVMS|HAUKELAND_US|DIPS_ARENA|HAUKELAND_US|20260509074500||ORL^O22^ORL_O22|LVMS20260509005|P|2.5|||AL|NE||UNICODE UTF-8
+MSA|AA|DIPS20260509004
+PID|||25119067834^^^HAUKELAND&2.16.578.1.12.4.1.4&ISO^FNR||Karlsen^Turid^Magnhild^^Fru||19901125|F|||Strandgaten 55^^Bergen^^5004^^NOR||^^PH^55345678
+ORC|OK|ORD20260509005|LVMS20260509005||IP||||20260509074500
+OBR|1|ORD20260509005|LVMS20260509005|CBC^Fullblodtelling^NLK|||20260509070000
+```
+
+---
+
+## 10. ORU^R01 - Thyroideafunksjon (thyroid function panel)
+
+```
+MSH|^~\&|LVMS|OUS_RIKSHOSP|DIPS_ARENA|OUS_RIKSHOSP|20260509111500||ORU^R01^ORU_R01|LVMS20260509006|P|2.5|||AL|NE||UNICODE UTF-8
+PID|||03058712345^^^OUS&2.16.578.1.12.4.1.4&ISO^FNR||Eriksen^Solveig^Åse^^Fru||19870503|F|||Bogstadveien 31^^Oslo^^0355^^NOR||^^PH^22678901
+PV1||O|POLIKL^Poliklinikk^^^^^^^Endokrinologisk avdeling||||LEG110^Fossum^Nils^^^Dr.^^L|||||||||||BES202605009
+ORC|RE|ORD20260509006|LVMS20260509006||CM||||20260509111500|||LEG110^Fossum^Nils^^^Dr.^^L
+OBR|1|ORD20260509006|LVMS20260509006|THYR^Thyroideapanel^NLK|||20260509090000|||||||||LEG110^Fossum^Nils^^^Dr.^^L||||||20260509111500|||F
+OBX|1|NM|TSH^Thyroideastimulerende hormon^NLK||8.7|mIU/L|0.4-4.0|H|||F|||20260509111500
+OBX|2|NM|FT4^Fritt tyroksin^NLK||9.2|pmol/L|12.0-22.0|L|||F|||20260509111500
+OBX|3|NM|FT3^Fritt trijodtyronin^NLK||3.1|pmol/L|3.1-6.8|N|||F|||20260509111500
+OBX|4|ST|THYR_KOMM^Kommentar^NLK||Forhøyet TSH med lav fritt T4, forenlig med primær hypotyreose||||||F|||20260509111500
+```
+
+---
+
+## 11. ORU^R01 - Blodbank forlikelighetsprøve (blood bank crossmatch)
+
+```
+MSH|^~\&|LVMS|AHUS|DIPS_ARENA|AHUS|20260509121000||ORU^R01^ORU_R01|LVMS20260509007|P|2.5|||AL|NE||UNICODE UTF-8
+PID|||11037823456^^^AHUS&2.16.578.1.12.4.1.4&ISO^FNR||Halvorsen^Tor^Magnus^^Hr||19780311|M|||Lillestrøm gate 12^^Lillestrøm^^2000^^NOR||^^PH^63789012
+PV1||I|KIR3^Rom401^Seng2^Ortopedisk avdeling||||LEG120^Svendsen^Grete^^^Dr.^^L|||||||||||BES202605010
+ORC|RE|ORD20260509007|LVMS20260509007||CM||||20260509121000|||LEG120^Svendsen^Grete^^^Dr.^^L
+OBR|1|ORD20260509007|LVMS20260509007|BBANK^Blodbank forlikelighetsprøve^NLK|||20260509100000|||||||||LEG120^Svendsen^Grete^^^Dr.^^L||||||20260509121000|||F
+OBX|1|CE|BTYPE^Blodtype^NLK||112144000^Blodtype A positiv^SCT||||||F|||20260509121000
+OBX|2|CE|ABSCR^Antistoffscreening^NLK||260385009^Negativ^SCT||||||F|||20260509121000
+OBX|3|CE|XMATCH^Forlikelighetsprøve^NLK||30766002^Forlikelig^SCT||||||F|||20260509121000
+OBX|4|ST|BBANK_ENH^Enhet^NLK||SAG-M erytrocyttkonsentrat, enhet N20260509-0042||||||F|||20260509121000
+```
+
+---
+
+## 12. ADT^A03 - Utskrivning (discharge)
+
+```
+MSH|^~\&|DIPS_ARENA|ST_OLAVS|LVMS|ST_OLAVS|20260509140000||ADT^A03^ADT_A03|DIPS20260509005|P|2.5|||AL|NE||UNICODE UTF-8
+EVN|A03|20260509140000
+PID|||09028734561^^^ST_OLAVS&2.16.578.1.12.4.1.4&ISO^FNR||Moen^Ragnhild^Berit^^Fru||19870209|F|||Elgeseter gate 40^^Trondheim^^7030^^NOR||^^PH^73678901
+PV1||I|MED2^Rom305^Seng1^Lungemedisinsk avdeling||||LEG130^Brekke^Harald^^^Dr.^^L|||||||||||BES202605011|||||||||||||||||||||||||||20260509140000
+```
+
+---
+
+## 13. ORU^R01 - Laboratoriesvar med PDF-vedlegg (lab report PDF attachment)
+
+```
+MSH|^~\&|LVMS|OUS_ULLEVAAL|DIPS_ARENA|OUS_ULLEVAAL|20260509130000||ORU^R01^ORU_R01|LVMS20260509008|P|2.5|||AL|NE||UNICODE UTF-8
+PID|||19068945671^^^OUS&2.16.578.1.12.4.1.4&ISO^FNR||Berntsen^Einar^Sigurd^^Hr||19890619|M|||Ullevålsveien 72^^Oslo^^0454^^NOR||^^PH^22789012
+PV1||I|INF2^Rom201^Seng1^Infeksjonsavdelingen||||LEG140^Holmen^Vibeke^^^Dr.^^L|||||||||||BES202605012
+ORC|RE|ORD20260509008|LVMS20260509008||CM||||20260509130000|||LEG140^Holmen^Vibeke^^^Dr.^^L
+OBR|1|ORD20260509008|LVMS20260509008|MIKRO^Mikrobiologirapport^NLK|||20260507080000|||||||||LEG140^Holmen^Vibeke^^^Dr.^^L||||||20260509130000|||F
+OBX|1|CE|BAKT^Bakteriefunn^NLK||83906003^Escherichia coli^SCT||||||F|||20260509130000
+OBX|2|ST|MIKRO_KOMM^Kommentar^NLK||ESBL-produserende E. coli isolert fra urinprøve||||||F|||20260509130000
+OBX|3|ED|PDF^Laboratoriesvar^^Mikrobiologirapport||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA2MTIgNzkyXQovQ29udGVudHMgNCAwIFIKL1Jlc291cmNlcyA8PAovRm9udCA8PAovRjEgNSAwIFIKPj4KPj4KPj4KZW5kb2JqCjQgMCBvYmoKPDwKL0xlbmd0aCA4NAo+PgpzdHJlYW0KQlQKL0YxIDEyIFRmCjEwMCA3MDAgVGQKKE1pa3JvYmlvbG9naXJhcHBvcnQgLSBVbGxldsOlbCkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8Ci9UeXBlIC9Gb250Ci9TdWJ0eXBlIC9UeXBlMQovQmFzZUZvbnQgL0hlbHZldGljYQo+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDE1MSAwMDAwMCBuIAowMDAwMDAwMzUyIDAwMDAwIG4gCjAwMDAwMDA0ODggMDAwMDAgbiAKdHJhaWxlcgo8PAovU2l6ZSA2Ci9Sb290IDEgMCBSCj4+CnN0YXJ0eHJlZgo1NzUKJSVFT0YK||||||F|||20260509130000
+```
+
+---
+
+## 14. ORM^O01 - Bestilling blodgass (blood gas order)
+
+```
+MSH|^~\&|DIPS_ARENA|AHUS|LVMS|AHUS|20260509142000||ORM^O01^ORM_O01|DIPS20260509006|P|2.5|||AL|NE||UNICODE UTF-8
+PID|||04039256789^^^AHUS&2.16.578.1.12.4.1.4&ISO^FNR||Solberg^Hilde^Margrete^^Fru||19920403|F|||Storgata 28^^Lillestrøm^^2000^^NOR||^^PH^63890123
+PV1||E|AKM^Akuttmottak^^^^^^^Akuttmedisin||||LEG150^Fjeld^Rune^^^Dr.^^L|||||||||||BES202605013
+ORC|NW|ORD20260509009||||||20260509142000|||LEG150^Fjeld^Rune^^^Dr.^^L
+OBR|1|ORD20260509009||BGA^Blodgassanalyse^NLK|||20260509142000|||||||||LEG150^Fjeld^Rune^^^Dr.^^L
+NTE|1||Dyspné og SpO2 88%. Hastesvar ønskes.
+```
+
+---
+
+## 15. ORU^R01 - Urinstix og sediment (urinalysis with sediment)
+
+```
+MSH|^~\&|LVMS|HAUKELAND_US|DIPS_ARENA|HAUKELAND_US|20260509151000||ORU^R01^ORU_R01|LVMS20260509009|P|2.5|||AL|NE||UNICODE UTF-8
+PID|||16078523498^^^HAUKELAND&2.16.578.1.12.4.1.4&ISO^FNR||Johannessen^Liv^Astrid^^Fru||19850716|F|||Fjøsangerveien 20^^Bergen^^5054^^NOR||^^PH^55456789
+PV1||O|POLIKL^Poliklinikk^^^^^^^Nyreavdelingen||||LEG160^Tangen^Olav^^^Dr.^^L|||||||||||BES202605014
+ORC|RE|ORD20260509010|LVMS20260509010||CM||||20260509151000|||LEG160^Tangen^Olav^^^Dr.^^L
+OBR|1|ORD20260509010|LVMS20260509010|URIN^Urinstix og sediment^NLK|||20260509133000|||||||||LEG160^Tangen^Olav^^^Dr.^^L||||||20260509151000|||F
+OBX|1|NM|URIN_PH^Urin pH^NLK||6.0||5.0-8.0|N|||F|||20260509151000
+OBX|2|CE|URIN_PROT^Urin protein^NLK||260385009^Negativ^SCT||||||F|||20260509151000
+OBX|3|CE|URIN_GLU^Urin glukose^NLK||260385009^Negativ^SCT||||||F|||20260509151000
+OBX|4|CE|URIN_BLOD^Urin blod^NLK||260385009^Negativ^SCT||||||F|||20260509151000
+OBX|5|CE|URIN_LEU^Urin leukocytter^NLK||260385009^Negativ^SCT||||||F|||20260509151000
+OBX|6|NM|URIN_SG^Spesifikk vekt^NLK||1.018||1.005-1.030|N|||F|||20260509151000
+```
+
+---
+
+## 16. ORU^R01 - Lipidpanel med forhøyet kolesterol (lipid panel with elevated cholesterol)
+
+```
+MSH|^~\&|LVMS|ST_OLAVS|DIPS_ARENA|ST_OLAVS|20260509155000||ORU^R01^ORU_R01|LVMS20260509011|P|2.5|||AL|NE||UNICODE UTF-8
+PID|||28026712389^^^ST_OLAVS&2.16.578.1.12.4.1.4&ISO^FNR||Bråten^Stein^Arild^^Hr||19670228|M|||Innherredsveien 14^^Trondheim^^7042^^NOR||^^PH^73789012
+PV1||O|POLIKL^Poliklinikk^^^^^^^Kardiologisk avdeling||||LEG170^Nordbø^Kjersti^^^Dr.^^L|||||||||||BES202605015
+ORC|RE|ORD20260509012|LVMS20260509012||CM||||20260509155000|||LEG170^Nordbø^Kjersti^^^Dr.^^L
+OBR|1|ORD20260509012|LVMS20260509012|LIPID^Lipidpanel^NLK|||20260509080000|||||||||LEG170^Nordbø^Kjersti^^^Dr.^^L||||||20260509155000|||F
+OBX|1|NM|CHOL^Totalkolesterol^NLK||7.2|mmol/L|<5.0|H|||F|||20260509155000
+OBX|2|NM|LDL^LDL-kolesterol^NLK||4.8|mmol/L|<3.0|H|||F|||20260509155000
+OBX|3|NM|HDL^HDL-kolesterol^NLK||1.1|mmol/L|>1.0|N|||F|||20260509155000
+OBX|4|NM|TRIG^Triglyserider^NLK||2.9|mmol/L|<1.7|H|||F|||20260509155000
+OBX|5|NM|CHOL_HDL^Kolesterol/HDL ratio^NLK||6.5|ratio|<5.0|H|||F|||20260509155000
+```
+
+---
+
+## 17. ADT^A08 - Oppdatering pasientdata (patient update)
+
+```
+MSH|^~\&|DIPS_ARENA|OUS_RIKSHOSP|LVMS|OUS_RIKSHOSP|20260509161000||ADT^A08^ADT_A01|DIPS20260509007|P|2.5|||AL|NE||UNICODE UTF-8
+EVN|A08|20260509161000
+PID|||03058712345^^^OUS&2.16.578.1.12.4.1.4&ISO^FNR||Eriksen^Solveig^Åse^^Fru||19870503|F|||Hegdehaugsveien 19^^Oslo^^0352^^NOR||^^PH^22890123
+PV1||I|ENDO^Rom104^Seng1^Endokrinologisk avdeling||||LEG110^Fossum^Nils^^^Dr.^^L|||||||||||BES202605016
+```
+
+---
+
+## 18. ORU^R01 - Mikrobiologi med kulturbilde vedlegg (microbiology with culture image)
+
+```
+MSH|^~\&|LVMS|UNN_TROMSOE|DIPS_ARENA|UNN_TROMSOE|20260509163000||ORU^R01^ORU_R01|LVMS20260509012|P|2.5|||AL|NE||UNICODE UTF-8
+PID|||21129078345^^^UNN&2.16.578.1.12.4.1.4&ISO^FNR||Jakobsen^Hanne^Kristin^^Fru||19901221|F|||Sjøgata 15^^Tromsø^^9008^^NOR||^^PH^77234567
+PV1||I|INF1^Rom103^Seng2^Infeksjonsavdelingen||||LEG180^Iversen^Dag^^^Dr.^^L|||||||||||BES202605017
+ORC|RE|ORD20260509013|LVMS20260509013||CM||||20260509163000|||LEG180^Iversen^Dag^^^Dr.^^L
+OBR|1|ORD20260509013|LVMS20260509013|SAARKULT^Sårkultur^NLK|||20260507120000|||||||||LEG180^Iversen^Dag^^^Dr.^^L||||||20260509163000|||F
+OBX|1|CE|BAKT^Bakteriefunn^NLK||3092008^Staphylococcus aureus^SCT||||||F|||20260509163000
+OBX|2|ST|MIKRO_KOMM^Kommentar^NLK||MRSA påvist i sårkultur. Kontaktsmitteisolering iverksatt.||||||F|||20260509163000
+OBX|3|CE|ABRES^Resistens Oksacillin^NLK||R^Resistent^HL70078||||||F|||20260509163000
+OBX|4|CE|ABRES^Resistens Vancomycin^NLK||S^Sensitiv^HL70078||||||F|||20260509163000
+OBX|5|CE|ABRES^Resistens Trimetoprim-sulfa^NLK||S^Sensitiv^HL70078||||||F|||20260509163000
+OBX|6|ED|IMG^Kulturbilde^^Sårkultur MRSA||^image^jpeg^Base64^/9j/4AAQSkZJRgABAQEASABIAAD/4gIoSUNDX1BST0ZJTEUAAQEAAAIYAAAAAAQwAABtbnRyUkdCIFhZWiAAAAAAAAAAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAAHRyWFlaAAABZAAAABRnWFlaAAABeAAAABRiWFlaAAABjAAAABRyVFJDAAABoAAAAChnVFJDAAABoAAAAChiVFJDAAABoAAAACh3dHB0AAAByAAAABRjcHJ0AAAB3AAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAFgAAABkAE0AUgBTAEEAIABzAOUAcgBrAHUAbAB0AHUAcgAgAC0AIABVAGIAaQBxAHUAaQB0AGkAbgBvAHUAcwAgAEMAbwBsAG8AcgBzAGUAdAAgAFQAcgBvAG0AcwD4AFhZWiAAAAAAAABvogAAOPUAAAOQWFlaIAAAAAAAAGKZAAC3hQAAGNpYWVogAAAAAAAAJKAAAA+EAAC2z3BhcmEAAAAAAAMAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABYWVogAAAAAAAA9tYAAQAAAADTLW1sdWMAAAAAAAAAAQAAAAxlblVTAAAAIAAAAGQATABhAGIAVgBhAG4AdABhAGcAZQAgAEwAVgBNAFM||||||F|||20260509163000
+```
+
+---
+
+## 19. ORM^O01 - Bestilling blodbank (blood bank order with special requirements)
+
+```
+MSH|^~\&|DIPS_ARENA|HAUKELAND_US|LVMS|HAUKELAND_US|20260509170000||ORM^O01^ORM_O01|DIPS20260509008|P|2.5|||AL|NE||UNICODE UTF-8
+PID|||06039134567^^^HAUKELAND&2.16.578.1.12.4.1.4&ISO^FNR||Aaserud^Torbjørn^Erling^^Hr||19910306|M|||Damsgårdsveien 88^^Bergen^^5058^^NOR||^^PH^55567890
+PV1||I|KIR1^Rom502^Seng1^Ortopedisk avdeling||||LEG190^Ellingsen^Cathrine^^^Dr.^^L|||||||||||BES202605018
+ORC|NW|ORD20260509014||||||20260509170000|||LEG190^Ellingsen^Cathrine^^^Dr.^^L
+OBR|1|ORD20260509014||XMATCH^Forlikelighetsprøve^NLK|||20260509170000|||||||||LEG190^Ellingsen^Cathrine^^^Dr.^^L
+OBR|2|ORD20260509014||BTYPE^Blodtypebestemmelse^NLK|||20260509170000|||||||||LEG190^Ellingsen^Cathrine^^^Dr.^^L
+NTE|1||Planlagt total hofteprotese 2026-05-12. Bestill 2 enheter SAG-M erytrocyttkonsentrat.
+```
+
+---
+
+## 20. ORU^R01 - HbA1c og glukosebelastning (HbA1c and glucose tolerance)
+
+```
+MSH|^~\&|LVMS|OUS_ULLEVAAL|NHN_EDI|OUS_ULLEVAAL|20260509173000||ORU^R01^ORU_R01|LVMS20260509013|P|2.5|||AL|NE||UNICODE UTF-8
+PID|||13028456712^^^OUS&2.16.578.1.12.4.1.4&ISO^FNR||Fjeldstad^Anette^Birgitte^^Fru||19840213|F|||Tøyengata 35^^Oslo^^0578^^NOR||^^PH^22901234
+PV1||O|POLIKL^Poliklinikk^^^^^^^Endokrinologisk avdeling||||LEG200^Aasen^Fredrik^^^Dr.^^L|||||||||||BES202605019
+ORC|RE|ORD20260509015|LVMS20260509015||CM||||20260509173000|||LEG200^Aasen^Fredrik^^^Dr.^^L
+OBR|1|ORD20260509015|LVMS20260509015|DIAB^Diabetesutredning^NLK|||20260509070000|||||||||LEG200^Aasen^Fredrik^^^Dr.^^L||||||20260509173000|||F
+OBX|1|NM|HBA1C^HbA1c^NLK||7.2|%|<6.0|H|||F|||20260509173000
+OBX|2|NM|HBA1C_IFCC^HbA1c IFCC^NLK||55|mmol/mol|<42|H|||F|||20260509173000
+OBX|3|NM|GLU_FAST^Fastende glukose^NLK||8.1|mmol/L|4.0-6.0|H|||F|||20260509173000
+OBX|4|NM|GLU_2H^Glukose 2t etter belastning^NLK||12.4|mmol/L|<7.8|H|||F|||20260509173000
+OBX|5|ST|DIAB_KOMM^Kommentar^NLK||Verdier forenlig med diabetes mellitus type 2. Anbefaler henvisning til diabetespoliklinikk.||||||F|||20260509173000
+```

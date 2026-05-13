@@ -53,7 +53,11 @@
             'cron_definition',
             'jitter_ms',
             'timezone',
-            'max_execution_time_ms'
+            'max_execution_time_ms',
+            'on_success_service',
+            'on_success_job',
+            'on_error_service',
+            'on_error_job'
         ]
     }
     </script>
@@ -143,6 +147,10 @@
                         <td class='ignore'>{{ job.jitter_ms|default:"" }}</td>
                         <td class='ignore'>{{ job.timezone|default:"" }}</td>
                         <td class='ignore'>{{ job.max_execution_time_ms|default:"" }}</td>
+                        <td class='ignore'>{{ job.on_success_service|default:"" }}</td>
+                        <td class='ignore'>{{ job.on_success_job|default:"" }}</td>
+                        <td class='ignore'>{{ job.on_error_service|default:"" }}</td>
+                        <td class='ignore'>{{ job.on_error_job|default:"" }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -212,6 +220,35 @@
                         </tr>
 
                         <tr>
+                            <td class="collapsible-toggle" style="vertical-align:middle">
+                            Callbacks
+                            </td>
+                            <td class="collapsible-toggle">
+                            <a href="javascript:$.fn.zato.toggle_visibility('.create-one-time-callbacks')">Toggle callbacks</a>
+                            </td>
+                        </tr>
+
+                        <tr class="create-one-time-callbacks hidden">
+                            <td style="vertical-align:middle">On success service</td>
+                            <td>{{ create_one_time_form.on_success_service }}</td>
+                        </tr>
+
+                        <tr class="create-one-time-callbacks hidden">
+                            <td style="vertical-align:middle">On success job</td>
+                            <td>{{ create_one_time_form.on_success_job }}</td>
+                        </tr>
+
+                        <tr class="create-one-time-callbacks hidden">
+                            <td style="vertical-align:middle">On error service</td>
+                            <td>{{ create_one_time_form.on_error_service }}</td>
+                        </tr>
+
+                        <tr class="create-one-time-callbacks hidden">
+                            <td style="vertical-align:middle">On error job</td>
+                            <td>{{ create_one_time_form.on_error_job }}</td>
+                        </tr>
+
+                        <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
@@ -278,6 +315,35 @@
                                 </label>
                             </td>
                             <td>{{ edit_one_time_form.extra }}</td>
+                        </tr>
+
+                        <tr>
+                            <td class="collapsible-toggle" style="vertical-align:middle">
+                            Callbacks
+                            </td>
+                            <td class="collapsible-toggle">
+                            <a href="javascript:$.fn.zato.toggle_visibility('.edit-one-time-callbacks')">Toggle callbacks</a>
+                            </td>
+                        </tr>
+
+                        <tr class="edit-one-time-callbacks hidden">
+                            <td style="vertical-align:middle">On success service</td>
+                            <td>{{ edit_one_time_form.on_success_service }}</td>
+                        </tr>
+
+                        <tr class="edit-one-time-callbacks hidden">
+                            <td style="vertical-align:middle">On success job</td>
+                            <td>{{ edit_one_time_form.on_success_job }}</td>
+                        </tr>
+
+                        <tr class="edit-one-time-callbacks hidden">
+                            <td style="vertical-align:middle">On error service</td>
+                            <td>{{ edit_one_time_form.on_error_service }}</td>
+                        </tr>
+
+                        <tr class="edit-one-time-callbacks hidden">
+                            <td style="vertical-align:middle">On error job</td>
+                            <td>{{ edit_one_time_form.on_error_job }}</td>
                         </tr>
 
                         <tr>
@@ -430,6 +496,35 @@
                         </tr>
 
                         <tr>
+                            <td class="collapsible-toggle" style="vertical-align:middle">
+                            Callbacks
+                            </td>
+                            <td class="collapsible-toggle">
+                            <a href="javascript:$.fn.zato.toggle_visibility('.create-interval-callbacks')">Toggle callbacks</a>
+                            </td>
+                        </tr>
+
+                        <tr class="create-interval-callbacks hidden">
+                            <td style="vertical-align:middle">On success service</td>
+                            <td>{{ create_interval_based_form.on_success_service }}</td>
+                        </tr>
+
+                        <tr class="create-interval-callbacks hidden">
+                            <td style="vertical-align:middle">On success job</td>
+                            <td>{{ create_interval_based_form.on_success_job }}</td>
+                        </tr>
+
+                        <tr class="create-interval-callbacks hidden">
+                            <td style="vertical-align:middle">On error service</td>
+                            <td>{{ create_interval_based_form.on_error_service }}</td>
+                        </tr>
+
+                        <tr class="create-interval-callbacks hidden">
+                            <td style="vertical-align:middle">On error job</td>
+                            <td>{{ create_interval_based_form.on_error_job }}</td>
+                        </tr>
+
+                        <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
@@ -575,6 +670,35 @@
                         <tr class="edit-interval-more-options hidden">
                             <td style="vertical-align:middle">Timezone</td>
                             <td>{{ edit_interval_based_form.timezone }}</td>
+                        </tr>
+
+                        <tr>
+                            <td class="collapsible-toggle" style="vertical-align:middle">
+                            Callbacks
+                            </td>
+                            <td class="collapsible-toggle">
+                            <a href="javascript:$.fn.zato.toggle_visibility('.edit-interval-callbacks')">Toggle callbacks</a>
+                            </td>
+                        </tr>
+
+                        <tr class="edit-interval-callbacks hidden">
+                            <td style="vertical-align:middle">On success service</td>
+                            <td>{{ edit_interval_based_form.on_success_service }}</td>
+                        </tr>
+
+                        <tr class="edit-interval-callbacks hidden">
+                            <td style="vertical-align:middle">On success job</td>
+                            <td>{{ edit_interval_based_form.on_success_job }}</td>
+                        </tr>
+
+                        <tr class="edit-interval-callbacks hidden">
+                            <td style="vertical-align:middle">On error service</td>
+                            <td>{{ edit_interval_based_form.on_error_service }}</td>
+                        </tr>
+
+                        <tr class="edit-interval-callbacks hidden">
+                            <td style="vertical-align:middle">On error job</td>
+                            <td>{{ edit_interval_based_form.on_error_job }}</td>
                         </tr>
 
                         <tr>

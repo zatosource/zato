@@ -99,8 +99,10 @@ def check_availability(req):
 
 @method_allowed('POST')
 def download_and_install(req):
-    logger.info('download_and_install: called from client: {}'.format(req.META.get('REMOTE_ADDR')))
+    logger.info('UPDATE-TRACE download_and_install: called from client: %s', req.META.get('REMOTE_ADDR'))
     result = updater.download_and_install(exclude_from_restart=['dashboard'])
+    logger.info('UPDATE-TRACE download_and_install: result success=%s, error=%s, version_from=%s, version_to=%s',
+        result.get('success'), result.get('error'), result.get('version_from'), result.get('version_to'))
 
     if result['success']:
         import redis
@@ -114,6 +116,7 @@ def download_and_install(req):
         except Exception:
             pass
 
+    logger.info('UPDATE-TRACE download_and_install: returning response, result=%s', result)
     return json_response(result, success=result['success'])
 
 # ################################################################################################################################

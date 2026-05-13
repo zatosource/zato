@@ -18,7 +18,7 @@ from threading import RLock
 from time import time
 
 # Bunch
-from bunch import Bunch, bunchify
+from zato.common.ext.bunch import Bunch, bunchify
 
 # SQLAlchemy
 from sqlalchemy import and_, create_engine, event, select
@@ -1145,22 +1145,6 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return query.out_ftp_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_cache_builtin(self, cluster_id, id):
-        """ Returns a built-in cache definition's details.
-        """
-        with closing(self.session()) as session:
-            return query.cache_builtin(session, cluster_id, id)
-
-# ################################################################################################################################
-
-    def get_cache_builtin_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of built-in cache definitions.
-        """
-        with closing(self.session()) as session:
-            return query.cache_builtin_list(session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 

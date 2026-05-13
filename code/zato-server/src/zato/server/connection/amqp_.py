@@ -40,7 +40,7 @@ from zato.server.connection.connector import Connector, Inactive
 
 if 0:
     from amqp.transport import TCPTransport
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from kombu.connection import Connection as KombuAMQPConnection
     from kombu.messaging import Producer as KombuProducer
     from kombu.pools import ProducerPool as KombuProducerPool

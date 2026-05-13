@@ -1,0 +1,287 @@
+# Corepoint Integration Engine - real HL7v2 ER7 messages
+
+## 1. ADT^A01 - Inpatient admission at Winona Health
+
+```
+MSH|^~\&|ADMISSIONS|WINONA_HEALTH|COREPOINT|WINONA_HIE|20250310142000||ADT^A01|CP-ADT-20250310-000123|P|2.3|||AL|NE
+EVN|A01|20250310142000
+PID|1||WH-MRN-10023456^^^WINONA_HEALTH^MR~518-34-7291^^^SSA^SS||Solberg^Ingrid^Katherine^^||19560815|F||W|2741 Garvin Heights Rd^^Winona^MN^55987^USA||^PRN^PH^^1^507^4529817||ENG|W|||||||N
+NK1|1|Solberg^Leif^A|SON^Son|1083 Gilmore Valley Rd^^Winona^MN^55987^USA|^PRN^PH^^1^507^4523698
+PV1|1|I|MED^2N^04^WH||||1538267490^Dahlstrom^Erik^J^^^MD|1538267490^Dahlstrom^Erik^J^^^MD||MED|||1|||||1538267490^Dahlstrom^Erik^J^^^MD|I||||||||||||||||||20250310142000||||||||20250310142000
+PV2|||J44.1^Chronic obstructive pulmonary disease with acute exacerbation^ICD10~J96.01^Acute respiratory failure with hypoxia^ICD10
+DG1|1|ICD10|J44.1^Chronic obstructive pulmonary disease with acute exacerbation^ICD10||20250310|A
+DG1|2|ICD10|J96.01^Acute respiratory failure with hypoxia^ICD10||20250310|A
+IN1|1|MEDICARE^^^CMS|MEDICARE|Centers for Medicare and Medicaid Services||||||||||20240101||||MC|Solberg^Ingrid^Katherine|01|19560815|||||||||||||1EG4-TK3-NL45
+IN1|2|BCBS-MN^^^BCBSMN|BCBS-MN|Blue Cross Blue Shield of Minnesota||||||MN-BCBS-GRP-44123|||20250101|20251231|||SUPPLEMENT|Solberg^Ingrid^Katherine|01|19560815|||||||||||||XYZ-482917365
+```
+
+---
+
+## 2. ADT^A04 - Outpatient registration at Riverland Medical Center, Austin
+
+```
+MSH|^~\&|REGISTRATION|RIVERLAND_MC|COREPOINT|RIVERLAND_HIE|20250415091500||ADT^A04|CP-ADT-20250415-001456|P|2.3|||AL|NE
+EVN|A04|20250415091500
+PID|1||RM-MRN-20034567^^^RIVERLAND^MR~431-68-9025^^^SSA^SS||Xiong^Tou^Pao^^||19680322|M||A|1829 4th Ave NW^^Austin^MN^55912^USA||^PRN^PH^^1^507^4370921~^PRN^CP^^1^507^4376558||HMN|M|||||||N
+NK1|1|Xiong^Mai^K|SPO^Spouse|1829 4th Ave NW^^Austin^MN^55912^USA|^PRN^PH^^1^507^4370922
+PV1|1|O|RIVERLAND^CLINIC1^02||||2847195630^Engstrom^Britta^L^^^MD|2847195630^Engstrom^Britta^L^^^MD||FP|||1|||||2847195630^Engstrom^Britta^L^^^MD|OP||||||||||||||||||||||||||20250415091500
+IN1|1|MEDICA^^^MEDICA|MEDICA-MN|Medica Health Plans^^401 Carlson Pkwy^^Minnetonka^MN^55305|||||MN-MED-GRP-5523|||20250101|20251231|||HMO|Xiong^Tou^Pao|01|19680322|||||||||||||MED-719384562
+```
+
+---
+
+## 3. ADT^A08 - Patient update at Fairmont Community Hospital
+
+```
+MSH|^~\&|REGISTRATION|FAIRMONT_CH|COREPOINT|FAIRMONT_HIE|20250520103000||ADT^A08|CP-ADT-20250520-002345|P|2.3|||AL|NE
+EVN|A08|20250520103000
+PID|1||FC-MRN-30045678^^^FAIRMONT^MR~327-51-8463^^^SSA^SS||Hassan^Amina^Fadumo^^||19710925|F||B|408 Lake Ave^^Fairmont^MN^56031^USA||^PRN^PH^^1^507^3829174~^PRN^CP^^1^507^3825091||SOM|M|||||||N
+PV1|1|O|FAIRMONT^CLINIC2^01||||3691284750^Overby^Karla^N^^^MD|3691284750^Overby^Karla^N^^^MD||FP|||1|||||3691284750^Overby^Karla^N^^^MD|OP||||||||||||||||||||||||||20250520103000
+```
+
+---
+
+## 4. ORM^O01 - Lab order from Winona Health EHR to LIS via Corepoint
+
+```
+MSH|^~\&|EHR|WINONA_HEALTH|LIS|WINONA_LAB|20250618080000||ORM^O01|CP-ORM-20250618-003456|P|2.3|||AL|NE
+PID|1||WH-MRN-40056789^^^WINONA_HEALTH^MR||Vang^Chue^Neng^^||19750430|M||A|915 Huff St^^Winona^MN^55987^USA||^PRN^PH^^1^507^4527103||HMN|M
+PV1|1|O|WINONA^LAB^01||||4072836195^Nygaard^Anders^R^^^MD|4072836195^Nygaard^Anders^R^^^MD||IM|||1|||||4072836195^Nygaard^Anders^R^^^MD|OP
+ORC|NW|WH-ORD-20250618-001^WINONA_HEALTH|WH-ORD-20250618-001^WINONA_HEALTH||SC|||1^^^20250618080000^^R||20250618080000|4072836195^Nygaard^Anders^R^^^MD|4072836195^Nygaard^Anders^R^^^MD|4072836195^Nygaard^Anders^R^^^MD||^WPN^PH^^1^507^4574000
+OBR|1|WH-ORD-20250618-001^WINONA_HEALTH|WH-ORD-20250618-001^WINONA_HEALTH|57698-3^Lipid panel with direct LDL^LN|ROUTINE|20250618080000||||||Fasting 12 hours||||20250618080000|^Serum||4072836195^Nygaard^Anders^R^^^MD||||||||||1^^^20250618080000^^R
+OBR|2|WH-ORD-20250618-001^WINONA_HEALTH|WH-ORD-20250618-001^WINONA_HEALTH|4548-4^Hemoglobin A1c^LN|ROUTINE|20250618080000||||||||||^Blood||4072836195^Nygaard^Anders^R^^^MD||||||||||1^^^20250618080000^^R
+```
+
+---
+
+## 5. ORU^R01 - Basic metabolic panel from Riverland Medical Center lab
+
+```
+MSH|^~\&|LIS|RIVERLAND_LAB|COREPOINT|RIVERLAND_EHR|20250722141500||ORU^R01^ORU_R01|CP-ORU-20250722-004567|P|2.5.1|||AL|NE
+PID|1||RM-MRN-50067890^^^RIVERLAND^MR||Moua^Pa^Nhia^^||19830612|F||A|612 Main St N^^Austin^MN^55912^USA||^PRN^PH^^1^507^4371852||HMN|S
+PV1|1|O|RIVERLAND^LAB^01||||5193748260^Bjornson^Sigrid^T^^^MD|5193748260^Bjornson^Sigrid^T^^^MD||FP|||1|||||5193748260^Bjornson^Sigrid^T^^^MD|OP
+ORC|RE|RM-ORD-20250721-005^RIVERLAND|RM-RES-20250722-4567^RIVERLAND_LAB|||||||5193748260^Bjornson^Sigrid^T^^^MD|5193748260^Bjornson^Sigrid^T^^^MD|||^WPN^PH^^1^507^4334000
+OBR|1|RM-ORD-20250721-005^RIVERLAND|RM-RES-20250722-4567^RIVERLAND_LAB|51990-0^Basic metabolic panel^LN|||20250721074500|||||||||||5193748260^Bjornson^Sigrid^T^^^MD||RM-LAB-12345||||20250722140000|||F
+OBX|1|NM|2345-7^Glucose^LN|1|95|mg/dL^milligrams per deciliter^UCUM|70-100||||F|||20250721074500|||||20250722140000||||RMLAB^Riverland Laboratory^CLIA&2.16.840.1.113883.19.4.6&ISO^XX^^^24D0512345|1000 First Dr NW^^Austin^MN^55912
+OBX|2|NM|3094-0^BUN^LN|2|15|mg/dL^milligrams per deciliter^UCUM|7-20||||F|||20250721074500|||||20250722140000||||RMLAB^Riverland Laboratory
+OBX|3|NM|2160-0^Creatinine^LN|3|0.8|mg/dL^milligrams per deciliter^UCUM|0.6-1.2||||F|||20250721074500|||||20250722140000||||RMLAB^Riverland Laboratory
+OBX|4|NM|2951-2^Sodium^LN|4|140|mmol/L^millimoles per liter^UCUM|136-145||||F|||20250721074500|||||20250722140000||||RMLAB^Riverland Laboratory
+OBX|5|NM|2823-3^Potassium^LN|5|4.2|mmol/L^millimoles per liter^UCUM|3.5-5.1||||F|||20250721074500|||||20250722140000||||RMLAB^Riverland Laboratory
+OBX|6|NM|2075-0^Chloride^LN|6|102|mmol/L^millimoles per liter^UCUM|98-106||||F|||20250721074500|||||20250722140000||||RMLAB^Riverland Laboratory
+OBX|7|NM|1963-8^Bicarbonate^LN|7|24|mmol/L^millimoles per liter^UCUM|22-29||||F|||20250721074500|||||20250722140000||||RMLAB^Riverland Laboratory
+OBX|8|NM|17861-6^Calcium^LN|8|9.4|mg/dL^milligrams per deciliter^UCUM|8.5-10.5||||F|||20250721074500|||||20250722140000||||RMLAB^Riverland Laboratory
+```
+
+---
+
+## 6. ADT^A08 - Insurance eligibility update at Winona Health
+
+```
+MSH|^~\&|REGISTRATION|WINONA_HEALTH|COREPOINT|WINONA_HIE|20250830143000||ADT^A08|CP-ADT-20250830-005678|P|2.3|||AL|NE
+EVN|A08|20250830143000
+PID|1||WH-MRN-60078901^^^WINONA_HEALTH^MR||Lindquist^Ruth^Elaine^^||19520715|F||W|1407 Gilmore Ave^^Winona^MN^55987^USA||^PRN^PH^^1^507^4528361||ENG|W|||||||N
+PV1|1|O|WINONA^CLINIC1^01||||6384917250^Haugen^Lars^P^^^MD|6384917250^Haugen^Lars^P^^^MD||IM|||1|||||6384917250^Haugen^Lars^P^^^MD|OP||||||||||||||||||||||||||20250830143000
+IN1|1|MEDICARE^^^CMS|MEDICARE|Centers for Medicare and Medicaid Services||||||||||20240101||||MC|Lindquist^Ruth^Elaine|01|19520715|||||||||||||1EG4-SW2-PQ67
+IN1|2|UHCMN^^^UHC|UHC-MN|UnitedHealthcare Minnesota^^9700 Health Care Ln^^Minnetonka^MN^55343|||||MN-UHC-GRP-3312|||20250101|20251231|||SUPPLEMENT|Lindquist^Ruth^Elaine|01|19520715|||||||||||||UHC-826413597
+```
+
+---
+
+## 7. ADT^A01 - Surgical admission at Fairmont Community Hospital
+
+```
+MSH|^~\&|ADMISSIONS|FAIRMONT_CH|COREPOINT|FAIRMONT_HIE|20250903060000||ADT^A01|CP-ADT-20250903-006789|P|2.3|||AL|NE
+EVN|A01|20250903060000
+PID|1||FC-MRN-70089012^^^FAIRMONT^MR~214-59-8736^^^SSA^SS||Warsame^Abdirahman^Guled^^||19480318|M||B|1520 Albion Ave^^Fairmont^MN^56031^USA||^PRN^PH^^1^507^3824710||SOM|M|||||||N
+NK1|1|Warsame^Halimo^D|SPO^Spouse|1520 Albion Ave^^Fairmont^MN^56031^USA|^PRN^PH^^1^507^3824711
+PV1|1|I|SURG^1S^02^FCH||||7150382946^Ostlund^Karen^M^^^MD|7150382946^Ostlund^Karen^M^^^MD||ORTH|||1|||||7150382946^Ostlund^Karen^M^^^MD|I||||||||||||||||||20250903060000||||||||20250903060000
+PV2|||M17.11^Primary osteoarthritis, right knee^ICD10
+DG1|1|ICD10|M17.11^Primary osteoarthritis, right knee^ICD10||20250903|A
+IN1|1|MEDICARE^^^CMS|MEDICARE|Centers for Medicare and Medicaid Services||||||||||20240101||||MC|Warsame^Abdirahman^Guled|01|19480318|||||||||||||1EG4-BG3-RS78
+```
+
+---
+
+## 8. ORU^R01 - Urinalysis result from Winona Health lab via Corepoint
+
+```
+MSH|^~\&|LIS|WINONA_LAB|COREPOINT|WINONA_EHR|20251014103000||ORU^R01^ORU_R01|CP-ORU-20251014-007890|P|2.5.1|||AL|NE
+PID|1||WH-MRN-80090123^^^WINONA_HEALTH^MR||Lor^Shoua^Ying^^||19650530|F||A|734 W Broadway^^Winona^MN^55987^USA||^PRN^PH^^1^507^4526193||HMN|M
+PV1|1|O|WINONA^LAB^01||||8260471593^Swanberg^Nils^G^^^MD|8260471593^Swanberg^Nils^G^^^MD||FP|||1|||||8260471593^Swanberg^Nils^G^^^MD|OP
+ORC|RE|WH-ORD-20251013-009^WINONA_HEALTH|WH-RES-20251014-7890^WINONA_LAB|||||||8260471593^Swanberg^Nils^G^^^MD|8260471593^Swanberg^Nils^G^^^MD|||^WPN^PH^^1^507^4574000
+OBR|1|WH-ORD-20251013-009^WINONA_HEALTH|WH-RES-20251014-7890^WINONA_LAB|24357-6^Urinalysis macro (dipstick) panel^LN|||20251013091500|||||||||||8260471593^Swanberg^Nils^G^^^MD||WH-LAB-23456||||20251014100000|||F
+OBX|1|ST|5778-6^Color of Urine^LN|1|Dark Yellow||Yellow||||F|||20251013091500|||||20251014100000||||WHLAB^Winona Health Laboratory^CLIA&2.16.840.1.113883.19.4.6&ISO^XX^^^24D0501234|855 Mankato Ave^^Winona^MN^55987
+OBX|2|ST|5767-9^Appearance of Urine^LN|2|Hazy||Clear|A|||F|||20251013091500|||||20251014100000||||WHLAB^Winona Health Laboratory
+OBX|3|NM|5803-2^pH of Urine^LN|3|5.5||5.0-8.0||||F|||20251013091500|||||20251014100000||||WHLAB^Winona Health Laboratory
+OBX|4|NM|5811-5^Specific gravity of Urine^LN|4|1.028||1.005-1.030||||F|||20251013091500|||||20251014100000||||WHLAB^Winona Health Laboratory
+OBX|5|ST|20454-5^Protein in Urine by Test strip^LN|5|2+||Negative|A|||F|||20251013091500|||||20251014100000||||WHLAB^Winona Health Laboratory
+OBX|6|ST|2349-9^Glucose in Urine^LN|6|Negative||Negative||||F|||20251013091500|||||20251014100000||||WHLAB^Winona Health Laboratory
+OBX|7|ST|5794-3^WBC esterase in Urine by Test strip^LN|7|3+||Negative|A|||F|||20251013091500|||||20251014100000||||WHLAB^Winona Health Laboratory
+OBX|8|ST|5802-4^Nitrite in Urine by Test strip^LN|8|Positive||Negative|A|||F|||20251013091500|||||20251014100000||||WHLAB^Winona Health Laboratory
+```
+
+---
+
+## 9. ORM^O01 - Radiology order from Riverland Medical Center to RIS via Corepoint
+
+```
+MSH|^~\&|EHR|RIVERLAND_MC|RIS|RIVERLAND_RAD|20250505143000||ORM^O01|CP-ORM-20250505-008901|P|2.3|||AL|NE
+PID|1||RM-MRN-90101234^^^RIVERLAND^MR||Abdi^Sahra^Khadra^^||19790625|F||B|1417 14th St NE^^Austin^MN^55912^USA||^PRN^PH^^1^507^4372918||SOM|M
+PV1|1|O|RIVERLAND^RAD^01||||9047261538^Engstrom^Britta^L^^^MD|9047261538^Engstrom^Britta^L^^^MD||ORTH|||1|||||9047261538^Engstrom^Britta^L^^^MD|OP
+ORC|NW|RM-ORD-20250505-003^RIVERLAND|RM-ORD-20250505-003^RIVERLAND||SC|||1^^^20250505143000^^R||20250505143000|9047261538^Engstrom^Britta^L^^^MD|9047261538^Engstrom^Britta^L^^^MD|9047261538^Engstrom^Britta^L^^^MD||^WPN^PH^^1^507^4334000
+OBR|1|RM-ORD-20250505-003^RIVERLAND|RM-ORD-20250505-003^RIVERLAND|73030^XR SHOULDER COMPLETE LEFT^CPT4|ROUTINE|20250505143000|||||Left shoulder pain, 3 weeks duration. Rule out rotator cuff pathology.||||20250505143000|||9047261538^Engstrom^Britta^L^^^MD||||||||||1^^^20250505143000^^R
+```
+
+---
+
+## 10. ADT^A04 - Walk-in clinic registration at Winona Health urgent care
+
+```
+MSH|^~\&|REGISTRATION|WINONA_UC|COREPOINT|WINONA_HIE|20250621171500||ADT^A04|CP-ADT-20250621-009012|P|2.3|||AL|NE
+EVN|A04|20250621171500
+PID|1||WH-MRN-01112345^^^WINONA_HEALTH^MR~163-48-7295^^^SSA^SS||Thao^Xeng^Koua^^||19910814|M||A|2015 Homer Rd^^Winona^MN^55987^USA||^PRN^PH^^1^507^4529078~^PRN^CP^^1^507^4521346||HMN|S|||||||N
+PV1|1|O|WINONA_UC^EXAM1^01||||1538267490^Dahlstrom^Erik^J^^^MD|1538267490^Dahlstrom^Erik^J^^^MD||UC|||1|||||1538267490^Dahlstrom^Erik^J^^^MD|OP||||||||||||||||||||||||||20250621171500
+IN1|1|HEALTHPARTNERS^^^HP|HP-MN|HealthPartners^^8170 33rd Ave S^^Bloomington^MN^55425|||||MN-HP-GRP-8834|||20250101|20251231|||HMO|Thao^Xeng^Koua|01|19910814|||||||||||||HP-394827156
+```
+
+---
+
+## 11. ORU^R01 - Troponin critical result from Fairmont Community Hospital lab
+
+```
+MSH|^~\&|LIS|FAIRMONT_LAB|COREPOINT|FAIRMONT_EHR|20251120041500||ORU^R01^ORU_R01|CP-ORU-20251120-010123|P|2.5.1|||AL|NE
+PID|1||FC-MRN-11123456^^^FAIRMONT^MR||Farah^Omar^Abshir^^||19520308|M||B|907 Interlaken Rd^^Fairmont^MN^56031^USA||^PRN^PH^^1^507^3828194||SOM|M
+PV1|1|E|FAIRMONT^ED^01||||2847195630^Haugen^Lars^P^^^MD|2847195630^Haugen^Lars^P^^^MD||EM|||1|||||2847195630^Haugen^Lars^P^^^MD|E
+ORC|RE|FC-ORD-20251120-001^FAIRMONT|FC-RES-20251120-0123^FAIRMONT_LAB|||||||2847195630^Haugen^Lars^P^^^MD|2847195630^Haugen^Lars^P^^^MD|||^WPN^PH^^1^507^2384000
+OBR|1|FC-ORD-20251120-001^FAIRMONT|FC-RES-20251120-0123^FAIRMONT_LAB|49563-0^Troponin I cardiac [Mass/volume] in Serum or Plasma by High sensitivity method^LN|||20251120035000|||||||||||2847195630^Haugen^Lars^P^^^MD||FC-LAB-34567||||20251120041000|||F
+OBX|1|NM|49563-0^Troponin I cardiac [Mass/volume] in Serum or Plasma by High sensitivity method^LN|1|1850|ng/L^nanograms per liter^UCUM|<34|H|||F|||20251120035000|||||20251120041000||||FCLAB^Fairmont Community Hospital Laboratory^CLIA&2.16.840.1.113883.19.4.6&ISO^XX^^^24D0567890|800 Medical Center Dr^^Fairmont^MN^56031
+```
+
+---
+
+## 12. RDE^O11 - Pharmacy order from Winona Health to pharmacy system via Corepoint
+
+```
+MSH|^~\&|EHR|WINONA_HEALTH|PHARMACY|WINONA_PHARM|20250310151500||RDE^O11^RDE_O11|CP-RDE-20250310-011234|P|2.5.1|||AL|NE
+PID|1||WH-MRN-10023456^^^WINONA_HEALTH^MR||Solberg^Ingrid^Katherine^^||19560815|F||W|2741 Garvin Heights Rd^^Winona^MN^55987^USA||^PRN^PH^^1^507^4529817||ENG|W
+PV1|1|I|MED^2N^04^WH||||1538267490^Dahlstrom^Erik^J^^^MD|1538267490^Dahlstrom^Erik^J^^^MD||MED|||1|||||1538267490^Dahlstrom^Erik^J^^^MD|I
+ORC|NW|WH-RX-20250310-001^WINONA_HEALTH|WH-RX-20250310-001^WINONA_HEALTH||SC||^BID&twice daily&HL70335^^^20250310^20250317|20250310151500|1538267490^Dahlstrom^Erik^J^^^MD|1538267490^Dahlstrom^Erik^J^^^MD|1538267490^Dahlstrom^Erik^J^^^MD||^WPN^PH^^1^507^4574000
+RXO|Amoxicillin^Amoxicillin 500mg capsule^NDC|500|mg^milligrams||PO^Oral^HL70162|||14|capsule^capsules|||||||||||Amoxicillin 500mg PO BID x 7 days
+RXE|^BID&twice daily&HL70335^^^20250310^20250317|Amoxicillin^Amoxicillin 500mg capsule^NDC|500|mg^milligrams|capsule^capsules|C48542^Oral dosage form^NCI||14||||||||1538267490^Dahlstrom^Erik^J^^^MD|||||Amoxicillin 500mg PO BID x 7 days for community-acquired pneumonia
+RXR|PO^Oral^HL70162
+```
+
+---
+
+## 13. ORU^R01 - CBC result with embedded PDF from Riverland Medical Center
+
+```
+MSH|^~\&|LIS|RIVERLAND_LAB|COREPOINT|RIVERLAND_EHR|20250908091500||ORU^R01^ORU_R01|CP-ORU-20250908-012345|P|2.5.1|||AL|NE
+PID|1||RM-MRN-21134567^^^RIVERLAND^MR||Yang^Bao^Mee^^||19720420|F||A|2108 Oakland Ave^^Austin^MN^55912^USA||^PRN^PH^^1^507^4375291||HMN|M
+PV1|1|O|RIVERLAND^LAB^01||||3691284750^Overby^Karla^N^^^MD|3691284750^Overby^Karla^N^^^MD||IM|||1|||||3691284750^Overby^Karla^N^^^MD|OP
+ORC|RE|RM-ORD-20250907-007^RIVERLAND|RM-RES-20250908-2345^RIVERLAND_LAB|||||||3691284750^Overby^Karla^N^^^MD|3691284750^Overby^Karla^N^^^MD|||^WPN^PH^^1^507^4334000
+OBR|1|RM-ORD-20250907-007^RIVERLAND|RM-RES-20250908-2345^RIVERLAND_LAB|58410-2^CBC with Auto Differential panel^LN|||20250907080000|||||||||||3691284750^Overby^Karla^N^^^MD||RM-LAB-12345||||20250908090000|||F
+OBX|1|ED|58410-2^CBC Report^LN|1|^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVGl0bGUgKENCQyB3aXRoIERpZmZlcmVudGlhbCBSZXBvcnQpCi9BdXRob3IgKFJpdmVybGFuZCBNZWRpY2FsIENlbnRlciBMYWJvcmF0b3J5KQovQ3JlYXRvciAoUml2ZXJsYW5kIExJUykKL1Byb2R1Y2VyIChSaXZlcmxhbmQgSGVhbHRoKQovQ3JlYXRpb25EYXRlIChEOjIwMjUwOTA4MDkxNTAwLTA1MDApCj4+CmVuZG9iagoyIDAgb2JqCjw8Ci9UeXBlIC9DYXRhbG9nCi9QYWdlcyAzIDAgUgo+PgplbmRvYmoKMyAwIG9iago8PAovVHlwZSAvUGFnZXMKL0tpZHMgWzQgMCBSXQovQ291bnQgMQovTWVkaWFCb3ggWzAgMCA2MTIgNzkyXQo+PgplbmRvYmoKNCAwIG9iago8PAovVHlwZSAvUGFnZQovUGFyZW50IDMgMCBSCi9Db250ZW50cyA1IDAgUgovUmVzb3VyY2VzIDw8Ci9Gb250IDw8Ci9GMSA2IDAgUgo+Pgo+Pgo+PgplbmRvYmoKNSAwIG9iago8PAovTGVuZ3RoIDI4MAo+PgpzdHJlYW0KQlQKL0YxIDEyIFRmCjM2IDc1NiBUZAooQ0JDIHdpdGggRGlmZmVyZW50aWFsIFJlcG9ydCkgVGoKCjM2IDczMCBUZAooV0JDOiA3LjIsIFJCQzogNC4zNSwgSGdiOiAxMy41LCBIY3Q6IDQwLjIsIFBsdDogMjEyKSBUagoKMzYgNzEwIFRkCihOZXV0cm9waGlsczogNTglLCBMeW1waG9jeXRlczogMzIlLCBNb25vY3l0ZXM6IDclKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCjYgMCBvYmoKPDwKL1R5cGUgL0ZvbnQKL1N1YnR5cGUgL1R5cGUxCi9CYXNlRm9udCAvSGVsdmV0aWNhCj4+CmVuZG9iagp4cmVmCjAgNwowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDI2NSAwMDAwMCBuIAowMDAwMDAwMzE0IDAwMDAwIG4gCjAwMDAwMDA0MTcgMDAwMDAgbiAKMDAwMDAwMDU2NyAwMDAwMCBuIAowMDAwMDAwODk3IDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgNwovUm9vdCAyIDAgUgo+PgpzdGFydHhyZWYKOTg3CiUlRU9GCg==||||||F
+OBX|2|NM|6690-2^WBC^LN|2|7.2|10*3/uL^thousand per microliter^UCUM|4.5-11.0||||F|||20250907080000|||||20250908090000||||RMLAB^Riverland Laboratory^CLIA&2.16.840.1.113883.19.4.6&ISO^XX^^^24D0512345|1000 First Dr NW^^Austin^MN^55912
+OBX|3|NM|789-8^RBC^LN|3|4.35|10*6/uL^million per microliter^UCUM|3.90-5.20||||F|||20250907080000|||||20250908090000||||RMLAB^Riverland Laboratory
+OBX|4|NM|718-7^Hemoglobin^LN|4|13.5|g/dL^grams per deciliter^UCUM|12.0-16.0||||F|||20250907080000|||||20250908090000||||RMLAB^Riverland Laboratory
+OBX|5|NM|4544-3^Hematocrit^LN|5|40.2|%^percent^UCUM|36.0-46.0||||F|||20250907080000|||||20250908090000||||RMLAB^Riverland Laboratory
+OBX|6|NM|777-3^Platelet count^LN|6|212|10*3/uL^thousand per microliter^UCUM|150-400||||F|||20250907080000|||||20250908090000||||RMLAB^Riverland Laboratory
+```
+
+---
+
+## 14. ADT^A01 - Emergency admission at Riverland Medical Center
+
+```
+MSH|^~\&|ADMISSIONS|RIVERLAND_MC|COREPOINT|RIVERLAND_HIE|20251201230000||ADT^A01|CP-ADT-20251201-013456|P|2.3|||AL|NE
+EVN|A01|20251201230000
+PID|1||RM-MRN-31145678^^^RIVERLAND^MR~659-21-4783^^^SSA^SS||Jama^Mohamed^Hirsi^^||19550918|M||B|3108 12th St SW^^Austin^MN^55912^USA||^PRN^PH^^1^507^4376042||SOM|M|||||||N
+NK1|1|Jama^Fartun^H|SPO^Spouse|3108 12th St SW^^Austin^MN^55912^USA|^PRN^PH^^1^507^4376043
+PV1|1|E|RIVERLAND^ED^02||||4072836195^Nygaard^Anders^R^^^MD|4072836195^Nygaard^Anders^R^^^MD||EM|||1|||||4072836195^Nygaard^Anders^R^^^MD|E||||||||||||||||||20251201230000||||||||20251201230000
+PV2|||K80.00^Calculus of gallbladder with acute cholecystitis without obstruction^ICD10~R10.11^Right upper quadrant pain^ICD10
+DG1|1|ICD10|K80.00^Calculus of gallbladder with acute cholecystitis without obstruction^ICD10||20251201|A
+IN1|1|BCBS-MN^^^BCBSMN|BCBS-MN|Blue Cross Blue Shield of Minnesota||||||MN-BCBS-GRP-55234|||20250101|20251231|||PPO|Jama^Mohamed^Hirsi|01|19550918|||||||||||||XYZ-517249368
+```
+
+---
+
+## 15. ORU^R01 - Pregnancy test result from Winona Health lab
+
+```
+MSH|^~\&|LIS|WINONA_LAB|COREPOINT|WINONA_EHR|20250412094500||ORU^R01^ORU_R01|CP-ORU-20250412-014567|P|2.5.1|||AL|NE
+PID|1||WH-MRN-41156789^^^WINONA_HEALTH^MR||Vue^Mailee^Pang^^||19960318|F||A|1508 Gilmore Ave^^Winona^MN^55987^USA||^PRN^PH^^1^507^4523871||HMN|S
+PV1|1|O|WINONA^OBGYN^01||||5193748260^Bjornson^Sigrid^T^^^MD|5193748260^Bjornson^Sigrid^T^^^MD||OB|||1|||||5193748260^Bjornson^Sigrid^T^^^MD|OP
+ORC|RE|WH-ORD-20250412-002^WINONA_HEALTH|WH-RES-20250412-4567^WINONA_LAB|||||||5193748260^Bjornson^Sigrid^T^^^MD|5193748260^Bjornson^Sigrid^T^^^MD|||^WPN^PH^^1^507^4574000
+OBR|1|WH-ORD-20250412-002^WINONA_HEALTH|WH-RES-20250412-4567^WINONA_LAB|2106-3^Choriogonadotropin [Units/volume] in Urine^LN|||20250412090000|||||||||||5193748260^Bjornson^Sigrid^T^^^MD||WH-LAB-23456||||20250412093000|||F
+OBX|1|CWE|2106-3^Choriogonadotropin [Units/volume] in Urine^LN|1|10828004^Positive^SCT||||||F|||20250412090000|||||20250412093000||||WHLAB^Winona Health Laboratory^CLIA&2.16.840.1.113883.19.4.6&ISO^XX^^^24D0501234|855 Mankato Ave^^Winona^MN^55987
+```
+
+---
+
+## 16. RDE^O11 - Antibiotic order from Fairmont Community Hospital pharmacy
+
+```
+MSH|^~\&|EHR|FAIRMONT_CH|PHARMACY|FAIRMONT_PHARM|20251201234500||RDE^O11^RDE_O11|CP-RDE-20251201-015678|P|2.5.1|||AL|NE
+PID|1||FC-MRN-51167890^^^FAIRMONT^MR||Jama^Mohamed^Hirsi^^||19550918|M||B|3108 12th St SW^^Austin^MN^55912^USA||^PRN^PH^^1^507^4376042||SOM|M
+PV1|1|E|FAIRMONT^ED^02||||4072836195^Nygaard^Anders^R^^^MD|4072836195^Nygaard^Anders^R^^^MD||EM|||1|||||4072836195^Nygaard^Anders^R^^^MD|E
+ORC|NW|FC-RX-20251201-001^FAIRMONT|FC-RX-20251201-001^FAIRMONT||SC||^Q8H&every 8 hours&HL70335^^^20251201^20251208|20251201234500|4072836195^Nygaard^Anders^R^^^MD|4072836195^Nygaard^Anders^R^^^MD|4072836195^Nygaard^Anders^R^^^MD||^WPN^PH^^1^507^2384000
+RXO|Piperacillin-Tazobactam^Piperacillin-Tazobactam 3.375g^NDC|3375|mg^milligrams||IV^Intravenous^HL70162|||21|dose^doses|||||||||||Piperacillin-Tazobactam 3.375g IV Q8H
+RXE|^Q8H&every 8 hours&HL70335^^^20251201^20251208|Piperacillin-Tazobactam^Piperacillin-Tazobactam 3.375g^NDC|3375|mg^milligrams|dose^doses|C38276^Intravenous^NCI||21||||||||4072836195^Nygaard^Anders^R^^^MD|||||Piperacillin-Tazobactam 3.375g IV Q8H for acute cholecystitis
+RXR|IV^Intravenous^HL70162
+```
+
+---
+
+## 17. ADT^A08 - Discharge notification at Winona Health via Corepoint
+
+```
+MSH|^~\&|ADMISSIONS|WINONA_HEALTH|COREPOINT|WINONA_HIE|20250315110000||ADT^A08|CP-ADT-20250315-016789|P|2.3|||AL|NE
+EVN|A08|20250315110000
+PID|1||WH-MRN-10023456^^^WINONA_HEALTH^MR||Solberg^Ingrid^Katherine^^||19560815|F||W|2741 Garvin Heights Rd^^Winona^MN^55987^USA||^PRN^PH^^1^507^4529817||ENG|W|||||||N
+PV1|1|I|MED^2N^04^WH||||1538267490^Dahlstrom^Erik^J^^^MD|1538267490^Dahlstrom^Erik^J^^^MD||MED|||1|||||1538267490^Dahlstrom^Erik^J^^^MD|I||||||||||||||||||20250310142000|||||||03^Home^HL70112|20250315100000
+```
+
+---
+
+## 18. ORU^R01 - Blood gas result from Fairmont Community Hospital lab
+
+```
+MSH|^~\&|LIS|FAIRMONT_LAB|COREPOINT|FAIRMONT_EHR|20251120043000||ORU^R01^ORU_R01|CP-ORU-20251120-017890|P|2.5.1|||AL|NE
+PID|1||FC-MRN-11123456^^^FAIRMONT^MR||Farah^Omar^Abshir^^||19520308|M||B|907 Interlaken Rd^^Fairmont^MN^56031^USA||^PRN^PH^^1^507^3828194||SOM|M
+PV1|1|E|FAIRMONT^ED^01||||2847195630^Haugen^Lars^P^^^MD|2847195630^Haugen^Lars^P^^^MD||EM|||1|||||2847195630^Haugen^Lars^P^^^MD|E
+ORC|RE|FC-ORD-20251120-002^FAIRMONT|FC-RES-20251120-7890^FAIRMONT_LAB|||||||2847195630^Haugen^Lars^P^^^MD|2847195630^Haugen^Lars^P^^^MD|||^WPN^PH^^1^507^2384000
+OBR|1|FC-ORD-20251120-002^FAIRMONT|FC-RES-20251120-7890^FAIRMONT_LAB|24336-0^Gas panel - Arterial blood^LN|||20251120040000|||||||||||2847195630^Haugen^Lars^P^^^MD||FC-LAB-34567||||20251120042500|||F
+OBX|1|NM|2744-1^pH of Arterial blood^LN|1|7.31||7.35-7.45|L|||F|||20251120040000|||||20251120042500||||FCLAB^Fairmont Community Hospital Laboratory^CLIA&2.16.840.1.113883.19.4.6&ISO^XX^^^24D0567890|800 Medical Center Dr^^Fairmont^MN^56031
+OBX|2|NM|2019-8^pCO2 Arterial blood^LN|2|48|mmHg^millimeters of mercury^UCUM|35-45|H|||F|||20251120040000|||||20251120042500||||FCLAB^Fairmont Community Hospital Laboratory
+OBX|3|NM|2703-7^pO2 Arterial blood^LN|3|72|mmHg^millimeters of mercury^UCUM|80-100|L|||F|||20251120040000|||||20251120042500||||FCLAB^Fairmont Community Hospital Laboratory
+OBX|4|NM|1960-4^Bicarbonate [Moles/volume] in Arterial blood^LN|4|23|mmol/L^millimoles per liter^UCUM|22-26||||F|||20251120040000|||||20251120042500||||FCLAB^Fairmont Community Hospital Laboratory
+OBX|5|NM|2708-6^Oxygen saturation Arterial blood^LN|5|93|%^percent^UCUM|95-100|L|||F|||20251120040000|||||20251120042500||||FCLAB^Fairmont Community Hospital Laboratory
+```
+
+---
+
+## 19. ORM^O01 - CT order from Fairmont Community Hospital to RIS
+
+```
+MSH|^~\&|EHR|FAIRMONT_CH|RIS|FAIRMONT_RAD|20251201233000||ORM^O01|CP-ORM-20251201-018901|P|2.3|||AL|NE
+PID|1||FC-MRN-51167890^^^FAIRMONT^MR||Jama^Mohamed^Hirsi^^||19550918|M||B|3108 12th St SW^^Austin^MN^55912^USA||^PRN^PH^^1^507^4376042||SOM|M
+PV1|1|E|FAIRMONT^ED^02||||4072836195^Nygaard^Anders^R^^^MD|4072836195^Nygaard^Anders^R^^^MD||EM|||1|||||4072836195^Nygaard^Anders^R^^^MD|E
+ORC|NW|FC-ORD-20251201-004^FAIRMONT|FC-ORD-20251201-004^FAIRMONT||SC|||1^^^20251201233000^^S||20251201233000|4072836195^Nygaard^Anders^R^^^MD|4072836195^Nygaard^Anders^R^^^MD|4072836195^Nygaard^Anders^R^^^MD||^WPN^PH^^1^507^2384000
+OBR|1|FC-ORD-20251201-004^FAIRMONT|FC-ORD-20251201-004^FAIRMONT|74177^CT ABD AND PELVIS WITH CONTRAST^CPT4|STAT|20251201233000|||||Acute right upper quadrant pain. Fever. Elevated WBC. Concern for acute cholecystitis.||||20251201230000|||4072836195^Nygaard^Anders^R^^^MD||||||||||1^^^20251201233000^^S
+```
+
+---
+
+## 20. ORU^R01 - Thyroid panel with embedded PDF report from Riverland lab via Corepoint
+
+```
+MSH|^~\&|LIS|RIVERLAND_LAB|COREPOINT|RIVERLAND_EHR|20251018093000||ORU^R01^ORU_R01|CP-ORU-20251018-019045|P|2.5.1|||AL|NE
+PID|1||RL-MRN-72234567^^^RIVERLAND^MR||Isse^Maryan^Deeqa^^||19580214|F||B|820 Bridge St^^Albert Lea^MN^56007^USA||^PRN^PH^^1^507^3794218||SOM|M
+PV1|1|O|RIVERLAND^LAB^01||||3691284750^Overby^Karla^N^^^MD|3691284750^Overby^Karla^N^^^MD||IM|||1|||||3691284750^Overby^Karla^N^^^MD|OP
+ORC|RE|RL-ORD-20251017-008^RIVERLAND|RL-RES-20251018-9045^RIVERLAND_LAB|||||||3691284750^Overby^Karla^N^^^MD|3691284750^Overby^Karla^N^^^MD|||^WPN^PH^^1^507^3795000
+OBR|1|RL-ORD-20251017-008^RIVERLAND|RL-RES-20251018-9045^RIVERLAND_LAB|94306-8^Thyroid panel^LN|||20251017080000|||||||||||3691284750^Overby^Karla^N^^^MD||RL-LAB-56789||||20251018091500|||F
+OBX|1|NM|3016-3^TSH [Units/volume] in Serum or Plasma^LN|1|8.7|mIU/L^milli-international units per liter^UCUM|0.4-4.0|H|||F|||20251017080000|||||20251018091500||||RLLAB^Riverland Medical Center Laboratory^CLIA&2.16.840.1.113883.19.4.6&ISO^XX^^^24D0678901|2200 Main St^^Albert Lea^MN^56007
+OBX|2|NM|3024-7^Free T4 [Mass/volume] in Serum or Plasma^LN|2|0.6|ng/dL^nanograms per deciliter^UCUM|0.8-1.8|L|||F|||20251017080000|||||20251018091500||||RLLAB^Riverland Medical Center Laboratory
+OBX|3|ED|94306-8^Thyroid Panel Lab Report PDF^LN|3|^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVGl0bGUgKFRoeXJvaWQgUGFuZWwgUmVwb3J0KQovQXV0aG9yIChSaXZlcmxhbmQgTWVkaWNhbCBDZW50ZXIgTGFib3JhdG9yeSkKL0NyZWF0b3IgKENvcmVwb2ludCBSZXBvcnQgR2VuZXJhdG9yKQovUHJvZHVjZXIgKEx5bmlhdGUgQ29yZXBvaW50IEhlYWx0aCkKL0NyZWF0aW9uRGF0ZSAoRDoyMDI1MTAxODA5MzAwMC0wNTAwKQo+PgplbmRvYmoKMiAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMyAwIFIKPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFs0IDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCg==||||||F|||20251017080000|||||20251018091500||||RLLAB^Riverland Medical Center Laboratory^CLIA&2.16.840.1.113883.19.4.6&ISO^XX^^^24D0678901|2200 Main St^^Albert Lea^MN^56007
+```

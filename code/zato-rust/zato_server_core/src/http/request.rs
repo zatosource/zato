@@ -6,6 +6,7 @@
 use std::sync::OnceLock;
 
 use chrono::{Datelike, FixedOffset, Timelike, Utc};
+use pyo3::intern;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDateTime, PyDict, PyString, PyTuple, PyTzInfo};
 
@@ -53,9 +54,9 @@ fn get_cached_attrs(server: &Bound<'_, PyAny>) -> PyResult<&'static CachedServer
         },
     };
     let _already_set = CACHED_ATTRS.set(attrs);
-    CACHED_ATTRS.get().ok_or_else(|| {
-        pyo3::exceptions::PyRuntimeError::new_err("failed to initialize cached server attrs")
-    })
+    CACHED_ATTRS
+        .get()
+        .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("failed to initialize cached server attrs"))
 }
 
 /// Truncates an internal correlation ID for external visibility.
@@ -124,7 +125,6 @@ pub fn handle_http_request(
     local_tz_offset_secs: i32,
     kwargs: Option<&Bound<'_, PyDict>>,
 ) -> PyResult<Py<PyTuple>> {
-
     let cached = get_cached_attrs(server)?;
 
     let user_agent: String = http_environ
@@ -135,19 +135,20 @@ pub fn handle_http_request(
         .and_then(|kwargs_dict| kwargs_dict.get_item("cid").ok().flatten())
         .map_or_else(|| new_cid_func.call0()?.extract(), |val| val.extract())?;
 
+    {
+        let prom_mod = py.import("zato.server.metrics")?;
+        let in_flight = prom_mod.getattr("zato_server_requests_in_flight")?;
+        in_flight.call_method0("inc")?;
+    }
+
     let request_ts_utc = Utc::now();
-    let local_offset = FixedOffset::east_opt(local_tz_offset_secs)
-        .ok_or_else(|| pyo3::exceptions::PyValueError::new_err("invalid timezone offset"))?;
+    let local_offset =
+        FixedOffset::east_opt(local_tz_offset_secs).ok_or_else(|| pyo3::exceptions::PyValueError::new_err("invalid timezone offset"))?;
     let request_ts_local = request_ts_utc.with_timezone(&local_offset);
 
-    let tz_utc: Bound<'_, PyTzInfo> = py
-        .import("datetime")?
-        .getattr("timezone")?
-        .getattr("utc")?
-        .cast_into()?;
+    let tz_utc: Bound<'_, PyTzInfo> = py.import("datetime")?.getattr("timezone")?.getattr("utc")?.cast_into()?;
 
-    let zero_offset = FixedOffset::east_opt(0)
-        .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("cannot create UTC offset"))?;
+    let zero_offset = FixedOffset::east_opt(0).ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("cannot create UTC offset"))?;
 
     let py_ts_utc = chrono_to_py_datetime(py, &request_ts_utc.with_timezone(&zero_offset), &tz_utc)?;
     let py_ts_local = chrono_to_py_datetime(py, &request_ts_local, &tz_utc)?;
@@ -176,51 +177,72 @@ pub fn handle_http_request(
     }
     http_environ.set_item("zato.http.remote_addr", &remote_addr)?;
 
-    let worker_store = server.getattr("worker_store")?;
-    let dispatcher = worker_store.getattr("request_dispatcher")?;
+    let config_manager = server.getattr("config_manager")?;
+    let dispatcher = config_manager.getattr("request_dispatcher")?;
 
     let payload_result = dispatcher.call_method1(
         "dispatch",
-        (&cid, &py_ts_utc, http_environ, &worker_store, &user_agent, &remote_addr),
+        (&cid, &py_ts_utc, http_environ, &config_manager, &user_agent, &remote_addr),
     );
 
-    let payload_bytes: Py<PyBytes> = match &payload_result {
-        Ok(payload) => {
-            if payload.is_none() {
-                PyBytes::new(py, b"").unbind()
-            } else if payload.is_instance_of::<PyBytes>() {
-                payload.extract::<Py<PyBytes>>()?
-            } else if payload.is_instance_of::<PyString>() {
-                let text: String = payload.extract()?;
-                PyBytes::new(py, text.as_bytes()).unbind()
-            } else {
-                payload.call_method1("encode", ("utf-8",))?.extract::<Py<PyBytes>>()?
+    // Check whether the dispatch returned a streaming iterator or a regular payload ..
+    let is_streaming = match &payload_result {
+        Ok(payload) => payload.hasattr(intern!(py, "__next__"))?,
+        Err(_) => false,
+    };
+
+    let dispatch_had_error = payload_result.is_err();
+
+    // .. for streaming responses, pass the iterator object through as-is ..
+    let payload_obj: Py<PyAny> = if is_streaming {
+        payload_result?.unbind()
+    } else {
+        // .. for regular responses, convert to PyBytes.
+        let payload_bytes: Py<PyBytes> = match &payload_result {
+            Ok(payload) => {
+                if payload.is_none() {
+                    PyBytes::new(py, b"").unbind()
+                } else if payload.is_instance_of::<PyBytes>() {
+                    payload.extract::<Py<PyBytes>>()?
+                } else if payload.is_instance_of::<PyString>() {
+                    let text: String = payload.extract()?;
+                    PyBytes::new(py, text.as_bytes()).unbind()
+                } else {
+                    payload.call_method1("encode", ("utf-8",))?.extract::<Py<PyBytes>>()?
+                }
             }
-        }
-        Err(err) => {
-            let traceback = err.traceback(py).map_or_else(String::new, |trace| {
-                trace.format().unwrap_or_default()
-            });
-            let error_msg = format!("`{cid}` Exception caught `{err}{traceback}`");
+            Err(err) => {
+                let traceback = err
+                    .traceback(py)
+                    .map_or_else(String::new, |trace| trace.format().unwrap_or_default());
+                let error_msg = format!("`{cid}` Exception caught `{err}{traceback}`");
 
-            let logger = py.import("logging")?.call_method1("getLogger", ("zato_rest",))?;
-            logger.call_method1("error", (&error_msg,))?;
+                let logger = py.import("logging")?.call_method1("getLogger", ("zato_rest",))?;
+                logger.call_method1("error", (&error_msg,))?;
 
-            http_environ.set_item("zato.http.response.status", "500 Internal Server Error")?;
+                http_environ.set_item("zato.http.response.status", "500 Internal Server Error")?;
 
-            let return_tracebacks: bool = server.getattr("return_tracebacks")?.extract()?;
-            let payload_str = if return_tracebacks {
-                error_msg
-            } else {
-                server.getattr("default_error_message")?.extract()?
-            };
-            PyBytes::new(py, payload_str.as_bytes()).unbind()
-        }
+                let return_tracebacks: bool = server.getattr("return_tracebacks")?.extract()?;
+                let payload_str = if return_tracebacks {
+                    error_msg
+                } else {
+                    server.getattr("default_error_message")?.extract()?
+                };
+                PyBytes::new(py, payload_str.as_bytes()).unbind()
+            }
+        };
+        payload_bytes.into_any()
     };
 
     let channel_item = http_environ.get_item("zato.channel_item")?;
     let channel_name: String = channel_item
+        .as_ref()
         .and_then(|chan_item| chan_item.call_method1("get", ("name", "-")).ok())
+        .map_or_else(|| Ok("-".to_owned()), |val| val.extract())?;
+
+    let service_name: String = channel_item
+        .as_ref()
+        .and_then(|chan_item| chan_item.call_method1("get", ("service_name", "-")).ok())
         .map_or_else(|| Ok("-".to_owned()), |val| val.extract())?;
 
     let status: String = http_environ
@@ -238,9 +260,16 @@ pub fn handle_http_request(
     }
 
     let status_code: &str = status.split_whitespace().next().map_or("200", |code| code);
-    let response_size: usize = payload_bytes.bind(py).as_bytes().len();
 
-    let path_info: String = http_environ.get_item("PATH_INFO")?
+    // Streaming responses have unknown size at this point ..
+    let response_size: usize = if is_streaming {
+        0
+    } else {
+        payload_obj.bind(py).cast::<PyBytes>().map_or(0, |bytes| bytes.as_bytes().len())
+    };
+
+    let path_info: String = http_environ
+        .get_item("PATH_INFO")?
         .map_or_else(|| Ok(String::new()), |val| val.extract())?;
 
     if cached.needs_access_log {
@@ -252,16 +281,19 @@ pub fn handle_http_request(
         if should_log {
             let access_now = Utc::now();
             let access_delta = access_now - request_ts_utc;
-            let resp_time = format!("{}.{:06}",
+            let resp_time = format!(
+                "{}.{:06}",
                 access_delta.num_seconds(),
                 (access_delta.num_microseconds().unwrap_or(0) % 1_000_000).unsigned_abs(),
             );
 
             let req_ts_str = request_ts_local.format("%d/%b/%Y:%H:%M:%S %z").to_string();
 
-            let method: String = http_environ.get_item("REQUEST_METHOD")?
+            let method: String = http_environ
+                .get_item("REQUEST_METHOD")?
                 .map_or_else(|| Ok(String::new()), |val| val.extract())?;
-            let http_version: String = http_environ.get_item("SERVER_PROTOCOL")?
+            let http_version: String = http_environ
+                .get_item("SERVER_PROTOCOL")?
                 .map_or_else(|| Ok(String::new()), |val| val.extract())?;
 
             log_access(&AccessLogEntry {
@@ -285,17 +317,42 @@ pub fn handle_http_request(
 
     let has_prometheus: bool = server.getattr("has_prometheus")?.extract()?;
     if has_prometheus {
-        let prom_mod = py.import("zato.server.base.parallel.http")?;
-        let counter = prom_mod.getattr("zato_http_requests_total")?;
-        let hist = prom_mod.getattr("zato_http_request_duration_seconds")?;
+        let prom_mod = py.import("zato.server.metrics")?;
+        let counter = prom_mod.getattr("zato_rest_channel_requests_total")?;
+        let hist = prom_mod.getattr("zato_rest_channel_request_duration_seconds")?;
         let response_time_secs = delta.num_milliseconds() as f64 / 1000.0;
+
+        let get_status_code_class = prom_mod.getattr("get_status_code_class")?;
+        let status_class: String = get_status_code_class.call1((status_code,))?.extract()?;
+
+        let get_error_source = prom_mod.getattr("get_error_source_from_status_class")?;
+        let error_source: String = get_error_source.call1((&status_class,))?.extract()?;
+
         let labels_kwargs = PyDict::new(py);
         labels_kwargs.set_item("channel_name", &channel_name)?;
-        labels_kwargs.set_item("status_code", status_code)?;
+        labels_kwargs.set_item("status_code", &status_class)?;
+        labels_kwargs.set_item("error_source", &error_source)?;
         counter.call_method("labels", (), Some(&labels_kwargs))?.call_method0("inc")?;
+
         let hist_kwargs = PyDict::new(py);
         hist_kwargs.set_item("channel_name", &channel_name)?;
-        hist.call_method("labels", (), Some(&hist_kwargs))?.call_method1("observe", (response_time_secs,))?;
+        hist.call_method("labels", (), Some(&hist_kwargs))?
+            .call_method1("observe", (response_time_secs,))?;
+
+        let svc_counter = prom_mod.getattr("zato_service_invocations_total")?;
+        let svc_hist = prom_mod.getattr("zato_service_duration_seconds")?;
+        let outcome = if dispatch_had_error { "error" } else { "ok" };
+
+        let svc_labels = PyDict::new(py);
+        svc_labels.set_item("service_name", &service_name)?;
+        svc_labels.set_item("outcome", outcome)?;
+        svc_counter.call_method("labels", (), Some(&svc_labels))?.call_method0("inc")?;
+
+        let svc_hist_labels = PyDict::new(py);
+        svc_hist_labels.set_item("service_name", &service_name)?;
+        svc_hist
+            .call_method("labels", (), Some(&svc_hist_labels))?
+            .call_method1("observe", (response_time_secs,))?;
     }
 
     let rest_log_ignore_obj = server.getattr("rest_log_ignore")?;
@@ -306,7 +363,8 @@ pub fn handle_http_request(
         }
     }
 
-    let should_log_rest = !rest_log_ignore.iter().any(|prefix| path_info.starts_with(prefix));
+    let is_internal_invoke = channel_name == "zato.api.invoke" && path_info.starts_with("/zato");
+    let should_log_rest = !is_internal_invoke && !rest_log_ignore.iter().any(|prefix| path_info.starts_with(prefix));
     if should_log_rest {
         let delta_sec = delta.num_seconds();
         #[expect(clippy::as_conversions, reason = "modulo 1_000_000 guarantees the result fits in i32")]
@@ -321,9 +379,19 @@ pub fn handle_http_request(
         });
     }
 
-    Ok(PyTuple::new(py, &[
-        PyString::new(py, &status).into_any(),
-        final_headers.into_any(),
-        payload_bytes.into_bound(py).into_any(),
-    ])?.unbind())
+    {
+        let prom_mod = py.import("zato.server.metrics")?;
+        let in_flight = prom_mod.getattr("zato_server_requests_in_flight")?;
+        in_flight.call_method0("dec")?;
+    }
+
+    Ok(PyTuple::new(
+        py,
+        &[
+            PyString::new(py, &status).into_any(),
+            final_headers.into_any(),
+            payload_obj.into_bound(py).into_any(),
+        ],
+    )?
+    .unbind())
 }

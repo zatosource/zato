@@ -1,0 +1,360 @@
+# eClinicalWorks - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A04 - Outpatient registration at family medicine practice
+
+https://www.eclinicalworks.com/resources/hl7-interface-specifications/
+
+```
+MSH|^~\&|ECWEHR|UNC_REX^2.16.840.1.113883.3.1276^^NPI&1234567890|UNCREX|UNC_REX|UNCREX||ADT^A04^ADT_A01|ECW20260401083012001|P|2.5.1|||AL|NE||ASCII|||
+EVN|A04|20260401083012
+PID|1||MRN64503329^^^UNCREX^MR~334728145^^^USSSA^SS||HOYLE^WINIFRED^ELAINE^^Mr.||19920804|F||2054-5^Black or African American^CDCREC|4500 OLD WAKE FOREST RD^^LEXINGTON^NC^27292^US^H||^PRN^PH^^1^984^8411831^NET^Internet^bernice.bumgarner@example.com|||M^Married^HL70002||||||||N^Not Hispanic^HL70189
+PD1||||1162723885^Ingram^Diana^J^^MD^^^NPI
+PV1|1|O|TRIAD_FAM^^^UNCREX^^^^3|R|||NOKON^Okonkwo^Nina^U^^MD^^^NPI|NOKON^Okonkwo^Nina^U^^MD^^^NPI||FAM|||||||NOKON^Okonkwo^Nina^U^^MD^^^NPI|S||||||||||||||||||||||||||20260401083012
+IN1|1|BCBS001^Blue Cross Blue Shield of NC|AETNA002|AETNA HEALTH OF NC|151 FARMINGTON AVE^^RALEIGH^NC^27601^US|^PRN^PH^^1^919^7651234|GRP440221|||TRIAD_MFG_CO||20250101|||Pettigrew^Lamont^E|HONEYCUTT|19780315|20001026||||||||||||||||YKQ443556001||||||M
+GT1|1||Whitley^Lorenzo^Owen^^Mr.||5508 OLEANDER DR^^GREENSBORO^NC^27410^US|^PRN^PH^^1^252^3253832||19780315|M||SEL
+```
+
+---
+
+## 2. ADT^A01 - Inpatient admission from ambulatory referral
+
+https://www.healthit.gov/test-method/transitions-care#ccds
+
+```
+MSH|^~\&|ECW|CAPE_FEAR^2.16.840.1.113883.3.10101^^NPI&9876543210|CAPEFEAR|CAPE_FEAR|CAPEFEAR||ADT^A01^ADT_A01|ECW20260412141500042|P|2.5.1|||AL|NE
+EVN|A01|20260412141500
+PID|1||MRN44259785^^^CAPEFEAR^MR||NORWOOD^QUINTON^GORDON^^Mrs.||19620914|M||2106-3^White^CDCREC|509 HAYWOOD RD^^MOORESVILLE^NC^28115^US^H||^PRN^PH^^1^336^5151633^NET^Internet^hope.funderburk@example.com|||W^Widowed^HL70002||||||||N^Not Hispanic^HL70189
+PV1|1|I|MED4E^401^A^CAPEFEAR||||JDELA^Delacruz^Julian^M^^MD^^^NPI|JDELA^Delacruz^Julian^M^^MD^^^NPI||MED|||A|||1738495621^Okonkwo^Ian^K^^MD^^^NPI|I||VN20260410013^Medicare^HL70064|||||||||||||||||||||||||||20260412141500
+DG1|1||J18.9^Pneumonia, unspecified organism^I10||20260412|A
+IN1|1|MCR001^Medicare|HUMANA005|HUMANA HEALTH OF NC|500 W MAIN ST^^LOUISVILLE^KY^40202^US|^PRN^PH^^1^800^6337227|||||||||||Honeycutt^Candace^E|19850825|820 MERRIMON AVE|803 Magnolia Ct^^Raleigh^NC^27609^US||||||||||||||||GRP51365||||||F
+```
+
+---
+
+## 3. ADT^A08 - Patient demographics update
+
+https://www.eclinicalworks.com/resources/hl7-interface-specifications/
+
+```
+MSH|^~\&|ECLINICALWORKS|CONE_HEALTH^2.16.840.1.113883.3.9201^^NPI&2345678901|CONEHLTH|CONE_HEALTH|CONEHLTH||ADT^A08^ADT_A01|ECW20260418091045007|P|2.5.1|||AL|NE
+EVN|A08|20260418091045
+PID|1||MRN74321436^^^CONEHLTH^MR~242922647^^^USSSA^SS||SHUFORD^PHYLLIS^KAY^^Ms.||19550519|F||2106-3^White^CDCREC|1729 TUNNEL RD^^CARY^NC^27511^US^H|4500 OLD WAKE FOREST RD^^HIGH POINT^NC^27260^US^M|^PRN^PH^^1^252^4671827^PRN^CP^^1^704^5559988~^NET^Internet^tanya.griggs@example.com|||S^Single^HL70002||||||2135-2^Hispanic or Latino^HL70189
+PD1||||1090893778^Ogburn^Evan^V^^MD^^^NPI
+PV1|1|O|CHLT_IM^^^CONEHLTH^^^^1|R|||KVAND^Vanderburg^Kent^V^^MD^^^NPI|KVAND^Vanderburg^Kent^V^^MD^^^NPI||IM|||||||KVAND^Vanderburg^Kent^V^^MD^^^NPI|S||||||||||||||||||||||||||20260418091045
+IN1|1|AETNA001^Aetna|CIGNA003|CIGNA HEALTHCARE OF NC|900 COTTAGE GROVE RD^^BLOOMFIELD^NC^27601^US|^PRN^PH^^1^800^8722862|GRPNC771002|||CHARLOTTE_IM_ASSOC||20260101|||Barefoot^Shanice^I|CHAVIS|19900722|19470106||||||||||||||||W990887321||||||F
+```
+
+---
+
+## 4. ORM^O01 - Lab order for comprehensive metabolic panel
+
+https://www.eclinicalworks.com/resources/hl7-interface-specifications/
+
+```
+MSH|^~\&|ECWEHR|UNC_REX^2.16.840.1.113883.3.1276^^NPI&3456789012|UNCREX|UNC_REX|UNCREX||ORM^O01^ORM_O01|ECW20260422103022018|P|2.5.1|||AL|NE
+PID|1||MRN87165223^^^UNCREX^MR~309874116^^^USSSA^SS||BROYHILL^XAVIER^CARL^^Mr.||19461115|M||2106-3^White^CDCREC|1844 WEAVER DAIRY RD^^GREENVILLE^NC^27834^US^H||^PRN^PH^^1^704^8174355|||M^Married^HL70002||||||||N^Not Hispanic^HL70189
+PV1|1|O|PNHRST^^^UNCREX^^^^1|R|||DOGBU^Ogburn^Derek^C^^MD^^^NPI|DOGBU^Ogburn^Derek^C^^MD^^^NPI||IM||||||||S||||||||||||||||||||||||||20260422103022
+IN1|1|MCR001^Medicare|MEDICAID001|NC MEDICAID|2501 MAIL SERVICE CENTER^^RALEIGH^NC^27699^US|^PRN^PH^^1^800^6337227|||||||||||||5010 SOUTH BLVD|19550903|289 Linden Rd^^Southern Pines^NC^28387^US||||||||||||||||1TH5WA3MK21||||||M
+ORC|NW|ORD2026042201^ECW|||||^^^20260422103022^^R||20260422103022|KCLON^Cloninger^Kendra^^RN|1843484743^OGBURN^Owen^V^^MD^^^NPI|||20260422103022||PINEHURST_MED_GRP^^^NPI&3456789012|UNCREX_PHARM^UNC Rex Healthcare Pharmacy^PH^UNCREX^1^980^9736891|
+OBR|1|ORD2026042201^ECW||80053^Comprehensive metabolic panel^CPT4|||20260422103022||||N||^^^20260422103022^^R|20260422103022|119297000^Blood specimen^SCT|1603023148^CARRAWAY^Linus^P^^MD^^^NPI||||||20260422103022|||F
+```
+
+---
+
+## 5. ORU^R01 - CBC results from reference lab
+
+https://www.eclinicalworks.com/resources/hl7-interface-specifications/
+
+```
+MSH|^~\&|LABCORP|WAKEMED_RAL|WAKEMED|WAKEMED_RAL^2.16.840.1.113883.3.4301^^NPI&4567890123|WAKEMED||ORU^R01^ORU_R01|LC20260425154500331|P|2.5.1|||AL|NE
+PID|1||MRN94063933^^^WAKEMED^MR||TATUM^YVETTE^CORA||19520406|F||2054-5^Black or African American^CDCREC|666 FRIENDLY AVE^^FAYETTEVILLE^NC^28301^US^H||^PRN^PH^^1^980^6918098|||S^Single^HL70002||||||||N^Not Hispanic^HL70189
+PV1|1|O|DURPED^^^WAKEMED^^^^1|R|||HKILP^Kilpatrick^Hugo^K^^MD^^^NPI||||||||||S
+ORC|RE|ORD2026042302^ECW|RES2026042501^LABCORP|||||||||MHARG^Hargrove^Marshall^M^^MD^^^NPI
+OBR|1|ORD2026042302^ECW|RES2026042501^LABCORP|85025^Complete blood count with differential^CPT4|||20260423120000||||N||||119297000^Blood specimen^SCT|1733457440^Plummer^Hugo^L^^MD^^^NPI||||||20260425154500|||F
+OBX|1|NM|6690-2^Leukocytes [#/volume] in Blood^LN||7.2|10*3/uL^thousand per microliter^UCUM|4.5-13.5|N|||F|||20260425150000
+OBX|2|NM|789-8^Erythrocytes [#/volume] in Blood^LN||4.85|10*6/uL^million per microliter^UCUM|4.00-5.20|N|||F|||20260425150000
+OBX|3|NM|718-7^Hemoglobin [Mass/volume] in Blood^LN||13.1|g/dL^grams per deciliter^UCUM|11.5-15.5|N|||F|||20260425150000
+OBX|4|NM|4544-3^Hematocrit [Volume Fraction] of Blood^LN||39.2|%^percent^UCUM|35.0-45.0|N|||F|||20260425150000
+OBX|5|NM|787-2^MCV [Entitic volume]^LN||80.8|fL^femtoliter^UCUM|75.0-87.0|N|||F|||20260425150000
+OBX|6|NM|785-6^MCH [Entitic mass]^LN||27.0|pg^picograms^UCUM|24.0-30.0|N|||F|||20260425150000
+OBX|7|NM|786-4^MCHC [Mass/volume]^LN||33.4|g/dL^grams per deciliter^UCUM|31.0-37.0|N|||F|||20260425150000
+OBX|8|NM|777-3^Platelets [#/volume] in Blood^LN||265|10*3/uL^thousand per microliter^UCUM|150-400|N|||F|||20260425150000
+OBX|9|NM|770-8^Neutrophils/100 leukocytes in Blood^LN||55.0|%^percent^UCUM|40.0-74.0|N|||F|||20260425150000
+OBX|10|NM|736-9^Lymphocytes/100 leukocytes in Blood^LN||35.0|%^percent^UCUM|19.0-53.0|N|||F|||20260425150000
+OBX|11|NM|5905-5^Monocytes/100 leukocytes in Blood^LN||7.0|%^percent^UCUM|3.0-10.0|N|||F|||20260425150000
+OBX|12|NM|713-8^Eosinophils/100 leukocytes in Blood^LN||2.5|%^percent^UCUM|0.0-5.0|N|||F|||20260425150000
+OBX|13|NM|706-2^Basophils/100 leukocytes in Blood^LN||0.5|%^percent^UCUM|0.0-2.0|N|||F|||20260425150000
+```
+
+---
+
+## 6. SIU^S12 - New appointment scheduled for well-woman visit
+
+https://www.eclinicalworks.com/resources/hl7-interface-specifications/
+
+```
+MSH|^~\&|ECW|WAKEMED_RAL^2.16.840.1.113883.3.4301^^NPI&5678901234|WAKEMED|WAKEMED_RAL|WAKEMED||SIU^S12^SIU_S12|ECW20260428094500055|P|2.5.1|||AL|NE
+SCH|APT88340001^ECW||||||ROUTINE^Routine^HL70276|WELLWOMAN^Well Woman Exam^LOCAL|30^MIN|MIN^^ISO+|||||1451979047^Truesdale^Joyce^D^^MD^^^NPI|^PRN^PH^^1^984^9759918|1451979047^Truesdale^Joyce^D^^MD^^^NPI|1190 MARKET ST^^JACKSONVILLE^NC^28540^910^5557890|FWOMEN^^^FAYETTEVILLE_WOMENS_HLTH^^^^1||BOOKED^Booked^HL70278
+PID|1||MRN14795988^^^WAKEMED^MR||YANCEY^VIVIAN^GAIL||19410826|F||2054-5^Black or African American^CDCREC|1405 BROOKWOOD DR^^GOLDSBORO^NC^27530^US^H||^PRN^PH^^1^984^3829131^PRN^CP^^1^910^5558877|||S^Single^HL70002||||||||N^Not Hispanic^HL70189
+PV1|1|O|FWOMEN^^^WAKEMED^^^^1|R|||KGATH^Gathings^Kent^L^^MD^^^NPI||||||||||S
+RGS|1||FWOMEN
+AIS|1||WELLWOMAN^Well Woman Exam^LOCAL|20260505093000|||30|MIN^^ISO+
+AIG|1||1451979047^Truesdale^Joyce^D^^MD^^^NPI
+AIL|1||FWOMEN^Exam Room 3^FAYETTEVILLE_WOMENS_HLTH
+AIP|1||1439698905^Walser^Nina^E^^MD^^^NPI
+```
+
+---
+
+## 7. VXU^V04 - Immunization administration report to NC-IIS
+
+https://www.immunize.nc.gov/providers/ncir.htm
+
+```
+MSH|^~\&|ECWEHR|MISSION_HOSP^2.16.840.1.113883.3.8801^^NPI&6789012345|MISSIONH|MISSION_HOSP|MISSIONH||VXU^V04^VXU_V04|ECW20260430111500009|P|2.5.1|||ER|AL||||||Z22^CDCPHINVS
+PID|1||MRN82277380^^^MISSIONH^MR||BLEVINS^STUART^HUGH||19870912|M||2106-3^White^CDCREC|1801 SARDIS RD N^^ASHEVILLE^NC^28801^US^H||^PRN^PH^^1^980^8349935|||S||||||||N^Not Hispanic^HL70189
+PD1||||1093707581^Lattimore^Ingrid^C^^MD^^^NPI|||||||02^Reminder/Recall - any method^HL70215|N^No^HL70136||A^Active^HL70441
+NK1|1|WHITLEY^QUINCY^W|FTH^Father^HL70063|2900 SELWYN AVE^^WINSTON SALEM^NC^27106^US|^PRN^PH^^1^919^9641681
+ORC|RE|ORD2026043001^ECW||||||||||COGBU^Ogburn^Curtis^Q^^MD^^^NPI|||20260430111500||MISSIONH_PHARM^Mission Hospital Asheville Pharmacy^^MISSIONH
+RXA|0|1|20260430111500|20260430111500|141^Influenza, seasonal, injectable^CVX|0.25|mL^^UCUM||00^New immunization record^NIP001|1695648890^Okonkwo^Diana||||||U3456AA^20271001^BKR|||CP^Completion^HL70322
+RXR|C28161^Intramuscular^NCIT|LA^Left Arm^HL70163
+OBX|1|CE|64994-7^Vaccine funding program eligibility category^LN||V05^VFC eligible - Medicaid/Medicaid Managed Care^HL70064||||||F
+OBX|2|CE|30956-7^Vaccine type^LN||141^Influenza, seasonal, injectable^CVX||||||F
+OBX|3|TS|29768-9^Date vaccine information statement published^LN||20250815||||||F
+OBX|4|TS|29769-7^Date vaccine information statement presented^LN||20260430||||||F
+```
+
+---
+
+## 8. RDE^O11 - Pharmacy prescription for metformin
+
+https://www.eclinicalworks.com/resources/hl7-interface-specifications/
+
+```
+MSH|^~\&|ECWEHR|NOVANT_FMC^2.16.840.1.113883.3.7801^^NPI&7890123456|NOVANTFMC|NOVANT_FMC|NOVANTFMC||RDE^O11^RDE_O11|ECW20260502140030012|P|2.5.1|||AL|NE
+PID|1||MRN72833147^^^NOVANTFMC^MR||CALDWELL^ESTELLE^NORA^^Mr.||19840422|F||2106-3^White^CDCREC|3021 WENDOVER AVE^^GREENVILLE^NC^27834^US^H||^PRN^PH^^1^984^5676623|||M^Married^HL70002||||||||N^Not Hispanic^HL70189
+PV1|1|O|HCKRY^^^NOVANTFMC^^^^1|R|||JBOST^Bostwick^Joyce^F^^MD^^^NPI||||||||||S
+AL1|1|DA|6809^Sulfa^RXNORM|MO^Moderate^HL70128|Rash
+ORC|NW|RX2026050201^ECW|||||^^^20260502^^R||20260502140030||1430620479^Jernigan^Derek^L^^MD^^^NPI|||20260502140030||HICKORY_INT_MED^^^NPI&7890123456
+RXE|^^^20260502140030^^R|6809^Metformin HCl 500 mg tablet^RXNORM|1||TAB^Tablet^HL70292|E1^Take one tablet by mouth twice daily with meals^LOCAL|||90|TAB^Tablet^HL70292|3||||||||||||||||||BID^Twice daily^HL70335
+RXR|PO^Oral^HL70162
+```
+
+---
+
+## 9. ORU^R01 - Lipid panel results with abnormal flag
+
+https://www.eclinicalworks.com/resources/hl7-interface-specifications/
+
+```
+MSH|^~\&|QUEST|ATRIUM_CMC|ATRIUMCMC|ATRIUM_CMC^2.16.840.1.113883.3.5201^^NPI&8901234567|ATRIUMCMC||ORU^R01^ORU_R01|QD20260505162200718|P|2.5.1|||AL|NE
+PID|1||MRN37411224^^^ATRIUMCMC^MR||RICHARDSON^PRESTON^GRANT||19751107|M||2054-5^Black or African American^CDCREC|1405 BROOKWOOD DR^^CHARLOTTE^NC^28205^US^H||^PRN^PH^^1^336^8227113|||D^Divorced^HL70002||||||||N^Not Hispanic^HL70189
+PV1|1|O|WILM^^^ATRIUMCMC^^^^1|R|||EGATH^Gathings^Evan^T^^MD^^^NPI||||||||||S
+ORC|RE|ORD2026050301^ECW|RES2026050501^QUEST|||||||||OSTEA^Steadman^Owen^N^^MD^^^NPI
+OBR|1|ORD2026050301^ECW|RES2026050501^QUEST|80061^Lipid panel^CPT4|||20260503093000||||N||||119297000^Blood specimen^SCT|1624744987^Blackmon^Evan^D^^MD^^^NPI||||||20260505162200|||F
+OBX|1|NM|2093-3^Cholesterol [Mass/volume] in Serum or Plasma^LN||248|mg/dL^milligrams per deciliter^UCUM|<200|HH|||F|||20260505160000
+OBX|2|NM|2571-8^Triglycerides [Mass/volume] in Serum or Plasma^LN||195|mg/dL^milligrams per deciliter^UCUM|<150|H|||F|||20260505160000
+OBX|3|NM|2085-9^HDL Cholesterol [Mass/volume] in Serum or Plasma^LN||42|mg/dL^milligrams per deciliter^UCUM|>40|N|||F|||20260505160000
+OBX|4|NM|13457-7^LDL Cholesterol [Mass/volume] in Serum or Plasma^LN||167|mg/dL^milligrams per deciliter^UCUM|<100|HH|||F|||20260505160000
+OBX|5|NM|13458-5^VLDL Cholesterol [Mass/volume] in Serum or Plasma^LN||39|mg/dL^milligrams per deciliter^UCUM|5-40|N|||F|||20260505160000
+OBX|6|NM|9830-1^Cholesterol.total/Cholesterol in HDL [Mass Ratio] in Serum or Plasma^LN||5.9||<5.0|H|||F|||20260505160000
+```
+
+---
+
+## 10. MDM^T02 - Clinical document with embedded PDF (base64 encapsulated data)
+
+https://www.eclinicalworks.com/resources/hl7-interface-specifications/
+
+```
+MSH|^~\&|ECWEHR|IREDELL_MEM^2.16.840.1.113883.3.14501^^NPI&9012345678|IREDELLMH|IREDELL_MEM|IREDELLMH||MDM^T02^MDM_T02|ECW20260507101200003|P|2.5.1|||AL|NE
+EVN|T02|20260507101200
+PID|1||MRN88405540^^^IREDELLMH^MR||BAREFOOT^MAXINE^FAYE^^Mr.||19720211|F||2028-9^Asian^CDCREC|820 MERRIMON AVE^^GREENSBORO^NC^27401^US^H||^PRN^PH^^1^910^4102590|||M^Married^HL70002||||||||N^Not Hispanic^HL70189
+PV1|1|O|CARY_ORT^^^IREDELLMH^^^^1|R|||PLATT^Lattimore^Pierce^J^^MD^^^NPI||||||||||S
+TXA|1|HP^History and Physical^HL70270|TX^Text^HL70191|20260507||1843898436^Blackmon^Evan^D^^MD^^^NPI||||||DOC88001^ECW||AU^Authenticated^HL70271||||||1843898436^Blackmon^Evan^D^^MD^^^NPI
+OBX|1|ED|18842-5^Discharge summary^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA2MTIgNzkyXQovQ29udGVudHMgNCAwIFIKL1Jlc291cmNlcyA8PAovRm9udCA8PAovRjEgNSAwIFIKPj4KPj4KPj4KZW5kb2JqCjQgMCBvYmoKPDwKL0xlbmd0aCA0NAo+PgpzdHJlYW0KQlQKL0YxIDEyIFRmCjEwMCA3MDAgVGQKKEhpc3RvcnkgYW5kIFBoeXNpY2FsKSBUago=||||||F
+```
+
+---
+
+## 11. ORM^O01 - Radiology order for chest X-ray
+
+https://www.eclinicalworks.com/resources/hl7-interface-specifications/
+
+```
+MSH|^~\&|ECW|MISSION_HOSP^2.16.840.1.113883.3.8801^^NPI&1122334455|MISSIONH|MISSION_HOSP|MISSIONH||ORM^O01^ORM_O01|ECW20260508083000027|P|2.5.1|||AL|NE
+PID|1||MRN45147977^^^MISSIONH^MR||BUMGARNER^ULYSSES^OWEN^^Mr.||19811127|M||2106-3^White^CDCREC|3715 LAWNDALE DR^^CHARLOTTE^NC^28202^US^H||^PRN^PH^^1^910^9987507|||S^Single^HL70002||||||||N^Not Hispanic^HL70189
+PV1|1|O|SNDHL^^^MISSIONH^^^^1|U|||IHOLL^Hollowell^Ian^W^^MD^^^NPI|IHOLL^Hollowell^Ian^W^^MD^^^NPI||UC||||||||S||||||||||||||||||||||||||20260508083000
+IN1|1|UHCNC001^UnitedHealthcare of NC|WELLPATH007|WELLPATH OF CAROLINA|2400 YORKMONT RD^^CHARLOTTE^NC^28217^US|^PRN^PH^^1^800^3288447|GRP220198|||SANDHILLS_URGENT||20260101|||Holshouser^Vernon^J|HELMS|19920810|19921103||||||||||||||||UHC889432101||||||M
+ORC|NW|ORD2026050801^ECW|||||^^^20260508083000^^S||20260508083000||1896525559^Plummer^Marshall^H^^MD^^^NPI|||20260508083000||SANDHILLS_URGENT^^^NPI&1122334455
+OBR|1|ORD2026050801^ECW||71046^Radiologic examination, chest, 2 views^CPT4|||20260508083000||||N||^^^20260508083000^^S||CHEST|1249497585^Mosteller^Pierce^H^^MD^^^NPI|||||||20260508083000|||F|||||||20260508083000
+DG1|1||R05.9^Cough, unspecified^I10||20260508|A
+```
+
+---
+
+## 12. ORU^R01 - Urinalysis results
+
+https://www.eclinicalworks.com/resources/hl7-interface-specifications/
+
+```
+MSH|^~\&|LABCORP|ATRIUM_CMC|ATRIUMCMC|ATRIUM_CMC^2.16.840.1.113883.3.5201^^NPI&2233445566|ATRIUMCMC||ORU^R01^ORU_R01|LC20260509130000442|P|2.5.1|||AL|NE
+PID|1||MRN71702366^^^ATRIUMCMC^MR||FRYE^PHYLLIS^FAYE||19610825|F||2106-3^White^CDCREC|7331 LIBERTY HALL DR^^SALISBURY^NC^28144^US^H||^PRN^PH^^1^910^6402011|||M^Married^HL70002||||||||N^Not Hispanic^HL70189
+PV1|1|O|GAST^^^ATRIUMCMC^^^^1|R|||NMOST^Mosteller^Nigel^V^^MD^^^NPI||||||||||S
+ORC|RE|ORD2026050701^ECW|RES2026050901^LABCORP|||||||||KELLE^Ellerbe^Kent^J^^MD^^^NPI
+OBR|1|ORD2026050701^ECW|RES2026050901^LABCORP|81003^Urinalysis, automated, without microscopy^CPT4|||20260507100000||||N||||119339001^Urine specimen^SCT|1387678895^Okonkwo^Francis^U^^MD^^^NPI||||||20260509130000|||F
+OBX|1|ST|5778-6^Color of Urine^LN||Yellow||Yellow|N|||F|||20260509125500
+OBX|2|ST|5767-9^Appearance of Urine^LN||Clear||Clear|N|||F|||20260509125500
+OBX|3|NM|5811-5^Specific gravity of Urine by Test strip^LN||1.020||1.005-1.030|N|||F|||20260509125500
+OBX|4|NM|5803-2^pH of Urine by Test strip^LN||6.0||5.0-8.0|N|||F|||20260509125500
+OBX|5|ST|5804-0^Protein [Mass/volume] in Urine by Test strip^LN||Negative||Negative|N|||F|||20260509125500
+OBX|6|ST|5792-7^Glucose [Mass/volume] in Urine by Test strip^LN||Negative||Negative|N|||F|||20260509125500
+OBX|7|ST|5797-6^Ketones [Mass/volume] in Urine by Test strip^LN||Negative||Negative|N|||F|||20260509125500
+OBX|8|ST|5794-3^Hemoglobin [Presence] in Urine by Test strip^LN||Negative||Negative|N|||F|||20260509125500
+OBX|9|ST|5802-4^Nitrite [Presence] in Urine by Test strip^LN||Negative||Negative|N|||F|||20260509125500
+OBX|10|ST|5799-2^Leukocyte esterase [Presence] in Urine by Test strip^LN||Negative||Negative|N|||F|||20260509125500
+```
+
+---
+
+## 13. SIU^S12 - Follow-up appointment for diabetes management
+
+https://www.eclinicalworks.com/resources/hl7-interface-specifications/
+
+```
+MSH|^~\&|ECLINICALWORKS|VIDANT_MC^2.16.840.1.113883.3.6701^^NPI&3344556677|VIDANTMC|VIDANT_MC|VIDANTMC||SIU^S12^SIU_S12|ECW20260510081500033|P|2.5.1|||AL|NE
+SCH|APT88450012^ECW||||||FOLLOWUP^Follow-Up^HL70276|ENDO_FU^Endocrine Follow-Up^LOCAL|45^MIN|MIN^^ISO+|||||1433115581^Mosteller^Alicia^K^^MD^^^NPI|^PRN^PH^^1^984^9767078|1433115581^Mosteller^Alicia^K^^MD^^^NPI|7331 LIBERTY HALL DR^^ASHEVILLE^NC^28803^919^5554560|WKENDO^^^WAKE_ENDOCRINE^^^^1||BOOKED^Booked^HL70278
+PID|1||MRN13935129^^^VIDANTMC^MR||HOYLE^STUART^GRANT^^Mr.||19560417|M||2054-5^Black or African American^CDCREC|6700 FAIRVIEW RD^^ASHEVILLE^NC^28801^US^H||^PRN^PH^^1^910^8603109|||M^Married^HL70002||||||||N^Not Hispanic^HL70189
+PV1|1|O|WKENDO^^^VIDANTMC^^^^1|R|||HINGR^Ingram^Hugo^V^^MD^^^NPI||||||||||S
+RGS|1||WKENDO
+AIS|1||ENDO_FU^Endocrine Follow-Up^LOCAL|20260520140000|||45|MIN^^ISO+
+AIG|1||1433115581^Mosteller^Alicia^K^^MD^^^NPI
+AIL|1||WKENDO^Exam Room 7^WAKE_ENDOCRINE
+AIP|1||1185832023^Ogburn^Joyce^M^^MD^^^NPI
+```
+
+---
+
+## 14. ADT^A04 - Outpatient registration at pediatric practice
+
+https://www.eclinicalworks.com/resources/hl7-interface-specifications/
+
+```
+MSH|^~\&|ECW|NOVANT_PSB^2.16.840.1.113883.3.7802^^NPI&4455667788|NOVANTPSB|NOVANT_PSB|NOVANTPSB||ADT^A04^ADT_A01|ECW20260511100000019|P|2.5.1|||AL|NE
+EVN|A04|20260511100000
+PID|1||MRN63942629^^^NOVANTPSB^MR||VICK^PRESTON^CARL||20030723|M||2028-9^Asian^CDCREC|509 HAYWOOD RD^^NEW BERN^NC^28560^US^H||^PRN^PH^^1^828^8007631|||S^Single^HL70002||||||||N^Not Hispanic^HL70189
+PD1||||1257065409^Ravenscroft^Holly^N^^MD^^^NPI
+NK1|1|SIGMON^ELTON^R|MTH^Mother^HL70063|308 TIMBER RIDGE LN^^CHARLOTTE^NC^28262^US|^PRN^PH^^1^910^4827809
+NK1|2|SIGMON^ELTON^R|FTH^Father^HL70063|308 TIMBER RIDGE LN^^CHARLOTTE^NC^28262^US|^PRN^PH^^1^910^4827809
+PV1|1|O|MRSV_PED^^^NOVANTPSB^^^^1|R|||PJERN^Jernigan^Pierce^R^^MD^^^NPI|PJERN^Jernigan^Pierce^R^^MD^^^NPI||PED|||||||PJERN^Jernigan^Pierce^R^^MD^^^NPI|S||||||||||||||||||||||||||20260511100000
+IN1|1|MCD001^Medicaid|MEDICAID001|NC MEDICAID|2501 MAIL SERVICE CENTER^^RALEIGH^NC^27699^US|^PRN^PH^^1^919^8556014||||||20260101||||||20000708|3801 LAKE BOONE TRL|20190725|241 Brawley School Rd^^Mooresville^NC^28117^US||||||||||||||||MCD990234567||||||M
+```
+
+---
+
+## 15. ORU^R01 - HbA1c result
+
+https://www.eclinicalworks.com/resources/hl7-interface-specifications/
+
+```
+MSH|^~\&|QUEST|CAPE_FEAR|CAPEFEAR|CAPE_FEAR^2.16.840.1.113883.3.10101^^NPI&3344556677|CAPEFEAR||ORU^R01^ORU_R01|QD20260515110000891|P|2.5.1|||AL|NE
+PID|1||MRN92504617^^^CAPEFEAR^MR||SHUFORD^HAROLD^REID^^Mr.||19670604|M||2054-5^Black or African American^CDCREC|5010 SOUTH BLVD^^GREENSBORO^NC^27401^US^H||^PRN^PH^^1^910^8132259|||M^Married^HL70002||||||||N^Not Hispanic^HL70189
+PV1|1|O|WKENDO^^^CAPEFEAR^^^^1|R|||BHARG^Hargrove^Brent^S^^MD^^^NPI||||||||||S
+ORC|RE|ORD2026051201^ECW|RES2026051501^QUEST|||||||||HYARB^Yarborough^Hugo^T^^MD^^^NPI
+OBR|1|ORD2026051201^ECW|RES2026051501^QUEST|83036^Hemoglobin A1c^CPT4|||20260512080000||||N||||119297000^Blood specimen^SCT|1185832023^Ogburn^Joyce^M^^MD^^^NPI||||||20260515110000|||F
+OBX|1|NM|4548-4^Hemoglobin A1c/Hemoglobin.total in Blood^LN||7.8|%^percent^UCUM|<5.7|H|||F|||20260515105000
+OBX|2|NM|4549-2^Hemoglobin A1c/Hemoglobin.total in Blood by HPLC^LN||7.8|%^percent^UCUM|<5.7|H|||F|||20260515105000
+NTE|1||HbA1c 7.8% corresponds to estimated average glucose of 177 mg/dL. Target for most adults with diabetes is below 7.0%.
+```
+
+---
+
+## 16. VXU^V04 - Childhood immunization series (DTaP, IPV, Hep B)
+
+https://www.immunize.nc.gov/providers/ncir.htm
+
+```
+MSH|^~\&|ECW|CATAWBA_VAL^2.16.840.1.113883.3.12301^^NPI&4455667788|CATAWBAMC|CATAWBA_VAL|CATAWBAMC||VXU^V04^VXU_V04|ECW20260511103000041|P|2.5.1|||ER|AL||||||Z22^CDCPHINVS
+PID|1||MRN76841728^^^CATAWBAMC^MR||ELLER^FLORINE^HELEN||20020727|F||2028-9^Asian^CDCREC|3801 LAKE BOONE TRL^^CARY^NC^27511^US^H||^PRN^PH^^1^984^2943530|||S||||||||N^Not Hispanic^HL70189
+PD1||||1257065409^Ravenscroft^Holly^N^^MD^^^NPI|||||||02^Reminder/Recall - any method^HL70215|N^No^HL70136||A^Active^HL70441
+NK1|1|MAYNARD^TYRONE^V|MTH^Mother^HL70063|2900 SELWYN AVE^^LEXINGTON^NC^27292^US|^PRN^PH^^1^980^6119179
+ORC|RE|ORD2026051101^ECW||||||||||CCULB^Culbreth^Curtis^U^^MD^^^NPI|||20260511103000||CATAWBAMC_PHARM^Catawba Valley Medical Center Pharmacy^^CATAWBAMC
+RXA|0|1|20260511103000|20260511103000|20^DTaP^CVX|0.5|mL^^UCUM||00^New immunization record^NIP001|1704144452^Blackmon^Julian||||||V4567BB^20271201^SNF|||CP^Completion^HL70322
+RXR|C28161^Intramuscular^NCIT|RT^Right Thigh^HL70163
+OBX|1|CE|64994-7^Vaccine funding program eligibility category^LN||V02^VFC eligible - Medicaid/Medicaid Managed Care^HL70064||||||F
+ORC|RE|ORD2026051102^ECW||||||||||CCULB^Culbreth^Curtis^U^^MD^^^NPI|||20260511103000||CATAWBAMC_PHARM^Catawba Valley Medical Center Pharmacy^^CATAWBAMC
+RXA|0|1|20260511103000|20260511103000|10^IPV^CVX|0.5|mL^^UCUM||00^New immunization record^NIP001|1704144452^Blackmon^Julian||||||W8901CC^20270601^SNF|||CP^Completion^HL70322
+RXR|C28161^Intramuscular^NCIT|LA^Left Arm^HL70163
+OBX|1|CE|64994-7^Vaccine funding program eligibility category^LN||V02^VFC eligible - Medicaid/Medicaid Managed Care^HL70064||||||F
+ORC|RE|ORD2026051103^ECW||||||||||CCULB^Culbreth^Curtis^U^^MD^^^NPI|||20260511103000||CATAWBAMC_PHARM^Catawba Valley Medical Center Pharmacy^^CATAWBAMC
+RXA|0|1|20260511103000|20260511103000|08^Hep B, adolescent or pediatric^CVX|0.5|mL^^UCUM||00^New immunization record^NIP001|1704144452^Blackmon^Julian||||||X2345DD^20270901^MSD|||CP^Completion^HL70322
+RXR|C28161^Intramuscular^NCIT|RT^Right Thigh^HL70163
+OBX|1|CE|64994-7^Vaccine funding program eligibility category^LN||V02^VFC eligible - Medicaid/Medicaid Managed Care^HL70064||||||F
+```
+
+---
+
+## 17. ORU^R01 - Radiology report with embedded base64 image
+
+https://www.eclinicalworks.com/resources/hl7-interface-specifications/
+
+```
+MSH|^~\&|MOORE_REG_RAD|DUKE_UNIV_HOSP|DUKEHOSP|DUKE_UNIV_HOSP^2.16.840.1.113883.3.2611^^NPI&1122334455|DUKEHOSP||ORU^R01^ORU_R01|FH20260509141500088|P|2.5.1|||AL|NE
+PID|1||MRN35960170^^^DUKEHOSP^MR||PREVATTE^FLOYD^PHILLIP^^Mr.||19640726|M||2106-3^White^CDCREC|308 TIMBER RIDGE LN^^NEW BERN^NC^28560^US^H||^PRN^PH^^1^919^3037191|||S^Single^HL70002||||||||N^Not Hispanic^HL70189
+PV1|1|O|SNDHL^^^DUKEHOSP^^^^1|U|||ADELA^Delacruz^Alicia^E^^MD^^^NPI||||||||||S
+ORC|RE|ORD2026050801^ECW|RES2026050901^MOORE_REG_RAD|||||||||OFAIR^Faircloth^Odette^L^^MD^^^NPI
+OBR|1|ORD2026050801^ECW|RES2026050901^MOORE_REG_RAD|71046^Radiologic examination, chest, 2 views^CPT4|||20260508090000||||N||||CHEST|1249497585^Mosteller^Pierce^H^^MD^^^NPI|||||RAD|20260509141500|||F
+OBX|1|FT|18748-4^Diagnostic imaging study^LN||CHEST X-RAY, 2 VIEWS\.br\\.br\CLINICAL INDICATION: Cough\.br\\.br\FINDINGS:\.br\Heart size is normal. Mediastinal contours are unremarkable.\.br\Lungs are clear bilaterally. No focal consolidation, pleural\.br\effusion, or pneumothorax identified. Osseous structures are\.br\intact.\.br\\.br\IMPRESSION:\.br\Normal chest radiograph. No acute cardiopulmonary disease.||||||F|||20260509140000
+OBX|2|ED|18748-4^Diagnostic imaging study^LN|IMG001|^image^jpeg^Base64^/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wgARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAAB//EABUBAQEAAAAAAAAAAAAAAAAAAAAB/9oADAMBAAIQAxAAAAFUf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAQUCf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQMBAT8Bf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQIBAT8Bf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEABj8Cf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAT8hf//aAAwDAQACAAMAAAAQn//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQMBAT8Qf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQIBAT8Qf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAT8Qf//Z||||||F|||20260509140000
+```
+
+---
+
+## 18. ADT^A08 - Insurance update for patient at urgent care
+
+https://www.eclinicalworks.com/resources/hl7-interface-specifications/
+
+```
+MSH|^~\&|ECWEHR|CONE_HEALTH^2.16.840.1.113883.3.9201^^NPI&5566778899|CONEHLTH|CONE_HEALTH|CONEHLTH||ADT^A08^ADT_A01|ECW20260512143000014|P|2.5.1|||AL|NE
+EVN|A08|20260512143000
+PID|1||MRN88523601^^^CONEHLTH^MR~475257723^^^USSSA^SS||STRICKLAND^ROSALIND^BETH^^Ms.||19801221|F||2028-9^Asian^CDCREC|3021 WENDOVER AVE^^SHELBY^NC^28150^US^H||^PRN^PH^^1^336^3507762^PRN^CP^^1^919^5550099~^NET^Internet^daphne.lowery@example.com|||S^Single^HL70002||||||||N^Not Hispanic^HL70189
+PD1||||1274382895^Ogburn^Hugo^A^^MD^^^NPI
+PV1|1|O|TRIUC^^^CONEHLTH^^^^1|U|||NSTEA^Steadman^Nigel^D^^MD^^^NPI|NSTEA^Steadman^Nigel^D^^MD^^^NPI||UC|||||||NSTEA^Steadman^Nigel^D^^MD^^^NPI|S||||||||||||||||||||||||||20260512143000
+IN1|1|CIGNA001^Cigna|CIGNA003|CIGNA HEALTHCARE OF NC|900 COTTAGE GROVE RD^^BLOOMFIELD^NC^27601^US|^PRN^PH^^1^800^2446224|GRP551009|||TRIANGLE_URGENT||20260101|||Prevatte^Tamika^G|HARTLEY|19950318|20040918||||||||||||||||CGN776001234||||||F
+IN2|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||Norwood^Xavier^K
+```
+
+---
+
+## 19. ORM^O01 - Lab order for thyroid panel
+
+https://www.eclinicalworks.com/resources/hl7-interface-specifications/
+
+```
+MSH|^~\&|ECW|MISSION_HOSP^2.16.840.1.113883.3.8801^^NPI&6677889900|MISSIONH|MISSION_HOSP|MISSIONH||ORM^O01^ORM_O01|ECW20260514091500022|P|2.5.1|||AL|NE
+PID|1||MRN94951470^^^MISSIONH^MR||WHITLEY^WILSON^NEIL^^Mrs.||19770615|M||2106-3^White^CDCREC|4500 OLD WAKE FOREST RD^^WILMINGTON^NC^28401^US^H||^PRN^PH^^1^336^9789254|||M^Married^HL70002||||||||N^Not Hispanic^HL70189
+PV1|1|O|GRNVL^^^MISSIONH^^^^1|R|||NSTEA^Steadman^Nigel^S^^MD^^^NPI|NSTEA^Steadman^Nigel^S^^MD^^^NPI||IM||||||||S||||||||||||||||||||||||||20260514091500
+ORC|NW|ORD2026051401^ECW|||||^^^20260514091500^^R||20260514091500|XISEN^Isenhour^Ximena^^RN|1385924761^Delacruz^Ian^L^^MD^^^NPI|||20260514091500||GREENVILLE_IM^^^NPI&6677889900|MISSIONH_PHARM^Mission Hospital Asheville Pharmacy^PH^MISSIONH^1^704^8415328|
+OBR|1|ORD2026051401^ECW||84443^Thyroid stimulating hormone (TSH)^CPT4|||20260514091500||||N||^^^20260514091500^^R|20260514091500|119297000^Blood specimen^SCT|1498160847^Carraway^Brent^T^^MD^^^NPI||||||20260514091500|||F
+OBR|2|ORD2026051401^ECW||84436^Thyroxine (T4), free^CPT4|||20260514091500||||N||^^^20260514091500^^R|20260514091500|119297000^Blood specimen^SCT|1498160847^Carraway^Brent^T^^MD^^^NPI||||||20260514091500|||F
+DG1|1||E03.9^Hypothyroidism, unspecified^I10||20260514|A
+```
+
+---
+
+## 20. RDE^O11 - Pharmacy prescription for lisinopril with allergy segment
+
+https://www.eclinicalworks.com/resources/hl7-interface-specifications/
+
+```
+MSH|^~\&|ECLINICALWORKS|NOVANT_PSB^2.16.840.1.113883.3.7802^^NPI&7788990011|NOVANTPSB|NOVANT_PSB|NOVANTPSB||RDE^O11^RDE_O11|ECW20260515103000008|P|2.5.1|||AL|NE
+PID|1||MRN79265239^^^NOVANTPSB^MR||HINSON^NELSON^HUGH^^Mr.||19931211|M||2106-3^White^CDCREC|5920 OLD PLANK RD^^WINSTON SALEM^NC^27101^US^H||^PRN^PH^^1^910^6309731|||M^Married^HL70002||||||||N^Not Hispanic^HL70189
+PV1|1|O|JAXPRI^^^NOVANTPSB^^^^1|R|||CWALS^Walser^Cynthia^B^^MD^^^NPI||||||||||S
+AL1|1|DA|3827^Penicillin^RXNORM|SV^Severe^HL70128|Anaphylaxis
+AL1|2|DA|723^Aspirin^RXNORM|MO^Moderate^HL70128|GI Bleeding
+ORC|NW|RX2026051501^ECW|||||^^^20260515^^R||20260515103000||1473203995^Ogburn^Julian^C^^MD^^^NPI|||20260515103000||JACKSONVILLE_PRI^^^NPI&7788990011
+RXE|^^^20260515103000^^R|29046^Lisinopril 10 mg tablet^RXNORM|1||TAB^Tablet^HL70292|E2^Take one tablet by mouth once daily^LOCAL|||30|TAB^Tablet^HL70292|3||||||||||||||||||QD^Once daily^HL70335
+RXR|PO^Oral^HL70162
+```

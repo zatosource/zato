@@ -17,7 +17,7 @@ from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.ntlm import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -29,13 +29,13 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'username')
-        output_repeated = True
+    input_required = 'cluster_id',
+    output_required = 'id', 'name', 'username'
+    output_repeated = True
 
     def handle(self):
         return {
+            'show_search_form': True,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'change_password_form': ChangePasswordForm()
@@ -44,9 +44,8 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'username')
-        output_required = ('id', 'name')
+    input_required = 'name', 'username'
+    output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict):
         initial_input_dict['is_active'] = True

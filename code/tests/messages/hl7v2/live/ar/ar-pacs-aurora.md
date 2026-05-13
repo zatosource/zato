@@ -1,0 +1,268 @@
+# PACS Aurora - real HL7v2 ER7 messages
+
+## 1. ORM^O01 - CT chest order at Hospital Italiano de Buenos Aires
+
+```
+MSH|^~\&|PACS_AURORA|HOSP_ITALIANO_BA|RIS|HOSP_ITALIANO_BA|20250310083012||ORM^O01^ORM_O01|HIBA20250310083012001|P|2.5|||AL|NE
+PID|1||PAC40129385^^^AURORA^MRN~25678934^^^RENAPER^NI||GONZALEZ^Maria^Elena^^^Sra.||19720418|F|||Av. Pueyrredon 1640^^Buenos Aires^CABA^C1118AAT^AR^L||^PRN^PH^^^11^49590300||spa^Spanish^ISO6392|C^Casada^HL70002|||25678934
+PV1|1|O|RADIMG^CT01^A^HIBA^^^^RADIMG||||1100234567^Martinez^Carlos^A^^Dr.^^^MN||RAD^Radiologia^HIBASERV|||R^Referral^HL70007|||||V80012345^^^HIBAENC^VN|OSDE^OSDE 310^HL70072||||||||||||||||||||||||20250310083000
+ORC|NW|ORD901001^HIS|RAD501001^AURORA||SC||^^^20250310090000^^R||20250310083012|LRODRIGUEZ^Rodriguez^Laura^M^^Lic.|||20250310083012||HOSP_ITALIANO_BA
+OBR|1|ORD901001^HIS|RAD501001^AURORA|71260^TC Torax con Contraste^CPT||||||||||||1100234567^Martinez^Carlos^A^^Dr.^^^MN||||||20250310090000|||NI^No Information^HL70507|||^^^20250310090000^^R
+DG1|1||R91.8^Otros hallazgos anormales no especificos del campo pulmonar^I10||20250310|W^Working^HL70052
+```
+
+---
+
+## 2. ORM^O01 - MRI brain order at Hospital de Clinicas Jose de San Martin
+
+```
+MSH|^~\&|PACS_AURORA|HOSP_CLINICAS|RIS|HOSP_CLINICAS|20250315101530||ORM^O01^ORM_O01|HCL20250315101530001|P|2.5|||AL|NE
+PID|1||PAC40230198^^^AURORA^MRN~31456789^^^RENAPER^NI||FERNANDEZ^Juan^Carlos^^^Sr.||19840225|M|||Av. Cordoba 2351^^Buenos Aires^CABA^C1120AAR^AR^L||^PRN^PH^^^11^59508000||spa^Spanish^ISO6392|S^Soltero^HL70002|||31456789
+PV1|1|O|RADIMG^MR02^A^HCLINICAS^^^^RADIMG||||1100345678^Lopez^Alejandro^R^^Dr.^^^MN||NEU^Neurologia^HCLSERV|||R^Referral^HL70007|||||V80023456^^^HCLENC^VN|PAMI^PAMI^HL70072||||||||||||||||||||||||20250315101500
+ORC|NW|ORD901002^HIS|RAD501002^AURORA||SC||^^^20250315110000^^R||20250315101530|MPEREZ^Perez^Marcela^B^^Lic.|||20250315101530||HOSP_CLINICAS
+OBR|1|ORD901002^HIS|RAD501002^AURORA|70553^RM Cerebro con y sin Contraste^CPT||||||||||||1100345678^Lopez^Alejandro^R^^Dr.^^^MN||||||20250315110000|||NI^No Information^HL70507|||^^^20250315110000^^R
+DG1|1||G43.909^Migrana no especificada, no intratable, sin estado migrañoso^I10||20250315|W^Working^HL70052
+```
+
+---
+
+## 3. ADT^A04 - Radiology worklist registration at Sanatorio Güemes
+
+```
+MSH|^~\&|PACS_AURORA|SANATORIO_GUEMES|WORKLIST|SANATORIO_GUEMES|20250322141200||ADT^A04^ADT_A01|SGU20250322141200001|P|2.5|||AL|NE
+EVN|A04|20250322141200|||CMORALES^Morales^Claudia^S^^Lic.|20250322140500
+PID|1||PAC40331245^^^AURORA^MRN~28934512^^^RENAPER^NI||RODRIGUEZ^Ana^Beatriz^^^Sra.||19780612|F|||Sanchez de Bustamante 1955^^Buenos Aires^CABA^C1425DUA^AR^L||^PRN^PH^^^11^48271900||spa^Spanish^ISO6392|C^Casada^HL70002|||28934512
+PV1|1|O|RADIMG^US01^A^SGUEMES^^^^RADIMG||||1100456789^Diaz^Roberto^M^^Dr.^^^MN||RAD^Radiologia^SGUSERV|||R^Referral^HL70007|||||V80034567^^^SGUENC^VN|SWISS_MEDICAL^Swiss Medical^HL70072||||||||||||||||||||||||20250322141200
+```
+
+---
+
+## 4. ORU^R01 - CT abdomen result with embedded JPEG image at Hospital Italiano
+
+```
+MSH|^~\&|PACS_AURORA|HOSP_ITALIANO_BA|HIS|HOSP_ITALIANO_BA|20250325163045||ORU^R01^ORU_R01|HIBA20250325163045001|P|2.5|||AL|NE
+PID|1||PAC40129385^^^AURORA^MRN~25678934^^^RENAPER^NI||GONZALEZ^Maria^Elena^^^Sra.||19720418|F|||Av. Pueyrredon 1640^^Buenos Aires^CABA^C1118AAT^AR^L||^PRN^PH^^^11^49590300||spa^Spanish^ISO6392|C^Casada^HL70002|||25678934
+PV1|1|O|RADIMG^CT01^A^HIBA^^^^RADIMG||||1100234567^Martinez^Carlos^A^^Dr.^^^MN||RAD^Radiologia^HIBASERV|||R^Referral^HL70007|||||V80012345^^^HIBAENC^VN|OSDE^OSDE 310^HL70072||||||||||||||||||||||||20250310083000
+ORC|RE|ORD901001^HIS|RAD501001^AURORA||CM||^^^20250310090000^^R||20250325163045|JGARCIA^Garcia^Jorge^L^^Lic.|||20250325163045||HOSP_ITALIANO_BA
+OBR|1|ORD901001^HIS|RAD501001^AURORA|71260^TC Torax con Contraste^CPT|||20250310091500|||||||||1100234567^Martinez^Carlos^A^^Dr.^^^MN||||||20250325163000||CT|F||^^^20250310090000^^R
+OBX|1|FT|71260^TC Torax con Contraste^CPT|1|HALLAZGOS: Se observa opacidad nodular de 12mm en lobulo inferior derecho. Sin adenopatias mediastinicas significativas. Parénquima pulmonar restante sin alteraciones. CONCLUSION: Nodulo pulmonar solitario en LID. Se sugiere seguimiento con TC en 3 meses.||||||F
+OBX|2|ED|IMG^TC Torax Imagen Clave^LOCAL|1|PACS_AURORA^IMAGE^JPEG^Base64^/9j/4AAQSkZJRgABAQEASABIAAD/2wBDABQODxIPDRQSEBIXFRQYHjIhHhwcHj0sLiQySUBMS0dARkVQWnNiUFVtVkVGZIhlbXd7gYKBTmCNl4x9lnN+gXz/2wBDARUXFx4aHjshITt8U0ZTfHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHz/wAARCABAAEADASIAAhEBAxEB/8QAGgAAAgMBAQAAAAAAAAAAAAAAAAUCBAYBA//EAC4QAAIBAwIEBAUFAQAAAAAAAAECAwAEERIhBRMxQSJRYXEGFDKBkRUjQlLh8P/EABkBAAMBAQEAAAAAAAAAAAAAAAABAgMEBf/EAB4RAAICAgMBAQAAAAAAAAAAAAABAhEDIRIxQSJR/9oADAMBAAIRAxEAPwC7xC9uXvpba3cxqnclQ2e+MnyrMXf||||||F
+OBX|3|CE|71260^TC Torax con Contraste^CPT|2|R91.1^Nodulo pulmonar solitario^I10||||||F
+```
+
+---
+
+## 5. ORM^O01 - Mammography order at Hospital Fernandez
+
+```
+MSH|^~\&|PACS_AURORA|HOSP_FERNANDEZ|RIS|HOSP_FERNANDEZ|20250401092300||ORM^O01^ORM_O01|HFZ20250401092300001|P|2.5|||AL|NE
+PID|1||PAC40442356^^^AURORA^MRN~22345678^^^RENAPER^NI||MARTINEZ^Silvia^Graciela^^^Sra.||19680903|F|||Cervino 3356^^Buenos Aires^CABA^C1425AHN^AR^L||^PRN^PH^^^11^48085000||spa^Spanish^ISO6392|C^Casada^HL70002|||22345678
+PV1|1|O|RADIMG^MG01^A^HFERNANDEZ^^^^RADIMG||||1100567890^Gutierrez^Patricia^L^^Dra.^^^MN||GIN^Ginecologia^HFZSERV|||R^Referral^HL70007|||||V80045678^^^HFZENC^VN|IOMA^IOMA^HL70072||||||||||||||||||||||||20250401092300
+ORC|NW|ORD901003^HIS|RAD501003^AURORA||SC||^^^20250401100000^^R||20250401092300|VLOPEZ^Lopez^Valeria^N^^Lic.|||20250401092300||HOSP_FERNANDEZ
+OBR|1|ORD901003^HIS|RAD501003^AURORA|77067^Mamografia Bilateral de Screening^CPT||||||||||||1100567890^Gutierrez^Patricia^L^^Dra.^^^MN||||||20250401100000|||NI^No Information^HL70507|||^^^20250401100000^^R
+DG1|1||Z12.31^Screening de neoplasia maligna de mama^I10||20250401|W^Working^HL70052
+```
+
+---
+
+## 6. ORU^R01 - Mammography result at Hospital Fernandez
+
+```
+MSH|^~\&|PACS_AURORA|HOSP_FERNANDEZ|HIS|HOSP_FERNANDEZ|20250403110830||ORU^R01^ORU_R01|HFZ20250403110830001|P|2.5|||AL|NE
+PID|1||PAC40442356^^^AURORA^MRN~22345678^^^RENAPER^NI||MARTINEZ^Silvia^Graciela^^^Sra.||19680903|F|||Cervino 3356^^Buenos Aires^CABA^C1425AHN^AR^L||^PRN^PH^^^11^48085000||spa^Spanish^ISO6392|C^Casada^HL70002|||22345678
+PV1|1|O|RADIMG^MG01^A^HFERNANDEZ^^^^RADIMG||||1100567890^Gutierrez^Patricia^L^^Dra.^^^MN||GIN^Ginecologia^HFZSERV|||R^Referral^HL70007|||||V80045678^^^HFZENC^VN|IOMA^IOMA^HL70072||||||||||||||||||||||||20250401092300
+ORC|RE|ORD901003^HIS|RAD501003^AURORA||CM||^^^20250401100000^^R||20250403110830|JPEREZ^Perez^Julia^M^^Lic.|||20250403110830||HOSP_FERNANDEZ
+OBR|1|ORD901003^HIS|RAD501003^AURORA|77067^Mamografia Bilateral de Screening^CPT|||20250401101200|||||||||1100567890^Gutierrez^Patricia^L^^Dra.^^^MN||||||20250403110800||MG|F||^^^20250401100000^^R
+OBX|1|FT|77067^Mamografia Bilateral^CPT|1|HALLAZGOS: Mamas de densidad heterogenea (ACR tipo C). No se identifican masas, distorsiones arquitecturales ni microcalcificaciones sospechosas. Ganglios axilares de aspecto habitual. CONCLUSION: BI-RADS 1 - Negativo. Control anual.||||||F
+OBX|2|CE|77067^Mamografia Bilateral^CPT|2|BI-RADS 1^Negativo^ACR||||||F
+```
+
+---
+
+## 7. ORM^O01 - Echocardiogram order at Hospital Austral
+
+```
+MSH|^~\&|PACS_AURORA|HOSP_AUSTRAL|RIS|HOSP_AUSTRAL|20250410143500||ORM^O01^ORM_O01|HAU20250410143500001|P|2.5|||AL|NE
+PID|1||PAC40553467^^^AURORA^MRN~35789012^^^RENAPER^NI||ALVAREZ^Pablo^Daniel^^^Sr.||19900114|M|||Av. Juan D. Peron 1500^^Pilar^Buenos Aires^B1629AHJ^AR^L||^PRN^PH^^^230^4482000||spa^Spanish^ISO6392|C^Casado^HL70002|||35789012
+PV1|1|O|RADIMG^ECO1^A^HAUSTRAL^^^^RADIMG||||1100678901^Rossi^Marcelo^F^^Dr.^^^MN||CAR^Cardiologia^HAUSERV|||R^Referral^HL70007|||||V80056789^^^HAUENC^VN|OSDE^OSDE 450^HL70072||||||||||||||||||||||||20250410143500
+ORC|NW|ORD901004^HIS|RAD501004^AURORA||SC||^^^20250410150000^^R||20250410143500|AFERNANDEZ^Fernandez^Andrea^C^^Lic.|||20250410143500||HOSP_AUSTRAL
+OBR|1|ORD901004^HIS|RAD501004^AURORA|93306^Ecocardiograma Transtorácico Completo^CPT||||||||||||1100678901^Rossi^Marcelo^F^^Dr.^^^MN||||||20250410150000|||NI^No Information^HL70507|||^^^20250410150000^^R
+DG1|1||I50.9^Insuficiencia cardiaca no especificada^I10||20250410|W^Working^HL70052
+```
+
+---
+
+## 8. ORU^R01 - Echocardiogram result with embedded PDF report at Hospital Austral
+
+```
+MSH|^~\&|PACS_AURORA|HOSP_AUSTRAL|HIS|HOSP_AUSTRAL|20250412091500||ORU^R01^ORU_R01|HAU20250412091500001|P|2.5|||AL|NE
+PID|1||PAC40553467^^^AURORA^MRN~35789012^^^RENAPER^NI||ALVAREZ^Pablo^Daniel^^^Sr.||19900114|M|||Av. Juan D. Peron 1500^^Pilar^Buenos Aires^B1629AHJ^AR^L||^PRN^PH^^^230^4482000||spa^Spanish^ISO6392|C^Casado^HL70002|||35789012
+PV1|1|O|RADIMG^ECO1^A^HAUSTRAL^^^^RADIMG||||1100678901^Rossi^Marcelo^F^^Dr.^^^MN||CAR^Cardiologia^HAUSERV|||R^Referral^HL70007|||||V80056789^^^HAUENC^VN|OSDE^OSDE 450^HL70072||||||||||||||||||||||||20250410143500
+ORC|RE|ORD901004^HIS|RAD501004^AURORA||CM||^^^20250410150000^^R||20250412091500|JGARCIA^Garcia^Jorge^L^^Lic.|||20250412091500||HOSP_AUSTRAL
+OBR|1|ORD901004^HIS|RAD501004^AURORA|93306^Ecocardiograma Transtorácico Completo^CPT|||20250410151000|||||||||1100678901^Rossi^Marcelo^F^^Dr.^^^MN||||||20250412091400||US|F||^^^20250410150000^^R
+OBX|1|FT|93306^Ecocardiograma TT^CPT|1|VI: Dimensiones normales. FEVI 62% (Simpson). Motilidad parietal global conservada. Patron diastolico de relajacion prolongada. AI levemente dilatada (42mm). Cavidades derechas normales. Valvulas sin alteraciones significativas. Sin derrame pericardico. CONCLUSION: Disfuncion diastolica grado I. AI levemente dilatada.||||||F
+OBX|2|ED|PDF^Informe Ecocardiograma^AUSPDI|1|PACS_AURORA^AP^^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovUmVzb3VyY2VzIDQgMCBSCi9NZWRpYUJveCBbMCAwIDYxMiA3OTJdCi9Db250ZW50cyA2IDAgUgo+PgplbmRvYmoK||||||F
+OBX|3|NM|8867-4^Frecuencia Cardiaca^LN|1|72|lpm|60-100||||F
+```
+
+---
+
+## 9. ORM^O01 - X-ray pelvis order at Hospital Britanico
+
+```
+MSH|^~\&|PACS_AURORA|HOSP_BRITANICO|RIS|HOSP_BRITANICO|20250418080045||ORM^O01^ORM_O01|HBR20250418080045001|P|2.5|||AL|NE
+PID|1||PAC40664578^^^AURORA^MRN~20123456^^^RENAPER^NI||LOPEZ^Roberto^Enrique^^^Sr.||19650721|M|||Solis 2081^^Buenos Aires^CABA^C1134ACL^AR^L||^PRN^PH^^^11^43091600||spa^Spanish^ISO6392|C^Casado^HL70002|||20123456
+PV1|1|O|RADIMG^RX01^A^HBRITANICO^^^^RADIMG||||1100789012^Sanchez^Eduardo^J^^Dr.^^^MN||TRA^Traumatologia^HBRSERV|||R^Referral^HL70007|||||V80067890^^^HBRENC^VN|PAMI^PAMI^HL70072||||||||||||||||||||||||20250418080000
+ORC|NW|ORD901005^HIS|RAD501005^AURORA||SC||^^^20250418083000^^R||20250418080045|RGIMENEZ^Gimenez^Raquel^A^^Lic.|||20250418080045||HOSP_BRITANICO
+OBR|1|ORD901005^HIS|RAD501005^AURORA|72170^Rx Pelvis AP y Lateral^CPT||||||||||||1100789012^Sanchez^Eduardo^J^^Dr.^^^MN||||||20250418083000|||NI^No Information^HL70507|||^^^20250418083000^^R
+DG1|1||M16.9^Coxartrosis no especificada^I10||20250418|W^Working^HL70052
+```
+
+---
+
+## 10. ORU^R01 - X-ray pelvis result at Hospital Britanico
+
+```
+MSH|^~\&|PACS_AURORA|HOSP_BRITANICO|HIS|HOSP_BRITANICO|20250418110500||ORU^R01^ORU_R01|HBR20250418110500001|P|2.5|||AL|NE
+PID|1||PAC40664578^^^AURORA^MRN~20123456^^^RENAPER^NI||LOPEZ^Roberto^Enrique^^^Sr.||19650721|M|||Solis 2081^^Buenos Aires^CABA^C1134ACL^AR^L||^PRN^PH^^^11^43091600||spa^Spanish^ISO6392|C^Casado^HL70002|||20123456
+PV1|1|O|RADIMG^RX01^A^HBRITANICO^^^^RADIMG||||1100789012^Sanchez^Eduardo^J^^Dr.^^^MN||TRA^Traumatologia^HBRSERV|||R^Referral^HL70007|||||V80067890^^^HBRENC^VN|PAMI^PAMI^HL70072||||||||||||||||||||||||20250418080000
+ORC|RE|ORD901005^HIS|RAD501005^AURORA||CM||^^^20250418083000^^R||20250418110500|JGARCIA^Garcia^Jorge^L^^Lic.|||20250418110500||HOSP_BRITANICO
+OBR|1|ORD901005^HIS|RAD501005^AURORA|72170^Rx Pelvis AP y Lateral^CPT|||20250418083500|||||||||1100789012^Sanchez^Eduardo^J^^Dr.^^^MN||||||20250418110400||CR|F||^^^20250418083000^^R
+OBX|1|FT|72170^Rx Pelvis^CPT|1|HALLAZGOS: Disminucion del espacio articular coxofemoral bilateral, mas marcado a derecha. Osteofitos marginales en acetabulo y cabeza femoral. Esclerosis subcondral. CONCLUSION: Coxartrosis bilateral, predominio derecho, grado III de Kellgren-Lawrence.||||||F
+OBX|2|CE|72170^Rx Pelvis^CPT|2|M16.0^Coxartrosis bilateral primaria^I10||||||F
+```
+
+---
+
+## 11. ADT^A01 - Inpatient admission for angiography at Fundacion Favaloro
+
+```
+MSH|^~\&|PACS_AURORA|FUND_FAVALORO|ADT_RECV|FUND_FAVALORO|20250502060030||ADT^A01^ADT_A01|FFV20250502060030001|P|2.5|||AL|NE
+EVN|A01|20250502060000|||MSILVA^Silva^Marina^C^^Lic.|20250502055000
+PID|1||PAC40775689^^^AURORA^MRN~18567890^^^RENAPER^NI||PEREZ^Jorge^Alberto^^^Sr.||19590312|M|||Av. Belgrano 1746^^Buenos Aires^CABA^C1093AAO^AR^L||^PRN^PH^^^11^43781200||spa^Spanish^ISO6392|V^Viudo^HL70002|||18567890
+NK1|1|PEREZ^Claudia^Ines|HIJ^Hija^HL70063|Av. Belgrano 1746^^Buenos Aires^CABA^C1093AAO^AR^L|^PRN^PH^^^11^43781201||EC^Emergency Contact^HL70131
+PV1|1|I|HEMO^H201^A^FFAVALORO^^^^HEMO||||1100890123^Bianchi^Ricardo^H^^Dr.^^^MN|1100890124^Torres^Lucia^M^^Dra.^^^MN|CAR^Cardiologia^FFVSERV|||R^Referral^HL70007|||||V80078901^^^FFVENC^VN|OSDE^OSDE 210^HL70072||||||||||||||||||||||||20250502060000
+IN1|1|OSDE210^OSDE Plan 210^^OSDE|50001|OSDE|Av. Leandro N. Alem 1067^^Buenos Aires^CABA^C1001AAF^AR|^PRN^PH^^^11^52399000||||||||||20240101|20251231|||1^Titular^HL70072|PEREZ^Jorge^Alberto|01^Self^HL70063|19590312
+```
+
+---
+
+## 12. ORM^O01 - Angiography order at Fundacion Favaloro
+
+```
+MSH|^~\&|PACS_AURORA|FUND_FAVALORO|RIS|FUND_FAVALORO|20250502071500||ORM^O01^ORM_O01|FFV20250502071500001|P|2.5|||AL|NE
+PID|1||PAC40775689^^^AURORA^MRN~18567890^^^RENAPER^NI||PEREZ^Jorge^Alberto^^^Sr.||19590312|M|||Av. Belgrano 1746^^Buenos Aires^CABA^C1093AAO^AR^L||^PRN^PH^^^11^43781200||spa^Spanish^ISO6392|V^Viudo^HL70002|||18567890
+PV1|1|I|HEMO^H201^A^FFAVALORO^^^^HEMO||||1100890123^Bianchi^Ricardo^H^^Dr.^^^MN||CAR^Cardiologia^FFVSERV|||R^Referral^HL70007|||||V80078901^^^FFVENC^VN|OSDE^OSDE 210^HL70072||||||||||||||||||||||||20250502060000
+ORC|NW|ORD901006^HIS|RAD501006^AURORA||SC||^^^20250502080000^^R||20250502071500|AFERNANDEZ^Fernandez^Andrea^C^^Lic.|||20250502071500||FUND_FAVALORO
+OBR|1|ORD901006^HIS|RAD501006^AURORA|93458^Cateterismo Cardiaco Izq con Coronariografia^CPT||||||||||||1100890123^Bianchi^Ricardo^H^^Dr.^^^MN||||||20250502080000|||NI^No Information^HL70507|||^^^20250502080000^^R
+DG1|1||I25.10^Enfermedad cardiaca ateroesclerotica^I10||20250502|W^Working^HL70052
+```
+
+---
+
+## 13. ORU^R01 - Angiography result with embedded image at Fundacion Favaloro
+
+```
+MSH|^~\&|PACS_AURORA|FUND_FAVALORO|HIS|FUND_FAVALORO|20250502143000||ORU^R01^ORU_R01|FFV20250502143000001|P|2.5|||AL|NE
+PID|1||PAC40775689^^^AURORA^MRN~18567890^^^RENAPER^NI||PEREZ^Jorge^Alberto^^^Sr.||19590312|M|||Av. Belgrano 1746^^Buenos Aires^CABA^C1093AAO^AR^L||^PRN^PH^^^11^43781200||spa^Spanish^ISO6392|V^Viudo^HL70002|||18567890
+PV1|1|I|HEMO^H201^A^FFAVALORO^^^^HEMO||||1100890123^Bianchi^Ricardo^H^^Dr.^^^MN||CAR^Cardiologia^FFVSERV|||R^Referral^HL70007|||||V80078901^^^FFVENC^VN|OSDE^OSDE 210^HL70072||||||||||||||||||||||||20250502060000
+ORC|RE|ORD901006^HIS|RAD501006^AURORA||CM||^^^20250502080000^^R||20250502143000|JGARCIA^Garcia^Jorge^L^^Lic.|||20250502143000||FUND_FAVALORO
+OBR|1|ORD901006^HIS|RAD501006^AURORA|93458^Cateterismo Cardiaco Izq con Coronariografia^CPT|||20250502081500|||||||||1100890123^Bianchi^Ricardo^H^^Dr.^^^MN||||||20250502142900||XA|F||^^^20250502080000^^R
+OBX|1|FT|93458^Cateterismo Cardiaco^CPT|1|HALLAZGOS: TCI sin lesiones. DA con estenosis severa (85%) en tercio proximal. Cx sin lesiones significativas. CD con estenosis moderada (50%) en tercio medio. FEVI por ventriculografia: 55%. CONCLUSION: Enfermedad coronaria severa de un vaso (DA proximal). Se indica angioplastia con stent.||||||F
+OBX|2|ED|IMG^Coronariografia Imagen^LOCAL|1|PACS_AURORA^IMAGE^JPEG^Base64^/9j/4AAQSkZJRgABAQEBLAEsAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCABAAEADASIAAhEBAxEB/8QAGwABAAIDAQEAAAAAAAAAAAAAAAUGAQQHAwj/xAAzEAABAwIDBQUHBQEAAAAAAAABAAID||||||F
+OBX|3|NM|8867-4^Frecuencia Cardiaca^LN|1|68|lpm|60-100||||F
+OBX|4|NM|75994-4^FEVI^LN|1|55|%|55-70||||F
+```
+
+---
+
+## 14. ORM^O01 - Ultrasound abdomen order at Hospital Garrahan
+
+```
+MSH|^~\&|PACS_AURORA|HOSP_GARRAHAN|RIS|HOSP_GARRAHAN|20250508141200||ORM^O01^ORM_O01|HGA20250508141200001|P|2.5|||AL|NE
+PID|1||PAC40886701^^^AURORA^MRN~55123456^^^RENAPER^NI||ROMERO^Valentina^^||20180506|F|||Combate de los Pozos 1881^^Buenos Aires^CABA^C1245AAM^AR^L||^PRN^PH^^^11^43089300||spa^Spanish^ISO6392|S^Soltero^HL70002|||55123456
+PV1|1|O|RADIMG^US02^A^HGARRAHAN^^^^RADIMG||||1100901234^Vega^Carolina^P^^Dra.^^^MN||PED^Pediatria^HGASERV|||R^Referral^HL70007|||||V80089012^^^HGAENC^VN|PAMI^PAMI^HL70072||||||||||||||||||||||||20250508141200
+ORC|NW|ORD901007^HIS|RAD501007^AURORA||SC||^^^20250508143000^^R||20250508141200|SMORENO^Moreno^Sofia^R^^Lic.|||20250508141200||HOSP_GARRAHAN
+OBR|1|ORD901007^HIS|RAD501007^AURORA|76700^Ecografia Abdominal Completa^CPT||||||||||||1100901234^Vega^Carolina^P^^Dra.^^^MN||||||20250508143000|||NI^No Information^HL70507|||^^^20250508143000^^R
+DG1|1||R10.9^Dolor abdominal no especificado^I10||20250508|W^Working^HL70052
+```
+
+---
+
+## 15. ORU^R01 - Ultrasound abdomen result at Hospital Garrahan
+
+```
+MSH|^~\&|PACS_AURORA|HOSP_GARRAHAN|HIS|HOSP_GARRAHAN|20250508154500||ORU^R01^ORU_R01|HGA20250508154500001|P|2.5|||AL|NE
+PID|1||PAC40886701^^^AURORA^MRN~55123456^^^RENAPER^NI||ROMERO^Valentina^^||20180506|F|||Combate de los Pozos 1881^^Buenos Aires^CABA^C1245AAM^AR^L||^PRN^PH^^^11^43089300||spa^Spanish^ISO6392|S^Soltero^HL70002|||55123456
+PV1|1|O|RADIMG^US02^A^HGARRAHAN^^^^RADIMG||||1100901234^Vega^Carolina^P^^Dra.^^^MN||PED^Pediatria^HGASERV|||R^Referral^HL70007|||||V80089012^^^HGAENC^VN|PAMI^PAMI^HL70072||||||||||||||||||||||||20250508141200
+ORC|RE|ORD901007^HIS|RAD501007^AURORA||CM||^^^20250508143000^^R||20250508154500|JGARCIA^Garcia^Jorge^L^^Lic.|||20250508154500||HOSP_GARRAHAN
+OBR|1|ORD901007^HIS|RAD501007^AURORA|76700^Ecografia Abdominal Completa^CPT|||20250508143500|||||||||1100901234^Vega^Carolina^P^^Dra.^^^MN||||||20250508154400||US|F||^^^20250508143000^^R
+OBX|1|FT|76700^Ecografia Abdominal^CPT|1|HALLAZGOS: Higado de ecoestructura homogenea, tamaño conservado para la edad. Vesicula biliar normodistendida sin litiasis. Vias biliares no dilatadas. Pancreas y bazo sin alteraciones. Riñones de forma y tamaño conservados, sin dilatacion pielocalicial. No se observa liquido libre. CONCLUSION: Ecografia abdominal dentro de limites normales.||||||F
+```
+
+---
+
+## 16. ORM^O01 - Doppler carotid order at Sanatorio Anchorena
+
+```
+MSH|^~\&|PACS_AURORA|SANATORIO_ANCHORENA|RIS|SANATORIO_ANCHORENA|20250512091800||ORM^O01^ORM_O01|SAN20250512091800001|P|2.5|||AL|NE
+PID|1||PAC40997812^^^AURORA^MRN~17890123^^^RENAPER^NI||GIMENEZ^Hector^Oscar^^^Sr.||19570828|M|||Av. Tomas de Anchorena 1872^^Buenos Aires^CABA^C1425ELF^AR^L||^PRN^PH^^^11^43093500||spa^Spanish^ISO6392|C^Casado^HL70002|||17890123
+PV1|1|O|RADIMG^DOP1^A^SANCHORENA^^^^RADIMG||||1101012345^Mendez^Gabriel^A^^Dr.^^^MN||ANG^Angiologia^SANSERV|||R^Referral^HL70007|||||V80090123^^^SANENC^VN|SWISS_MEDICAL^Swiss Medical^HL70072||||||||||||||||||||||||20250512091800
+ORC|NW|ORD901008^HIS|RAD501008^AURORA||SC||^^^20250512100000^^R||20250512091800|LRUIZ^Ruiz^Lorena^E^^Lic.|||20250512091800||SANATORIO_ANCHORENA
+OBR|1|ORD901008^HIS|RAD501008^AURORA|93880^Eco Doppler Vasos de Cuello Bilateral^CPT||||||||||||1101012345^Mendez^Gabriel^A^^Dr.^^^MN||||||20250512100000|||NI^No Information^HL70507|||^^^20250512100000^^R
+DG1|1||I65.29^Oclusion y estenosis de arteria carotida no especificada^I10||20250512|W^Working^HL70052
+```
+
+---
+
+## 17. ORU^R01 - Doppler carotid result at Sanatorio Anchorena
+
+```
+MSH|^~\&|PACS_AURORA|SANATORIO_ANCHORENA|HIS|SANATORIO_ANCHORENA|20250512113000||ORU^R01^ORU_R01|SAN20250512113000001|P|2.5|||AL|NE
+PID|1||PAC40997812^^^AURORA^MRN~17890123^^^RENAPER^NI||GIMENEZ^Hector^Oscar^^^Sr.||19570828|M|||Av. Tomas de Anchorena 1872^^Buenos Aires^CABA^C1425ELF^AR^L||^PRN^PH^^^11^43093500||spa^Spanish^ISO6392|C^Casado^HL70002|||17890123
+PV1|1|O|RADIMG^DOP1^A^SANCHORENA^^^^RADIMG||||1101012345^Mendez^Gabriel^A^^Dr.^^^MN||ANG^Angiologia^SANSERV|||R^Referral^HL70007|||||V80090123^^^SANENC^VN|SWISS_MEDICAL^Swiss Medical^HL70072||||||||||||||||||||||||20250512091800
+ORC|RE|ORD901008^HIS|RAD501008^AURORA||CM||^^^20250512100000^^R||20250512113000|JGARCIA^Garcia^Jorge^L^^Lic.|||20250512113000||SANATORIO_ANCHORENA
+OBR|1|ORD901008^HIS|RAD501008^AURORA|93880^Eco Doppler Vasos de Cuello Bilateral^CPT|||20250512101000|||||||||1101012345^Mendez^Gabriel^A^^Dr.^^^MN||||||20250512112900||US|F||^^^20250512100000^^R
+OBX|1|FT|93880^Eco Doppler Carotideo^CPT|1|HALLAZGOS: Carotida comun derecha con placa fibrocalcificada que genera estenosis del 45%. Carotida interna derecha permeable. Carotida comun izquierda con placa blanda que genera estenosis del 30%. Vertebrales permeables con flujo anterogrado. CONCLUSION: Ateromatosis carotidea bilateral leve a moderada. Sin criterios hemodinamicos de estenosis significativa.||||||F
+OBX|2|NM|93880^VPS Carotida Interna Derecha^CPT|1|95|cm/s|<125||||F
+OBX|3|NM|93880^VPS Carotida Interna Izquierda^CPT|2|78|cm/s|<125||||F
+```
+
+---
+
+## 18. ADT^A08 - Patient update for scheduled MRI at Hospital El Cruce
+
+```
+MSH|^~\&|PACS_AURORA|HOSP_EL_CRUCE|WORKLIST|HOSP_EL_CRUCE|20250520103000||ADT^A08^ADT_A01|HEC20250520103000001|P|2.5|||AL|NE
+EVN|A08|20250520103000|||DCASTRO^Castro^Diana^M^^Lic.|20250520102000
+PID|1||PAC41108923^^^AURORA^MRN~38901234^^^RENAPER^NI||ACOSTA^Luciana^Soledad^^^Sra.||19920707|F|||Av. Calchaqui 5401^^Florencio Varela^Buenos Aires^B1888AAE^AR^L||^PRN^PH^^^11^42109000||spa^Spanish^ISO6392|S^Soltera^HL70002|||38901234
+PV1|1|O|RADIMG^MR01^A^HELCRUCE^^^^RADIMG||||1101123456^Rios^Fernando^D^^Dr.^^^MN||NEU^Neurologia^HECSERV|||R^Referral^HL70007|||||V80101234^^^HECENC^VN|IOMA^IOMA^HL70072||||||||||||||||||||||||20250520103000
+```
+
+---
+
+## 19. ORM^O01 - CT abdomen contrast order at Hospital Posadas
+
+```
+MSH|^~\&|PACS_AURORA|HOSP_POSADAS|RIS|HOSP_POSADAS|20250525082000||ORM^O01^ORM_O01|HPO20250525082000001|P|2.5|||AL|NE
+PID|1||PAC41219034^^^AURORA^MRN~27654321^^^RENAPER^NI||TORRES^Miguel^Angel^^^Sr.||19770415|M|||Av. Presidente Illia s/n^^El Palomar^Buenos Aires^B1684^AR^L||^PRN^PH^^^11^44697500||spa^Spanish^ISO6392|C^Casado^HL70002|||27654321
+PV1|1|I|RADIMG^CT02^A^HPOSADAS^^^^RADIMG||||1101234567^Castillo^Andres^M^^Dr.^^^MN||GAS^Gastroenterologia^HPOSERV|||R^Referral^HL70007|||||V80112345^^^HPOENC^VN|PAMI^PAMI^HL70072||||||||||||||||||||||||20250525082000
+ORC|NW|ORD901009^HIS|RAD501009^AURORA||SC||^^^20250525090000^^R||20250525082000|MDIAZ^Diaz^Mariana^L^^Lic.|||20250525082000||HOSP_POSADAS
+OBR|1|ORD901009^HIS|RAD501009^AURORA|74178^TC Abdomen y Pelvis con Contraste^CPT||||||||||||1101234567^Castillo^Andres^M^^Dr.^^^MN||||||20250525090000|||NI^No Information^HL70507|||^^^20250525090000^^R
+DG1|1||K80.20^Calculo de vesicula biliar sin colecistitis^I10||20250525|W^Working^HL70052
+```
+
+---
+
+## 20. ORU^R01 - CT abdomen result with embedded PNG image at Hospital Posadas
+
+```
+MSH|^~\&|PACS_AURORA|HOSP_POSADAS|HIS|HOSP_POSADAS|20250525134500||ORU^R01^ORU_R01|HPO20250525134500001|P|2.5|||AL|NE
+PID|1||PAC41219034^^^AURORA^MRN~27654321^^^RENAPER^NI||TORRES^Miguel^Angel^^^Sr.||19770415|M|||Av. Presidente Illia s/n^^El Palomar^Buenos Aires^B1684^AR^L||^PRN^PH^^^11^44697500||spa^Spanish^ISO6392|C^Casado^HL70002|||27654321
+PV1|1|I|RADIMG^CT02^A^HPOSADAS^^^^RADIMG||||1101234567^Castillo^Andres^M^^Dr.^^^MN||GAS^Gastroenterologia^HPOSERV|||R^Referral^HL70007|||||V80112345^^^HPOENC^VN|PAMI^PAMI^HL70072||||||||||||||||||||||||20250525082000
+ORC|RE|ORD901009^HIS|RAD501009^AURORA||CM||^^^20250525090000^^R||20250525134500|JGARCIA^Garcia^Jorge^L^^Lic.|||20250525134500||HOSP_POSADAS
+OBR|1|ORD901009^HIS|RAD501009^AURORA|74178^TC Abdomen y Pelvis con Contraste^CPT|||20250525091000|||||||||1101234567^Castillo^Andres^M^^Dr.^^^MN||||||20250525134400||CT|F||^^^20250525090000^^R
+OBX|1|FT|74178^TC Abdomen y Pelvis^CPT|1|HALLAZGOS: Higado de tamaño normal con densidad homogenea. Vesicula biliar con multiples imagenes litiasicas de hasta 15mm. Vias biliares no dilatadas. Pancreas, bazo y suprarrenales sin alteraciones. Riñones con buena diferenciacion corticomedular. No se observan adenopatias retroperitoneales. CONCLUSION: Litiasis vesicular multiple. Sin otras alteraciones significativas.||||||F
+OBX|2|ED|IMG^TC Abdomen Reconstruccion^LOCAL|1|PACS_AURORA^IMAGE^PNG^Base64^iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEwAACxMBAJqcGAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAARsSURBVHic7ZtNaBxlGMd/M5vdTTbZbJI2bWxia1tbP1C0VmxRxINVFBEPnlT04kG8eFBP4kUQ8eDRg4cKgnhRUAQVUbGK2ipaW6nVWmPTmDRtk002m49NstmZ8eBMM7OZ3e7s7Mxm438OM++87/N/n//zzrwzQ4T/OTT||||||F
+OBX|3|CE|74178^TC Abdomen y Pelvis^CPT|2|K80.20^Litiasis vesicular sin colecistitis^I10||||||F
+```

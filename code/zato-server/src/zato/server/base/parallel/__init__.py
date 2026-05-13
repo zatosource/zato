@@ -20,22 +20,16 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # gevent
 import gevent
 from gevent import sleep, spawn
 from gevent.lock import RLock
 
-# Open Telemetry
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-
 # Zato
 from zato.common.config_dispatcher import ConfigDispatchReceiver, ConfigDispatcher
-from zato.bunch import Bunch
+from zato.common.ext.bunch import Bunch
 from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, HotDeploy, PubSub, SERVER_STARTUP, \
     SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
@@ -67,8 +61,7 @@ from zato.common.util.platform_ import is_posix
 from zato.common.util.time_ import TimeUtil
 from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
-from zato.server.base.parallel.http import HTTPHandler
-from zato.server.base.worker import WorkerStore
+from zato.server.base.config_manager import ConfigManager
 from zato.server.config import ConfigDict, ConfigStore
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import ODBConfigSource
@@ -80,22 +73,17 @@ from zato.server.groups.ctx import SecurityGroupsCtxBuilder
 
 if 0:
 
-    from bunch import Bunch as bunch_
-    from ddtrace.trace import tracer as dd_tracer
-    from ddtrace._trace.tracer import Tracer as DatadogTracer
+    from zato.common.ext.bunch import Bunch as bunch_
     from kombu.transport.pyamqp import Message as KombuMessage
-    from opentelemetry.trace import Tracer as OTLPTracer
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, strdict, strbytes, \
         strlist, strorlistnone, strnone, strorlist, strset
     from zato.server.base.parallel.delivery import RedisPushDelivery
-    from zato.server.connection.cache import Cache, CacheAPI
-    from zato.server.ext.zunicorn.arbiter import Arbiter
-    from zato.server.ext.zunicorn.workers.ggevent import GeventWorker
+    from zato.server.connection.cache import CacheAPI
     from zato.server.service.store import ServiceStore
-    from zato.simpleio import SIOServerConfig
+    from zato.input_output import IOProcessor
     from zato.server.startup_callable import StartupCallableTool
 
     bunch_ = bunch_
@@ -104,7 +92,7 @@ if 0:
     random_seed = random_seed
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
-    SIOServerConfig = SIOServerConfig # type: ignore
+    IOProcessor = IOProcessor # type: ignore
     StartupCallableTool = StartupCallableTool
 
 # ################################################################################################################################
@@ -127,17 +115,16 @@ _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
+class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     """ Main server process.
     """
     odb: 'ODBManager'
     config: 'ConfigStore'
     crypto_manager: 'ServerCryptoManager'
     sql_pool_store: 'PoolStore'
-    on_wsgi_request: 'any_'
 
     cluster: 'ClusterModel'
-    worker_store: 'WorkerStore'
+    config_manager: 'ConfigManager'
     service_store: 'ServiceStore'
 
     rpc: 'ServerRPC'
@@ -149,12 +136,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
     stop_after: 'intnone'
     deploy_auto_from: 'str' = ''
-
-    datadog_tracer: 'DatadogTracer'
-    otlp_tracer: 'OTLPTracer'
-
-    is_datadog_enabled: 'bool'
-    is_grafana_cloud_enabled: 'bool'
 
     env_name: 'str'
 
@@ -168,6 +149,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
     pubsub_subscriptions: 'SubscriptionsStore'
 
     work_dir:'str'
+
+# ################################################################################################################################
+
+    @property
+    def worker_store(self) -> 'ConfigManager':
+        return self.config_manager
+
+# ################################################################################################################################
 
     def __init__(self) -> 'None':
         self.logger = logger
@@ -197,13 +186,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self.pickup_config = Bunch()
         self.logging_config = Bunch()
         self.logging_conf_path = 'server-'
-        self.sio_config = cast_('SIOServerConfig', None)
+        self.io_config = cast_('any_', None)
         self.connector_server_grace_time = None
         self.id = -1
         self.name = ''
         self.process_cid = new_cid_server()
-        self.worker_id = ''
-        self.worker_pid = -1
+        self.server_pid = -1
         self.cluster_id = -1
         self.cluster_name = ''
         self.startup_jobs = {}
@@ -222,8 +210,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self.crypto_use_tls = False
         self.pid = -1
         self.sync_internal = False
-        self.is_first_worker = False
-        self.process_idx = -1
         self.shmem_size = -1.0
         self.audit_pii = audit_pii
         self.has_fg = False
@@ -274,6 +260,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self.needs_all_access_log = True
         self.access_log_ignore = set()
         self.rest_log_ignore   = set()
+        self.has_prometheus = True
         self.is_enabled_for_warn = logging.getLogger('zato').isEnabledFor(WARN)
         self.is_admin_enabled_for_info = logging.getLogger('zato_admin').isEnabledFor(INFO)
 
@@ -288,11 +275,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def maybe_on_first_worker(self, server:'ParallelServer') -> 'anyset':
-        """ This method will execute code with a distibuted lock held. We need a lock because we can have multiple worker
-        processes fighting over the right to redeploy services. The first worker to obtain the lock will actually perform
+    def maybe_on_first_server(self, server:'ParallelServer') -> 'anyset':
+        """ This method will execute code with a distributed lock held. We need a lock because we can have multiple server
+        processes fighting over the right to redeploy services. The first server to obtain the lock will actually perform
         the redeployment and set a flag meaning that for this particular deployment key (and remember that each server restart
-        means a new deployment key) the services have been already deployed. Further workers will check that the flag exists
+        means a new deployment key) the services have been already deployed. Further servers will check that the flag exists
         and will skip the deployment altogether.
         """
         def import_initial_services_jobs() -> 'anyset':
@@ -389,7 +376,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
     def add_pickup_conf_from_local_path(self, paths:'str', source:'str', path_patterns:'strorlistnone'=None) -> 'None':
 
         # Bunchz
-        from bunch import bunchify
+        from zato.common.ext.bunch import bunchify
 
         # Local variables
         path_patterns = path_patterns or HotDeploy.Default_Patterns
@@ -477,7 +464,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
     def _add_user_conf_from_path(self, path:'str', source:'str') -> 'None':
 
         # Bunch
-        from bunch import bunchify
+        from zato.common.ext.bunch import bunchify
 
         # Ignore files other than the below ones
         suffixes = ['ini', 'conf', 'yaml', 'yml']
@@ -620,7 +607,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         # Read all the user config files that are already available on startup
         self.read_user_config()
 
-        locally_deployed = self.maybe_on_first_worker(server)
+        locally_deployed = self.maybe_on_first_server(server)
 
         return locally_deployed
 
@@ -765,20 +752,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         # This cannot be done in __init__ because each sub-process obviously has its own PID
         self.pid = os.getpid()
 
-        # This also cannot be done in __init__ which doesn't have this variable yet
-        self.process_idx = int(os.environ['ZATO_SERVER_WORKER_IDX'])
-        self.is_first_worker = self.process_idx == 0
-
-        # Monitoring
-        logger.info('Monitoring setup - datadog_enabled:%s grafana_cloud_enabled:%s',
-            self.is_datadog_enabled, self.is_grafana_cloud_enabled)
-
-        if self.is_datadog_enabled:
-            self._set_up_datadog()
-
-        if self.is_grafana_cloud_enabled:
-            self._set_up_grafana_cloud()
-
         # Used later on
         use_tls = as_bool(self.fs_server_config.crypto.use_tls)
 
@@ -831,11 +804,13 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         # Basic metadata
         self.id = server.id
         self.name = server.name
+
+        from zato.server.metrics import set_server_info
+        set_server_info(self.name)
+
         self.cluster = self.odb.cluster
         self.cluster_id = self.cluster.id
         self.cluster_name = self.cluster.name
-        self.worker_id = '{}.{}.{}.{}'.format(self.cluster_id, self.id, self.worker_pid, self.process_cid)
-
         # SQL post-processing
         ODBPostProcess(self.odb.session(), None, self.cluster_id).run()
 
@@ -856,7 +831,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self.http_methods_allowed_re = '({})'.format(http_methods_allowed_re)
 
         # Reads in all configuration from ODB
-        self.worker_store = WorkerStore(self.config, self)
+        self.config_manager = ConfigManager(self.config, self)
         self.set_up_config(server) # type: ignore
 
         # Normalize hot-deploy configuration
@@ -886,9 +861,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         # API keys configuration
         self.set_up_api_key_config()
 
-        # Some parts of the worker store's configuration are required during the deployment of services
-        # which is why we are doing it here, before worker_store.init() is called.
-        self.worker_store.early_init()
+        # Some parts of the config manager's configuration are required during the deployment of services
+        # which is why we are doing it here, before config_manager.init() is called.
+        self.config_manager.early_init()
 
         # Deploys services
         locally_deployed = self._after_init_common(server) # type: ignore
@@ -897,8 +872,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self.groups_manager = GroupsManager(self)
         self.security_groups_ctx_builder = SecurityGroupsCtxBuilder(self)
 
-        # Initializes worker store, including connectors
-        self.worker_store.init()
+        # Initializes config manager, including connectors
+        self.config_manager.init()
 
         # Security facade wrapper
         self.security_facade = SecurityFacade(self)
@@ -935,9 +910,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         # Load pub/sub permissions from database into pattern matcher
         self._load_pubsub_permissions()
 
-        # Let the worker know the broker client is ready
-        self.worker_store.set_config_dispatcher(self.config_dispatcher)
-        self.worker_store.after_config_dispatcher_set()
+        # Let the config manager know the broker client is ready
+        self.config_manager.set_config_dispatcher(self.config_dispatcher)
+        self.config_manager.after_config_dispatcher_set()
 
         self._after_init_accepted(locally_deployed)
         self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host, self.port, self.preferred_address, use_tls)
@@ -972,6 +947,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                 'payload_name': item['full_path']
             })
 
+        # All services are deployed, build MCP tool registries now ..
+        self._build_mcp_tool_registries()
+
         # The server is started so we can deploy what we were told to handle on startup.
         if self.deploy_auto_from:
             self.handle_enmasse_auto_from()
@@ -989,6 +967,29 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self.log_environment_details()
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
+
+# ################################################################################################################################
+
+    def _build_mcp_tool_registries(self) -> 'None':
+        """ Builds tool registries for all MCP channels.
+        Called after all services (internal and user-defined) are deployed.
+        """
+        for channel_config in self.config_manager.channel_mcp.values():
+            wrapper = channel_config.conn
+            if wrapper:
+                if wrapper.handler:
+                    wrapper.handler.tool_registry.rebuild()
+
+# ################################################################################################################################
+
+    def notify_mcp_tools_changed(self) -> 'None':
+        """ Rebuilds tool registries and queues list_changed notifications for all MCP channels.
+        Called after hot-deploy deploys new services at runtime.
+        """
+        for channel_config in self.config_manager.channel_mcp.values():
+            wrapper = channel_config.conn
+            if wrapper:
+                wrapper.on_services_deployed()
 
 # ################################################################################################################################
 
@@ -1125,7 +1126,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         """
         import time as _time
         from json import loads as json_loads
-        from bunch import Bunch
+        from zato.common.ext.bunch import Bunch
         from zato.common.api import SCHEDULER
         from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 
@@ -1135,6 +1136,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         job_id = ctx['job_id']
         job_name = ctx['name']
         current_run = ctx['current_run']
+
+        on_success_service = ctx.get('on_success_service')
+        on_success_job = ctx.get('on_success_job')
+        on_error_service = ctx.get('on_error_service')
+        on_error_job = ctx.get('on_error_job')
+
         logger.info('Invoking service for job: id=%s name=%s run=%s', job_id, job_name, current_run)
 
         extra = ctx.get('extra')
@@ -1160,20 +1167,116 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             },
         })
 
+        # Run the main service and capture the outcome ..
         outcome = SCHEDULER.OUTCOME.OK
+        error_traceback = ''
         _t0 = _time.monotonic()
+
         try:
-            self.worker_store.on_message_invoke_service(msg, 'scheduler', 'SCHEDULER_JOB_EXECUTED')
+            self.config_manager.on_message_invoke_service(msg, 'scheduler', 'SCHEDULER_JOB_EXECUTED')
         except Exception:
             outcome = SCHEDULER.OUTCOME.ERROR
-            logger.warning('Scheduler job_id=%s; name=%s; outcome=error; traceback=%s', job_id, job_name, format_exc())
+            error_traceback = format_exc()
+            logger.warning('Scheduler job_id=%s; name=%s; outcome=error; traceback=%s', job_id, job_name, error_traceback)
 
         duration_ms = int((_time.monotonic() - _t0) * 1000)
 
+        # .. report the outcome to the Rust scheduler ..
         try:
             self._scheduler.mark_complete(job_id, outcome, duration_ms, current_run)
         except Exception:
             logger.warning('Scheduler mark_complete failed; job_id=%s; name=%s; traceback=%s', job_id, job_name, format_exc())
+
+        # .. and spawn callback greenlets based on the outcome.
+        callback_context = {
+            'job_id': job_id,
+            'job_name': job_name,
+            'outcome': outcome,
+            'duration_ms': duration_ms,
+            'error_traceback': error_traceback,
+            'current_run': current_run,
+        }
+
+        if outcome == SCHEDULER.OUTCOME.OK:
+            on_callback_service = on_success_service
+            on_callback_job = on_success_job
+        else:
+            on_callback_service = on_error_service
+            on_callback_job = on_error_job
+
+        event_label = 'success' if outcome == SCHEDULER.OUTCOME.OK else 'error'
+
+        if on_callback_service:
+            spawn(self._invoke_callback_service, on_callback_service, callback_context, event_label)
+
+        if on_callback_job:
+            spawn(self._invoke_callback_job, on_callback_job, callback_context, event_label)
+
+    def _invoke_callback_service(self, service_name:'str', callback_context:'dict', event_label:'str') -> 'None':
+        """ Invokes a Zato service as a scheduler job callback, passing the original job's context.
+        """
+        from json import dumps as json_dumps
+        from zato.common.ext.bunch import Bunch
+        from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
+
+        job_id = callback_context['job_id']
+        job_name = callback_context['job_name']
+
+        logger.info('Invoking %s callback service=%s for job_id=%s name=%s', event_label, service_name, job_id, job_name)
+
+        payload = json_dumps(callback_context)
+
+        message = Bunch({
+            'action': SCHEDULER_MSG.JOB_EXECUTED.value,
+            'name': f'callback:{job_name}',
+            'service': service_name,
+            'payload': payload,
+            'cid': new_cid_server(),
+            'job_type': 'interval_based',
+            'zato_ctx': {
+                'scheduler_job_id': job_id,
+                'scheduler_current_run': callback_context['current_run'],
+                'is_scheduler_callback': True,
+            },
+        })
+
+        try:
+            self.config_manager.on_message_invoke_service(message, 'scheduler', 'SCHEDULER_JOB_EXECUTED')
+        except Exception:
+            logger.warning('Callback service=%s failed for job_id=%s; traceback=%s', service_name, job_id, format_exc())
+
+    def _invoke_callback_job(self, target_job_name:'str', callback_context:'dict', event_label:'str') -> 'None':
+        """ Executes another scheduler job as a callback by looking up its ID and triggering it.
+        """
+        from contextlib import closing
+        from zato.common.odb.model import Job
+
+        source_job_id = callback_context['job_id']
+        source_job_name = callback_context['job_name']
+
+        try:
+            with closing(self.odb.session()) as session:
+                target_job = session.query(Job).filter_by(name=target_job_name, cluster_id=1).first()
+
+            if target_job is None:
+                logger.warning(
+                    'Callback job=%s not found for source job_id=%s name=%s', target_job_name, source_job_id, source_job_name)
+                return
+
+            if not target_job.is_active:
+                logger.info(
+                    'Skipping inactive callback job=%s for source job_id=%s name=%s', target_job_name, source_job_id, source_job_name)
+                return
+
+            logger.info(
+                'Triggering %s callback job=%s for source job_id=%s name=%s', event_label, target_job_name, source_job_id, source_job_name)
+
+            target_job_id = target_job.id
+            self._scheduler.execute_job(target_job_id)
+
+        except Exception:
+            logger.warning(
+                'Callback job=%s failed for source job_id=%s; traceback=%s', target_job_name, source_job_id, format_exc())
 
     def _handle_timeout_event(self, fields:'dict') -> 'None':
         """ Processes a timeout event from the scheduler.
@@ -1367,6 +1470,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                 SecurityBase, SecurityBase.id == PubSubSubscription.sec_base_id
             ).filter(
                 PubSubSubscription.cluster_id == self.cluster_id
+            ).filter(
+                SecurityBase.is_active == True
             ).all()
 
             synced = 0
@@ -1409,20 +1514,21 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
     def _pre_initialize(self) -> 'None':
 
         from contextlib import closing
-        from zato.common.util.channel import ensure_django_channel_exists, ensure_openapi_channel_exists
+        from zato.common.util.channel import ensure_mcp_channel_exists, \
+            ensure_openapi_channel_exists
 
         with closing(self.odb.session()) as session:
             openapi_created = ensure_openapi_channel_exists(session, self.cluster_id)
-            django_created = ensure_django_channel_exists(session, self.cluster_id)
+            mcp_created = ensure_mcp_channel_exists(session, self.cluster_id)
 
-            if openapi_created or django_created:
+            if openapi_created or mcp_created:
                 session.commit()
 
             if openapi_created:
                 logger.info('Created OpenAPI handler channel')
 
-            if django_created:
-                logger.info('Created Django handler channel')
+            if mcp_created:
+                logger.info('Created MCP handler channel')
 
 # ################################################################################################################################
 
@@ -1447,6 +1553,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                 SecurityBase, PubSubPermission.sec_base_id == SecurityBase.id
             ).filter(
                 PubSubPermission.cluster_id == self.cluster_id
+            ).filter(
+                SecurityBase.is_active == True
             ).all()
 
 
@@ -1490,6 +1598,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
                 SecurityBase, PubSubSubscription.sec_base_id == SecurityBase.id
             ).filter(
                 PubSubSubscription.cluster_id == self.cluster_id
+            ).filter(
+                SecurityBase.is_active == True
             ).all()
 
             for sub_key, username, sec_name in subscriptions:
@@ -1523,8 +1633,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         self.set_up_config(self) # type: ignore
 
         # .. now reload it ..
-        self.worker_store.init()
-        self.worker_store.init_pubsub()
+        self.config_manager.init()
+        self.config_manager.init_pubsub()
 
         # .. reload pub/sub permissions from database ..
         self._load_pubsub_permissions()
@@ -1737,7 +1847,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
         # If a pid has any of these names in its name or command line,
         # we consider it a process that will be stopped.
-        to_include = ['zato', 'gunicorn']
+        to_include = ['zato']
 
         for proc in list(psutil.process_iter(['pid', 'name'])):
             proc_name = proc.name()
@@ -1824,36 +1934,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def get_default_cache(self) -> 'CacheAPI':
-        """ Returns the server's default cache.
-        """
-        return cast_('CacheAPI', self.worker_store.cache_api.default)
-
-# ################################################################################################################################
-
-    def get_cache(self, cache_type:'str', cache_name:'str') -> 'Cache':
-        """ Returns a cache object of given type and name.
-        """
-        return self.worker_store.cache_api.get_cache(cache_type, cache_name)
-
-# ################################################################################################################################
-
-    def get_from_cache(self, cache_type:'str', cache_name:'str', key:'str') -> 'any_':
-        """ Returns a value from input cache by key, or None if there is no such key.
-        """
-        cache = self.worker_store.cache_api.get_cache(cache_type, cache_name)
-        return cache.get(key) # type: ignore
-
-# ################################################################################################################################
-
-    def set_in_cache(self, cache_type:'str', cache_name:'str', key:'str', value:'any_') -> 'any_':
-        """ Sets a value in cache for input parameters.
-        """
-        cache = self.worker_store.cache_api.get_cache(cache_type, cache_name)
-        return cache.set(key, value) # type: ignore
-
-# ################################################################################################################################
-
     def _remove_response_root_elem(self, data:'strdict') -> 'strdict':
         keys = list(data.keys())
         if len(keys) == 1:
@@ -1878,50 +1958,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _set_up_grafana_cloud(self):
-        logger.info('Setting up Grafana Cloud monitoring')
-
-        from opentelemetry.sdk.resources import Resource
-        from opentelemetry.sdk.metrics import MeterProvider
-        from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-        from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-
-        resource = Resource.create({'service.name': 'zato.server'})
-
-        trace_exporter = OTLPSpanExporter(endpoint='http://localhost:4318/v1/traces')
-        processor = BatchSpanProcessor(trace_exporter)
-
-        provider = TracerProvider(resource=resource)
-        provider.add_span_processor(processor)
-        trace.set_tracer_provider(provider)
-
-        self.otlp_tracer = trace.get_tracer('zato.server')
-
-        metrics_exporter = OTLPMetricExporter(endpoint='http://localhost:4318/v1/metrics')
-        metrics_reader = PeriodicExportingMetricReader(metrics_exporter, export_interval_millis=5000)
-        metrics_provider = MeterProvider(resource=resource, metric_readers=[metrics_reader])
-
-        self.otlp_meter = metrics_provider.get_meter('zato.server')
-        self.otlp_gauges = {}
-        self.otlp_gauges_lock = RLock()
-        self.otlp_counters = {}
-        self.otlp_counters_lock = RLock()
-
-# ################################################################################################################################
-
-    def _set_up_datadog(self):
-        logger.info('Setting up Datadog monitoring')
-
-        # Datadog
-        from ddtrace.trace import tracer
-        self.datadog_tracer = tracer
-
-# ################################################################################################################################
-
     def invoke(self, service:'str', request:'any_'=None, *args:'any_', **kwargs:'any_') -> 'any_':
-        """ Invokes a service either in our own worker or, if PID is given on input, in another process of this server.
+        """ Invokes a service either in our own process or, if PID is given on input, in another process of this server.
         """
-        response = self.worker_store.invoke(
+        response = self.config_manager.invoke(
             service, request,
             data_format=kwargs.pop('data_format', DATA_FORMAT.DICT),
             serialize=kwargs.pop('serialize', True),
@@ -1946,7 +1986,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
     def invoke_async(self, service:'str', request:'any_', callback:'callable_', *args:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes a service in background.
         """
-        return self.worker_store.invoke(service, request, is_async=True, callback=callback, *args, **kwargs)
+        return self.config_manager.invoke(service, request, is_async=True, callback=callback, *args, **kwargs)
 
 # ################################################################################################################################
 
@@ -1990,48 +2030,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     @staticmethod
-    def post_fork(arbiter:'Arbiter', worker:'any_') -> 'None':
-        """ A Gunicorn hook which initializes the worker.
+    def start_server_process(server:'ParallelServer', deployment_key:'str') -> 'None':
+        """ Initializes the server process.
         """
 
         # Each subprocess needs to have the random number generator re-seeded.
         random_seed()
 
-        # This is our parallel server
-        server = worker.app.zato_wsgi_app # type: ParallelServer
-
         server.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_POST_FORK, kwargs={
-            'arbiter': arbiter,
-            'worker': worker,
+            'server': server,
         })
 
-        worker.app.zato_wsgi_app.worker_pid = worker.pid
-        ParallelServer.start_server(server, arbiter.zato_deployment_key)
-
-# ################################################################################################################################
-
-    @staticmethod
-    def on_starting(arbiter:'Arbiter') -> 'None':
-        """ A Gunicorn hook for setting the deployment key for this particular
-        set of server processes. It needs to be added to the arbiter because
-        we want for each worker to be (re-)started to see the same key.
-        """
-        arbiter.zato_deployment_key = '{}.{}'.format(utcnow().isoformat(), uuid4().hex)
-
-# ################################################################################################################################
-
-    @staticmethod
-    def worker_exit(arbiter:'Arbiter', worker:'GeventWorker') -> 'None':
-
-        # Invoke cleanup procedures
-        app:'ParallelServer' = worker.app.zato_wsgi_app
-        _ = app.cleanup_on_stop()
-
-# ################################################################################################################################
-
-    @staticmethod
-    def before_pid_kill(arbiter:'Arbiter', worker:'GeventWorker') -> 'None':
-        pass
+        server.server_pid = os.getpid()
+        ParallelServer.start_server(server, deployment_key)
 
 # ################################################################################################################################
 
@@ -2039,10 +2050,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
         """ A shutdown cleanup procedure.
         """
 
-        # Tell the ODB we've gone through a clean shutdown but only if this is
-        # the main process going down (Arbiter) not one of Gunicorn workers.
-        # We know it's the main process because its ODB's session has never
-        # been initialized.
+        # Tell the ODB we've gone through a clean shutdown but only if the
+        # ODB session has never been initialized (pre-server-start path).
         if not self.odb.session_initialized:
 
             self.config.odb_data = self.get_config_odb_data(self)
@@ -2074,7 +2083,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
             logger.info('Stopping server process (%s:%s) (%s)', self.name, self.pid, os.getpid())
 
             import sys
-            sys.exit(3) # Same as arbiter's WORKER_BOOT_ERROR
+            sys.exit(0)
 
 # ################################################################################################################################
 
@@ -2093,11 +2102,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
     def api_service_store_get_service_name_by_id(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.service_store.get_service_name_by_id(*args, **kwargs)
 
-    def api_worker_store_basic_auth_get_by_id(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        return self.worker_store.basic_auth_get_by_id(*args, **kwargs)
+    def api_config_manager_basic_auth_get_by_id(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self.config_manager.basic_auth_get_by_id(*args, **kwargs)
 
-    def api_worker_store_reconnect_generic(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        return self.worker_store.reconnect_generic(*args, **kwargs) # type: ignore
+    def api_config_manager_reconnect_generic(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self.config_manager.reconnect_generic(*args, **kwargs) # type: ignore
 
 # ################################################################################################################################
 

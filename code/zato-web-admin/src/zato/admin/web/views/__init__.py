@@ -16,7 +16,7 @@ from itertools import chain
 from traceback import format_exc
 
 # bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Django
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseServerError
@@ -235,7 +235,6 @@ class BaseView:
     def __init__(self):
         self.req = None # type: any_
         self.cluster_id = None
-        self.clear_user_message()
         self.ctx = {}
 
     def __call__(self, req, *args, **kwargs):
@@ -257,16 +256,11 @@ class BaseView:
     def on_after_set_input(self):
         pass
 
-    def clear_user_message(self):
-        self.user_message = None
-        self.user_message_class = 'failure'
-
-    class SimpleIO:
-        input_required = []
-        input_optional = []
-        output_required = []
-        output_optional = []
-        output_repeated = False
+    input_required = []
+    input_optional = []
+    output_required = []
+    output_optional = []
+    output_repeated = False
 
     def get_service_name(self, *_args, **_kwargs):
         raise NotImplementedError('May be implemented by subclasses')
@@ -299,7 +293,7 @@ class BaseView:
         self.populate_initial_input_dict(initial_input_dict)
         self.input.update(initial_input_dict)
 
-        for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional, default_attrs):
+        for name in chain(self.input_required, self.input_optional, default_attrs):
             if name != 'cluster_id':
 
                 value = req.GET.getlist(name)
@@ -339,7 +333,6 @@ class Index(BaseView):
         self.input = Bunch()
         self.items = []
         self.item = None
-        self.clear_user_message()
 
     def can_invoke_admin_service(self):
         """ Returns a boolean flag indicating that we know what service to invoke, what cluster it is on
@@ -352,7 +345,7 @@ class Index(BaseView):
             logger.info('Value missing; self.cluster_id `%s`', self.cluster_id)
             return False
 
-        for elem in self.SimpleIO.input_required:
+        for elem in self.input_required:
             if elem == 'cluster_id':
                 continue
             if not elem in input_elems:
@@ -405,14 +398,14 @@ class Index(BaseView):
         """ Creates a new instance of the model class for each of the element received
         and fills it in with received attributes.
         """
-        names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
+        names = tuple(chain(self.output_required, self.output_optional))
 
         for msg_item in item_list or []:
 
             output_class = self.get_output_class()
             item = output_class() if output_class else self.output_class()
 
-            # Use attributes that were definded upfront for the SimpleIO definition
+            # Use attributes that were defined upfront for the I/O definition
             # or use everything that we received from the service.
             names = names if names else msg_item.keys()
 
@@ -436,14 +429,14 @@ class Index(BaseView):
         """ Creates a new instance of the model class for each of the element received
         and fills it in with received attributes.
         """
-        sio_names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
+        io_names = tuple(chain(self.output_required, self.output_optional))
 
         for msg_item in (item_list or []):
 
             item = self.output_class()
 
-            # .. use the SIO field names if declared, otherwise take all keys from the response item.
-            names = sio_names if sio_names else msg_item.keys()
+            # .. use the I/O field names if declared, otherwise take all keys from the response item.
+            names = io_names if io_names else msg_item.keys()
 
             for name in sorted(names):
                 value = getattr(msg_item, name, None)
@@ -474,8 +467,6 @@ class Index(BaseView):
         """ Handles the request, taking care of common things and delegating
         control to the subclass for fetching this view-specific data.
         """
-        self.clear_user_message()
-
         try:
             super(Index, self).__call__(req, *args, **kwargs)
 
@@ -494,17 +485,30 @@ class Index(BaseView):
                 self.before_invoke_admin_service()
                 response = self.invoke_admin_service()
 
-                logger.info('Response from service: ok=`%s`, data_type=`%s`, data=`%s`', response.ok, type(response.data), response.data)
+                logger.info('View response: ok=%s, data_type=%s, data=%r',
+                    response.ok, type(response.data).__name__,
+                    str(response.data)[:500] if response.data else '(None)')
+                logger.info('View response: has_data=%s, details=%r, inner_text=%r',
+                    response.has_data, response.details, response.inner.text[:500] if response.inner else '(None)')
 
                 if response and response.ok:
                     return_data['response_inner'] = response.inner_service_response
 
                     if isinstance(response.data, list):
+                        logger.info('View: handling as list, len=%d', len(response.data))
                         self.handle_item_list(response.data, True)
+                    elif hasattr(response.data, 'get'):
+                        if response_list := response.data.get('response'):
+                            logger.info('View: handling as paginated response, len=%d', len(response_list))
+                            self.handle_item_list(response_list, True)
+                        else:
+                            logger.info('View: handling as single item (dict without response key)')
+                            self._handle_item(response.data)
                     else:
+                        logger.info('View: handling as single item')
                         self._handle_item(response.data)
                 else:
-                    self.user_message = response.details
+                    logger.info('View: response not ok, details=%r', response.details)
             else:
                 logger.info('can_invoke_admin_service returned False, not invoking an admin service:[%s]', self.service_name)
 
@@ -514,8 +518,6 @@ class Index(BaseView):
             return_data['items'] = self.items
             return_data['item'] = self.item
             return_data['input'] = self.input
-            return_data['user_message'] = self.user_message
-            return_data['user_message_class'] = self.user_message_class
             return_data['zato_clusters'] = req.zato.clusters
             return_data['search_form'] = req.zato.search_form
             return_data['meta'] = response.meta if response else {}
@@ -557,7 +559,6 @@ class CreateEdit(BaseView):
         initial_input_dict = initial_input_dict or {}
         initial_return_data = initial_return_data or {}
         self.input_dict.clear()
-        self.clear_user_message()
 
         try:
             logger.info('CreateEdit step 1: calling super().__call__')
@@ -577,9 +578,9 @@ class CreateEdit(BaseView):
 
             input_dict.update(initial_input_dict)
 
-            logger.info('CreateEdit step 4: building input_dict from SIO, initial_input_dict=%s', initial_input_dict)
+            logger.info('CreateEdit step 4: building input_dict from I/O, initial_input_dict=%s', initial_input_dict)
 
-            for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
+            for name in chain(self.input_required, self.input_optional):
                 if name not in input_dict and name not in self.input_dict:
                     value = self.input.get(name)
                     value = self.pre_process_item(name, value)
@@ -590,8 +591,8 @@ class CreateEdit(BaseView):
             self.pre_process_input_dict(self.input_dict)
 
             logger.info('CreateEdit step 5: input_dict=%s', self.input_dict)
-            logger.info('CreateEdit step 5: SimpleIO.input_required=%s', self.SimpleIO.input_required)
-            logger.info('CreateEdit step 5: SimpleIO.input_optional=%s', self.SimpleIO.input_optional)
+            logger.info('CreateEdit step 5: input_required=%s', self.input_required)
+            logger.info('CreateEdit step 5: input_optional=%s', self.input_optional)
             logger.info('CreateEdit step 5: self.input=%s', self.input)
             logger.info('CreateEdit step 5: POST=%s', dict(self.req.POST))
 
@@ -607,8 +608,8 @@ class CreateEdit(BaseView):
 
                 return_data.update(initial_return_data)
 
-                sio_output = tuple(chain(self.SimpleIO.output_optional, self.SimpleIO.output_required))
-                output_names = sio_output if sio_output else response.data.keys()
+                io_output = tuple(chain(self.output_optional, self.output_required))
+                output_names = io_output if io_output else response.data.keys()
 
                 logger.info('CreateEdit step 8: output_names=%s', output_names)
 

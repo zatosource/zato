@@ -14,7 +14,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from arrow import utcnow
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # gevent
 from gevent import spawn, spawn_later

@@ -1,0 +1,266 @@
+# Vitec Acute - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A04 - ED patient registration (päivystyksen rekisteröinti)
+
+```
+MSH|^~\&|ACUTE|KYS|LIFECARE|KYS_HIS|20260509080000||ADT^A04|ACUTE000001|P|2.3|||AL|NE||FIN
+EVN|A04|20260509080000
+PID|||PT500001^^^KYS^MR~200185-234A^^^DVV^NNFIN||Turunen^Ville^Tapani^^Herra||19850120|M|||Tulliportinkatu 15^^Kuopio^^70100^FIN||^^CP^0401234582
+PV1||E|KYS^PPKL^Triage 1^^PSSHP||||DR500^Korhonen^Matti^^^LL^Lääkäri||||||||||||KÄYNTI500001|||||||||||||||||||||||20260509080000
+PV2|||^Rintakipu
+```
+
+---
+
+## 2. ADT^A01 - ED admission to inpatient (päivystyksestä osastolle)
+
+```
+MSH|^~\&|ACUTE|KYS|LIFECARE|KYS_HIS|20260509120000||ADT^A01|ACUTE000002|P|2.3|||AL|NE||FIN
+EVN|A01|20260509120000
+PID|||PT500001^^^KYS^MR~200185-234A^^^DVV^NNFIN||Turunen^Ville^Tapani^^Herra||19850120|M|||Tulliportinkatu 15^^Kuopio^^70100^FIN||^^CP^0401234582
+PV1||I|KYS^SIS1^Huone 302^Vuode 1^PSSHP||||DR500^Korhonen^Matti^^^LL^Lääkäri||||||||||||HOITO500001|||||||||||||||||||||||20260509120000
+PV2|||^Sydäninfarktiepäily
+IN1|1|POHJOLA|500001|Pohjola Vakuutus|Lapinmäentie 1^^Helsinki^^00350^FIN
+```
+
+---
+
+## 3. ADT^A03 - ED discharge (päivystyksestä kotiutus)
+
+```
+MSH|^~\&|ACUTE|KYS|LIFECARE|KYS_HIS|20260509143000||ADT^A03|ACUTE000003|P|2.3|||AL|NE||FIN
+EVN|A03|20260509143000
+PID|||PT500002^^^KYS^MR~150392-567B^^^DVV^NNFIN||Laitinen^Sanna^Kristiina^^Rouva||19920315|F|||Kauppakatu 22^^Kuopio^^70100^FIN||^^CP^0509876550
+PV1||E|KYS^PPKL^Triage 2^^PSSHP||||DR501^Mäkinen^Elisa^^^LL^Lääkäri||||||||||||KÄYNTI500002|||||||||||||||||||||||20260509100000|20260509143000
+```
+
+---
+
+## 4. ADT^A08 - ED patient update (päivystyspotilaan tietojen päivitys)
+
+```
+MSH|^~\&|ACUTE|KYS|LIFECARE|KYS_HIS|20260509090000||ADT^A08|ACUTE000004|P|2.3|||AL|NE||FIN
+EVN|A08|20260509090000
+PID|||PT500001^^^KYS^MR~200185-234A^^^DVV^NNFIN||Turunen^Ville^Tapani^^Herra||19850120|M|||Tulliportinkatu 15^^Kuopio^^70100^FIN||^^CP^0401234582
+PV1||E|KYS^PPKL^Triage 1^^PSSHP||||DR500^Korhonen^Matti^^^LL^Lääkäri||||||||||||KÄYNTI500001|||||||||||||||||||||||20260509080000
+PV2|||^Sydäninfarktiepäily, ESI 2
+```
+
+---
+
+## 5. ORM^O01 - ED laboratory order, urgent (päivystyksen kiireellinen laboratoriotilaus)
+
+```
+MSH|^~\&|ACUTE|KYS|KYSLAB|PSSHP|20260509081500||ORM^O01|ACUTE000005|P|2.3|||AL|NE||FIN
+PID|||PT500001^^^KYS^MR~200185-234A^^^DVV^NNFIN||Turunen^Ville^Tapani^^Herra||19850120|M|||Tulliportinkatu 15^^Kuopio^^70100^FIN||^^CP^0401234582
+PV1||E|KYS^PPKL^Triage 1^^PSSHP||||DR500^Korhonen^Matti^^^LL^Lääkäri||||||||||||KÄYNTI500001
+ORC|NW|ORD500001^ACUTE|||||^^^20260509081500^^S||20260509081500|DR500^Korhonen^Matti^^^LL^Lääkäri
+OBR|1|ORD500001^ACUTE||4825^P-TnT^KYSLAB|||20260509081500||||||S||DR500^Korhonen^Matti^^^LL^Lääkäri
+OBR|2|ORD500001^ACUTE||2741^B-PVK+T^KYSLAB|||20260509081500||||||S||DR500^Korhonen^Matti^^^LL^Lääkäri
+OBR|3|ORD500001^ACUTE||4520^P-CRP^KYSLAB|||20260509081500||||||S||DR500^Korhonen^Matti^^^LL^Lääkäri
+OBR|4|ORD500001^ACUTE||2003^P-Krea^KYSLAB|||20260509081500||||||S||DR500^Korhonen^Matti^^^LL^Lääkäri
+```
+
+---
+
+## 6. ORU^R01 - ED troponin result, critical (päivystyksen kriittinen troponiini)
+
+```
+MSH|^~\&|KYSLAB|PSSHP|ACUTE|KYS|20260509101000||ORU^R01|KYSLAB000001|P|2.3|||AL|NE||FIN
+PID|||PT500001^^^KYS^MR~200185-234A^^^DVV^NNFIN||Turunen^Ville^Tapani^^Herra||19850120|M|||Tulliportinkatu 15^^Kuopio^^70100^FIN||^^CP^0401234582
+PV1||E|KYS^PPKL^Triage 1^^PSSHP||||DR500^Korhonen^Matti^^^LL^Lääkäri||||||||||||KÄYNTI500001
+ORC|RE|ORD500001^ACUTE|RES500001^KYSLAB||||^^^20260509081500^^S||20260509101000
+OBR|1|ORD500001^ACUTE|RES500001^KYSLAB|4825^P-TnT^KYSLAB|||20260509082000|||||||20260509082000|^^S|DR500^Korhonen^Matti^^^LL^Lääkäri||||||20260509101000|||F
+OBX|1|NM|6598-7^P-TnT^LN||312|ng/l|<14|HH|||F|||20260509101000
+```
+
+---
+
+## 7. ORU^R01 - ED blood count and CRP (päivystyksen PVK ja CRP)
+
+```
+MSH|^~\&|KYSLAB|PSSHP|ACUTE|KYS|20260509103000||ORU^R01|KYSLAB000002|P|2.3|||AL|NE||FIN
+PID|||PT500003^^^KYS^MR~081170-890C^^^DVV^NNFIN||Hänninen^Markku^Olavi^^Herra||19701108|M|||Puijonkatu 33^^Kuopio^^70100^FIN||^^PH^0171234567
+PV1||E|KYS^PPKL^Triage 3^^PSSHP||||DR502^Lahtinen^Olli^^^LL^Lääkäri||||||||||||KÄYNTI500003
+ORC|RE|ORD500002^ACUTE|RES500002^KYSLAB||||^^^20260509091000^^S||20260509103000
+OBR|1|ORD500002^ACUTE|RES500002^KYSLAB|2741^B-PVK+T^KYSLAB|||20260509092000|||||||20260509092000|^^B|DR502^Lahtinen^Olli^^^LL^Lääkäri||||||20260509103000|||F
+OBX|1|NM|6768^B-Leuk^KYSLAB||14.5|10E9/l|3.4-8.2|HH|||F|||20260509103000
+OBX|2|NM|1552^B-Hb^KYSLAB||145|g/l|134-167||||F|||20260509103000
+OBX|3|NM|2798^B-Trom^KYSLAB||310|10E9/l|150-360||||F|||20260509103000
+OBX|4|NM|4520^P-CRP^KYSLAB||68|mg/l|<3|HH|||F|||20260509103000
+```
+
+---
+
+## 8. ORM^O01 - ED radiology order (päivystyksen kuvantamistilaus)
+
+```
+MSH|^~\&|ACUTE|KYS|SECTRA_RIS|KYS_RAD|20260509091000||ORM^O01|ACUTE000006|P|2.3|||AL|NE||FIN
+PID|||PT500004^^^KYS^MR~250300-123D^^^DVV^NNFIN||Kokkonen^Aleksi^Petteri^^Herra||20000325|M|||Vuorikatu 12^^Kuopio^^70100^FIN||^^CP^0451234573
+PV1||E|KYS^PPKL^Triage 2^^PSSHP||||DR503^Hämäläinen^Tuula^^^LL^Lääkäri||||||||||||KÄYNTI500004
+ORC|NW|ORD500003^ACUTE|||||^^^20260509091000^^S||20260509091000|DR503^Hämäläinen^Tuula^^^LL^Lääkäri
+OBR|1|ORD500003^ACUTE||37116-1^CT vatsa^RADLEX|||20260509091000||||||||DR503^Hämäläinen^Tuula^^^LL^Lääkäri||||||||||VATSAKIPU^Akuutti vatsakipu
+```
+
+---
+
+## 9. ORU^R01 - ED radiology result with base64 PDF (päivystyksen kuvantamisvastaus PDF-liitteellä)
+
+```
+MSH|^~\&|SECTRA_RIS|KYS_RAD|ACUTE|KYS|20260509130000||ORU^R01|SECTRA000003|P|2.3|||AL|NE||FIN
+PID|||PT500004^^^KYS^MR~250300-123D^^^DVV^NNFIN||Kokkonen^Aleksi^Petteri^^Herra||20000325|M|||Vuorikatu 12^^Kuopio^^70100^FIN||^^CP^0451234573
+PV1||E|KYS^PPKL^Triage 2^^PSSHP||||DR503^Hämäläinen^Tuula^^^LL^Lääkäri||||||||||||KÄYNTI500004
+ORC|RE|ORD500003^ACUTE|RES500003^SECTRA_RIS||||^^^20260509091000^^S||20260509130000
+OBR|1|ORD500003^ACUTE|RES500003^SECTRA_RIS|37116-1^CT vatsa^RADLEX|||20260509100000|||||||20260509100000|^^CT|DR504^Ruotsalainen^Pasi^^^RAD^Radiologi||||||20260509130000|||F
+OBX|1|TX|18748-4^Diagnostic imaging study^LN||Vatsan TT: Umpilisäke turvonnut, ympäröivä rasva ödemaattinen. Löydös sopii akuuttiin appendisiittiin.||||||F|||20260509130000
+OBX|2|ED|PDF^TT-lausunto^L||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UK||||||F|||20260509130000
+```
+
+---
+
+## 10. ORU^R01 - ED blood gas results (päivystyksen verikaasut)
+
+```
+MSH|^~\&|KYSLAB|PSSHP|ACUTE|KYS|20260509094000||ORU^R01|KYSLAB000003|P|2.3|||AL|NE||FIN
+PID|||PT500005^^^KYS^MR~120845+456E^^^DVV^NNFIN||Nousiainen^Aarne^Kalevi^^Herra||19450812|M|||Maaherrankatu 7^^Kuopio^^70100^FIN||^^PH^0172345678
+PV1||E|KYS^PPKL^Triage 1^^PSSHP||||DR505^Antikainen^Minna^^^LL^Lääkäri||||||||||||KÄYNTI500005
+ORC|RE|ORD500004^ACUTE|RES500004^KYSLAB||||^^^20260509085000^^S||20260509094000
+OBR|1|ORD500004^ACUTE|RES500004^KYSLAB|24338-6^aB-Verikaasuanalyysi^LN|||20260509090000|||||||20260509090000|^^aB|DR505^Antikainen^Minna^^^LL^Lääkäri||||||20260509094000|||F
+OBX|1|NM|2744-1^aB-pH^LN||7.32|kPa|7.35-7.45|L|||F|||20260509094000
+OBX|2|NM|2019-8^aB-pCO2^LN||7.2|kPa|4.7-6.0|HH|||F|||20260509094000
+OBX|3|NM|2703-7^aB-pO2^LN||8.5|kPa|11.0-14.4|L|||F|||20260509094000
+OBX|4|NM|1959-6^aB-HCO3^LN||27.2|mmol/l|22.0-26.0|H|||F|||20260509094000
+OBX|5|NM|1925-7^aB-BE^LN||1.8|mmol/l|-2.5-2.5||||F|||20260509094000
+OBX|6|NM|2713-6^aB-SatO2^LN||89|%|95-100|L|||F|||20260509094000
+```
+
+---
+
+## 11. ORM^O01 - ED ECG order (päivystyksen EKG-tilaus)
+
+```
+MSH|^~\&|ACUTE|KYS|CARDIO|KYS_FYSI|20260509082000||ORM^O01|ACUTE000007|P|2.3|||AL|NE||FIN
+PID|||PT500001^^^KYS^MR~200185-234A^^^DVV^NNFIN||Turunen^Ville^Tapani^^Herra||19850120|M|||Tulliportinkatu 15^^Kuopio^^70100^FIN||^^CP^0401234582
+PV1||E|KYS^PPKL^Triage 1^^PSSHP||||DR500^Korhonen^Matti^^^LL^Lääkäri||||||||||||KÄYNTI500001
+ORC|NW|ORD500005^ACUTE|||||^^^20260509082000^^S||20260509082000|DR500^Korhonen^Matti^^^LL^Lääkäri
+OBR|1|ORD500005^ACUTE||89001-4^12-kytkentäinen EKG^LN|||20260509082000||||||S||DR500^Korhonen^Matti^^^LL^Lääkäri
+```
+
+---
+
+## 12. ORU^R01 - ED ECG result with base64 PDF (EKG-tulos PDF-liitteellä)
+
+```
+MSH|^~\&|CARDIO|KYS_FYSI|ACUTE|KYS|20260509090000||ORU^R01|CARDIO000001|P|2.3|||AL|NE||FIN
+PID|||PT500001^^^KYS^MR~200185-234A^^^DVV^NNFIN||Turunen^Ville^Tapani^^Herra||19850120|M|||Tulliportinkatu 15^^Kuopio^^70100^FIN||^^CP^0401234582
+PV1||E|KYS^PPKL^Triage 1^^PSSHP||||DR500^Korhonen^Matti^^^LL^Lääkäri||||||||||||KÄYNTI500001
+ORC|RE|ORD500005^ACUTE|RES500005^CARDIO||||^^^20260509082000^^S||20260509090000
+OBR|1|ORD500005^ACUTE|RES500005^CARDIO|89001-4^12-kytkentäinen EKG^LN|||20260509083000|||||||20260509083000|^^EKG|DR506^Tolvanen^Jussi^^^LL^Lääkäri||||||20260509090000|||F
+OBX|1|TX|89001-4^EKG-tulkinta^LN||Sinusrytmi, frekvenssi 88/min. ST-nousu V1-V4, akuutti anteriorinen STEMI.||||||F|||20260509090000
+OBX|2|ED|PDF^EKG-tuloste^L||^application^pdf^Base64^JVBERi0xLjUKJeLjz9MKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKL01hcmtJbmZvIDw8Ci9NYXJrZWQgdHJ1ZQo+PgplbmRvYmoKMiAwIG9iago8PAovVHlwZSAvUGFnZXMKL0tpZHMgWzMgMCBSXQovQ291bnQgMQovTWVkaWFCb3ggWzAgMCA4NDIgNTk1XQo+Pgpl||||||F|||20260509090000
+```
+
+---
+
+## 13. ADT^A02 - ED transfer to monitored bed (siirto valvontapaikkaan)
+
+```
+MSH|^~\&|ACUTE|KYS|LIFECARE|KYS_HIS|20260509095000||ADT^A02|ACUTE000008|P|2.3|||AL|NE||FIN
+EVN|A02|20260509095000
+PID|||PT500001^^^KYS^MR~200185-234A^^^DVV^NNFIN||Turunen^Ville^Tapani^^Herra||19850120|M|||Tulliportinkatu 15^^Kuopio^^70100^FIN||^^CP^0401234582
+PV1||E|KYS^PPKL^Valvonta 1^^PSSHP||||DR500^Korhonen^Matti^^^LL^Lääkäri||||||||||||KÄYNTI500001|||||||||||||||||||||||20260509080000
+```
+
+---
+
+## 14. ORU^R01 - ED electrolytes (päivystyksen elektrolyytit)
+
+```
+MSH|^~\&|KYSLAB|PSSHP|ACUTE|KYS|20260509110000||ORU^R01|KYSLAB000004|P|2.3|||AL|NE||FIN
+PID|||PT500006^^^KYS^MR~060258-789F^^^DVV^NNFIN||Rissanen^Sirpa^Anneli^^Rouva||19580206|F|||Kuninkaankatu 19^^Kuopio^^70100^FIN||^^PH^0173456789
+PV1||E|KYS^PPKL^Triage 3^^PSSHP||||DR507^Ikonen^Jari^^^LL^Lääkäri||||||||||||KÄYNTI500006
+ORC|RE|ORD500006^ACUTE|RES500006^KYSLAB||||^^^20260509093000^^S||20260509110000
+OBR|1|ORD500006^ACUTE|RES500006^KYSLAB|24326-1^Elektrolyytit^LN|||20260509094000|||||||20260509094000|^^S|DR507^Ikonen^Jari^^^LL^Lääkäri||||||20260509110000|||F
+OBX|1|NM|2947-0^fP-Na^LN||128|mmol/l|137-145|LL|||F|||20260509110000
+OBX|2|NM|6298-4^fP-K^LN||5.8|mmol/l|3.5-5.0|HH|||F|||20260509110000
+OBX|3|NM|2160-0^fP-Krea^LN||165|umol/l|50-90|HH|||F|||20260509110000
+```
+
+---
+
+## 15. ORM^O01 - ED consultation order (päivystyksen konsultaatiotilaus)
+
+```
+MSH|^~\&|ACUTE|KYS|LIFECARE|KYS_HIS|20260509100000||ORM^O01|ACUTE000009|P|2.3|||AL|NE||FIN
+PID|||PT500004^^^KYS^MR~250300-123D^^^DVV^NNFIN||Kokkonen^Aleksi^Petteri^^Herra||20000325|M|||Vuorikatu 12^^Kuopio^^70100^FIN||^^CP^0451234573
+PV1||E|KYS^PPKL^Triage 2^^PSSHP||||DR503^Hämäläinen^Tuula^^^LL^Lääkäri||||||||||||KÄYNTI500004
+ORC|NW|ORD500007^ACUTE|||||^^^20260509100000^^S||20260509100000|DR503^Hämäläinen^Tuula^^^LL^Lääkäri
+OBR|1|ORD500007^ACUTE||KONS^Konsultaatio, kirurgia^KYS|||20260509100000||||||||DR503^Hämäläinen^Tuula^^^LL^Lääkäri
+NTE|1||Akuutti appendisiittiepäily. TT-löydös sopiva. Pyydän kirurgin arviota leikkausaiheesta.
+```
+
+---
+
+## 16. ORU^R01 - ED rapid glucose (päivystyksen pikaglukoosi)
+
+```
+MSH|^~\&|KYSLAB|PSSHP|ACUTE|KYS|20260509084000||ORU^R01|KYSLAB000005|P|2.3|||AL|NE||FIN
+PID|||PT500007^^^KYS^MR~190740+012G^^^DVV^NNFIN||Väänänen^Eero^Kalevi^^Herra||19400719|M|||Satamakatu 4^^Kuopio^^70100^FIN||^^PH^0174567890
+PV1||E|KYS^PPKL^Triage 1^^PSSHP||||DR508^Partanen^Anu^^^LL^Lääkäri||||||||||||KÄYNTI500007
+ORC|RE|ORD500008^ACUTE|RES500008^KYSLAB||||^^^20260509082500^^S||20260509084000
+OBR|1|ORD500008^ACUTE|RES500008^KYSLAB|14879-1^cB-Gluk^LN|||20260509083000|||||||20260509083000|^^cB|DR508^Partanen^Anu^^^LL^Lääkäri||||||20260509084000|||F
+OBX|1|NM|14879-1^cB-Gluk^LN||2.1|mmol/l|4.0-6.0|LL|||F|||20260509084000
+```
+
+---
+
+## 17. ADT^A31 - ED patient demographic update (päivystyspotilaan henkilötietojen päivitys)
+
+```
+MSH|^~\&|ACUTE|KYS|LIFECARE|KYS_HIS|20260509085000||ADT^A31|ACUTE000010|P|2.3|||AL|NE||FIN
+EVN|A31|20260509085000
+PID|||PT500008^^^KYS^MR~010202-234H^^^DVV^NNFIN||Miettinen^Emilia^Sofia^^Neiti||20020201|F|||Asemakatu 10^^Kuopio^^70100^FIN||^^CP^0401234583
+PV1||N
+```
+
+---
+
+## 18. ORU^R01 - ED alcohol and drug screen (päivystyksen päihdeseulonta)
+
+```
+MSH|^~\&|KYSLAB|PSSHP|ACUTE|KYS|20260509112000||ORU^R01|KYSLAB000006|P|2.3|||AL|NE||FIN
+PID|||PT500009^^^KYS^MR~080580-678J^^^DVV^NNFIN||Pesonen^Juha^Matti^^Herra||19800508|M|||Niiralankatu 3^^Kuopio^^70100^FIN||^^CP^0407654330
+PV1||E|KYS^PPKL^Triage 2^^PSSHP||||DR509^Laukkanen^Sirkka^^^LL^Lääkäri||||||||||||KÄYNTI500009
+ORC|RE|ORD500009^ACUTE|RES500009^KYSLAB||||^^^20260509100000^^S||20260509112000
+OBR|1|ORD500009^ACUTE|RES500009^KYSLAB|5640-8^S-Etanoli^LN|||20260509101000|||||||20260509101000|^^S|DR509^Laukkanen^Sirkka^^^LL^Lääkäri||||||20260509112000|||F
+OBX|1|NM|5640-8^S-Etanoli^LN||1.8|promille|0||||F|||20260509112000
+OBX|2|ST|43984-6^U-HuumeSeul^LN||Bentsodiatsepiinit positiivinen, muut negatiiviset||||||F|||20260509112000
+```
+
+---
+
+## 19. ORM^O01 - ED blood product order (päivystyksen verivalmistetilaus)
+
+```
+MSH|^~\&|ACUTE|KYS|KYSLAB_VP|PSSHP|20260509093000||ORM^O01|ACUTE000011|P|2.3|||AL|NE||FIN
+PID|||PT500010^^^KYS^MR~150265-901K^^^DVV^NNFIN||Keinänen^Eila^Marjatta^^Rouva||19650215|F|||Hapelähteenkatu 14^^Kuopio^^70100^FIN||^^CP^0409876551
+PV1||E|KYS^PPKL^Triage 1^^PSSHP||||DR510^Mustonen^Pekka^^^LL^Lääkäri||||||||||||KÄYNTI500010
+ORC|NW|ORD500010^ACUTE|||||^^^20260509093000^^S||20260509093000|DR510^Mustonen^Pekka^^^LL^Lääkäri
+OBR|1|ORD500010^ACUTE||1305^E-ABORh^KYSLAB_VP|||20260509093000||||||S||DR510^Mustonen^Pekka^^^LL^Lääkäri
+OBR|2|ORD500010^ACUTE||SOPIVUUS^E-X-koe^KYSLAB_VP|||20260509093000||||||S||DR510^Mustonen^Pekka^^^LL^Lääkäri
+```
+
+---
+
+## 20. ORU^R01 - ED lactate result (päivystyksen laktaattitulos)
+
+```
+MSH|^~\&|KYSLAB|PSSHP|ACUTE|KYS|20260509100000||ORU^R01|KYSLAB000007|P|2.3|||AL|NE||FIN
+PID|||PT500011^^^KYS^MR~031155+234L^^^DVV^NNFIN||Huttunen^Taisto^Olavi^^Herra||19551103|M|||Kauppakatu 40^^Kuopio^^70100^FIN||^^PH^0175678901
+PV1||E|KYS^PPKL^Triage 1^^PSSHP||||DR511^Väisänen^Kirsi^^^LL^Lääkäri||||||||||||KÄYNTI500011
+ORC|RE|ORD500011^ACUTE|RES500011^KYSLAB||||^^^20260509091000^^S||20260509100000
+OBR|1|ORD500011^ACUTE|RES500011^KYSLAB|2524-7^P-Laktaatti^LN|||20260509092000|||||||20260509092000|^^P|DR511^Väisänen^Kirsi^^^LL^Lääkäri||||||20260509100000|||F
+OBX|1|NM|2524-7^P-Laktaatti^LN||4.8|mmol/l|0.5-2.2|HH|||F|||20260509100000
+```

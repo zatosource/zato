@@ -21,7 +21,6 @@ config_template = """{{
   "log_config": "./config/repo/{log_config}",
     "zato_secret_key": "{zato_secret_key}",
   "well_known_data": "{well_known_data}",
-  "is_totp_enabled": false,
 
   "DEBUG": 0,
   "ALLOWED_HOSTS": ["*"],
@@ -40,8 +39,7 @@ config_template = """{{
   "SECRET_KEY": "{SECRET_KEY}",
 
   "ADMIN_INVOKE_NAME": "{ADMIN_INVOKE_NAME}",
-  "ADMIN_INVOKE_PASSWORD": "{ADMIN_INVOKE_PASSWORD}",
-  "ADMIN_INVOKE_PATH": "/zato/admin/invoke"
+  "ADMIN_INVOKE_PASSWORD": "{ADMIN_INVOKE_PASSWORD}"
 }}
 """ # noqa
 

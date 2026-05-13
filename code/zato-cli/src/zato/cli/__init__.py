@@ -76,12 +76,6 @@ common_ca_create_opts = [
     {'name':'--common-name', 'help':'Common name (defaults to {default})'.format(default=default_common_name)},
 ]
 
-common_totp_opts = [
-    {'name': 'username', 'help': 'Username to reset the TOTP secret key of'},
-    {'name': '--key', 'help': 'Key to use'},
-    {'name': '--key-label', 'help': 'Label to apply to the key'},
-]
-
 common_scheduler_server_address_opts = [
     {'name':'--scheduler-address-for-server', 'help':'Address of the scheduler for servers to invoke'},
     {'name':'--server-address-for-scheduler', 'help':'Address of the server for a scheduler to invoke'},
@@ -144,9 +138,6 @@ ping_query=SELECT 1
 # ################################################################################################################################
 
 command_imports = (
-    ('cache_delete', 'zato.cli.cache.CacheDelete'),
-    ('cache_get', 'zato.cli.cache.CacheGet'),
-    ('cache_set', 'zato.cli.cache.CacheSet'),
     ('change_password', 'zato.cli.security.basic_auth.ChangePassword'),
     ('check_config', 'zato.cli.check_config.CheckConfig'),
     ('create_api_key', 'zato.cli.security.api_key.CreateDefinition'),
@@ -169,7 +160,6 @@ command_imports = (
     ('from_config', 'zato.cli.FromConfig'),
     ('hash_get_rounds', 'zato.cli.crypto.GetHashRounds'),
     ('info', 'zato.cli.info.Info'),
-    ('reset_totp_key', 'zato.cli.web_admin_auth.ResetTOTPKey'),
     ('quickstart_create', 'zato.cli.quickstart.Create'),
     ('service_invoke', 'zato.cli.service.Invoke'),
     ('set_ide_password', 'zato.cli.ide.SetIDEPassword'),
@@ -249,7 +239,6 @@ class ZatoCommand:
         NOT_A_ZATO_SERVER = 23
         NOT_A_ZATO_WEB_ADMIN = 24
         NOT_A_ZATO_SCHEDULER = 26
-        CACHE_KEY_NOT_FOUND = 27
         SERVER_TIMEOUT = 28
         PARAMETER_MISSING = 29
         PATH_NOT_A_FILE = 30
@@ -402,6 +391,7 @@ class ZatoCommand:
 
         self.logger = logging.getLogger(self.__class__.__name__) # noqa
         self.logger.setLevel(logging.DEBUG if self.verbose else logging.INFO) # noqa
+        self.logger.propagate = False
         self.logger.handlers[:] = []
 
         console_handler = logging.StreamHandler(sys.stdout) # noqa

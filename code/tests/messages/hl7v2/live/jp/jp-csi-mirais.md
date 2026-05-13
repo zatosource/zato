@@ -1,0 +1,258 @@
+# CSI MI-RA-Is - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - inpatient admission (入院登録)
+
+```
+MSH|^~\&|MI-RA-Is|福岡大学病院|SS-MIX2|地域連携|20260301090000||ADT^A01^ADT_A01|MIR20260301090000001|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A01|20260301090000
+PID|||PAT300100^^^福岡大学^PI||高橋^勝也^^^^^L||19700115|M|||福岡県福岡市城南区七隈7-45-1^^城南区^福岡県^814-0180^JPN^H||^PRN^PH^^81^92^8011011||JPN|M|||||||||||||||||||N
+PV1||I|3A^302^1^福岡大学^^^^N||||D300100^原田^浩司^^^^^L^^^DR|||CAR||||A|||V300100|||||||||||||||||||||||||||20260301090000
+IN1|1||56789012|全国健康保険協会|福岡県福岡市博多区博多駅東2-11-1||||||||||||||||||||||||||||||||||||||||8
+```
+
+---
+
+## 2. ADT^A03 - discharge (退院)
+
+```
+MSH|^~\&|MI-RA-Is|福岡大学病院|SS-MIX2|地域連携|20260312140000||ADT^A03^ADT_A03|MIR20260312140000002|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A03|20260312140000
+PID|||PAT300100^^^福岡大学^PI||高橋^勝也^^^^^L||19700115|M|||福岡県福岡市城南区七隈7-45-1^^城南区^福岡県^814-0180^JPN^H||^PRN^PH^^81^92^8011011||JPN|M
+PV1||I|3A^302^1^福岡大学^^^^N||||D300100^原田^浩司^^^^^L^^^DR|||CAR||||||||V300100|||||||||||||||||||||||||||20260312140000
+```
+
+---
+
+## 3. ORM^O01 - pharmacy order (処方オーダ)
+
+```
+MSH|^~\&|MI-RA-Is|福岡大学病院|薬剤部|福岡大学|20260302080000||ORM^O01^ORM_O01|MIR20260302080000003|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT300100^^^福岡大学^PI||高橋^勝也^^^^^L||19700115|M
+PV1||I|3A^302^1^福岡大学^^^^N||||D300100^原田^浩司^^^^^L^^^DR
+ORC|NW|ORD20260302001^MI-RA-Is||||||||||D300100^原田^浩司^^^^^L^^^DR
+RXO|612130101^ビソプロロールフマル酸塩錠2.5mg^HOT9|||2.5||mg||PO^経口^HL70162|||||||||||||||D300100^原田^浩司^^^^^L^^^DR
+TQ1|||1^^D&日&JAHIS0001|||||20260302|||28^日^JAHIS0002
+```
+
+---
+
+## 4. OML^O33 - laboratory order (検体検査オーダ)
+
+```
+MSH|^~\&|MI-RA-Is|福岡大学病院|検査部|福岡大学|20260302060000||OML^O33^OML_O33|MIR20260302060000004|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT300100^^^福岡大学^PI||高橋^勝也^^^^^L||19700115|M
+PV1||I|3A^302^1^福岡大学^^^^N||||D300100^原田^浩司^^^^^L^^^DR
+SPM|1|||BLD^血液^HL70487|||||||||||20260302060000
+ORC|NW|LAB20260302001^MI-RA-Is||||||||||D300100^原田^浩司^^^^^L^^^DR
+OBR|1|LAB20260302001^MI-RA-Is||2A090000001930101^BNP^JC10|R||20260302060000
+OBR|2|LAB20260302002^MI-RA-Is||2B150000001930101^D-ダイマー^JC10|R||20260302060000
+```
+
+---
+
+## 5. ORU^R01 - laboratory result cardiac markers (心臓マーカー検査結果)
+
+```
+MSH|^~\&|検査部|福岡大学|MI-RA-Is|福岡大学|20260302130000||ORU^R01^ORU_R01|LAB20260302130000005|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT300100^^^福岡大学^PI||高橋^勝也^^^^^L||19700115|M
+PV1||I|3A^302^1^福岡大学^^^^N||||D300100^原田^浩司^^^^^L^^^DR
+ORC|RE|LAB20260302001^MI-RA-Is||||||||||D300100^原田^浩司^^^^^L^^^DR
+OBR|1|LAB20260302001^MI-RA-Is||2A090000001930101^BNP^JC10|R||20260302060000|||||||20260302060000||D300100^原田^浩司^^^^^L^^^DR||||||||20260302130000|||F
+OBX|1|NM|2A090000001930101^BNP^JC10||185.3|pg/mL|0.0-18.4|H|||F|||20260302130000
+OBX|2|NM|2B150000001930101^D-ダイマー^JC10||0.8|ug/mL|0.0-1.0|N|||F|||20260302130000
+OBX|3|NM|2A070000001930101^トロポニンT^JC10||0.012|ng/mL|0.000-0.014|N|||F|||20260302130000
+```
+
+---
+
+## 6. ORU^R01 - cardiac catheterization report with PDF (心臓カテーテルレポート)
+
+```
+MSH|^~\&|循環器部|福岡大学|MI-RA-Is|福岡大学|20260305160000||ORU^R01^ORU_R01|CATH20260305160000006|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT300100^^^福岡大学^PI||高橋^勝也^^^^^L||19700115|M
+PV1||I|3A^302^1^福岡大学^^^^N||||D300100^原田^浩司^^^^^L^^^DR
+ORC|RE|CATH20260305001^MI-RA-Is
+OBR|1|CATH20260305001^MI-RA-Is||93510^心臓カテーテル検査^CPT|R||20260305100000|||||||20260305100000||D300100^原田^浩司^^^^^L^^^DR||||||||20260305160000|||F
+OBX|1|TX|93510^心臓カテーテル検査^CPT|1|左冠動脈前下行枝#7に75%狭窄。右冠動脈#2に50%狭窄。左室駆出率62%。||||||F|||20260305160000
+OBX|2|ED|PDF^カテーテルレポートPDF^L|1|^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA4NDIgNTk1XSAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA2MCA+PgpzdHJlYW0KQlQKL0YxIDEyIFRmCjEwMCA3MDAgVGQKKENhcmRpYWMgQ2F0aCBSZXBvcnQpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKeHJlZgowIDUKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjA2IDAwMDAwIG4gCnRyYWlsZXIKPDwgL1NpemUgNSAvUm9vdCAxIDAgUiA+PgpzdGFydHhyZWYKMzE2CiUlRU9GCg==||||||F|||20260305160000
+```
+
+---
+
+## 7. ADT^A02 - patient transfer (転棟)
+
+```
+MSH|^~\&|MI-RA-Is|福岡大学病院|SS-MIX2|地域連携|20260308100000||ADT^A02^ADT_A02|MIR20260308100000007|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A02|20260308100000
+PID|||PAT300100^^^福岡大学^PI||高橋^勝也^^^^^L||19700115|M|||福岡県福岡市城南区七隈7-45-1^^城南区^福岡県^814-0180^JPN^H||^PRN^PH^^81^92^8011011||JPN|M
+PV1||I|5B^510^1^福岡大学^^^^N||||D300100^原田^浩司^^^^^L^^^DR|||CAR||3A^302^1^福岡大学^^^^N|||||||V300100|||||||||||||||||||||||||||20260308100000
+```
+
+---
+
+## 8. ORM^O01 - radiology order (放射線オーダ)
+
+```
+MSH|^~\&|MI-RA-Is|福岡大学病院|放射線部|福岡大学|20260303080000||ORM^O01^ORM_O01|MIR20260303080000008|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT300100^^^福岡大学^PI||高橋^勝也^^^^^L||19700115|M
+PV1||I|3A^302^1^福岡大学^^^^N||||D300100^原田^浩司^^^^^L^^^DR
+ORC|NW|RAD20260303001^MI-RA-Is||||||||||D300100^原田^浩司^^^^^L^^^DR
+OBR|1|RAD20260303001^MI-RA-Is||75574^冠動脈CT^CPT|R||20260303080000|||||||20260303080000||D300100^原田^浩司^^^^^L^^^DR
+```
+
+---
+
+## 9. ADT^A08 - patient information update (患者情報更新)
+
+```
+MSH|^~\&|MI-RA-Is|福岡大学病院|SS-MIX2|地域連携|20260305090000||ADT^A08^ADT_A01|MIR20260305090000009|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A08|20260305090000
+PID|||PAT300100^^^福岡大学^PI||高橋^勝也^^^^^L||19700115|M|||福岡県福岡市城南区七隈7-45-1^^城南区^福岡県^814-0180^JPN^H||^PRN^PH^^81^92^8011011~^WPN^PH^^81^92^7635555||JPN|M|||||||||||||||||||N
+PV1||I|3A^302^1^福岡大学^^^^N||||D300100^原田^浩司^^^^^L^^^DR|||CAR||||||||V300100|||||||||||||||||||||||||||20260301090000
+IN1|1||56789012|全国健康保険協会|福岡県福岡市博多区博多駅東2-11-1||||||||||||||||||||||||||||||||||||||||8
+```
+
+---
+
+## 10. ORU^R01 - echocardiogram with embedded report (心エコーレポート)
+
+```
+MSH|^~\&|生理検査部|福岡大学|MI-RA-Is|福岡大学|20260304150000||ORU^R01^ORU_R01|ECHO20260304150000010|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT300100^^^福岡大学^PI||高橋^勝也^^^^^L||19700115|M
+PV1||I|3A^302^1^福岡大学^^^^N||||D300100^原田^浩司^^^^^L^^^DR
+ORC|RE|ECHO20260304001^MI-RA-Is
+OBR|1|ECHO20260304001^MI-RA-Is||93306^経胸壁心エコー^CPT|R||20260304100000|||||||20260304100000||D300100^原田^浩司^^^^^L^^^DR||||||||20260304150000|||F
+OBX|1|TX|93306^経胸壁心エコー^CPT|1|左室駆出率(EF)62%。壁運動異常なし。弁膜症なし。心嚢液貯留なし。||||||F|||20260304150000
+OBX|2|NM|93306^LVEF^CPT||62|%|55-70|N|||F|||20260304150000
+OBX|3|NM|93306^LVDd^CPT||48|mm|38-52|N|||F|||20260304150000
+OBX|4|ED|PDF^心エコーレポートPDF^L|1|^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA1NiA+PgpzdHJlYW0KQlQKL0YxIDEyIFRmCjEwMCA3MDAgVGQKKEVjaG9jYXJkaW9ncmFtIFJlcG9ydCkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTE1IDAwMDAwIG4gCjAwMDAwMDAyMDYgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA1IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgozMTIKJSVFT0YK||||||F|||20260304150000
+```
+
+---
+
+## 11. ADT^A04 - outpatient registration (外来受付)
+
+```
+MSH|^~\&|MI-RA-Is|福岡大学病院|SS-MIX2|地域連携|20260320080000||ADT^A04^ADT_A01|MIR20260320080000011|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A04|20260320080000
+PID|||PAT300200^^^福岡大学^PI||松田^恵理子^^^^^L||19880503|F|||福岡県福岡市早良区百道浜3-7-1^^早良区^福岡県^814-0001^JPN^H||^PRN^PH^^81^92^8214321||JPN|S
+PV1||O|循環器外来^1^1^福岡大学^^^^N||||D300200^永田^明彦^^^^^L^^^DR|||CAR||||A|||V300200|||||||||||||||||||||||||||20260320080000
+```
+
+---
+
+## 12. SIU^S12 - appointment scheduled (予約登録)
+
+```
+MSH|^~\&|MI-RA-Is|福岡大学病院|外来予約|福岡大学|20260315150000||SIU^S12^SIU_S12|MIR20260315150000012|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+SCH|APT20260320001^MI-RA-Is|APT20260320001^MI-RA-Is|||||外来受診^外来予約^L|||||^^20^20260320090000^20260320091000
+PID|||PAT300200^^^福岡大学^PI||松田^恵理子^^^^^L||19880503|F
+PV1||O|循環器外来^1^1^福岡大学^^^^N||||D300200^永田^明彦^^^^^L^^^DR
+AIG|1||D300200^永田^明彦^^^^^L^^^DR
+AIL|1||循環器外来^1^1^福岡大学
+```
+
+---
+
+## 13. ORM^O01 - injection order (注射オーダ)
+
+```
+MSH|^~\&|MI-RA-Is|福岡大学病院|薬剤部|福岡大学|20260302100000||ORM^O01^ORM_O01|MIR20260302100000013|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT300100^^^福岡大学^PI||高橋^勝也^^^^^L||19700115|M
+PV1||I|3A^302^1^福岡大学^^^^N||||D300100^原田^浩司^^^^^L^^^DR
+ORC|NW|INJ20260302001^MI-RA-Is||||||||||D300100^原田^浩司^^^^^L^^^DR
+RXO|620502601^ヘパリンナトリウム注10000単位^HOT9|||10000||単位||IV^静脈内^HL70162|||||||||||||||D300100^原田^浩司^^^^^L^^^DR
+TQ1|||||||||20260302100000|20260303100000
+```
+
+---
+
+## 14. DFT^P03 - charge posting (診療報酬請求)
+
+```
+MSH|^~\&|MI-RA-Is|福岡大学病院|医事会計|福岡大学|20260312150000||DFT^P03^DFT_P03|MIR20260312150000014|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|P03|20260312150000
+PID|||PAT300100^^^福岡大学^PI||高橋^勝也^^^^^L||19700115|M
+PV1||I|5B^510^1^福岡大学^^^^N||||D300100^原田^浩司^^^^^L^^^DR
+FT1|1|ORD20260312001|20260312|20260312|CG|110^入院基本料^診療行為コード||12|12840|||||||||||||||D300100^原田^浩司^^^^^L^^^DR
+FT1|2|ORD20260312002|20260312|20260312|CG|150200110^心臓カテーテル法^診療行為コード||1|48000|||||||||||||||D300100^原田^浩司^^^^^L^^^DR
+```
+
+---
+
+## 15. RDE^O11 - pharmacy dispense event (調剤実施)
+
+```
+MSH|^~\&|薬剤部|福岡大学|MI-RA-Is|福岡大学|20260302090000||RDE^O11^RDE_O11|PH20260302090000015|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT300100^^^福岡大学^PI||高橋^勝也^^^^^L||19700115|M
+PV1||I|3A^302^1^福岡大学^^^^N||||D300100^原田^浩司^^^^^L^^^DR
+ORC|RE|ORD20260302001^MI-RA-Is|DSP20260302001^薬剤部|||||||||D300100^原田^浩司^^^^^L^^^DR
+RXE|^^^20260302^^^日|612130101^ビソプロロールフマル酸塩錠2.5mg^HOT9|2.5||mg|錠|||||||28|||||||||||PH200^杉山^健太郎^^^^^L^^^RPH
+RXD|1|612130101^ビソプロロールフマル酸塩錠2.5mg^HOT9|20260302090000|28|錠||||||||||||||PH200^杉山^健太郎^^^^^L^^^RPH
+```
+
+---
+
+## 16. ORU^R01 - Holter ECG report (ホルター心電図レポート)
+
+```
+MSH|^~\&|生理検査部|福岡大学|MI-RA-Is|福岡大学|20260310150000||ORU^R01^ORU_R01|HOLT20260310150000016|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT300100^^^福岡大学^PI||高橋^勝也^^^^^L||19700115|M
+PV1||I|5B^510^1^福岡大学^^^^N||||D300100^原田^浩司^^^^^L^^^DR
+ORC|RE|HOLT20260310001^MI-RA-Is
+OBR|1|HOLT20260310001^MI-RA-Is||93224^ホルター心電図^CPT|R||20260309090000|||||||20260309090000||D300100^原田^浩司^^^^^L^^^DR||||||||20260310150000|||F
+OBX|1|TX|93224^ホルター心電図^CPT|1|総心拍数：98,543回。平均心拍数：68/分。最高心拍数：112/分。最低心拍数：52/分。||||||F|||20260310150000
+OBX|2|TX|93224^ホルター心電図^CPT|2|心室性期外収縮：23回（全心拍の0.02%）。上室性期外収縮：45回。ST変化：なし。||||||F|||20260310150000
+```
+
+---
+
+## 17. ADT^A28 - new patient registration (新規患者登録)
+
+```
+MSH|^~\&|MI-RA-Is|福岡大学病院|MPI|地域連携|20260320070000||ADT^A28^ADT_A05|MIR20260320070000017|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|A28|20260320070000
+PID|||PAT300200^^^福岡大学^PI||松田^恵理子^^^^^L||19880503|F|||福岡県福岡市早良区百道浜3-7-1^^早良区^福岡県^814-0001^JPN^H||^PRN^PH^^81^92^8214321||JPN|S
+```
+
+---
+
+## 18. MDM^T02 - discharge summary with CDA (退院サマリ)
+
+```
+MSH|^~\&|MI-RA-Is|福岡大学病院|SS-MIX2|地域連携|20260312160000||MDM^T02^MDM_T02|MIR20260312160000018|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+EVN|T02|20260312160000
+PID|||PAT300100^^^福岡大学^PI||高橋^勝也^^^^^L||19700115|M
+PV1||I|5B^510^1^福岡大学^^^^N||||D300100^原田^浩司^^^^^L^^^DR
+TXA|1|DS^退院時サマリ^HL70270|TX|20260312160000|D300100^原田^浩司^^^^^L^^^DR||20260312160000||||||DOC20260312001||||||AU
+OBX|1|ED|DS^退院時サマリ^HL70270|1|^text^xml^Base64^PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPENsaW5pY2FsRG9jdW1lbnQgeG1sbnM9InVybjpobDctb3JnOnYzIj4KICA8dGl0bGU+6YCA6Zmi5pmC44K144Oe44OqPC90aXRsZT4KICA8ZWZmZWN0aXZlVGltZSB2YWx1ZT0iMjAyNjAzMTIiLz4KICA8Y29tcG9uZW50PgogICAgPHN0cnVjdHVyZWRCb2R5PgogICAgICA8Y29tcG9uZW50PgogICAgICAgIDxzZWN0aW9uPgogICAgICAgICAgPHRpdGxlPuiouuaWrTwvdGl0bGU+CiAgICAgICAgICA8dGV4dD7lronlrprni63lv4PnlYcsIOWGoOWLleiEiENU5q2j5bi4PC90ZXh0PgogICAgICAgIDwvc2VjdGlvbj4KICAgICAgPC9jb21wb25lbnQ+CiAgICA8L3N0cnVjdHVyZWRCb2R5PgogIDwvY29tcG9uZW50Pgo8L0NsaW5pY2FsRG9jdW1lbnQ+Cg==||||||F|||20260312160000
+```
+
+---
+
+## 19. MFN^M02 - physician master update (医師マスタ更新)
+
+```
+MSH|^~\&|MI-RA-Is|福岡大学病院|SS-MIX2|地域連携|20260401000000||MFN^M02^MFN_M02|MIR20260401000000019|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+MFI|PRA^^HL70175||UPD|||NE
+MFE|MAD|D300300|20260401000000|D300300^荒木^大輔^^^^^L^^^DR^福岡大学^CDA
+STF|D300300|D300300^^福岡大学|荒木^大輔^^^^^L||M||||||^WPN^PH^^81^92^8011011
+PRA|D300300||I|心臓血管外科||||||||||||||||||20260401
+```
+
+---
+
+## 20. ORU^R01 - coronary CT report (冠動脈CTレポート)
+
+```
+MSH|^~\&|放射線部|福岡大学|MI-RA-Is|福岡大学|20260303160000||ORU^R01^ORU_R01|RAD20260303160000020|P|2.5||||||~ISO IR87||ISO 2022-1994|JPN
+PID|||PAT300100^^^福岡大学^PI||高橋^勝也^^^^^L||19700115|M
+PV1||I|3A^302^1^福岡大学^^^^N||||D300100^原田^浩司^^^^^L^^^DR
+ORC|RE|RAD20260303001^MI-RA-Is
+OBR|1|RAD20260303001^MI-RA-Is||75574^冠動脈CT^CPT|R||20260303100000|||||||20260303100000||D300100^原田^浩司^^^^^L^^^DR||||||||20260303160000|||F
+OBX|1|TX|75574^冠動脈CT^CPT|1|左冠動脈主幹部：有意狭窄なし。前下行枝：#7に中等度石灰化プラークあり、内腔狭窄50-75%。||||||F|||20260303160000
+OBX|2|TX|75574^冠動脈CT^CPT|2|回旋枝：有意狭窄なし。右冠動脈：#2に軽度石灰化あり、内腔狭窄25-50%。||||||F|||20260303160000
+OBX|3|TX|75574^冠動脈CT^CPT|3|結論：LAD#7に中等度狭窄。侵襲的冠動脈造影検査を推奨。||||||F|||20260303160000
+```

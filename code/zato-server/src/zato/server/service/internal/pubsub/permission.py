@@ -14,7 +14,7 @@ from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import PubSubPermission, SecurityBase
 from zato.common.odb.query import pubsub_permission_list
 from zato.common.util.sql import set_instance_opaque_attrs
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -22,11 +22,8 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 class GetList(AdminService):
     """ Returns a list of pub/sub permissions.
     """
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_pubsub_permission_get_list_request'
-        response_elem = 'zato_pubsub_permission_get_list_response'
-        input_required = 'cluster_id',
-        output_required = 'id', 'name', 'pattern', 'access_type', 'sec_base_id', 'subscription_count'
+    input = 'cluster_id', '-cur_page', '-paginate', '-query'
+    output = 'id', 'name', 'pattern', 'access_type', 'sec_base_id', 'subscription_count'
 
     def get_data(self, session):
 
@@ -61,12 +58,8 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new pub/sub permission.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_permission_create_request'
-        response_elem = 'zato_pubsub_permission_create_response'
-        input_required = 'sec_base_id', 'pattern', 'access_type'
-        input_optional = 'cluster_id'
-        output_required = 'id', 'name'
+    input = 'sec_base_id', 'pattern', 'access_type', '-cluster_id'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -129,12 +122,8 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an existing pub/sub permission.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_permission_edit_request'
-        response_elem = 'zato_pubsub_permission_edit_response'
-        input_required = 'id', 'sec_base_id', 'pattern', 'access_type'
-        input_optional = 'cluster_id',
-        output_required = 'id', 'name'
+    input = 'id', 'sec_base_id', 'pattern', 'access_type', '-cluster_id'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -183,10 +172,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a pub/sub permission.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_permission_delete_request'
-        response_elem = 'zato_pubsub_permission_delete_response'
-        input_required = 'id',
+    input = 'id',
 
     def handle(self):
         with closing(self.odb.session()) as session:

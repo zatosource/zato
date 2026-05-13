@@ -8,6 +8,13 @@ extend-exclude = [
     "**/src/zato/common/py23_",
 ]
 
+[lint]
+select = [
+    "F",     # pyflakes (includes F841 unused variables, F811 redefined unused, F401 unused imports)
+    "W",     # pycodestyle warnings
+    "E",     # pycodestyle errors
+]
+
 [lint.flake8-quotes]
 inline-quotes    = "single"
 multiline-quotes = "single"

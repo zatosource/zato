@@ -34,6 +34,7 @@ pub async fn start_http_server(shared: Arc<SchedulerShared>) -> std::io::Result<
     HttpServer::new(move || {
         App::new()
             .app_data(state.clone())
+            .route("/metrics", web::get().to(get_metrics))
             .route("/api/get_job_summaries", web::get().to(get_job_summaries))
             .route("/api/get_timeline_events", web::get().to(get_timeline_events))
             .route("/api/get_history_page", web::get().to(get_history_page))
@@ -44,6 +45,14 @@ pub async fn start_http_server(shared: Arc<SchedulerShared>) -> std::io::Result<
     .bind("127.0.0.1:35100")?
     .run()
     .await
+}
+
+/// Returns all scheduler metrics in Prometheus text exposition format.
+async fn get_metrics() -> HttpResponse {
+    let body = crate::metrics::encode_metrics();
+    HttpResponse::Ok()
+        .content_type("text/plain; version=0.0.4; charset=utf-8")
+        .body(body)
 }
 
 /// Returns a summary list of all jobs including history-derived fields.

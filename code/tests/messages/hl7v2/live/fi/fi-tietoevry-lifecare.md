@@ -1,0 +1,267 @@
+# TietoEvry Lifecare - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - Inpatient admission (sisäänkirjaus)
+
+```
+MSH|^~\&|LIFECARE|TYKS|KANTA|THL|20260509080000||ADT^A01^ADT_A01|LC000001|P|2.4|||AL|NE||FIN|UTF-8
+EVN|A01|20260509080000
+PID|||PT300001^^^TYKS^MR~120870-456A^^^DVV^NNFIN||Korhonen^Pekka^Juhani^^Herra||19700812|M|||Yliopistonkatu 22^^Turku^^20100^FIN||^^PH^0221234567~^^CP^0401234571
+PV1||I|TYKS^KIR1^Huone 305^Vuode 1^VSSHP||||DR300^Virtanen^Maarit^^^LKT^Lääkäri||||||||||||HOITO300001|||||||||||||||||||||||20260509080000
+PV2|||^Sappikivitauti
+IN1|1|KELA|300001|KELA - Kansaneläkelaitos|Nordenskiöldinkatu 12^^Helsinki^^00250^FIN
+```
+
+---
+
+## 2. ADT^A02 - Patient transfer (osastosiirto)
+
+```
+MSH|^~\&|LIFECARE|TYKS|KANTA|THL|20260510091000||ADT^A02^ADT_A02|LC000002|P|2.4|||AL|NE||FIN|UTF-8
+EVN|A02|20260510091000
+PID|||PT300001^^^TYKS^MR~120870-456A^^^DVV^NNFIN||Korhonen^Pekka^Juhani^^Herra||19700812|M|||Yliopistonkatu 22^^Turku^^20100^FIN||^^PH^0221234567~^^CP^0401234571
+PV1||I|TYKS^SIS1^Huone 412^Vuode 2^VSSHP||||DR300^Virtanen^Maarit^^^LKT^Lääkäri||||||||||||HOITO300001|||||||||||||||||||||||20260509080000
+```
+
+---
+
+## 3. ADT^A03 - Patient discharge (uloskirjaus)
+
+```
+MSH|^~\&|LIFECARE|TYKS|KANTA|THL|20260514140000||ADT^A03^ADT_A03|LC000003|P|2.4|||AL|NE||FIN|UTF-8
+EVN|A03|20260514140000
+PID|||PT300001^^^TYKS^MR~120870-456A^^^DVV^NNFIN||Korhonen^Pekka^Juhani^^Herra||19700812|M|||Yliopistonkatu 22^^Turku^^20100^FIN||^^PH^0221234567~^^CP^0401234571
+PV1||I|TYKS^SIS1^Huone 412^Vuode 2^VSSHP||||DR300^Virtanen^Maarit^^^LKT^Lääkäri||||||||||||HOITO300001|||||||||||||||||||||||20260509080000|20260514140000
+```
+
+---
+
+## 4. ADT^A04 - Outpatient registration (polikliininen rekisteröinti)
+
+```
+MSH|^~\&|LIFECARE|TYKS|KANTA|THL|20260509093000||ADT^A04^ADT_A01|LC000004|P|2.4|||AL|NE||FIN|UTF-8
+EVN|A04|20260509093000
+PID|||PT300002^^^TYKS^MR~050385-789B^^^DVV^NNFIN||Laine^Maija^Kristiina^^Rouva||19850305|F|||Eerikinkatu 14^^Turku^^20100^FIN||^^CP^0509876546
+PV1||O|TYKS^POLI1^Vastaanottohuone 4^^VSSHP||||DR301^Ahonen^Ilkka^^^LKT^Lääkäri||||||||||||KÄYNTI300001|||||||||||||||||||||||20260509093000
+IN1|1|IF|300002|If Vahinkovakuutus|Niittyportti 4^^Espoo^^02200^FIN
+```
+
+---
+
+## 5. ADT^A08 - Update patient information (potilastietojen päivitys)
+
+```
+MSH|^~\&|LIFECARE|TYKS|KANTA|THL|20260509110000||ADT^A08^ADT_A01|LC000005|P|2.4|||AL|NE||FIN|UTF-8
+EVN|A08|20260509110000
+PID|||PT300003^^^TYKS^MR~280960-234C^^^DVV^NNFIN||Mäkinen^Hannu^Viljo^^Herra||19600928|M|||Linnankatu 37^^Turku^^20100^FIN||^^PH^0223456789~^^CP^0407654323
+PV1||I|TYKS^KIR2^Huone 201^Vuode 1^VSSHP||||DR302^Salminen^Tuija^^^LKT^Lääkäri||||||||||||HOITO300002|||||||||||||||||||||||20260507090000
+NK1|1|Mäkinen^Sirpa||^^CP^0407654324||EC
+```
+
+---
+
+## 6. ADT^A31 - Update person information (henkilötietojen muutos)
+
+```
+MSH|^~\&|LIFECARE|TYKS|VRK|DVV|20260509120000||ADT^A31^ADT_A05|LC000006|P|2.4|||AL|NE||FIN|UTF-8
+EVN|A31|20260509120000
+PID|||PT300004^^^TYKS^MR~011195-345D^^^DVV^NNFIN||Leppänen^Katja^Maria^^Rouva||19951101|F|||Aurakatu 2^^Turku^^20100^FIN||^^CP^0401234572
+PV1||N
+```
+
+---
+
+## 7. ADT^A40 - Patient merge (potilastietojen yhdistäminen)
+
+```
+MSH|^~\&|LIFECARE|TYKS|KANTA|THL|20260509130000||ADT^A40^ADT_A39|LC000007|P|2.4|||AL|NE||FIN|UTF-8
+EVN|A40|20260509130000
+PID|||PT300005^^^TYKS^MR||Salonen^Risto^Antero^^Herra||19580713|M|||Itäinen Pitkäkatu 50^^Turku^^20520^FIN||^^PH^0225678901
+MRG|PT300099^^^TYKS^MR
+PV1||N
+```
+
+---
+
+## 8. ORM^O01 - Laboratory order (laboratoriotilaus)
+
+```
+MSH|^~\&|LIFECARE|TYKS|TYKSLAB|VSSHP|20260509085000||ORM^O01|LC000008|P|2.3|||AL|NE||FIN
+PID|||PT300006^^^TYKS^MR~180792-678E^^^DVV^NNFIN||Heikkinen^Sami^Petteri^^Herra||19920718|M|||Puutarhakatu 9^^Turku^^20100^FIN||^^CP^0451234569
+PV1||O|TYKS^POLI2^Vastaanottohuone 6^^VSSHP||||DR303^Tuominen^Riikka^^^LKT^Lääkäri||||||||||||KÄYNTI300002
+ORC|NW|ORD300001^LIFECARE|||||^^^20260509085000^^R||20260509085000|DR303^Tuominen^Riikka^^^LKT^Lääkäri
+OBR|1|ORD300001^LIFECARE||2741^B-PVK+T^TYKSLAB|||20260509085000||||||||DR303^Tuominen^Riikka^^^LKT^Lääkäri
+OBR|2|ORD300001^LIFECARE||4520^P-CRP^TYKSLAB|||20260509085000||||||||DR303^Tuominen^Riikka^^^LKT^Lääkäri
+```
+
+---
+
+## 9. ORU^R01 - Laboratory result (laboratoriovastaus)
+
+```
+MSH|^~\&|TYKSLAB|VSSHP|LIFECARE|TYKS|20260509133000||ORU^R01|TYKSLAB000001|P|2.3|||AL|NE||FIN
+PID|||PT300006^^^TYKS^MR~180792-678E^^^DVV^NNFIN||Heikkinen^Sami^Petteri^^Herra||19920718|M|||Puutarhakatu 9^^Turku^^20100^FIN||^^CP^0451234569
+PV1||O|TYKS^POLI2^Vastaanottohuone 6^^VSSHP||||DR303^Tuominen^Riikka^^^LKT^Lääkäri||||||||||||KÄYNTI300002
+ORC|RE|ORD300001^LIFECARE|RES300001^TYKSLAB||||^^^20260509085000^^R||20260509133000
+OBR|1|ORD300001^LIFECARE|RES300001^TYKSLAB|2741^B-PVK+T^TYKSLAB|||20260509090000|||||||20260509090000|^^B|DR303^Tuominen^Riikka^^^LKT^Lääkäri||||||20260509133000|||F
+OBX|1|NM|6768^B-Leuk^TYKSLAB||5.9|10E9/l|3.4-8.2||||F|||20260509133000
+OBX|2|NM|1552^B-Hb^TYKSLAB||155|g/l|134-167||||F|||20260509133000
+OBX|3|NM|2798^B-Trom^TYKSLAB||198|10E9/l|150-360||||F|||20260509133000
+```
+
+---
+
+## 10. SIU^S12 - New appointment (uusi ajanvaraus)
+
+```
+MSH|^~\&|LIFECARE|TYKS|LIFECARE_SCHED|VSSHP|20260509100000||SIU^S12^SIU_S12|LC000009|P|2.4|||AL|NE||FIN|UTF-8
+SCH|APT300001|APT300001||||ROUTINE^Normaali^HL70276|FOLLOWUP^Kontrollikäynti^HL70277|DOCTOR^Lääkärin vastaanotto|20|min|^^^20260520100000^20260520102000
+PID|||PT300007^^^TYKS^MR~090488-901F^^^DVV^NNFIN||Rantala^Johanna^Elise^^Rouva||19880409|F|||Brahenkatu 5^^Turku^^20100^FIN||^^CP^0401234573
+PV1||O|TYKS^POLI3^Vastaanottohuone 8^^VSSHP||||DR304^Laaksonen^Juha^^^LKT^Lääkäri
+RGS|1
+AIS|1||SISÄPOLI^Sisätautien poliklinikka^LIFECARE|20260520100000|20|min
+AIP|1||DR304^Laaksonen^Juha^^^LKT^Lääkäri
+```
+
+---
+
+## 11. SIU^S14 - Appointment modification (ajanvarauksen muutos)
+
+```
+MSH|^~\&|LIFECARE|TYKS|LIFECARE_SCHED|VSSHP|20260512090000||SIU^S14^SIU_S12|LC000010|P|2.4|||AL|NE||FIN|UTF-8
+SCH|APT300001|APT300001||||ROUTINE^Normaali^HL70276|FOLLOWUP^Kontrollikäynti^HL70277|DOCTOR^Lääkärin vastaanotto|20|min|^^^20260522100000^20260522102000
+PID|||PT300007^^^TYKS^MR~090488-901F^^^DVV^NNFIN||Rantala^Johanna^Elise^^Rouva||19880409|F|||Brahenkatu 5^^Turku^^20100^FIN||^^CP^0401234573
+PV1||O|TYKS^POLI3^Vastaanottohuone 8^^VSSHP||||DR304^Laaksonen^Juha^^^LKT^Lääkäri
+RGS|1
+AIS|1||SISÄPOLI^Sisätautien poliklinikka^LIFECARE|20260522100000|20|min
+AIP|1||DR304^Laaksonen^Juha^^^LKT^Lääkäri
+```
+
+---
+
+## 12. ORM^O01 - Radiology order (röntgentilaus)
+
+```
+MSH|^~\&|LIFECARE|TYKS|SECTRA_RIS|VSSHP_RAD|20260509104000||ORM^O01|LC000011|P|2.4|||AL|NE||FIN|UTF-8
+PID|||PT300008^^^TYKS^MR~241155+567G^^^DVV^NNFIN||Koskela^Olavi^Tapio^^Herra||19551124|M|||Hämeenkatu 7^^Turku^^20500^FIN||^^PH^0227654321
+PV1||E|TYKS^PPKL^Triage 1^^VSSHP||||DR305^Kallio^Merja^^^LKT^Lääkäri||||||||||||KÄYNTI300003
+ORC|NW|ORD300002^LIFECARE|||||^^^20260509104000^^S||20260509104000|DR305^Kallio^Merja^^^LKT^Lääkäri
+OBR|1|ORD300002^LIFECARE||71020^Thorax PA+LAT^RADLEX|||20260509104000||||||||DR305^Kallio^Merja^^^LKT^Lääkäri||||||||||HENGENAHDISTUS^Hengenahdistus
+```
+
+---
+
+## 13. MDM^T02 - Clinical document notification (kliininen asiakirjailmoitus)
+
+```
+MSH|^~\&|LIFECARE|TYKS|KANTA|THL|20260509150000||MDM^T02^MDM_T02|LC000012|P|2.4|||AL|NE||FIN|UTF-8
+EVN|T02|20260509150000
+PID|||PT300009^^^TYKS^MR~130675-234H^^^DVV^NNFIN||Aalto^Ritva^Marjatta^^Rouva||19750613|F|||Kaskenkatu 11^^Turku^^20700^FIN||^^CP^0409876547
+PV1||I|TYKS^KIR1^Huone 305^Vuode 1^VSSHP||||DR306^Koivunen^Arto^^^LKT^Lääkäri||||||||||||HOITO300003
+TXA|1|HP^Hoitokertomus|TX|||20260509150000||||||DOC300001||||AU
+OBX|1|TX|11506-3^Progress note^LN||Potilas toipunut leikkauksesta hyvin. Haava siisti, ei infektiomerkkejä. Kipulääkitys riittävä.||||||F
+```
+
+---
+
+## 14. ORU^R01 - Renal function panel (munuaistoimintakokeet)
+
+```
+MSH|^~\&|TYKSLAB|VSSHP|LIFECARE|TYKS|20260509144000||ORU^R01|TYKSLAB000002|P|2.3|||AL|NE||FIN
+PID|||PT300010^^^TYKS^MR~070540+890J^^^DVV^NNFIN||Nurmi^Eino^Kalevi^^Herra||19400507|M|||Ratapihankatu 15^^Turku^^20100^FIN||^^PH^0229876543
+PV1||I|TYKS^SIS2^Huone 504^Vuode 1^VSSHP||||DR307^Mäkelä^Esa^^^LKT^Lääkäri||||||||||||HOITO300004
+ORC|RE|ORD300003^LIFECARE|RES300003^TYKSLAB||||^^^20260509080000^^R||20260509144000
+OBR|1|ORD300003^LIFECARE|RES300003^TYKSLAB|2003^P-Krea^TYKSLAB|||20260509082000|||||||20260509082000|^^S|DR307^Mäkelä^Esa^^^LKT^Lääkäri||||||20260509144000|||F
+OBX|1|NM|2160-0^P-Krea^LN||142|umol/l|50-90|HH|||F|||20260509144000
+OBX|2|NM|3094-0^P-Urea^LN||12.5|mmol/l|2.6-6.4|HH|||F|||20260509144000
+OBX|3|NM|33914-3^eGFR^LN||38|ml/min/1.73m2|>60|L|||F|||20260509144000
+```
+
+---
+
+## 15. ORU^R01 - Pathology result with base64 PDF (patologian vastaus PDF-liitteellä)
+
+```
+MSH|^~\&|TYKSLAB_PAT|VSSHP|LIFECARE|TYKS|20260509170000||ORU^R01|TYKSLAB000003|P|2.3|||AL|NE||FIN
+PID|||PT300011^^^TYKS^MR~220378-345K^^^DVV^NNFIN||Lahtinen^Mirja^Anneli^^Rouva||19780322|F|||Uudenmaankatu 3^^Turku^^20500^FIN||^^CP^0401234574
+PV1||O|TYKS^POLI4^Vastaanottohuone 2^^VSSHP||||DR308^Rantanen^Ville^^^LKT^Lääkäri||||||||||||KÄYNTI300004
+ORC|RE|ORD300004^LIFECARE|RES300004^TYKSLAB_PAT||||^^^20260506100000^^R||20260509170000
+OBR|1|ORD300004^LIFECARE|RES300004^TYKSLAB_PAT|60570-9^Pathology report^LN|||20260506102000|||||||20260506102000|^^Biopsia|DR308^Rantanen^Ville^^^LKT^Lääkäri||||||20260509170000|||F
+OBX|1|TX|22634-0^Pathology report text^LN||Histologinen tutkimus: Adenokarsinooma colonissa. pT3N1M0.||||||F|||20260509170000
+OBX|2|ED|PDF^Patologian lausunto^L||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCjMgMCBvYmoKL1BhcmVudCAy||||||F|||20260509170000
+```
+
+---
+
+## 16. ORU^R01 - Electrolyte panel (elektrolyytit)
+
+```
+MSH|^~\&|TYKSLAB|VSSHP|LIFECARE|TYKS|20260509152000||ORU^R01|TYKSLAB000004|P|2.3|||AL|NE||FIN
+PID|||PT300012^^^TYKS^MR~160290-012L^^^DVV^NNFIN||Toivonen^Antti^Kalevi^^Herra||19900216|M|||Maariankatu 20^^Turku^^20100^FIN||^^CP^0407766555
+PV1||I|TYKS^SIS1^Huone 401^Vuode 2^VSSHP||||DR309^Häkkinen^Leena^^^LKT^Lääkäri||||||||||||HOITO300005
+ORC|RE|ORD300005^LIFECARE|RES300005^TYKSLAB||||^^^20260509090000^^R||20260509152000
+OBR|1|ORD300005^LIFECARE|RES300005^TYKSLAB|24326-1^Elektrolyytit^LN|||20260509091500|||||||20260509091500|^^S|DR309^Häkkinen^Leena^^^LKT^Lääkäri||||||20260509152000|||F
+OBX|1|NM|2947-0^fP-Na^LN||140|mmol/l|137-145||||F|||20260509152000
+OBX|2|NM|6298-4^fP-K^LN||3.9|mmol/l|3.5-5.0||||F|||20260509152000
+OBX|3|NM|17861-6^fP-Ca-Ion^LN||1.22|mmol/l|1.15-1.30||||F|||20260509152000
+OBX|4|NM|2601-3^fP-Mg^LN||0.85|mmol/l|0.71-0.94||||F|||20260509152000
+```
+
+---
+
+## 17. ORU^R01 - Cardiac markers (sydänmerkkiaineet)
+
+```
+MSH|^~\&|TYKSLAB|VSSHP|LIFECARE|TYKS|20260509160000||ORU^R01|TYKSLAB000005|P|2.3|||AL|NE||FIN
+PID|||PT300013^^^TYKS^MR~011145+678M^^^DVV^NNFIN||Heinonen^Tauno^Olavi^^Herra||19450101|M|||Satamakatu 8^^Turku^^20100^FIN||^^PH^0222345678
+PV1||E|TYKS^PPKL^Triage 3^^VSSHP||||DR310^Kinnunen^Ari^^^LKT^Lääkäri||||||||||||KÄYNTI300005
+ORC|RE|ORD300006^LIFECARE|RES300006^TYKSLAB||||^^^20260509103000^^S||20260509160000
+OBR|1|ORD300006^LIFECARE|RES300006^TYKSLAB|4825^P-TnT^TYKSLAB|||20260509104000|||||||20260509104000|^^S|DR310^Kinnunen^Ari^^^LKT^Lääkäri||||||20260509160000|||F
+OBX|1|NM|6598-7^P-TnT^LN||89|ng/l|<14|HH|||F|||20260509160000
+OBX|2|NM|33762-6^P-NTproBNP^LN||1250|ng/l|<125|HH|||F|||20260509160000
+```
+
+---
+
+## 18. ORU^R01 - Discharge summary with base64 PDF (loppulausunto PDF-liitteellä)
+
+```
+MSH|^~\&|LIFECARE|TYKS|KANTA|THL|20260514160000||ORU^R01|LC000013|P|2.4|||AL|NE||FIN|UTF-8
+PID|||PT300014^^^TYKS^MR~050265-901N^^^DVV^NNFIN||Virtanen^Liisa^Annikki^^Rouva||19650205|F|||Aninkaistenkatu 1^^Turku^^20100^FIN||^^CP^0401234575
+PV1||I|TYKS^KIR1^Huone 307^Vuode 1^VSSHP||||DR311^Järvinen^Matti^^^LKT^Lääkäri||||||||||||HOITO300006|||||||||||||||||||||||20260509080000|20260514140000
+OBR|1|||18842-5^Discharge summary^LN|||20260514160000||||||||DR311^Järvinen^Matti^^^LKT^Lääkäri||||||20260514160000|||F
+OBX|1|TX|18842-5^Discharge summary text^LN||Potilas kotiutettu sappileikkauksen jälkeen. Toipuminen edennyt normaalisti. Kontrollikäynti 2 viikon kuluttua.||||||F|||20260514160000
+OBX|2|ED|PDF^Loppulausunto^L||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UK||||||F|||20260514160000
+```
+
+---
+
+## 19. ORM^O01 - Consultation request (konsultaatiopyyntö)
+
+```
+MSH|^~\&|LIFECARE|TYKS|LIFECARE|TYKS_KONS|20260509141000||ORM^O01|LC000014|P|2.4|||AL|NE||FIN|UTF-8
+PID|||PT300015^^^TYKS^MR~030582-456P^^^DVV^NNFIN||Jokinen^Timo^Sakari^^Herra||19820503|M|||Kristiinankatu 12^^Turku^^20100^FIN||^^CP^0451234570
+PV1||I|TYKS^SIS2^Huone 510^Vuode 2^VSSHP||||DR312^Peltonen^Maria^^^LKT^Lääkäri||||||||||||HOITO300007
+ORC|NW|ORD300007^LIFECARE|||||^^^20260509141000^^R||20260509141000|DR312^Peltonen^Maria^^^LKT^Lääkäri
+OBR|1|ORD300007^LIFECARE||KONS^Konsultaatio, kardiologia^LIFECARE|||20260509141000||||||||DR312^Peltonen^Maria^^^LKT^Lääkäri
+NTE|1||Potilaalla toistuvia rintakipujaksoja rasituksessa. Pyydän kardiologin arviota.
+```
+
+---
+
+## 20. ORU^R01 - Hematology results (hematologiset tulokset)
+
+```
+MSH|^~\&|TYKSLAB|VSSHP|LIFECARE|TYKS|20260509163000||ORU^R01|TYKSLAB000006|P|2.3|||AL|NE||FIN
+PID|||PT300016^^^TYKS^MR~200395-789Q^^^DVV^NNFIN||Karjalainen^Emilia^Sofia^^Rouva||19950320|F|||Kauppiaskatu 6^^Turku^^20100^FIN||^^CP^0407654325
+PV1||O|TYKS^HEM1^Vastaanottohuone 3^^VSSHP||||DR313^Lehtinen^Kari^^^LKT^Lääkäri
+ORC|RE|ORD300008^LIFECARE|RES300008^TYKSLAB||||^^^20260509090000^^R||20260509163000
+OBR|1|ORD300008^LIFECARE|RES300008^TYKSLAB|3002^B-Diffi^TYKSLAB|||20260509091000|||||||20260509091000|^^B|DR313^Lehtinen^Kari^^^LKT^Lääkäri||||||20260509163000|||F
+OBX|1|NM|6768^B-Leuk^TYKSLAB||4.2|10E9/l|3.4-8.2||||F|||20260509163000
+OBX|2|NM|770-8^B-Neutro^TYKSLAB||55|%|40-75||||F|||20260509163000
+OBX|3|NM|736-9^B-Lymfo^TYKSLAB||35|%|20-45||||F|||20260509163000
+OBX|4|NM|5905-5^B-Mono^TYKSLAB||6|%|2-10||||F|||20260509163000
+OBX|5|NM|713-8^B-Eosino^TYKSLAB||3|%|1-6||||F|||20260509163000
+OBX|6|NM|706-2^B-Baso^TYKSLAB||1|%|0-2||||F|||20260509163000
+```

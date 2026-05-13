@@ -1,0 +1,258 @@
+# MEDITECH (Expanse/6.x) - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - inpatient admission
+
+```
+MSH|^~\&|MT_EXPANSE|CAMBRIDGE_MEM|ADT_RECV|HIS_SYS|20260509071500||ADT^A01^ADT_A01|MT000001|P|2.4
+EVN|A01|20260509071500
+PID|||8273619054^^^ON_HN^JHN||Fortin^Gabriel^Joseph||19710823|M|||512 Hespeler Rd^^Cambridge^ON^N1R 4G2^CA||^PRN^PH^^1^519^7384216||||MRN314928
+PV1||I|3MED^312^A^CMH||||23145^Wozniak^Tomasz^^^Dr.^^MD|56823^Khouri^Layla^^^Dr.^^MD|||MED||||7||ENC2026050901|||||||||||||||||||||||||||20260509071500
+IN1|1||OHIP|Ontario Health Insurance Plan|49 Place d'Armes^^Kingston^ON^K7L 5J3^CA||||||||||||||||||||||||||||||||||||||||8273619054
+```
+
+---
+
+## 2. ADT^A02 - patient transfer
+
+```
+MSH|^~\&|MT_EXPANSE|CAMBRIDGE_MEM|ADT_RECV|HIS_SYS|20260509143000||ADT^A02^ADT_A02|MT000002|P|2.4
+EVN|A02|20260509143000
+PID|||8273619054^^^ON_HN^JHN||Fortin^Gabriel^Joseph||19710823|M|||512 Hespeler Rd^^Cambridge^ON^N1R 4G2^CA||^PRN^PH^^1^519^7384216
+PV1||I|4SURG^405^B^CMH||||23145^Wozniak^Tomasz^^^Dr.^^MD|56823^Khouri^Layla^^^Dr.^^MD|||SURG||||7||ENC2026050901|||||||||||||||||||||||||||20260509143000
+```
+
+---
+
+## 3. ADT^A03 - patient discharge
+
+```
+MSH|^~\&|MT_EXPANSE|CAMBRIDGE_MEM|ADT_RECV|HIS_SYS|20260512110000||ADT^A03^ADT_A03|MT000003|P|2.4
+EVN|A03|20260512110000
+PID|||8273619054^^^ON_HN^JHN||Fortin^Gabriel^Joseph||19710823|M|||512 Hespeler Rd^^Cambridge^ON^N1R 4G2^CA||^PRN^PH^^1^519^7384216
+PV1||I|4SURG^405^B^CMH||||23145^Wozniak^Tomasz^^^Dr.^^MD|56823^Khouri^Layla^^^Dr.^^MD|||SURG||||7||ENC2026050901|||||||||||||||||||||||||||20260512110000
+DG1|1||K80.2^Calculus of gallbladder without obstruction^I10||20260509|A
+```
+
+---
+
+## 4. ADT^A04 - outpatient registration
+
+```
+MSH|^~\&|MT_EXPANSE|NORTH_BAY_RH|ADT_RECV|HIS_SYS|20260510083000||ADT^A04^ADT_A01|MT000004|P|2.4
+EVN|A04|20260510083000
+PID|||5184729063^^^ON_HN^JHN||Lavoie^Camille^Marie||19880316|F|||287 Fraser St^^North Bay^ON^P1B 2X4^CA||^PRN^PH^^1^705^5827493
+PV1||O|EMERG^ER1^1^NBRH||||78234^Cooper^Jonathan^^^Dr.^^MD|||EMERG||||9||ENC2026051001|||||||||||||||||||||||||||20260510083000
+```
+
+---
+
+## 5. ADT^A08 - patient information update
+
+```
+MSH|^~\&|MT_EXPANSE|CAMBRIDGE_MEM|ADT_RECV|HIS_SYS|20260511090000||ADT^A08^ADT_A01|MT000005|P|2.4
+EVN|A08|20260511090000
+PID|||8273619054^^^ON_HN^JHN||Fortin^Gabriel^Joseph||19710823|M|||145 Holiday Inn Dr^^Cambridge^ON^N3C 1Z6^CA||^PRN^PH^^1^519^7385923||||MRN314928
+PV1||I|4SURG^405^B^CMH||||23145^Wozniak^Tomasz^^^Dr.^^MD|||SURG||||7||ENC2026050901|||||||||||||||||||||||||||20260511090000
+NK1|1|Fortin^Marie-Claude||^PRN^PH^^1^519^7384217|||||||||||||||||||||||||||||SPO
+```
+
+---
+
+## 6. ADT^A01 - Quebec hospital admission
+
+```
+MSH|^~\&|MEDITECH|HOPITAL_ANNA_LABERGE|ADT_RECV|HIS_SYS|20260509090000||ADT^A01^ADT_A01|MT000006|P|2.4
+EVN|A01|20260509090000
+PID|||DEMR74052812^^^QC_RAMQ^JHN||Demers^Sebastien^Luc||19740528|M|||2814 Boul Saint-Joseph^^Laval^QC^H7N 4P3^CA||^PRN^PH^^1^450^7298142||||MRN429183
+PV1||I|2MED^210^A^HAL||||34782^Tremblay^Andre^^^Dr.^^MD|45893^Lavoie^Sophie^^^Dr.^^MD|||MED||||7||ENC2026050902|||||||||||||||||||||||||||20260509090000
+```
+
+---
+
+## 7. ORU^R01 - CBC lab result
+
+```
+MSH|^~\&|MT_EXPANSE|CAMBRIDGE_MEM|LAB_RECV|EMR_SYS|20260509150000||ORU^R01^ORU_R01|MT000007|P|2.4
+PID|||8273619054^^^ON_HN^JHN||Fortin^Gabriel^Joseph||19710823|M|||512 Hespeler Rd^^Cambridge^ON^N1R 4G2^CA
+ORC|RE|LAB200100|LAB300200||CM||||20260509080000|||23145^Wozniak^Tomasz^^^Dr.^^MD
+OBR|1|LAB200100|LAB300200|58410-2^CBC panel^LN|||20260509073000|||||||||23145^Wozniak^Tomasz^^^Dr.^^MD||||||20260509143000|||F
+OBX|1|NM|718-7^Hemoglobin^LN||152|g/L|130-170|N|||F
+OBX|2|NM|6690-2^Leukocytes^LN||9.8|x10E9/L|4.0-11.0|N|||F
+OBX|3|NM|789-8^Erythrocytes^LN||4.82|x10E12/L|4.50-5.90|N|||F
+OBX|4|NM|777-3^Platelets^LN||312|x10E9/L|150-400|N|||F
+OBX|5|NM|787-2^MCV^LN||91.2|fL|80.0-100.0|N|||F
+```
+
+---
+
+## 8. ORU^R01 - troponin result (critical)
+
+```
+MSH|^~\&|MT_EXPANSE|NORTH_BAY_RH|LAB_RECV|EMR_SYS|20260510110000||ORU^R01^ORU_R01|MT000008|P|2.4
+PID|||5184729063^^^ON_HN^JHN||Lavoie^Camille^Marie||19880316|F|||287 Fraser St^^North Bay^ON^P1B 2X4^CA
+ORC|RE|LAB200200|LAB300300||CM||||20260510084000|||78234^Cooper^Jonathan^^^Dr.^^MD
+OBR|1|LAB200200|LAB300300|49563-0^Troponin I cardiac^LN|||20260510084000|||||||||78234^Cooper^Jonathan^^^Dr.^^MD||||||20260510103000|||F
+OBX|1|NM|49563-0^Troponin I^LN||0.85|ng/mL|0.00-0.04|HH|||F
+NTE|1||Critical value - physician notified at 1045h by phone.
+```
+
+---
+
+## 9. ORU^R01 - radiology report with embedded PDF
+
+```
+MSH|^~\&|MT_EXPANSE|CAMBRIDGE_MEM|RAD_RECV|EMR_SYS|20260510163000||ORU^R01^ORU_R01|MT000009|P|2.4
+PID|||8273619054^^^ON_HN^JHN||Fortin^Gabriel^Joseph||19710823|M|||512 Hespeler Rd^^Cambridge^ON^N1R 4G2^CA
+ORC|RE|RAD200300|RAD300400||CM||||20260510130000|||23145^Wozniak^Tomasz^^^Dr.^^MD
+OBR|1|RAD200300|RAD300400|30712-3^Abdominal US^LN|||20260510130000|||||||||23145^Wozniak^Tomasz^^^Dr.^^MD||||||20260510160000|||F
+OBX|1|ED|PDF^Ultrasound Report^MT_EXPANSE||^AP^^Base64^JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL0NvdW50IDEKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1Bh||||||F
+OBX|2|FT|30712-3^Abdominal US Impression^LN||Cholelithiasis with gallbladder wall thickening suggesting acute cholecystitis. No biliary duct dilatation.||||||F
+```
+
+---
+
+## 10. ORU^R01 - scanned document image (PNG)
+
+```
+MSH|^~\&|MT_EXPANSE|NORTH_BAY_RH|DOC_RECV|EMR_SYS|20260511091500||ORU^R01^ORU_R01|MT000010|P|2.4
+PID|||5184729063^^^ON_HN^JHN||Lavoie^Camille^Marie||19880316|F|||287 Fraser St^^North Bay^ON^P1B 2X4^CA
+ORC|RE|DOC200400|DOC300500||CM||||20260511083000|||78234^Cooper^Jonathan^^^Dr.^^MD
+OBR|1|DOC200400|DOC300500|11488-4^Consultation note^LN|||20260511083000|||||||||78234^Cooper^Jonathan^^^Dr.^^MD||||||20260511090000|||F
+OBX|1|ED|IMG^Scanned Consultation Letter^MT_EXPANSE||^IM^PNG^Base64^iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVQYV2P8z8BQz0AEYBxVOGwUAgBGFgiB3bCmjgAAAABJRU5ErkJggg==||||||F
+```
+
+---
+
+## 11. ORM^O01 - laboratory order
+
+```
+MSH|^~\&|MT_EXPANSE|CAMBRIDGE_MEM|LAB_SYS|CORE_LAB|20260509065000||ORM^O01^ORM_O01|MT000011|P|2.4
+PID|||8273619054^^^ON_HN^JHN||Fortin^Gabriel^Joseph||19710823|M|||512 Hespeler Rd^^Cambridge^ON^N1R 4G2^CA
+PV1||I|3MED^312^A^CMH||||23145^Wozniak^Tomasz^^^Dr.^^MD
+ORC|NW|LAB200500|||||||20260509064500|||23145^Wozniak^Tomasz^^^Dr.^^MD
+OBR|1|LAB200500||24323-8^CMP^LN|||20260509065000|||||||||23145^Wozniak^Tomasz^^^Dr.^^MD
+ORC|NW|LAB200501|||||||20260509064500|||23145^Wozniak^Tomasz^^^Dr.^^MD
+OBR|2|LAB200501||2093-3^Cholesterol^LN|||20260509065000|||||||||23145^Wozniak^Tomasz^^^Dr.^^MD
+```
+
+---
+
+## 12. ORM^O01 - radiology order
+
+```
+MSH|^~\&|MT_EXPANSE|NORTH_BAY_RH|RIS_SYS|RAD_DEPT|20260510091000||ORM^O01^ORM_O01|MT000012|P|2.4
+PID|||5184729063^^^ON_HN^JHN||Lavoie^Camille^Marie||19880316|F|||287 Fraser St^^North Bay^ON^P1B 2X4^CA
+PV1||O|EMERG^ER1^1^NBRH||||78234^Cooper^Jonathan^^^Dr.^^MD
+ORC|NW|RAD200600|||||||20260510090500|||78234^Cooper^Jonathan^^^Dr.^^MD
+OBR|1|RAD200600||71020-2^Chest X-ray^LN|||20260510091000|||||||||78234^Cooper^Jonathan^^^Dr.^^MD||||||||||||STAT
+```
+
+---
+
+## 13. ORU^R01 - coagulation panel
+
+```
+MSH|^~\&|MT_EXPANSE|CAMBRIDGE_MEM|LAB_RECV|EMR_SYS|20260510103000||ORU^R01^ORU_R01|MT000013|P|2.4
+PID|||8273619054^^^ON_HN^JHN||Fortin^Gabriel^Joseph||19710823|M|||512 Hespeler Rd^^Cambridge^ON^N1R 4G2^CA
+ORC|RE|LAB200700|LAB300800||CM||||20260510070000|||23145^Wozniak^Tomasz^^^Dr.^^MD
+OBR|1|LAB200700|LAB300800|38875-1^Coagulation panel^LN|||20260510070000|||||||||23145^Wozniak^Tomasz^^^Dr.^^MD||||||20260510100000|||F
+OBX|1|NM|5902-2^PT^LN||13.2|seconds|11.0-13.5|N|||F
+OBX|2|NM|6301-6^INR^LN||1.1||0.9-1.1|N|||F
+OBX|3|NM|3173-2^aPTT^LN||31.5|seconds|25.0-35.0|N|||F
+```
+
+---
+
+## 14. ADT^A01 - BC hospital admission
+
+```
+MSH|^~\&|MEDITECH|LIONS_GATE_HOSP|ADT_RECV|HIS_SYS|20260511073000||ADT^A01^ADT_A01|MT000014|P|2.4
+EVN|A01|20260511073000
+PID|||6253719048^^^BC_PHN^JHN||Park^Joon-Ho||19790204|M|||825 Marine Dr^^North Vancouver^BC^V7P 1V4^CA||^PRN^PH^^1^604^9748312||||MRN528739
+PV1||I|2MED^204^A^LGH||||45729^MacKenzie^Bruce^^^Dr.^^MD|56834^Wong^Vivian^^^Dr.^^MD|||MED||||7||ENC2026051101|||||||||||||||||||||||||||20260511073000
+```
+
+---
+
+## 15. ORU^R01 - liver function panel
+
+```
+MSH|^~\&|MEDITECH|LIONS_GATE_HOSP|LAB_RECV|EMR_SYS|20260511140000||ORU^R01^ORU_R01|MT000015|P|2.4
+PID|||6253719048^^^BC_PHN^JHN||Park^Joon-Ho||19790204|M|||825 Marine Dr^^North Vancouver^BC^V7P 1V4^CA
+ORC|RE|LAB200800|LAB300900||CM||||20260511080000|||45729^MacKenzie^Bruce^^^Dr.^^MD
+OBR|1|LAB200800|LAB300900|24325-3^Hepatic function panel^LN|||20260511073000|||||||||45729^MacKenzie^Bruce^^^Dr.^^MD||||||20260511133000|||F
+OBX|1|NM|1742-6^ALT^LN||145|U/L|7-56|HH|||F
+OBX|2|NM|1920-8^AST^LN||98|U/L|10-40|H|||F
+OBX|3|NM|1975-2^Bilirubin total^LN||42|umol/L|3-21|H|||F
+OBX|4|NM|6768-6^Alkaline phosphatase^LN||310|U/L|44-147|H|||F
+OBX|5|NM|2885-2^Total protein^LN||68|g/L|60-80|N|||F
+OBX|6|NM|1751-7^Albumin^LN||35|g/L|35-50|N|||F
+```
+
+---
+
+## 16. ORU^R01 - thyroid panel
+
+```
+MSH|^~\&|MT_EXPANSE|NORTH_BAY_RH|LAB_RECV|EMR_SYS|20260511160000||ORU^R01^ORU_R01|MT000016|P|2.4
+PID|||5184729063^^^ON_HN^JHN||Lavoie^Camille^Marie||19880316|F|||287 Fraser St^^North Bay^ON^P1B 2X4^CA
+ORC|RE|LAB200900|LAB301000||CM||||20260511080000|||78234^Cooper^Jonathan^^^Dr.^^MD
+OBR|1|LAB200900|LAB301000|34896-2^Thyroid panel^LN|||20260511073000|||||||||78234^Cooper^Jonathan^^^Dr.^^MD||||||20260511153000|||F
+OBX|1|NM|3016-3^TSH^LN||8.7|mIU/L|0.4-4.0|H|||F
+OBX|2|NM|3024-7^Free T4^LN||9.2|pmol/L|10.0-25.0|L|||F
+OBX|3|NM|3053-6^Free T3^LN||3.1|pmol/L|3.5-6.5|L|||F
+```
+
+---
+
+## 17. ORM^O01 - medication order
+
+```
+MSH|^~\&|MT_EXPANSE|CAMBRIDGE_MEM|PHARM_SYS|PHARMACY|20260510070000||ORM^O01^ORM_O01|MT000017|P|2.4
+PID|||8273619054^^^ON_HN^JHN||Fortin^Gabriel^Joseph||19710823|M|||512 Hespeler Rd^^Cambridge^ON^N1R 4G2^CA
+PV1||I|4SURG^405^B^CMH||||23145^Wozniak^Tomasz^^^Dr.^^MD
+ORC|NW|RX200100|||||||20260510065500|||23145^Wozniak^Tomasz^^^Dr.^^MD
+RXO|106861^Cefazolin 1g IV q8h^LOCAL||1|g|IV|Q8H^^HL70335|||||||||||||||||||20260510070000|20260513070000
+```
+
+---
+
+## 18. ADT^A04 - emergency registration
+
+```
+MSH|^~\&|MT_EXPANSE|CAMBRIDGE_MEM|ADT_RECV|HIS_SYS|20260512220000||ADT^A04^ADT_A01|MT000018|P|2.4
+EVN|A04|20260512220000
+PID|||3729184056^^^ON_HN^JHN||Adeyemi^Babatunde^Olumide||19930715|M|||89 Water St N^^Cambridge^ON^N1R 5W3^CA||^PRN^PH^^1^519^7382491||||MRN317842
+PV1||E|EMERG^ER3^1^CMH||||67823^Reilly^Maeve^^^Dr.^^MD|||EMERG||||1||ENC2026051201|||||||||||||||||||||||||||20260512220000
+```
+
+---
+
+## 19. ORU^R01 - blood gas result
+
+```
+MSH|^~\&|MT_EXPANSE|CAMBRIDGE_MEM|LAB_RECV|EMR_SYS|20260512230000||ORU^R01^ORU_R01|MT000019|P|2.4
+PID|||3729184056^^^ON_HN^JHN||Adeyemi^Babatunde^Olumide||19930715|M|||89 Water St N^^Cambridge^ON^N1R 5W3^CA
+ORC|RE|LAB201000|LAB301100||CM||||20260512221500|||67823^Reilly^Maeve^^^Dr.^^MD
+OBR|1|LAB201000|LAB301100|24336-0^ABG panel^LN|||20260512221500|||||||||67823^Reilly^Maeve^^^Dr.^^MD||||||20260512225500|||F
+OBX|1|NM|2744-1^pH arterial^LN||7.38||7.35-7.45|N|||F
+OBX|2|NM|2019-8^pCO2^LN||42|mmHg|35-45|N|||F
+OBX|3|NM|2703-7^pO2^LN||88|mmHg|80-100|N|||F
+OBX|4|NM|1959-6^Bicarbonate^LN||24|mmol/L|22-26|N|||F
+OBX|5|NM|2708-6^O2 Sat^LN||96|%|95-100|N|||F
+```
+
+---
+
+## 20. ORU^R01 - operative report with embedded PDF
+
+```
+MSH|^~\&|MT_EXPANSE|CAMBRIDGE_MEM|DOC_RECV|EMR_SYS|20260511153000||ORU^R01^ORU_R01|MT000020|P|2.4
+PID|||8273619054^^^ON_HN^JHN||Fortin^Gabriel^Joseph||19710823|M|||512 Hespeler Rd^^Cambridge^ON^N1R 4G2^CA
+ORC|RE|DOC200500|DOC300600||CM||||20260511130000|||23145^Wozniak^Tomasz^^^Dr.^^MD
+OBR|1|DOC200500|DOC300600|28570-0^Operative note^LN|||20260511130000|||||||||23145^Wozniak^Tomasz^^^Dr.^^MD||||||20260511150000|||F
+OBX|1|ED|PDF^Operative Report^MT_EXPANSE||^AP^^Base64^JVBERi0xLjUKJcOkw7zDtsOfCjEgMCBvYmoKPDwvVHlwZS9DYXRhbG9nL1BhZ2VzIDIgMCBSPj4KZW5kb2JqCjIgMCBvYmoKPDwvVHlwZS9QYWdlcy9LaWRzWzMgMCBSXS9Db3VudCAxPj4KZW5kb2Jq||||||F
+OBX|2|FT|28570-0^Operative note text^LN||Laparoscopic cholecystectomy performed without complication. Gallbladder removed intact. Intraoperative cholangiogram normal.||||||F
+```

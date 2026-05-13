@@ -1,0 +1,231 @@
+# Epic (EpicCare) - real HL7v2 ER7 messages
+
+---
+
+## 1. ADT^A01 - Inpatient admission at UCLA Medical Center
+
+```
+MSH|^~\&|EPICADT|UCLA_MC|LABSYS|UCLA_MC|20260508143022||ADT^A01^ADT_A01|MSG00001|P|2.5.1
+EVN|A01|20260508143022
+PID|1||MRN10234567^^^UCLA_MC^MR||Sandoval^Gabriela^Inez^^Mrs.||19780415|F||2106-3^White^HL70005|2814 Sawtelle Blvd^^Los Angeles^CA^90064||^PRN^PH^^1^310^5551234|^WPN^PH^^1^310^5559876|||S|||612-44-8293
+PV1||I|4WEST^4W12^01^UCLA_MC^^^^4 West Nursing||||1234567^Okafor^Chidinma^E^^^MD|9876543^Desai^Ravi^N^^^MD|||MED||||ADM|A0||||||||||||||||||||||||||20260508143022
+IN1|1|BCBS001|456789|Blue Shield of California|50 Beale St^^San Francisco^CA^94105||^PRN^PH^^1^800^3332273|GROUP98765|||||||Sandoval^Gabriela^Inez|01|19780415|2814 Sawtelle Blvd^^Los Angeles^CA^90064
+```
+
+## 2. ADT^A02 - Patient transfer within Stanford Hospital
+
+```
+MSH|^~\&|EPICADT|STANFORD_HC|NURSING|STANFORD_HC|20260507091500||ADT^A02^ADT_A02|MSG00002|P|2.5.1
+EVN|A02|20260507091500
+PID|1||MRN20345678^^^STANFORD_HC^MR||Jefferson^Marcus^DeAndre^^Mr.||19650823|M||2054-5^Black or African American^HL70005|1740 University Ave^^Palo Alto^CA^94301||^PRN^PH^^1^650^5553456||||S|||831-55-7294
+PV1||I|ICU^ICU04^01^STANFORD_HC^^^^ICU||||5551234^Matsumoto^Karen^L^^^MD|6662345^Bhatia^Arjun^S^^^MD|||SUR||||ADM|A0|||||||||||||||||||3NORTH^3N08^02^STANFORD_HC^^^^3 North|||||20260505081000
+```
+
+## 3. ADT^A03 - Discharge from Cedars-Sinai
+
+```
+MSH|^~\&|EPICADT|CEDARS_SINAI|BILLING|CEDARS_SINAI|20260506160000||ADT^A03^ADT_A03|MSG00003|P|2.5.1
+EVN|A03|20260506160000
+PID|1||MRN30456789^^^CEDARS_SINAI^MR||Tanaka^Yuki^Harumi^^Ms.||19900312|F||2028-9^Asian^HL70005|812 S Fairfax Ave Apt 302^^Los Angeles^CA^90036||^PRN^PH^^1^323^5557890||||M|||704-88-3156
+PV1||I|6EAST^6E22^01^CEDARS_SINAI^^^^6 East||||7771234^Abramowitz^Steven^R^^^MD|8882345^Trujillo^Dolores^M^^^MD|||OBS||||ADM|A0||||||||||||||||||||||||||20260503122000|20260506160000
+DG1|1||J18.9^Pneumonia, unspecified organism^I10||20260503|A
+```
+
+## 4. ADT^A04 - Outpatient registration at Kaiser Permanente
+
+```
+MSH|^~\&|EPICADT|KAISER_SF|CLINICS|KAISER_SF|20260508080000||ADT^A04^ADT_A01|MSG00004|P|2.5.1
+EVN|A04|20260508080000
+PID|1||MRN40567890^^^KAISER_SF^MR||Lam^Brandon^Wai^^Mr.||19850719|M||2028-9^Asian^HL70005|1927 Clement St^^San Francisco^CA^94121||^PRN^PH^^1^415^5552345||||M|||543-33-6178
+PV1||O|CARDCLN^CARD02^01^KAISER_SF^^^^Cardiology Clinic||||3334567^Robles^Angela^V^^^MD|||CAR||||REF|A0||||||||||||||||||||||||||20260508080000
+IN1|1|KP001|KP98765|Kaiser Foundation Health Plan|1 Kaiser Plaza^^Oakland^CA^94612||^PRN^PH^^1^800^4644000|GRPKP2026|||||||Lam^Brandon^Wai|01|19850719|1927 Clement St^^San Francisco^CA^94121
+```
+
+## 5. ADT^A08 - Patient information update at UCSF Health
+
+```
+MSH|^~\&|EPIC|UCSF_HEALTH|REG|UCSF_HEALTH|20260507144500||ADT^A08^ADT_A01|MSG00005|P|2.5.1
+EVN|A08|20260507144500
+PID|1||MRN50678901^^^UCSF_HEALTH^MR||Reyes^Ernesto^Joaquin^^Mr.||19720930|M||2106-3^White^HL70005|3240 24th St^^San Francisco^CA^94110||^PRN^PH^^1^415^5558901~^PRN^CP^^1^415^5551122||||M|||489-22-7063
+PV1||O|ORTHO^ORT05^01^UCSF_HEALTH^^^^Orthopedics||||4445678^Kaplan^Miriam^F^^^MD|||ORT||||REF|A0||||||||||||||||||||||||||20260501093000
+```
+
+## 6. ADT^A28 - Add person information at Sutter Health
+
+```
+MSH|^~\&|EPICCARE|SUTTER_HEALTH|MPI|SUTTER_HEALTH|20260508103000||ADT^A28^ADT_A05|MSG00006|P|2.5.1
+EVN|A28|20260508103000
+PID|1||MRN60789012^^^SUTTER_HEALTH^MR||Callahan^Megan^Therese^^Mrs.||19680205|F||2106-3^White^HL70005|7830 Greenback Ln^^Sacramento^CA^95610||^PRN^PH^^1^916^5554567||||M|||375-11-9842
+PV1||N
+```
+
+## 7. ADT^A31 - Update person information at Scripps Health
+
+```
+MSH|^~\&|EPICCARE|SCRIPPS_MEM|MPI|SCRIPPS_MEM|20260507155500||ADT^A31^ADT_A05|MSG00007|P|2.5.1
+EVN|A31|20260507155500
+PID|1||MRN70890123^^^SCRIPPS_MEM^MR||Choi^Daniel^Seung^^Mr.||19910428|M||2028-9^Asian^HL70005|4532 Balboa Ave^^San Diego^CA^92117||^PRN^PH^^1^858^5556789~^PRN^CP^^1^858^5553210||||S|||267-99-4138
+PV1||N
+NK1|1|Choi^Eunice^Hye||^PRN^PH^^1^858^5554321|||||||||||||||||||||||||||||F|19630815
+```
+
+## 8. ORM^O01 - Lab order from UCLA Medical Center
+
+```
+MSH|^~\&|EPICLAB|UCLA_MC|LABCORE|UCLA_MC|20260508100000||ORM^O01^ORM_O01|MSG00008|P|2.5.1
+PID|1||MRN10234567^^^UCLA_MC^MR||Sandoval^Gabriela^Inez^^Mrs.||19780415|F||2106-3^White^HL70005|2814 Sawtelle Blvd^^Los Angeles^CA^90064||^PRN^PH^^1^310^5551234
+PV1||I|4WEST^4W12^01^UCLA_MC||||1234567^Okafor^Chidinma^E^^^MD
+ORC|NW|ORD89012345|||||^^^20260508100000^^R||20260508100000|NURSE001^Vega^Kelly||1234567^Okafor^Chidinma^E^^^MD|4WEST
+OBR|1|ORD89012345||CBC^Complete Blood Count^L|||20260508100000||||A|||||1234567^Okafor^Chidinma^E^^^MD||||||20260508100000|||F
+OBR|2|ORD89012346||CMP^Comprehensive Metabolic Panel^L|||20260508100000||||A|||||1234567^Okafor^Chidinma^E^^^MD||||||20260508100000|||F
+```
+
+## 9. ORU^R01 - Lab results with CBC from Stanford Health Care
+
+```
+MSH|^~\&|EPICLAB|STANFORD_HC|EPICCARE|STANFORD_HC|20260508112000||ORU^R01^ORU_R01|MSG00009|P|2.5.1
+PID|1||MRN20345678^^^STANFORD_HC^MR||Jefferson^Marcus^DeAndre^^Mr.||19650823|M||2054-5^Black or African American^HL70005|1740 University Ave^^Palo Alto^CA^94301||^PRN^PH^^1^650^5553456
+PV1||I|ICU^ICU04^01^STANFORD_HC||||5551234^Matsumoto^Karen^L^^^MD
+ORC|RE|ORD89012400||||||^^^20260508080000^^R||20260508112000|LAB001^Herrera^Roberto||5551234^Matsumoto^Karen^L^^^MD
+OBR|1|ORD89012400||CBC^Complete Blood Count^L|||20260508080000|||||||20260508090000|B^Blood|5551234^Matsumoto^Karen^L^^^MD||||||20260508112000|||F
+OBX|1|NM|6690-2^WBC^LN||7.2|10*3/uL|4.5-11.0|N|||F|||20260508110000
+OBX|2|NM|789-8^RBC^LN||4.85|10*6/uL|4.50-5.90|N|||F|||20260508110000
+OBX|3|NM|718-7^Hemoglobin^LN||14.2|g/dL|13.5-17.5|N|||F|||20260508110000
+OBX|4|NM|4544-3^Hematocrit^LN||42.1|%|38.3-48.6|N|||F|||20260508110000
+OBX|5|NM|787-2^MCV^LN||86.8|fL|80.0-100.0|N|||F|||20260508110000
+OBX|6|NM|777-3^Platelet Count^LN||245|10*3/uL|150-400|N|||F|||20260508110000
+```
+
+## 10. ORU^R01 - Pathology report with encapsulated PDF from Cedars-Sinai
+
+```
+MSH|^~\&|EPICLAB|CEDARS_SINAI|EPICCARE|CEDARS_SINAI|20260507163000||ORU^R01^ORU_R01|MSG00010|P|2.5.1
+PID|1||MRN30456789^^^CEDARS_SINAI^MR||Tanaka^Yuki^Harumi^^Ms.||19900312|F||2028-9^Asian^HL70005|812 S Fairfax Ave Apt 302^^Los Angeles^CA^90036||^PRN^PH^^1^323^5557890
+PV1||I|6EAST^6E22^01^CEDARS_SINAI||||7771234^Abramowitz^Steven^R^^^MD
+ORC|RE|ORD89012500||||||^^^20260505100000^^R||20260507163000|PATH001^Watanabe^Kenji||7771234^Abramowitz^Steven^R^^^MD
+OBR|1|ORD89012500||11529-5^Surgical Pathology Report^LN|||20260505100000|||||||20260505110000|T^Tissue|7771234^Abramowitz^Steven^R^^^MD||||||20260507163000|||F
+OBX|1|ED|11529-5^Surgical Pathology Report^LN||^application^pdf^Base64^JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KPj4K||||||F|||20260507163000
+```
+
+## 11. ORU^R01 - Radiology report with encapsulated PDF from Kaiser
+
+```
+MSH|^~\&|EPICRAD|KAISER_LA|EPICCARE|KAISER_LA|20260506141500||ORU^R01^ORU_R01|MSG00011|P|2.5.1
+PID|1||MRN80901234^^^KAISER_LA^MR||Brooks^Shanice^Renee^^Ms.||19820614|F||2054-5^Black or African American^HL70005|4718 Degnan Blvd^^Los Angeles^CA^90043||^PRN^PH^^1^323^5551098
+PV1||O|RADCLN^RAD01^01^KAISER_LA||||8889012^Lindgren^Thomas^W^^^MD
+ORC|RE|ORD89012600||||||^^^20260506100000^^R||20260506141500|RAD001^Malhotra^Priya||8889012^Lindgren^Thomas^W^^^MD
+OBR|1|ORD89012600||71020^Chest X-ray 2 views^CPT|||20260506100000|||||||20260506103000|^Chest|8889012^Lindgren^Thomas^W^^^MD||||||20260506141500|||F
+OBX|1|ED|71020^Chest X-ray 2 views^CPT||^application^pdf^Base64^JVBERi0xLjUKJcOkw7zDtsOfCjEgMCBvYmoKPDwgL1R5cGUgL0NhdGFsb2cKL1BhZ2VzIDIgMCBSCj4+CmVuZG9iagoyIDAgb2JqCjw8IC9UeXBlIC9QYWdlcwovS2lkcyBbMyAwIFJdCi9Db3VudCAxCj4+CmVuZG9iago=||||||F|||20260506141500
+OBX|2|FT|71020^Chest X-ray 2 views^CPT||IMPRESSION: No acute cardiopulmonary disease. Heart size normal. Lungs are clear bilaterally.||||||F|||20260506141500
+```
+
+## 12. SIU^S12 - New appointment scheduled at UCSF
+
+```
+MSH|^~\&|EPIC|UCSF_HEALTH|SCHEDENG|UCSF_HEALTH|20260508090000||SIU^S12^SIU_S12|MSG00012|P|2.5.1
+SCH|APT2026050801|APT2026050801||||ROUTINE^Routine^HL70276|FOLLOWUP^Follow Up Visit^APPTTYPE|||||30|min|^^^20260515100000^20260515103000|||||4445678^Kaplan^Miriam^F^^^MD|||||BOOKED
+PID|1||MRN50678901^^^UCSF_HEALTH^MR||Reyes^Ernesto^Joaquin^^Mr.||19720930|M||2106-3^White^HL70005|3240 24th St^^San Francisco^CA^94110||^PRN^PH^^1^415^5558901
+PV1||O|ORTHO^ORT05^01^UCSF_HEALTH||||4445678^Kaplan^Miriam^F^^^MD
+RGS|1
+AIS|1||ORTHOFU^Orthopedic Follow-Up^L|20260515100000|||30|min
+AIP|1||4445678^Kaplan^Miriam^F^^^MD|||||20260515100000|||30|min
+```
+
+## 13. SIU^S12 - Appointment at Stanford outpatient
+
+```
+MSH|^~\&|EPIC|STANFORD_HC|CADENCE|STANFORD_HC|20260507113000||SIU^S12^SIU_S12|MSG00013|P|2.5.1
+SCH|APT2026050702|APT2026050702||||ROUTINE^Routine^HL70276|NEWPT^New Patient Visit^APPTTYPE|||||60|min|^^^20260520140000^20260520150000|||||2223456^Espinosa^Claudia^R^^^MD|||||BOOKED
+PID|1||MRN90012345^^^STANFORD_HC^MR||Okonkwo^Emeka^Chidi^^Mr.||19880117|M||2054-5^Black or African American^HL70005|391 Lytton Ave^^Palo Alto^CA^94301||^PRN^PH^^1^650^5557654
+PV1||O|DERM^DRM03^01^STANFORD_HC^^^^Dermatology||||2223456^Espinosa^Claudia^R^^^MD
+RGS|1
+AIS|1||DERMNEW^Dermatology New Patient^L|20260520140000|||60|min
+AIP|1||2223456^Espinosa^Claudia^R^^^MD|||||20260520140000|||60|min
+```
+
+## 14. MDM^T02 - Document notification with content from UCLA
+
+```
+MSH|^~\&|EPIC|UCLA_MC|DOCMGMT|UCLA_MC|20260508150000||MDM^T02^MDM_T02|MSG00014|P|2.5.1
+EVN|T02|20260508150000
+PID|1||MRN10234567^^^UCLA_MC^MR||Sandoval^Gabriela^Inez^^Mrs.||19780415|F||2106-3^White^HL70005|2814 Sawtelle Blvd^^Los Angeles^CA^90064||^PRN^PH^^1^310^5551234
+PV1||I|4WEST^4W12^01^UCLA_MC||||1234567^Okafor^Chidinma^E^^^MD
+TXA|1|HP^History and Physical^HL70270|TX|20260508150000|1234567^Okafor^Chidinma^E^^^MD||20260508150000|||||DOC20260508001|||AU||AV||||1234567^Okafor^Chidinma^E^^^MD
+OBX|1|TX|11488-4^Consultation Note^LN||HISTORY OF PRESENT ILLNESS: The patient is a 47-year-old female presenting with shortness of breath and productive cough for 3 days.||||||F
+OBX|2|TX|11488-4^Consultation Note^LN||PHYSICAL EXAMINATION: Temp 101.2F, BP 128/82, HR 92, RR 22, SpO2 94% on RA. Lungs with bilateral crackles at bases.||||||F
+OBX|3|TX|11488-4^Consultation Note^LN||ASSESSMENT AND PLAN: Community-acquired pneumonia. Start ceftriaxone and azithromycin. Chest X-ray ordered.||||||F
+```
+
+## 15. MDM^T02 - Discharge summary document from Cedars-Sinai
+
+```
+MSH|^~\&|EPIC|CEDARS_SINAI|DOCMGMT|CEDARS_SINAI|20260506170000||MDM^T02^MDM_T02|MSG00015|P|2.5.1
+EVN|T02|20260506170000
+PID|1||MRN30456789^^^CEDARS_SINAI^MR||Tanaka^Yuki^Harumi^^Ms.||19900312|F||2028-9^Asian^HL70005|812 S Fairfax Ave Apt 302^^Los Angeles^CA^90036||^PRN^PH^^1^323^5557890
+PV1||I|6EAST^6E22^01^CEDARS_SINAI||||7771234^Abramowitz^Steven^R^^^MD
+TXA|1|DS^Discharge Summary^HL70270|TX|20260506170000|7771234^Abramowitz^Steven^R^^^MD||20260506170000|||||DOC20260506001|||AU||AV||||7771234^Abramowitz^Steven^R^^^MD
+OBX|1|TX|18842-5^Discharge Summary^LN||DISCHARGE DIAGNOSIS: Community-acquired pneumonia, resolved. HOSPITAL COURSE: Patient admitted 5/3 with fever, cough, hypoxia. Treated with IV antibiotics x3 days, transitioned to oral. Afebrile x48hrs at discharge.||||||F
+OBX|2|TX|18842-5^Discharge Summary^LN||DISCHARGE MEDICATIONS: Amoxicillin-clavulanate 875mg PO BID x5 days. Acetaminophen 650mg PO Q6H PRN fever/pain.||||||F
+OBX|3|TX|18842-5^Discharge Summary^LN||FOLLOW-UP: PCP in 7 days. Return to ED if fever >101.5F, worsening dyspnea, or chest pain.||||||F
+```
+
+## 16. ORM^O01 - Radiology order from Stanford Health Care
+
+```
+MSH|^~\&|EPICRAD|STANFORD_HC|RADIS|STANFORD_HC|20260508083000||ORM^O01^ORM_O01|MSG00016|P|2.5.1
+PID|1||MRN20345678^^^STANFORD_HC^MR||Jefferson^Marcus^DeAndre^^Mr.||19650823|M||2054-5^Black or African American^HL70005|1740 University Ave^^Palo Alto^CA^94301||^PRN^PH^^1^650^5553456
+PV1||I|ICU^ICU04^01^STANFORD_HC||||5551234^Matsumoto^Karen^L^^^MD
+ORC|NW|ORD89012700|||||^^^20260508083000^^S||20260508083000|NURSE002^Duarte^Patricia||5551234^Matsumoto^Karen^L^^^MD|ICU
+OBR|1|ORD89012700||71260^CT Chest with contrast^CPT|||20260508083000||||A|||STAT^Stat^HL70078||5551234^Matsumoto^Karen^L^^^MD||||||20260508083000|||F
+```
+
+## 17. ORU^R01 - Metabolic panel results from UCSF
+
+```
+MSH|^~\&|EPICLAB|UCSF_HEALTH|EPICCARE|UCSF_HEALTH|20260507180000||ORU^R01^ORU_R01|MSG00017|P|2.5.1
+PID|1||MRN50678901^^^UCSF_HEALTH^MR||Reyes^Ernesto^Joaquin^^Mr.||19720930|M||2106-3^White^HL70005|3240 24th St^^San Francisco^CA^94110||^PRN^PH^^1^415^5558901
+PV1||O|ORTHO^ORT05^01^UCSF_HEALTH||||4445678^Kaplan^Miriam^F^^^MD
+ORC|RE|ORD89012800||||||^^^20260507140000^^R||20260507180000|LAB002^Ochoa^Miguel||4445678^Kaplan^Miriam^F^^^MD
+OBR|1|ORD89012800||CMP^Comprehensive Metabolic Panel^L|||20260507140000|||||||20260507150000|B^Blood|4445678^Kaplan^Miriam^F^^^MD||||||20260507180000|||F
+OBX|1|NM|2345-7^Glucose^LN||98|mg/dL|74-106|N|||F|||20260507175000
+OBX|2|NM|3094-0^BUN^LN||16|mg/dL|6-20|N|||F|||20260507175000
+OBX|3|NM|2160-0^Creatinine^LN||1.1|mg/dL|0.7-1.3|N|||F|||20260507175000
+OBX|4|NM|2951-2^Sodium^LN||140|mmol/L|136-145|N|||F|||20260507175000
+OBX|5|NM|2823-3^Potassium^LN||4.2|mmol/L|3.5-5.1|N|||F|||20260507175000
+OBX|6|NM|1742-6^ALT^LN||24|U/L|7-56|N|||F|||20260507175000
+OBX|7|NM|1920-8^AST^LN||28|U/L|10-40|N|||F|||20260507175000
+```
+
+## 18. ORU^R01 - Troponin critical result from Kaiser SF
+
+```
+MSH|^~\&|EPICLAB|KAISER_SF|EPICCARE|KAISER_SF|20260508051200||ORU^R01^ORU_R01|MSG00018|P|2.5.1
+PID|1||MRN40567890^^^KAISER_SF^MR||Lam^Brandon^Wai^^Mr.||19850719|M||2028-9^Asian^HL70005|1927 Clement St^^San Francisco^CA^94121||^PRN^PH^^1^415^5552345
+PV1||E|ED^ED12^01^KAISER_SF^^^^Emergency Department||||9990123^Petrosyan^Nadia^J^^^MD
+ORC|RE|ORD89012900||||||^^^20260508043000^^S||20260508051200|LAB003^Fuentes^Maria||9990123^Petrosyan^Nadia^J^^^MD
+OBR|1|ORD89012900||TROP^Troponin I^L|||20260508043000|||||||20260508044500|B^Blood|9990123^Petrosyan^Nadia^J^^^MD||||||20260508051200|||F
+OBX|1|NM|10839-9^Troponin I^LN||2.45|ng/mL|0.00-0.04|HH|||F|||20260508051000
+NTE|1||CRITICAL VALUE - Physician notified at 0512 by Lab Tech Fuentes. Dr. Petrosyan acknowledged.
+```
+
+## 19. ADT^A01 - Emergency admission at Scripps Mercy Hospital
+
+```
+MSH|^~\&|EPICADT|SCRIPPS_MERCY|EDIS|SCRIPPS_MERCY|20260508022000||ADT^A01^ADT_A01|MSG00019|P|2.5.1
+EVN|A01|20260508022000
+PID|1||MRN11223344^^^SCRIPPS_MERCY^MR||Morales^Andres^Rafael^^Mr.||19751108|M||2106-3^White^HL70005|2457 University Ave^^San Diego^CA^92104||^PRN^PH^^1^619^5553456||||M|||158-33-7462
+PV1||E|ED^ED05^01^SCRIPPS_MERCY^^^^Emergency||||1112233^Yee^Alison^T^^^MD|||EM||||ER|A0||||||||||||||||||||||||||20260508022000
+DG1|1||I21.9^Acute myocardial infarction, unspecified^I10||20260508|A
+IN1|1|ANTHEM01|ANT789012|Anthem Blue Cross of California|21215 Burbank Blvd^^Woodland Hills^CA^91367||^PRN^PH^^1^800^8722862|GRPANT2026|||||||Morales^Andres^Rafael|01|19751108|2457 University Ave^^San Diego^CA^92104
+```
+
+## 20. ORM^O01 - Medication order from Cedars-Sinai
+
+```
+MSH|^~\&|EPIC|CEDARS_SINAI|PHARMACY|CEDARS_SINAI|20260508071500||ORM^O01^ORM_O01|MSG00020|P|2.5.1
+PID|1||MRN30456789^^^CEDARS_SINAI^MR||Tanaka^Yuki^Harumi^^Ms.||19900312|F||2028-9^Asian^HL70005|812 S Fairfax Ave Apt 302^^Los Angeles^CA^90036||^PRN^PH^^1^323^5557890
+PV1||I|6EAST^6E22^01^CEDARS_SINAI||||7771234^Abramowitz^Steven^R^^^MD
+ORC|NW|ORD89013000|||||^^^20260508071500^^R||20260508071500|NURSE003^Whitfield^Angela||7771234^Abramowitz^Steven^R^^^MD|6EAST
+RXO|CEFTRIAXONE^Ceftriaxone 1g^RXNORM|1||g|IV|Q24H|||||||1
+RXR|IV^Intravenous^HL70162
+```

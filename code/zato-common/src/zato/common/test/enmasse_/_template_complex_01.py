@@ -194,7 +194,7 @@ scheduler:
     start_date: '2025-04-21 23:19:47'
     days: 10
 
-kafka_channel:
+channel_kafka:
 
   - name: enmasse.kafka.channel.1
     is_active: true
@@ -214,7 +214,28 @@ kafka_channel:
     ssl_cert_file: /path/to/cert.pem
     ssl_key_file: /path/to/key.pem
 
-kafka_outgoing:
+channel_hl7_mllp:
+
+  - name: enmasse.hl7.mllp.1
+    service: enmasse.hl7.test.service
+    should_validate: true
+    msh9_message_type: ORU
+
+  - name: enmasse.hl7.mllp.2
+    service: enmasse.hl7.test.service.2
+    msh9_message_type: ADT
+    msh9_trigger_event: A01
+    fix_off_by_one_field_index: true
+    dedup_ttl_value: 30
+    dedup_ttl_unit: minutes
+
+  - name: enmasse.hl7.mllp.3
+    service: enmasse.hl7.test.service.3
+    is_default: true
+    normalize_obx2_value_type: false
+    allow_short_encoding_characters: false
+
+outgoing_kafka:
 
   - name: enmasse.kafka.outgoing.1
     is_active: true
@@ -227,6 +248,18 @@ kafka_outgoing:
     topic: enmasse-test-out-topic-2
     ssl: true
     ssl_ca_file: /path/to/ca.pem
+
+outgoing_graphql:
+
+  - name: enmasse.graphql.outgoing.1
+    is_active: true
+    address: https://graph.microsoft.com/v1.0
+    default_query_timeout: 30
+
+  - name: enmasse.graphql.outgoing.2
+    is_active: true
+    address: https://api.github.com/graphql
+    default_query_timeout: 60
 
 ldap:
 
