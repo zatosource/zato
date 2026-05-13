@@ -1204,13 +1204,15 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             on_callback_service = on_error_service
             on_callback_job = on_error_job
 
+        event_label = 'success' if outcome == SCHEDULER.OUTCOME.OK else 'error'
+
         if on_callback_service:
-            spawn(self._invoke_callback_service, on_callback_service, callback_context)
+            spawn(self._invoke_callback_service, on_callback_service, callback_context, event_label)
 
         if on_callback_job:
-            spawn(self._invoke_callback_job, on_callback_job, callback_context)
+            spawn(self._invoke_callback_job, on_callback_job, callback_context, event_label)
 
-    def _invoke_callback_service(self, service_name:'str', callback_context:'dict') -> 'None':
+    def _invoke_callback_service(self, service_name:'str', callback_context:'dict', event_label:'str') -> 'None':
         """ Invokes a Zato service as a scheduler job callback, passing the original job's context.
         """
         from json import dumps as json_dumps
@@ -1220,7 +1222,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         job_id = callback_context['job_id']
         job_name = callback_context['job_name']
 
-        logger.info('Invoking callback service=%s for job_id=%s name=%s', service_name, job_id, job_name)
+        logger.info('Invoking %s callback service=%s for job_id=%s name=%s', event_label, service_name, job_id, job_name)
 
         payload = json_dumps(callback_context)
 
@@ -1243,7 +1245,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         except Exception:
             logger.warning('Callback service=%s failed for job_id=%s; traceback=%s', service_name, job_id, format_exc())
 
-    def _invoke_callback_job(self, target_job_name:'str', callback_context:'dict') -> 'None':
+    def _invoke_callback_job(self, target_job_name:'str', callback_context:'dict', event_label:'str') -> 'None':
         """ Executes another scheduler job as a callback by looking up its ID and triggering it.
         """
         from contextlib import closing
@@ -1253,7 +1255,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         source_job_name = callback_context['job_name']
 
         logger.info(
-            'Triggering callback job=%s for source job_id=%s name=%s', target_job_name, source_job_id, source_job_name)
+            'Triggering %s callback job=%s for source job_id=%s name=%s', event_label, target_job_name, source_job_id, source_job_name)
 
         try:
             with closing(self.odb.session()) as session:
