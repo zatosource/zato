@@ -16,7 +16,7 @@ from uuid import uuid4
 from zato.common.py23_.past.builtins import unicode
 
 # Zato
-from zato.common.api import ZATO_ODB_POOL_NAME
+from zato.common.api import query_parameters, ZATO_ODB_POOL_NAME
 from zato.common.exception import ZatoException
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import Cluster, SQLConnectionPool
@@ -45,7 +45,7 @@ class GetList(AdminService):
     """
     _filter_by = SQLConnectionPool.name,
 
-    input = 'cluster_id',
+    input = 'cluster_id', *query_parameters
     output = 'id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', \
         Integer('pool_size'), '-extra', '-engine_display_name'
 

@@ -14,6 +14,7 @@ from traceback import format_exc
 from zato.common.ext.bunch import Bunch
 
 # Zato
+from zato.common.api import query_parameters
 from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import Cluster, PubSubTopic
 from zato.common.odb.query import pubsub_topic_list
@@ -30,7 +31,7 @@ class GetList(AdminService):
     """
     _filter_by = PubSubTopic.name, PubSubTopic.description,
 
-    input = 'cluster_id', '-cur_page', '-paginate', '-query'
+    input = 'cluster_id', *query_parameters
     output = 'id', 'name', 'is_active', '-description', '-publisher_count', '-subscriber_count'
 
     def get_data(self, session):
