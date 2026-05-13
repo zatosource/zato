@@ -1121,3 +1121,4 @@ div.action-panel a {
     animation: zato-live-puff 1.5s ease-out;
 }
 .text-center { text-align: center; }
+.collapsible-toggle { padding-top: 0.62rem !important; }
