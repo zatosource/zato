@@ -33,14 +33,14 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def set_kvdb_config(server_config:'strdict', input_data:'Bunch', redis_sentinels:'str') -> 'None':
+def set_redis_config(server_config:'strdict', input_data:'Bunch', redis_sentinels:'str') -> 'None':
 
-    server_config['kvdb']['host'] = input_data.host or ''
-    server_config['kvdb']['port'] = int(input_data.port) if input_data.port else ''
-    server_config['kvdb']['db'] = int(input_data.db) if input_data.db else ''
-    server_config['kvdb']['use_redis_sentinels'] = input_data.use_redis_sentinels
-    server_config['kvdb']['redis_sentinels'] = redis_sentinels
-    server_config['kvdb']['redis_sentinels_master'] = input_data.redis_sentinels_master or ''
+    server_config['redis']['host'] = input_data.host or ''
+    server_config['redis']['port'] = int(input_data.port) if input_data.port else ''
+    server_config['redis']['db'] = int(input_data.db) if input_data.db else ''
+    server_config['redis']['use_redis_sentinels'] = input_data.use_redis_sentinels
+    server_config['redis']['redis_sentinels'] = redis_sentinels
+    server_config['redis']['redis_sentinels_master'] = input_data.redis_sentinels_master or ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,7 +66,7 @@ class GetList(AdminService):
         }
 
         config = get_config_object(self.server.repo_location, 'server.conf')
-        config = config['kvdb']
+        config = config['redis']
 
         for elem in self.output:
 
@@ -119,17 +119,17 @@ class Edit(AdminService):
 
         # First, update the persistent configuration on disk ..
         config = get_config_object(self.server.repo_location, 'server.conf')
-        set_kvdb_config(config, input, redis_sentinels)
+        set_redis_config(config, input, redis_sentinels)
 
         server_conf_path = os.path.join(self.server.repo_location, 'server.conf')
         with open(server_conf_path, 'wb') as f:
             _ = config.write(f) # type: ignore
 
         # .. assign new in-RAM server-wide configuration ..
-        set_kvdb_config(self.server.fs_server_config, input, redis_sentinels)
+        set_redis_config(self.server.fs_server_config, input, redis_sentinels)
 
         # .. and rebuild the Redis connection object.
-        self.server.kvdb.reconfigure(self.server.fs_server_config.kvdb)
+        self.server.redis_conn.reconfigure(self.server.fs_server_config.redis)
 
         # Our callers expect these two
         self.response.payload.id = ModuleCtx.StaticID
@@ -158,13 +158,13 @@ class ChangePassword(ChangePasswordBase):
         config = get_config_object(self.server.repo_location, 'secrets.conf')
 
         # Set the new secret
-        config['zato']['server_conf.kvdb.password'] = password # type: ignore
+        config['zato']['server_conf.redis.password'] = password # type: ignore
 
         # Update the on-disk configuration
         update_config_file(config, self.server.repo_location, 'secrets.conf') # type: ignore
 
         # Change in-RAM password
-        self.server.kvdb.set_password(password) # type: ignore
+        self.server.redis_conn.set_password(password) # type: ignore
 
         self.response.payload.id = self.request.input.id
 

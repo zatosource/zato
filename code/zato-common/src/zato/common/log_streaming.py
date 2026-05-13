@@ -104,7 +104,7 @@ class LogStreamingManager:
         'zato_rest',
         'zato.hot-deploy.create',
         # 'zato_access_log',
-        # 'zato_kvdb',
+        # 'zato_redis',
         # 'zato_admin'
     }
 

@@ -155,7 +155,7 @@ class RedisPubSubBackend:
 
         # .. add to stream ..
         stream_key = self._get_stream_key(topic_name)
-        _ = self.redis.xadd(stream_key, message, maxlen=_default_stream_max_len)
+        redis_stream_id = self.redis.xadd(stream_key, message, maxlen=_default_stream_max_len)
 
         counter = zato_pubsub_messages_published_total.labels(topic_name=topic_name)
         _ = counter.inc()
@@ -186,11 +186,9 @@ class RedisPubSubBackend:
 
         # .. create consumer group if not exists ..
         try:
-            _ = self.redis.xgroup_create(stream_key, sub_key, id='$', mkstream=True)
+            _ = self.redis.xgroup_create(stream_key, sub_key, id='0', mkstream=True)
         except ResponseError as error:
-            if 'BUSYGROUP' in error.args[0]:
-                pass
-            else:
+            if 'BUSYGROUP' not in error.args[0]:
                 raise
 
 # ################################################################################################################################
@@ -228,7 +226,8 @@ class RedisPubSubBackend:
         self,
         sub_key:'str',
         max_messages:'int'=_default_max_messages,
-        max_len:'int'=_default_max_len
+        max_len:'int'=_default_max_len,
+        block_ms:'int'=0
     ) -> 'anylist':
         """ Fetch messages for a subscriber from all subscribed topics.
         """
@@ -249,12 +248,16 @@ class RedisPubSubBackend:
 
         # .. read from all subscribed streams ..
         try:
+            block_value = block_ms if block_ms else None
+
             result = self.redis.xreadgroup(
                 groupname=sub_key,
                 consumername=sub_key,
                 streams=streams,
-                count=max_messages
+                count=max_messages,
+                block=block_value
             )
+
         except ResponseError as error:
             if 'NOGROUP' in error.args[0]:
                 return []

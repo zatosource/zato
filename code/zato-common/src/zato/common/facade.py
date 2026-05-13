@@ -91,11 +91,13 @@ class PubSubFacade:
         pub_time:'strnone'=None,
     ) -> 'PublishResult':
 
+        is_service = topic_name in self.server.service_store.name_to_impl_name
+
         # Check if the topic_name is actually a known service name ..
-        if topic_name in self.server.service_store.name_to_impl_name:
+        if is_service:
             topic_name = self._ensure_service_topic(topic_name)
 
-        # .. now, publish the message to the topic.
+        # .. now, publish the message to the topic ..
         out = self.server.pubsub_redis.publish(
             topic_name,
             data,
@@ -133,7 +135,7 @@ class PubSubFacade:
                 sub_config = {
                     'sub_key': sub_key,
                     'topic_name': computed_topic,
-                    'push_type': 'service',
+                    'push_type': PubSub.Push_Type.Service,
                     'push_service_name': service_name,
                     'rest_push_endpoint_id': None,
                 }
@@ -142,6 +144,9 @@ class PubSubFacade:
                     self.server._push_subs[sub_key] = []
 
                 self.server._push_subs[sub_key].append(sub_config)
+
+                # .. start a delivery greenlet for this sub_key ..
+                self.server.pubsub_push_delivery.start_sub_key(sub_key)
 
                 # .. mark as set up ..
                 self.server._service_topic_cache.add(service_name)

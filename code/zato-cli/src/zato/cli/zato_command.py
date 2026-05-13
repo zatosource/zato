@@ -432,7 +432,7 @@ def pre_process_server(sys_argv, opts_idx, opts):
 
     #
     # This is pre-3.2
-    # 'zato0', 'create1', 'server2', '/path/to/server3', 'sqlite4', 'kvdb_host5', 'kvdb_port6', 'cluster_name7', 'server_name8'
+    # 'zato0', 'create1', 'server2', '/path/to/server3', 'sqlite4', 'redis_host5', 'redis_port6', 'cluster_name7', 'server_name8'
     #
     len_pre_32 = 9
 
@@ -458,10 +458,10 @@ def pre_process_server(sys_argv, opts_idx, opts):
         new_argv.append('--odb_type') # sqlite4
         new_argv.append(sys_argv[4])
 
-        new_argv.append('--kvdb_host') # kvdb_host5
+        new_argv.append('--redis_host') # redis_host5
         new_argv.append(sys_argv[5])
 
-        new_argv.append('--kvdb_port') # kvdb_port6
+        new_argv.append('--redis_port') # redis_port6
         new_argv.append(sys_argv[6])
 
         new_argv.extend(opts)

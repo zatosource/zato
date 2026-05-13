@@ -655,6 +655,7 @@ class AMQP:
 
 class REDIS:
     class DEFAULT:
+        HOST = 'localhost'
         PORT = 6379
         DB = 0
 

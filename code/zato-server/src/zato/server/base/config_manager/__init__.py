@@ -617,22 +617,18 @@ class ConfigManager(_ConfigManagerBase):
 # ################################################################################################################################
 
     def _build_cache_api(self) -> 'CacheAPI':
-        """ Creates a Redis-backed CacheAPI using the server's [kvdb] configuration.
+        """ Creates a Redis-backed CacheAPI using the server's [redis] configuration.
         """
         from redis import Redis
 
-        kvdb_config = self.server.fs_server_config.kvdb
-
-        host = kvdb_config.host or 'localhost'
-        port = int(kvdb_config.port or 6379)
-        db = int(kvdb_config.get('db', 0))
-        password = kvdb_config.password if kvdb_config.password else None
+        redis_config = self.server.fs_server_config.redis
+        redis_password = redis_config.password if redis_config.password else None
 
         redis_client = Redis(
-            host=host,
-            port=port,
-            db=db,
-            password=password,
+            host=redis_config.host,
+            port=redis_config.port,
+            db=redis_config.db,
+            password=redis_password,
             decode_responses=True,
         )
 
@@ -1979,6 +1975,9 @@ class ConfigManager(_ConfigManagerBase):
 
             # .. remove push delivery config ..
             server._push_subs.pop(sub_key, None)
+
+            # .. stop the delivery greenlet for this sub_key ..
+            server.pubsub_push_delivery.stop_sub_key(sub_key)
 
             # .. and remove from cache.
             server._service_topic_cache.discard(service_name)
