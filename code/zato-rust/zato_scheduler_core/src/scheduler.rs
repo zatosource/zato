@@ -138,6 +138,8 @@ pub fn scheduler_loop(
             break;
         }
 
+        crate::metrics::TICKS_TOTAL.inc();
+
         let now_wall = Utc::now();
         let now_mono = Instant::now();
         let wall_delta_ms = (now_wall - last_wall).num_milliseconds();
@@ -146,6 +148,7 @@ pub fn scheduler_loop(
 
         if drift_ms > shared.clock_jump_threshold_ms {
             tracing::warn!("Clock jump detected (drift_ms={drift_ms}), reanchoring all jobs");
+            crate::metrics::CLOCK_JUMPS_TOTAL.inc();
             let mut state = shared.state.lock();
             reanchor_all_jobs(&mut state, now_wall);
         }
@@ -165,11 +168,33 @@ pub fn scheduler_loop(
             let batch = {
                 let mut state = shared.state.lock();
                 check_in_flight_timeouts(&mut state, &mut deferred);
-                collect_due_jobs(&mut state, now_wall, shared.coalesce_window_ms, &mut deferred)
+                let batch = collect_due_jobs(&mut state, now_wall, shared.coalesce_window_ms, &mut deferred);
+
+                let mut total: i64 = 0;
+                let mut active: i64 = 0;
+                let mut in_flight: i64 = 0;
+                for rj in state.jobs.values() {
+                    total += 1;
+                    if rj.is_active {
+                        active += 1;
+                    }
+                    if rj.in_flight {
+                        in_flight += 1;
+                    }
+                }
+                crate::metrics::JOBS_TOTAL.set(total);
+                crate::metrics::JOBS_ACTIVE.set(active);
+                crate::metrics::JOBS_IN_FLIGHT.set(in_flight);
+
+                batch
             };
             deferred.flush();
             batch
         };
+
+        for item in &fire_batch {
+            crate::metrics::EXECUTIONS_TOTAL.with_label_values(&[&item.name, "fired"]).inc();
+        }
 
         for item in fire_batch {
             if fire_sender.send(item).is_err() {
@@ -288,6 +313,10 @@ pub fn collect_due_jobs(
             extra: running_job.extra.clone(),
             job_type: running_job.job_type.clone(),
             current_run: running_job.current_run,
+            on_success_service: running_job.on_success_service.clone(),
+            on_success_job: running_job.on_success_job.clone(),
+            on_error_service: running_job.on_error_service.clone(),
+            on_error_job: running_job.on_error_job.clone(),
         });
 
         let mut rec = ExecutionRecord::new(&planned, &actual, outcome::RUNNING, running_job.current_run).with_delay(delay_ms_unsigned);
@@ -325,6 +354,15 @@ pub fn check_in_flight_timeouts(state: &mut SchedulerState, deferred: &mut Defer
                 running_job.max_execution_time_ms,
                 job_id,
             );
+            crate::metrics::EXECUTIONS_TOTAL
+                .with_label_values(&[&running_job.name, outcome::TIMEOUT])
+                .inc();
+
+            let duration_secs = elapsed_ms as f64 / 1000.0;
+            crate::metrics::EXECUTION_DURATION_SECONDS
+                .with_label_values(&[&running_job.name])
+                .observe(duration_secs);
+
             running_job.in_flight = false;
             running_job.in_flight_since = None;
             running_job.in_flight_run = None;

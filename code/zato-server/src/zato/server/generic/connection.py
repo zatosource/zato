@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # Zato
 from zato.common.api import GENERIC
@@ -46,7 +46,6 @@ class GenericConnection:
         self.secret_type = None
 
         self.conn_def_id = None
-        self.cache_id = None
         self.cluster_id = None
 
 # ################################################################################################################################

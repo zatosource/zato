@@ -16,7 +16,7 @@ from re import findall
 from traceback import format_exc
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # lxml
 from lxml.etree import _Element as EtreeElement # type: ignore
@@ -30,13 +30,12 @@ from gevent.lock import RLock
 from zato.common.py23_ import maxint
 
 # Zato
-from zato.bunch import Bunch
+from zato.common.ext.bunch import Bunch
 from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, NotGiven, PARAMS_PRIORITY, \
      RESTAdapterResponse, zato_no_op_marker
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import PubSubFacade, SecurityFacade
 from zato.common.json_internal import dumps
-from zato.common.monitoring.logger_ import DatadogLogger
 from zato.common.monitoring.metrics import ServiceMetrics
 from zato.common.typing_ import cast_, type_
 from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
@@ -45,24 +44,22 @@ from zato.common.util.time_ import utcnow
 from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
-from zato.server.connection.facade import KafkaFacade, KeysightContainer, RESTFacade, SchedulerFacade
-from zato.server.connection.http_soap.outgoing import current_datadog_cid, current_datadog_context, \
-    current_datadog_env_name, current_datadog_process_name, current_datadog_service_name
+from zato.server.connection.facade import KafkaFacade, GraphQLFacade, KeysightContainer, MLLPFacade, RESTFacade, SchedulerFacade
 from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
 from zato.server.pattern.api import ParallelExec
 from zato.server.service.reqresp import AMQPRequestData, Cloud, Outgoing, Request
 
-# Zato - Cython
-from zato.cy.reqresp.payload import SimpleIOPayload
-from zato.cy.reqresp.response import Response
+# Zato
+from zato.server.reqresp.payload import IOPayload
+from zato.server.reqresp.response import Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
 from zato.common.ext.dataclasses import dataclass
 from zato.common.marshal_.api import Model, ModelCtx
 from zato.server.connection.cloud.microsoft_dataverse import DataverseClient
-from zato.simpleio import AsIs, CSV, Bool, Date, DateTime, Dict, Decimal, DictList, Elem as SIOElem, Float, Int, List, \
+from zato.input_output import AsIs, CSV, Bool, Date, DateTime, Dict, Decimal, DictList, Elem as IOElem, Float, Int, List, \
      Opaque, Text, UTC, UUID
 
 # For pyflakes
@@ -89,7 +86,6 @@ UUID = UUID # type: ignore
 # ################################################################################################################################
 
 if 0:
-    from ddtrace._trace.context import Context as DatadogContext
     from logging import Logger
     from zato.common.config_dispatcher import ConfigDispatcher
     from zato.common.audit import AuditPII
@@ -102,10 +98,10 @@ if 0:
     from zato.distlock import Lock
     from zato.server.connection.ftp import FTPStore
     from zato.server.connection.http_soap.outgoing import RESTWrapper
-    from zato.server.base.worker import WorkerStore
+    from zato.server.base.config_manager import ConfigManager
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
-    from zato.simpleio import CySimpleIO
+    from zato.input_output import IOProcessor
     anydictnone = anydictnone
     callnone = callnone
     dictnone = dictnone
@@ -116,14 +112,14 @@ if 0:
     callable_ = callable_
     ConfigDict = ConfigDict
     ConfigStore = ConfigStore
-    CySimpleIO = CySimpleIO # type: ignore
+    IOProcessor = IOProcessor # type: ignore
     FTPStore = FTPStore
     ODBManager = ODBManager
     ParallelServer = ParallelServer
     ServerCryptoManager = ServerCryptoManager
     timedelta = timedelta
     TimeUtil = TimeUtil
-    WorkerStore = WorkerStore
+    ConfigManager = ConfigManager
 
 # ################################################################################################################################
 
@@ -139,7 +135,7 @@ NOT_GIVEN = 'ZATO_NOT_GIVEN'
 # Backward compatibility
 Boolean = Bool
 Integer = Int
-ForceType = SIOElem
+ForceType = IOElem
 ListOfDicts = DictList
 Nested = Opaque
 Unicode = Text
@@ -204,7 +200,6 @@ def call_hook_with_service(hook:'callable_', service:'Service') -> 'None':
 internal_invoke_keys = {
     'as_bunch',
     'cid',
-    'datadog_context',
     'serialize',
     'set_response_func',
     'skip_response_elem',
@@ -348,7 +343,6 @@ class Service:
 
     process_name:'str' = 'No name'
 
-    kafka: 'KafkaFacade'
     rest: 'RESTFacade'
     schedule: 'SchedulerFacade'
     security: 'SecurityFacade'
@@ -372,18 +366,18 @@ class Service:
     amqp = AMQPFacade()
     commands = CommandsFacade()
 
-    _worker_store:'WorkerStore'
-    _worker_config:'ConfigStore'
+    _config_manager:'ConfigManager'
+    _config_store:'ConfigStore'
 
     _has_before_job_hooks:'bool' = False
     _has_after_job_hooks:'bool' = False
     _before_job_hooks = []
     _after_job_hooks = []
 
-    has_sio:'bool'
+    has_io:'bool'
 
-    # Cython based SimpleIO definition created by service store when the class is deployed
-    _sio:'CySimpleIO'
+    # I/O definition created by service store when the class is deployed
+    _io:'IOProcessor'
 
     # Crypto operations
     crypto:'ServerCryptoManager'
@@ -415,8 +409,6 @@ class Service:
     processing_time: 'float'
 
     # Monitoring
-    needs_datadog_logging: 'bool'
-    datadog_context: 'DatadogContext' = None # type: ignore
     metrics: 'ServiceMetrics'
 
     # Rule engine
@@ -458,20 +450,22 @@ class Service:
 
         self.out = self.outgoing = Outgoing(
             self.amqp,
-            self._worker_config.out_odoo,
-            self._worker_store.worker_config.out_plain_http,
-            self._worker_config.out_soap,
-            self._worker_store.sql_pool_store,
-            self._worker_config.out_sap,
-            self._worker_store.outconn_ldap,
-            self._worker_store.outconn_mongodb,
+            GraphQLFacade(),
+            KafkaFacade(),
+            self._config_store.out_odoo,
+            self._config_manager.config_store.out_plain_http,
+            self._config_store.out_soap,
+            self._config_manager.sql_pool_store,
+            self._config_store.out_sap,
+            self._config_manager.outconn_ldap,
+            self._config_manager.outconn_mongodb,
         ) # type: Outgoing
 
         # REST facade for outgoing connections
         self.rest = RESTFacade()
 
-        # Kafka facade for outgoing connections
-        self.kafka = KafkaFacade()
+        # MLLP facade for outgoing connections
+        self.mllp = MLLPFacade()
 
 # ################################################################################################################################
 
@@ -556,45 +550,52 @@ class Service:
         # The if's below are meant to be written in this way because we don't want any unnecessary attribute lookups
         # and method calls in this method - it's invoked each time a service is executed. The attributes are set
         # for the whole of the Service class each time it is discovered they are needed. It cannot be done in ServiceStore
-        # because at the time that ServiceStore executes the worker config may still not be ready.
+        # because at the time that ServiceStore executes the config store may still not be ready.
 
         if self.component_enabled_email:
             if not Service.email:
-                Service.email = EMailAPI(self._worker_store.email_smtp_api, self._worker_store.email_imap_api)
+                Service.email = EMailAPI(self._config_manager.email_smtp_api, self._config_manager.email_imap_api)
 
         if self.component_enabled_search:
             if not Service.search:
-                Service.search = SearchAPI(self._worker_store.search_es_api)
+                Service.search = SearchAPI(self._config_manager.search_es_api)
 
         if may_have_wsgi_environ:
             self.request.http.init(self.wsgi_environ)
 
-        # self.has_sio attribute is set by ServiceStore during deployment
-        if self.has_sio:
-            self.request.init(True, self.cid, self._sio, self.data_format, self.transport, self.wsgi_environ, self.server.encrypt)
-            self.response.init(self.cid, self._sio, self.data_format)
+        # self.has_io attribute is set by ServiceStore during deployment
+        if self.has_io:
+            self.request.init(True, self.cid, self._io, self.data_format, self.transport, self.wsgi_environ, self.server.encrypt)
+            self.response.init(self.cid, self._io, self.data_format)
 
         # Cache is always enabled
-        self.cache = self._worker_store.cache_api
+        self.cache = self._config_manager.cache_api
 
         # REST facade
-        self.rest.init(self.cid, self._worker_store.worker_config.out_plain_http)
+        self.rest.init(self.cid, self._config_manager.config_store.out_plain_http)
 
         # Kafka facade
-        self.kafka.init(self._worker_store)
+        self.out.kafka.init(self._config_manager)
+
+        # GraphQL facade
+        self.out.graphql.init(self._config_manager)
+
+        # MLLP facade
+        self.mllp.init(self._config_manager)
 
         # Vendors - Keysight
         self.keysight = KeysightContainer()
-        self.keysight.init(self.cid, self._worker_store.worker_config.out_plain_http)
+        self.keysight.init(self.cid, self._config_manager.config_store.out_plain_http)
 
 # ################################################################################################################################
 
     def set_response_data(self, service:'Service', **kwargs:'any_') -> 'any_':
         response = service.response.payload
+
         if not isinstance(response, _response_raw_types):
 
             if hasattr(response, 'getvalue'):
-                response = response.getvalue(serialize=kwargs.get('serialize'))
+                response = response.getvalue()
                 if kwargs.get('as_bunch'):
                     response = bunchify(response)
 
@@ -673,22 +674,15 @@ class Service:
         transport,     # type: str
         server,        # type: ParallelServer
         config_dispatcher, # type: ConfigDispatcher | None
-        worker_store,  # type: WorkerStore
+        config_manager,  # type: ConfigManager
         cid,           # type: str
-        simple_io_config, # type: anydict
         *args:'any_',
         **kwargs:'any_'
     ) -> 'any_':
 
         self.process_name = kwargs.get('process_name') or service.process_name
 
-        # Configure logging depending on whether monitoring is enabled ..
-        if service.needs_datadog_logging:
-            service.logger = DatadogLogger(cid, server, service.name, self.process_name, self)
-        else:
-
-            # .. no Datadog = use stdlib's logger.
-            service.logger = _get_logger(service.name) # type: Logger
+        service.logger = _get_logger(service.name) # type: Logger
 
         # .. now we can assign the logger to our request object.
         service.request.logger = service.logger
@@ -711,75 +705,12 @@ class Service:
         params_priority = kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT)
 
         service.update(service, channel, server, config_dispatcher, # type: ignore
-            worker_store, cid, payload, raw_request, transport, simple_io_config, data_format, wsgi_environ,
+            config_manager, cid, payload, raw_request, transport, data_format, wsgi_environ,
             job_type=job_type, channel_params=channel_params,
             merge_channel_params=merge_channel_params, params_priority=params_priority,
             in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'),
             channel_info=kwargs.get('channel_info'),
             channel_item=channel_item)
-
-        # Datadog spans - created here but finished after handle() completes
-        _datadog_span = None
-        _datadog_channel_span = None
-
-        if service.needs_datadog_logging:
-
-            # We may have it from our caller ..
-            _datadog_parent_context = kwargs.get('datadog_context')
-
-            # .. build the service name for Datadog ..
-            if self.server.env_name:
-                _dd_service_name = f'{self.server.env_name} | {service.name}'
-            else:
-                _dd_service_name = service.name
-
-            # .. build a span indicating that we're being invoked ..
-            _datadog_span = self.server.datadog_tracer.start_span(
-                name='',
-                service=_dd_service_name,
-                resource=f'Invoker',
-                child_of=_datadog_parent_context
-            )
-
-            # .. set our metadata ..
-            _datadog_span.set_tag('cid', self.cid)
-            _datadog_span.set_tag('zato_process', self.process_name)
-            _datadog_span.set_tag('zato_service', service.name)
-            _datadog_span.set_tag('zato_env_name', self.server.env_name)
-            _datadog_span.set_tag('zato_message_level', 'INFO')
-            _datadog_span.set_tag('zato_message', f'Service was invoked')
-
-            # .. store it for possible later use ..
-            self.datadog_context = _datadog_span.context
-
-            # .. set it in contextvar so http_request can access it ..
-            _ = current_datadog_context.set(_datadog_span.context)
-            _ = current_datadog_service_name.set(service.name)
-            _ = current_datadog_process_name.set(self.process_name)
-            _ = current_datadog_cid.set(self.cid)
-            _ = current_datadog_env_name.set(self.server.env_name)
-
-            # .. if this is a REST channel, create a span for it ..
-            if channel == CHANNEL.HTTP_SOAP and channel_item:
-                channel_name = channel_item.get('name', '')
-                request_method = wsgi_environ.get('REQUEST_METHOD', '')
-                raw_uri = wsgi_environ.get('RAW_URI', '')
-                _datadog_channel_span = self.server.datadog_tracer.start_span(
-                    name='zato.http.channel',
-                    service=_dd_service_name,
-                    resource=f'REST Channel: {channel_name}',
-                    child_of=_datadog_span.context
-                )
-                _datadog_channel_span.set_tag('cid', self.cid)
-                _datadog_channel_span.set_tag('zato_process', self.process_name)
-                _datadog_channel_span.set_tag('zato_service', service.name)
-                _datadog_channel_span.set_tag('zato_env_name', self.server.env_name)
-                _datadog_channel_span.set_tag('zato_message_level', 'INFO')
-                _datadog_channel_span.set_tag('zato_message', f'{request_method} {raw_uri}')
-
-        # Increment invocation counter for Grafana Cloud
-        if server.is_grafana_cloud_enabled:
-            service.metrics.incr('zato_service_' + service.name.replace('.', '_').replace('-', '_'))
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
@@ -810,13 +741,11 @@ class Service:
                     service.logger.addHandler(_scheduler_log_handler)
 
                 try:
-                    # This is the place where the service is invoked
                     self._invoke(service, channel)
                 finally:
                     if _scheduler_log_handler is not None:
                         service.logger.removeHandler(_scheduler_log_handler)
 
-                # Called after .handle - catches exceptions
                 if service.call_hooks and service.after_handle: # type: ignore
                     call_hook_no_service(service.after_handle)
 
@@ -826,7 +755,6 @@ class Service:
             finally:
                 try:
 
-                    # This obtains the response
                     response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
 
                     # If this was fan-out/fan-in we need to always notify our callbacks no matter the result
@@ -841,7 +769,7 @@ class Service:
                             func = parallel.on_call_finished
                             exc_data = exc_formatted
 
-                        if isinstance(service.response.payload, SimpleIOPayload):
+                        if isinstance(service.response.payload, IOPayload):
                             payload = service.response.payload.getvalue()
                         else:
                             payload = service.response.payload
@@ -867,11 +795,6 @@ class Service:
                 else:
                     if e:
                         raise e from None
-                finally:
-                    if _datadog_channel_span:
-                        _datadog_channel_span.finish()
-                    if _datadog_span:
-                        _datadog_span.finish()
 
         # We don't accept it but some response needs to be returned anyway.
         else:
@@ -963,12 +886,11 @@ class Service:
         set_response_func = kwargs.pop('set_response_func', service.set_response_data)
 
         invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,
-            self.config_dispatcher, self._worker_store, kwargs.pop('cid', self.cid), {})
+            self.config_dispatcher, self._config_manager, kwargs.pop('cid', self.cid), {})
 
         kwargs.update({
             'serialize':serialize,
             'as_bunch': as_bunch,
-            'datadog_context': getattr(self, 'datadog_context', None),
         })
 
         if timeout:
@@ -1231,7 +1153,6 @@ class Service:
         payload,               # type: any_
         raw_request,           # type: any_
         transport='',          # type: str
-        simple_io_config=None, # type: anydictnone
         data_format='',        # type: str
         wsgi_environ=None,     # type: dictnone
         job_type='',           # type: str
@@ -1323,9 +1244,8 @@ class _Hook(Service): # type: ignore
     """
     _hook_func_name: 'strdict'
 
-    class SimpleIO:
-        input_required = (Opaque('ctx'),)
-        output_optional = ('hook_action',)
+    input = Opaque('ctx'),
+    output = '-hook_action',
 
     def handle(self):
         func_name = self._hook_func_name[self.request.input.ctx.hook_type]

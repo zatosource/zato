@@ -25,18 +25,18 @@ mod server;
 #[allow(unsafe_code, reason = "libc socket/bind/listen/setsockopt syscalls for TCP listener setup")]
 mod socket;
 
-pub use server::HTTPServer;
 pub use headers::extract_headers;
 pub use request::handle_http_request;
 pub use request::make_cid_public;
+pub use server::HTTPServer;
 
 use pyo3::prelude::*;
 
 /// Owned Python object handle.
 pub(crate) type PyObject = Py<PyAny>;
 
-use std::sync::atomic::AtomicI32;
 use parking_lot::Mutex;
+use std::sync::atomic::AtomicI32;
 
 /// File descriptor of the listening TCP socket (-1 when not listening).
 pub(crate) static LISTEN_FD: AtomicI32 = AtomicI32::new(-1);

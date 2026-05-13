@@ -65,7 +65,7 @@ sys.path.append(r'{base_dir}/lib64/python3.6/site-packages/')
 sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
 from zato.cli.zato_command import main
 sys.exit(main())
-" "\$@"
+" "$@"
 """.strip() # noqa: W605
 
 zato_command_template_windows = r"""
@@ -444,7 +444,7 @@ class EnvironmentManager:
     def pip_install_standalone_requirements(self) -> 'None':
 
         # These cannot be installed via requirements.txt - install all at once
-        packages = 'cython==3.1.0 pyOpenSSL==25.0.0 zato-ext-bunch==1.3'
+        packages = 'pyOpenSSL==25.0.0'
 
         command = '{pip_command} install {pip_install_prefix} {packages}'.format(**{
             'pip_command': self.pip_command,
@@ -459,7 +459,6 @@ class EnvironmentManager:
     def pip_install_zato_packages(self) -> 'None':
 
         editable_packages = []
-        non_editable_packages = []
 
         zato_should_update_base = os.environ.get('Zato_Should_Update_Base', 'True')
 
@@ -476,13 +475,8 @@ class EnvironmentManager:
                 'zato-web-admin',
             ])
 
-        non_editable_packages.append('zato-cy')
-
         if editable_packages:
             self.run_pip_install_zato_packages(editable_packages)
-
-        if non_editable_packages:
-            self.run_pip_install_zato_packages(non_editable_packages, allow_editable=False)
 
 # ################################################################################################################################
 

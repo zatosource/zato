@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
+from zato.admin.web.forms import add_select
 from zato.common.api import HL7
 
 # ################################################################################################################################
@@ -30,8 +31,50 @@ class CreateForm(forms.Form):
     max_wait_time = forms.CharField(initial=_default.max_wait_time, widget=forms.TextInput(attrs={'style':'width:25%'}))
     max_msg_size = forms.CharField(initial=_default.max_msg_size, widget=forms.TextInput(attrs={'style':'width:30%'}))
     read_buffer_size = forms.CharField(initial=_default.read_buffer_size, widget=forms.TextInput(attrs={'style':'width:15%'}))
+    recv_timeout = forms.CharField(initial=_default.recv_timeout, widget=forms.TextInput(attrs={'style':'width:8%'}))
     start_seq = forms.CharField(initial=_default.start_seq, widget=forms.TextInput(attrs={'style':'width:35%'}))
     end_seq = forms.CharField(initial=_default.end_seq, widget=forms.TextInput(attrs={'style':'width:26%'}))
+
+    # Retry engine
+    max_retries = forms.CharField(
+        initial=_default.max_retries,
+        widget=forms.TextInput(attrs={'style':'width:8%'}),
+    )
+    backoff_base_seconds = forms.CharField(
+        initial=_default.backoff_base_seconds,
+        widget=forms.TextInput(attrs={'style':'width:8%'}),
+    )
+    backoff_cap_seconds = forms.CharField(
+        initial=_default.backoff_cap_seconds,
+        widget=forms.TextInput(attrs={'style':'width:10%'}),
+    )
+    backoff_jitter_percent = forms.CharField(
+        initial=_default.backoff_jitter_percent,
+        widget=forms.TextInput(attrs={'style':'width:8%'}),
+    )
+
+    # Circuit breaker
+    circuit_breaker_threshold_percent = forms.CharField(
+        initial=_default.circuit_breaker_threshold_percent,
+        widget=forms.TextInput(attrs={'style':'width:8%'}),
+    )
+    circuit_breaker_window_seconds = forms.CharField(
+        initial=_default.circuit_breaker_window_seconds,
+        widget=forms.TextInput(attrs={'style':'width:10%'}),
+    )
+    circuit_breaker_reset_seconds = forms.CharField(
+        initial=_default.circuit_breaker_reset_seconds,
+        widget=forms.TextInput(attrs={'style':'width:10%'}),
+    )
+
+    # TLS
+    tls_cert_path = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    tls_key_path  = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    tls_ca_path   = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+
+    def __init__(self, prefix=None, post_data=None):
+        super(CreateForm, self).__init__(post_data, prefix=prefix)
+        add_select(self, 'logging_level', HL7.Const.LoggingLevel(), needs_initial_select=False)
 
 # ################################################################################################################################
 # ################################################################################################################################

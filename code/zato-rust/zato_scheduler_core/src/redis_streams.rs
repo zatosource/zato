@@ -13,10 +13,10 @@ use std::sync::Arc;
 use chrono::Utc;
 use serde::Deserialize;
 
-use crate::job::{ExecutionRecord, LogEntry, RunningJob};
+use crate::job::{LogEntry, RunningJob};
 use crate::model::SchedulerJob;
 use crate::scheduler::SchedulerShared;
-use crate::types::{FireBatch, outcome};
+use crate::types::FireBatch;
 use crate::{humanize_ms, reload_jobs};
 
 /// Redis stream key where the server publishes commands for the scheduler.
@@ -405,6 +405,15 @@ fn handle_mark_complete(shared: &SchedulerShared, payload: &str) {
             parsed.duration_ms,
             parsed.job_id,
         );
+
+        crate::metrics::EXECUTIONS_TOTAL
+            .with_label_values(&[&running_job.name, &parsed.outcome])
+            .inc();
+
+        let duration_secs = parsed.duration_ms as f64 / 1000.0;
+        crate::metrics::EXECUTION_DURATION_SECONDS
+            .with_label_values(&[&running_job.name])
+            .observe(duration_secs);
         running_job.in_flight = false;
         running_job.in_flight_since = None;
         running_job.in_flight_run = None;
@@ -442,17 +451,6 @@ fn handle_mark_complete(shared: &SchedulerShared, payload: &str) {
                 if fire >= now {
                     break;
                 }
-                running_job.current_run += 1;
-                let skipped_run = running_job.current_run;
-                running_job.record_execution(
-                    ExecutionRecord::new(
-                        &fire.to_rfc3339(),
-                        &now.to_rfc3339(),
-                        outcome::SKIPPED_ALREADY_IN_FLIGHT,
-                        skipped_run,
-                    )
-                    .with_outcome_ctx(parsed.current_run.to_string()),
-                );
                 running_job.advance_to_next(now);
             }
         }

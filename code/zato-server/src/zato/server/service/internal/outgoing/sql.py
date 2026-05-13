@@ -16,20 +16,20 @@ from uuid import uuid4
 from zato.common.py23_.past.builtins import unicode
 
 # Zato
-from zato.common.api import ZATO_ODB_POOL_NAME
+from zato.common.api import query_parameters, ZATO_ODB_POOL_NAME
 from zato.common.exception import ZatoException
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import Cluster, SQLConnectionPool
 from zato.common.odb.query import out_sql_list
 from zato.common.util.api import get_sql_engine_display_name
 from zato.server.service import AsIs, Integer
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+from zato.server.service.internal import AdminService, ChangePasswordBase
 
 class _SQLService:
     """ A common class for various SQL-related services.
     """
-    def notify_worker_threads(self, params, action=OUTGOING.SQL_CREATE_EDIT.value):
-        """ Notify worker threads of new or updated parameters.
+    def notify_server(self, params, action=OUTGOING.SQL_CREATE_EDIT.value):
+        """ Notify the server of new or updated parameters.
         """
         params['action'] = action
         self.config_dispatcher.publish(params)
@@ -45,13 +45,9 @@ class GetList(AdminService):
     """
     _filter_by = SQLConnectionPool.name,
 
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_outgoing_sql_get_list_request'
-        response_elem = 'zato_outgoing_sql_get_list_response'
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username',
-            Integer('pool_size'))
-        output_optional = ('extra', 'engine_display_name')
+    input = 'cluster_id', *query_parameters
+    output = 'id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', \
+        Integer('pool_size'), '-extra', '-engine_display_name'
 
     def get_data(self, session):
         return self._search(out_sql_list, session, self.request.input.cluster_id, False)
@@ -67,13 +63,9 @@ class GetList(AdminService):
 class Create(AdminService, _SQLService):
     """ Creates a new outgoing SQL connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_sql_create_request'
-        response_elem = 'zato_outgoing_sql_create_response'
-        input_required = ('name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username',
-            Integer('pool_size'))
-        input_optional = ('extra',)
-        output_required = ('id', 'name', 'display_name')
+    input = 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', \
+        Integer('pool_size'), '-extra'
+    output = 'id', 'name', 'display_name'
 
     def handle(self):
         input = self.request.input
@@ -111,7 +103,7 @@ class Create(AdminService, _SQLService):
                 # Make sure not to use bytes when notifying other threads
                 input.extra = input.extra.decode('utf8') if isinstance(input.extra, bytes) else input.extra
 
-                self.notify_worker_threads(input)
+                self.notify_server(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
@@ -126,13 +118,9 @@ class Create(AdminService, _SQLService):
 class Edit(AdminService, _SQLService):
     """ Updates an outgoing SQL connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_sql_edit_request'
-        response_elem = 'zato_outgoing_sql_edit_response'
-        input_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username',
-            Integer('pool_size'))
-        input_optional = ('extra',)
-        output_required = ('id', 'name', 'display_name')
+    input = 'id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', \
+        Integer('pool_size'), '-extra'
+    output = 'id', 'name', 'display_name'
 
     def handle(self):
         input = self.request.input
@@ -173,7 +161,7 @@ class Edit(AdminService, _SQLService):
                 # Make sure not to use bytes when notifying other threads
                 input.extra = input.extra.decode('utf8') if isinstance(input.extra, bytes) else input.extra
 
-                self.notify_worker_threads(input)
+                self.notify_server(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
@@ -188,10 +176,7 @@ class Edit(AdminService, _SQLService):
 class Delete(AdminService, _SQLService):
     """ Deletes an outgoing SQL connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_sql_delete_request'
-        response_elem = 'zato_outgoing_sql_delete_response'
-        input_required = ('id',)
+    input = 'id',
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -204,7 +189,7 @@ class Delete(AdminService, _SQLService):
                 session.delete(item)
                 session.commit()
 
-                self.notify_worker_threads({'name':old_name}, OUTGOING.SQL_DELETE.value)
+                self.notify_server({'name':old_name}, OUTGOING.SQL_DELETE.value)
 
             except Exception:
                 session.rollback()
@@ -215,10 +200,6 @@ class Delete(AdminService, _SQLService):
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an outgoing SQL connection.
     """
-    class SimpleIO(ChangePasswordBase.SimpleIO):
-        request_elem = 'zato_outgoing_sql_change_password_request'
-        response_elem = 'zato_outgoing_sql_change_password_response'
-
     def handle(self):
         def _auth(instance, password):
             instance.password = password
@@ -228,11 +209,8 @@ class ChangePassword(ChangePasswordBase):
 class Ping(AdminService):
     """ Pings an SQL database
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_sql_ping_request'
-        response_elem = 'zato_outgoing_sql_ping_response'
-        input_required = 'id', 'should_raise_on_error'
-        output_optional = 'id', 'response_time'
+    input = 'id', 'should_raise_on_error'
+    output = '-id', '-response_time'
 
     def handle(self):
 
@@ -289,11 +267,7 @@ class AutoPing(AdminService):
 class GetEngineList(AdminService):
     """ Returns a list of all engines defined in sql.conf.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_sql_get_engine_list_request'
-        response_elem = 'zato_outgoing_sql_get_engine_list_response'
-        output_required = (AsIs('id'), 'name')
-        output_repeated = True
+    output = AsIs('id'), 'name'
 
     def get_data(self):
         out = []

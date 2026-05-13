@@ -29,7 +29,7 @@ from zato.server.service import Model, Service
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from sqlalchemy.orm import Session as SASession
     from zato.common.typing_ import strlist
     Bunch = Bunch
@@ -78,7 +78,7 @@ class DeleteObjectsResponse(BaseDeleteObjectsResponse):
 
 class DeleteObjectsImpl(Service):
 
-    class SimpleIO:
+    class IO:
         input = DeleteObjectsImplRequest
         output = DeleteObjectsImplResponse
 
@@ -203,7 +203,7 @@ class DeleteObjects(Service):
 
     name = 'zato.common.delete-objects'
 
-    class SimpleIO:
+    class IO:
         input = DeleteObjectsRequest
         output = DeleteObjectsResponse
 
@@ -340,11 +340,10 @@ class DeleteMany(Service):
     def _delete_misc(self, session:'SASession', pattern:'strlist') -> 'None':
 
         # Zato
-        from zato.common.odb.model import CacheBuiltin, ChannelAMQP, IMAP, OutgoingAMQP, \
+        from zato.common.odb.model import ChannelAMQP, IMAP, OutgoingAMQP, \
             OutgoingFTP, OutgoingOdoo, OutgoingSAP, Service, SMTP
 
         tables:'any_' = {
-            CacheBuiltin.__table__: [CacheBuiltin.name],
             ChannelAMQP.__table__: [ChannelAMQP.name],
             IMAP.__table__: [IMAP.name],
             OutgoingAMQP.__table__: [OutgoingAMQP.name],

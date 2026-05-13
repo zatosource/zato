@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from numbers import Number
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Zato
 from zato.common.defaults import http_plain_server_port
@@ -94,6 +94,11 @@ TRUE_FALSE = 'true_false'
 FALSE_TRUE = 'false_true'
 
 simple_types = (bytes, str, dict, list, tuple, bool, Number)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+query_parameters = ('-paginate', '-cur_page', '-query')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -328,78 +333,6 @@ class SERVER_UP_STATUS(Attrs):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CACHE:
-
-    class Default_Name:
-        Main = 'default'
-        Bearer_Token = 'zato.bearer.token'
-
-    API_USERNAME = 'pub.zato.cache'
-
-    class TYPE:
-        BUILTIN = 'builtin'
-
-    class BUILTIN_KV_DATA_TYPE:
-        STR = NameId('String', 'str')
-        INT = NameId('Integer', 'int')
-
-        def __iter__(self):
-            return iter((self.STR, self.INT))
-
-    class STATE_CHANGED:
-
-        CLEAR = 'CLEAR'
-
-        DELETE = 'DELETE'
-        DELETE_BY_PREFIX = 'DELETE_BY_PREFIX'
-        DELETE_BY_SUFFIX= 'DELETE_BY_SUFFIX'
-        DELETE_BY_REGEX = 'DELETE_BY_REGEX'
-        DELETE_CONTAINS = 'DELETE_CONTAINS'
-        DELETE_NOT_CONTAINS = 'DELETE_NOT_CONTAINS'
-        DELETE_CONTAINS_ALL = 'DELETE_CONTAINS_ALL'
-        DELETE_CONTAINS_ANY = 'DELETE_CONTAINS_ANY'
-
-        EXPIRE = 'EXPIRE'
-        EXPIRE_BY_PREFIX = 'EXPIRE_BY_PREFIX'
-        EXPIRE_BY_SUFFIX = 'EXPIRE_BY_SUFFIX'
-        EXPIRE_BY_REGEX = 'EXPIRE_BY_REGEX'
-        EXPIRE_CONTAINS = 'EXPIRE_CONTAINS'
-        EXPIRE_NOT_CONTAINS = 'EXPIRE_NOT_CONTAINS'
-        EXPIRE_CONTAINS_ALL = 'EXPIRE_CONTAINS_ALL'
-        EXPIRE_CONTAINS_ANY = 'EXPIRE_CONTAINS_ANY'
-
-        GET = 'GET'
-
-        SET = 'SET'
-        SET_BY_PREFIX = 'SET_BY_PREFIX'
-        SET_BY_SUFFIX = 'SET_BY_SUFFIX'
-        SET_BY_REGEX = 'SET_BY_REGEX'
-        SET_CONTAINS = 'SET_CONTAINS'
-        SET_NOT_CONTAINS = 'SET_NOT_CONTAINS'
-        SET_CONTAINS_ALL = 'SET_CONTAINS_ALL'
-        SET_CONTAINS_ANY = 'SET_CONTAINS_ANY'
-
-    class DEFAULT:
-        MAX_SIZE = 10000
-        MAX_ITEM_SIZE = 10000 # In characters for string/unicode, bytes otherwise
-
-    class PERSISTENT_STORAGE:
-        NO_PERSISTENT_STORAGE = NameId('No persistent storage', 'no-persistent-storage')
-        SQL = NameId('SQL', 'sql')
-
-        def __iter__(self):
-            return iter((self.NO_PERSISTENT_STORAGE, self.SQL))
-
-    class SYNC_METHOD:
-        NO_SYNC = NameId('No synchronization', 'no-sync')
-        IN_BACKGROUND = NameId('In background', 'in-background')
-
-        def __iter__(self):
-            return iter((self.NO_SYNC, self.IN_BACKGROUND))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class SCHEDULER:
 
     class OUTCOME:
@@ -520,7 +453,7 @@ class CHANNEL(Attrs):
     SERVICE = 'service'
     STARTUP_SERVICE = 'startup-service'
     URL_DATA = 'url-data'
-    WORKER = 'worker'
+    INVOKE = 'invoke'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -544,7 +477,7 @@ class MISC:
     OAUTH_SIG_METHODS = ['HMAC-SHA1', 'PLAINTEXT']
     PIDFILE = 'pidfile'
     SEPARATOR = ':::'
-    DefaultAdminInvokeChannel = 'admin.invoke.json'
+    DefaultAdminInvokeChannel = 'zato.api.invoke'
     Default_Cluster_ID = 1
 
 # ################################################################################################################################
@@ -750,6 +683,7 @@ class GENERIC:
 
     class CONNECTION:
         class TYPE:
+            CHANNEL_MCP = 'channel-mcp'
             CHANNEL_OPENAPI = 'channel-openapi'
             CHANNEL_KAFKA = 'channel-kafka'
             CLOUD_CONFLUENCE = 'cloud-confluence'
@@ -757,6 +691,9 @@ class GENERIC:
             CLOUD_MICROSOFT_365 = 'cloud-microsoft-365'
             CLOUD_SALESFORCE = 'cloud-salesforce'
             OUTCONN_LDAP = 'outconn-ldap'
+            CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
+            OUTCONN_HL7_MLLP = 'outconn-hl7-mllp'
+            OUTCONN_GRAPHQL = 'outconn-graphql'
             OUTCONN_KAFKA = 'outconn-kafka'
             OUTCONN_MONGODB = 'outconn-mongodb'
 
@@ -773,12 +710,6 @@ class Groups:
     class Membership_Action:
         Add    = 'add'
         Remove = 'remove'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TOTP:
-    default_label = '<default-label>'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -948,8 +879,8 @@ class OAuth:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# TODO: SIMPLE_IO.FORMAT should be removed in favour of plain DATA_FORMAT
-class SIMPLE_IO:
+# TODO: IO.FORMAT should be removed in favour of plain DATA_FORMAT
+class IO:
 
     class FORMAT(Attrs):
         FORM_DATA = DATA_FORMAT.FORM_DATA
@@ -1165,6 +1096,10 @@ _default_sleep_jitter = 1.5
 # ################################################################################################################################
 
 class Echo(Service):
+    \"\"\" Echoes back any JSON payload sent to it. Accepts arbitrary key-value pairs
+    and returns them unchanged under the 'echo' key. Use this service to verify
+    connectivity and to inspect how Zato processes and returns request data.
+    \"\"\"
 
     name = 'demo.echo'
 
@@ -1281,9 +1216,27 @@ class HL7:
         max_msg_size = 2_000_000
         max_wait_time = 5
         pool_size = 10
-        read_buffer_size = 2048
+        read_buffer_size = 32768
         recv_timeout = 250
         start_seq = '0b'
+
+        # Retry engine defaults (outbound)
+        max_retries                      = 5
+        backoff_base_seconds             = 1
+        backoff_cap_seconds              = 300
+        backoff_jitter_percent           = 10
+
+        # Circuit breaker defaults (outbound)
+        circuit_breaker_threshold_percent = 50
+        circuit_breaker_window_seconds    = 60
+        circuit_breaker_reset_seconds     = 60
+
+        # Dedup defaults (inbound)
+        dedup_ttl_value = 14
+        dedup_ttl_unit  = 'days'
+
+        # TLS defaults
+        tls_version_min = 'TLSv1.2'
 
     class Const:
 

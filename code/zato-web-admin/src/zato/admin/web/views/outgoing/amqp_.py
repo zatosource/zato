@@ -22,7 +22,7 @@ from zato.admin.web.forms.outgoing.amqp_ import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed
 from zato.common.json_internal import dumps
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,11 +74,10 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'address', 'username', 'password', 'is_active', 'delivery_mode', 'priority',
-            'content_type', 'content_encoding', 'expiration', 'pool_size', 'user_id', 'app_id', 'delivery_mode_text')
-        output_repeated = True
+    input_required = 'cluster_id',
+    output_required = ('id', 'name', 'address', 'username', 'password', 'is_active', 'delivery_mode', 'priority',
+        'content_type', 'content_encoding', 'expiration', 'pool_size', 'user_id', 'app_id', 'delivery_mode_text')
+    output_repeated = True
 
     def handle(self):
         create_form = CreateForm()
@@ -88,6 +87,7 @@ class Index(_Index):
             item.delivery_mode_text = delivery_friendly_name[item.delivery_mode]
 
         return {
+            'show_search_form': True,
             'create_form': create_form,
             'edit_form': edit_form,
         }

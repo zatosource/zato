@@ -15,7 +15,6 @@ from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, \
     common_scheduler_server_address_opts, sql_conf_contents, ZatoCommand
 from zato.common.api import CONTENT_TYPE, Default_Extra_Service_File_Data, Default_Service_File_Data, NotGiven, SCHEDULER
 from zato.common.crypto.api import ServerCryptoManager
-from zato.common.simpleio_ import simple_io_conf_contents
 from zato.common.util.api import as_bool, get_demo_extra_py_fs_locations, get_demo_py_fs_locations
 from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
 from zato.common.util.open_ import open_r, open_w
@@ -29,27 +28,16 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# For pyflakes
-simple_io_conf_contents = simple_io_conf_contents
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 server_conf_dict = deepcopy(CONTENT_TYPE)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 server_conf_template = """[main]
-gunicorn_bind=0.0.0.0:{{port}}
-gunicorn_worker_class=gevent
-gunicorn_workers={{gunicorn_workers}}
-gunicorn_timeout=1234567890
-gunicorn_user=
-gunicorn_group=
-gunicorn_proc_name=
-gunicorn_logger_class=
-gunicorn_graceful_timeout=1
+bind=0.0.0.0:{{port}}
+num_threads={{num_threads}}
+timeout=1234567890
+graceful_timeout=1
 
 work_dir=../../work
 
@@ -127,7 +115,7 @@ needs_x_zato_cid=False
 return_tracebacks=True
 default_error_message="An error has occurred"
 startup_callable=
-service_invoker_allow_internal="demo.ping", "/zato/api/invoke/service_name"
+service_invoker_allow_internal="demo.ping", "zato.api.invoke"
 
 [http]
 methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
@@ -170,7 +158,7 @@ allow_loopback=False
 
 [logging]
 http_access_log_ignore=
-rest_log_ignore=/zato/admin/invoke, /metrics, /zato/ping
+rest_log_ignore=/zato/api/invoke, /metrics, /zato/ping
 
 [os_environ]
 sample_key=sample_value
@@ -457,9 +445,6 @@ class Create(ZatoCommand):
         # SQLAlchemy
         from sqlalchemy.exc import IntegrityError
 
-        # Python 2/3 compatibility
-        from six import PY3
-
         # Zato
         from zato.common.api import SERVER_JOIN_STATUS
         from zato.common.crypto.const import well_known_data
@@ -547,7 +532,7 @@ class Create(ZatoCommand):
             # Substitue the variables ..
             server_conf_data = server_conf_template.format(
                     port=getattr(args, 'http_port', None) or default_http_port,
-                    gunicorn_workers=threads,
+                    num_threads=threads,
                     odb_db_name=args.odb_db_name or args.sqlite_path,
                     odb_engine=odb_engine,
                     odb_host=args.odb_host or '',
@@ -632,15 +617,6 @@ class Create(ZatoCommand):
                 zato_odb_password=odb_password,
             ))
             secrets_conf.close()
-
-            bytes_to_str_encoding = 'utf8' if PY3 else ''
-
-            simple_io_conf_loc = os.path.join(self.target_dir, 'config/repo/simple-io.conf')
-            simple_io_conf = open_w(simple_io_conf_loc)
-            _ = simple_io_conf.write(simple_io_conf_contents.format(
-                bytes_to_str_encoding=bytes_to_str_encoding
-            ))
-            simple_io_conf.close()
 
             if show_output:
                 self.logger.debug('Core configuration stored in {}'.format(server_conf_loc))

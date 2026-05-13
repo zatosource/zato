@@ -134,6 +134,7 @@
             let sessionSeconds = sessionDuration;
             const sessionTimerEl = document.getElementById('session-timer');
             let lastMouseReset = 0;
+            let lastKeepalive = 0;
 
             function resetSessionTimer() {
                 sessionSeconds = sessionDuration;
@@ -164,6 +165,10 @@
                 if (now - lastMouseReset >= 1000) {
                     lastMouseReset = now;
                     sessionSeconds = sessionDuration;
+                }
+                if (now - lastKeepalive >= 60000) {
+                    lastKeepalive = now;
+                    fetch('{% url "session-keepalive" %}', {method: 'GET', keepalive: true, credentials: 'same-origin'});
                 }
             }, {passive: true});
 
@@ -296,16 +301,14 @@
                                         <a class="menu-link" href="#">Channels &rarr;</a>
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "channel-amqp" %}?cluster={{ cluster_id|default:"1" }}">AMQP</a></li>
-                                            {% if False %}
                                             <li class="child">
                                                 <a class="menu-link" href="#">HL7 &rarr;</a>
                                                 <ul>
                                                     <li class="child"><a class="menu-link" href="{% url "channel-hl7-mllp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-hl7-mllp">MLLP</a></li>
-                                                    <li class="child"><a class="menu-link" href="{% url "channel-hl7-rest" %}?cluster={{ cluster_id|default:"1" }}">REST</a></li>
                                                 </ul>
                                             </li>
-                                            {% endif %}
                                             <li class="child"><a class="menu-link" href="{% url "channel-kafka" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-kafka">Kafka</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "channel-mcp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-mcp">MCP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "channel-openapi" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-openapi">OpenAPI</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=channel&amp;transport=plain_http">REST</a></li>
                                         </ul>
@@ -317,15 +320,13 @@
                                             {% if False %}
                                             <li class="child"><a class="menu-link" href="{% url "out-ftp" %}?cluster={{ cluster_id|default:"1" }}">FTP</a></li>
                                             {% endif %}
-                                            {% if False %}
                                             <li class="child">
                                                 <a class="menu-link" href="#">HL7 &rarr;</a>
                                                 <ul>
-                                                    <li class="child"><a class="menu-link" href="{% url "outgoing-hl7-fhir" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-hl7-fhir">FHIR</a></li>
                                                     <li class="child"><a class="menu-link" href="{% url "outgoing-hl7-mllp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-hl7-mllp">MLLP</a></li>
                                                 </ul>
                                             </li>
-                                            {% endif %}
+                                            <li class="child"><a class="menu-link" href="{% url "out-graphql" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-graphql">GraphQL</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-kafka" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-kafka">Kafka</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-ldap" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ldap">LDAP</a></li>
                                             {% if 0%}
@@ -339,9 +340,6 @@
                                             <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=outgoing&amp;transport=soap">SOAP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-sql" %}?cluster={{ cluster_id|default:"1" }}">SQL</a></li>
                                         </ul>
-                                    </li>
-                                    <li>
-                                        <a class="menu-link" href="{% url "cache-builtin" %}?cluster={{ cluster_id|default:"1" }}">Cache</a>
                                     </li>
                                     <li class="child">
                                         <a class="menu-link" href="#">Search &rarr;</a>

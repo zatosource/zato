@@ -29,7 +29,7 @@ from zato.common.util.time_ import utcnow
 
 if 0:
     from logging import Logger
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import any_, callable_, intnone, strnone
     from zato.server.base.parallel import ParallelServer
 
@@ -176,11 +176,11 @@ class ConnectionQueue:
             return True
 
         # .. same as above ..
-        elif not getattr(self.server, 'worker_store', None):
+        elif not getattr(self.server, 'config_manager', None):
             return True
 
         else:
-            for _ignored_conn_type, value in self.server.worker_store.generic_conn_api.items():
+            for _ignored_conn_type, value in self.server.config_manager.generic_conn_api.items():
                 for _ignored_conn_name, conn_dict in value.items():
                     if conn_dict['id'] == self.conn_id:
                         return True

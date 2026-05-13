@@ -29,7 +29,6 @@ if exist %workdir%\zato-broker\build    (rmdir /s /q %workdir%\zato-broker\build
 if exist %workdir%\zato-cli\build       (rmdir /s /q %workdir%\zato-cli\build)
 if exist %workdir%\zato-client\build    (rmdir /s /q %workdir%\zato-client\build)
 if exist %workdir%\zato-common\build    (rmdir /s /q %workdir%\zato-common\build)
-if exist %workdir%\zato-cy\build        (rmdir /s /q %workdir%\zato-cy\build)
 if exist %workdir%\zato-distlock\build  (rmdir /s /q %workdir%\zato-distlock\build)
 if exist %workdir%\zato-lib\build       (rmdir /s /q %workdir%\zato-lib\build)
 if exist %workdir%\zato-server\build    (rmdir /s /q %workdir%\zato-server\build)
@@ -40,7 +39,6 @@ del /s /q %workdir%\zato-broker\*.pyc
 del /s /q %workdir%\zato-cli\*.pyc
 del /s /q %workdir%\zato-client\*.pyc
 del /s /q %workdir%\zato-common\*.pyc
-del /s /q %workdir%\zato-cy\*.pyc
 del /s /q %workdir%\zato-distlock\*.pyc
 del /s /q %workdir%\zato-lib\*.pyc
 del /s /q %workdir%\zato-server\*.pyc
@@ -51,14 +49,10 @@ del /s /q %workdir%\zato-broker\*.pyd
 del /s /q %workdir%\zato-cli\*.pyd
 del /s /q %workdir%\zato-client\*.pyd
 del /s /q %workdir%\zato-common\*.pyd
-del /s /q %workdir%\zato-cy\*.pyd
 del /s /q %workdir%\zato-distlock\*.pyd
 del /s /q %workdir%\zato-lib\*.pyd
 del /s /q %workdir%\zato-server\*.pyd
 del /s /q %workdir%\zato-web-admin\*.pyd
-
-del /s /q %workdir%\zato-cy\*.c
-del /s /q %workdir%\zato-cy\*.html
 
 del /s /q %workdir%\bundle-ext\python-windows\python-%python_version%\py.bat
 del /s /q %workdir%\bundle-ext\python-windows\python-%python_version%\zato.bat

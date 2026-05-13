@@ -20,7 +20,7 @@ from zato.admin.web.util import get_pubsub_security_definitions, get_service_lis
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, get_outconn_rest_list
 from zato.common.api import CONNECTION, PubSub, URL_TYPE
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,12 +38,11 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id',
-        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_base_id', 'security', 'delivery_type', \
-            'push_type', 'rest_push_endpoint_id', 'rest_push_endpoint_name', 'push_service_name', 'topic_name_list', \
-            'topic_link_list'
-        output_repeated = True
+    input_required = 'cluster_id',
+    output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_base_id', 'security', 'delivery_type', \
+        'push_type', 'rest_push_endpoint_id', 'rest_push_endpoint_name', 'push_service_name', 'topic_name_list', \
+        'topic_link_list'
+    output_repeated = True
 
     def on_before_append_item(self, item):
 
@@ -128,11 +127,10 @@ class Create(_CreateEdit):
     url_name = 'pubsub-subscription-create'
     service_name = 'zato.pubsub.subscription.create'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'cluster_id', 'topic_name', 'sec_base_id', 'delivery_type'
-        input_optional = 'is_delivery_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_required = 'id', 'sub_key', 'is_delivery_active', 'created', 'security', 'delivery_type', \
-            'topic_name_list', 'topic_link_list',
+    input_required = 'cluster_id', 'topic_name', 'sec_base_id', 'delivery_type'
+    input_optional = 'is_delivery_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
+    output_required = 'id', 'sub_key', 'is_delivery_active', 'created', 'security', 'delivery_type', \
+        'topic_name_list', 'topic_link_list',
 
     def _get_input_dict(self):
         return self._get_input_dict_common('create-topic_name')
@@ -160,10 +158,9 @@ class Edit(_CreateEdit):
     url_name = 'pubsub-subscription-edit'
     service_name = 'zato.pubsub.subscription.edit'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'sub_key', 'cluster_id', 'topic_id_list', 'sec_base_id', 'delivery_type'
-        input_optional = 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_required = 'id', 'sub_key', 'security', 'delivery_type', 'is_delivery_active', 'topic_name_list', 'topic_link_list'
+    input_required = 'sub_key', 'cluster_id', 'topic_id_list', 'sec_base_id', 'delivery_type'
+    input_optional = 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
+    output_required = 'id', 'sub_key', 'security', 'delivery_type', 'is_delivery_active', 'topic_name_list', 'topic_link_list'
 
     def _get_input_dict(self):
         return self._get_input_dict_common('topic_name')

@@ -18,7 +18,7 @@ from zato.admin.web.views import change_password as _change_password, \
      CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.api import NONCE_STORE
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -30,11 +30,9 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'username',
-            'proto_version', 'sig_method', 'max_nonce_log')
-        output_repeated = True
+    input_required = 'cluster_id',
+    output_required = 'id', 'name', 'is_active', 'username', 'proto_version', 'sig_method', 'max_nonce_log'
+    output_repeated = True
 
     def handle(self):
         return {
@@ -47,10 +45,8 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'username',
-            'proto_version', 'sig_method', 'max_nonce_log')
-        output_required = ('id', 'name')
+    input_required = 'name', 'is_active', 'username', 'proto_version', 'sig_method', 'max_nonce_log'
+    output_required = 'id', 'name'
 
     def success_message(self, item):
         return 'Successfully {0} the OAuth definition [{1}]'.format(self.verb, item.name)

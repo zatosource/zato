@@ -50,19 +50,15 @@ rm -rf ./local
 rm -rf ./man
 rm -rf ./parts
 rm -rf ./share
-rm -rf ./tests
 rm -rf ./zato_extra_paths
 
 rm -rf ./zato-cli/build
 rm -rf ./zato-client/build
 rm -rf ./zato-common/build
-rm -rf ./zato-cy/build
 rm -rf ./zato-distlock/build
 rm -rf ./zato-server/build
 rm -rf ./zato-web-admin/build
 
 find . -name \*~ -delete
 find . -name \*.pyc -delete
-find . -name \*.so -delete
-find ./zato-cy/ -name \*.c -delete
-find ./zato-cy/ -name \*.html -delete
+find . -path '*/target' -type d -prune -exec rm -rf {} +

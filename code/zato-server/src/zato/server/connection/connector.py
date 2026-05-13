@@ -22,7 +22,7 @@ from zato.common.util.api import spawn_greenlet
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import any_, dict_, dictnone, callable_, callnone, type_
     from zato.common.model.connector import ConnectorConfig
     from zato.server.base.parallel import ParallelServer

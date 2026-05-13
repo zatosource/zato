@@ -24,16 +24,16 @@ class Index(_Index):
     output_class = Microsoft365ConfigObject
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name', 'is_active', 'client_id', 'secret_value', 'scopes', 'tenant_id'
-        output_optional = generic_attrs
-        output_repeated = True
+    input_required = 'cluster_id', 'type_'
+    output_required = 'id', 'name', 'is_active', 'client_id', 'secret_value', 'scopes', 'tenant_id'
+    output_optional = generic_attrs
+    output_repeated = True
 
 # ################################################################################################################################
 
     def handle(self):
         return {
+            'show_search_form': True,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
         }
@@ -44,9 +44,8 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'id', 'name', 'is_active', 'client_id', 'secret_value', 'scopes', 'tenant_id'
-        output_required = 'id', 'name'
+    input_required = 'id', 'name', 'is_active', 'client_id', 'secret_value', 'scopes', 'tenant_id'
+    output_required = 'id', 'name'
 
 # ################################################################################################################################
 

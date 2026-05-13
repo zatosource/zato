@@ -11,7 +11,7 @@ import logging
 from copy import deepcopy
 
 # Bunch
-from bunch import Bunch, bunchify
+from zato.common.ext.bunch import Bunch, bunchify
 
 # lxml
 from lxml.etree import _Element as EtreeElement
@@ -25,8 +25,8 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import make_repr
 from zato.common.util.http_ import get_form_data as util_get_form_data
 
-# Zato - Cython
-from zato.simpleio import ServiceInput
+# Zato
+from zato.input_output import ServiceInput
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,12 +47,13 @@ if 0:
     from zato.common.typing_ import any_, callable_, stranydict, strnone
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.email import EMailAPI
+    from zato.server.connection.facade import GraphQLFacade, KafkaFacade
     from zato.server.connection.ftp import FTPStore
     from zato.server.connection.search import SearchAPI
     from zato.server.service import AMQPFacade, Service
 
-    # Zato - Cython
-    from zato.simpleio import CySimpleIO
+    # Zato
+    from zato.input_output import IOProcessor
 
     callable_ = callable_
     strnone = strnone
@@ -60,7 +61,7 @@ if 0:
     Arrow = Arrow
     ConfigDict = ConfigDict
     ConfigStore = ConfigStore
-    CySimpleIO = CySimpleIO
+    IOProcessor = IOProcessor
     EMailAPI = EMailAPI
     FTPStore = FTPStore
     KombuAMQPMessage = KombuAMQPMessage
@@ -157,7 +158,6 @@ class Request:
     def __init__(
         self,
         service, # type: Service
-        simple_io_config=None, # type: any_
         data_format=None, # type: strnone
         transport=None    # type: strnone
     ) -> 'None':
@@ -182,9 +182,9 @@ class Request:
 
     def init(
         self,
-        is_sio,       # type: bool
+        is_io,       # type: bool
         cid,          # type: str
-        sio,          # type: CySimpleIO
+        io_processor,          # type: IOProcessor
         data_format,  # type: str
         transport,    # type: str
         wsgi_environ, # type: stranydict
@@ -195,9 +195,9 @@ class Request:
         self.input = ServiceInput()
         self.encrypt_func = encrypt_func
 
-        if is_sio:
+        if is_io:
 
-            parsed = sio.parse_input(self.payload or {}, data_format, extra=self.channel_params, service=self.service)
+            parsed = io_processor.parse_input(self.payload or {}, data_format, extra=self.channel_params, service=self.service)
 
             if isinstance(parsed, Model):
                 self.input = parsed
@@ -208,7 +208,7 @@ class Request:
                     if param not in self.input:
                         self.input[param] = value
 
-        # We merge channel params in if requested even if it's not SIO
+        # We merge channel params in if requested even if it's not I/O
         else:
             if self.merge_channel_params:
                 self.input.update(self.channel_params)
@@ -247,14 +247,18 @@ class Request:
 
 class Outgoing:
     """ A container for various outgoing connections a service can access. This in fact is a thin wrapper around data
-    fetched from the service's self.worker_store.
+    fetched from the service's config manager.
     """
-    __slots__ = ('amqp', 'ftp', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'sap', 'ldap', 'mongodb', 'redis')
+    __slots__ = ('amqp', 'ftp', 'graphql', 'kafka', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'sap', 'ldap', 'mongodb', 'redis')
 
-    def __init__(self, amqp=None, odoo=None, plain_http=None, soap=None, sql=None,
+    def __init__(self, amqp=None, graphql=None, kafka=None, odoo=None, plain_http=None, soap=None, sql=None,
             sap=None, ldap=None, mongodb=None, redis=None):
 
         self.amqp = cast_('AMQPFacade', amqp)
+
+        self.graphql = cast_('GraphQLFacade', graphql)
+
+        self.kafka = cast_('KafkaFacade', kafka)
 
         self.odoo = cast_('ConfigDict', odoo)
 

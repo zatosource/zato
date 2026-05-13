@@ -19,19 +19,20 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms([
         'name',
-        'address',
         'service',
         'logging_level',
-        'data_encoding',
         'max_msg_size',
+        'max_msg_size_unit',
         'read_buffer_size',
         'recv_timeout',
         'start_seq',
         'end_seq',
+        'default_character_encoding',
     ]);
 
     var unique_constraints = [
-        {field: 'name', entity_type: 'generic_connection', attr_name: 'name'}
+        {field: 'name', entity_type: 'generic_connection', attr_name: 'name'},
+        {field: 'rest_url_path', entity_type: 'channel_rest', attr_name: 'url_path'},
     ];
     $.each(unique_constraints, function(i, c) {
         $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
@@ -41,14 +42,232 @@ $(document).ready(function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.mllp.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new HL7 MLLP channel', null);
+$.fn.zato.channel.hl7.mllp.tab_labels = {
+    main:     'Main',
+    routing:  'Routing',
+    protocol: 'Protocol',
+    tolerance: 'Tolerance',
+    dedup:    'Deduplication',
+    logging:  'Logging'
+};
+
+$.fn.zato.channel.hl7.mllp._reset_tabs = function(action) {
+    var is_edit = action === 'edit';
+    $.fn.zato.form_tabs.reset({
+        div_id:       is_edit ? '#edit-div' : '#create-div',
+        panel_prefix: is_edit ? 'mllp-edit-tab-panel-' : 'mllp-create-tab-panel-',
+        default_tab:  'main',
+        tab_labels:   $.fn.zato.channel.hl7.mllp.tab_labels
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.channel.hl7.mllp._routing_fields = [
+    'msh3_sending_app',
+    'msh4_sending_facility',
+    'msh5_receiving_app',
+    'msh6_receiving_facility',
+    'msh9_message_type',
+    'msh9_trigger_event',
+    'msh11_processing_id',
+    'msh12_version_id'
+];
+
+$.fn.zato.channel.hl7.mllp._toggle_routing_fields = function(prefix) {
+    var is_default = $('#' + prefix + 'is_default').is(':checked');
+    var fields = $.fn.zato.channel.hl7.mllp._routing_fields;
+    for (var i = 0; i < fields.length; i++) {
+        var input = $('#' + prefix + fields[i]);
+        input.prop('readonly', is_default);
+        input.toggleClass('routing-disabled', is_default);
+    }
+};
+
+$.fn.zato.channel.hl7.mllp._bind_default_toggle = function(prefix) {
+    var checkbox = $('#' + prefix + 'is_default');
+    checkbox.off('change.routing').on('change.routing', function() {
+        $.fn.zato.channel.hl7.mllp._toggle_routing_fields(prefix);
+    });
+    $.fn.zato.channel.hl7.mllp._toggle_routing_fields(prefix);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.hl7.mllp._toggle_groups = function(selector) {
+    var elem = $(selector);
+    if(elem.is(':visible')) {
+        elem.hide();
+    }
+    else {
+        elem.css('display', '');
+        elem.show();
+    }
+};
+
+$.fn.zato.channel.hl7.mllp._toggle_rest_fields = function(form_selector) {
+    var checkbox = $(form_selector).find('input[name="use_rest"]');
+    var rows = $(form_selector).find('tr.rest-field');
+    if(checkbox.is(':checked')) {
+        rows.css('display', 'table-row');
+    }
+    else {
+        rows.css('display', 'none');
+        $(form_selector).find('.mllp-create-groups-block, .mllp-edit-groups-block').hide();
+    }
+};
+
+$.fn.zato.channel.hl7.mllp._bind_rest_toggle = function(form_selector) {
+    var checkbox = $(form_selector).find('input[name="use_rest"]');
+    checkbox.off('change.rest').on('change.rest', function() {
+        $.fn.zato.channel.hl7.mllp._toggle_rest_fields(form_selector);
+    });
+    $.fn.zato.channel.hl7.mllp._toggle_rest_fields(form_selector);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.hl7.mllp._populate_groups = function(item_list, item_html_prefix, html_elem_id_selector) {
+    $.fn.zato.populate_multi_checkbox(
+        item_list,
+        item_html_prefix,
+        'id',
+        'name',
+        'is_assigned',
+        "/zato/groups/group/zato-api-creds/?cluster=1&query={1}&highlight={2}",
+        'multi-select-table',
+        html_elem_id_selector,
+        'id',
+        false
+    );
+};
+
+$.fn.zato.channel.hl7.mllp._create_populate_groups = function(item_list) {
+    $.fn.zato.channel.hl7.mllp._populate_groups(
+        item_list, 'mllp_security_group_checkbox_', '#mllp-multi-select-div-create');
+};
+
+$.fn.zato.channel.hl7.mllp._edit_populate_groups = function(item_list) {
+    $.fn.zato.channel.hl7.mllp._populate_groups(
+        item_list, 'edit-mllp_security_group_checkbox_', '#mllp-multi-select-div-edit');
+};
+
+$.fn.zato.channel.hl7.mllp._create_populate_groups_callback = function(data, status) {
+    if(status == 'success') {
+        var item_list = $.parseJSON(data.responseText);
+        if(item_list && item_list.length) {
+            $.fn.zato.channel.hl7.mllp._create_populate_groups(item_list);
+        }
+        else {
+            var elem = $('#mllp-multi-select-div-create');
+            elem.removeClass('multi-select-div');
+            elem.html("No security groups found. Click to <a href='/zato/groups/group/zato-api-creds/?cluster=1' target='_blank'>create one</a>.");
+        }
+    }
+};
+
+$.fn.zato.channel.hl7.mllp._edit_populate_groups_callback = function(data, status) {
+    if(status == 'success') {
+        var item_list = $.parseJSON(data.responseText);
+        if(item_list && item_list.length) {
+            $.fn.zato.channel.hl7.mllp._edit_populate_groups(item_list);
+        }
+        else {
+            var elem = $('#mllp-multi-select-div-edit');
+            elem.removeClass('multi-select-div');
+            elem.html("No security groups found. Click to <a href='/zato/groups/group/zato-api-creds/?cluster=1' target='_blank'>create one</a>.");
+        }
+    }
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.hl7.mllp.create = function() {
+    $.fn.zato.channel.hl7.mllp._reset_tabs('create');
+    $.fn.zato.post('/zato/http-soap/get-security-groups/zato-api-creds/',
+        $.fn.zato.channel.hl7.mllp._create_populate_groups_callback, '', '', true);
+    $.fn.zato.data_table._create_edit('create', 'Create a new HL7 MLLP channel', null);
+    $.fn.zato.channel.hl7.mllp._bind_default_toggle('id_');
+    $.fn.zato.channel.hl7.mllp._bind_rest_toggle('#create-form');
+    $.fn.zato.how_it_works.init({
+        badge_id: 'create-how-it-works',
+        div_id: '#create-div',
+        descriptions: $.fn.zato.channel.hl7.mllp.field_descriptions
+    });
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.hl7.mllp.field_descriptions = {
+
+    // Main tab
+    'id_name': 'A unique name for this MLLP channel.<br>Used to identify it in logs and the dashboard.',
+    'id_is_active': 'Whether this channel accepts connections.<br>Inactive channels do not route messages.',
+    'id_service': 'The service invoked for each<br>incoming HL7 message.',
+    'id_use_rest': 'When on, HL7 messages can also be received<br>over REST in addition to MLLP.',
+    'id_rest_only': 'When on, messages are received only over REST.<br>When off, messages are received over both<br>MLLP and REST.',
+    'id_rest_url_path': 'URL path for the REST channel,<br>e.g. /api/hl7/v2.',
+    'id_rest_security_id': 'Security definition used to authenticate<br>incoming REST requests.',
+    'id_rest_security_groups': 'Security groups that can access<br>the REST channel.',
+
+    // Routing tab
+    'id_is_default': 'When enabled, this channel receives all messages<br>that no other channel claimed. Only one channel<br>can be the default at a time.',
+    'id_msh3_sending_app': 'Only accept messages where MSH-3<br>(sending application) equals this value.<br>Empty means any. Case-insensitive.',
+    'id_msh4_sending_facility': 'Only accept messages where MSH-4<br>(sending facility) equals this value.<br>Empty means any. Case-insensitive.',
+    'id_msh5_receiving_app': 'Only accept messages where MSH-5<br>(receiving application) equals this value.<br>Empty means any. Case-insensitive.',
+    'id_msh6_receiving_facility': 'Only accept messages where MSH-6<br>(receiving facility) equals this value.<br>Empty means any. Case-insensitive.',
+    'id_msh9_message_type': 'Only accept messages where MSH-9.1<br>(message type, e.g. ADT, ORM) equals this value.<br>Empty means any. Case-insensitive.',
+    'id_msh9_trigger_event': 'Only accept messages where MSH-9.2<br>(trigger event, e.g. A01, O01) equals this value.<br>Empty means any. Case-insensitive.',
+    'id_msh11_processing_id': 'Only accept messages where MSH-11<br>(P=production, T=training, D=debugging)<br>equals this value. Empty means any. Case-insensitive.',
+    'id_msh12_version_id': 'Only accept messages where MSH-12<br>(HL7 version, e.g. 2.5) equals this value.<br>Empty means any. Case-insensitive.',
+
+    // Protocol tab
+    'id_use_msh18_encoding': 'When on, the server reads the character encoding<br>from the MSH-18 field of each incoming message.<br>When off, or if MSH-18 is empty, the Encoding<br>setting below is used instead.',
+    'id_default_character_encoding': 'Character encoding used to decode raw bytes<br>when MSH-18 is absent or the MSH-18 toggle is off.',
+    'id_recv_timeout': 'Per-recv timeout in milliseconds.<br>The connection stays open between messages.',
+    'id_max_msg_size': 'Maximum allowed message size.<br>Frames exceeding this are rejected.',
+    'id_start_seq': 'MLLP start-of-block byte in hex.<br>Standard: 0b.',
+    'id_end_seq': 'MLLP end-of-block bytes in hex.<br>Standard: 1c 0d.',
+
+    // Tolerance tab - wire-level preprocessing
+    'id_normalize_line_endings': 'Converts CRLF and LF to CR<br>as required by HL7 v2.',
+    'id_force_standard_delimiters': 'Rewrites MSH-2 to standard delimiters<br>(^~\\&amp;).',
+    'id_repair_truncated_msh': 'Recovers messages with a corrupted<br>or malformed MSH segment.',
+    'id_split_concatenated_messages': 'Splits a TCP payload containing multiple<br>MSH segments into separate messages.',
+
+    // Tolerance tab - parser-level fixups
+    'id_normalize_obx2_value_type': 'When OBX-2 is empty but OBX-5 has data,<br>fills OBX-2 with ST so the observation<br>value can be accessed.',
+    'id_replace_invalid_obx2_value_type': 'Replaces unrecognized OBX-2 data types<br>with ST. Prevents parse failures from<br>nonstandard value type codes.',
+    'id_normalize_invalid_escape_sequences': 'Removes stray backslash characters that<br>do not form a valid HL7 escape sequence.<br>Prevents parse errors from malformed escapes.',
+    'id_normalize_obx8_abnormal_flags': 'Clears OBX-8 (Abnormal Flags) when it<br>contains the literal string "null" instead<br>of a valid flag value.',
+    'id_normalize_quadruple_quoted_empty': 'Strips sequences of two or more consecutive<br>double-quote characters that some systems<br>emit as empty-field placeholders.',
+    'id_allow_short_encoding_characters': 'Pads MSH-2 with standard encoding characters<br>when the sender provides fewer than the<br>required four.',
+    'id_fix_off_by_one_field_index': 'Removes a spurious empty first field from<br>non-MSH segments. Fixes messages where a<br>leading separator shifts all field indices.',
+
+    // Deduplication tab
+    'id_dedup_ttl_value': 'How long to remember message control IDs (MSH-10).<br>Duplicates within this window are acknowledged<br>but not delivered to the service.',
+    'id_dedup_ttl_unit': 'Time unit for the dedup window<br>(minutes, hours, or days).',
+
+    // Logging tab
+    'id_should_return_errors': 'When on, error details are included<br>in NAK responses sent to the sender (ERR segment).<br>When off, the NAK code is sent without details.',
+    'id_should_log_messages': 'When on, each incoming message body and<br>routing decision is written to the server log<br>(server.log in the server directory).',
+    'id_logging_level': 'Verbosity level for this channel\'s entries<br>in the server log (server.log).',
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.channel.hl7.mllp.edit = function(id) {
+    $.fn.zato.channel.hl7.mllp._reset_tabs('edit');
+    $.fn.zato.post('/zato/http-soap/get-security-groups/zato-api-creds/',
+        $.fn.zato.channel.hl7.mllp._edit_populate_groups_callback, '', '', true);
     $.fn.zato.data_table._create_edit('edit', 'Update the HL7 MLLP channel', id);
+    $.fn.zato.channel.hl7.mllp._bind_default_toggle('id_edit-');
+    $.fn.zato.channel.hl7.mllp._bind_rest_toggle('#edit-form');
+    $.fn.zato.how_it_works.init({
+        badge_id: 'edit-how-it-works',
+        div_id: '#edit-div',
+        descriptions: $.fn.zato.channel.hl7.mllp.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -66,11 +285,13 @@ $.fn.zato.channel.hl7.mllp.data_table.new_row = function(item, data, include_tr)
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
 
+    let use_rest = item.use_rest == true;
+
     // 1
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>', use_rest ? 'Yes' : 'No');
 
-    row += String.format('<td>{0}</td>', item.address);
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service, cluster_id));
 
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.hl7.mllp.edit('{0}')\">Edit</a>", item.id));
@@ -83,8 +304,51 @@ $.fn.zato.channel.hl7.mllp.data_table.new_row = function(item, data, include_tr)
     row += String.format("<td class='ignore'>{0}</td>", item.should_parse_on_input);
     row += String.format("<td class='ignore'>{0}</td>", item.should_validate);
 
-    row += String.format("<td class='ignore'>{0}</td>", item.data_encoding);
     row += String.format("<td class='ignore'>{0}</td>", item.should_return_errors);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.should_log_messages);
+    row += String.format("<td class='ignore'>{0}</td>", item.logging_level);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.max_msg_size);
+    row += String.format("<td class='ignore'>{0}</td>", item.max_msg_size_unit);
+    row += String.format("<td class='ignore'>{0}</td>", item.read_buffer_size);
+    row += String.format("<td class='ignore'>{0}</td>", item.recv_timeout);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.start_seq);
+    row += String.format("<td class='ignore'>{0}</td>", item.end_seq);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.msh3_sending_app);
+    row += String.format("<td class='ignore'>{0}</td>", item.msh4_sending_facility);
+    row += String.format("<td class='ignore'>{0}</td>", item.msh5_receiving_app);
+    row += String.format("<td class='ignore'>{0}</td>", item.msh6_receiving_facility);
+    row += String.format("<td class='ignore'>{0}</td>", item.msh9_message_type);
+    row += String.format("<td class='ignore'>{0}</td>", item.msh9_trigger_event);
+    row += String.format("<td class='ignore'>{0}</td>", item.msh11_processing_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.msh12_version_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.is_default);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.dedup_ttl_value);
+    row += String.format("<td class='ignore'>{0}</td>", item.dedup_ttl_unit);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.default_character_encoding);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.normalize_line_endings);
+    row += String.format("<td class='ignore'>{0}</td>", item.force_standard_delimiters);
+    row += String.format("<td class='ignore'>{0}</td>", item.repair_truncated_msh);
+    row += String.format("<td class='ignore'>{0}</td>", item.split_concatenated_messages);
+    row += String.format("<td class='ignore'>{0}</td>", item.use_msh18_encoding);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.normalize_obx2_value_type);
+    row += String.format("<td class='ignore'>{0}</td>", item.replace_invalid_obx2_value_type);
+    row += String.format("<td class='ignore'>{0}</td>", item.normalize_invalid_escape_sequences);
+    row += String.format("<td class='ignore'>{0}</td>", item.normalize_obx8_abnormal_flags);
+    row += String.format("<td class='ignore'>{0}</td>", item.normalize_quadruple_quoted_empty);
+    row += String.format("<td class='ignore'>{0}</td>", item.allow_short_encoding_characters);
+    row += String.format("<td class='ignore'>{0}</td>", item.fix_off_by_one_field_index);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.use_rest);
+    row += String.format("<td class='ignore'>{0}</td>", item.rest_only);
+    row += String.format("<td class='ignore'>{0}</td>", item.rest_channel_id);
 
     if(include_tr) {
         row += '</tr>';
@@ -107,11 +371,39 @@ $.fn.zato.channel.hl7.mllp.delete_ = function(id) {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.live_form_updates.register('create', [
-    {object_type: 'service', target_select: '#id_service'}
+    {object_type: 'service', target_select: '#id_service'},
+    {
+        object_type: 'security',
+        target_select: '#id_rest_security_id',
+        label_format: '{sec_type_name}/{name}'
+    },
+    {
+        object_type: 'security_group',
+        handler: 'multi_checkbox',
+        container: '#mllp-multi-select-div-create',
+        reload_callback: function() {
+            $.fn.zato.post('/zato/http-soap/get-security-groups/zato-api-creds/',
+                $.fn.zato.channel.hl7.mllp._create_populate_groups_callback, '', '', true);
+        }
+    }
 ]);
 
 $.fn.zato.live_form_updates.register('edit', [
-    {object_type: 'service', target_select: '#id_edit-service'}
+    {object_type: 'service', target_select: '#id_edit-service'},
+    {
+        object_type: 'security',
+        target_select: '#id_edit-rest_security_id',
+        label_format: '{sec_type_name}/{name}'
+    },
+    {
+        object_type: 'security_group',
+        handler: 'multi_checkbox',
+        container: '#mllp-multi-select-div-edit',
+        reload_callback: function() {
+            $.fn.zato.post('/zato/http-soap/get-security-groups/zato-api-creds/',
+                $.fn.zato.channel.hl7.mllp._edit_populate_groups_callback, '', '', true);
+        }
+    }
 ]);
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

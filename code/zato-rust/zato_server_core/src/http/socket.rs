@@ -18,8 +18,7 @@ fn sockaddr_in_socklen() -> PyResult<libc::socklen_t> {
 
 /// Returns `AF_INET` as a `sa_family_t`.
 fn af_inet_family() -> PyResult<libc::sa_family_t> {
-    libc::sa_family_t::try_from(libc::AF_INET)
-        .map_err(|err| pyo3::exceptions::PyOverflowError::new_err(format!("AF_INET overflow: {err}")))
+    libc::sa_family_t::try_from(libc::AF_INET).map_err(|err| pyo3::exceptions::PyOverflowError::new_err(format!("AF_INET overflow: {err}")))
 }
 
 /// Sets a socket option, logging a warning on failure.
@@ -43,11 +42,7 @@ pub(super) fn create_listen_socket(host: &str, port: u16) -> PyResult<i32> {
     // preventing fd leaks. addr is a stack-local sockaddr_in whose pointer and size
     // are correctly passed to bind.
     unsafe {
-        let fd = libc::socket(
-            libc::AF_INET,
-            libc::SOCK_STREAM | libc::SOCK_NONBLOCK | libc::SOCK_CLOEXEC,
-            0,
-        );
+        let fd = libc::socket(libc::AF_INET, libc::SOCK_STREAM | libc::SOCK_NONBLOCK | libc::SOCK_CLOEXEC, 0);
         if fd < 0 {
             return Err(pyo3::exceptions::PyOSError::new_err("socket() failed"));
         }
@@ -61,17 +56,13 @@ pub(super) fn create_listen_socket(host: &str, port: u16) -> PyResult<i32> {
         if libc::bind(fd, addr_ptr, sockaddr_in_socklen()?) < 0 {
             let err = std::io::Error::last_os_error();
             libc::close(fd);
-            return Err(pyo3::exceptions::PyOSError::new_err(format!(
-                "bind({host}:{port}) failed: {err}"
-            )));
+            return Err(pyo3::exceptions::PyOSError::new_err(format!("bind({host}:{port}) failed: {err}")));
         }
 
         if libc::listen(fd, LISTEN_BACKLOG) < 0 {
             let err = std::io::Error::last_os_error();
             libc::close(fd);
-            return Err(pyo3::exceptions::PyOSError::new_err(format!(
-                "listen() failed: {err}"
-            )));
+            return Err(pyo3::exceptions::PyOSError::new_err(format!("listen() failed: {err}")));
         }
 
         Ok(fd)
@@ -85,9 +76,8 @@ fn make_sockaddr(host: &str, port: u16) -> PyResult<libc::sockaddr_in> {
     } else if host == "127.0.0.1" || host == "localhost" {
         std::net::Ipv4Addr::LOCALHOST
     } else {
-        host.parse().map_err(|err| {
-            pyo3::exceptions::PyValueError::new_err(format!("bad host: {err}"))
-        })?
+        host.parse()
+            .map_err(|err| pyo3::exceptions::PyValueError::new_err(format!("bad host: {err}")))?
     };
     let octets = ip_addr.octets();
     // SAFETY: zeroed sockaddr_in is a valid initial state per POSIX.

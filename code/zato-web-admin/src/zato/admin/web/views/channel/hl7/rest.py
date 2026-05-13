@@ -31,12 +31,11 @@ class Index(_Index):
             'data_format': DATA_FORMAT.HL7
         }
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active', 'is_internal', 'hl7_version', 'url_path', 'service_name', 'security_name', \
-            'security_id', 'sec_type', 'sec_type_name', 'data_format',
-        output_optional = ('json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors') + generic_attrs
-        output_repeated = True
+    input_required = 'cluster_id',
+    output_required = 'id', 'name', 'is_active', 'is_internal', 'hl7_version', 'url_path', 'service_name', 'security_name', \
+        'security_id', 'sec_type', 'sec_type_name', 'data_format',
+    output_optional = ('json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors') + generic_attrs
+    output_repeated = True
 
 # ################################################################################################################################
 
@@ -51,6 +50,7 @@ class Index(_Index):
     def handle(self):
         security_list = self.get_sec_def_list(SEC_DEF_TYPE.BASIC_AUTH)
         return {
+            'show_search_form': True,
             'create_form': CreateForm(security_list, req=self.req),
             'edit_form': EditForm(security_list, prefix='edit', req=self.req),
         }
@@ -61,11 +61,10 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_internal', 'hl7_version', 'url_path', 'service', 'security_id', 'data_format'
-        input_optional = ('is_active', 'json_path', 'should_parse_on_input', 'should_validate', \
-            'should_return_errors') + generic_attrs
-        output_required = 'id', 'name'
+    input_required = 'name', 'is_internal', 'hl7_version', 'url_path', 'service', 'security_id', 'data_format'
+    input_optional = ('is_active', 'json_path', 'should_parse_on_input', 'should_validate', \
+        'should_return_errors') + generic_attrs
+    output_required = 'id', 'name'
 
 # ################################################################################################################################
 

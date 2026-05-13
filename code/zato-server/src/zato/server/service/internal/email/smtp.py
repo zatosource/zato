@@ -21,7 +21,7 @@ from zato.common.broker_message import EMAIL
 from zato.common.odb.model import SMTP
 from zato.common.version import get_version
 from zato.common.odb.query import email_smtp_list
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
+from zato.server.service.internal import AdminService, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
@@ -75,10 +75,6 @@ class ChangePassword(ChangePasswordBase):
     """
     password_required = False
 
-    class SimpleIO(ChangePasswordBase.SimpleIO):
-        request_elem = 'zato_email_smtp_change_password_request'
-        response_elem = 'zato_email_smtp_change_password_response'
-
     def handle(self):
         def _auth(instance, password):
             instance.password = password
@@ -90,11 +86,8 @@ class ChangePassword(ChangePasswordBase):
 class Ping(AdminService):
     """ Pings an SMTP connection to check its configuration.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_email_smtp_ping_request'
-        response_elem = 'zato_email_smtp_ping_response'
-        input_required = ('id',)
-        output_required = ('info',)
+    input = 'id',
+    output = 'info',
 
     def handle(self):
 

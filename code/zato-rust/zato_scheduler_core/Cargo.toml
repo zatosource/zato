@@ -23,6 +23,7 @@ chrono = { version = "0.4.44", features = ["serde"] }
 chrono-tz = "0.10.4"
 humantime = "2.3.0"
 parking_lot = "0.12"
+prometheus = { version = "0.14.0", default-features = false }
 rand = "0.10.1"
 redis = "1.2.0"
 serde = { version = "1.0.228", features = ["derive"] }

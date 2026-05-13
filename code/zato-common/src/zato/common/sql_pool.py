@@ -19,7 +19,7 @@ from threading import RLock
 from time import time
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Zato
 from zato.common.api import MS_SQL, NotGiven, SECRET_SHADOW, UNITTEST

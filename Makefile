@@ -1,7 +1,7 @@
-.PHONY: build install clean server-build scheduler-build sio-build common-core-build queue-bridge-build \
-	server-clean scheduler-clean sio-clean common-core-clean queue-bridge-clean \
-	server-install scheduler-install sio-install common-core-install queue-bridge-install \
-	ruff qa-reqs-install unify \
+.PHONY: build install clean server-build scheduler-build io-build common-core-build queue-bridge-build \
+	server-clean scheduler-clean io-clean common-core-clean queue-bridge-clean \
+	server-install scheduler-install io-install common-core-install queue-bridge-install \
+	ruff pyright qa-reqs-install unify \
 	update cron-update stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener
 
@@ -11,10 +11,12 @@ CARGO_ENV := $(HOME)/.cargo/env
 LOAD_CARGO_ENV := if [ -f $(CARGO_ENV) ]; then . $(CARGO_ENV); fi
 
 ZATO_RUST := $(CURDIR)/code/zato-rust
+ZATO_HEALTH_RS := $(CURDIR)/code/zato-common/src/zato
 
 default: build
 
-build: common-core-build server-build scheduler-build sio-build queue-bridge-build
+build: common-core-build server-build scheduler-build io-build queue-bridge-build
+# build: ... fhir-rust-build  # FHIR commented out for now
 
 server-build:
 	@echo ">>> Building server"
@@ -32,11 +34,11 @@ scheduler-build:
 scheduler:
 	$(CURDIR)/code/bin/_zato_scheduler
 
-sio-build:
-	@echo ">>> Building sio"
+io-build:
+	@echo ">>> Building I/O"
 	$(LOAD_CARGO_ENV) && \
 	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
-	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_sio/Cargo.toml
+	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_input_output/Cargo.toml
 
 common-core-build:
 	@echo ">>> Building common-core"
@@ -51,6 +53,17 @@ queue-bridge-build:
 	rm -f $(CURDIR)/code/bin/_zato_queue_bridge && \
 	cp $(ZATO_RUST)/zato_queue_bridge/target/release/_zato_queue_bridge $(CURDIR)/code/bin/_zato_queue_bridge
 
+# FHIR commented out for now
+#fhir-rust-build:
+#	@echo ">>> Building FHIR Rust extension"
+#	$(LOAD_CARGO_ENV) && \
+#	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
+#	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_HEALTH_RS)/fhir_r4_0_1_core/Cargo.toml
+
+# FHIR commented out for now
+#fhir-rust-clean:
+#	rm -rf $(ZATO_HEALTH_RS)/fhir_r4_0_1_core/target
+
 queue-bridge:
 	$(CURDIR)/code/bin/_zato_queue_bridge
 
@@ -58,14 +71,11 @@ file-listener:
 	$(CURDIR)/code/bin/py $(CURDIR)/code/zato-common/src/zato/common/file_transfer/listener.py
 
 install:
-	@if [ "$(filter-out install,$(MAKECMDGOALS))" = "" ]; then \
+	@if [ -z "$(MAKEOVERRIDES)" ]; then \
 		$(CURDIR)/code/install.sh; \
 	else \
-		$(CURDIR)/code/support-linux/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python $(filter-out install,$(MAKECMDGOALS)); \
+		$(CURDIR)/code/support-linux/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python $(MAKEOVERRIDES); \
 	fi
-
-%:
-	@:
 
 clean:
 	$(CURDIR)/code/clean.sh
@@ -76,8 +86,8 @@ server-clean:
 scheduler-clean:
 	rm -rf $(ZATO_RUST)/zato_scheduler_core/target
 
-sio-clean:
-	rm -rf $(ZATO_RUST)/zato_sio/target
+io-clean:
+	rm -rf $(ZATO_RUST)/zato_input_output/target
 
 common-core-clean:
 	rm -rf $(ZATO_RUST)/zato_common_core/target
@@ -89,7 +99,7 @@ server-install: server-build
 
 scheduler-install: scheduler-build
 
-sio-install: sio-build
+io-install: io-build
 
 common-core-install: common-core-build
 
@@ -113,6 +123,10 @@ unify:
 
 ruff:
 	$(CURDIR)/code/bin/ruff check $(CURDIR)/code
+
+pyright:
+	@echo "Running pyright from $(CURDIR)/code on zato-common/src/zato/hl7v2/ tests/python/"
+	cd $(CURDIR)/code && pyright zato-common/src/zato/hl7v2/ tests/python/
 
 update:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/updates_cli.py

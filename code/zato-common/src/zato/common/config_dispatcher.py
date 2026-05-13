@@ -11,7 +11,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # Zato
 from zato.common.broker_message import code_to_name
@@ -23,7 +23,7 @@ from zato.common.util.config import resolve_env_variables
 
 if 0:
     from zato.server.base.parallel import ParallelServer
-    from zato.server.base.worker import WorkerStore
+    from zato.server.base.config_manager import ConfigManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,13 +75,13 @@ class ConfigDispatchReceiver:
     """ Mixin for objects that receive config events from the dispatcher.
     """
     config_dispatcher: 'ConfigDispatcher'
-    worker_store: 'WorkerStore'
+    config_manager: 'ConfigManager'
 
     def on_config_event(self, msg:'anydict') -> 'None':
         msg = resolve_env_variables(msg)
         if not self.filter(msg):
             return
-        handle_config_event(msg, self.worker_store)
+        handle_config_event(msg, self.config_manager)
 
     def filter(self, msg:'anydict') -> 'bool':
         return True
@@ -95,7 +95,7 @@ class ConfigDispatcher:
         self.server = server
 
     def publish(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
-        handle_config_event(msg, self.server.worker_store)
+        handle_config_event(msg, self.server.config_manager)
 
     invoke_async = publish
 

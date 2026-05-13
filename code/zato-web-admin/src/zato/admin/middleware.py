@@ -11,17 +11,18 @@ from http.client import OK
 from logging import getLogger
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Django
 from django.urls import resolve
 
 # Zato
-from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, ADMIN_INVOKE_PATH, SASession, settings_db
+from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, SASession, settings_db
 from zato.admin.web.forms import SearchForm
 from zato.admin.web.models import ClusterColorMarker
 from zato.admin.web.util import get_user_profile
-from zato.client import AnyServiceInvoker
+from zato.client import ZatoClient
+from zato.common.const import ServiceConst
 from zato.common.json_internal import loads
 from zato.common.odb.model import Cluster
 from zato.common.version import get_version
@@ -87,7 +88,7 @@ class HeadersEnrichedException(Exception):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Client(AnyServiceInvoker):
+class Client(ZatoClient):
     def __init__(self, req, *args, **kwargs):
         self.forwarded_for = req.META.get('HTTP_X_FORWARDED_FOR') or req.META.get('REMOTE_ADDR')
         super(Client, self).__init__(*args, **kwargs)
@@ -95,13 +96,23 @@ class Client(AnyServiceInvoker):
 # ################################################################################################################################
 
     def invoke(self, *args, **kwargs):
-        response = super(Client, self).invoke(*args, headers={'X-Zato-Forwarded-For': self.forwarded_for}, **kwargs)
+        headers = kwargs.pop('headers', {})
+        headers['X-Zato-Forwarded-For'] = self.forwarded_for
+
+        logger.info('WebAdmin Client.invoke args=%r, kwargs_keys=%r', args, list(kwargs.keys()))
+
+        response = super(Client, self).invoke(*args, headers=headers, **kwargs)
+
+        logger.info('WebAdmin Client.invoke response ok=%s, status=%s, data_type=%s, data=%r',
+            response.ok, response.inner.status_code, type(response.data).__name__,
+            str(response.data)[:500] if response.data else '(None)')
+
         if response.inner.status_code != OK:
 
             json_data = loads(response.inner.text)
             cid = json_data.get('cid')
             err_details = json_data.get('details')
-            full_details = 'CID: {}; nDetails: {}'.format(cid, err_details)
+            full_details = 'CID: {}, nDetails: {}'.format(cid, err_details)
 
             if not err_details:
                 err_details = json_data
@@ -121,11 +132,15 @@ class Client(AnyServiceInvoker):
 # ################################################################################################################################
 
     def invoke_async(self, *args, **kwargs):
-        response = super(Client, self).invoke_async(*args, headers={'X-Zato-Forwarded-For': self.forwarded_for}, **kwargs)
+        headers = kwargs.pop('headers', {})
+        headers['X-Zato-Forwarded-For'] = self.forwarded_for
+        response = super(Client, self).invoke_async(*args, headers=headers, **kwargs)
         return response
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+_Auth_Paths = {'/accounts/login/', '/accounts/login/callback/', '/logout/', '/zato/session-keepalive/'}
 
 class ZatoMiddleware:
 
@@ -154,6 +169,10 @@ class ZatoMiddleware:
         req.zato.settings_db = settings_db
         req.zato.args = Bunch() # Arguments read from URL
 
+        # Auth-related paths do not need the cluster query or invoke client
+        if req.path in _Auth_Paths:
+            return
+
         # Whether this request to web-admin was served over TLS
         req.zato.is_tls = req.META.get('HTTP_X_FORWARDED_PROTO', '').lower() == 'https'
 
@@ -176,7 +195,7 @@ class ZatoMiddleware:
                 url = 'http://127.0.0.1:17010'
 
                 auth = (ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD)
-                req.zato.client = Client(req, url, ADMIN_INVOKE_PATH, auth, to_bunch=True)
+                req.zato.client = Client(req, url, ServiceConst.API_Invoke_Url_Path, auth, to_bunch=True)
 
             req.zato.clusters = req.zato.odb.query(Cluster).order_by(Cluster.name).all()
             req.zato.search_form = SearchForm(req.zato.clusters, req.GET)
@@ -206,12 +225,13 @@ class ZatoMiddleware:
         else:
             resp.context_data = {'zato_version':version}
 
-        try:
-            ccm = ClusterColorMarker.objects.get(cluster_id=req.zato.cluster_id, user_profile=req.zato.user_profile)
-        except ClusterColorMarker.DoesNotExist:
-            pass
-        else:
-            resp.context_data['cluster_color'] = ccm.color
+        if req.path not in _Auth_Paths:
+            try:
+                ccm = ClusterColorMarker.objects.get(cluster_id=1, user_profile=req.zato.user_profile)
+            except ClusterColorMarker.DoesNotExist:
+                pass
+            else:
+                resp.context_data['cluster_color'] = ccm.color
 
         resp.render()
 

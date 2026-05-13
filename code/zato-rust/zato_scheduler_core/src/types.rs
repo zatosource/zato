@@ -110,4 +110,12 @@ pub struct FireBatch {
     pub job_type: JobType,
     /// The current run number.
     pub current_run: u32,
+    /// Service to invoke on success.
+    pub on_success_service: Option<String>,
+    /// Scheduler job to execute on success.
+    pub on_success_job: Option<String>,
+    /// Service to invoke on error.
+    pub on_error_service: Option<String>,
+    /// Scheduler job to execute on error.
+    pub on_error_job: Option<String>,
 }

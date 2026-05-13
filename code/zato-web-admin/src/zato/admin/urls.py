@@ -13,10 +13,7 @@ from django.contrib.auth.decorators import login_required
 # Zato
 from zato.admin import settings
 from zato.admin.web.util import static_serve
-from zato.admin.web.views import account, datadog, env_variables, grafana_cloud, http_soap, live_form_updates, log_streaming, main, news, openapi_, python_packages, scheduler, service, updates
-from zato.admin.web.views.cache import builtin as cache_builtin
-from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
-from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
+from zato.admin.web.views import account, datadog, env_variables, grafana_cloud, highlight as highlight_view, http_soap, live_form_updates, log_streaming, main, news, openapi_, python_packages, scheduler, service, updates
 from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel.hl7 import mllp as channel_hl7_mllp
 from zato.admin.web.views.channel.hl7 import rest as channel_hl7_rest
@@ -33,6 +30,8 @@ from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing.hl7 import fhir as out_hl7_fhir
 from zato.admin.web.views.outgoing.hl7 import mllp as out_hl7_mllp
 from zato.admin.web.views.channel import kafka as channel_kafka
+from zato.admin.web.views.channel import mcp as channel_mcp
+from zato.admin.web.views.outgoing import graphql as out_graphql
 from zato.admin.web.views.outgoing import kafka as out_kafka
 from zato.admin.web.views.outgoing import ldap as out_ldap
 from zato.admin.web.views.outgoing import mongodb as out_mongodb
@@ -73,6 +72,7 @@ urlpatterns = [
     url(r'^accounts/login/$', main.login, name='login'),
     url(r'^$', main.index_redirect),
     url(r'^zato/$', login_required(main.index), name='main-page'),
+    url(r'^zato/session-keepalive/$', login_required(main.session_keepalive), name='session-keepalive'),
     url(r'^zato/news/get$', login_required(news.get_news), name='news-get'),
     url(r'^logout/$', login_required(main.logout), name='logout'),
     url(r'^zato/check-attr-exists/$', login_required(check_attr_exists), name='check-attr-exists'),
@@ -88,8 +88,6 @@ urlpatterns += [
         login_required(account.settings_basic), name='account-settings-basic'),
     url(r'^account/settings/basic/save/$',
         login_required(account.settings_basic_save), name='account-settings-basic-save'),
-    url(r'^account/settings/basic/generate-totp-key$',
-        login_required(account.generate_totp_key), name='account-settings-basic-generate-totp-key'),
     ]
 
 # ################################################################################################################################
@@ -363,6 +361,22 @@ urlpatterns += [
         login_required(channel_kafka.Delete()), name=channel_kafka.Delete.url_name),
     url(r'^zato/channel/kafka/import-demo-config$',
         login_required(channel_kafka.import_demo_config), name='channel-kafka-import-demo-config'),
+
+    # .. MCP
+
+    url(r'^zato/channel/mcp/$',
+        login_required(channel_mcp.Index()), name=channel_mcp.Index.url_name),
+    url(r'^zato/channel/mcp/create/$',
+        login_required(channel_mcp.Create()), name=channel_mcp.Create.url_name),
+    url(r'^zato/channel/mcp/edit/$',
+        login_required(channel_mcp.Edit()), name=channel_mcp.Edit.url_name),
+    url(r'^zato/channel/mcp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(channel_mcp.Delete()), name=channel_mcp.Delete.url_name),
+    url(r'^zato/channel/mcp/get-service-list/$',
+        login_required(channel_mcp.get_service_list), name='channel-mcp-get-service-list'),
+
+    url(r'^zato/channel/mcp/get-security-list/$',
+        login_required(channel_mcp.get_security_list), name='channel-mcp-get-security-list'),
     ]
 
 # ################################################################################################################################
@@ -383,6 +397,28 @@ urlpatterns += [
         login_required(out_ldap.change_password), name='out-ldap-change-password'),
     url(r'^zato/outgoing/ldap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_ldap.ping), name='out-ldap-ping'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. GraphQL outgoing
+
+    url(r'^zato/outgoing/graphql/$',
+        login_required(out_graphql.Index()), name=out_graphql.Index.url_name),
+    url(r'^zato/outgoing/graphql/create/$',
+        login_required(out_graphql.Create()), name=out_graphql.Create.url_name),
+    url(r'^zato/outgoing/graphql/edit/$',
+        login_required(out_graphql.Edit()), name=out_graphql.Edit.url_name),
+    url(r'^zato/outgoing/graphql/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_graphql.Delete()), name=out_graphql.Delete.url_name),
+    url(r'^zato/outgoing/graphql/change-password/$',
+        login_required(out_graphql.change_password), name='out-graphql-change-password'),
+    url(r'^zato/outgoing/graphql/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_graphql.ping), name='out-graphql-ping'),
+    url(r'^zato/outgoing/graphql/invoke/(?P<id>.*)/$',
+        login_required(out_graphql.invoke), name='out-graphql-invoke'),
     ]
 
 # ################################################################################################################################
@@ -583,8 +619,8 @@ urlpatterns += [
         login_required(http_soap.invoke_channel), name='http-soap-invoke-channel'),
     url(r'^zato/http-soap/invoke-outconn/(?P<id>.*)/$',
         login_required(http_soap.invoke_outconn), name='http-soap-invoke-outconn'),
-    url(r'^zato/http-soap/highlight/$',
-        login_required(http_soap.highlight), name='http-soap-highlight'),
+    url(r'^zato/highlight/$',
+        login_required(highlight_view.highlight), name='highlight'),
 
     url(r'^zato/http-soap/openapi/parse/$',
         login_required(openapi_.parse), name='http-soap-openapi-parse'),
@@ -606,38 +642,6 @@ urlpatterns += [
 # ################################################################################################################################
 
 urlpatterns += [
-
-    # .. Built-in
-
-    url(r'^zato/cache/builtin/$',
-        login_required(cache_builtin.Index()), name=cache_builtin.Index.url_name),
-    url(r'^zato/cache/builtin/create/$',
-        login_required(cache_builtin.Create()), name=cache_builtin.Create.url_name),
-    url(r'^zato/cache/builtin/edit/$',
-        login_required(cache_builtin.Edit()), name=cache_builtin.Edit.url_name),
-    url(r'^zato/cache/builtin/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(cache_builtin.Delete()), name=cache_builtin.Delete.url_name),
-    url(r'^zato/cache/builtin/clear/$',
-        login_required(cache_builtin.clear), name='cache-builtin-clear'),
-
-    url(r'^zato/cache/builtin/entries/(?P<id>.*)/delete/$',
-        login_required(cache_builtin_entries.Delete()), name=cache_builtin_entries.Delete.url_name),
-
-    url(r'^zato/cache/builtin/entries/(?P<id>.*)/$',
-        login_required(cache_builtin_entries.Index()), name=cache_builtin_entries.Index.url_name),
-
-    url(r'^zato/cache/builtin/details/entry/create/cache-id/(?P<id>.*)/cluster/(?P<cluster_id>.*)/action/$',
-        login_required(cache_builtin_entry.create_action), name='cache-builtin-create-entry-action'),
-
-    url(r'^zato/cache/builtin/details/entry/create/cache-id/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(cache_builtin_entry.create), name='cache-builtin-create-entry'),
-
-    url(r'^zato/cache/builtin/details/entry/edit/cache-id/(?P<id>.*)/cluster/(?P<cluster_id>.*)/action/$',
-        login_required(cache_builtin_entry.edit_action), name='cache-builtin-edit-entry-action'),
-
-    url(r'^zato/cache/builtin/details/entry/edit/cache-id/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(cache_builtin_entry.edit), name='cache-builtin-edit-entry'),
-
     ]
 
 # ################################################################################################################################

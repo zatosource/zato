@@ -1,0 +1,26 @@
+# Re-export from the native Rust extension installed as a flat module
+from zato_input_output import * # noqa: F401,F403
+from zato_input_output import ( # noqa: F401
+    Bool,
+    Int,
+    Text,
+    AsIs,
+    Float,
+    CSV,
+    Date,
+    DateTime,
+    Decimal,
+    Dict,
+    DictList,
+    Elem,
+    IOProcessor,
+    List,
+    Payload,
+    Response,
+    Secret,
+    ServiceInput,
+    UTC,
+    UUID,
+    is_io_bool,
+    is_io_int,
+)

@@ -14,3 +14,8 @@ web_admin_port = 8182
 http_plain_server_port = 17010
 
 default_cluster_id = 1
+
+# Fields whose values must be masked in logs and query strings
+secret_fields_exact = {'auth_data', 'auth_token', 'password', 'secret_key', 'tls_pem_passphrase', 'token', 'api_key', 'apiKey', 'xApiKey'}
+secret_fields_prefix:'set[str]' = set()
+secret_fields_suffix:'set[str]' = set()

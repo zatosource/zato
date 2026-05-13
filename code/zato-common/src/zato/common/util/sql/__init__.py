@@ -11,7 +11,7 @@ from itertools import chain
 from logging import DEBUG, getLogger
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # gevent
 from gevent import sleep
@@ -20,7 +20,7 @@ from gevent import sleep
 from sqlalchemy.exc import InternalError as SAInternalError, OperationalError as SAOperationalError
 
 # Zato
-from zato.common.api import GENERIC
+from zato.common.api import GENERIC, query_parameters
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import Base, SecurityBase
 from zato.common.util.search import SearchResults
@@ -29,7 +29,7 @@ from zato.common.util.search import SearchResults
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import any_
 
 # ################################################################################################################################
@@ -52,7 +52,7 @@ _DeadlockException = (SAInternalError, SAOperationalError)
 # but the underlying PyMySQL library returns only a string rather than an integer code.
 _deadlock_code = 'Deadlock found when trying to get lock'
 
-_zato_opaque_skip_attrs = {'needs_details', 'paginate', 'cur_page', 'query'}
+_zato_opaque_skip_attrs = {'needs_details'} | {elem.lstrip('-') for elem in query_parameters}
 
 # ################################################################################################################################
 
@@ -263,7 +263,7 @@ def get_dict_with_opaque(instance, to_bunch=False):
 # ################################################################################################################################
 
 def set_instance_opaque_attrs(instance, input, skip=None, only=None, _zato_skip=_zato_opaque_skip_attrs):
-    """ Given an SQLAlchemy object instance and incoming SimpleIO-based input,
+    """ Given an SQLAlchemy object instance and incoming I/O-based input,
     populates all opaque values of that instance.
     """
     only = only or []

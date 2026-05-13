@@ -15,7 +15,7 @@ from threading import RLock
 from paste.util.multidict import MultiDict
 
 # Bunch
-from zato.bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Python 2/3 compatibility
 from zato.common.ext.future.utils import itervalues
@@ -297,7 +297,6 @@ class ConfigStore:
         self.generic_connection = None   # type: ConfigDict
         self.service = None   # type: ConfigDict
         self.search_es = None   # type: ConfigDict
-        self.cache_builtin = None   # type: ConfigDict
 
         # Local on-disk configuraion repository
         self.repo_location = None # type: str
@@ -320,8 +319,8 @@ class ConfigStore:
         # ODB
         self.odb_data = Bunch()
 
-        # SimpleIO
-        self.simple_io = None # type: stranydict
+        # I/O
+        self.io = None # type: stranydict
 
         # Services
         self.service = None # type: ConfigDict

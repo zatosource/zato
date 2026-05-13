@@ -30,6 +30,9 @@ pub mod redis_streams;
 /// HTTP query API served by actix-web for the Zato server to read scheduler state.
 pub mod http_api;
 
+/// Prometheus metrics for the scheduler process.
+pub mod metrics;
+
 use calendar::CalendarData;
 use job::RunningJob;
 

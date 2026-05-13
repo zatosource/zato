@@ -26,16 +26,23 @@ class Index(_Index):
     output_class = HL7MLLPConfigObject
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name', 'is_active', 'is_internal', 'security_name', 'address', 'pool_size'
-        output_optional = generic_attrs
-        output_repeated = True
+    input_required = 'cluster_id', 'type_'
+    output_required = 'id', 'name', 'is_active', 'is_internal', 'security_name', 'address', 'pool_size'
+    output_optional = (
+        'should_log_messages', 'logging_level',
+        'max_msg_size', 'read_buffer_size', 'recv_timeout',
+        'start_seq', 'end_seq', 'max_wait_time',
+        'max_retries', 'backoff_base_seconds', 'backoff_cap_seconds', 'backoff_jitter_percent',
+        'circuit_breaker_threshold_percent', 'circuit_breaker_window_seconds', 'circuit_breaker_reset_seconds',
+        'tls_cert_path', 'tls_key_path', 'tls_ca_path',
+    ) + generic_attrs
+    output_repeated = True
 
 # ################################################################################################################################
 
     def handle(self):
         return {
+            'show_search_form': True,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
         }
@@ -46,10 +53,17 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_internal', 'address'
-        input_optional = ('is_active', 'pool_size') + generic_attrs
-        output_required = 'id', 'name'
+    input_required = 'name', 'is_internal', 'address'
+    input_optional = (
+        'is_active', 'pool_size',
+        'should_log_messages', 'logging_level',
+        'max_msg_size', 'read_buffer_size', 'recv_timeout',
+        'start_seq', 'end_seq', 'max_wait_time',
+        'max_retries', 'backoff_base_seconds', 'backoff_cap_seconds', 'backoff_jitter_percent',
+        'circuit_breaker_threshold_percent', 'circuit_breaker_window_seconds', 'circuit_breaker_reset_seconds',
+        'tls_cert_path', 'tls_key_path', 'tls_ca_path',
+    ) + generic_attrs
+    output_required = 'id', 'name'
 
 # ################################################################################################################################
 

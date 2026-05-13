@@ -15,7 +15,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Zato
 from zato.common.api import SECRET_SHADOW

@@ -1,5 +1,5 @@
 use proptest::prelude::*;
-use zato_server_core::logging::{AccessLogEntry, LogWriter, RestLogEntry, format_rest_line, format_access_line, transform_header_key};
+use zato_server_core::logging::{AccessLogEntry, LogWriter, RestLogEntry, format_access_line, format_rest_line, transform_header_key};
 
 proptest! {
 

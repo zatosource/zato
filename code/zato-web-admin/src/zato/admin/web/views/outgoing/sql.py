@@ -22,7 +22,7 @@ from zato.admin.web.views import Delete as _Delete, method_allowed
 from zato.common.api import engine_display_name
 from zato.common.json_internal import dumps
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 logger = logging.getLogger(__name__)
 

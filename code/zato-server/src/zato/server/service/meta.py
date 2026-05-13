@@ -16,7 +16,7 @@ from time import time
 from traceback import format_exc
 
 # Bunch
-from bunch import bunchify
+from zato.common.ext.bunch import bunchify
 
 # SQLAlchemy
 from sqlalchemy import Boolean, Integer
@@ -28,8 +28,7 @@ from zato.common.odb.model import Base, Cluster
 from zato.common.util.api import parse_literal_dict
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.connection.http_soap import BadRequest
-from zato.server.service import AsIs, Bool as BoolSIO, Int as IntSIO
-from zato.server.service.internal import AdminSIO, GetListAdminSIO
+from zato.server.service import AsIs, Bool as BoolIO, Int as IntIO
 
 # ################################################################################################################################
 
@@ -50,9 +49,9 @@ singleton = object()
 
 # ################################################################################################################################
 
-sa_to_sio = {
-    Boolean: BoolSIO,
-    Integer: IntSIO
+sa_to_io = {
+    Boolean: BoolIO,
+    Integer: IntIO
 }
 
 # ################################################################################################################################
@@ -96,13 +95,13 @@ def get_columns_to_visit(columns, is_required):
 
 # ################################################################################################################################
 
-def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_cluster_id):
+def get_io_elems(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_cluster_id):
 
     # This can be either a list or an SQLAlchemy object
     elems = attrs.get(elems_name) or []
     columns = []
 
-    # Generate elems out of SQLAlchemy tables, including calls to SIOElem's subclasses, such as Bool or Int.
+    # Generate elems out of SQLAlchemy tables, including calls to IOElem subclasses, such as Bool or Int.
 
     if elems and isclass(elems) and issubclass(elems, Base):
 
@@ -115,7 +114,7 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_
             if column.name == 'cluster_id' and is_output:
                 continue
 
-            # We already have cluster_id and don't need a SIOElem'd one.
+            # We already have cluster_id and don't need an IOElem one.
             if column.name == 'cluster_id' and has_cluster_id:
                 continue
 
@@ -132,7 +131,7 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_
                 else:
                     continue # Create or GetList
 
-            for k, v in sa_to_sio.items():
+            for k, v in sa_to_io.items():
                 if isinstance(column.type, k):
                     if column.name in attrs.request_as_is:
                         wrapper = AsIs
@@ -179,7 +178,7 @@ def update_attrs(cls, name, attrs):
     attrs.create_edit_force_rewrite = getattr(mod, 'create_edit_force_rewrite', set())
     attrs.check_existing_one = getattr(mod, 'check_existing_one', True)
     attrs.request_as_is = getattr(mod, 'request_as_is', [])
-    attrs.sio_default_value = getattr(mod, 'sio_default_value', None)
+    attrs.io_default_value = getattr(mod, 'io_default_value', None)
     attrs.get_list_docs = getattr(mod, 'get_list_docs', None)
     attrs.delete_require_instance = getattr(mod, 'delete_require_instance', True)
     attrs.skip_create_integrity_error = getattr(mod, 'skip_create_integrity_error', False)
@@ -221,22 +220,25 @@ def update_attrs(cls, name, attrs):
 class AdminServiceMeta(type):
 
     @staticmethod
-    def get_sio(
+    def get_io(
         *,
         attrs,
         name,
         input_required=None,
         input_optional=None,
         output_required=None,
+        output_optional=None,
         is_list=True,
         class_=None,
         skip_input_required=False
     ):
 
-        _BaseClass = GetListAdminSIO if is_list else AdminSIO
-
         if not input_optional:
-            input_optional = list(_BaseClass.input_optional) if hasattr(_BaseClass, 'input_optional') else []
+            # GetList has pagination params as optional input
+            if is_list:
+                input_optional = [IntIO('cur_page'), BoolIO('paginate'), 'query']
+            else:
+                input_optional = []
 
         if not input_required:
             if skip_input_required:
@@ -244,60 +246,84 @@ class AdminServiceMeta(type):
             else:
                 input_required = ['cluster_id']
 
-        sio = {
+        io_def = {
             'input_required': input_required,
             'input_optional': input_optional,
             'output_required': output_required if output_required is not None else ['id', 'name'],
         }
 
-        class SimpleIO(_BaseClass):
-            request_elem = 'zato_{}_{}_request'.format(attrs.elem, req_resp[name])
-            response_elem = 'zato_{}_{}_response'.format(attrs.elem, req_resp[name])
-            default_value = attrs['sio_default_value']
-            input_required = sio['input_required'] + attrs['input_required_extra']
-            input_optional = sio['input_optional'] + attrs['input_optional_extra']
+        merged_input_required = io_def['input_required'] + attrs['input_required_extra']
+        merged_input_optional = io_def['input_optional'] + attrs['input_optional_extra']
 
-            for param in attrs['skip_input_params']:
-                if param in input_required:
-                    input_required.remove(param)
+        for param in attrs['skip_input_params']:
+            if param in merged_input_required:
+                merged_input_required.remove(param)
 
-            output_required = sio['output_required'] + attrs['output_required_extra']
-            output_optional = attrs['output_optional_extra']
+        merged_output_required = io_def['output_required'] + attrs['output_required_extra']
+        merged_output_optional = (output_optional or []) + attrs['output_optional_extra']
 
-        for io in 'input', 'output':
-            for req in 'required', 'optional':
-                _name = '{}_{}'.format(io, req)
+        # Extend with SQLAlchemy-derived elements
+        for io_type, req_type in [('input', 'required'), ('input', 'optional'), ('output', 'required'), ('output', 'optional')]:
+            _name = '{}_{}'.format(io_type, req_type)
+            is_required = req_type == 'required'
+            is_output = io_type == 'output'
+            is_get_list = name == 'GetList'
 
-                is_required = 'required' in req
-                is_output = 'output' in io
-                is_get_list = name=='GetList'
+            if io_type == 'input' and req_type == 'required':
+                target = merged_input_required
+            elif io_type == 'input' and req_type == 'optional':
+                target = merged_input_optional
+            elif io_type == 'output' and req_type == 'required':
+                target = merged_output_required
+            else:
+                target = merged_output_optional
 
-                sio_elem = getattr(SimpleIO, _name)
-                has_cluster_id = 'cluster_id' in sio_elem
-                sio_to_add = get_io(
-                    attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list, has_cluster_id)
-                sio_elem.extend(sio_to_add)
+            has_cluster_id = 'cluster_id' in target
+            io_to_add = get_io_elems(attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list, has_cluster_id)
+            target.extend(io_to_add)
 
-                if attrs.is_create_edit and is_required:
-                    sio_elem.extend(attrs.create_edit_input_required_extra)
+            if attrs.is_create_edit and is_required:
+                target.extend(attrs.create_edit_input_required_extra)
 
-                if attrs.is_create_edit and (not is_required):
-                    sio_elem.extend(attrs.create_edit_input_optional_extra)
+            if attrs.is_create_edit and (not is_required):
+                target.extend(attrs.create_edit_input_optional_extra)
 
-                # Sorts and removes duplicates
-                setattr(SimpleIO, _name, list(set(sio_elem)))
+        # Remove duplicates
+        merged_input_required = list(set(merged_input_required))
+        merged_input_optional = list(set(merged_input_optional))
+        merged_output_required = list(set(merged_output_required))
+        merged_output_optional = list(set(merged_output_optional))
 
         for skip_name in attrs.skip_output_params:
-            for attr_names in chain([SimpleIO.output_required, SimpleIO.output_optional]):
-                if skip_name in attr_names:
-                    attr_names.remove(skip_name)
+            if skip_name in merged_output_required:
+                merged_output_required.remove(skip_name)
+            if skip_name in merged_output_optional:
+                merged_output_optional.remove(skip_name)
 
-        SimpleIO.input_required = tuple(SimpleIO.input_required)
-        SimpleIO.input_optional = tuple(SimpleIO.input_optional)
-        SimpleIO.output_required = tuple(SimpleIO.output_required)
-        SimpleIO.output_optional = tuple(SimpleIO.output_optional)
+        # Build input tuple: required fields bare, optional fields with '-' prefix
+        input_elems = list(merged_input_required)
+        for elem in merged_input_optional:
+            if isinstance(elem, str):
+                input_elems.append('-' + elem)
+            else:
+                input_elems.append(elem)
 
-        return SimpleIO
+        # Build output tuple: required fields bare, optional fields with '-' prefix
+        output_elems = list(merged_output_required)
+        for elem in merged_output_optional:
+            if isinstance(elem, str):
+                output_elems.append('-' + elem)
+            else:
+                output_elems.append(elem)
+
+        return {
+            'input': tuple(input_elems),
+            'output': tuple(output_elems),
+            'request_elem': 'zato_{}_{}_request'.format(attrs.elem, req_resp[name]),
+            'response_elem': 'zato_{}_{}_response'.format(attrs.elem, req_resp[name]),
+            'default_value': attrs['io_default_value'],
+            'output_required': tuple(merged_output_required),
+        }
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -308,7 +334,9 @@ class GetListMeta(AdminServiceMeta):
     def __init__(cls, name, bases, attrs):
         attrs = update_attrs(cls, name, attrs)
         cls.__doc__ = 'Returns a list of {}.'.format(attrs.get_list_docs)
-        cls.SimpleIO = GetListMeta.get_sio(attrs=attrs, name=name, is_list=True)
+        io = GetListMeta.get_io(attrs=attrs, name=name, is_list=True)
+        cls.input = io['input']
+        cls.output = io['output']
         cls.handle = GetListMeta.handle(attrs)
         cls.get_data = GetListMeta.get_data(attrs.get_data_func)
         super(GetListMeta, cls).__init__(cls)
@@ -346,7 +374,10 @@ class CreateEditMeta(AdminServiceMeta):
         attrs = update_attrs(cls, name, attrs)
         verb = 'Creates' if attrs.is_create else 'Updates'
         cls.__doc__ = '{} {}.'.format(verb, attrs.label)
-        cls.SimpleIO = CreateEditMeta.get_sio(attrs=attrs, name=name, is_list=False, class_=cls)
+        io = CreateEditMeta.get_io(attrs=attrs, name=name, is_list=False, class_=cls)
+        cls.input = io['input']
+        cls.output = io['output']
+        cls._io_output_required = io['output_required']
         cls.handle = CreateEditMeta.handle(attrs)
         super(CreateEditMeta, cls).__init__(cls)
 
@@ -456,7 +487,7 @@ class CreateEditMeta(AdminServiceMeta):
                     to_rewrite = chain(
                         attrs.create_edit_rewrite,
                         attrs.create_edit_force_rewrite,
-                        self.SimpleIO.output_required
+                        self._io_output_required
                     )
 
                     for name in to_rewrite:
@@ -478,14 +509,16 @@ class DeleteMeta(AdminServiceMeta):
     def __init__(cls, name, bases, attrs):
         attrs = update_attrs(cls, name, attrs)
         cls.__doc__ = 'Deletes {}.'.format(attrs.label)
-        cls.SimpleIO = DeleteMeta.get_sio(
+        io = DeleteMeta.get_io(
             attrs=attrs,
             name=name,
             input_required=[],
-            input_optional=['id', 'name', 'should_raise_if_missing'],
+            input_optional=[IntIO('id'), 'name', 'should_raise_if_missing'],
             output_required=[],
             skip_input_required=True,
         )
+        cls.input = io['input']
+        cls.output = io['output']
         cls.handle = DeleteMeta.handle(attrs)
         super(DeleteMeta, cls).__init__(cls)
 
@@ -576,7 +609,9 @@ class DeleteMeta(AdminServiceMeta):
 class PingMeta(AdminServiceMeta):
     def __init__(cls, name, bases, attrs):
         attrs = update_attrs(cls, name, attrs)
-        cls.SimpleIO = PingMeta.get_sio(attrs=attrs, name=name, input_required=['id'], output_optional=['info', 'id'])
+        io = PingMeta.get_io(attrs=attrs, name=name, input_required=['id'], output_optional=['info', 'id'])
+        cls.input = io['input']
+        cls.output = io['output']
         cls.handle = PingMeta.handle(attrs)
         super(PingMeta, cls).__init__(cls)
 

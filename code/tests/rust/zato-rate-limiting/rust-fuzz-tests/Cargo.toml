@@ -1,0 +1,21 @@
+[package]
+name = "zato_rate_limiting_core-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.zato_rate_limiting_core]
+path = "../../../../zato-rust/zato_rate_limiting_core"
+
+[[bin]]
+name = "fuzz_token_bucket_check"
+path = "fuzz_targets/fuzz_token_bucket_check.rs"
+test = false
+doc = false
+bench = false

@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.common.api import GENERIC
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 
-class KafkaChannelImporter(GenericConnectionImporter):
+class ChannelKafkaImporter(GenericConnectionImporter):
 
     connection_type = GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA
 
@@ -36,7 +36,7 @@ class KafkaChannelImporter(GenericConnectionImporter):
     connection_secret_keys = ['password', 'secret']
     connection_required_attrs = ['name', 'address']
 
-class KafkaOutgoingImporter(GenericConnectionImporter):
+class OutgoingKafkaImporter(GenericConnectionImporter):
 
     connection_type = GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA
 

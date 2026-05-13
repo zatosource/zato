@@ -23,6 +23,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
          storage_key:    localStorage key used to remember the selection
          default_tab:    tab name to show on first visit
          on_change:      optional callback(new_tab_name)
+         no_scroll_lock: if true, skip the scroll-lock mechanism (use inside dialogs)
        Returns {set_tab, get_tab}. */
     ns.tabs.init = function(config) {
         var active_cls = config.active_cls || 'dashboard-tab-active';
@@ -68,43 +69,50 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             user_chose = true;
             if (config.storage_key) { ns.storage_set(config.storage_key, tab); }
 
-            /* Capture scroll, swap panels, then keep pinning the viewport
-               back for SCROLL_LOCK_MS. Firefox commits its scroll-anchor
-               adjustments a frame or two AFTER the click handler returns;
-               a single scrollTo is not enough. */
-            var scroll_x = window.pageXOffset || document.documentElement.scrollLeft || 0;
-            var scroll_y = window.pageYOffset || document.documentElement.scrollTop || 0;
-            try { this.blur(); } catch(e) {}
+            if (config.no_scroll_lock) {
+                apply();
+            }
+            else {
+                var scroll_x = window.pageXOffset || document.documentElement.scrollLeft || 0;
+                var scroll_y = window.pageYOffset || document.documentElement.scrollTop || 0;
+                try {
+                    this.blur();
+                    var dialog = $(this).closest('.ui-dialog');
+                    if (dialog.length) {
+                        dialog[0].focus();
+                    }
+                } catch(e) {}
 
-            var locking = true;
-            var snap_back = function() {
-                if (!locking) return;
-                if (window.pageXOffset !== scroll_x || window.pageYOffset !== scroll_y) {
-                    window.scrollTo(scroll_x, scroll_y);
-                }
-            };
-            window.addEventListener('scroll', snap_back, true);
+                var locking = true;
+                var snap_back = function() {
+                    if (!locking) return;
+                    if (window.pageXOffset !== scroll_x || window.pageYOffset !== scroll_y) {
+                        window.scrollTo(scroll_x, scroll_y);
+                    }
+                };
+                window.addEventListener('scroll', snap_back, true);
 
-            apply();
-            window.scrollTo(scroll_x, scroll_y);
+                apply();
+                window.scrollTo(scroll_x, scroll_y);
 
-            var deadline = Date.now() + SCROLL_LOCK_MS;
-            var tick = function() {
-                snap_back();
-                if (Date.now() < deadline) {
+                var deadline = Date.now() + SCROLL_LOCK_MS;
+                var tick = function() {
+                    snap_back();
+                    if (Date.now() < deadline) {
+                        window.requestAnimationFrame(tick);
+                    } else {
+                        locking = false;
+                        window.removeEventListener('scroll', snap_back, true);
+                    }
+                };
+                if (typeof window.requestAnimationFrame === 'function') {
                     window.requestAnimationFrame(tick);
                 } else {
-                    locking = false;
-                    window.removeEventListener('scroll', snap_back, true);
+                    setTimeout(function() {
+                        locking = false;
+                        window.removeEventListener('scroll', snap_back, true);
+                    }, SCROLL_LOCK_MS);
                 }
-            };
-            if (typeof window.requestAnimationFrame === 'function') {
-                window.requestAnimationFrame(tick);
-            } else {
-                setTimeout(function() {
-                    locking = false;
-                    window.removeEventListener('scroll', snap_back, true);
-                }, SCROLL_LOCK_MS);
             }
 
             if (typeof config.on_change === 'function') {

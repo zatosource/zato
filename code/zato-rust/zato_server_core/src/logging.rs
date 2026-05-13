@@ -33,14 +33,16 @@ impl LogWriter {
     pub fn new(path: PathBuf, max_bytes: u64) -> std::io::Result<Self> {
         let file = Self::open(&path)?;
         let written = file.metadata()?.len();
-        Ok(Self { file, path, written, max_bytes })
+        Ok(Self {
+            file,
+            path,
+            written,
+            max_bytes,
+        })
     }
 
     /// Writes `line` to the log, rotating the file first if appending would exceed `max_bytes`.
-    #[expect(
-        clippy::as_conversions,
-        reason = "line.len() is a buffer size that will never approach u64::MAX"
-    )]
+    #[expect(clippy::as_conversions, reason = "line.len() is a buffer size that will never approach u64::MAX")]
     pub fn write_line(&mut self, line: &[u8]) -> std::io::Result<()> {
         if self.max_bytes > 0 && self.written + line.len() as u64 > self.max_bytes {
             let backup2 = self.path.with_extension("log.2");
@@ -175,8 +177,7 @@ fn init_writer(cell: &OnceLock<Mutex<LogWriter>>, path: &str, max_bytes: u64) ->
     if cell.get().is_some() {
         return Ok(());
     }
-    let writer = LogWriter::new(PathBuf::from(path), max_bytes)
-        .map_err(|err| pyo3::exceptions::PyIOError::new_err(err.to_string()))?;
+    let writer = LogWriter::new(PathBuf::from(path), max_bytes).map_err(|err| pyo3::exceptions::PyIOError::new_err(err.to_string()))?;
     let _already_set = cell.set(Mutex::new(writer));
     Ok(())
 }

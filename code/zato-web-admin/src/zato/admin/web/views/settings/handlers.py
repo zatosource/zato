@@ -20,15 +20,22 @@ class RestartHandler:
     def _restart(self, req, component_name):
         component_path = self.updater.get_component_path(component_name)
         component_port = self.updater.get_component_port(component_name)
-        return restart_component(req, self.updater, component_name, component_path, component_port)
+        logger.info('UPDATE-TRACE handlers._restart: component_name=%s, component_path=%s, component_port=%s',
+            component_name, component_path, component_port)
+        result = restart_component(req, self.updater, component_name, component_path, component_port)
+        logger.info('UPDATE-TRACE handlers._restart: component_name=%s, result=%s', component_name, result)
+        return result
 
     def restart_scheduler(self, req):
+        logger.info('UPDATE-TRACE handlers.restart_scheduler: entering')
         return self._restart(req, 'scheduler')
 
     def restart_server(self, req):
+        logger.info('UPDATE-TRACE handlers.restart_server: entering')
         return self._restart(req, 'server')
 
     def restart_proxy(self, req):
+        logger.info('UPDATE-TRACE handlers.restart_proxy: entering')
         return self._restart(req, 'proxy')
 
     def restart_dashboard(self, req):

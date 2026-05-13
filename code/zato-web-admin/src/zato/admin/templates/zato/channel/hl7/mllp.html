@@ -5,6 +5,11 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -15,6 +20,9 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
@@ -24,7 +32,7 @@
             '_selection',
             'name',
             '_is_active',
-            'address',
+            '_use_rest',
             '_service',
             '_edit',
             '_delete',
@@ -33,8 +41,42 @@
             'service',
             'should_parse_on_input',
             'should_validate',
-            'data_encoding',
             'should_return_errors',
+            'should_log_messages',
+            'logging_level',
+            'max_msg_size',
+            'max_msg_size_unit',
+            'read_buffer_size',
+            'recv_timeout',
+            'start_seq',
+            'end_seq',
+            'msh3_sending_app',
+            'msh4_sending_facility',
+            'msh5_receiving_app',
+            'msh6_receiving_facility',
+            'msh9_message_type',
+            'msh9_trigger_event',
+            'msh11_processing_id',
+            'msh12_version_id',
+            'is_default',
+            'dedup_ttl_value',
+            'dedup_ttl_unit',
+            'default_character_encoding',
+            'normalize_line_endings',
+            'force_standard_delimiters',
+            'repair_truncated_msh',
+            'split_concatenated_messages',
+            'use_msh18_encoding',
+            'normalize_obx2_value_type',
+            'replace_invalid_obx2_value_type',
+            'normalize_invalid_escape_sequences',
+            'normalize_obx8_abnormal_flags',
+            'normalize_quadruple_quoted_empty',
+            'allow_short_encoding_characters',
+            'fix_off_by_one_field_index',
+            'use_rest',
+            'rest_only',
+            'rest_channel_id',
         ]
     }
     </script>
@@ -72,8 +114,8 @@
                         {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
+                        <th><a href="#">REST</a></th>
 
-                        <th><a href="#">Address</a></th>
                         <th><a href="#">Service</a></th>
 
                         <th>&nbsp;</th>
@@ -101,8 +143,8 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.use_rest|yesno:'Yes,No' }}</td>
 
-                        <td>{{ item.address }}</td>
                         <td><a href="{% url "service-overview" item.service %}?cluster={{ cluster_id }}">{{ item.service }}</a></td>
 
                         <td><a href="javascript:$.fn.zato.channel.hl7.mllp.edit('{{ item.id }}')">Edit</a></td>
@@ -115,8 +157,51 @@
                         <td class='ignore'>{{ item.should_parse_on_input }}</td>
                         <td class='ignore'>{{ item.should_validate }}</td>
 
-                        <td class='ignore'>{{ item.data_encoding }}</td>
                         <td class='ignore'>{{ item.should_return_errors }}</td>
+
+                        <td class='ignore'>{{ item.should_log_messages }}</td>
+                        <td class='ignore'>{{ item.logging_level }}</td>
+
+                        <td class='ignore'>{{ item.max_msg_size }}</td>
+                        <td class='ignore'>{{ item.max_msg_size_unit }}</td>
+                        <td class='ignore'>{{ item.read_buffer_size }}</td>
+                        <td class='ignore'>{{ item.recv_timeout }}</td>
+
+                        <td class='ignore'>{{ item.start_seq }}</td>
+                        <td class='ignore'>{{ item.end_seq }}</td>
+
+                        <td class='ignore'>{{ item.msh3_sending_app }}</td>
+                        <td class='ignore'>{{ item.msh4_sending_facility }}</td>
+                        <td class='ignore'>{{ item.msh5_receiving_app }}</td>
+                        <td class='ignore'>{{ item.msh6_receiving_facility }}</td>
+                        <td class='ignore'>{{ item.msh9_message_type }}</td>
+                        <td class='ignore'>{{ item.msh9_trigger_event }}</td>
+                        <td class='ignore'>{{ item.msh11_processing_id }}</td>
+                        <td class='ignore'>{{ item.msh12_version_id }}</td>
+                        <td class='ignore'>{{ item.is_default }}</td>
+
+                        <td class='ignore'>{{ item.dedup_ttl_value }}</td>
+                        <td class='ignore'>{{ item.dedup_ttl_unit }}</td>
+
+                        <td class='ignore'>{{ item.default_character_encoding }}</td>
+
+                        <td class='ignore'>{{ item.normalize_line_endings }}</td>
+                        <td class='ignore'>{{ item.force_standard_delimiters }}</td>
+                        <td class='ignore'>{{ item.repair_truncated_msh }}</td>
+                        <td class='ignore'>{{ item.split_concatenated_messages }}</td>
+                        <td class='ignore'>{{ item.use_msh18_encoding }}</td>
+
+                        <td class='ignore'>{{ item.normalize_obx2_value_type }}</td>
+                        <td class='ignore'>{{ item.replace_invalid_obx2_value_type }}</td>
+                        <td class='ignore'>{{ item.normalize_invalid_escape_sequences }}</td>
+                        <td class='ignore'>{{ item.normalize_obx8_abnormal_flags }}</td>
+                        <td class='ignore'>{{ item.normalize_quadruple_quoted_empty }}</td>
+                        <td class='ignore'>{{ item.allow_short_encoding_characters }}</td>
+                        <td class='ignore'>{{ item.fix_off_by_one_field_index }}</td>
+
+                        <td class='ignore'>{{ item.use_rest }}</td>
+                        <td class='ignore'>{{ item.rest_only }}</td>
+                        <td class='ignore'>{{ item.rest_channel_id }}</td>
 
                     </tr>
                 {% endfor %}
@@ -137,143 +222,218 @@
             <div class="bd">
                 <form novalidate action="{% url "channel-hl7-mllp-create" %}" method="post" id="create-form">
 
+                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="routing" role="tab" aria-selected="false">Routing</button>
+                        <button type="button" class="dashboard-tab" data-tab="protocol" role="tab" aria-selected="false">Protocol</button>
+                        <button type="button" class="dashboard-tab" data-tab="tolerance" role="tab" aria-selected="false">Tolerance</button>
+                        <button type="button" class="dashboard-tab" data-tab="dedup" role="tab" aria-selected="false">Deduplication</button>
+                        <button type="button" class="dashboard-tab" data-tab="logging" role="tab" aria-selected="false">Logging</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mllp-create-tab-panel-main" role="tabpanel">
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:11%"><label for="id_name">Name</label></td>
+                                <td>{{ create_form.name }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_is_active">Active</label></td>
+                                <td><label class="toggle-switch">{{ create_form.is_active }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_service">Service</label></td>
+                                <td>{{ create_form.service }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_use_rest">Use REST</label></td>
+                                <td><label class="toggle-switch">{{ create_form.use_rest }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr class="rest-field" style="display:none">
+                                <td><label for="id_rest_only">REST only?</label></td>
+                                <td><label class="toggle-switch">{{ create_form.rest_only }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr class="rest-field" style="display:none">
+                                <td><label for="id_rest_url_path">URL path</label></td>
+                                <td>{{ create_form.rest_url_path }}</td>
+                            </tr>
+                            <tr class="rest-field" style="display:none">
+                                <td><label for="id_rest_security_id">Security</label></td>
+                                <td>{{ create_form.rest_security_id }}</td>
+                            </tr>
+                            <tr class="rest-field" style="display:none">
+                                <td style="vertical-align:middle"><label for="id_rest_security_groups">Security groups</label></td>
+                                <td>
+                                    <a id="id_rest_security_groups" href="javascript:$.fn.zato.channel.hl7.mllp._toggle_groups('.mllp-create-groups-block')">Toggle options</a>
+                                </td>
+                            </tr>
+                            <tr class="mllp-create-groups-block" style="display:none">
+                                <td class="to-ignore"></td>
+                                <td>
+                                    <div class="multi-select-div" id="mllp-multi-select-div-create"></div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mllp-create-tab-panel-routing" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_is_default">Default</label></td>
+                                <td><label class="toggle-switch">{{ create_form.is_default }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_msh3_sending_app">Sending app</label></td>
+                                <td>{{ create_form.msh3_sending_app }} <span class="form_hint">MSH-3</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_msh4_sending_facility">Sending facility</label></td>
+                                <td>{{ create_form.msh4_sending_facility }} <span class="form_hint">MSH-4</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_msh5_receiving_app">Receiving app</label></td>
+                                <td>{{ create_form.msh5_receiving_app }} <span class="form_hint">MSH-5</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_msh6_receiving_facility">Receiving facility</label></td>
+                                <td>{{ create_form.msh6_receiving_facility }} <span class="form_hint">MSH-6</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_msh9_message_type">Message type</label></td>
+                                <td>{{ create_form.msh9_message_type }} <span class="form_hint">MSH-9.1</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_msh9_trigger_event">Trigger event</label></td>
+                                <td>{{ create_form.msh9_trigger_event }} <span class="form_hint">MSH-9.2</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_msh11_processing_id">Processing ID</label></td>
+                                <td>{{ create_form.msh11_processing_id }} <span class="form_hint">MSH-11</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_msh12_version_id">Version</label></td>
+                                <td>{{ create_form.msh12_version_id }} <span class="form_hint">MSH-12</span></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mllp-create-tab-panel-protocol" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_use_msh18_encoding">Use MSH-18 encoding</label></td>
+                                <td><label class="toggle-switch">{{ create_form.use_msh18_encoding }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_default_character_encoding">Encoding</label></td>
+                                <td>{{ create_form.default_character_encoding }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_recv_timeout">Recv. timeout</label></td>
+                                <td>{{ create_form.recv_timeout }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_max_msg_size">Max. msg. size</label></td>
+                                <td>{{ create_form.max_msg_size }} {{ create_form.max_msg_size_unit }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_start_seq">Start separator</label></td>
+                                <td>{{ create_form.start_seq }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_end_seq">End separator</label></td>
+                                <td>{{ create_form.end_seq }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mllp-create-tab-panel-tolerance" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:30%"><label for="id_normalize_line_endings">Normalize line endings</label></td>
+                                <td><label class="toggle-switch">{{ create_form.normalize_line_endings }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_force_standard_delimiters">Force standard delimiters</label></td>
+                                <td><label class="toggle-switch">{{ create_form.force_standard_delimiters }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_repair_truncated_msh">Repair truncated MSH</label></td>
+                                <td><label class="toggle-switch">{{ create_form.repair_truncated_msh }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_split_concatenated_messages">Split concatenated messages</label></td>
+                                <td><label class="toggle-switch">{{ create_form.split_concatenated_messages }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_normalize_obx2_value_type">Fill empty OBX-2 value type</label></td>
+                                <td><label class="toggle-switch">{{ create_form.normalize_obx2_value_type }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_replace_invalid_obx2_value_type">Replace invalid OBX-2 value type</label></td>
+                                <td><label class="toggle-switch">{{ create_form.replace_invalid_obx2_value_type }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_normalize_invalid_escape_sequences">Strip orphan escape characters</label></td>
+                                <td><label class="toggle-switch">{{ create_form.normalize_invalid_escape_sequences }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_normalize_obx8_abnormal_flags">Clear OBX-8 literal null</label></td>
+                                <td><label class="toggle-switch">{{ create_form.normalize_obx8_abnormal_flags }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_normalize_quadruple_quoted_empty">Strip multi-quote sequences</label></td>
+                                <td><label class="toggle-switch">{{ create_form.normalize_quadruple_quoted_empty }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_allow_short_encoding_characters">Pad short encoding characters</label></td>
+                                <td><label class="toggle-switch">{{ create_form.allow_short_encoding_characters }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_fix_off_by_one_field_index">Fix off-by-one field index</label></td>
+                                <td><label class="toggle-switch">{{ create_form.fix_off_by_one_field_index }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mllp-create-tab-panel-dedup" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:6%"><label for="id_dedup_ttl_value">TTL</label></td>
+                                <td>{{ create_form.dedup_ttl_value }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_dedup_ttl_unit">Unit</label></td>
+                                <td>{{ create_form.dedup_ttl_unit }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mllp-create-tab-panel-logging" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:9%"><label for="id_should_return_errors">Return errors</label></td>
+                                <td><label class="toggle-switch">{{ create_form.should_return_errors }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_should_log_messages">Log I/O</label></td>
+                                <td><label class="toggle-switch">{{ create_form.should_log_messages }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_logging_level">Log level</label></td>
+                                <td>{{ create_form.logging_level }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
                     <table class="form-data">
-
                         <tr>
-                            <td style="vertical-align:middle;width:17%">
-                                <label for="id_name">
-                                Name
-                                </label>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
                             </td>
-                            <td>{{ create_form.name }}</td>
-                        </tr>
-
-                        <tr>
-                            <td></td>
-                            <td>
-
-                                <label>
-                                Active
-                                {{ create_form.is_active }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Address
-                                {{ create_form.address }}
-                                </label>
-
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle;width:12%">
-                                <label for="id_service">
-                                Service
-                                </label>
-                            </td>
-                            <td>{{ create_form.service }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                            More options
-                            </td>
-                            <td>
-                            <a href="javascript:$.fn.zato.toggle_visibility('.more-options-block')">Toggle options</a>
-                            </td>
-                        </tr>
-
-                        <tr class="more-options-block hidden">
-                            <td></td>
-                            <td>
-
-                                <label>
-                                Return errors
-                                {{ create_form.should_return_errors }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Log I/O
-                                {{ create_form.should_log_messages }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Encoding
-                                {{ create_form.data_encoding }}
-                                </label>
-
-                            </td>
-                        </tr>
-
-                        <tr class="more-options-block hidden">
-                            <td></td>
-                            <td>
-
-                                <label>
-                                Recv. tmt.
-                                {{ create_form.recv_timeout }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Log level
-                                {{ create_form.logging_level }}
-                                </label>
-
-                            </td>
-                        </tr>
-
-                        <tr class="more-options-block hidden">
-                            <td>Max. size</td>
-                            <td>
-
-                                <label>
-                                Message
-                                {{ create_form.max_msg_size }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Read buffer
-                                {{ create_form.read_buffer_size }}
-                                </label>
-
-                            </td>
-                        </tr>
-
-                        <tr class="more-options-block hidden">
-                            <td>Separator</td>
-                            <td>
-
-                                <label>
-                                Start
-                                {{ create_form.start_seq }}
-                                </label>
-
-                                |
-
-                                <label>
-                                End
-                                {{ create_form.end_seq }}
-                                </label>
-
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
-
                         </tr>
                     </table>
 
@@ -286,143 +446,218 @@
             <div class="bd">
                 <form novalidate action="{% url "channel-hl7-mllp-edit" %}" method="post" id="edit-form">
 
+                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="routing" role="tab" aria-selected="false">Routing</button>
+                        <button type="button" class="dashboard-tab" data-tab="protocol" role="tab" aria-selected="false">Protocol</button>
+                        <button type="button" class="dashboard-tab" data-tab="tolerance" role="tab" aria-selected="false">Tolerance</button>
+                        <button type="button" class="dashboard-tab" data-tab="dedup" role="tab" aria-selected="false">Deduplication</button>
+                        <button type="button" class="dashboard-tab" data-tab="logging" role="tab" aria-selected="false">Logging</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mllp-edit-tab-panel-main" role="tabpanel">
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:9%"><label for="id_edit-name">Name</label></td>
+                                <td>{{ edit_form.name }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-is_active">Active</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.is_active }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-service">Service</label></td>
+                                <td>{{ edit_form.service }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-use_rest">Use REST</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.use_rest }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr class="rest-field" style="display:none">
+                                <td><label for="id_edit-rest_only">REST only?</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.rest_only }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr class="rest-field" style="display:none">
+                                <td><label for="id_edit-rest_url_path">URL path</label></td>
+                                <td>{{ edit_form.rest_url_path }}</td>
+                            </tr>
+                            <tr class="rest-field" style="display:none">
+                                <td><label for="id_edit-rest_security_id">Security</label></td>
+                                <td>{{ edit_form.rest_security_id }}</td>
+                            </tr>
+                            <tr class="rest-field" style="display:none">
+                                <td style="vertical-align:middle"><label for="id_edit-rest_security_groups">Security groups</label></td>
+                                <td>
+                                    <a id="id_edit-rest_security_groups" href="javascript:$.fn.zato.channel.hl7.mllp._toggle_groups('.mllp-edit-groups-block')">Toggle options</a>
+                                </td>
+                            </tr>
+                            <tr class="mllp-edit-groups-block" style="display:none">
+                                <td class="to-ignore"></td>
+                                <td>
+                                    <div class="multi-select-div" id="mllp-multi-select-div-edit"></div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mllp-edit-tab-panel-routing" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_edit-is_default">Default</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.is_default }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-msh3_sending_app">Sending app</label></td>
+                                <td>{{ edit_form.msh3_sending_app }} <span class="form_hint">MSH-3</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-msh4_sending_facility">Sending facility</label></td>
+                                <td>{{ edit_form.msh4_sending_facility }} <span class="form_hint">MSH-4</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-msh5_receiving_app">Receiving app</label></td>
+                                <td>{{ edit_form.msh5_receiving_app }} <span class="form_hint">MSH-5</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-msh6_receiving_facility">Receiving facility</label></td>
+                                <td>{{ edit_form.msh6_receiving_facility }} <span class="form_hint">MSH-6</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-msh9_message_type">Message type</label></td>
+                                <td>{{ edit_form.msh9_message_type }} <span class="form_hint">MSH-9.1</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-msh9_trigger_event">Trigger event</label></td>
+                                <td>{{ edit_form.msh9_trigger_event }} <span class="form_hint">MSH-9.2</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-msh11_processing_id">Processing ID</label></td>
+                                <td>{{ edit_form.msh11_processing_id }} <span class="form_hint">MSH-11</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-msh12_version_id">Version</label></td>
+                                <td>{{ edit_form.msh12_version_id }} <span class="form_hint">MSH-12</span></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mllp-edit-tab-panel-protocol" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_edit-use_msh18_encoding">Use MSH-18 encoding</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.use_msh18_encoding }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-default_character_encoding">Encoding</label></td>
+                                <td>{{ edit_form.default_character_encoding }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-recv_timeout">Recv. timeout</label></td>
+                                <td>{{ edit_form.recv_timeout }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-max_msg_size">Max. msg. size</label></td>
+                                <td>{{ edit_form.max_msg_size }} {{ edit_form.max_msg_size_unit }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-start_seq">Start separator</label></td>
+                                <td>{{ edit_form.start_seq }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-end_seq">End separator</label></td>
+                                <td>{{ edit_form.end_seq }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mllp-edit-tab-panel-tolerance" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:30%"><label for="id_edit-normalize_line_endings">Normalize line endings</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.normalize_line_endings }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-force_standard_delimiters">Force standard delimiters</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.force_standard_delimiters }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-repair_truncated_msh">Repair truncated MSH</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.repair_truncated_msh }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-split_concatenated_messages">Split concatenated messages</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.split_concatenated_messages }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-normalize_obx2_value_type">Fill empty OBX-2 value type</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.normalize_obx2_value_type }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-replace_invalid_obx2_value_type">Replace invalid OBX-2 value type</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.replace_invalid_obx2_value_type }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-normalize_invalid_escape_sequences">Strip orphan escape characters</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.normalize_invalid_escape_sequences }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-normalize_obx8_abnormal_flags">Clear OBX-8 literal null</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.normalize_obx8_abnormal_flags }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-normalize_quadruple_quoted_empty">Strip multi-quote sequences</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.normalize_quadruple_quoted_empty }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-allow_short_encoding_characters">Pad short encoding characters</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.allow_short_encoding_characters }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-fix_off_by_one_field_index">Fix off-by-one field index</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.fix_off_by_one_field_index }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mllp-edit-tab-panel-dedup" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:6%"><label for="id_edit-dedup_ttl_value">TTL</label></td>
+                                <td>{{ edit_form.dedup_ttl_value }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-dedup_ttl_unit">Unit</label></td>
+                                <td>{{ edit_form.dedup_ttl_unit }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mllp-edit-tab-panel-logging" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:9%"><label for="id_edit-should_return_errors">Return errors</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.should_return_errors }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-should_log_messages">Log I/O</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.should_log_messages }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-logging_level">Log level</label></td>
+                                <td>{{ edit_form.logging_level }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
                     <table class="form-data">
-
                         <tr>
-                            <td style="vertical-align:middle;width:17%">
-                                <label for="id_name">
-                                Name
-                                </label>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
                             </td>
-                            <td>{{ edit_form.name }}</td>
-                        </tr>
-
-                        <tr>
-                            <td></td>
-                            <td>
-
-                                <label>
-                                Active
-                                {{ edit_form.is_active }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Address
-                                {{ edit_form.address }}
-                                </label>
-
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle;width:12%">
-                                <label for="id_edit-service">
-                                Service
-                                </label>
-                            </td>
-                            <td>{{ edit_form.service }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                            More options
-                            </td>
-                            <td>
-                            <a href="javascript:$.fn.zato.toggle_visibility('.more-options-block')">Toggle options</a>
-                            </td>
-                        </tr>
-
-                        <tr class="more-options-block hidden">
-                            <td></td>
-                            <td>
-
-                                <label>
-                                Return errors
-                                {{ edit_form.should_return_errors }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Log I/O
-                                {{ edit_form.should_log_messages }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Encoding
-                                {{ edit_form.data_encoding }}
-                                </label>
-
-                            </td>
-                        </tr>
-
-                        <tr class="more-options-block hidden">
-                            <td></td>
-                            <td>
-
-                                <label>
-                                Recv. tmt.
-                                {{ edit_form.recv_timeout }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Log level
-                                {{ edit_form.logging_level }}
-                                </label>
-
-                            </td>
-                        </tr>
-
-                        <tr class="more-options-block hidden">
-                            <td>Max. size</td>
-                            <td>
-
-                                <label>
-                                Message
-                                {{ edit_form.max_msg_size }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Read buffer
-                                {{ edit_form.read_buffer_size }}
-                                </label>
-
-                            </td>
-                        </tr>
-
-                        <tr class="more-options-block hidden">
-                            <td>Separator</td>
-                            <td>
-
-                                <label>
-                                Start
-                                {{ edit_form.start_seq }}
-                                </label>
-
-                                |
-
-                                <label>
-                                End
-                                {{ edit_form.end_seq }}
-                                </label>
-
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
-
                         </tr>
                     </table>
 

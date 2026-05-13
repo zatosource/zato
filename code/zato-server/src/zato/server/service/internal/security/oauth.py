@@ -12,12 +12,12 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
-from zato.common.api import SEC_DEF_TYPE
+from zato.common.api import query_parameters, SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, OAuth
 from zato.common.odb.query import oauth_list
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,12 +33,10 @@ class GetList(AdminService):
     """
     _filter_by = OAuth.name,
 
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_security_oauth_get_list_request'
-        response_elem = 'zato_security_oauth_get_list_response'
-        input_required = 'cluster_id'
-        output_required = 'id', 'name', 'is_active', 'username', 'client_id_field', 'client_secret_field', 'grant_type'
-        output_optional = 'auth_server_url', 'scopes', 'extra_fields', 'data_format'
+    input = 'cluster_id', *query_parameters
+    output = 'id', 'name', 'is_active', 'username', 'client_id_field', 'client_secret_field', 'grant_type', \
+        '-auth_server_url', '-scopes', '-extra_fields', '-data_format', \
+        '-static_header', '-static_token', '-static_prefix'
 
     def get_data(self, session:'any_') -> 'anylist':
         return elems_with_opaque(self._search(oauth_list, session, self.request.input.cluster_id, False)) # type: ignore
@@ -54,13 +52,10 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new Bearer token definition.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_oauth_create_request'
-        response_elem = 'zato_security_oauth_create_response'
-        input_required = 'cluster_id', 'name', 'is_active', 'username', 'client_id_field', \
-            'client_secret_field', 'grant_type', 'data_format'
-        input_optional = 'auth_server_url', 'scopes', 'extra_fields'
-        output_required = 'id', 'name'
+    input = 'cluster_id', 'name', 'is_active', '-username', '-client_id_field', \
+        '-client_secret_field', '-grant_type', '-data_format', '-auth_server_url', '-scopes', '-extra_fields', \
+        '-static_header', '-static_token', '-static_prefix'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -109,7 +104,7 @@ class Create(AdminService):
             self.response.payload.name = definition.name
 
         # Make sure the object has been created
-        _:'any_' = self.server.worker_store.wait_for_oauth(input.name)
+        _:'any_' = self.server.config_manager.wait_for_oauth(input.name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -117,13 +112,10 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an Bearer token definition.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_oauth_edit_request'
-        response_elem = 'zato_security_oauth_edit_response'
-        input_required = 'id', 'cluster_id', 'name', 'is_active', 'username', 'client_id_field', \
-            'client_secret_field', 'grant_type', 'data_format'
-        input_optional = 'auth_server_url', 'scopes', 'extra_fields'
-        output_required = 'id', 'name'
+    input = 'id', 'cluster_id', 'name', 'is_active', '-username', '-client_id_field', \
+        '-client_secret_field', '-grant_type', '-data_format', '-auth_server_url', '-scopes', '-extra_fields', \
+        '-static_header', '-static_token', '-static_prefix'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -173,10 +165,6 @@ class ChangePassword(ChangePasswordBase):
     """
     password_required = False
 
-    class SimpleIO(ChangePasswordBase.SimpleIO):
-        request_elem = 'zato_security_oauth_change_password_request'
-        response_elem = 'zato_security_oauth_change_password_response'
-
     def handle(self):
         def _auth(instance:'any_', password:'str'):
             instance.password = password
@@ -189,10 +177,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes an Bearer token definition.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_oauth_delete_request'
-        response_elem = 'zato_security_oauth_delete_response'
-        input_required = 'id'
+    input = 'id',
 
     def handle(self):
         with closing(self.odb.session()) as session:

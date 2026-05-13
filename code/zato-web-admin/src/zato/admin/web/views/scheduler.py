@@ -34,7 +34,7 @@ from zato.common.api import SCHEDULER, TRACE1
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 from zato.common.util.api import pprint
 
 # Python 2/3 compatibility
@@ -146,7 +146,7 @@ def _get_create_edit_message(user_profile, cluster, params, form_prefix=''):
     if start_date:
         start_date = from_user_to_utc(start_date, user_profile)
 
-    return {
+    message = {
         'name': params[form_prefix + 'name'],
         'cluster_id': cluster.id,
         'id': params.get(form_prefix + 'id', ''),
@@ -155,6 +155,13 @@ def _get_create_edit_message(user_profile, cluster, params, form_prefix=''):
         'extra': params.get(form_prefix + 'extra', ''),
         'start_date': start_date.isoformat(),
     }
+
+    for callback_field in ('on_success_service', 'on_success_job', 'on_error_service', 'on_error_job'):
+        value = params.get(form_prefix + callback_field, '')
+        if value:
+            message[callback_field] = value
+
+    return message
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -353,6 +360,11 @@ def index(req):
                     raise ZatoException(msg)
 
                 job.definition_text = definition_text
+                job.on_success_service = getattr(job_elem, 'on_success_service', '')
+                job.on_success_job = getattr(job_elem, 'on_success_job', '')
+                job.on_error_service = getattr(job_elem, 'on_error_service', '')
+                job.on_error_job = getattr(job_elem, 'on_error_job', '')
+
                 jobs.append(job)
 
         if req.method == 'POST':

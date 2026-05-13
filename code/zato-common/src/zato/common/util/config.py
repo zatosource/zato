@@ -14,7 +14,7 @@ from traceback import format_exc
 from urllib.parse import parse_qsl, urlparse, urlunparse
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # parse
 from parse import PARSE_RE as parse_re
@@ -337,7 +337,7 @@ def _replace_query_string_items(server:'ParallelServer', data:'any_') -> 'str':
         should_continue = True
 
         # .. check exact keys ..
-        for name in server.sio_config.secret_config.exact:
+        for name in server.io_config.secret.exact:
             if key == name:
                 value = Secret_Shadow
                 should_continue = False
@@ -345,7 +345,7 @@ def _replace_query_string_items(server:'ParallelServer', data:'any_') -> 'str':
 
         # .. check prefixes ..
         if should_continue:
-            for name in server.sio_config.secret_config.prefixes:
+            for name in server.io_config.secret.prefix:
                 if key.startswith(name):
                     value = Secret_Shadow
                     should_continue = should_continue
@@ -353,7 +353,7 @@ def _replace_query_string_items(server:'ParallelServer', data:'any_') -> 'str':
 
         # .. check suffixes ..
         if should_continue:
-            for name in server.sio_config.secret_config.suffixes:
+            for name in server.io_config.secret.suffix:
                 if key.endswith(name):
                     value = Secret_Shadow
                     break

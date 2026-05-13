@@ -1,13 +1,13 @@
 //! Accept loop - accepts TCP connections in batches and spawns a gevent greenlet per connection.
 
+use pyo3::intern;
 use pyo3::prelude::*;
 use pyo3::types::{PyCFunction, PyDict, PyTuple};
-use pyo3::intern;
 use std::sync::atomic::Ordering::Relaxed;
 
-use super::{LISTEN_FD, ACCEPT_WATCHER, PyObject, MAX_BATCH_ACCEPT, GEVENT_IO_READ};
-use super::socket::setsockopt_logged;
 use super::connection::{ConnectionCtx, handle_connection};
+use super::socket::setsockopt_logged;
+use super::{ACCEPT_WATCHER, GEVENT_IO_READ, LISTEN_FD, MAX_BATCH_ACCEPT, PyObject};
 
 /// Checks if a Python exception is a transient connection error that should be silently dropped.
 fn is_connection_error(py_err: &PyErr) -> bool {
@@ -40,12 +40,7 @@ impl Drop for WatcherCleanup {
     clippy::cast_possible_truncation,
     reason = "extracting individual octets from a 32-bit IPv4 address stored in network byte order"
 )]
-pub(super) fn accept_loop(
-    py: Python<'_>,
-    listen_fd: i32,
-    request_handler: &PyObject,
-    server_software: &str,
-) -> PyResult<()> {
+pub(super) fn accept_loop(py: Python<'_>, listen_fd: i32, request_handler: &PyObject, server_software: &str) -> PyResult<()> {
     let gevent = py.import("gevent")?;
     let hub = gevent.call_method0("get_hub")?;
     let loop_obj = hub.getattr(intern!(py, "loop"))?;
@@ -106,22 +101,27 @@ pub(super) fn accept_loop(
             let software = server_software.to_string();
 
             let handler = PyCFunction::new_closure(
-                py, None, None,
+                py,
+                None,
+                None,
                 move |args: &Bound<'_, PyTuple>, _kw: Option<&Bound<'_, PyDict>>| -> PyResult<()> {
                     let py = args.py();
-                    let conn_result = handle_connection(py, &ConnectionCtx {
-                        fd: client_fd,
-                        remote_addr: &remote_addr,
-                        remote_port: &remote_port,
-                        request_handler: &handler_ref,
-                        server_software: &software,
-                    });
+                    let conn_result = handle_connection(
+                        py,
+                        &ConnectionCtx {
+                            fd: client_fd,
+                            remote_addr: &remote_addr,
+                            remote_port: &remote_port,
+                            request_handler: &handler_ref,
+                            server_software: &software,
+                        },
+                    );
                     // SAFETY: client_fd is a valid socket obtained from accept4 above.
                     // The closure owns the fd and this is the only place it is closed.
-                    unsafe { libc::close(client_fd); }
-                    conn_result.or_else(|err| {
-                        if is_connection_error(&err) { Ok(()) } else { Err(err) }
-                    })
+                    unsafe {
+                        libc::close(client_fd);
+                    }
+                    conn_result.or_else(|err| if is_connection_error(&err) { Ok(()) } else { Err(err) })
                 },
             )?;
 

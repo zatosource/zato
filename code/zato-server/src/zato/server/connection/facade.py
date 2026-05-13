@@ -38,7 +38,7 @@ if 0:
     from requests import Response
     from zato.common.typing_ import any_, anydict, callnone
     from zato.server.base.parallel import ParallelServer
-    from zato.server.base.worker import WorkerStore
+    from zato.server.base.config_manager import ConfigManager
     from zato.server.config import ConfigDict
     from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
     from zato.server.queue_bridge.client import QueueBridgeClient
@@ -426,15 +426,218 @@ class KafkaFacade:
     _outconn_kafka: 'anydict'
     _queue_bridge: 'QueueBridgeClient'
 
-    def init(self, worker_store:'WorkerStore') -> 'None':
-        self._outconn_kafka = worker_store.outconn_kafka
-        self._queue_bridge = worker_store.server._queue_bridge
+    def init(self, config_manager:'ConfigManager') -> 'None':
+        self._outconn_kafka = config_manager.outconn_kafka
+        self._queue_bridge = config_manager.server._queue_bridge
 
 # ################################################################################################################################
 
     def __getitem__(self, name:'str') -> 'KafkaInvoker':
         self._outconn_kafka[name]
         return KafkaInvoker(name, self._queue_bridge)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class HL7MLLPInvoker:
+    """ Wraps a single HL7 MLLP outgoing connection for use from services.
+    """
+    _conn_name: 'str'
+    _outconn_hl7_mllp: 'anydict'
+
+    def __init__(self, conn_name:'str', outconn_hl7_mllp:'anydict') -> 'None':
+        self._conn_name = conn_name
+        self._outconn_hl7_mllp = outconn_hl7_mllp
+
+    def __repr__(self) -> 'str':
+        return f'HL7MLLPInvoker({self._conn_name} at {hex(id(self))})'
+
+    def to_dict(self) -> 'anydict':
+        return {'conn_name': self._conn_name}
+
+# ################################################################################################################################
+
+    def send(self, data:'str | bytes') -> 'object':
+        """ Sends an HL7 message through the named outgoing connection and returns an AckResult.
+        """
+        conn = self._outconn_hl7_mllp[self._conn_name].conn
+        out = conn.invoke(data)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MLLPFacade:
+    """ Provides dict-like access to HL7 MLLP outgoing connections from services via self.mllp.
+    """
+    _outconn_hl7_mllp: 'anydict'
+
+    def init(self, config_manager:'ConfigManager') -> 'None':
+        self._outconn_hl7_mllp = config_manager.outconn_hl7_mllp
+
+# ################################################################################################################################
+
+    def __getitem__(self, name:'str') -> 'HL7MLLPInvoker':
+        self._outconn_hl7_mllp[name]
+        return HL7MLLPInvoker(name, self._outconn_hl7_mllp)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GraphQLInvoker:
+    """ Wraps a single GraphQL outgoing connection for use from services.
+    """
+    _conn_name: 'str'
+    _outconn_graphql: 'anydict'
+
+    def __init__(self, conn_name:'str', outconn_graphql:'anydict') -> 'None':
+        self._conn_name = conn_name
+        self._outconn_graphql = outconn_graphql
+
+# ################################################################################################################################
+
+    def __repr__(self) -> 'str':
+        out = f'GraphQLInvoker({self._conn_name} at {hex(id(self))})'
+        return out
+
+# ################################################################################################################################
+
+    def execute(self, query:'any_', params:'anydict | None'=None) -> 'anydict':
+        """ Executes a GraphQL query or mutation against the configured server.
+        """
+
+        # gql
+        from gql import Client as GQLClient
+        from gql import gql as gql_parse
+        from gql.transport.requests import RequestsHTTPTransport
+
+        # Get the connection's config ..
+        config = self._outconn_graphql[self._conn_name]
+        address = config.config['address']
+        timeout = config.config.get('default_query_timeout')
+
+        # .. extra headers ..
+        if extra_raw := config.config.get('extra'):
+            headers = json.loads(extra_raw)
+        else:
+            headers = {}
+
+        # .. build the transport ..
+        transport = RequestsHTTPTransport(url=address, timeout=timeout, headers=headers)
+
+        # .. build the client ..
+        client = GQLClient(transport=transport)
+
+        # .. if the query is a string, parse it ..
+        if isinstance(query, str):
+            query = gql_parse(query)
+
+        # .. build the request keyword arguments ..
+        execute_kwargs = {}
+
+        if params:
+            execute_kwargs['variable_values'] = params
+
+        # .. execute the query ..
+        with client as session:
+            out = session.execute(query, **execute_kwargs)
+
+        return out
+
+# ################################################################################################################################
+
+    def session(self) -> 'any_':
+        """ Returns a context manager that yields a (session, DSLSchema) pair for DSL-based queries.
+        """
+
+        # stdlib
+        from contextlib import contextmanager
+
+        # gql
+        from gql import Client as GQLClient
+        from gql.dsl import DSLSchema
+        from gql.transport.requests import RequestsHTTPTransport
+
+        # Get the connection's config ..
+        config = self._outconn_graphql[self._conn_name]
+        address = config.config['address']
+        timeout = config.config.get('default_query_timeout')
+
+        # .. extra headers ..
+        if extra_raw := config.config.get('extra'):
+            headers = json.loads(extra_raw)
+        else:
+            headers = {}
+
+        @contextmanager
+        def _session_ctx():
+
+            # Build the transport and client with schema fetching enabled ..
+            transport = RequestsHTTPTransport(url=address, timeout=timeout, headers=headers)
+            client = GQLClient(transport=transport, fetch_schema_from_transport=True)
+
+            # .. open the session ..
+            with client as gql_session:
+                ds = DSLSchema(client.schema)
+                yield gql_session, ds
+
+        return _session_ctx()
+
+# ################################################################################################################################
+
+    def ping(self) -> 'bool':
+        """ Pings the GraphQL server using a schema introspection query.
+        """
+        _ping_query = '{ __schema { queryType { name } } }'
+        _ = self.execute(_ping_query)
+
+        out = True
+        return out
+
+# ################################################################################################################################
+
+    @staticmethod
+    def ping_config(config:'anydict') -> 'None':
+        """ Pings using a raw config dict (as stored in the config manager).
+        """
+        from gql import Client as GQLClient
+        from gql import gql as gql_parse
+        from gql.transport.requests import RequestsHTTPTransport
+
+        address = config['address']
+        timeout = config.get('default_query_timeout')
+        if timeout:
+            timeout = int(timeout)
+
+        if extra_raw := config.get('extra'):
+            headers = json.loads(extra_raw)
+        else:
+            headers = {}
+
+        transport = RequestsHTTPTransport(url=address, timeout=timeout, headers=headers)
+        client = GQLClient(transport=transport)
+
+        try:
+            _ = client.execute(gql_parse('{ __schema { queryType { name } } }'))
+        except Exception as e:
+            raise Exception(str(e)) from None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GraphQLFacade:
+    """ Provides dict-like access to GraphQL outgoing connections from services via self.out.graphql.
+    """
+    _outconn_graphql: 'anydict'
+
+    def init(self, config_manager:'ConfigManager') -> 'None':
+        self._outconn_graphql = config_manager.outconn_graphql
+
+# ################################################################################################################################
+
+    def __getitem__(self, name:'str') -> 'GraphQLInvoker':
+        self._outconn_graphql[name]
+        return GraphQLInvoker(name, self._outconn_graphql)
 
 # ################################################################################################################################
 # ################################################################################################################################

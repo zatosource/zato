@@ -11,11 +11,12 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
+from zato.common.api import query_parameters
 from zato.common.broker_message import CHANNEL
 from zato.common.exception import ServiceMissingException
 from zato.common.odb.model import ChannelAMQP, Cluster, Service
 from zato.common.odb.query import channel_amqp_list
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 
@@ -25,13 +26,9 @@ class GetList(AdminService):
     name = 'zato.channel.amqp.get-list'
     _filter_by = ChannelAMQP.name,
 
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_channel_amqp_get_list_request'
-        response_elem = 'zato_channel_amqp_get_list_response'
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'address', 'username', 'password', 'is_active', 'queue', 'consumer_tag_prefix',
-            'service_name', 'pool_size', 'ack_mode','prefetch_count')
-        output_optional = ('data_format',)
+    input = 'cluster_id', *query_parameters
+    output = 'id', 'name', 'address', 'username', 'password', 'is_active', 'queue', 'consumer_tag_prefix', \
+        'service_name', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format'
 
     def get_data(self, session):
         return self._search(channel_amqp_list, session, self.request.input.cluster_id, False)
@@ -47,13 +44,9 @@ class Create(AdminService):
     """
     name = 'zato.channel.amqp.create'
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_channel_amqp_create_request'
-        response_elem = 'zato_channel_amqp_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'address', 'username', 'password', 'queue', 'consumer_tag_prefix', 'service', 'pool_size',
-            'ack_mode','prefetch_count')
-        input_optional = 'data_format'
-        output_required = 'id', 'name'
+    input = 'cluster_id', 'name', 'is_active', 'address', 'username', 'password', 'queue', 'consumer_tag_prefix', \
+        'service', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format'
+    output = 'id', 'name'
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -124,13 +117,9 @@ class Edit(AdminService):
     """
     name = 'zato.channel.amqp.edit'
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_channel_amqp_edit_request'
-        response_elem = 'zato_channel_amqp_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'username', 'password', 'queue',
-            'consumer_tag_prefix', 'service', 'pool_size', 'ack_mode','prefetch_count')
-        input_optional = 'data_format'
-        output_required = ('id', 'name')
+    input = 'id', 'cluster_id', 'name', 'is_active', 'address', 'username', 'password', 'queue', \
+        'consumer_tag_prefix', 'service', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format'
+    output = 'id', 'name'
 
     def handle(self):
 
@@ -199,10 +188,7 @@ class Delete(AdminService):
     """
     name = 'zato.channel.amqp.delete'
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_channel_amqp_delete_request'
-        response_elem = 'zato_channel_amqp_delete_response'
-        input_required = ('id',)
+    input = 'id',
 
     def handle(self):
         with closing(self.odb.session()) as session:

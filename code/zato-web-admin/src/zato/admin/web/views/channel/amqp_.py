@@ -18,7 +18,7 @@ from zato.admin.web.forms.channel.amqp_ import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, Index as _Index, method_allowed
 from zato.common.json_internal import dumps
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -54,17 +54,17 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'address', 'username', 'password', 'queue', 'consumer_tag_prefix', 'service_name',
-            'pool_size', 'ack_mode','prefetch_count', 'data_format')
-        output_repeated = True
+    input_required = 'cluster_id',
+    output_required = 'id', 'name', 'is_active', 'address', 'username', 'password', 'queue', 'consumer_tag_prefix', 'service_name', \
+        'pool_size', 'ack_mode', 'prefetch_count', 'data_format'
+    output_repeated = True
 
     def handle(self):
         create_form = CreateForm(req=self.req)
         edit_form = EditForm(prefix='edit', req=self.req)
 
         return {
+            'show_search_form': True,
             'create_form': create_form,
             'edit_form': edit_form,
         }

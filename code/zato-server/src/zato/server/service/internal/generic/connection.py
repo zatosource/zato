@@ -14,18 +14,20 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
-from zato.common.api import GENERIC as COMMON_GENERIC, generic_attrs, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, ZATO_NONE
+from zato.common.api import GENERIC as COMMON_GENERIC, generic_attrs, query_parameters, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, \
+     ZATO_NONE
 from zato.common.broker_message import GENERIC
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query.generic import connection_list
 from zato.common.typing_ import cast_
 from zato.common.util.api import parse_simple_type
+from zato.common.util.channel import on_mcp_channel_create_edit, on_mcp_channel_delete
 from zato.common.util.config import replace_query_string_items_in_dict
 from zato.common.util.time_ import utcnow
 from zato.server.generic.connection import GenericConnection
 from zato.server.service import AsIs, Int
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+from zato.server.service.internal import AdminService, ChangePasswordBase
 from zato.server.service.internal.generic import _BaseService
 from zato.server.service.meta import DeleteMeta
 
@@ -35,7 +37,7 @@ from six import add_metaclass
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import any_, anydict, anylist, strdict
     from zato.server.service import Service
 
@@ -55,7 +57,17 @@ extra_delete_attrs = ['type_']
 
 # ################################################################################################################################
 
-hook = {}
+hook = {
+    COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP: on_mcp_channel_create_edit,
+}
+
+# ################################################################################################################################
+
+def instance_hook(service, input, instance, attrs):
+    """ Called before delete commit. Cleans up the HTTPSOAP channel for MCP connections.
+    """
+    if instance.type_ == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP:
+        on_mcp_channel_delete(attrs._meta_session, instance.name, instance.cluster_id)
 
 # ################################################################################################################################
 
@@ -80,7 +92,7 @@ extra_secret_keys = (
 
 )
 
-# Note that this is a set, unlike extra_secret_keys, because we do not make it part of SIO.
+# Note that this is a set, unlike extra_secret_keys, because we do not make it part of I/O.
 extra_simple_type = {
     'is_active',
 }
@@ -111,7 +123,7 @@ def ensure_ints(data:'strdict') -> 'None':
 
 # ################################################################################################################################
 
-class _CreateEditSIO(AdminSIO):
+class _CreateEditIO:
     input_required = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn')
     input_optional = ('cluster_id', 'id', Int('pool_size'), Int('cache_expiry'), 'address', Int('port'), Int('timeout'),
         'data_format', 'version',
@@ -128,16 +140,18 @@ class _CreateEdit(_BaseService):
     is_create: 'bool'
     is_edit:   'bool'
 
-    class SimpleIO(_CreateEditSIO):
-        output_required = ('id', 'name')
-        default_value = None
-        response_elem = None
+    output = 'id', 'name'
 
 # ################################################################################################################################
 
     def handle(self) -> 'None':
 
         data = deepcopy(self.request.input)
+
+        self.logger.info('GenericConn _CreateEdit step 1: is_create=%s, is_edit=%s, data.keys=%s',
+            self.is_create, self.is_edit, sorted(data.keys()))
+        self.logger.info('GenericConn _CreateEdit step 1b: type_=%s, name=%s',
+            data.get('type_'), data.get('name'))
 
         # Build a reusable flag indicating that a secret was sent on input.
         secret = data.get('secret', ZATO_NONE)
@@ -160,7 +174,7 @@ class _CreateEdit(_BaseService):
             if key not in data:
                 if key not in skip_simple_type:
                     value = parse_simple_type(value)
-                    value = self._sio.eval_(key, value, self.server.encrypt)
+                    value = self._io.eval_(key, value, self.server.encrypt)
 
             if key in extra_secret_keys:
                 if value is None:
@@ -182,6 +196,10 @@ class _CreateEdit(_BaseService):
         # Make sure that specific keys are integers
         ensure_ints(data)
 
+        self.logger.info('GenericConn _CreateEdit step 2: data after raw_request merge, keys=%s', sorted(data.keys()))
+        self.logger.info('GenericConn _CreateEdit step 2b: type_=%s, is_active=%s, security_id=%s',
+            data.get('type_'), data.get('is_active'), data.get('security_id'))
+
         # Break down security definitions into components
         security_id = data.get('security_id') or ''
         if sec_def_sep in security_id:
@@ -194,9 +212,9 @@ class _CreateEdit(_BaseService):
 
             # .. look up the security name by its ID ..
             if sec_def_type == SEC_DEF_TYPE.BASIC_AUTH:
-                func = self.server.worker_store.basic_auth_get_by_id
+                func = self.server.config_manager.basic_auth_get_by_id
             elif sec_def_type == SEC_DEF_TYPE.OAUTH:
-                func = self.server.worker_store.oauth_get_by_id
+                func = self.server.config_manager.oauth_get_by_id
             else:
                 func = None
 
@@ -218,6 +236,8 @@ class _CreateEdit(_BaseService):
             data['security_name'] = security_name
 
         conn = GenericConnection.from_dict(data)
+
+        self.logger.info('GenericConn _CreateEdit step 3: conn.type_=%s, conn.name=%s', conn.type_, conn.name)
 
         with closing(self.server.odb.session()) as session:
 
@@ -249,6 +269,10 @@ class _CreateEdit(_BaseService):
 
             conn_dict = conn.to_sql_dict()
 
+            self.logger.info('GenericConn _CreateEdit step 4: conn_dict keys=%s', sorted(conn_dict.keys()))
+            self.logger.info('GenericConn _CreateEdit step 4b: conn_dict type_=%s, name=%s, cluster_id=%s',
+                conn_dict.get('type_'), conn_dict.get('name'), conn_dict.get('cluster_id'))
+
             # This will be needed in case this is a rename
             old_name = model.name
 
@@ -263,6 +287,9 @@ class _CreateEdit(_BaseService):
 
                 setattr(model, key, value)
 
+            self.logger.info('GenericConn _CreateEdit step 5: about to session.add + commit, model.type_=%s, model.name=%s',
+                getattr(model, 'type_', None), getattr(model, 'name', None))
+
             hook_func = hook.get(data.type_)
             if hook_func:
                 hook_func(self, data, model, old_name)
@@ -272,12 +299,19 @@ class _CreateEdit(_BaseService):
 
             instance = self._get_instance_by_name(session, ModelGenericConn, data.type_, data.name)
 
+            self.logger.info('GenericConn _CreateEdit step 6: committed, instance.id=%s, instance.name=%s, instance.type_=%s',
+                instance.id, instance.name, instance.type_)
+
             self.response.payload.id = instance.id
             self.response.payload.name = instance.name
 
         data['old_name'] = old_name
         data['action'] = GENERIC.CONNECTION_EDIT.value if self.is_edit else GENERIC.CONNECTION_CREATE.value
         data['id'] = instance.id
+
+        self.logger.info('GenericConn _CreateEdit step 7: publishing config event, action=%s, id=%s, type_=%s',
+            data['action'], data['id'], data.get('type_'))
+
         self.config_dispatcher.publish(data)
 
 # ################################################################################################################################
@@ -314,15 +348,15 @@ class GetList(AdminService):
     """
     _filter_by = ModelGenericConn.name,
 
-    class SimpleIO(GetListAdminSIO):
-        input_required = ('cluster_id',)
-        input_optional = GetListAdminSIO.input_optional + ('type_',)
+    input = 'cluster_id', '-type_', *query_parameters
 
 # ################################################################################################################################
 
     def get_data(self, session:'any_') -> 'any_':
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
+        self.logger.info('GenericConn GetList.get_data: cluster_id=%s, type_=%s', cluster_id, self.request.input.type_)
         data = self._search(connection_list, session, cluster_id, self.request.input.type_, False)
+        self.logger.info('GenericConn GetList.get_data: result count=%s', data.count() if hasattr(data, 'count') else 'N/A')
         return data
 
 # ################################################################################################################################
@@ -383,6 +417,8 @@ class GetList(AdminService):
         out = {'_meta':{}, 'response':[]}
         _meta = cast_('anydict', out['_meta'])
 
+        self.logger.info('GenericConn GetList.handle: type_=%s', self.request.input.type_)
+
         with closing(self.odb.session()) as session:
 
             search_result = self.get_data(session)
@@ -393,6 +429,9 @@ class GetList(AdminService):
                 conn_dict = conn.to_dict()
                 self._enrich_conn_dict(conn_dict)
                 cast_('anylist', out['response']).append(conn_dict)
+
+        response_count = len(cast_('anylist', out['response']))
+        self.logger.info('GenericConn GetList.handle: returning %s items for type_=%s', response_count, self.request.input.type_)
 
         # Results are already included in the list of out['response'] elements
         _ = _meta.pop('result', None)
@@ -407,8 +446,6 @@ class ChangePassword(ChangePasswordBase):
     """
     password_required = False
 
-    class SimpleIO(ChangePasswordBase.SimpleIO):
-        response_elem = None
 
 # ################################################################################################################################
 
@@ -496,11 +533,8 @@ class ChangePassword(ChangePasswordBase):
 class Ping(_BaseService):
     """ Pings a generic connection.
     """
-    class SimpleIO(AdminSIO):
-        input_required = 'id'
-        output_required = 'info'
-        output_optional = 'is_success'
-        response_elem = None
+    input = Int('id')
+    output = 'info', '-is_success'
 
     def handle(self) -> 'None':
         with closing(self.odb.session()) as session:
@@ -512,7 +546,7 @@ class Ping(_BaseService):
             custom_ping_func_dict = {}
 
             # Most connections use a generic ping function, unless overridden on a case-by-case basis.
-            ping_func = custom_ping_func_dict.get(instance.type_, self.server.worker_store.ping_generic_connection)
+            ping_func = custom_ping_func_dict.get(instance.type_, self.server.config_manager.ping_generic_connection)
 
             start_time = utcnow()
 
@@ -536,11 +570,8 @@ class Ping(_BaseService):
 class Invoke(AdminService):
     """ Invokes a generic connection by its name.
     """
-    class SimpleIO:
-        input_required = 'conn_type', 'conn_name'
-        input_optional = 'request_data'
-        output_optional = 'response_data'
-        response_elem = None
+    input = 'conn_type', 'conn_name', '-request_data'
+    output = '-response_data'
 
     def handle(self) -> 'None':
 
@@ -567,3 +598,68 @@ class Invoke(AdminService):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class InvokeGraphQL(_BaseService):
+    """ Invokes a GraphQL outgoing connection with a query and optional variables.
+    """
+    name = 'zato.generic.connection.invoke-graphql'
+    input = Int('id'), '-query', '-variables'
+    output = '-response_data', '-response_time'
+
+    def handle(self) -> 'None':
+
+        import json
+        import time
+
+        from gql import Client as GQLClient
+        from gql import gql as gql_parse
+        from gql.transport.requests import RequestsHTTPTransport
+
+        with closing(self.odb.session()) as session:
+            instance = self._get_instance_by_id(session, ModelGenericConn, self.request.input.id)
+            config = loads(instance.opaque1) if instance.opaque1 else {}
+            config['address'] = instance.address
+
+        query_text = self.request.input.get('query', '')
+        variables_text = self.request.input.get('variables', '')
+
+        if not query_text or not query_text.strip():
+            raise Exception('No query provided')
+
+        if variables_text and variables_text.strip():
+            variables = json.loads(variables_text)
+        else:
+            variables = None
+
+        timeout = config.get('default_query_timeout')
+        if timeout:
+            timeout = int(timeout)
+
+        if extra_raw := config.get('extra'):
+            headers = json.loads(extra_raw)
+        else:
+            headers = {}
+
+        transport = RequestsHTTPTransport(url=config['address'], timeout=timeout, headers=headers)
+        client = GQLClient(transport=transport)
+
+        parsed_query = gql_parse(query_text)
+
+        execute_kwargs = {}
+        if variables:
+            execute_kwargs['variable_values'] = variables
+
+        start = time.monotonic()
+
+        try:
+            with client as gql_session:
+                result = gql_session.execute(parsed_query, **execute_kwargs)
+        except Exception as e:
+            elapsed = time.monotonic() - start
+            self.response.payload.response_data = str(e)
+            self.response.payload.response_time = f'{elapsed:.3f}s'
+            raise Exception(str(e)) from None
+
+        elapsed = time.monotonic() - start
+        self.response.payload.response_data = json.dumps(result, indent=2)
+        self.response.payload.response_time = f'{elapsed:.3f}s'

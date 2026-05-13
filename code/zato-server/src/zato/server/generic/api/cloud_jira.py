@@ -19,7 +19,7 @@ from zato.server.connection.queue import Wrapper
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
+    from zato.common.ext.bunch import Bunch
     from requests import Response
     from zato.common.typing_ import any_, stranydict, strnone
     from zato.server.base.parallel import ParallelServer

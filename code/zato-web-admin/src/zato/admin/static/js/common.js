@@ -50,13 +50,12 @@ $.namespace('zato');
 $.namespace('zato.account');
 $.namespace('zato.account.basic_settings');
 $.namespace('zato.audit_log');
-$.namespace('zato.cache');
-$.namespace('zato.cache.builtin');
-$.namespace('zato.cache.builtin.entries');
 $.namespace('zato.channel');
 $.namespace('zato.channel.amqp');
 $.namespace('zato.channel.kafka');
 $.namespace('zato.channel.kafka.data_table');
+$.namespace('zato.channel.mcp');
+$.namespace('zato.channel.mcp.data_table');
 $.namespace('zato.channel.hl7');
 $.namespace('zato.channel.hl7.mllp');
 $.namespace('zato.channel.hl7.mllp.data_table');
@@ -104,6 +103,8 @@ $.namespace('zato.outgoing.hl7.fhir.data_table');
 $.namespace('zato.outgoing.hl7.mllp');
 $.namespace('zato.outgoing.hl7.mllp.data_table');
 $.namespace('zato.outgoing.mongodb');
+$.namespace('zato.outgoing.graphql');
+$.namespace('zato.outgoing.graphql.data_table');
 $.namespace('zato.outgoing.kafka');
 $.namespace('zato.outgoing.kafka.data_table');
 $.namespace('zato.outgoing.ldap');
@@ -139,17 +140,13 @@ $.namespace('zato.vendors.keysight.vision');
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.post = function(url, callback, data, data_type, suppress_user_message, context) {
+$.fn.zato.post = function(url, callback, data, data_type, context) {
     if(!data) {
         data = '';
     }
 
     if(!data_type) {
         data_type = 'json';
-    }
-
-    if(!suppress_user_message && !$('#zato-action-overlay').length) {
-        $.fn.zato.user_message(false, '', true);
     }
 
     if(!context) {
@@ -169,35 +166,6 @@ $.fn.zato.post = function(url, callback, data, data_type, suppress_user_message,
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.user_message = function(is_success, msg, loading) {
-    var pre = $('#user-message');
-    var new_css_class = ''
-
-    if(!loading) {
-        $.fn.zato.hide_action_overlay();
-        if(is_success) {
-            css_class = 'user-message-success';
-        }
-        else {
-            css_class = 'user-message-failure';
-        }
-    }
-    else {
-        css_class = 'loading';
-    }
-
-    pre.removeClass('user-message-success').
-        removeClass('user-message-failure').
-        removeClass('loading').
-        addClass(css_class);
-    pre.text(msg);
-
-    var div = $('#user-message-div');
-    div.fadeOut(100, function() {
-        div.fadeIn(250);
-    });
-}
-
 $.fn.zato.show_action_overlay = function(label) {
 }
 
@@ -205,20 +173,6 @@ $.fn.zato.hide_action_overlay = function() {
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-$.fn.zato.post_with_user_message = function(url, on_callback_done) {
-
-    var callback = function(data, status) {
-        var success = status == 'success';
-        $.fn.zato.user_message(success, data.responseText);
-
-        if(on_callback_done) {
-            on_callback_done(success);
-        }
-    }
-
-    $.fn.zato.post(url, callback, '', 'text');
-}
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Forms
@@ -477,13 +431,6 @@ $.fn.zato.data_table._on_submit_complete = function(data, status) {
     }
 
     $.fn.zato.hide_action_overlay();
-
-    if(!success) {
-        $.fn.zato.user_message(false, msg);
-    }
-    else {
-        $('#user-message-div').hide();
-    }
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -612,12 +559,6 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
             if(on_success_callback) {
                 on_success_callback();
             }
-
-            $('#user-message-div').hide();
-        }
-        else {
-            msg = data.responseText;
-            $.fn.zato.user_message(false, msg);
         }
     }
 
@@ -695,7 +636,7 @@ $.fn.zato.data_table.on_change_password_submit = function() {
             }
         }
 
-        $.fn.zato.post(form.attr('action'), _callback, form.serialize(), null, true);
+        $.fn.zato.post(form.attr('action'), _callback, form.serialize());
         $('#change_password-div').dialog('close');
 
         return false;
@@ -1601,6 +1542,8 @@ $.fn.zato.is_form_valid = function(form) {
     });
 
     // Confirm that all the required elements are provided
+    var first_invalid = null;
+
     form.find($.fn.zato.jquery_pattern_required).each(function(idx, elem) {
 
         var elem = $(elem)
@@ -1623,6 +1566,11 @@ $.fn.zato.is_form_valid = function(form) {
 
             $.fn.zato.add_elem_placeholder(elem, msg);
 
+            // Track the first invalid field so we can focus it later
+            if (!first_invalid) {
+                first_invalid = elem;
+            }
+
             // If we are here, it means that the form is not valid
             is_valid = false;
         }
@@ -1630,6 +1578,24 @@ $.fn.zato.is_form_valid = function(form) {
             $.fn.zato.cleanup_elem_css_attention(elem);
         }
     })
+
+    // If the first invalid field is inside a hidden tab panel, switch to that tab first
+    if (first_invalid) {
+        var hidden_panel = first_invalid.closest('.dashboard-tab-panel[hidden]');
+        if (hidden_panel.length) {
+            var panel_id = hidden_panel.attr('id');
+            var tab_container = hidden_panel.closest('.ui-dialog-content, form').first();
+            var tab_buttons = tab_container.find('.dashboard-tab');
+            tab_buttons.each(function() {
+                var panel_suffix = $(this).data('tab');
+                if (panel_id && panel_id.endsWith(panel_suffix)) {
+                    $(this).trigger('click');
+                    return false;
+                }
+            });
+        }
+        first_invalid.focus();
+    }
 
     // Now, we can return the result to our caller
     return is_valid;

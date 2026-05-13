@@ -17,32 +17,29 @@ from uuid import uuid4
 
 # Python 2/3 compatibility
 from builtins import bytes
-from zato.common.ext.future.utils import iterkeys
 
 # Zato
-from zato.common.api import BROKER, SCHEDULER
+from zato.common.api import query_parameters
 from zato.common.broker_message import SERVICE
 from zato.common.const import ServiceConst
 from zato.common.exception import BadRequest, ZatoException
 from zato.common.ext.validate_ import is_boolean
-from zato.common.json_ import dumps as json_dumps
 from zato.common.json_internal import dumps, loads
 from zato.common.marshal_.api import Model
 from zato.common.odb.model import Cluster, ChannelAMQP, DeployedService, HTTPSOAP, Server, Service as ODBService
 from zato.common.odb.query import service_deployment_list, service_list
 from zato.common.scheduler import get_startup_job_services
-from zato.common.util.api import hot_deploy, parse_extra_into_dict, payload_from_request
+from zato.common.util.api import hot_deploy
 from zato.common.util.file_system import get_tmp_path
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean, Integer, Service
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from datetime import datetime
-    from zato.common.typing_ import any_, anydict, strnone
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,14 +55,8 @@ class GetList(AdminService):
     """
     _filter_by = ODBService.name,
 
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_service_get_list_request'
-        response_elem = 'zato_service_get_list_response'
-        input_required = 'cluster_id'
-        input_optional = ('should_include_scheduler',) + GetListAdminSIO.input_optional
-        output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted')
-        output_repeated = True
-        default_value = ''
+    input = 'cluster_id', '-should_include_scheduler', *query_parameters
+    output = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted')
 
 # ################################################################################################################################
 
@@ -150,9 +141,8 @@ class IsDeployed(Service):
 
 class _Get(AdminService):
 
-    class SimpleIO(AdminSIO):
-        input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted')
+    input = 'cluster_id',
+    output = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted')
 
     def get_data(self, session): # type: ignore
         query = session.query(ODBService.id, ODBService.name, ODBService.is_active,
@@ -183,10 +173,7 @@ class _Get(AdminService):
 class GetByName(_Get):
     """ Returns a particular service by its name.
     """
-    class SimpleIO(_Get.SimpleIO):
-        request_elem = 'zato_service_get_by_name_request'
-        response_elem = 'zato_service_get_by_name_response'
-        input_required = _Get.SimpleIO.input_required + ('name',)
+    input = 'cluster_id', 'name'
 
     def add_filter(self, query): # type: ignore
         return query.\
@@ -198,10 +185,7 @@ class GetByName(_Get):
 class GetByID(_Get):
     """ Returns a particular service by its ID.
     """
-    class SimpleIO(_Get.SimpleIO):
-        request_elem = 'zato_service_get_by_name_request'
-        response_elem = 'zato_service_get_by_name_response'
-        input_required = _Get.SimpleIO.input_required + ('id',)
+    input = 'cluster_id', 'id'
 
     def add_filter(self, query): # type: ignore
         return query.\
@@ -213,11 +197,8 @@ class GetByID(_Get):
 class Edit(AdminService):
     """ Updates a service.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_service_edit_request'
-        response_elem = 'zato_service_edit_response'
-        input_required = 'id', 'is_active', Integer('slow_threshold')
-        output_optional = 'id', 'name', 'impl_name', 'is_internal', Boolean('may_be_deleted')
+    input = 'id', 'is_active', Integer('slow_threshold')
+    output = '-id', '-name', '-impl_name', '-is_internal', Boolean('-may_be_deleted')
 
     def handle(self):
         input = self.request.input
@@ -254,10 +235,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a service.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_service_delete_request'
-        response_elem = 'zato_service_delete_response'
-        input_required = ('id',)
+    input = 'id',
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -299,11 +277,8 @@ class Delete(AdminService):
 class GetChannelList(AdminService):
     """ Returns a list of channels of a given type through which the service is exposed.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_service_get_channel_list_request'
-        response_elem = 'zato_service_get_channel_list_response'
-        input_required = ('id', 'channel_type')
-        output_required = ('id', 'name')
+    input = 'id', 'channel_type'
+    output = 'id', 'name'
 
     def handle(self):
         channel_type_class = {
@@ -328,298 +303,12 @@ class GetChannelList(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Invoke(AdminService):
-    """ Invokes the service directly, as though it was exposed through a channel defined in web-admin.
-    """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_service_invoke_request'
-        response_elem = 'zato_service_invoke_response'
-        input_optional = 'id', 'name', 'payload', 'channel', 'data_format', 'transport', Boolean('is_async'), \
-            Integer('expiration'), Integer('pid'), Boolean('all_pids'), Integer('timeout'), Boolean('skip_response_elem'), \
-            'needs_response_time'
-        output_optional = ('response',)
-
-# ################################################################################################################################
-
-    def _get_payload_from_extra(self, payload:'any_') -> 'strnone':
-
-        if not payload:
-            return
-
-        if payload in (b'""', b"''", b'null', 'null'):
-            return
-
-        if isinstance(payload, bytes):
-            payload = payload.decode('utf8')
-
-        # .. ignore payload that seems to be JSON ..
-        if '{' in payload or '}' in payload:
-            return
-
-        payload = payload[1:-1]
-        payload = payload.replace('\\n', '\n')
-        payload = parse_extra_into_dict(payload, convert_bool=False)
-
-        return payload
-
-# ################################################################################################################################
-
-    def _invoke_other_server_pid(
-        self,
-        name:'str',
-        payload:'any_',
-        pid:'int',
-        data_format:'str',
-        skip_response_elem:'bool',
-    ) -> 'any_':
-
-        response = self.server.invoke(
-            name,
-            payload, # type: ignore
-            pid=pid,
-            data_format=data_format,
-            skip_response_elem=skip_response_elem)
-
-        response = {
-            pid: {
-                'is_ok': True,
-                'pid': pid,
-                'pid_data': response or None,
-                'error_info': '',
-        }}
-
-        return response
-
-# ################################################################################################################################
-
-    def _invoke_current_server_pid(
-        self,
-        id:'any_',
-        name:'str',
-        all_pids:'bool',
-        payload:'any_',
-        channel:'str',
-        data_format:'str',
-        transport:'str',
-        zato_response_headers_container:'anydict',
-        skip_response_elem:'bool',
-    ) -> 'any_':
-
-        func, id_ = (self.invoke, name) if name else (self.invoke_by_id, id)
-
-        response = func(
-            id_,
-            payload, # type: ignore
-            channel,
-            data_format,
-            transport,
-            zato_response_headers_container=zato_response_headers_container,
-            skip_response_elem=skip_response_elem,
-            serialize=not skip_response_elem)
-
-        if all_pids:
-
-            response = {
-                self.server.pid: {
-                    'is_ok': True,
-                    'pid': self.server.pid,
-                    'pid_data': response,
-                    'error_info': '',
-            }}
-
-        return response
-
-# ################################################################################################################################
-
-    def _build_response(self, response:'any_') -> 'any_':
-
-        if not isinstance(response, str):
-            if not isinstance(response, bytes):
-                if hasattr(response, 'to_dict'):
-                    response = response.to_dict() # type: ignore
-                response = json_dumps(response)
-
-        # Make sure what we return is a string ..
-        response = response if isinstance(response, bytes) else response.encode('utf8')
-
-        # .. which we base64-encode ..
-        response = b64encode(response).decode('utf8') if response else ''
-
-        # .. and return to our caller.
-        return response
-
-# ################################################################################################################################
-
-    def _run_async_invoke(
-        self,
-        pid:'int',
-        id:'any_',
-        name:'str',
-        payload:'any_',
-        channel:'str',
-        data_format:'str',
-        transport:'str',
-        expiration:'int',
-    ) -> 'any_':
-
-        if id:
-            impl_name = self.server.service_store.id_to_impl_name[id]
-            name = self.server.service_store.service_data(impl_name)['name']
-
-        response = self.invoke_async(name, payload, channel, data_format, transport, expiration)
-        return response
-
-# ################################################################################################################################
-
-    def _run_sync_invoke(
-        self,
-        pid:'int',
-        timeout:'int',
-        id:'any_',
-        name:'str',
-        all_pids:'bool',
-        payload:'any_',
-        channel:'str',
-        data_format:'str',
-        transport:'str',
-        zato_response_headers_container:'anydict',
-        skip_response_elem:'bool',
-    ) -> 'any_':
-
-        # This method is the same as the one for async, except that in async there was no all_pids
-
-        response = self._invoke_current_server_pid(
-            id, name, all_pids, payload, channel, data_format, transport,
-            zato_response_headers_container, skip_response_elem)
-
-        return response
-
-# ################################################################################################################################
-
-    def _build_response_time(self, start_time:'datetime') -> 'any_':
-
-        response_time = self.time.utcnow(needs_format=False) - start_time # type: ignore
-        response_time = response_time.total_seconds()
-        response_time = response_time * 1000 # Turn seconds into milliseconds
-
-        # If we have less than a millisecond, don't show exactly how much it was ..
-        if response_time < 1:
-            response_time_human = 'Below 1 ms'
-        else:
-            # .. if it's below 10 seconds, keep using milliseconds ..
-            if response_time < 10_000:
-                response_time = int(response_time) # Round it up
-                response_time_human = f'{response_time} ms'
-
-            # .. otherwise, turn it into seconds ..
-            else:
-                _response_time = float(response_time)
-                _response_time = _response_time / 1000.0 # Convert it back to seconds
-                _response_time = round(_response_time, 2) # Keep it limited to two digits
-                response_time_human = f'{_response_time} sec.'
-
-        return response_time, response_time_human
-
-# ################################################################################################################################
-
-    def handle(self):
-
-        # Local aliases
-        payload:'any_' = None
-        needs_response_time = self.request.input.get('needs_response_time', True)
-
-        # A dictionary of headers that the target service may want to produce
-        zato_response_headers_container = {}
-
-        # Optionally, we are return the total execution time of this service
-        if needs_response_time:
-            start_time = self.time.utcnow(needs_format=False)
-
-        # This is our input ..
-        orig_payload:'any_' = self.request.input.get('payload')
-
-        # .. which is optional ..
-        if orig_payload:
-
-            # .. if it exists, it will be BASE64-encoded ..
-            orig_payload = b64decode(orig_payload) # type: ignore
-
-            # .. try and see if it a dict of extra keys and value ..
-            payload = self._get_payload_from_extra(orig_payload)
-
-            # .. if it is not, run the regular parser ..
-            if not payload:
-                payload = payload_from_request(self.server.json_parser, self.cid, orig_payload,
-                    self.request.input.data_format, self.request.input.transport)
-
-                if payload:
-
-                    if isinstance(payload, str):
-                        scheduler_indicator = SCHEDULER.EmbeddedIndicator
-                    else:
-                        scheduler_indicator = SCHEDULER.EmbeddedIndicatorBytes
-
-                    if scheduler_indicator in payload: # type: ignore
-                        payload = loads(payload) # type: ignore
-                        payload = payload['data'] # type: ignore
-
-        id = self.request.input.get('id')
-        name = self.request.input.get('name') or ''
-        pid = self.request.input.get('pid') or 0
-        all_pids = self.request.input.get('all_pids')
-        timeout = self.request.input.get('timeout') or None
-        skip_response_elem = self.request.input.get('skip_response_elem') or False
-        channel = self.request.input.get('channel')
-        data_format = self.request.input.get('data_format')
-        transport = self.request.input.get('transport')
-        expiration = self.request.input.get('expiration') or BROKER.DEFAULT_EXPIRATION
-
-        if name and id:
-            raise ZatoException('Cannot accept both id:`{}` and name:`{}`'.format(id, name))
-
-        try:
-
-            # Is this an async invocation ..
-            if self.request.input.get('is_async'):
-                response = self._run_async_invoke(
-                    pid, id, name, payload, channel, data_format, transport, expiration)
-
-            # .. or a sync one ..
-            else:
-                response = self._run_sync_invoke(
-                    pid, timeout, id, name, all_pids, payload, channel,
-                    data_format, transport, zato_response_headers_container, skip_response_elem
-                )
-
-            # .. we still may not have any response here ..
-            if response is not None:
-                response = self._build_response(response)
-                self.response.payload.response = response
-
-        finally:
-
-            # If we are here, it means that we can optionally compute the total execution time ..
-            if needs_response_time:
-
-                # .. build the values we are to return ..
-                response_time, response_time_human = self._build_response_time(start_time) # type: ignore
-
-                # .. which we attach to our response.
-                self.response.headers['X-Zato-Response-Time'] = response_time
-                self.response.headers['X-Zato-Response-Time-Human'] = response_time_human
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class GetDeploymentInfoList(AdminService):
     """ Returns detailed information regarding the service's deployment status on each of the servers it's been deployed to.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_service_get_deployment_info_list_request'
-        response_elem = 'zato_service_get_deployment_info_list_response'
-        input = '-id', '-needs_details', Boolean('-include_internal')
-        output = 'server_id', 'server_name', 'service_id', 'service_name', 'fs_location', 'file_name', \
-            Integer('line_number'), '-details'
+    input = '-id', '-needs_details', Boolean('-include_internal')
+    output = 'server_id', 'server_name', 'service_id', 'service_name', 'fs_location', 'file_name', \
+        Integer('line_number'), '-details'
 
     def get_data(self, session): # type: ignore
 
@@ -675,11 +364,8 @@ class GetDeploymentInfoList(AdminService):
 class GetSourceInfo(AdminService):
     """ Returns information on the service's source code.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_service_get_source_info_request'
-        response_elem = 'zato_service_get_source_info_response'
-        input_required = ('cluster_id', 'name')
-        output_optional = ('service_id', 'server_name', 'source', 'source_path', 'source_hash', 'source_hash_method')
+    input = 'cluster_id', 'name'
+    output = '-service_id', '-server_name', '-source', '-source_path', '-source_hash', '-source_hash_method'
 
     def get_data(self, session): # type: ignore
         return session.query(ODBService.id.label('service_id'), Server.name.label('server_name'), # type: ignore
@@ -709,10 +395,7 @@ class GetSourceInfo(AdminService):
 class UploadPackage(AdminService):
     """ Uploads a package with service(s) to be hot-deployed.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_service_upload_package_request'
-        response_elem = 'zato_service_upload_package_response'
-        input_required = ('cluster_id', 'payload', 'payload_name')
+    input = 'cluster_id', 'payload', 'payload_name'
 
     def handle(self):
 
@@ -760,7 +443,7 @@ class UploadPackage(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ServiceInvoker(AdminService):
+class ServiceInvoker(Service):
     """ A proxy service to invoke other services through via REST.
     """
     name = ServiceConst.ServiceInvokerName
@@ -774,7 +457,40 @@ class ServiceInvoker(AdminService):
 
 # ################################################################################################################################
 
+    def _check_gateway_allowed(self, service_name):
+        """ Checks whether the service is allowed for the current channel's gateway allowlist.
+        If the allowlist is empty, all services are allowed.
+        """
+        channel_id = self.channel.id
+
+        with self.server.gateway_services_allowed_lock:
+            allowed_services = self.server.gateway_services_allowed.get(channel_id)
+
+        if allowed_services and service_name not in allowed_services:
+            raise BadRequest(self.cid, 'No such service `{}`'.format(service_name))
+
+# ################################################################################################################################
+
+    def _set_request_context(self):
+        """ Propagates Django and forwarded-for context from HTTP headers into wsgi_environ.
+        """
+        django_user = self.wsgi_environ.get('HTTP_X_ZATO_USER', '')
+        correlation_id = self.wsgi_environ.get('HTTP_X_ZATO_CORRELATION_ID', '')
+        forwarded_for = self.wsgi_environ.get('HTTP_X_ZATO_FORWARDED_FOR', '')
+
+        if django_user or correlation_id or forwarded_for:
+            self.wsgi_environ['zato.request_ctx'] = {
+                'django_user': django_user,
+                'correlation_id': correlation_id,
+                'forwarded_for': forwarded_for,
+            }
+
+# ################################################################################################################################
+
     def handle(self, _internal=('zato', 'pub.zato')): # type: ignore
+
+        # We track response time for all invocations
+        start_time = self.time.utcnow(needs_format=False)
 
         # ODBService name is given in URL path
         service_name = self.request.http.params.service_name
@@ -791,6 +507,12 @@ class ServiceInvoker(AdminService):
                     msg, service_name, self.channel.name, self.server.fs_server_config.misc.service_invoker_allow_internal)
                 self.response.data_format = 'text/plain'
                 raise BadRequest(self.cid, 'No such service `{}`'.format(service_name))
+
+        # Per-channel service allowlist enforcement
+        self._check_gateway_allowed(service_name)
+
+        # Propagate context headers from callers like the Django plugin
+        self._set_request_context()
 
         # Make sure the service exists
         if self.server.service_store.has_service(service_name):
@@ -812,18 +534,29 @@ class ServiceInvoker(AdminService):
                 zato_response_headers_container=zato_response_headers_container
                 )
 
-            # All internal services wrap their responses in top-level elements that we need to shed here ..
-            if is_internal and response:
-                top_level = list(iterkeys(response))[0]
-                response = response[top_level]
-
             # Take dataclass-based models into account
             response = response.to_dict() if isinstance(response, Model) else response
 
-            # Assign response to outgoing payload
-            self.response.payload = dumps(response)
+            # Assign response to outgoing payload - if it is already serialized, use it as-is
+            self.response.payload = response if isinstance(response, str) else dumps(response)
             self.response.data_format = 'application/json'
             self.response.headers.update(zato_response_headers_container)
+
+            # Compute and attach response time headers
+            elapsed = self.time.utcnow(needs_format=False) - start_time
+            total_ms = elapsed.total_seconds() * 1000
+
+            if total_ms < 1:
+                response_time_human = 'Below 1 ms'
+            elif total_ms < 10_000:
+                total_ms = int(total_ms)
+                response_time_human = f'{total_ms} ms'
+            else:
+                total_sec = round(total_ms / 1000.0, 2)
+                response_time_human = f'{total_sec} sec.'
+
+            self.response.headers['X-Zato-Response-Time'] = str(total_ms)
+            self.response.headers['X-Zato-Response-Time-Human'] = response_time_human
 
         # No such service as given on input
         else:
@@ -833,7 +566,7 @@ class ServiceInvoker(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class RPCServiceInvoker(AdminService):
+class RPCServiceInvoker(Service):
     """ An invoker making use of the API that Redis-based communication used to use.
     """
     def handle(self):

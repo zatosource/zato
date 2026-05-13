@@ -19,7 +19,7 @@ from uuid import uuid4
 from regex import compile as re_compile
 
 # Zato
-from zato.bunch import bunchify
+from zato.common.ext.bunch import bunchify
 from zato.common.api import HTTP_SOAP, MISC, TRACE1
 
 http_any_internal = HTTP_SOAP.ACCEPT.ANY_INTERNAL

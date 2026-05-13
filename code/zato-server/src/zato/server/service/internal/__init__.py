@@ -22,7 +22,7 @@ from zato.common.broker_message import MESSAGE_TYPE, SECURITY
 from zato.common.odb.model import Cluster
 from zato.common.util.api import get_response_value, make_cid_public
 from zato.common.util.sql import search as sql_search
-from zato.server.service import AsIs, Bool, Int, Service
+from zato.server.service import AsIs, Int, Service
 
 # ################################################################################################################################
 
@@ -58,25 +58,10 @@ class SearchTool:
 
 # ################################################################################################################################
 
-class AdminSIO:
-    pass
-
-# ################################################################################################################################
-
-class GetListAdminSIO:
-    input_optional = (Int('cur_page'), Bool('paginate'), 'query')
-
-# ################################################################################################################################
-
 class AdminService(Service):
     """ A Zato admin service, part of the Zato public API.
     """
-    output_optional = ('_meta',)
     skip_before_handle = False
-
-    class SimpleIO(AdminSIO):
-        """ This empty definition is needed in case the service should be invoked through REST.
-        """
 
     def __init__(self):
         super(AdminService, self).__init__()
@@ -96,10 +81,6 @@ class AdminService(Service):
         if self.skip_before_handle:
             return
 
-        # Do not log BASE64-encoded messages
-        if self.name == 'zato.service.invoke':
-            return
-
         if self.server.is_admin_enabled_for_info:
 
             # Prefer that first because it may be a generic connection
@@ -111,12 +92,15 @@ class AdminService(Service):
                     data = loads(data)
             except Exception:
                 data = self.request.input
-            finally:
-                to_copy = {}
-                for k, v in data.items():
-                    to_copy[k] = v
 
-                data = deepcopy(to_copy)
+            if not data:
+                return
+
+            to_copy = {}
+            for k, v in data.items():
+                to_copy[k] = v
+
+            data = deepcopy(to_copy)
 
             for k in data:
                 if 'password' in k:
@@ -148,17 +132,13 @@ class AdminService(Service):
 
     def after_handle(self):
 
-        # Do not log BASE64-encoded messages
-        if self.name == 'zato.service.invoke':
-            return
-
         if self.server.is_admin_enabled_for_info:
             logger.info('Response; service:`%s`, data:`%s` cid:`%s`, ',
                 self.name, get_response_value(self.response), self.cid)
 
         payload = self.response.payload
         is_text = isinstance(payload, basestring)
-        needs_meta = self.request.input.get('needs_meta', True)
+        needs_meta = self.request.input.get('needs_meta', True) if self.request.input else True
 
         if needs_meta and hasattr(self, '_search_tool'):
             if not is_text:
@@ -234,13 +214,10 @@ class ServerInvoker(AdminService):
 class ChangePasswordBase(AdminService):
     """ A base class for handling the changing of any of the ODB passwords.
     """
-    # Subclasses may wish to set it to False to special-case what they need to deal with
     password_required = True
 
-    class SimpleIO(AdminSIO):
-        input_required = 'password',
-        input_optional = Int('id'), 'name', 'type_'
-        output_required = AsIs('id')
+    input = 'password', Int('-id'), '-name', '-type_'
+    output = AsIs('id'),
 
     def _handle(self, class_, auth_func, action, name_func=None, instance_id=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL,
         *args, **kwargs):

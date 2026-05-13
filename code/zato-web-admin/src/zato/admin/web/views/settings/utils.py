@@ -21,6 +21,8 @@ def json_response(data, success=True):
     return response_class(response_json, content_type='application/json')
 
 def restart_component(req, updater, component_name, component_path, port=0):
-    logger.info('restart_{}: called from client: {}'.format(component_name, req.META.get('REMOTE_ADDR')))
+    logger.info('UPDATE-TRACE utils.restart_component: component_name=%s, component_path=%s, port=%s, client=%s',
+        component_name, component_path, port, req.META.get('REMOTE_ADDR'))
     result = updater.restart_component(component_name, component_path, port)
+    logger.info('UPDATE-TRACE utils.restart_component: component_name=%s, result=%s', component_name, result)
     return json_response(result, success=result['success'])

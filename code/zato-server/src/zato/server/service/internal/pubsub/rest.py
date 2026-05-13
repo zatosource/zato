@@ -91,13 +91,15 @@ class PubSubRESTService(Service):
     def _validate_credentials(self, username:'str', password:'str') -> 'bool':
         """ Validate username/password against all basic auth security definitions.
         """
-        basic_auth_config = self.server.worker_store.request_dispatcher.url_data.basic_auth_config
+        basic_auth_config = self.server.config_manager.request_dispatcher.url_data.basic_auth_config
         auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
 
         for sec_def in basic_auth_config.values():
-            config = sec_def.get('config', {})
-            expected_username = config.get('username')
-            expected_password = config.get('password')
+            config = sec_def['config']
+            if not config['is_active']:
+                continue
+            expected_username = config['username']
+            expected_password = config['password']
             if expected_username and expected_password:
                 result = check_basic_auth(self.cid, auth_header, expected_username, expected_password)
                 if result is True:
@@ -112,11 +114,8 @@ class Publish(PubSubRESTService):
     """
     name = 'pubsub.rest.publish'
 
-    class SimpleIO:
-        input_required = 'topic_name', AsIs('data')
-        input_optional = 'priority', 'expiration', AsIs('correl_id'), AsIs('in_reply_to'), AsIs('ext_client_id'), 'pub_time'
-        output_optional = AsIs('msg_id'), 'is_ok', 'cid', AsIs('status'), 'details'
-        skip_empty_keys = True
+    input = 'topic_name', AsIs('data'), '-priority', '-expiration', AsIs('-correl_id'), AsIs('-in_reply_to'), AsIs('-ext_client_id'), '-pub_time'
+    output = AsIs('-msg_id'), '-is_ok', '-cid', AsIs('-status'), '-details'
 
 # ################################################################################################################################
 
@@ -222,9 +221,8 @@ class GetMessages(PubSubRESTService):
     """
     name = 'pubsub.rest.get-messages'
 
-    class SimpleIO:
-        input_optional = Int('max_messages'), Int('max_len')
-        output_optional = AsIs('messages'), Int('message_count'), 'is_ok', 'cid', AsIs('status'), 'details'
+    input = Int('-max_messages'), Int('-max_len')
+    output = AsIs('-messages'), Int('-message_count'), '-is_ok', '-cid', AsIs('-status'), '-details'
 
 # ################################################################################################################################
 
@@ -287,9 +285,8 @@ class Subscribe(PubSubRESTService):
     """
     name = 'pubsub.rest.subscribe'
 
-    class SimpleIO:
-        input_required = 'topic_name'
-        output_optional = 'is_ok', 'cid', AsIs('status'), 'details', 'sub_key'
+    input = 'topic_name',
+    output = '-is_ok', '-cid', AsIs('-status'), '-details', '-sub_key'
 
 # ################################################################################################################################
 
@@ -379,9 +376,8 @@ class Unsubscribe(PubSubRESTService):
     """
     name = 'pubsub.rest.unsubscribe'
 
-    class SimpleIO:
-        input_required = 'topic_name'
-        output_optional = 'is_ok', 'cid', AsIs('status'), 'details'
+    input = 'topic_name',
+    output = '-is_ok', '-cid', AsIs('-status'), '-details'
 
 # ################################################################################################################################
 

@@ -20,7 +20,6 @@ from zato.cli.enmasse.client import wait_for_services, Default_Service_Wait_Time
 from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.cli.enmasse.importers.channel_rest import ChannelImporter
 from zato.cli.enmasse.importers.group import GroupImporter
-from zato.cli.enmasse.importers.cache import CacheImporter
 from zato.cli.enmasse.importers.email_smtp import SMTPImporter
 from zato.cli.enmasse.importers.email_imap import IMAPImporter
 from zato.cli.enmasse.importers.es import ElasticSearchImporter
@@ -29,7 +28,9 @@ from zato.cli.enmasse.importers.scheduler import SchedulerImporter
 from zato.cli.enmasse.importers.sql import SQLImporter
 from zato.cli.enmasse.importers.confluence import ConfluenceImporter
 from zato.cli.enmasse.importers.jira import JiraImporter
-from zato.cli.enmasse.importers.kafka import KafkaChannelImporter, KafkaOutgoingImporter
+from zato.cli.enmasse.importers.channel_hl7_mllp import ChannelHL7MLLPImporter
+from zato.cli.enmasse.importers.graphql import OutgoingGraphQLImporter
+from zato.cli.enmasse.importers.kafka import ChannelKafkaImporter, OutgoingKafkaImporter
 from zato.cli.enmasse.importers.ldap import LDAPImporter
 from zato.cli.enmasse.importers.microsoft_365 import Microsoft365Importer
 from zato.cli.enmasse.importers.outgoing_rest import OutgoingRESTImporter
@@ -59,11 +60,13 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 
 for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse.importers.channel_rest',
-                        'zato.cli.enmasse.importers.group', 'zato.cli.enmasse.importers.cache',
+                        'zato.cli.enmasse.importers.group',
                         'zato.cli.enmasse.importers.email_smtp', 'zato.cli.enmasse.importers.email_imap',
                         'zato.cli.enmasse.importers.es', 'zato.cli.enmasse.importers.odoo',
                         'zato.cli.enmasse.importers.scheduler', 'zato.cli.enmasse.importers.sql',
                         'zato.cli.enmasse.importers.confluence', 'zato.cli.enmasse.importers.jira',
+                        'zato.cli.enmasse.importers.channel_hl7_mllp',
+                        'zato.cli.enmasse.importers.graphql',
                         'zato.cli.enmasse.importers.kafka',
                         'zato.cli.enmasse.importers.ldap', 'zato.cli.enmasse.importers.microsoft_365',
                         'zato.cli.enmasse.importers.outgoing_rest', 'zato.cli.enmasse.importers.outgoing_soap',
@@ -89,7 +92,6 @@ class EnmasseYAMLImporter:
 
         self.sec_defs = {}
         self.group_defs = {}
-        self.cache_defs = {}
         self.odoo_defs = {}
         self.smtp_defs = {}
         self.imap_defs = {}
@@ -98,8 +100,10 @@ class EnmasseYAMLImporter:
         self.job_defs = {}
         self.confluence_defs = {}
         self.jira_defs = {}
-        self.kafka_channel_defs = {}
-        self.kafka_outgoing_defs = {}
+        self.channel_hl7_mllp_defs = {}
+        self.channel_kafka_defs = {}
+        self.outgoing_graphql_defs = {}
+        self.outgoing_kafka_defs = {}
         self.ldap_defs = {}
         self.microsoft_365_defs = {}
         self.outgoing_rest_defs = {}
@@ -119,7 +123,6 @@ class EnmasseYAMLImporter:
         self.security_importer = SecurityImporter(self)
         self.channel_importer = ChannelImporter(self)
         self.group_importer = GroupImporter(self)
-        self.cache_importer = CacheImporter(self)
         self.odoo_importer = OdooImporter(self)
         self.smtp_importer = SMTPImporter(self)
         self.imap_importer = IMAPImporter(self)
@@ -128,8 +131,10 @@ class EnmasseYAMLImporter:
         self.scheduler_importer = SchedulerImporter(self)
         self.confluence_importer = ConfluenceImporter(self)
         self.jira_importer = JiraImporter(self)
-        self.kafka_channel_importer = KafkaChannelImporter(self)
-        self.kafka_outgoing_importer = KafkaOutgoingImporter(self)
+        self.channel_hl7_mllp_importer = ChannelHL7MLLPImporter(self)
+        self.channel_kafka_importer = ChannelKafkaImporter(self)
+        self.outgoing_graphql_importer = OutgoingGraphQLImporter(self)
+        self.outgoing_kafka_importer = OutgoingKafkaImporter(self)
         self.ldap_importer = LDAPImporter(self)
         self.microsoft_365_importer = Microsoft365Importer(self)
         self.outgoing_rest_importer = OutgoingRESTImporter(self)
@@ -345,29 +350,6 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
-    def sync_cache(self, cache_list:'list', session:'SASession') -> 'tuple':
-        """ Synchronizes cache definitions from a YAML configuration with the database.
-        """
-        if not cache_list:
-            return [], []
-
-        # Examine each cache item in detail
-        for idx, item in enumerate(cache_list):
-            if not item.get('name'):
-                # Skip items without a name or log them if needed
-                logger.warning('Cache item %d has no name, skipping', idx)
-                continue
-
-        cache_created, cache_updated = self.cache_importer.sync_cache_definitions(cache_list, session)
-
-        # Get cache definitions from the cache importer
-        self.cache_defs = self.cache_importer.cache_defs
-        logger.info('Processed cache definitions: created=%d updated=%d', len(cache_created), len(cache_updated))
-
-        return cache_created, cache_updated
-
-# ################################################################################################################################
-
     def sync_odoo(self, odoo_list:'list', session:'SASession') -> 'tuple':
         """ Synchronizes Odoo connection definitions from a YAML configuration with the database.
         """
@@ -560,39 +542,80 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
-    def sync_kafka_channel(self, kafka_channel_list:'list', session:'SASession') -> 'tuple':
-        if not kafka_channel_list:
+    def sync_channel_hl7_mllp(self, channel_hl7_mllp_list:'list', session:'SASession') -> 'tuple':
+        if not channel_hl7_mllp_list:
             return [], []
 
-        count = len(kafka_channel_list)
+        count = len(channel_hl7_mllp_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} HL7 MLLP channel {noun}')
+
+        for idx, item in enumerate(channel_hl7_mllp_list):
+            logger.info('HL7 MLLP channel item %d: %s', idx, item)
+
+        created, updated = self.channel_hl7_mllp_importer.sync_definitions(channel_hl7_mllp_list, session)
+        self.channel_hl7_mllp_defs = self.channel_hl7_mllp_importer.connection_defs
+
+        created_count = len(created)
+        updated_count = len(updated)
+        logger.info('Processed HL7 MLLP channel definitions: created=%d updated=%d', created_count, updated_count)
+
+        return created, updated
+
+# ################################################################################################################################
+
+    def sync_channel_kafka(self, channel_kafka_list:'list', session:'SASession') -> 'tuple':
+        if not channel_kafka_list:
+            return [], []
+
+        count = len(channel_kafka_list)
         noun = 'definition' if count == 1 else 'definitions'
         logger.info(f'Processing {count} Kafka channel {noun}')
 
-        for idx, item in enumerate(kafka_channel_list):
+        for idx, item in enumerate(channel_kafka_list):
             logger.info('Kafka channel item %d: %s', idx, item)
 
-        created, updated = self.kafka_channel_importer.sync_definitions(kafka_channel_list, session)
-        self.kafka_channel_defs = self.kafka_channel_importer.connection_defs
+        created, updated = self.channel_kafka_importer.sync_definitions(channel_kafka_list, session)
+        self.channel_kafka_defs = self.channel_kafka_importer.connection_defs
         logger.info('Processed Kafka channel definitions: created=%d updated=%d', len(created), len(updated))
 
         return created, updated
 
 # ################################################################################################################################
 
-    def sync_kafka_outgoing(self, kafka_outgoing_list:'list', session:'SASession') -> 'tuple':
-        if not kafka_outgoing_list:
+    def sync_outgoing_kafka(self, outgoing_kafka_list:'list', session:'SASession') -> 'tuple':
+        if not outgoing_kafka_list:
             return [], []
 
-        count = len(kafka_outgoing_list)
+        count = len(outgoing_kafka_list)
         noun = 'definition' if count == 1 else 'definitions'
         logger.info(f'Processing {count} Kafka outgoing {noun}')
 
-        for idx, item in enumerate(kafka_outgoing_list):
+        for idx, item in enumerate(outgoing_kafka_list):
             logger.info('Kafka outgoing item %d: %s', idx, item)
 
-        created, updated = self.kafka_outgoing_importer.sync_definitions(kafka_outgoing_list, session)
-        self.kafka_outgoing_defs = self.kafka_outgoing_importer.connection_defs
+        created, updated = self.outgoing_kafka_importer.sync_definitions(outgoing_kafka_list, session)
+        self.outgoing_kafka_defs = self.outgoing_kafka_importer.connection_defs
         logger.info('Processed Kafka outgoing definitions: created=%d updated=%d', len(created), len(updated))
+
+        return created, updated
+
+# ################################################################################################################################
+
+    def sync_outgoing_graphql(self, outgoing_graphql_list:'list', session:'SASession') -> 'tuple':
+        if not outgoing_graphql_list:
+            return [], []
+
+        count = len(outgoing_graphql_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} GraphQL outgoing {noun}')
+
+        for idx, item in enumerate(outgoing_graphql_list):
+            logger.info('GraphQL outgoing item %d: %s', idx, item)
+
+        created, updated = self.outgoing_graphql_importer.sync_definitions(outgoing_graphql_list, session)
+        self.outgoing_graphql_defs = self.outgoing_graphql_importer.connection_defs
+        logger.info('Processed GraphQL outgoing definitions: created=%d updated=%d', len(created), len(updated))
 
         return created, updated
 
@@ -794,13 +817,6 @@ class EnmasseYAMLImporter:
         if channels_updated:
             self.updated_objects['channel_rest'] = channels_updated
 
-        # Process cache definitions
-        cache_created, cache_updated = self.sync_cache(yaml_config.get('cache', []), session)
-        if cache_created:
-            self.created_objects['cache'] = cache_created
-        if cache_updated:
-            self.updated_objects['cache'] = cache_updated
-
         # Process Odoo connection definitions
         odoo_created, odoo_updated = self.sync_odoo(yaml_config.get('odoo', []), session)
         if odoo_created:
@@ -867,20 +883,36 @@ class EnmasseYAMLImporter:
             self.updated_objects['ldap'] = ldap_updated
 
         # Process Kafka channel definitions
-        kafka_channel_list = yaml_config.get('kafka_channel', [])
-        kafka_channel_created, kafka_channel_updated = self.sync_kafka_channel(kafka_channel_list, session)
-        if kafka_channel_created:
-            self.created_objects['kafka_channel'] = kafka_channel_created
-        if kafka_channel_updated:
-            self.updated_objects['kafka_channel'] = kafka_channel_updated
+        channel_kafka_list = yaml_config.get('channel_kafka', [])
+        channel_kafka_created, channel_kafka_updated = self.sync_channel_kafka(channel_kafka_list, session)
+        if channel_kafka_created:
+            self.created_objects['channel_kafka'] = channel_kafka_created
+        if channel_kafka_updated:
+            self.updated_objects['channel_kafka'] = channel_kafka_updated
 
         # Process Kafka outgoing definitions
-        kafka_outgoing_list = yaml_config.get('kafka_outgoing', [])
-        kafka_outgoing_created, kafka_outgoing_updated = self.sync_kafka_outgoing(kafka_outgoing_list, session)
-        if kafka_outgoing_created:
-            self.created_objects['kafka_outgoing'] = kafka_outgoing_created
-        if kafka_outgoing_updated:
-            self.updated_objects['kafka_outgoing'] = kafka_outgoing_updated
+        outgoing_kafka_list = yaml_config.get('outgoing_kafka', [])
+        outgoing_kafka_created, outgoing_kafka_updated = self.sync_outgoing_kafka(outgoing_kafka_list, session)
+        if outgoing_kafka_created:
+            self.created_objects['outgoing_kafka'] = outgoing_kafka_created
+        if outgoing_kafka_updated:
+            self.updated_objects['outgoing_kafka'] = outgoing_kafka_updated
+
+        # Process GraphQL outgoing definitions
+        outgoing_graphql_list = yaml_config.get('outgoing_graphql', [])
+        outgoing_graphql_created, outgoing_graphql_updated = self.sync_outgoing_graphql(outgoing_graphql_list, session)
+        if outgoing_graphql_created:
+            self.created_objects['outgoing_graphql'] = outgoing_graphql_created
+        if outgoing_graphql_updated:
+            self.updated_objects['outgoing_graphql'] = outgoing_graphql_updated
+
+        # Process HL7 MLLP channel definitions
+        channel_hl7_mllp_list = yaml_config.get('channel_hl7_mllp', [])
+        channel_hl7_mllp_created, channel_hl7_mllp_updated = self.sync_channel_hl7_mllp(channel_hl7_mllp_list, session)
+        if channel_hl7_mllp_created:
+            self.created_objects['channel_hl7_mllp'] = channel_hl7_mllp_created
+        if channel_hl7_mllp_updated:
+            self.updated_objects['channel_hl7_mllp'] = channel_hl7_mllp_updated
 
         # Process Microsoft 365 connection definitions
         ms365_list = yaml_config.get('microsoft_365', [])

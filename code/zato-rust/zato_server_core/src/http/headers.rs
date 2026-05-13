@@ -1,8 +1,8 @@
 //! HTTP header parsing and WSGI environ key mapping.
 
+use pyo3::intern;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyString};
-use pyo3::intern;
 
 use crate::logging::transform_header_key;
 

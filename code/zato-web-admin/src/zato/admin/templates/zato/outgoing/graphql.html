@@ -1,0 +1,292 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}GraphQL connections{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/invoker.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/graphql.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'name',
+            '_is_active',
+            'address',
+            'security',
+            '_edit',
+            '_delete',
+            '_ping',
+            '_invoke',
+            'id',
+            'is_active',
+            'extra',
+            'default_query_timeout',
+            'security_id',
+            'sec_type',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    {% if cluster_id %}
+        <div id="markup">
+            <h2 class="zato">GraphQL connections</h2>
+
+{% with has_generic="1" generic_type="outconn-graphql" %}
+    {% include "zato/search-form.html" with page_prompt="Show connections"%}
+{% endwith %}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.outgoing.graphql.create()">Create a new connection</a>
+        </div>
+
+            <table class="zato-table" id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 1 {% endcomment %}
+                        <th><a href="#">Name</a></th>
+                        <th style="text-align:left"><a href="#">Active</a></th>
+                        <th><a href="#">Address</a></th>
+
+                        {% comment %} 2 {% endcomment %}
+                        <th><a href="#">Security</a></th>
+
+                        {% comment %} 3 {% endcomment %}
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 4 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        {% comment %} 1 {% endcomment %}
+                        <td>{{ item.name }}</td>
+                        <td style="text-align:left">{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td><a href="{{ item.address }}">{{ item.address }}</a></td>
+
+                        {% comment %} 2 {% endcomment %}
+                        <td>
+                            {% if item.security_name %}
+                                {% if item.sec_type == 'oauth' %}
+                                <a href="/zato/security/oauth/outconn/client-credentials/?cluster={{ cluster_id }}&amp;query={{ item.security_name }}">{{ item.security_name }}</a>
+                                {% elif item.sec_type == 'basic_auth' %}
+                                <a href="/zato/security/basic-auth/?cluster={{ cluster_id }}&amp;query={{ item.security_name }}">{{ item.security_name }}</a>
+                                {% elif item.sec_type == 'apikey' %}
+                                <a href="/zato/security/apikey/?cluster={{ cluster_id }}&amp;query={{ item.security_name }}">{{ item.security_name }}</a>
+                                {% endif %}
+                            {% else %}
+                                <span class="form_hint">---</span>
+                            {% endif %}
+                        </td>
+
+                        {% comment %} 3 {% endcomment %}
+                        <td><a href="javascript:$.fn.zato.outgoing.graphql.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.graphql.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)">Ping</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.graphql.invoke('{{ item.id }}')">Invoke</a></td>
+
+                        {% comment %} 4 {% endcomment %}
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.extra|default:"" }}</td>
+                        <td class='ignore'>{{ item.default_query_timeout|default:"" }}</td>
+                        <td class='ignore'>{% if item.sec_type %}{{ item.sec_type }}/{{ item.security_id }}{% endif %}</td>
+                        <td class='ignore'>{{ item.sec_type|default:"" }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='16'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+
+{% include "zato/paginate/action-panel.html" %}
+        </div>
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "out-graphql-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:13%">
+                                <label for="id_name">
+                                Name
+                                </label>
+                            </td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_is_active">
+                                Active
+                                </label>
+                            </td>
+                            <td>{{ create_form.is_active }}</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_default_query_timeout">
+                                Timeout
+                                </label>
+                            </td>
+                            <td>{{ create_form.default_query_timeout }}</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_address">
+                                Address
+                                </label>
+                            </td>
+                            <td>{{ create_form.address }}</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_security_id">
+                                Security
+                                </label>
+                            </td>
+                            <td>{{ create_form.security_id }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_extra">
+                                Extra headers
+                                </label>
+                            </td>
+                            <td>{{ create_form.extra }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <span class="how-it-works-badge" id="create-how-it-works" style="float:left">How does it work?</span>
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "out-graphql-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:13%">
+                                <label for="id_edit-name">
+                                Name
+                                </label>
+                            </td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_edit-is_active">
+                                Active
+                                </label>
+                            </td>
+                            <td>{{ edit_form.is_active }}</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_edit-default_query_timeout">
+                                Timeout
+                                </label>
+                            </td>
+                            <td>{{ edit_form.default_query_timeout }}</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_edit-address">
+                                Address
+                                </label>
+                            </td>
+                            <td>{{ edit_form.address }}</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_edit-security_id">
+                                Security
+                                </label>
+                            </td>
+                            <td>{{ edit_form.security_id }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-extra">
+                                Extra headers
+                                </label>
+                            </td>
+                            <td>{{ edit_form.extra }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <span class="how-it-works-badge" id="edit-how-it-works" style="float:left">How does it work?</span>
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+        {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

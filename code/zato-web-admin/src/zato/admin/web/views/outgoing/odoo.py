@@ -21,7 +21,7 @@ from zato.admin.web.views import change_password as _change_password, CreateEdit
      Index as _Index, method_allowed
 from zato.common.api import ODOO
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +33,9 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'host', 'port', 'user', 'database', 'protocol', 'pool_size')
-        output_repeated = True
+    input_required = 'cluster_id',
+    output_required = 'id', 'name', 'is_active', 'host', 'port', 'user', 'database', 'protocol', 'pool_size'
+    output_repeated = True
 
     def handle(self):
 
@@ -46,6 +45,7 @@ class Index(_Index):
                     item.protocol_name = protocol.name
 
         return {
+            'show_search_form': True,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'change_password_form': ChangePasswordForm(),
@@ -56,9 +56,8 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'host', 'port', 'user', 'database', 'protocol', 'pool_size')
-        output_required = ('id', 'name')
+    input_required = 'name', 'is_active', 'host', 'port', 'user', 'database', 'protocol', 'pool_size'
+    output_required = 'id', 'name'
 
     def success_message(self, item):
         return 'Successfully {} the outgoing Odoo connection [{}]'.format(self.verb, item.name)

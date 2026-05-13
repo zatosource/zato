@@ -24,7 +24,7 @@ from time import sleep
 from traceback import format_exc
 
 # Bunch
-from bunch import Bunch
+from zato.common.ext.bunch import Bunch
 
 # Zato
 from zato.common.api import SCHEDULER

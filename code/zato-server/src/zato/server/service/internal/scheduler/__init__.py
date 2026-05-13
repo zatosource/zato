@@ -31,7 +31,13 @@ from zato.server.service.internal import AdminService
 _service_name_prefix = 'zato.scheduler.job.'
 _entity_type = 'scheduler'
 _ib_params = ('weeks', 'days', 'hours', 'minutes', 'seconds')
-_new_params = ('jitter_ms', 'timezone', 'calendar', 'max_execution_time_ms')
+_new_params = ('jitter_ms', 'timezone', 'calendar', 'max_execution_time_ms',
+    'on_success_service', 'on_success_job', 'on_error_service', 'on_error_job')
+
+_opaque_stale_keys = frozenset(_ib_params + (
+    'repeats', 'service', 'name', 'is_active', 'job_type', 'start_date', 'extra', 'id', 'cluster_id',
+))
+
 default_page = 1
 default_page_size = 50
 
@@ -80,7 +86,7 @@ def _create_edit(self, action):
     input = self.request.input
     input.cluster_id = default_cluster_id
 
-    self.logger.info('_create_edit: action=%s raw_input=%s', action, input)
+    self.logger.info('_create_edit: action=%s input=%s', action, input)
 
     job_type = input.job_type
     name = input.name
@@ -214,6 +220,14 @@ def _create_edit(self, action):
                 ib.repeats = data['repeats']
 
             set_instance_opaque_attrs(job_row, input, only=list(_new_params))
+
+            if job_row.opaque1:
+                from json import loads as json_loads, dumps as json_dumps
+                opaque = json_loads(job_row.opaque1)
+                for stale_key in _opaque_stale_keys:
+                    opaque.pop(stale_key, None)
+                job_row.opaque1 = json_dumps(opaque)
+
             session.add(job_row)
             session.commit()
 
@@ -242,9 +256,10 @@ class _CreateEdit(_SchedulerAdmin):
     """ A base class for both creating and editing scheduler jobs.
     """
     input = 'cluster_id', 'name', 'is_active', 'job_type', 'service', 'start_date', \
-        '-id', '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', \
+        Int('-id'), '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', \
         '-cron_definition', '-should_ignore_existing', \
-        '-jitter_ms', '-timezone', '-calendar', '-max_execution_time_ms'
+        '-jitter_ms', '-timezone', '-calendar', '-max_execution_time_ms', \
+        '-on_success_service', '-on_success_job', '-on_error_service', '-on_error_job'
     output = '-id', '-name', '-cron_definition'
 
     def handle(self):
@@ -258,7 +273,8 @@ class _Get(_SchedulerAdmin):
     """
     output = 'id', 'name', 'is_active', 'job_type', 'start_date', 'service_id', 'service_name', \
         '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', '-cron_definition', \
-        '-jitter_ms', '-timezone', '-calendar', '-max_execution_time_ms'
+        '-jitter_ms', '-timezone', '-calendar', '-max_execution_time_ms', \
+        '-on_success_service', '-on_success_job', '-on_error_service', '-on_error_job'
 
 # ################################################################################################################################
 # ################################################################################################################################

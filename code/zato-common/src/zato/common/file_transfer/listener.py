@@ -382,28 +382,14 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
             with open(event_path, 'rb') as f:
                 file_data = f.read()
 
-            inner_payload = dumps({
+            request_body = dumps({
                 'payload': b64encode(file_data).decode('ascii'),
                 'payload_name': event_path,
             })
 
-            request_body = dumps({
-                'name': 'zato.hot-deploy.create',
-                'payload': b64encode(inner_payload.encode('utf8')).decode('ascii'),
-                'channel': 'invoke',
-                'data_format': 'json',
-                'transport': None,
-                'is_async': False,
-                'expiration': 15,
-                'pid': None,
-                'all_pids': False,
-                'timeout': None,
-                'skip_response_elem': True,
-                'needs_response_time': True,
-                'needs_headers': True,
-            })
-
-            response = self.session.post(self.invoke_url, data=request_body)
+            service_name = 'zato.hot-deploy.create'
+            url = self.invoke_url.format(service_name)
+            response = self.session.post(url, data=request_body)
 
             if response.ok:
                 logger.info('Deployed -> %s', event_path)
@@ -547,7 +533,7 @@ def _build_session() -> 'tuple':
     session = requests.Session()
     session.auth = (username, password)
 
-    invoke_url = 'http://localhost:17010' + config['ADMIN_INVOKE_PATH']
+    invoke_url = 'http://localhost:17010/zato/api/invoke/{}'
 
     return session, invoke_url
 

@@ -27,12 +27,11 @@ class Index(_Index):
     output_class = HL7FHIRConfigObject
     paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name', 'is_active', 'is_internal', 'address', 'security_id', \
-            'pool_size', 'security_name'
-        output_optional = ('extra',) + generic_attrs
-        output_repeated = True
+    input_required = 'cluster_id', 'type_'
+    output_required = 'id', 'name', 'is_active', 'is_internal', 'address', 'security_id', \
+        'pool_size', 'security_name'
+    output_optional = ('extra',) + generic_attrs
+    output_repeated = True
 
 # ################################################################################################################################
 
@@ -46,6 +45,7 @@ class Index(_Index):
         )
 
         return {
+            'show_search_form': True,
             'create_form': CreateForm(self.req, security_list),
             'edit_form': EditForm(self.req, security_list, prefix='edit'),
         }
@@ -56,10 +56,9 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_internal', 'address', 'security_id', 'pool_size'
-        input_optional = ('is_active', 'extra') + generic_attrs
-        output_required = 'id', 'name'
+    input_required = 'name', 'is_internal', 'address', 'security_id', 'pool_size'
+    input_optional = ('is_active', 'extra') + generic_attrs
+    output_required = 'id', 'name'
 
 # ################################################################################################################################
 

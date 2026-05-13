@@ -381,10 +381,10 @@ class SecurityGroupsCtx:
     def _get_sec_def_by_id(self, security_id:'int') -> 'anydict':
 
         # Let's try Basic Auth definitions first ..
-        if not (sec_def := self.server.worker_store.basic_auth_get_by_id(security_id)):
+        if not (sec_def := self.server.config_manager.basic_auth_get_by_id(security_id)):
 
             # .. if we do not have anything, it must be an API key definition then ..
-            sec_def = self.server.worker_store.apikey_get_by_id(security_id)
+            sec_def = self.server.config_manager.apikey_get_by_id(security_id)
 
         # If we do not have anything, we can only report an error
         if not sec_def:
@@ -472,7 +472,7 @@ class SecurityGroupsCtx:
             if member.sec_type == Sec_Def_Type.BASIC_AUTH:
 
                 # .. get the member's security definition ..
-                sec_def = self.server.worker_store.basic_auth_get_by_id(member.security_id)
+                sec_def = self.server.config_manager.basic_auth_get_by_id(member.security_id)
 
                 # .. populate the correct container ..
                 self.on_basic_auth_created(
@@ -485,7 +485,7 @@ class SecurityGroupsCtx:
             elif member.sec_type == Sec_Def_Type.APIKEY:
 
                 # .. get the member's security definition ..
-                sec_def = self.server.worker_store.apikey_get_by_id(member.security_id)
+                sec_def = self.server.config_manager.apikey_get_by_id(member.security_id)
 
                 # .. populate the correct container ..
                 self.on_apikey_created(

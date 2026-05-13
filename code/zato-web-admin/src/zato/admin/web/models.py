@@ -14,16 +14,10 @@ from django.contrib.auth.models import User
 
 # Zato
 from zato.admin.web import DATE_FORMATS, MONTH_YEAR_FORMATS, TIME_FORMATS
-from zato.common.json_internal import loads
 
 # Not used in practice
 def _on_delete(*unused_args, **unused_kwargs):
     pass
-
-class TOTPData:
-    def __init__(self):
-        self.key = None
-        self.label = None
 
 class UserProfile(models.Model):
     class Meta:
@@ -50,16 +44,6 @@ class UserProfile(models.Model):
             self.time_format_py, self.month_year_format_py, self.date_time_format_py)
 
     __unicode__ = __repr__
-
-    def get_totp_data(self):
-        totp_data = TOTPData()
-
-        if self.opaque1:
-            opaque = loads(self.opaque1)
-            totp_data.key = opaque.get('totp_key')
-            totp_data.label = opaque.get('totp_label')
-
-        return totp_data
 
 class ClusterColorMarker(models.Model):
     class Meta:

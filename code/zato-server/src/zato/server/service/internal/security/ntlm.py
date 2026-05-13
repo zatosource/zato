@@ -12,11 +12,11 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
-from zato.common.api import SEC_DEF_TYPE
+from zato.common.api import query_parameters, SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, NTLM
 from zato.common.odb.query import ntlm_list
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,11 +32,8 @@ class GetList(AdminService):
     """
     _filter_by = NTLM.name,
 
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_security_ntlm_get_list_request'
-        response_elem = 'zato_security_ntlm_get_list_response'
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'username')
+    input = 'cluster_id', *query_parameters
+    output = 'id', 'name', 'is_active', 'username'
 
     def get_data(self, session):
         return self._search(ntlm_list, session, self.request.input.cluster_id, False)
@@ -51,11 +48,8 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new NTLM definition.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_ntlm_create_request'
-        response_elem = 'zato_security_ntlm_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'username')
-        output_required = ('id', 'name')
+    input = 'cluster_id', 'name', 'is_active', 'username'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -95,7 +89,7 @@ class Create(AdminService):
             self.response.payload.name = auth.name
 
         # Make sure the object has been created
-        _:'any_' = self.server.worker_store.wait_for_ntlm(input.name)
+        _:'any_' = self.server.config_manager.wait_for_ntlm(input.name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,11 +97,8 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an NTLM definition.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_ntlm_edit_request'
-        response_elem = 'zato_security_ntlm_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'username')
-        output_required = ('id', 'name')
+    input = 'id', 'cluster_id', 'name', 'is_active', 'username'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -155,10 +146,6 @@ class ChangePassword(ChangePasswordBase):
     """
     password_required = False
 
-    class SimpleIO(ChangePasswordBase.SimpleIO):
-        request_elem = 'zato_security_ntlm_change_password_request'
-        response_elem = 'zato_security_ntlm_change_password_response'
-
     def handle(self):
         def _auth(instance, password):
             instance.password = password
@@ -171,10 +158,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes an NTLM definition.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_ntlm_delete_request'
-        response_elem = 'zato_security_ntlm_delete_response'
-        input_required = ('id',)
+    input = 'id',
 
     def handle(self):
         with closing(self.odb.session()) as session:
