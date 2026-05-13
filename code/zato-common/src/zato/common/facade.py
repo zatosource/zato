@@ -9,18 +9,29 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from logging import getLogger
 
+# Zato
+from zato.common.api import PubSub
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.pubsub.redis_backend import PublishResult
-    from zato.common.typing_ import any_, anydict, anydictnone
+    from zato.common.typing_ import any_, anydict, anydictnone, anylist, strnone
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_default_priority = PubSub.Message.Priority_Default
+_default_expiration = PubSub.Message.Default_Expiration
+_default_max_messages = PubSub.Message.Default_Max_Messages
+_default_max_len = PubSub.Message.Default_Max_Len
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,7 +44,8 @@ class SecurityFacade:
     def get_bearer_token_by_name(self, key:'str') -> 'anydict':
         item:'anydictnone' = self.server.config_manager.request_dispatcher.url_data.oauth_config.get(key)
         if item:
-            return item['config']
+            out = item['config']
+            return out
         else:
             raise KeyError(f'Security definition not found by key (1) -> {key}')
 
@@ -41,7 +53,8 @@ class SecurityFacade:
 
         for value in self.server.config_manager.request_dispatcher.url_data.oauth_config.values():
             if value['config']['id'] == id:
-                return value['config']
+                out = value['config']
+                return out
         else:
             raise KeyError(f'Security definition not found ID -> {id}')
 
@@ -53,21 +66,43 @@ class PubSubFacade:
     def __init__(self, server:'ParallelServer') -> 'None':
         self.server = server
 
-    def publish(self, topic_name:'str', data:'any_', **kwargs:'any_') -> 'PublishResult':
-        return self.server.pubsub_redis.publish(
+    def publish(
+        self,
+        topic_name:'str',
+        data:'any_',
+        *,
+        priority:'int'=_default_priority,
+        expiration:'int'=_default_expiration,
+        correl_id:'strnone'=None,
+        in_reply_to:'strnone'=None,
+        ext_client_id:'strnone'=None,
+        publisher:'strnone'=None,
+        pub_time:'strnone'=None,
+    ) -> 'PublishResult':
+
+        out = self.server.pubsub_redis.publish(
             topic_name,
             data,
-            priority=kwargs.get('priority', 5),
-            expiration=kwargs.get('expiration', 31536000),
-            correl_id=kwargs.get('correl_id') or kwargs.get('cid'),
-            in_reply_to=kwargs.get('in_reply_to'),
-            ext_client_id=kwargs.get('ext_client_id'),
-            publisher=kwargs.get('publisher'),
-            pub_time=kwargs.get('pub_time'),
+            priority=priority,
+            expiration=expiration,
+            correl_id=correl_id,
+            in_reply_to=in_reply_to,
+            ext_client_id=ext_client_id,
+            publisher=publisher,
+            pub_time=pub_time,
         )
 
-    def get_messages(self, sub_key:'str', max_messages:'int'=50, max_len:'int'=5_000_000) -> 'list':
-        return self.server.pubsub_redis.fetch_messages(sub_key, max_messages=max_messages, max_len=max_len)
+        return out
+
+    def get_messages(
+        self,
+        sub_key:'str',
+        max_messages:'int'=_default_max_messages,
+        max_len:'int'=_default_max_len,
+    ) -> 'anylist':
+
+        out = self.server.pubsub_redis.fetch_messages(sub_key, max_messages=max_messages, max_len=max_len)
+        return out
 
     def subscribe(self, topic_name:'str', sub_key:'str') -> 'None':
         self.server.pubsub_redis.subscribe(sub_key, topic_name)

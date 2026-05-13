@@ -241,7 +241,11 @@ class RedisPubSubBackend:
             return []
 
         # .. build streams dict for xreadgroup ..
-        streams = {self._get_stream_key(topic): '>' for topic in topics}
+        streams:'anydict' = {}
+
+        for topic in topics:
+            stream_key = self._get_stream_key(topic)
+            streams[stream_key] = '>'
 
         # .. read from all subscribed streams ..
         try:
