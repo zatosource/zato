@@ -314,6 +314,9 @@ class ServiceStore:
             # that another deleted service was in.
             pass
 
+        # .. clean up any implicit service topic subscription ..
+        self.server.config_manager.invalidate_service_topic(name)
+
 # ################################################################################################################################
 
     def delete_service_data(self, name:'str') -> 'None':
