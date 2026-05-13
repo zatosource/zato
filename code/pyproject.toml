@@ -1,3 +1,9 @@
+[tool.pytest.ini_options]
+markers = [
+    "perftest: long-running performance tests, skipped by default",
+]
+addopts = "-m 'not perftest'"
+
 [tool.pyright]
 extraPaths = [
     "./lib/python3.8/site-packages",
