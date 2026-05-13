@@ -13,8 +13,8 @@ from traceback import format_exc
 
 # Zato
 from zato.common.api import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
-     ZATO_NONE
+     Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, query_parameters, SEC_DEF_TYPE, \
+     URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.exception import ServiceMissingException
 from zato.common.json_internal import dumps, loads
@@ -131,7 +131,8 @@ class GetList(_BaseGet):
     """
     _filter_by = HTTPSOAP.name,
 
-    input = '-include_wrapper', '-cluster_id', '-connection', '-transport', '-data_format', '-needs_security_group_names'
+    input = '-include_wrapper', '-cluster_id', '-connection', '-transport', '-data_format', '-needs_security_group_names', \
+        *query_parameters
     output = 'id', 'name', 'is_active', 'is_internal', 'url_path', \
         '-service_id', '-service_name', '-security_id', '-security_name', '-sec_type', \
         '-method', '-soap_action', '-soap_version', '-data_format', '-host', '-ping_method', '-pool_size', \

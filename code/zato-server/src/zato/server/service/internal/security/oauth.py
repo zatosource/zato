@@ -12,7 +12,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
-from zato.common.api import SEC_DEF_TYPE
+from zato.common.api import query_parameters, SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, OAuth
 from zato.common.odb.query import oauth_list
@@ -33,7 +33,7 @@ class GetList(AdminService):
     """
     _filter_by = OAuth.name,
 
-    input = 'cluster_id',
+    input = 'cluster_id', *query_parameters
     output = 'id', 'name', 'is_active', 'username', 'client_id_field', 'client_secret_field', 'grant_type', \
         '-auth_server_url', '-scopes', '-extra_fields', '-data_format', \
         '-static_header', '-static_token', '-static_prefix'

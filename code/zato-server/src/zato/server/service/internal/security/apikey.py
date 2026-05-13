@@ -12,7 +12,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
-from zato.common.api import SEC_DEF_TYPE
+from zato.common.api import query_parameters, SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, APIKeySecurity
 from zato.common.odb.query import apikey_security_list
@@ -34,7 +34,7 @@ class GetList(AdminService):
     """
     _filter_by = APIKeySecurity.name,
 
-    input = 'cluster_id',
+    input = 'cluster_id', *query_parameters
     output = 'id', 'name', 'is_active', 'username', '-header'
 
     def get_data(self, session:'SASession') -> 'any_':

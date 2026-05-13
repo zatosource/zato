@@ -159,23 +159,12 @@ class AdminService(Service):
         # Should we break the results into individual pages
         needs_pagination = self.request.input.get('paginate')
 
-        logger.info('AdminService._search: search_func=%s, needs_pagination=%s, filter_by=%s',
-            search_func.__name__ if hasattr(search_func, '__name__') else search_func,
-            needs_pagination, self._filter_by)
-        logger.info('AdminService._search: request.input=%s', self.request.input)
-        logger.info('AdminService._search: args=%s, kwargs=%s', args, kwargs)
-
         if needs_pagination:
             result = sql_search(search_func, self.request.input, self._filter_by, session, cluster_id, *args, **kwargs)
-            logger.info('AdminService._search: paginated result type=%s, total=%s, result_len=%s',
-                type(result).__name__,
-                getattr(result, 'total', 'N/A'),
-                len(result.result) if hasattr(result, 'result') else 'N/A')
             self._search_tool.set_output_meta(result)
         else:
             # No pagination requested at all
             result = search_func(session, cluster_id, *args)
-            logger.info('AdminService._search: non-paginated result type=%s', type(result).__name__)
 
         return result
 

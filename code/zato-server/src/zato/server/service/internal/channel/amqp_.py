@@ -11,6 +11,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
+from zato.common.api import query_parameters
 from zato.common.broker_message import CHANNEL
 from zato.common.exception import ServiceMissingException
 from zato.common.odb.model import ChannelAMQP, Cluster, Service
@@ -25,7 +26,7 @@ class GetList(AdminService):
     name = 'zato.channel.amqp.get-list'
     _filter_by = ChannelAMQP.name,
 
-    input = 'cluster_id', '-cur_page', '-paginate', '-query'
+    input = 'cluster_id', *query_parameters
     output = 'id', 'name', 'address', 'username', 'password', 'is_active', 'queue', 'consumer_tag_prefix', \
         'service_name', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format'
 

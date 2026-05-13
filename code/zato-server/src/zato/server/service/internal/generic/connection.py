@@ -14,7 +14,8 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
-from zato.common.api import GENERIC as COMMON_GENERIC, generic_attrs, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, ZATO_NONE
+from zato.common.api import GENERIC as COMMON_GENERIC, generic_attrs, query_parameters, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, \
+     ZATO_NONE
 from zato.common.broker_message import GENERIC
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
@@ -347,7 +348,7 @@ class GetList(AdminService):
     """
     _filter_by = ModelGenericConn.name,
 
-    input = 'cluster_id', '-type_'
+    input = 'cluster_id', '-type_', *query_parameters
 
 # ################################################################################################################################
 

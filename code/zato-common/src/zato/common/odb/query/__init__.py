@@ -72,43 +72,27 @@ class _SearchWrapper:
     """
     def __init__(self, q, default_page_size=_no_page_limit, **config):
 
-        logger.info('_SearchWrapper.__init__: config=%s', config)
-        logger.info('_SearchWrapper.__init__: q type=%s', type(q).__name__)
-
         # Apply WHERE conditions
         where = config.get('where') or _not_given
         if where is not _not_given:
-            logger.info('_SearchWrapper: applying WHERE clause')
             q = q.filter(where)
         else:
 
             filters = []
 
-            query = config.get('query', [])
-            logger.info('_SearchWrapper: query=%r, type=%s', query, type(query).__name__)
-
-            if query:
+            if query := config.get('query', []):
                 query = query if isinstance(query, (list, tuple)) else [query]
-                logger.info('_SearchWrapper: normalized query=%r', query)
 
-            filter_by = config.get('filter_by', [])
-            logger.info('_SearchWrapper: filter_by=%r, type=%s', filter_by, type(filter_by).__name__)
-
-            if filter_by:
+            if filter_by := config.get('filter_by', []):
                 filter_by = filter_by if isinstance(filter_by, (list, tuple)) else [filter_by]
                 len_filter_by = len(filter_by)
-                logger.info('_SearchWrapper: len_filter_by=%d, query=%r', len_filter_by, query)
                 for column in filter_by:
-                    logger.info('_SearchWrapper: column=%r, type=%s', column, type(column).__name__)
                     for criterion in query:
                         expression = column.contains(criterion)
-                        logger.info('_SearchWrapper: criterion=%r, expression=%s', criterion, expression)
                         if criterion.startswith('-'):
                             expression = not_(expression)
                         and_filter = and_(*[expression]) # type: ignore
                         filters.append(and_filter)
-
-                logger.info('_SearchWrapper: filters count=%d, filters=%s', len(filters), filters)
 
                 # We need to use "or" if we filter by more then one column
                 # to let the filters match all of them independently.
@@ -118,16 +102,11 @@ class _SearchWrapper:
                     else:
                         combine_criteria_using = and_
 
-                    logger.info('_SearchWrapper: combining with %s', combine_criteria_using.__name__)
                     q = q.filter(combine_criteria_using(*filters))
-            else:
-                logger.info('_SearchWrapper: filter_by is empty/falsy, no filtering applied')
 
         # Total number of results
         total_q = q.statement.with_only_columns([func.count()]).order_by(None)
         self.total = q.session.execute(total_q).scalar()
-
-        logger.info('_SearchWrapper: total after filtering=%d', self.total)
 
         # Pagination
         page_size = config.get('page_size', default_page_size)
@@ -135,8 +114,6 @@ class _SearchWrapper:
 
         slice_from = cur_page * page_size
         slice_to = slice_from + page_size
-
-        logger.info('_SearchWrapper: page_size=%s, cur_page=%s, slice=%s:%s', page_size, cur_page, slice_from, slice_to)
 
         self.q = q.slice(slice_from, slice_to)
 
@@ -150,32 +127,17 @@ def query_wrapper(func):
     @wraps(func)
     def inner(*args, **kwargs):
 
-        logger.info('query_wrapper.inner: func=%s, args count=%d, kwargs=%s',
-            func.__name__, len(args), kwargs)
-
         # Each query function will have the last argument either False or True
         # depending on whether columns are needed or not.
         needs_columns = args[-1]
-
-        logger.info('query_wrapper.inner: needs_columns=%s, supports_kwargs=%s',
-            needs_columns, _QueryConfig.supports_kwargs(func))
 
         if _QueryConfig.supports_kwargs(func):
             result = func(*args, **kwargs)
         else:
             result = func(*args)
 
-        logger.info('query_wrapper.inner: result type=%s, passing kwargs to _SearchWrapper: %s',
-            type(result).__name__, kwargs)
-
         tool = _SearchWrapper(result, **kwargs)
-
-        logger.info('query_wrapper.inner: tool.total=%s', tool.total)
-
         result = _SearchResults(tool.q, tool.q.all(), tool.q.subquery().columns, tool.total)
-
-        logger.info('query_wrapper.inner: final result total=%s, result_len=%s',
-            tool.total, len(result.result) if hasattr(result, 'result') else 'N/A')
 
         if needs_columns:
             return result, result.columns

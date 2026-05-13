@@ -13,6 +13,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
+from zato.common.api import query_parameters
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import OutgoingFTP
 from zato.common.odb.query import out_ftp, out_ftp_list
@@ -62,7 +63,7 @@ class GetList(AdminService):
     """
     _filter_by = OutgoingFTP.name,
 
-    input = 'cluster_id',
+    input = 'cluster_id', *query_parameters
     output = _get_output_required + ('-user', '-acct', '-timeout', Boolean('-dircache'), '-default_directory')
 
     def get_data(self, session):

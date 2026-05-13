@@ -19,6 +19,7 @@ from uuid import uuid4
 from builtins import bytes
 
 # Zato
+from zato.common.api import query_parameters
 from zato.common.broker_message import SERVICE
 from zato.common.const import ServiceConst
 from zato.common.exception import BadRequest, ZatoException
@@ -54,7 +55,7 @@ class GetList(AdminService):
     """
     _filter_by = ODBService.name,
 
-    input = 'cluster_id', '-should_include_scheduler'
+    input = 'cluster_id', '-should_include_scheduler', *query_parameters
     output = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted')
 
 # ################################################################################################################################

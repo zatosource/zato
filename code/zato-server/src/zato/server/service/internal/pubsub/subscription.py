@@ -20,7 +20,7 @@ from zato.common.ext.bunch import Bunch, bunchify
 from zato.common.broker_message import PUBSUB
 
 logger = getLogger(__name__)
-from zato.common.api import PubSub
+from zato.common.api import PubSub, query_parameters
 from zato.common.odb.model import Cluster, HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 from zato.common.odb.query import pubsub_subscription_list
 from zato.common.pubsub.util import evaluate_pattern_match, get_security_definition, set_time_since
@@ -118,7 +118,7 @@ class GetList(AdminService):
     """
     _filter_by = PubSubSubscription.sub_key,
 
-    input = 'cluster_id', '-needs_password'
+    input = 'cluster_id', '-needs_password', *query_parameters
     output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', AsIs('topic_link_list'), 'sec_base_id', \
         'sec_name', 'security', 'username', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name', \
         '-rest_push_endpoint_name', AsIs('-topic_name_list'), '-password'

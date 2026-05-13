@@ -11,6 +11,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
+from zato.common.api import query_parameters
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import OutgoingAMQP
 from zato.common.odb.query import out_amqp_list
@@ -36,7 +37,7 @@ class GetList(AdminService):
     name = 'zato.outgoing.amqp.get-list'
     _filter_by = OutgoingAMQP.name,
 
-    input = 'cluster_id',
+    input = 'cluster_id', *query_parameters
     output = 'id', 'name', 'address', 'username', 'password', 'is_active', 'delivery_mode', 'priority', 'pool_size', \
         '-content_type', '-content_encoding', '-expiration', AsIs('-user_id'), AsIs('-app_id')
 
