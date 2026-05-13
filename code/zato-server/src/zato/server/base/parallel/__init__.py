@@ -1254,9 +1254,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         source_job_id = callback_context['job_id']
         source_job_name = callback_context['job_name']
 
-        logger.info(
-            'Triggering %s callback job=%s for source job_id=%s name=%s', event_label, target_job_name, source_job_id, source_job_name)
-
         try:
             with closing(self.odb.session()) as session:
                 target_job = session.query(Job).filter_by(name=target_job_name, cluster_id=1).first()
@@ -1265,6 +1262,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 logger.warning(
                     'Callback job=%s not found for source job_id=%s name=%s', target_job_name, source_job_id, source_job_name)
                 return
+
+            if not target_job.is_active:
+                logger.info(
+                    'Skipping inactive callback job=%s for source job_id=%s name=%s', target_job_name, source_job_id, source_job_name)
+                return
+
+            logger.info(
+                'Triggering %s callback job=%s for source job_id=%s name=%s', event_label, target_job_name, source_job_id, source_job_name)
 
             target_job_id = target_job.id
             self._scheduler.execute_job(target_job_id)
