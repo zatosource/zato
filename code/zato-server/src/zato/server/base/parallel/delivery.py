@@ -73,6 +73,7 @@ class RedisPushDelivery:
         found_any = False
 
         for sub_key, config_list in push_subs.items():
+
             if self._stop_event.is_set():
                 break
 
@@ -83,41 +84,57 @@ class RedisPushDelivery:
 
             found_any = True
 
-            # Build a topic_name -> config lookup for routing
-            config_by_topic = {cfg['topic_name']: cfg for cfg in config_list}
+            # .. build a topic_name -> config lookup for routing ..
+            config_by_topic:'anydict' = {}
 
-            for msg in messages:
-                topic_name = msg.get('meta', {}).get('topic_name', '')
+            for config in config_list:
+                topic_name = config['topic_name']
+                config_by_topic[topic_name] = config
+
+            for message in messages:
+
+                meta = message['meta']
+                topic_name = meta['topic_name']
+
                 sub_config = config_by_topic.get(topic_name)
+
+                # .. use the first config as the default if topic not found ..
                 if not sub_config:
-                    # Fall back to the first config if topic not found
                     sub_config = config_list[0]
+
                 try:
-                    self._deliver_message(msg, sub_config)
+                    self._deliver_message(message, sub_config)
                 except Exception:
                     logger.warning('PubSub push delivery failed for sub_key `%s`: %s', sub_key, format_exc())
 
         return found_any
 
-    def _deliver_message(self, msg:'anydict', sub_config:'anydict') -> 'None':
+    def _deliver_message(self, message:'anydict', sub_config:'anydict') -> 'None':
         push_type = sub_config['push_type']
 
         if push_type == 'service':
             from zato.common.ext.bunch import bunchify
+
             service_name = sub_config['push_service_name']
-            flat = dict(msg.get('meta', {}))
-            flat['data'] = msg['data']
-            self.server.invoke(service_name, bunchify(flat))
+            meta = message['meta']
+
+            flat = dict(meta)
+            flat['data'] = message['data']
+
+            payload = bunchify(flat)
+            self.server.invoke(service_name, payload)
 
         elif push_type == 'rest':
-            self._deliver_to_rest(msg, sub_config)
+            self._deliver_to_rest(message, sub_config)
 
-    def _deliver_to_rest(self, msg:'anydict', sub_config:'anydict') -> 'None':
+    def _deliver_to_rest(self, message:'anydict', sub_config:'anydict') -> 'None':
         from json import dumps
         from requests import post as requests_post
 
         url = sub_config['rest_push_url']
-        requests_post(url, data=dumps(msg), headers={'Content-Type': 'application/json'})
+
+        serialized_message = dumps(message)
+        requests_post(url, data=serialized_message, headers={'Content-Type': 'application/json'})
 
 # ################################################################################################################################
 # ################################################################################################################################
