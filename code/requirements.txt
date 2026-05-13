@@ -93,7 +93,7 @@ SQLAlchemy==1.4.54
 stroll==1.1.0
 stevedore==3.5.0
 sumy==0.12.0
-tabulate==0.9.0s
+tabulate==0.9.0
 texttable==1.6.1
 typing-utils==0.1.0
 tzlocal==5.3.1
