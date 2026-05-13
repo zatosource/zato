@@ -93,7 +93,7 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
-kvdb_logger = logging.getLogger('zato_kvdb')
+redis_logger = logging.getLogger('zato_redis')
 
 
 # ################################################################################################################################
@@ -1408,14 +1408,15 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         from redis import Redis
         from zato.server.base.parallel.delivery import RedisPushDelivery
 
-        kvdb_config = self.fs_server_config.kvdb
+        redis_config = self.fs_server_config.redis
+        redis_password = redis_config.password if redis_config.password else None
 
         try:
             redis_conn = Redis(
-                host=kvdb_config.host or 'localhost',
-                port=int(kvdb_config.port or 6379),
-                db=int(kvdb_config.get('db', 0)),
-                password=kvdb_config.password if kvdb_config.password else None,
+                host=redis_config.host,
+                port=redis_config.port,
+                db=redis_config.db,
+                password=redis_password,
                 decode_responses=True,
             )
             self.pubsub_redis = RedisPubSubBackend(redis_conn)
@@ -1423,8 +1424,16 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             self._sync_pubsub_subscriptions()
 
-            self.pubsub_push_delivery = RedisPushDelivery(self, self.pubsub_redis)
-            self.pubsub_push_delivery.start()
+            # .. pass connection params so each delivery greenlet creates its own connection ..
+            redis_conn_params = {
+                'host': redis_config.host,
+                'port': redis_config.port,
+                'db': redis_config.db,
+                'password': redis_password,
+                'decode_responses': True,
+            }
+
+            self.pubsub_push_delivery = RedisPushDelivery(self, redis_conn_params)
 
             logger.info('PubSub Redis backend started')
         except Exception:

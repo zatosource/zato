@@ -68,19 +68,13 @@ def _kill_server() -> 'None':
 
     if _server_process:
         if _server_process.poll() is None:
-
-            # Try graceful termination first ..
-            _server_process.terminate()
-
-            try:
-                _ = _server_process.wait(timeout=_process_kill_timeout)
-
-            # .. if it does not stop in time, force kill it.
-            except subprocess.TimeoutExpired:
-                _server_process.kill()
-                _ = _server_process.wait(timeout=_process_kill_timeout)
+            _server_process.kill()
+            _ = _server_process.wait(timeout=_process_kill_timeout)
 
     _server_process = None
+
+    # .. also kill any orphaned Zato server processes that may have forked ..
+    _ = subprocess.run(['pkill', '-f', 'zato.server.main'], capture_output=True)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -141,6 +135,10 @@ def zato_server() -> 'any_':
     global _server_process, _temp_directory
 
     from config import TestConfig
+
+    # .. kill any leftover Zato servers from interrupted previous runs ..
+    _ = subprocess.run(['pkill', '-f', 'zato.server.main'], capture_output=True)
+    time.sleep(2)
 
     start_time = time.monotonic()
 
