@@ -8,10 +8,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
+from math import log2
+from random import uniform
+from time import monotonic
 from traceback import format_exc
 
 # gevent
-from gevent import spawn
+from gevent import sleep, spawn
 from gevent.event import Event
 from gevent.lock import RLock
 
@@ -35,6 +38,11 @@ logger = getLogger(__name__)
 
 _default_delivery_block_ms = 5000
 _delivery_batch_size = 50
+
+_max_retry_time = PubSub.Delivery.Max_Retry_Time
+_retry_interval_initial = PubSub.Delivery.Retry_Interval_Initial
+_retry_interval_max = PubSub.Delivery.Retry_Interval_Max
+_retry_jitter_percent = PubSub.Delivery.Retry_Jitter_Percent
 
 sub_key_greenlet_dict = dict[str, 'Greenlet']
 
@@ -123,44 +131,29 @@ class RedisPushDelivery:
         or the stop event is set. Each greenlet has its own dedicated Redis
         connection to prevent connection pool races with BLOCK.
         """
-        # .. create a dedicated backend for this greenlet ..
         backend = self._create_greenlet_backend()
 
         logger.info('PubSub delivery greenlet started for sub_key `%s`', sub_key)
 
+        # .. on startup, drain any messages that were read but never acknowledged
+        # .. before the process stopped (e.g. after a restart) ..
         while not self._stop_event.is_set():
-
-            # .. exit if this sub_key was removed ..
             if sub_key not in self.server._push_subs:
                 break
+            pending = backend.fetch_pending(sub_key, max_messages=_delivery_batch_size)
+            if not pending:
+                break
+            self._deliver_batch(pending, sub_key, backend)
 
+        # .. then block for new messages ..
+        while not self._stop_event.is_set():
+            if sub_key not in self.server._push_subs:
+                break
             try:
-
-                # .. block on Redis until a message arrives (up to configured timeout) ..
                 messages = backend.fetch_messages(
                     sub_key, max_messages=_delivery_batch_size, block_ms=_default_delivery_block_ms)
-
-                if not messages:
-                    continue
-
-                # .. get the config for this sub_key ..
-                config_list = self.server._push_subs[sub_key]
-
-                # .. build a topic_name -> config lookup for routing ..
-                config_by_topic:'anydict' = {}
-
-                for config in config_list:
-                    topic_name = config['topic_name']
-                    config_by_topic[topic_name] = config
-
-                # .. deliver each message to the target service ..
-                for message in messages:
-                    meta = message['meta']
-                    topic_name = meta['topic_name']
-                    sub_config = config_by_topic[topic_name]
-
-                    self._deliver_message(message, sub_config)
-
+                if messages:
+                    self._deliver_batch(messages, sub_key, backend)
             except Exception:
                 logger.warning('PubSub delivery error for sub_key `%s`: %s', sub_key, format_exc())
 
@@ -168,8 +161,61 @@ class RedisPushDelivery:
 
 # ################################################################################################################################
 
+    def _deliver_batch(self, messages:'list', sub_key:'str', backend:'RedisPubSubBackend') -> 'None':
+        """ Deliver a batch of raw messages, retrying each one individually.
+        """
+        config_list = self.server._push_subs[sub_key]
+
+        config_by_topic:'anydict' = {}
+        for config in config_list:
+            config_by_topic[config['topic_name']] = config
+
+        for message in messages:
+            topic_name = message['topic_name']
+            sub_config = config_by_topic[topic_name]
+            self._deliver_with_retry(message, sub_config, sub_key, backend)
+
+# ################################################################################################################################
+
+    def _deliver_with_retry(
+        self,
+        message:'anydict',
+        sub_config:'anydict',
+        sub_key:'str',
+        backend:'RedisPubSubBackend'
+    ) -> 'None':
+        """ Attempt to deliver a message, retrying with logarithmic backoff and jitter
+        until the delivery deadline is reached. Acknowledges the message regardless of
+        whether delivery ultimately succeeded or the deadline was exhausted.
+        """
+        stream_name = message['_stream_name']
+        redis_message_id = message['_redis_message_id']
+        deadline = monotonic() + _max_retry_time
+        interval = _retry_interval_initial
+
+        while monotonic() < deadline:
+            try:
+                self._deliver_message(message, sub_config)
+                break
+            except Exception:
+
+                # .. compute jitter as a fraction of the current interval ..
+                jitter = interval * _retry_jitter_percent / 100
+                sleep_time = interval + uniform(0, jitter)
+                sleep(sleep_time)
+
+                # .. grow the interval logarithmically, capped at the configured maximum ..
+                interval = min(interval * log2(interval + 1), _retry_interval_max)
+        else:
+            logger.error('PubSub delivery deadline exhausted for sub_key `%s`, msg_id `%s`',
+                sub_key, message.get('msg_id', '?'))
+
+        backend.ack_message(stream_name, sub_key, redis_message_id)
+
+# ################################################################################################################################
+
     def _deliver_message(self, message:'anydict', sub_config:'anydict') -> 'None':
-        """ Deliver a single message to the configured target.
+        """ Deliver a single raw message to the configured target.
         """
         push_type = sub_config['push_type']
 
@@ -182,37 +228,28 @@ class RedisPushDelivery:
 # ################################################################################################################################
 
     def _deliver_to_service(self, message:'anydict', sub_config:'anydict') -> 'None':
-        """ Deliver a message by invoking a Zato service.
+        """ Deliver a raw message by invoking a Zato service.
         """
-        # Zato
         from zato.common.ext.bunch import bunchify
 
         service_name = sub_config['push_service_name']
-        meta = message['meta']
 
-        # .. build a flat dict with meta + data ..
-        flat = dict(meta)
-        flat['data'] = message['data']
-
-        payload = bunchify(flat)
+        payload = bunchify(message)
 
         self.server.invoke(service_name, payload)
 
 # ################################################################################################################################
 
     def _deliver_to_rest(self, message:'anydict', sub_config:'anydict') -> 'None':
-        """ Deliver a message by posting to a REST endpoint.
+        """ Deliver a raw message by posting to a REST endpoint.
         """
-        # stdlib
         from json import dumps
-
-        # requests
         from requests import post as requests_post
 
         url = sub_config['rest_push_url']
 
-        serialized_message = dumps(message)
-        _ = requests_post(url, data=serialized_message, headers={'Content-Type': 'application/json'})
+        response = requests_post(url, data=dumps(message), headers={'Content-Type': 'application/json'})
+        response.raise_for_status()
 
 # ################################################################################################################################
 # ################################################################################################################################

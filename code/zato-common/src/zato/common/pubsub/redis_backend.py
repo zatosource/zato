@@ -227,9 +227,12 @@ class RedisPubSubBackend:
         sub_key:'str',
         max_messages:'int'=_default_max_messages,
         max_len:'int'=_default_max_len,
-        block_ms:'int'=0
+        block_ms:'int'=0,
+        stream_id:'str'='>'
     ) -> 'anylist':
         """ Fetch messages for a subscriber from all subscribed topics.
+        Does not acknowledge messages - the caller is responsible for calling
+        ack_message after successful processing.
         """
         subs_key = self._get_subs_key(sub_key)
 
@@ -244,7 +247,7 @@ class RedisPubSubBackend:
 
         for topic in topics:
             stream_key = self._get_stream_key(topic)
-            streams[stream_key] = '>'
+            streams[stream_key] = stream_id
 
         # .. read from all subscribed streams ..
         try:
@@ -266,7 +269,7 @@ class RedisPubSubBackend:
         if not result:
             return []
 
-        messages = []
+        messages:'anylist' = []
         total_len = 0
 
         for stream_name, stream_messages in result:
@@ -275,7 +278,7 @@ class RedisPubSubBackend:
                 # .. message_data is already dict[str, str] because decode_responses=True ..
                 decoded = message_data
 
-                # .. check expiration - skip expired messages ..
+                # .. check expiration - ack expired messages immediately and skip them ..
                 expiration_time_iso = decoded['expiration_time_iso']
 
                 normalized_expiration_iso = expiration_time_iso.replace('Z', '+00:00')
@@ -304,14 +307,6 @@ class RedisPubSubBackend:
 
                 messages.append(decoded)
 
-                # .. acknowledge the message for this consumer group ..
-                _ = self.redis.xack(stream_name, sub_key, redis_message_id)
-
-                delivered_topic = decoded['topic_name']
-
-                counter = zato_pubsub_messages_delivered_total.labels(topic_name=delivered_topic)
-                _ = counter.inc()
-
         # .. sort by priority desc, then by pub_time asc ..
         def _sort_key(message:'anydict') -> 'tuple':
             negated_priority = -message['priority']
@@ -322,14 +317,37 @@ class RedisPubSubBackend:
 
         messages.sort(key=_sort_key)
 
-        # .. format messages according to documentation: {data, meta} ..
+        return messages[:max_messages]
+
+# ################################################################################################################################
+
+    def ack_message(self, stream_name:'str', sub_key:'str', redis_message_id:'str') -> 'None':
+        """ Acknowledge a single message after successful processing.
+        """
+        _ = self.redis.xack(stream_name, sub_key, redis_message_id)
+
+# ################################################################################################################################
+
+    def fetch_pending(self, sub_key:'str', max_messages:'int'=_default_max_messages) -> 'anylist':
+        """ Fetch previously read but unacknowledged messages for a subscriber.
+        Used on startup to retry messages that were not delivered before the process stopped.
+        """
+        return self.fetch_messages(sub_key, max_messages=max_messages, stream_id='0')
+
+# ################################################################################################################################
+
+    def format_messages_for_rest(self, messages:'anylist', sub_key:'str') -> 'anylist':
+        """ Format raw messages into the {data, meta} structure expected by the REST API.
+        Also acknowledges each message and increments delivery counters.
+        """
         now = utcnow()
 
         out:'anylist' = []
 
-        for message in messages[:max_messages]:
-            _ = message.pop('_redis_message_id')
-            _ = message.pop('_stream_name')
+        for message in messages:
+
+            redis_message_id = message.pop('_redis_message_id')
+            stream_name = message.pop('_stream_name')
 
             data_raw = message.pop('data')
 
@@ -374,6 +392,12 @@ class RedisPubSubBackend:
                 'data': data,
                 'meta': meta
             })
+
+            # .. acknowledge and count after formatting ..
+            self.ack_message(stream_name, sub_key, redis_message_id)
+
+            counter = zato_pubsub_messages_delivered_total.labels(topic_name=message['topic_name'])
+            _ = counter.inc()
 
         return out
 

@@ -256,11 +256,14 @@ class GetMessages(PubSubRESTService):
         max_len = input.max_len if input.max_len else _max_len_default
 
         # Fetch messages from Redis
-        messages = self.server.pubsub_redis.fetch_messages(
+        raw_messages = self.server.pubsub_redis.fetch_messages(
             sub_key,
             max_messages=max_messages,
             max_len=max_len
         )
+
+        # .. format and acknowledge each message for the REST pull path ..
+        messages = self.server.pubsub_redis.format_messages_for_rest(raw_messages, sub_key)
 
         # Build response
         self.response.payload.is_ok = True
