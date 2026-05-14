@@ -12,6 +12,13 @@ import os
 # ################################################################################################################################
 # ################################################################################################################################
 
+str_str_dict = dict[str, str]
+str_int_dict = dict[str, int]
+str_object_dict = dict[str, object]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # All available pub/sub push endpoints in fixed order. Each entry is a topic name
 # that maps 1:1 to an outgoing REST connection, a subscriber security definition,
 # and an HTTP receiver server.
@@ -60,19 +67,25 @@ class PubSubPushTestConfig:
 
     base_url = ''
 
-    publisher_username = 'pubsub.test.publisher'
-    publisher_password = ''
+    publisher_username  = 'pubsub.test.publisher'
+    publisher_password  = ''
 
-    puller_username = 'pubsub.test.puller'
-    puller_password = ''
+    puller_username  = 'pubsub.test.puller'
+    puller_password  = ''
 
     subscriber_password = ''
 
     # Populated at runtime by conftest - maps topic_name -> tmpdir path
-    endpoint_output_dirs:'dict[str, str]' = {}
+    endpoint_output_dirs:'str_str_dict' = {}
 
     # Populated at runtime by conftest - maps topic_name -> port
-    endpoint_ports:'dict[str, int]' = {}
+    endpoint_ports:'str_int_dict' = {}
+
+    # Populated at runtime by conftest - maps topic_name -> ReceiverBehavior
+    receiver_controls:'str_object_dict' = {}
+
+    # Populated at runtime by conftest - maps topic_name -> ReceiverServer
+    receiver_servers:'str_object_dict' = {}
 
 # ################################################################################################################################
 # ################################################################################################################################
