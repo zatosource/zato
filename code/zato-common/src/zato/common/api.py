@@ -655,6 +655,7 @@ class AMQP:
 
 class REDIS:
     class DEFAULT:
+        HOST = 'localhost'
         PORT = 6379
         DB = 0
 
@@ -1322,8 +1323,22 @@ class PubSub:
         Priority_Max = 9
         Priority_Default = 5
         Default_Expiration = 86400 * 365  # 24 hours * 365 days = 1 year in seconds
-        Default_Max_Len = 5_000_000
+        Default_Max_Len = 20_000_000
         Default_Max_Messages = 50
+
+    class Delivery:
+
+        # How long to keep retrying a failed delivery before giving up (30 days)
+        Max_Retry_Time = 86_400 * 30
+
+        # Initial delay between delivery attempts (seconds)
+        Retry_Interval_Initial = 3
+
+        # Maximum delay between delivery attempts (seconds)
+        Retry_Interval_Max = 10
+
+        # Random jitter added to each interval, as a percentage of the current interval
+        Retry_Jitter_Percent = 10
 
     class Repeats:
         Max = 500

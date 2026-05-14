@@ -13,7 +13,6 @@ import logging
 import os
 import sys
 from dataclasses import dataclass
-from datetime import datetime
 from functools import total_ordering
 from hashlib import sha256
 from importlib import import_module
@@ -53,7 +52,7 @@ from zato.server.service import SchedulerFacade, Service
 from zato.server.service.internal import AdminService
 
 # Zato
-from zato.input_output import IOProcessor
+from zato.input_output import IOProcessor  # type: ignore[attr-defined]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -314,6 +313,9 @@ class ServiceStore:
             # that another deleted service was in.
             pass
 
+        # .. clean up any implicit service topic subscription ..
+        self.server.config_manager.invalidate_service_topic(name)
+
 # ################################################################################################################################
 
     def delete_service_data(self, name:'str') -> 'None':
@@ -435,7 +437,6 @@ class ServiceStore:
     def set_up_class_attributes(self, class_:'type[Service]', service_store:'ServiceStore') -> 'None':
 
         # Local aliases
-        service_name = class_.get_name()
         _Class_IO = None # type: ignore
         _Class_IO = _Class_IO # type: ignore
 
@@ -454,7 +455,7 @@ class ServiceStore:
 
             class_._zato_needs_response_wrapper = False # type: ignore
 
-            if not hasattr(class_, 'IO') or not getattr(class_.IO, 'input', None):
+            if not hasattr(class_, 'IO') or not getattr(class_.IO, 'input', None):  # type: ignore[attr-defined]
 
                 class _Class_IO:
                     pass
@@ -765,10 +766,10 @@ class ServiceStore:
                 needs_new_session = True
                 session = self.odb.session()
             try:
-                services = self.get_basic_data_services(session)
+                services = self.get_basic_data_services(session)  # type: ignore[arg-type]
             finally:
                 if needs_new_session and session:
-                    session.close()
+                    _ = session.close()
 
         with self.update_lock:
             for item in to_process: # type: InRAMService
@@ -1563,7 +1564,7 @@ class ServiceStore:
                 module_path = getsourcefile(item['service_class']) or 'no-module-path'
                 logger.debug('Copying `%s` to `%s`', module_path, self.server.hot_deploy_config.pickup_dir)
 
-                shutil_copy(module_path, self.server.hot_deploy_config.pickup_dir)
+                _ = shutil_copy(module_path, self.server.hot_deploy_config.pickup_dir)
 
 # ################################################################################################################################
 

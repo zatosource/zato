@@ -288,7 +288,7 @@ class TestConfigDispatcher:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestKVDB:
+class TestRedis:
 
     class TestConn:
         def __init__(self):
@@ -352,7 +352,7 @@ class TestServer:
     def __init__(self, service_store_name_to_impl_name=None, service_store_impl_name_to_service=None, config_manager=None):
 
         self.odb = TestODB()
-        self.kvdb = TestKVDB()
+        self.redis_conn = TestRedis()
         self.service_store = TestServiceStore(service_store_name_to_impl_name, service_store_impl_name_to_service)
         self.marshal_api = MarshalAPI()
         self.config_manager = config_manager

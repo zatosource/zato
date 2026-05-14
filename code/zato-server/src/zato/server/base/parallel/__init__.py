@@ -11,7 +11,6 @@ import logging
 import os
 from copy import deepcopy
 from datetime import timedelta
-from json import loads
 from logging import INFO, WARN
 from pathlib import Path
 from platform import system as platform_system
@@ -19,11 +18,7 @@ from random import seed as random_seed
 from traceback import format_exc
 from uuid import uuid4
 
-# Bunch
-from zato.common.ext.bunch import bunchify
-
 # gevent
-import gevent
 from gevent import sleep, spawn
 from gevent.lock import RLock
 
@@ -62,7 +57,7 @@ from zato.common.util.time_ import TimeUtil
 from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.config_manager import ConfigManager
-from zato.server.config import ConfigDict, ConfigStore
+from zato.server.config import ConfigStore
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import ODBConfigSource
 from zato.server.groups.base import GroupsManager
@@ -81,9 +76,8 @@ if 0:
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, strdict, strbytes, \
         strlist, strorlistnone, strnone, strorlist, strset
     from zato.server.base.parallel.delivery import RedisPushDelivery
-    from zato.server.connection.cache import CacheAPI
     from zato.server.service.store import ServiceStore
-    from zato.input_output import IOProcessor
+    from zato.input_output import IOProcessor  # type: ignore[attr-defined]
     from zato.server.startup_callable import StartupCallableTool
 
     bunch_ = bunch_
@@ -99,7 +93,7 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
-kvdb_logger = logging.getLogger('zato_kvdb')
+redis_logger = logging.getLogger('zato_redis')
 
 
 # ################################################################################################################################
@@ -167,6 +161,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.odb_data = Bunch()
         self._has_pubsub_redis = False
         self._push_subs = {} # type: dict[str, list]
+        self._service_topic_cache = set() # type: set[str]
+        self._service_topic_lock = RLock()
         self.repo_location = ''
         self.user_conf_location:'strlist' = []
         self.user_conf_location_extra:'strset' = set()
@@ -996,11 +992,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def _start_scheduler(self) -> 'None':
         """ Connect to the standalone scheduler binary via Redis Streams and HTTP.
         """
-        from json import loads as json_loads
-
-        from zato.common.api import SCHEDULER
-        from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
-
         self._scheduler_started = False
 
         try:
@@ -1026,11 +1017,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         """ Starts a dedicated greenlet that consumes fire and timeout events
         from the scheduler via Redis Streams.
         """
-        from json import loads as json_loads
-
-        from zato.common.api import SCHEDULER
-        from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
-
         fire_redis = self._scheduler.new_redis_conn()
 
         fire_stream = 'zato:scheduler:stream:fire'
@@ -1040,7 +1026,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         for stream in (fire_stream, timeout_stream):
             try:
-                fire_redis.xgroup_create(stream, group_name, id='$', mkstream=True)
+                _ = fire_redis.xgroup_create(stream, group_name, id='$', mkstream=True)
             except Exception as exc:
                 if 'BUSYGROUP' not in str(exc):
                     raise
@@ -1060,21 +1046,21 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     if not result:
                         continue
 
-                    for stream_name, messages in result:
+                    for stream_name, messages in result:  # type: ignore[union-attr]
                         for msg_id, fields in messages:
                             # logger.info('Fire listener received: stream=%s msg_id=%s fields=%s', stream_name, msg_id, fields)
                             if stream_name == fire_stream:
-                                spawn(self._handle_fire_event, fields)
+                                _ = spawn(self._handle_fire_event, fields)
                             elif stream_name == timeout_stream:
-                                spawn(self._handle_timeout_event, fields)
+                                _ = spawn(self._handle_timeout_event, fields)
 
-                            fire_redis.xack(stream_name, group_name, msg_id)
+                            _ = fire_redis.xack(stream_name, group_name, msg_id)
 
                 except Exception:
                     logger.warning('Error in scheduler fire listener: %s', format_exc())
                     sleep(1)
 
-        spawn(_fire_listener_loop)
+        _ = spawn(_fire_listener_loop)
         logger.info('Scheduler fire listener greenlet started')
 
     def _start_scheduler_request_listener(self, scheduler_adapter:'any_') -> 'None':
@@ -1086,7 +1072,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         consumer_name = 'server-request-0'
 
         try:
-            req_redis.xgroup_create(request_stream, group_name, id='$', mkstream=True)
+            _ = req_redis.xgroup_create(request_stream, group_name, id='$', mkstream=True)
         except Exception as exc:
             if 'BUSYGROUP' not in str(exc):
                 raise
@@ -1106,19 +1092,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     if not result:
                         continue
 
-                    for stream_name, messages in result:
+                    for stream_name, messages in result:  # type: ignore[union-attr]
                         for msg_id, fields in messages:
                             command = fields['command']
                             if command == 'request_jobs':
                                 logger.info('Scheduler requested jobs, sending reload')
                                 self._scheduler.reload(odb_adapter=scheduler_adapter)
-                            req_redis.xack(stream_name, group_name, msg_id)
+                            _ = req_redis.xack(stream_name, group_name, msg_id)
 
                 except Exception:
                     logger.warning('Error in scheduler request listener: %s', format_exc())
                     sleep(1)
 
-        spawn(_request_listener_loop)
+        _ = spawn(_request_listener_loop)
         logger.info('Scheduler request listener greenlet started')
 
     def _handle_fire_event(self, fields:'dict') -> 'None':
@@ -1207,10 +1193,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         event_label = 'success' if outcome == SCHEDULER.OUTCOME.OK else 'error'
 
         if on_callback_service:
-            spawn(self._invoke_callback_service, on_callback_service, callback_context, event_label)
+            _ = spawn(self._invoke_callback_service, on_callback_service, callback_context, event_label)
 
         if on_callback_job:
-            spawn(self._invoke_callback_job, on_callback_job, callback_context, event_label)
+            _ = spawn(self._invoke_callback_job, on_callback_job, callback_context, event_label)
 
     def _invoke_callback_service(self, service_name:'str', callback_context:'dict', event_label:'str') -> 'None':
         """ Invokes a Zato service as a scheduler job callback, passing the original job's context.
@@ -1289,7 +1275,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def _invoke_queue_service(self, service_name, data):
+    def _invoke_queue_service(self, service_name:'str', data:'any_') -> 'None':
         """ Invoked by the recv listener greenlet when a message is received
         from an external queue (Kafka, SQS, etc.) via the queue bridge binary.
         """
@@ -1341,6 +1327,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         except Exception:
             logger.warning('Queue bridge could not be started: %s', format_exc())
 
+# ################################################################################################################################
+
     def _reload_queue_bridge(self) -> 'None':
         from contextlib import closing
         from zato.common.api import GENERIC
@@ -1364,25 +1352,26 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         ch_noun = 'channel' if len(channels) == 1 else 'channels'
         out_noun = 'outgoing connection' if len(outgoing) == 1 else 'outgoing connections'
         logger.info('Reloading queue bridge with %d %s and %d %s', len(channels), ch_noun, len(outgoing), out_noun)
-        self._queue_bridge.reload(channels=channels, outgoing=outgoing)
+        self._queue_bridge.reload(channels=channels, outgoing=outgoing)  # type: ignore[union-attr]
+
+# ################################################################################################################################
 
     def _start_queue_bridge_recv_listener(self, b64decode:'any_') -> 'None':
-        """ Starts a dedicated greenlet that consumes recv events
-        from the queue bridge via Redis Streams.
+        """ Starts a dedicated greenlet that consumes recv events from the queue bridge via Redis Streams.
         """
-        recv_redis = self._queue_bridge.new_redis_conn()
+        recv_redis = self._queue_bridge.new_redis_conn()  # type: ignore[union-attr]
 
         recv_stream = 'zato:queue_bridge:stream:recv'
         group_name = 'server-recv'
         consumer_name = 'server-recv-0'
 
         try:
-            recv_redis.xgroup_create(recv_stream, group_name, id='$', mkstream=True)
+            _ = recv_redis.xgroup_create(recv_stream, group_name, id='$', mkstream=True)
         except Exception as exc:
             if 'BUSYGROUP' not in str(exc):
                 raise
 
-        def _recv_listener_loop():
+        def _recv_listener_loop() -> 'None':
             while True:
                 try:
                     result = recv_redis.xreadgroup(
@@ -1396,19 +1385,20 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     if not result:
                         continue
 
-                    for stream_name, messages in result:
+                    for stream_name, messages in result:  # type: ignore[union-attr]
                         for msg_id, fields in messages:
                             service_name = fields['service']
                             payload_b64 = fields['payload']
                             payload = b64decode(payload_b64)
                             self._invoke_queue_service(service_name, payload)
-                            recv_redis.xack(stream_name, group_name, msg_id)
+                            _ = recv_redis.xack(stream_name, group_name, msg_id)
 
                 except Exception:
                     logger.warning('Error in queue bridge recv listener: %s', format_exc())
                     sleep(1)
 
-        spawn(_recv_listener_loop)
+        _ = spawn(_recv_listener_loop)
+
         logger.info('Queue bridge recv listener greenlet started')
 
 # ################################################################################################################################
@@ -1418,14 +1408,15 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         from redis import Redis
         from zato.server.base.parallel.delivery import RedisPushDelivery
 
-        kvdb_config = self.fs_server_config.kvdb
+        redis_config = self.fs_server_config.redis
+        redis_password = redis_config.password if redis_config.password else None
 
         try:
             redis_conn = Redis(
-                host=kvdb_config.host or 'localhost',
-                port=int(kvdb_config.port or 6379),
-                db=int(kvdb_config.get('db', 0)),
-                password=kvdb_config.password if kvdb_config.password else None,
+                host=redis_config.host,
+                port=redis_config.port,
+                db=redis_config.db,
+                password=redis_password,
                 decode_responses=True,
             )
             self.pubsub_redis = RedisPubSubBackend(redis_conn)
@@ -1433,8 +1424,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             self._sync_pubsub_subscriptions()
 
-            self.pubsub_push_delivery = RedisPushDelivery(self, self.pubsub_redis)
-            self.pubsub_push_delivery.start()
+            # .. pass connection params so each delivery greenlet creates its own connection ..
+            redis_conn_params = {
+                'host': redis_config.host,
+                'port': redis_config.port,
+                'db': redis_config.db,
+                'password': redis_password,
+                'decode_responses': True,
+            }
+
+            self.pubsub_push_delivery = RedisPushDelivery(self, redis_conn_params)
+
+            for sub_key in self._push_subs:
+                self.pubsub_push_delivery.start_sub_key(sub_key)
 
             logger.info('PubSub Redis backend started')
         except Exception:
@@ -1471,7 +1473,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             ).filter(
                 PubSubSubscription.cluster_id == self.cluster_id
             ).filter(
-                SecurityBase.is_active == True
+                SecurityBase.is_active == True  # noqa: E712
             ).all()
 
             synced = 0
@@ -1554,7 +1556,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             ).filter(
                 PubSubPermission.cluster_id == self.cluster_id
             ).filter(
-                SecurityBase.is_active == True
+                SecurityBase.is_active == True  # noqa: E712
             ).all()
 
 
@@ -1562,7 +1564,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             client_permissions = {}
             username_to_sec_name = {}
 
-            for pattern_str, access_type, username, sec_name in permissions:
+            for pattern_str, _access_type, username, sec_name in permissions:
 
                 if username not in client_permissions:
                     client_permissions[username] = []
@@ -1587,7 +1589,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
                 sec_name = username_to_sec_name.get(username)
                 if sec_name:
-                    self.pubsub_subscriptions.register_user(username, sec_name)
+                    _ = self.pubsub_subscriptions.register_user(username, sec_name)
 
             # Load subscriptions with sub_keys and their topics
             subscriptions = session.query(
@@ -1599,11 +1601,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             ).filter(
                 PubSubSubscription.cluster_id == self.cluster_id
             ).filter(
-                SecurityBase.is_active == True
+                SecurityBase.is_active == True  # noqa: E712
             ).all()
 
             for sub_key, username, sec_name in subscriptions:
-                self.pubsub_subscriptions.register_user(username, sec_name, sub_key)
+                _ = self.pubsub_subscriptions.register_user(username, sec_name, sub_key)
 
             # Load subscription topics and set up Redis consumer groups
             subscription_topics = session.query(
@@ -2110,20 +2112,21 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def get_bearer_token(self, security_id='', raw_params=None):
+    def get_bearer_token(self, security_id:'str'='', raw_params:'any_'=None) -> 'any_':
         return self.bearer_token_manager.get_bearer_token_from_odb(self.odb, security_id, raw_params)
 
 # ################################################################################################################################
 
-    def check_attr_exists(self, entity_type, attr_name, value):
+    def check_attr_exists(self, entity_type:'str', attr_name:'str', value:'any_') -> 'str':
         import json
         from contextlib import closing
         from sqlalchemy import text
         exists = False
         with closing(self.odb.session()) as session:
             try:
+                query = f'SELECT 1 FROM {entity_type} WHERE {attr_name} = :val LIMIT 1'
                 result = session.execute(
-                    text(f'SELECT 1 FROM {entity_type} WHERE {attr_name} = :val LIMIT 1'),
+                    text(query),  # type: ignore[operator]
                     {'val': value}
                 )
                 exists = result.fetchone() is not None

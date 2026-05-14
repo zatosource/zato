@@ -35,6 +35,7 @@ from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC a
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
+from zato.common.facade import _service_name_to_topic, _service_sub_key_prefix
 from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.typing_ import cast_
@@ -616,22 +617,18 @@ class ConfigManager(_ConfigManagerBase):
 # ################################################################################################################################
 
     def _build_cache_api(self) -> 'CacheAPI':
-        """ Creates a Redis-backed CacheAPI using the server's [kvdb] configuration.
+        """ Creates a Redis-backed CacheAPI using the server's [redis] configuration.
         """
         from redis import Redis
 
-        kvdb_config = self.server.fs_server_config.kvdb
-
-        host = kvdb_config.host or 'localhost'
-        port = int(kvdb_config.port or 6379)
-        db = int(kvdb_config.get('db', 0))
-        password = kvdb_config.password if kvdb_config.password else None
+        redis_config = self.server.fs_server_config.redis
+        redis_password = redis_config.password if redis_config.password else None
 
         redis_client = Redis(
-            host=host,
-            port=port,
-            db=db,
-            password=password,
+            host=redis_config.host,
+            port=redis_config.port,
+            db=redis_config.db,
+            password=redis_password,
             decode_responses=True,
         )
 
@@ -1113,7 +1110,9 @@ class ConfigManager(_ConfigManagerBase):
         """
         sec_def_id = msg['id']
         rule_dicts = msg['rule_dicts']
-        logger.info('on_config_event_SECURITY_BASIC_AUTH_RATE_LIMITING_EDIT; sec_def_id:%s (type:%s), rule_dicts:%s', sec_def_id, type(sec_def_id).__name__, rule_dicts)
+        logger.info(
+            'on_config_event_SECURITY_BASIC_AUTH_RATE_LIMITING_EDIT; sec_def_id:%s (type:%s), rule_dicts:%s',
+            sec_def_id, type(sec_def_id).__name__, rule_dicts)
         self.server.rate_limiting_manager.set_sec_def_config(sec_def_id, rule_dicts)
 
 # ################################################################################################################################
@@ -1951,6 +1950,37 @@ class ConfigManager(_ConfigManagerBase):
                             'access_type': PubSub.API_Client.Subscriber,
                         })
             self.server.pubsub_pattern_matcher.set_permissions(msg.username, permissions)
+
+# ################################################################################################################################
+
+    def invalidate_service_topic(self, service_name:'str') -> 'None':
+
+        # Get a reference to the server ..
+        server = self.server
+
+        # .. acquire the lock to prevent races with the setup path ..
+        with server._service_topic_lock:
+
+            # .. if this service was never set up, there is nothing to do ..
+            if service_name not in server._service_topic_cache:
+                return
+
+            # .. build the subscription key and topic name ..
+            sub_key = _service_sub_key_prefix + service_name
+            topic_name = _service_name_to_topic(service_name)
+
+            # .. remove the Redis consumer group and subscription sets ..
+            if server._has_pubsub_redis:
+                server.pubsub_redis.unsubscribe(sub_key, topic_name)
+
+            # .. remove push delivery config ..
+            server._push_subs.pop(sub_key, None)
+
+            # .. stop the delivery greenlet for this sub_key ..
+            server.pubsub_push_delivery.stop_sub_key(sub_key)
+
+            # .. and remove from cache.
+            server._service_topic_cache.discard(service_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
