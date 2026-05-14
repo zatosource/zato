@@ -1435,6 +1435,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             self.pubsub_push_delivery = RedisPushDelivery(self, redis_conn_params)
 
+            for sub_key in self._push_subs:
+                self.pubsub_push_delivery.start_sub_key(sub_key)
+
             logger.info('PubSub Redis backend started')
         except Exception:
             logger.warning('PubSub Redis backend could not be started: %s', format_exc())
