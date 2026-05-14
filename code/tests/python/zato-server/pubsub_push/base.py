@@ -15,6 +15,9 @@ import unittest
 # requests
 import requests
 
+# Zato
+from zato.common.api import PubSub as CommonPubSub
+
 # local
 from config import PubSubPushTestConfig
 
@@ -29,6 +32,9 @@ if 0:
 
 anydict_list = list['anydict']
 str_str_tuple = tuple[str, str]
+
+_priority_min = CommonPubSub.Message.Priority_Min
+_priority_max = CommonPubSub.Message.Priority_Max
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,9 +60,19 @@ class BasePushTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def publish(self, topic_name:'str', data:'any_', expiration:'int'=0) -> 'anydict':
+    def publish(
+        self,
+        topic_name:'str',
+        data:'any_',
+        expiration:'int'=0,
+        priority:'int'=-1,
+        correl_id:'str'='',
+        in_reply_to:'str'='',
+        ext_client_id:'str'='',
+        pub_time:'str'='',
+        ) -> 'anydict':
         """ Publish a message to a topic using the publisher credentials.
-        If expiration is non-zero, it is included as the message TTL in seconds.
+        Optional parameters are included in the payload only when non-default.
         Raises on non-2xx HTTP status to catch server errors immediately.
         """
 
@@ -64,11 +80,27 @@ class BasePushTestCase(unittest.TestCase):
         base_url = self.config.base_url
         url = f'{base_url}/pubsub/topic/{topic_name}'
 
-        # .. prepare the payload ..
+        # .. prepare the payload with only the parameters that were set ..
         payload:'anydict' = {'data': data}
 
         if expiration:
             payload['expiration'] = expiration
+
+        if priority >= 0:
+            priority = max(_priority_min, min(priority, _priority_max))
+            payload['priority'] = priority
+
+        if correl_id:
+            payload['correl_id'] = correl_id
+
+        if in_reply_to:
+            payload['in_reply_to'] = in_reply_to
+
+        if ext_client_id:
+            payload['ext_client_id'] = ext_client_id
+
+        if pub_time:
+            payload['pub_time'] = pub_time
 
         # .. build the credentials ..
         username = self.config.publisher_username
@@ -194,8 +226,9 @@ class BasePullTestCase(BasePushTestCase):
 
 # ################################################################################################################################
 
-    def pull_messages(self) -> 'anydict':
+    def pull_messages(self, max_messages:'int'=0, max_len:'int'=0) -> 'anydict':
         """ Retrieve messages using the pull subscription via get-messages.
+        Optional max_messages and max_len parameters are included only when non-zero.
         """
 
         # Build the URL ..
@@ -207,8 +240,20 @@ class BasePullTestCase(BasePushTestCase):
         password = self.config.puller_password
         credentials = (username, password)
 
+        # .. prepare optional parameters ..
+        payload:'anydict' = {}
+
+        if max_messages:
+            payload['max_messages'] = max_messages
+
+        if max_len:
+            payload['max_len'] = max_len
+
         # .. send the request ..
-        response = requests.post(url, auth=credentials)
+        if payload:
+            response = requests.post(url, json=payload, auth=credentials)
+        else:
+            response = requests.post(url, auth=credentials)
 
         # .. and return the result.
         out = response.json()
