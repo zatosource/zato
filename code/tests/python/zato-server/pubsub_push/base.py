@@ -22,7 +22,12 @@ from config import PubSubPushTestConfig
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import any_, anydict, strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+anydict_list = list['anydict']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,9 +41,10 @@ class BasePubSubPushTestCase(unittest.TestCase):
 # ################################################################################################################################
 
     def setUp(self) -> 'None':
-        """ Remove all JSON files from each active endpoint's output directory
-        so that each test starts with a clean slate.
+        """ Clean up state from prior tests so each test starts fresh.
         """
+
+        # Remove all JSON files from each active endpoint's output directory ..
         for output_directory in self.config.endpoint_output_dirs.values():
 
             for entry in os.listdir(output_directory):
@@ -46,21 +52,39 @@ class BasePubSubPushTestCase(unittest.TestCase):
                     file_path = os.path.join(output_directory, entry)
                     os.remove(file_path)
 
+        # .. and drain any messages sitting in the pull queue from prior tests.
+        _ = self.pull_messages()
+
 # ################################################################################################################################
 
-    def publish(self, topic_name:'str', data:'any_') -> 'anydict':
+    def publish(self, topic_name:'str', data:'any_', expiration:'int'=0) -> 'anydict':
         """ Publish a message to a topic using the publisher credentials.
+        If expiration is non-zero, it is included as the message TTL in seconds.
         """
-        url = f'{self.config.base_url}/pubsub/topic/{topic_name}'
-        payload = {'data': data}
-        auth = (self.config.publisher_username, self.config.publisher_password)
 
-        response = requests.post(url, json=payload, auth=auth)
+        # Build the URL for the topic ..
+        base_url = self.config.base_url
+        url = f'{base_url}/pubsub/topic/{topic_name}'
 
-        result = response.json()
-        result['http_status_code'] = response.status_code
+        # .. prepare the payload ..
+        payload:'anydict' = {'data': data}
 
-        return result
+        if expiration:
+            payload['expiration'] = expiration
+
+        # .. build the credentials ..
+        username = self.config.publisher_username
+        password = self.config.publisher_password
+        credentials = (username, password)
+
+        # .. send the request ..
+        response = requests.post(url, json=payload, auth=credentials)
+
+        # .. and return the result.
+        out = response.json()
+        out['http_status_code'] = response.status_code
+
+        return out
 
 # ################################################################################################################################
 
@@ -69,14 +93,17 @@ class BasePubSubPushTestCase(unittest.TestCase):
         topic_name:'str',
         expected_count:'int',
         timeout:'int'=30,
-        ) -> 'list[anydict]':
+        ) -> 'anydict_list':
         """ Poll the output directory for a topic's HTTP receiver until the
         expected number of JSON files appear or the timeout expires.
         """
+
+        # Set up the polling parameters ..
         output_directory = self.config.endpoint_output_dirs[topic_name]
         deadline = time.monotonic() + timeout
-        file_names:'list[str]' = []
+        file_names:'strlist' = []
 
+        # .. poll until we have enough files or the deadline passes ..
         while time.monotonic() < deadline:
 
             file_names = []
@@ -92,7 +119,7 @@ class BasePubSubPushTestCase(unittest.TestCase):
 
             time.sleep(0.5)
 
-        # Read all JSON files from the output directory
+        # .. read all JSON files from the output directory ..
         messages = []
         file_names.sort()
 
@@ -103,36 +130,53 @@ class BasePubSubPushTestCase(unittest.TestCase):
                 message = json.load(message_file)
                 messages.append(message)
 
-        return messages
+        # .. and return them.
+        out = messages
+        return out
 
 # ################################################################################################################################
 
     def pull_messages(self) -> 'anydict':
         """ Retrieve messages using the pull subscription via get-messages.
         """
-        url = f'{self.config.base_url}/pubsub/messages/get'
-        auth = (self.config.puller_username, self.config.puller_password)
 
-        response = requests.post(url, auth=auth)
-        result = response.json()
-        result['http_status_code'] = response.status_code
+        # Build the URL ..
+        base_url = self.config.base_url
+        url = f'{base_url}/pubsub/messages/get'
 
-        return result
+        # .. build the credentials ..
+        username = self.config.puller_username
+        password = self.config.puller_password
+        credentials = (username, password)
+
+        # .. send the request ..
+        response = requests.post(url, auth=credentials)
+
+        # .. and return the result.
+        out = response.json()
+        out['http_status_code'] = response.status_code
+
+        return out
 
 # ################################################################################################################################
 
     def count_files_in_output_directory(self, topic_name:'str') -> 'int':
         """ Count JSON files in a topic's output directory without reading them.
         """
+
+        # Look up the output directory ..
         output_directory = self.config.endpoint_output_dirs[topic_name]
 
+        # .. count the JSON files ..
         count = 0
 
         for entry in os.listdir(output_directory):
             if entry.endswith('.json'):
                 count += 1
 
-        return count
+        # .. and return the total.
+        out = count
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

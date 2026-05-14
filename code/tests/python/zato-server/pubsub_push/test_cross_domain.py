@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import time
 
 # PyPI
-import pytest
+import pytest # type: ignore[reportMissingImports]
 
 # local
 from base import BasePubSubPushTestCase
@@ -19,8 +19,10 @@ from config import _active_endpoints
 # ################################################################################################################################
 # ################################################################################################################################
 
-_skip_fewer_than_two = pytest.mark.skipif(
-    len(_active_endpoints) < 2,
+_active_endpoint_count = len(_active_endpoints)
+
+_skip_fewer_than_two = pytest.mark.skipif( # type: ignore[reportUntypedFunctionDecorator]
+    _active_endpoint_count < 2,
     reason='Cross-domain tests require at least 2 active endpoints',
 )
 
@@ -31,7 +33,7 @@ class TestCrossDomainIsolation(BasePubSubPushTestCase):
     """ Routing isolation tests - each endpoint must receive only its own topic's messages.
     """
 
-    @_skip_fewer_than_two
+    @_skip_fewer_than_two # type: ignore[reportUntypedFunctionDecorator]
     def test_endpoint_receives_only_own_topic(self) -> 'None':
         """ Publishing to the first topic must not deliver anything to the second endpoint.
         """
@@ -63,7 +65,7 @@ class TestCrossDomainIsolation(BasePubSubPushTestCase):
 
 # ################################################################################################################################
 
-    @_skip_fewer_than_two
+    @_skip_fewer_than_two # type: ignore[reportUntypedFunctionDecorator]
     def test_all_active_endpoints_receive_own_messages(self) -> 'None':
         """ Publishing one message per active topic must deliver exactly one new message
         to each corresponding endpoint.
@@ -92,7 +94,7 @@ class TestCrossDomainIsolation(BasePubSubPushTestCase):
 
 # ################################################################################################################################
 
-    @_skip_fewer_than_two
+    @_skip_fewer_than_two # type: ignore[reportUntypedFunctionDecorator]
     def test_no_message_duplication(self) -> 'None':
         """ Publishing a single message must result in exactly one delivery to the endpoint.
         """

@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 
 # PyPI
-import pytest
+import pytest # type: ignore[reportMissingImports]
 
 # local
 from base import BasePubSubPushTestCase
@@ -19,27 +19,27 @@ from config import is_endpoint_active
 # ################################################################################################################################
 # ################################################################################################################################
 
-_skip_customer_registered = pytest.mark.skipif(
+_skip_customer_registered = pytest.mark.skipif( # type: ignore[reportUntypedFunctionDecorator]
     not is_endpoint_active('customer.registered'),
     reason='customer.registered not in active endpoint set',
 )
 
-_skip_customer_updated = pytest.mark.skipif(
+_skip_customer_updated = pytest.mark.skipif( # type: ignore[reportUntypedFunctionDecorator]
     not is_endpoint_active('customer.updated'),
     reason='customer.updated not in active endpoint set',
 )
 
-_skip_customer_deactivated = pytest.mark.skipif(
+_skip_customer_deactivated = pytest.mark.skipif( # type: ignore[reportUntypedFunctionDecorator]
     not is_endpoint_active('customer.deactivated'),
     reason='customer.deactivated not in active endpoint set',
 )
 
-_skip_order_placed = pytest.mark.skipif(
+_skip_order_placed = pytest.mark.skipif( # type: ignore[reportUntypedFunctionDecorator]
     not is_endpoint_active('order.placed'),
     reason='order.placed not in active endpoint set',
 )
 
-_skip_order_shipped = pytest.mark.skipif(
+_skip_order_shipped = pytest.mark.skipif( # type: ignore[reportUntypedFunctionDecorator]
     not is_endpoint_active('order.shipped'),
     reason='order.shipped not in active endpoint set',
 )
@@ -51,7 +51,7 @@ class TestCustomerPushDelivery(BasePubSubPushTestCase):
     """ Push delivery tests for customer and order domain events.
     """
 
-    @_skip_customer_registered
+    @_skip_customer_registered # type: ignore[reportUntypedFunctionDecorator]
     def test_customer_registered_pushed(self) -> 'None':
         """ A message published to customer.registered must be pushed to its HTTP receiver.
         """
@@ -71,7 +71,7 @@ class TestCustomerPushDelivery(BasePubSubPushTestCase):
 
 # ################################################################################################################################
 
-    @_skip_customer_updated
+    @_skip_customer_updated # type: ignore[reportUntypedFunctionDecorator]
     def test_customer_updated_pushed(self) -> 'None':
         """ A message published to customer.updated must be pushed to its HTTP receiver.
         """
@@ -91,7 +91,7 @@ class TestCustomerPushDelivery(BasePubSubPushTestCase):
 
 # ################################################################################################################################
 
-    @_skip_customer_deactivated
+    @_skip_customer_deactivated # type: ignore[reportUntypedFunctionDecorator]
     def test_customer_deactivated_pushed(self) -> 'None':
         """ A message published to customer.deactivated must be pushed to its HTTP receiver.
         """
@@ -111,7 +111,7 @@ class TestCustomerPushDelivery(BasePubSubPushTestCase):
 
 # ################################################################################################################################
 
-    @_skip_order_placed
+    @_skip_order_placed # type: ignore[reportUntypedFunctionDecorator]
     def test_order_placed_pushed(self) -> 'None':
         """ A message published to order.placed must be pushed to its HTTP receiver.
         """
@@ -131,7 +131,7 @@ class TestCustomerPushDelivery(BasePubSubPushTestCase):
 
 # ################################################################################################################################
 
-    @_skip_order_shipped
+    @_skip_order_shipped # type: ignore[reportUntypedFunctionDecorator]
     def test_order_shipped_pushed(self) -> 'None':
         """ A message published to order.shipped must be pushed to its HTTP receiver.
         """
@@ -151,7 +151,7 @@ class TestCustomerPushDelivery(BasePubSubPushTestCase):
 
 # ################################################################################################################################
 
-    @_skip_order_placed
+    @_skip_order_placed # type: ignore[reportUntypedFunctionDecorator]
     def test_burst_of_orders_pushed(self) -> 'None':
         """ Publishing 20 messages to order.placed must deliver all 20 to the HTTP receiver.
         """
@@ -170,7 +170,7 @@ class TestCustomerPushDelivery(BasePubSubPushTestCase):
 
 # ################################################################################################################################
 
-    @_skip_customer_registered
+    @_skip_customer_registered # type: ignore[reportUntypedFunctionDecorator]
     def test_large_customer_payload_pushed(self) -> 'None':
         """ A 100 KB JSON payload published to customer.registered must be delivered in full.
         """
