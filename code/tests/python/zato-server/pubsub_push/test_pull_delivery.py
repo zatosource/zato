@@ -11,13 +11,13 @@ import json
 import time
 
 # local
-from base import BasePubSubPushTestCase
+from base import BasePullTestCase
 from config import _active_endpoints
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestPullDelivery(BasePubSubPushTestCase):
+class TestPullDelivery(BasePullTestCase):
     """ Pull delivery tests using the puller user's subscription across all active topics.
     """
 
@@ -47,7 +47,8 @@ class TestPullDelivery(BasePubSubPushTestCase):
     def test_pull_multiple_topics(self) -> 'None':
         """ Publishing to all active topics and pulling must return messages from all of them.
         """
-        # Publish one message per active topic
+
+        # Publish one message per active topic ..
         for topic_name in _active_endpoints:
             data = {'pull_test': 'multi_topic', 'source_topic': topic_name}
             result = self.publish(topic_name, data)
@@ -113,18 +114,44 @@ class TestPullDelivery(BasePubSubPushTestCase):
 
         first_message = pull_result['messages'][0]
 
-        # The message must have data and meta sections
+        # The message must have data and meta sections ..
         self.assertIn('data', first_message)
         self.assertIn('meta', first_message)
 
         meta = first_message['meta']
 
-        # Verify standard metadata fields are present
+        # .. verify standard metadata fields are present.
         self.assertIn('topic_name', meta)
         self.assertIn('msg_id', meta)
         self.assertIn('correl_id', meta)
         self.assertIn('sub_key', meta)
         self.assertIn('priority', meta)
+
+# ################################################################################################################################
+
+    def test_expired_message_not_pulled(self) -> 'None':
+        """ A message published with a 1-second TTL must not be available
+        for pull after the TTL expires.
+        """
+        topic_name = _active_endpoints[0]
+
+        data = {'pull_test': 'ttl_expiration', 'marker': 'should-expire'}
+
+        # Drain the pull queue immediately before publishing
+        # so we have a clean baseline ..
+        _ = self.pull_messages()
+
+        result = self.publish(topic_name, data, expiration=1)
+        self.assertTrue(result['is_ok'])
+
+        # Wait for the message to expire ..
+        time.sleep(3)
+
+        pull_result = self.pull_messages()
+        self.assertTrue(pull_result['is_ok'])
+
+        message_count = pull_result['message_count']
+        self.assertEqual(message_count, 0)
 
 # ################################################################################################################################
 # ################################################################################################################################

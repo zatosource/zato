@@ -28,12 +28,14 @@ if 0:
 # ################################################################################################################################
 
 anydict_list = list['anydict']
+str_str_tuple = tuple[str, str]
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BasePubSubPushTestCase(unittest.TestCase):
-    """ Base test case for pub/sub push delivery tests.
+class BasePushTestCase(unittest.TestCase):
+    """ Base test case for push delivery tests. Clears output directories
+    before each test but does not touch the pull queue.
     """
 
     config = PubSubPushTestConfig
@@ -41,10 +43,8 @@ class BasePubSubPushTestCase(unittest.TestCase):
 # ################################################################################################################################
 
     def setUp(self) -> 'None':
-        """ Clean up state from prior tests so each test starts fresh.
+        """ Remove all JSON files from each active endpoint's output directory.
         """
-
-        # Remove all JSON files from each active endpoint's output directory ..
         for output_directory in self.config.endpoint_output_dirs.values():
 
             for entry in os.listdir(output_directory):
@@ -52,14 +52,12 @@ class BasePubSubPushTestCase(unittest.TestCase):
                     file_path = os.path.join(output_directory, entry)
                     os.remove(file_path)
 
-        # .. and drain any messages sitting in the pull queue from prior tests.
-        _ = self.pull_messages()
-
 # ################################################################################################################################
 
     def publish(self, topic_name:'str', data:'any_', expiration:'int'=0) -> 'anydict':
         """ Publish a message to a topic using the publisher credentials.
         If expiration is non-zero, it is included as the message TTL in seconds.
+        Raises on non-2xx HTTP status to catch server errors immediately.
         """
 
         # Build the URL for the topic ..
@@ -77,13 +75,25 @@ class BasePubSubPushTestCase(unittest.TestCase):
         password = self.config.publisher_password
         credentials = (username, password)
 
-        # .. send the request ..
+        # .. send the request and fail fast on HTTP errors ..
         response = requests.post(url, json=payload, auth=credentials)
+        response.raise_for_status()
 
         # .. and return the result.
         out = response.json()
         out['http_status_code'] = response.status_code
 
+        return out
+
+# ################################################################################################################################
+
+    def publish_raw(self, url:'str', data:'any_', credentials:'str_str_tuple') -> 'requests.Response':
+        """ Publish to an arbitrary URL with arbitrary credentials.
+        Does NOT raise on HTTP errors - callers inspect the response themselves.
+        """
+        payload:'anydict' = {'data': data}
+
+        out = requests.post(url, json=payload, auth=credentials)
         return out
 
 # ################################################################################################################################
@@ -136,26 +146,13 @@ class BasePubSubPushTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def pull_messages(self) -> 'anydict':
-        """ Retrieve messages using the pull subscription via get-messages.
+    def extract_push_data(self, raw_message:'anydict') -> 'anydict':
+        """ Extract and parse the data field from a raw push-delivered message.
+        The push payload is the raw Redis stream entry where data is a JSON string.
         """
+        data_json = raw_message['data']
 
-        # Build the URL ..
-        base_url = self.config.base_url
-        url = f'{base_url}/pubsub/messages/get'
-
-        # .. build the credentials ..
-        username = self.config.puller_username
-        password = self.config.puller_password
-        credentials = (username, password)
-
-        # .. send the request ..
-        response = requests.post(url, auth=credentials)
-
-        # .. and return the result.
-        out = response.json()
-        out['http_status_code'] = response.status_code
-
+        out = json.loads(data_json)
         return out
 
 # ################################################################################################################################
@@ -176,6 +173,47 @@ class BasePubSubPushTestCase(unittest.TestCase):
 
         # .. and return the total.
         out = count
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class BasePullTestCase(BasePushTestCase):
+    """ Base test case for tests that use pull delivery.
+    Extends BasePushTestCase by also draining the pull queue before each test.
+    """
+
+    def setUp(self) -> 'None':
+        """ Clear output directories and drain any messages sitting in the
+        pull queue from prior tests.
+        """
+        super().setUp()
+
+        # Drain the pull queue so each test starts with zero pending messages.
+        _ = self.pull_messages()
+
+# ################################################################################################################################
+
+    def pull_messages(self) -> 'anydict':
+        """ Retrieve messages using the pull subscription via get-messages.
+        """
+
+        # Build the URL ..
+        base_url = self.config.base_url
+        url = f'{base_url}/pubsub/messages/get'
+
+        # .. build the credentials ..
+        username = self.config.puller_username
+        password = self.config.puller_password
+        credentials = (username, password)
+
+        # .. send the request ..
+        response = requests.post(url, auth=credentials)
+
+        # .. and return the result.
+        out = response.json()
+        out['http_status_code'] = response.status_code
+
         return out
 
 # ################################################################################################################################

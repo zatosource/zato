@@ -6,14 +6,11 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import json
-
 # PyPI
 import pytest # type: ignore[reportMissingImports]
 
 # local
-from base import BasePubSubPushTestCase
+from base import BasePushTestCase
 from config import is_endpoint_active
 
 # ################################################################################################################################
@@ -47,7 +44,7 @@ _skip_login_failed = pytest.mark.skipif( # type: ignore[reportUntypedFunctionDec
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestIAMPushDelivery(BasePubSubPushTestCase):
+class TestIAMPushDelivery(BasePushTestCase):
     """ Push delivery tests for IAM domain events.
     """
 
@@ -64,10 +61,10 @@ class TestIAMPushDelivery(BasePubSubPushTestCase):
         messages = self.poll_for_messages(topic_name, expected_count=1)
 
         message_count = len(messages)
-        self.assertGreaterEqual(message_count, 1)
+        self.assertEqual(message_count, 1)
 
-        received_data = json.dumps(messages[0])
-        self.assertIn('usr-001', received_data)
+        received_data = self.extract_push_data(messages[0])
+        self.assertEqual(received_data['user_id'], 'usr-001')
 
 # ################################################################################################################################
 
@@ -84,10 +81,10 @@ class TestIAMPushDelivery(BasePubSubPushTestCase):
         messages = self.poll_for_messages(topic_name, expected_count=1)
 
         message_count = len(messages)
-        self.assertGreaterEqual(message_count, 1)
+        self.assertEqual(message_count, 1)
 
-        received_data = json.dumps(messages[0])
-        self.assertIn('usr-002', received_data)
+        received_data = self.extract_push_data(messages[0])
+        self.assertEqual(received_data['user_id'], 'usr-002')
 
 # ################################################################################################################################
 
@@ -104,10 +101,10 @@ class TestIAMPushDelivery(BasePubSubPushTestCase):
         messages = self.poll_for_messages(topic_name, expected_count=1)
 
         message_count = len(messages)
-        self.assertGreaterEqual(message_count, 1)
+        self.assertEqual(message_count, 1)
 
-        received_data = json.dumps(messages[0])
-        self.assertIn('usr-003', received_data)
+        received_data = self.extract_push_data(messages[0])
+        self.assertEqual(received_data['user_id'], 'usr-003')
 
 # ################################################################################################################################
 
@@ -124,10 +121,10 @@ class TestIAMPushDelivery(BasePubSubPushTestCase):
         messages = self.poll_for_messages(topic_name, expected_count=1)
 
         message_count = len(messages)
-        self.assertGreaterEqual(message_count, 1)
+        self.assertEqual(message_count, 1)
 
-        received_data = json.dumps(messages[0])
-        self.assertIn('usr-004', received_data)
+        received_data = self.extract_push_data(messages[0])
+        self.assertEqual(received_data['user_id'], 'usr-004')
 
 # ################################################################################################################################
 
@@ -144,10 +141,10 @@ class TestIAMPushDelivery(BasePubSubPushTestCase):
         messages = self.poll_for_messages(topic_name, expected_count=1)
 
         message_count = len(messages)
-        self.assertGreaterEqual(message_count, 1)
+        self.assertEqual(message_count, 1)
 
-        received_data = json.dumps(messages[0])
-        self.assertIn('usr-005', received_data)
+        received_data = self.extract_push_data(messages[0])
+        self.assertEqual(received_data['user_id'], 'usr-005')
 
 # ################################################################################################################################
 
@@ -178,13 +175,14 @@ class TestIAMPushDelivery(BasePubSubPushTestCase):
             messages = self.poll_for_messages(topic_name, expected_count=1)
 
             message_count = len(messages)
-            self.assertGreaterEqual(message_count, 1)
+            self.assertEqual(message_count, 1)
 
 # ################################################################################################################################
 
     @_skip_user_created # type: ignore[reportUntypedFunctionDecorator]
     def test_iam_pushed_metadata_present(self) -> 'None':
-        """ A pushed message must contain pub/sub metadata fields.
+        """ A pushed message must contain pub/sub metadata fields from the
+        raw Redis stream entry.
         """
         topic_name = 'iam.user.created'
         data = {'user_id': 'usr-meta-001', 'event': 'metadata_check'}
@@ -195,14 +193,23 @@ class TestIAMPushDelivery(BasePubSubPushTestCase):
         messages = self.poll_for_messages(topic_name, expected_count=1)
 
         message_count = len(messages)
-        self.assertGreaterEqual(message_count, 1)
+        self.assertEqual(message_count, 1)
 
-        # The pushed message should contain the raw Redis stream fields
+        # The pushed message is a raw Redis stream entry and must contain
+        # the standard metadata fields alongside the data payload ..
         first_message = messages[0]
-        serialized = json.dumps(first_message)
 
-        # The topic name should appear somewhere in the pushed payload
-        self.assertIn('iam.user.created', serialized)
+        self.assertIn('data', first_message)
+        self.assertIn('msg_id', first_message)
+        self.assertIn('pub_time_iso', first_message)
+        self.assertIn('topic_name', first_message)
+
+        # .. the topic_name field must match what we published to ..
+        self.assertEqual(first_message['topic_name'], 'iam.user.created')
+
+        # .. and the data field must contain our original payload.
+        received_data = self.extract_push_data(first_message)
+        self.assertEqual(received_data['user_id'], 'usr-meta-001')
 
 # ################################################################################################################################
 # ################################################################################################################################
