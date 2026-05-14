@@ -388,16 +388,7 @@ class Create(ZatoCommand):
             service=get_messages_service, cluster=cluster)
         session.add(get_messages_channel)
 
-        subscribe_channel = HTTPSOAP(
-            None, 'pubsub.rest.subscribe', True, True, 'channel',
-            'plain_http', None, '/pubsub/subscribe/topic/{topic_name}', 'POST', '', None, DATA_FORMAT.JSON,
-            service=subscribe_service, cluster=cluster)
-        session.add(subscribe_channel)
-
-        unsubscribe_channel = HTTPSOAP(
-            None, 'pubsub.rest.unsubscribe', True, True, 'channel',
-            'plain_http', None, '/pubsub/unsubscribe/topic/{topic_name}', 'POST', '', None, DATA_FORMAT.JSON,
-            service=unsubscribe_service, cluster=cluster)
-        session.add(unsubscribe_channel)
+        # Subscribe and unsubscribe channels are intentionally not created -
+        # those endpoints are disabled.
 
 # ################################################################################################################################

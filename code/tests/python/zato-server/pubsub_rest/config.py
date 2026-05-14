@@ -22,6 +22,10 @@ class TestConfig:
     user2_username = os.environ.get('Zato_PubSub_User2', 'user.2')
     user2_password = os.environ.get('Zato_PubSub_User2_Password', 'password.2')
 
+    # user.3 has valid credentials but no subscriptions
+    user3_username = os.environ.get('Zato_PubSub_User3', 'user.3')
+    user3_password = os.environ.get('Zato_PubSub_User3_Password', 'password.3')
+
     topic_allowed = os.environ.get('Zato_PubSub_Topic_Allowed', 'demo.1')
     topic_forbidden = os.environ.get('Zato_PubSub_Topic_Forbidden', 'forbidden.topic')
 

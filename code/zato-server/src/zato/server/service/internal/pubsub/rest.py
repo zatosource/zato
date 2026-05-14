@@ -36,7 +36,9 @@ _max_priority = PubSub.Message.Priority_Max
 _default_priority = PubSub.Message.Priority_Default
 _default_expiration = PubSub.Message.Default_Expiration
 _max_messages_default = 50
-_max_len_default = 5_000_000
+_max_messages_limit = 1000
+_max_len_default = PubSub.Message.Default_Max_Len
+_max_len_limit = PubSub.Message.Default_Max_Len
 
 _status_ok = PubSub.Status.OK
 _status_bad_request = PubSub.Status.Bad_Request
@@ -244,16 +246,16 @@ class GetMessages(PubSubRESTService):
         sub_key = self._get_sub_key_for_user(username)
 
         if not sub_key:
-            self.response.payload.is_ok = True
+            self.response.payload.is_ok = False
             self.response.payload.cid = cid
-            self.response.payload.messages = []
-            self.response.payload.message_count = 0
-            self.response.payload.status = _status_ok
+            self.response.payload.details = 'No subscription found for user'
+            self.response.payload.status = _status_unauthorized
+            self.response.status_code = UNAUTHORIZED
             return
 
-        # Get optional parameters
-        max_messages = input.max_messages if input.max_messages else _max_messages_default
-        max_len = input.max_len if input.max_len else _max_len_default
+        # Get optional parameters, capping at documented maximums
+        max_messages = min(input.max_messages if input.max_messages else _max_messages_default, _max_messages_limit)
+        max_len = min(input.max_len if input.max_len else _max_len_default, _max_len_limit)
 
         # Fetch messages from Redis
         raw_messages = self.server.pubsub_redis.fetch_messages(
@@ -284,7 +286,7 @@ class GetMessages(PubSubRESTService):
 # ################################################################################################################################
 
 class Subscribe(PubSubRESTService):
-    """ Subscribe to a topic.
+    """ Subscribe to a topic (disabled).
     """
     name = 'pubsub.rest.subscribe'
 
@@ -293,7 +295,7 @@ class Subscribe(PubSubRESTService):
 
 # ################################################################################################################################
 
-    def handle(self) -> 'None':
+    def _disabled_handle(self) -> 'None':
 
         # Local aliases
         cid = self.cid
@@ -375,7 +377,7 @@ class Subscribe(PubSubRESTService):
 # ################################################################################################################################
 
 class Unsubscribe(PubSubRESTService):
-    """ Unsubscribe from a topic.
+    """ Unsubscribe from a topic (disabled).
     """
     name = 'pubsub.rest.unsubscribe'
 
@@ -384,7 +386,7 @@ class Unsubscribe(PubSubRESTService):
 
 # ################################################################################################################################
 
-    def handle(self) -> 'None':
+    def _disabled_handle(self) -> 'None':
 
         # Local aliases
         cid = self.cid
