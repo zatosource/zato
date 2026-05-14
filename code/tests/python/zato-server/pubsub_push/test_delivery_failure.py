@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import json
 import os
 import time
 
@@ -14,7 +15,7 @@ import time
 import pytest # type: ignore[reportMissingImports]
 
 # local
-from base import BasePubSubPushTestCase
+from base import BasePushTestCase
 from config import _active_endpoints
 
 # ################################################################################################################################
@@ -30,25 +31,28 @@ _skip_fewer_than_two = pytest.mark.skipif( # type: ignore[reportUntypedFunctionD
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestDeliveryFailure(BasePubSubPushTestCase):
+class TestDeliveryFailure(BasePushTestCase):
     """ Rainy-day tests for push delivery under failure conditions.
     """
 
     def setUp(self) -> 'None':
-        """ Clear output directories, drain the pull queue, and reset all
-        receivers to accept mode.
+        """ Reset all receivers to accept mode BEFORE clearing output
+        directories, so retrying messages from a prior test do not
+        land on disk after the parent setUp clears them.
         """
-        super().setUp()
 
         for behavior in self.config.receiver_controls.values():
             behavior.set_accept() # type: ignore[union-attr]
 
+        super().setUp()
+
 # ################################################################################################################################
 
     def _poll_for_marker(self, topic_name:'str', marker:'str', timeout:'int'=30) -> 'bool':
-        """ Poll the output directory until a message containing the marker
-        string appears. Returns True if found within the timeout.
-        Tolerates stale messages from prior tests or server retries.
+        """ Poll the output directory until a message whose data field
+        contains the given marker value appears. Parses JSON and checks
+        the marker key specifically to avoid false positives from
+        substring matching on raw file content.
         """
 
         # Set up the polling parameters ..
@@ -63,9 +67,18 @@ class TestDeliveryFailure(BasePubSubPushTestCase):
                     file_path = os.path.join(output_directory, entry)
 
                     with open(file_path, 'r') as message_file:
-                        content = message_file.read()
+                        message = json.load(message_file)
 
-                    if marker in content:
+                    # The push payload is a raw Redis stream entry
+                    # where the data field is a JSON string ..
+                    data_json = message.get('data', '')
+
+                    try:
+                        data = json.loads(data_json)
+                    except (json.JSONDecodeError, TypeError):
+                        continue
+
+                    if data.get('marker') == marker:
                         return True
 
             time.sleep(0.5)
@@ -75,23 +88,30 @@ class TestDeliveryFailure(BasePubSubPushTestCase):
 # ################################################################################################################################
 
     def _count_files_with_marker(self, topic_name:'str', marker:'str') -> 'int':
-        """ Count JSON files in the output directory whose content contains
-        the marker string.
+        """ Count JSON files in the output directory whose parsed data
+        field contains the given marker value.
         """
 
         # Look up the output directory ..
         output_directory = self.config.endpoint_output_dirs[topic_name]
         count = 0
 
-        # .. scan each file for the marker ..
+        # .. scan each file and parse the data field ..
         for entry in os.listdir(output_directory):
             if entry.endswith('.json'):
                 file_path = os.path.join(output_directory, entry)
 
                 with open(file_path, 'r') as message_file:
-                    content = message_file.read()
+                    message = json.load(message_file)
 
-                if marker in content:
+                data_json = message.get('data', '')
+
+                try:
+                    data = json.loads(data_json)
+                except (json.JSONDecodeError, TypeError):
+                    continue
+
+                if data.get('marker') == marker:
                     count += 1
 
         # .. and return the total.
@@ -117,6 +137,13 @@ class TestDeliveryFailure(BasePubSubPushTestCase):
 
         found = self._poll_for_marker(topic_name, 'recover-after-3', timeout=30)
         self.assertTrue(found, 'Message with marker recover-after-3 was not delivered')
+
+        # Verify Zato sent a real payload during the rejected attempts ..
+        rejected_count = behavior.rejected_count # type: ignore[union-attr]
+        self.assertGreaterEqual(rejected_count, 1)
+
+        last_body = behavior.last_rejected_body # type: ignore[union-attr]
+        self.assertIn('recover-after-3', last_body)
 
 # ################################################################################################################################
 
@@ -168,28 +195,34 @@ class TestDeliveryFailure(BasePubSubPushTestCase):
 # ################################################################################################################################
 
     @_skip_fewer_than_two # type: ignore[reportUntypedFunctionDecorator]
-    def test_expired_message_not_pulled(self) -> 'None':
-        """ A message published with a 1-second TTL must not be available
-        for pull after the TTL expires.
+    def test_expired_message_not_pushed(self) -> 'None':
+        """ A message published with a 1-second TTL must not be pushed
+        to the receiver if delivery is delayed past the TTL.
         """
         topic_name = _active_endpoints[0]
+        behavior = self.config.receiver_controls[topic_name]
 
-        data = {'failure_test': 'ttl_expiration', 'marker': 'should-expire'}
+        # Make the receiver hang long enough for the message to expire
+        # before the push delivery completes ..
+        behavior.set_hang(hang_seconds=5) # type: ignore[union-attr]
 
-        # Drain the pull queue immediately before publishing so we have a clean baseline
-        _ = self.pull_messages()
+        data = {'failure_test': 'push_ttl', 'marker': 'should-expire-push'}
 
         result = self.publish(topic_name, data, expiration=1)
         self.assertTrue(result['is_ok'])
 
-        # Wait for the message to expire
-        time.sleep(3)
+        # Wait for the TTL to expire and delivery attempts to settle ..
+        time.sleep(10)
 
-        pull_result = self.pull_messages()
-        self.assertTrue(pull_result['is_ok'])
+        # Reset the receiver to accept mode ..
+        behavior.set_accept() # type: ignore[union-attr]
 
-        message_count = pull_result['message_count']
-        self.assertEqual(message_count, 0)
+        # Wait a bit more for any late delivery ..
+        time.sleep(5)
+
+        # The expired message must not have been written to disk ..
+        count = self._count_files_with_marker(topic_name, 'should-expire-push')
+        self.assertEqual(count, 0, 'Expired message was delivered to the push endpoint')
 
 # ################################################################################################################################
 
@@ -233,11 +266,13 @@ class TestDeliveryFailure(BasePubSubPushTestCase):
         result = self.publish(topic_name, data)
         self.assertTrue(result['is_ok'])
 
-        # Wait for delivery after retries, then extra time for any duplicate to arrive
+        # Wait for delivery after retries ..
         found = self._poll_for_marker(topic_name, 'exactly-once', timeout=30)
         self.assertTrue(found, 'Message with marker exactly-once was not delivered')
 
-        time.sleep(5)
+        # Wait 15 seconds (1.5x Zato's max retry interval of 10s)
+        # for any delayed duplicate to arrive ..
+        time.sleep(15)
 
         duplicate_count = self._count_files_with_marker(topic_name, 'exactly-once')
         self.assertEqual(duplicate_count, 1)
@@ -261,7 +296,7 @@ class TestDeliveryFailure(BasePubSubPushTestCase):
             result = self.publish(topic_name, data)
             self.assertTrue(result['is_ok'])
 
-        # Wait until all 10 messages with our marker arrive
+        # Wait until all 10 messages with our marker arrive ..
         deadline = time.monotonic() + 30
 
         while time.monotonic() < deadline:
@@ -271,7 +306,7 @@ class TestDeliveryFailure(BasePubSubPushTestCase):
             time.sleep(0.5)
 
         final_count = self._count_files_with_marker(topic_name, 'burst-item')
-        self.assertGreaterEqual(final_count, 10)
+        self.assertEqual(final_count, 10)
 
 # ################################################################################################################################
 # ################################################################################################################################

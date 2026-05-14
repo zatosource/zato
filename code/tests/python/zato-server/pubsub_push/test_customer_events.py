@@ -6,14 +6,11 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import json
-
 # PyPI
 import pytest # type: ignore[reportMissingImports]
 
 # local
-from base import BasePubSubPushTestCase
+from base import BasePushTestCase
 from config import is_endpoint_active
 
 # ################################################################################################################################
@@ -47,7 +44,7 @@ _skip_order_shipped = pytest.mark.skipif( # type: ignore[reportUntypedFunctionDe
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestCustomerPushDelivery(BasePubSubPushTestCase):
+class TestCustomerPushDelivery(BasePushTestCase):
     """ Push delivery tests for customer and order domain events.
     """
 
@@ -64,10 +61,10 @@ class TestCustomerPushDelivery(BasePubSubPushTestCase):
         messages = self.poll_for_messages(topic_name, expected_count=1)
 
         message_count = len(messages)
-        self.assertGreaterEqual(message_count, 1)
+        self.assertEqual(message_count, 1)
 
-        received_data = json.dumps(messages[0])
-        self.assertIn('cust-001', received_data)
+        received_data = self.extract_push_data(messages[0])
+        self.assertEqual(received_data['customer_id'], 'cust-001')
 
 # ################################################################################################################################
 
@@ -84,10 +81,10 @@ class TestCustomerPushDelivery(BasePubSubPushTestCase):
         messages = self.poll_for_messages(topic_name, expected_count=1)
 
         message_count = len(messages)
-        self.assertGreaterEqual(message_count, 1)
+        self.assertEqual(message_count, 1)
 
-        received_data = json.dumps(messages[0])
-        self.assertIn('cust-002', received_data)
+        received_data = self.extract_push_data(messages[0])
+        self.assertEqual(received_data['customer_id'], 'cust-002')
 
 # ################################################################################################################################
 
@@ -104,10 +101,10 @@ class TestCustomerPushDelivery(BasePubSubPushTestCase):
         messages = self.poll_for_messages(topic_name, expected_count=1)
 
         message_count = len(messages)
-        self.assertGreaterEqual(message_count, 1)
+        self.assertEqual(message_count, 1)
 
-        received_data = json.dumps(messages[0])
-        self.assertIn('cust-003', received_data)
+        received_data = self.extract_push_data(messages[0])
+        self.assertEqual(received_data['customer_id'], 'cust-003')
 
 # ################################################################################################################################
 
@@ -124,10 +121,10 @@ class TestCustomerPushDelivery(BasePubSubPushTestCase):
         messages = self.poll_for_messages(topic_name, expected_count=1)
 
         message_count = len(messages)
-        self.assertGreaterEqual(message_count, 1)
+        self.assertEqual(message_count, 1)
 
-        received_data = json.dumps(messages[0])
-        self.assertIn('ord-001', received_data)
+        received_data = self.extract_push_data(messages[0])
+        self.assertEqual(received_data['order_id'], 'ord-001')
 
 # ################################################################################################################################
 
@@ -144,10 +141,10 @@ class TestCustomerPushDelivery(BasePubSubPushTestCase):
         messages = self.poll_for_messages(topic_name, expected_count=1)
 
         message_count = len(messages)
-        self.assertGreaterEqual(message_count, 1)
+        self.assertEqual(message_count, 1)
 
-        received_data = json.dumps(messages[0])
-        self.assertIn('ord-002', received_data)
+        received_data = self.extract_push_data(messages[0])
+        self.assertEqual(received_data['order_id'], 'ord-002')
 
 # ################################################################################################################################
 
@@ -166,7 +163,41 @@ class TestCustomerPushDelivery(BasePubSubPushTestCase):
         messages = self.poll_for_messages(topic_name, expected_count=20, timeout=60)
 
         message_count = len(messages)
-        self.assertGreaterEqual(message_count, 20)
+        self.assertEqual(message_count, 20)
+
+# ################################################################################################################################
+
+    @_skip_order_placed # type: ignore[reportUntypedFunctionDecorator]
+    def test_burst_ordering_preserved(self) -> 'None':
+        """ Publishing 10 messages with sequential indices must deliver them
+        in the same order they were published.
+        """
+        topic_name = 'order.placed'
+
+        for message_index in range(10):
+            data = {'order_id': f'seq-{message_index:03d}', 'sequence': message_index}
+            result = self.publish(topic_name, data)
+            self.assertTrue(result['is_ok'])
+
+        messages = self.poll_for_messages(topic_name, expected_count=10, timeout=30)
+
+        message_count = len(messages)
+        self.assertEqual(message_count, 10)
+
+        # Extract the sequence index from each delivered message and verify
+        # they arrive in monotonically increasing order ..
+        delivered_indices = []
+
+        for message in messages:
+            received_data = self.extract_push_data(message)
+            delivered_indices.append(received_data['sequence'])
+
+        index_count = len(delivered_indices)
+
+        for position in range(1, index_count):
+            previous = delivered_indices[position - 1]
+            current = delivered_indices[position]
+            self.assertLess(previous, current, f'Out-of-order delivery at position {position}')
 
 # ################################################################################################################################
 
@@ -176,7 +207,6 @@ class TestCustomerPushDelivery(BasePubSubPushTestCase):
         """
         topic_name = 'customer.registered'
 
-        # Build a payload that is approximately 100 KB
         large_field = 'x' * 100_000
         data = {'customer_id': 'cust-large-001', 'profile_data': large_field}
 
@@ -186,10 +216,11 @@ class TestCustomerPushDelivery(BasePubSubPushTestCase):
         messages = self.poll_for_messages(topic_name, expected_count=1, timeout=30)
 
         message_count = len(messages)
-        self.assertGreaterEqual(message_count, 1)
+        self.assertEqual(message_count, 1)
 
-        received_data = json.dumps(messages[0])
-        self.assertIn('cust-large-001', received_data)
+        received_data = self.extract_push_data(messages[0])
+        self.assertEqual(received_data['customer_id'], 'cust-large-001')
+        self.assertEqual(len(received_data['profile_data']), 100_000)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -38,6 +38,8 @@ class ReceiverBehavior:
         self._hang_seconds = 10
         self._reject_remaining = 0
         self._received_count = 0
+        self._rejected_count = 0
+        self._last_rejected_body = ''
 
 # ################################################################################################################################
 
@@ -62,6 +64,16 @@ class ReceiverBehavior:
         with self._lock:
             self._mode = 'hang'
             self._hang_seconds = hang_seconds
+
+# ################################################################################################################################
+
+    def record_rejection(self, body:'str') -> 'None':
+        """ Record the body of a rejected request so tests can verify
+        Zato sent a real payload during rejected delivery attempts.
+        """
+        with self._lock:
+            self._rejected_count += 1
+            self._last_rejected_body = body
 
 # ################################################################################################################################
 
@@ -105,6 +117,24 @@ class ReceiverBehavior:
             return out
 
 # ################################################################################################################################
+
+    @property
+    def rejected_count(self) -> 'int':
+        with self._lock:
+
+            out = self._rejected_count
+            return out
+
+# ################################################################################################################################
+
+    @property
+    def last_rejected_body(self) -> 'str':
+        with self._lock:
+
+            out = self._last_rejected_body
+            return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _ControllableHandler(BaseHTTPRequestHandler):
@@ -114,7 +144,28 @@ class _ControllableHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> 'None':
 
-        # Read the request body ..
+        # Verify that Zato is POSTing to the correct webhook path ..
+        expected_path = self.server.expected_path # type: ignore[attr-defined]
+
+        if self.path != expected_path:
+            self.send_response(404)
+            self.end_headers()
+            return
+
+        # .. verify Content-Type is application/json ..
+        content_type = self.headers['Content-Type']
+
+        if not content_type:
+            self.send_response(415)
+            self.end_headers()
+            return
+
+        if not content_type.startswith('application/json'):
+            self.send_response(415)
+            self.end_headers()
+            return
+
+        # .. read the request body ..
         content_length_header = self.headers['Content-Length']
         content_length = int(content_length_header)
         body = self.rfile.read(content_length)
@@ -123,8 +174,10 @@ class _ControllableHandler(BaseHTTPRequestHandler):
         behavior = self.server.behavior # type: ignore[attr-defined]
         action, hang_seconds = behavior.get_action()
 
-        # .. reject with 503 without writing anything to disk ..
+        # .. reject with 503, but record the payload so tests can
+        # verify Zato sent real data during rejected attempts ..
         if action == 'reject_503':
+            behavior.record_rejection(body.decode('utf-8'))
             self.send_response(503)
             self.end_headers()
             return
@@ -165,13 +218,15 @@ class ReceiverServer:
     Behavior is controllable at runtime via the attached ReceiverBehavior object.
     """
 
-    def __init__(self, port:'int', output_directory:'str') -> 'None':
+    def __init__(self, port:'int', output_directory:'str', expected_path:'str') -> 'None':
         self.port = port
         self.output_directory = output_directory
+        self.expected_path = expected_path
         self.behavior = ReceiverBehavior()
         self._server = HTTPServer(('127.0.0.1', port), _ControllableHandler)
         self._server.output_directory = output_directory # type: ignore[attr-defined]
         self._server.behavior = self.behavior # type: ignore[attr-defined]
+        self._server.expected_path = expected_path # type: ignore[attr-defined]
         self._thread = Thread(target=self._server.serve_forever, daemon=True)
 
 # ################################################################################################################################
@@ -198,6 +253,7 @@ class ReceiverServer:
         self._server = HTTPServer(('127.0.0.1', self.port), _ControllableHandler)
         self._server.output_directory = self.output_directory # type: ignore[attr-defined]
         self._server.behavior = self.behavior # type: ignore[attr-defined]
+        self._server.expected_path = self.expected_path # type: ignore[attr-defined]
         self._thread = Thread(target=self._server.serve_forever, daemon=True)
         self._thread.start()
 

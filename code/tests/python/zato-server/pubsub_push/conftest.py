@@ -177,8 +177,11 @@ def pubsub_push_server() -> 'Generator[None, None, None]': # type: ignore[misc]
         PubSubPushTestConfig.endpoint_ports[topic_name] = port
         PubSubPushTestConfig.endpoint_output_dirs[topic_name] = output_directory
 
+        # Build the expected path that matches the enmasse template's url_path
+        expected_path = '/webhook/' + topic_name.replace('.', '/')
+
         # Start the receiver and record its control handles
-        receiver = ReceiverServer(port, output_directory)
+        receiver = ReceiverServer(port, output_directory, expected_path)
         receiver.start()
         receiver_servers.append(receiver)
 
