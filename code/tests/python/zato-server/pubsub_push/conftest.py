@@ -255,16 +255,24 @@ def pubsub_push_server() -> 'Generator[None, None, None]': # type: ignore[misc]
     server_path = os.path.join(server_directory, 'server1')
 
     # .. import enmasse YAML into the ODB before starting the server.
-    # The server is not running yet, so enmasse cannot notify it (rc=16),
-    # but the ODB is updated correctly. On startup, the server reads
-    # from ODB and picks up all the imported definitions ..
-    _ = subprocess.run(
+    # The server is not running yet, so enmasse will fail to reload config
+    # after a successful ODB import. We set Zato_Needs_Config_Reload=False
+    # so enmasse skips the reload step entirely and exits cleanly ..
+    enmasse_environment = quickstart_environment.copy()
+    enmasse_environment['Zato_Needs_Config_Reload'] = 'False'
+
+    enmasse_result = subprocess.run(
         [_zato_bin, 'enmasse', server_path, '--import', '--input', enmasse_path],
         capture_output=True,
         text=True,
         timeout=60,
-        env=quickstart_environment,
+        env=enmasse_environment,
     )
+
+    if enmasse_result.returncode != 0:
+        raise RuntimeError(
+            f'enmasse import failed:\nstdout: {enmasse_result.stdout}\nstderr: {enmasse_result.stderr}'
+        )
 
     # .. allocate dynamic ports for this test run ..
     server_port = _find_free_port()
