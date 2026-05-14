@@ -87,7 +87,8 @@ class BasePushTestCase(unittest.TestCase):
             payload['expiration'] = expiration
 
         if priority >= 0:
-            priority = max(_priority_min, min(priority, _priority_max))
+            priority = max(_priority_min, priority)
+            priority = min(priority, _priority_max)
             payload['priority'] = priority
 
         if correl_id:
