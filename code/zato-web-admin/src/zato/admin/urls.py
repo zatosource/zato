@@ -49,6 +49,7 @@ from zato.admin.web.views.monitoring import config as monitoring_config
 from zato.admin.web.views.monitoring import dashboard as monitoring_dashboard
 from zato.admin.web.views.monitoring.wizard import health as monitoring_wizard_health
 from zato.admin.web.views.vendors import keysight_vision
+from zato.admin.web.views.pubsub import dashboard as pubsub_dashboard
 from zato.admin.web.views.pubsub import topic
 from zato.admin.web.views.pubsub import permission
 from zato.admin.web.views.pubsub import subscription
@@ -923,6 +924,15 @@ urlpatterns += [
 # ################################################################################################################################
 
 urlpatterns += [
+
+    # PubSub Dashboard
+
+    url(r'^zato/pubsub/dashboard/$',
+        login_required(pubsub_dashboard.index), name='pubsub-dashboard'),
+    url(r'^zato/pubsub/dashboard/poll/$',
+        login_required(pubsub_dashboard.poll), name='pubsub-dashboard-poll'),
+    url(r'^zato/pubsub/import-demo-config$',
+        login_required(pubsub_dashboard.import_demo_config), name='pubsub-import-demo-config'),
 
     # PubSub Topics
 
