@@ -1,0 +1,149 @@
+{% extends "zato/dashboard_base.html" %}
+{% load extras %}
+
+{% block html_title %}Pub/sub dashboard{% endblock %}
+
+{% block dashboard_domain_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/dashboard.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.pubsub.dashboard.config.base_url = '{{ dashboard_base_url }}';
+    $.fn.zato.pubsub.dashboard.init({{ dashboard_data|safe }});
+});
+</script>
+{% endblock %}
+
+{% block dashboard_header_pill %}
+                <div class="dashboard-hero-pill-group" id="dashboard-hero-pill-group"></div>
+{% endblock %}
+
+{% block dashboard_tiles %}
+
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">Topics</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-topics">-</div>
+                        <div class="dashboard-tile-spark" id="spark-topics"></div>
+                    </div>
+                </div>
+
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">Subscribers</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-subscribers">-</div>
+                        <div class="dashboard-tile-spark" id="spark-subscribers"></div>
+                    </div>
+                </div>
+
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">Depth</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-depth">-</div>
+                        <div class="dashboard-tile-spark" id="spark-depth"></div>
+                    </div>
+                </div>
+
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">Oldest unacked</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-oldest-unacked">-</div>
+                        <div class="dashboard-tile-spark" id="spark-oldest-unacked"></div>
+                    </div>
+                </div>
+
+{% endblock %}
+
+{% block dashboard_chart_header_class %}dashboard-card-header-tabs{% endblock %}
+{% block dashboard_chart_header_content %}
+                <div class="dashboard-tabs" role="tablist" aria-label="Message flow">
+                    <button type="button"
+                            class="dashboard-tab dashboard-tab-active"
+                            data-tab="message-flow"
+                            role="tab"
+                            aria-selected="true">
+                        <span class="dashboard-tab-label">Message flow</span>
+                    </button>
+                </div>
+{% endblock %}
+
+{% block dashboard_time_range_options %}
+                        <div class="dashboard-time-range-option" data-minutes="5">Last 5 minutes</div>
+                        <div class="dashboard-time-range-option" data-minutes="15">Last 15 minutes</div>
+                        <div class="dashboard-time-range-option" data-minutes="30">Last 30 minutes</div>
+                        <div class="dashboard-time-range-option" data-minutes="60">Last 1 hour</div>
+                        <div class="dashboard-time-range-option" data-minutes="360">Last 6 hours</div>
+                        <div class="dashboard-time-range-option" data-minutes="1440">Today</div>
+                        <div class="dashboard-time-range-option dashboard-time-range-active" data-minutes="0">All</div>
+{% endblock %}
+
+{% block dashboard_grid %}
+
+        <div class="dashboard-card dashboard-card-topics">
+            <div class="dashboard-card-header dashboard-card-header-tabs">
+                <div class="dashboard-tabs" role="tablist" aria-label="Topics">
+                    <button type="button"
+                            class="dashboard-tab dashboard-tab-active"
+                            data-tab="topics"
+                            role="tab"
+                            aria-selected="true">
+                        <span class="dashboard-tab-label">Topics</span>
+                        <span class="dashboard-pill" id="dashboard-topics-count"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="dashboard-tab-panel"
+                 id="dashboard-tab-panel-topics"
+                 role="tabpanel"
+                 aria-labelledby="dashboard-tab-topics">
+                <div class="dashboard-card-scroll">
+                    <table class="zato-table" id="dashboard-topic-table">
+                        <thead>
+                            <tr>
+                                <th class="dashboard-th-dot"></th>
+                                <th>Topic</th>
+                                <th>Subscribers</th>
+                                <th>Depth</th>
+                                <th>Pub rate</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboard-topic-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card dashboard-card-queues">
+            <div class="dashboard-card-header dashboard-card-header-tabs">
+                <div class="dashboard-tabs" role="tablist" aria-label="Queues">
+                    <button type="button"
+                            class="dashboard-tab dashboard-tab-active"
+                            data-tab="queues"
+                            role="tab"
+                            aria-selected="true">
+                        <span class="dashboard-tab-label">Queues</span>
+                        <span class="dashboard-pill" id="dashboard-queues-count"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="dashboard-tab-panel"
+                 id="dashboard-tab-panel-queues"
+                 role="tabpanel"
+                 aria-labelledby="dashboard-tab-queues">
+                <div class="dashboard-card-scroll">
+                    <table class="zato-table" id="dashboard-queue-table">
+                        <thead>
+                            <tr>
+                                <th class="dashboard-th-dot"></th>
+                                <th>Queue</th>
+                                <th>Depth</th>
+                                <th>Oldest msg</th>
+                                <th>Delivery rate</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboard-queue-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+{% endblock %}
