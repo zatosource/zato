@@ -212,4 +212,27 @@ class TestIAMPushDelivery(BasePushTestCase):
         self.assertEqual(received_data['user_id'], 'usr-meta-001')
 
 # ################################################################################################################################
+
+    @_skip_user_created # type: ignore[reportUntypedFunctionDecorator]
+    def test_publish_response_fields(self) -> 'None':
+        """ The publish response must contain msg_id and status fields
+        as documented in the REST API specification.
+        """
+        topic_name = 'iam.user.created'
+        data = {'user_id': 'usr-resp-001', 'event': 'response_check'}
+
+        result = self.publish(topic_name, data)
+
+        # The response must contain all documented fields ..
+        self.assertIn('is_ok', result)
+        self.assertTrue(result['is_ok'])
+
+        self.assertIn('msg_id', result)
+        msg_id = result['msg_id']
+        msg_id_length = len(msg_id)
+        self.assertGreater(msg_id_length, 0)
+
+        self.assertIn('status', result)
+
+# ################################################################################################################################
 # ################################################################################################################################
