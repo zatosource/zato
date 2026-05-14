@@ -35,6 +35,19 @@ class BasePubSubPushTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    def setUp(self) -> 'None':
+        """ Remove all JSON files from each active endpoint's output directory
+        so that each test starts with a clean slate.
+        """
+        for output_directory in self.config.endpoint_output_dirs.values():
+
+            for entry in os.listdir(output_directory):
+                if entry.endswith('.json'):
+                    file_path = os.path.join(output_directory, entry)
+                    os.remove(file_path)
+
+# ################################################################################################################################
+
     def publish(self, topic_name:'str', data:'any_') -> 'anydict':
         """ Publish a message to a topic using the publisher credentials.
         """
