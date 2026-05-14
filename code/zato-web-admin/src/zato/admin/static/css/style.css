@@ -1122,3 +1122,36 @@ div.action-panel a {
 }
 .text-center { text-align: center; }
 .collapsible-toggle { padding-top: 0.62rem !important; }
+
+/* ------------------------------------------------------------ */
+/* Inline spinner overlay                                        */
+/* ------------------------------------------------------------ */
+
+.zato-spinner-overlay {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px;
+    border: 2px solid #ccc;
+    border-radius: 5px;
+    z-index: 9999;
+}
+
+.zato-spinner-overlay-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ccc;
+    border-top: 2px solid #333;
+    border-radius: 50%;
+    animation: zato-spinner-spin 1s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+@keyframes zato-spinner-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

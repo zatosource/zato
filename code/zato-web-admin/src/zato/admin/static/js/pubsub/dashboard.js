@@ -5,7 +5,6 @@ $.fn.zato.pubsub.dashboard = {};
 
 $.fn.zato.pubsub.dashboard.config = {
     cluster_id: '1',
-    base_url: '/zato/pubsub/dashboard/',
     default_time_range: 0
 };
 
@@ -47,7 +46,7 @@ $.fn.zato.pubsub.dashboard.series_labels = {
 // Kit aliases
 // ////////////////////////////////////////////////////////////////////////////
 
-(function() {
+(function($) {
     var kit = $.fn.zato.dashboard_kit;
     var dash = $.fn.zato.pubsub.dashboard;
 
@@ -71,75 +70,118 @@ $.fn.zato.pubsub.dashboard.series_labels = {
         kit.set_number($('#stat-topics'), topic_count);
         kit.set_number($('#stat-subscribers'), total_subscribers);
         kit.set_number($('#stat-depth'), total_depth);
-        $('#stat-oldest-unacked').text(oldest_unacked > 0 ? kit.format_duration_ms(oldest_unacked * 1000) : '-');
 
-        var now = Date.now();
-        dash._spark_buffers.push('topics', now, topic_count);
-        dash._spark_buffers.push('subscribers', now, total_subscribers);
-        dash._spark_buffers.push('depth', now, total_depth);
-        dash._spark_buffers.push('oldest_unacked', now, oldest_unacked);
+        var oldest_unacked_ms = oldest_unacked * 1000;
+        var oldest_unacked_label = oldest_unacked > 0 ? kit.format_duration_ms(oldest_unacked_ms) : '-';
+        $('#stat-oldest-unacked').text(oldest_unacked_label);
+
+        dash._spark_buffers.push('topics', topic_count);
+        dash._spark_buffers.push('subscribers', total_subscribers);
+        dash._spark_buffers.push('depth', total_depth);
+        dash._spark_buffers.push('oldest_unacked', oldest_unacked);
 
         if (dash._stat_tile_handle) {
             dash._stat_tile_handle.bind();
         }
 
-        // Topic table
+        // Build the topic table ..
         var topics = data.topics;
         var topic_body = $('#dashboard-topic-table-body');
         topic_body.empty();
         $('#dashboard-topics-count').text(topics.length);
 
-        for (var i = 0; i < topics.length; i++) {
-            var t = topics[i];
-            var dot_class = t.is_active ? 'dashboard-dot-ok' : 'dashboard-dot-inactive';
-            topic_body.append(
-                '<tr>' +
-                '<td class="dashboard-th-dot"><span class="dashboard-dot ' + dot_class + '"></span></td>' +
-                '<td>' + t.name + '</td>' +
-                '<td>' + kit.format_number_compact(t.subscriber_count) + '</td>' +
-                '<td>' + kit.format_number_compact(t.depth) + '</td>' +
-                '<td>' + kit.format_number_compact(t.pub_rate) + '/s</td>' +
-                '</tr>'
-            );
+        for (var topicIdx = 0; topicIdx < topics.length; topicIdx++) {
+            var topic = topics[topicIdx];
+            var topic_dot_class = topic.is_active ? 'dashboard-dot-ok' : 'dashboard-dot-inactive';
+
+            var topic_row = document.createElement('tr');
+
+            var topic_dot_cell = document.createElement('td');
+            topic_dot_cell.className = 'dashboard-th-dot';
+            var topic_dot_span = document.createElement('span');
+            topic_dot_span.className = 'dashboard-dot ' + topic_dot_class;
+            topic_dot_cell.appendChild(topic_dot_span);
+            topic_row.appendChild(topic_dot_cell);
+
+            var topic_name_cell = document.createElement('td');
+            topic_name_cell.textContent = topic.name;
+            topic_row.appendChild(topic_name_cell);
+
+            var topic_sub_cell = document.createElement('td');
+            topic_sub_cell.textContent = kit.format_number_compact(topic.subscriber_count);
+            topic_row.appendChild(topic_sub_cell);
+
+            var topic_depth_cell = document.createElement('td');
+            topic_depth_cell.textContent = kit.format_number_compact(topic.depth);
+            topic_row.appendChild(topic_depth_cell);
+
+            var topic_rate_cell = document.createElement('td');
+            topic_rate_cell.textContent = kit.format_number_compact(topic.pub_rate) + '/s';
+            topic_row.appendChild(topic_rate_cell);
+
+            topic_body.append(topic_row);
         }
 
-        // Queue table
+        // .. build the queue table ..
         var queues = data.queues;
         var queue_body = $('#dashboard-queue-table-body');
         queue_body.empty();
         $('#dashboard-queues-count').text(queues.length);
 
-        for (var j = 0; j < queues.length; j++) {
-            var q = queues[j];
-            var q_dot_class = q.depth > 0 ? 'dashboard-dot-warn' : 'dashboard-dot-ok';
-            queue_body.append(
-                '<tr>' +
-                '<td class="dashboard-th-dot"><span class="dashboard-dot ' + q_dot_class + '"></span></td>' +
-                '<td>' + q.name + '</td>' +
-                '<td>' + kit.format_number_compact(q.depth) + '</td>' +
-                '<td>' + (q.oldest_msg_age_seconds > 0 ? kit.format_duration_ms(q.oldest_msg_age_seconds * 1000) : '-') + '</td>' +
-                '<td>' + kit.format_number_compact(q.delivery_rate) + '/s</td>' +
-                '</tr>'
-            );
+        for (var queueIdx = 0; queueIdx < queues.length; queueIdx++) {
+            var queue = queues[queueIdx];
+            var queue_dot_class = queue.depth > 0 ? 'dashboard-dot-warn' : 'dashboard-dot-ok';
+
+            var queue_age_ms = queue.oldest_msg_age_seconds * 1000;
+            var queue_age_label = queue.oldest_msg_age_seconds > 0 ? kit.format_duration_ms(queue_age_ms) : '-';
+
+            var queue_row = document.createElement('tr');
+
+            var queue_dot_cell = document.createElement('td');
+            queue_dot_cell.className = 'dashboard-th-dot';
+            var queue_dot_span = document.createElement('span');
+            queue_dot_span.className = 'dashboard-dot ' + queue_dot_class;
+            queue_dot_cell.appendChild(queue_dot_span);
+            queue_row.appendChild(queue_dot_cell);
+
+            var queue_name_cell = document.createElement('td');
+            queue_name_cell.textContent = queue.name;
+            queue_row.appendChild(queue_name_cell);
+
+            var queue_depth_cell = document.createElement('td');
+            queue_depth_cell.textContent = kit.format_number_compact(queue.depth);
+            queue_row.appendChild(queue_depth_cell);
+
+            var queue_age_cell = document.createElement('td');
+            queue_age_cell.textContent = queue_age_label;
+            queue_row.appendChild(queue_age_cell);
+
+            var queue_rate_cell = document.createElement('td');
+            queue_rate_cell.textContent = kit.format_number_compact(queue.delivery_rate) + '/s';
+            queue_row.appendChild(queue_rate_cell);
+
+            queue_body.append(queue_row);
         }
 
-        // Main chart - flatten the timeline into records the kit expects
+        // .. flatten the timeline into records the kit expects ..
         var timeline = data.history_timeline;
         var records = [];
         var publishes = timeline.publishes;
         var deliveries = timeline.deliveries;
 
-        for (var pi = 0; pi < publishes.length; pi++) {
-            records.push({ts: publishes[pi].ts, series: 'published', count: publishes[pi].count});
+        for (var publishIdx = 0; publishIdx < publishes.length; publishIdx++) {
+            records.push({ts: publishes[publishIdx].ts, series: 'published', count: publishes[publishIdx].count});
         }
-        for (var di = 0; di < deliveries.length; di++) {
-            records.push({ts: deliveries[di].ts, series: 'delivered', count: deliveries[di].count});
+
+        for (var deliveryIdx = 0; deliveryIdx < deliveries.length; deliveryIdx++) {
+            records.push({ts: deliveries[deliveryIdx].ts, series: 'delivered', count: deliveries[deliveryIdx].count});
         }
 
         if (dash._chart_handle) {
             dash._chart_handle.render(records);
         }
 
+        // .. and lock table column widths.
         kit.lock_table_widths('#dashboard-topic-table');
         kit.lock_table_widths('#dashboard-queue-table');
     };
@@ -156,7 +198,7 @@ $.fn.zato.pubsub.dashboard.series_labels = {
             headers: {'X-CSRFToken': $.cookie('csrftoken')},
             success: function(data) {
                 if (typeof data === 'string') {
-                    try { data = JSON.parse(data); } catch(e) { return; }
+                    try { data = JSON.parse(data); } catch(parse_error) { return; }
                 }
                 dash.render(data);
             },
@@ -192,8 +234,8 @@ $.fn.zato.pubsub.dashboard.series_labels = {
         });
 
         // Time range
-        var _stored_range = parseInt(kit.storage_get('zato_pubsub_time_range'), 10);
-        dash._time_range_minutes = isNaN(_stored_range) ? dash.config.default_time_range : _stored_range;
+        var stored_range = parseInt(kit.storage_get('zato_pubsub_time_range'), 10);
+        dash._time_range_minutes = isNaN(stored_range) ? dash.config.default_time_range : stored_range;
         dash._chart_handle.set_time_range_minutes(dash._time_range_minutes);
 
         var menu = $('#dashboard-time-range-menu');
@@ -256,4 +298,4 @@ $.fn.zato.pubsub.dashboard.series_labels = {
         });
     };
 
-})();
+})(jQuery);
