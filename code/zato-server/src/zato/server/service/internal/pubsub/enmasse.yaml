@@ -9,6 +9,11 @@ security:
     username: user.2
     password: password.2
 
+  - name: demo_sec_def.3
+    type: basic_auth
+    username: user.3
+    password: password.3
+
 outgoing_rest:
 
   - name: demo.outgoing.rest.1

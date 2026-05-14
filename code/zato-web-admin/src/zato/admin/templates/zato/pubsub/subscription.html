@@ -10,51 +10,51 @@
 
         /* Pub/sub reusable design tokens */
         :root {
-            --ps-badge-radius: 4px;
-            --ps-badge-font-size: 11px;
-            --ps-badge-font-weight: 700;
-            --ps-badge-padding: 2px 8px;
-            --ps-badge-letter-spacing: 0.3px;
+            --pubsub-badge-radius: 4px;
+            --pubsub-badge-font-size: 11px;
+            --pubsub-badge-font-weight: 700;
+            --pubsub-badge-padding: 2px 8px;
+            --pubsub-badge-letter-spacing: 0.3px;
 
-            --ps-deliv-enabled-color: #8a7fa6;
-            --ps-deliv-enabled-bg: rgba(138, 127, 166, 0.09);
-            --ps-deliv-disabled-color: #9e9e9e;
-            --ps-deliv-disabled-bg: rgba(158, 158, 158, 0.10);
+            --pubsub-deliv-enabled-color: #8a7fa6;
+            --pubsub-deliv-enabled-bg: rgba(138, 127, 166, 0.09);
+            --pubsub-deliv-disabled-color: #9e9e9e;
+            --pubsub-deliv-disabled-bg: rgba(158, 158, 158, 0.10);
 
-            --ps-pub-enabled-color: #7e96a8;
-            --ps-pub-enabled-bg: rgba(126, 150, 168, 0.09);
-            --ps-pub-disabled-color: #bbb;
-            --ps-pub-disabled-bg: rgba(187, 187, 187, 0.08);
+            --pubsub-pub-enabled-color: #7e96a8;
+            --pubsub-pub-enabled-bg: rgba(126, 150, 168, 0.09);
+            --pubsub-pub-disabled-color: #bbb;
+            --pubsub-pub-disabled-bg: rgba(187, 187, 187, 0.08);
         }
 
         .ps-badge {
             display: inline-block;
-            padding: var(--ps-badge-padding);
-            border-radius: var(--ps-badge-radius);
-            font-size: var(--ps-badge-font-size);
-            font-weight: var(--ps-badge-font-weight);
-            letter-spacing: var(--ps-badge-letter-spacing);
+            padding: var(--pubsub-badge-padding);
+            border-radius: var(--pubsub-badge-radius);
+            font-size: var(--pubsub-badge-font-size);
+            font-weight: var(--pubsub-badge-font-weight);
+            letter-spacing: var(--pubsub-badge-letter-spacing);
             line-height: 1.15;
         }
 
         .ps-badge-deliv-enabled {
-            color: var(--ps-deliv-enabled-color);
-            background: var(--ps-deliv-enabled-bg);
+            color: var(--pubsub-deliv-enabled-color);
+            background: var(--pubsub-deliv-enabled-bg);
         }
 
         .ps-badge-deliv-disabled {
-            color: var(--ps-deliv-disabled-color);
-            background: var(--ps-deliv-disabled-bg);
+            color: var(--pubsub-deliv-disabled-color);
+            background: var(--pubsub-deliv-disabled-bg);
         }
 
         .ps-badge-pub-enabled {
-            color: var(--ps-pub-enabled-color);
-            background: var(--ps-pub-enabled-bg);
+            color: var(--pubsub-pub-enabled-color);
+            background: var(--pubsub-pub-enabled-bg);
         }
 
         .ps-badge-pub-disabled {
-            color: var(--ps-pub-disabled-color);
-            background: var(--ps-pub-disabled-bg);
+            color: var(--pubsub-pub-disabled-color);
+            background: var(--pubsub-pub-disabled-bg);
         }
 
         .ps-status-cell {

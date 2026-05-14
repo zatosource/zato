@@ -16,6 +16,7 @@ from logging import getLogger
 from redis.exceptions import ResponseError
 
 # Zato
+from zato.common.api import PubSub
 from zato.common.util.api import new_msg_id, utcnow
 from zato.server.metrics import zato_pubsub_messages_delivered_total, zato_pubsub_messages_published_total
 
@@ -34,7 +35,16 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass(init=True, repr=True, eq=True)
+_default_priority = PubSub.Message.Priority_Default
+_default_expiration = PubSub.Message.Default_Expiration
+_default_max_messages = PubSub.Message.Default_Max_Messages
+_default_max_len = PubSub.Message.Default_Max_Len
+_default_stream_max_len = 100_000
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
 class PublishResult:
     msg_id: 'str'
 
@@ -45,7 +55,6 @@ class ModuleCtx:
     Stream_Prefix = 'zato:pubsub:stream:'
     Subs_Prefix = 'zato:pubsub:subs:'
     Topic_Subs_Prefix = 'zato:pubsub:topic_subs:'
-    Default_Max_Len = 100_000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,17 +69,20 @@ class RedisPubSubBackend:
 # ################################################################################################################################
 
     def _get_stream_key(self, topic_name:'str') -> 'str':
-        return f'{ModuleCtx.Stream_Prefix}{topic_name}'
+        out = f'{ModuleCtx.Stream_Prefix}{topic_name}'
+        return out
 
 # ################################################################################################################################
 
     def _get_subs_key(self, sub_key:'str') -> 'str':
-        return f'{ModuleCtx.Subs_Prefix}{sub_key}'
+        out = f'{ModuleCtx.Subs_Prefix}{sub_key}'
+        return out
 
 # ################################################################################################################################
 
     def _get_topic_subs_key(self, topic_name:'str') -> 'str':
-        return f'{ModuleCtx.Topic_Subs_Prefix}{topic_name}'
+        out = f'{ModuleCtx.Topic_Subs_Prefix}{topic_name}'
+        return out
 
 # ################################################################################################################################
 
@@ -79,8 +91,8 @@ class RedisPubSubBackend:
         topic_name:'str',
         data:'any_',
         *,
-        priority:'int'=5,
-        expiration:'int'=31536000,
+        priority:'int'=_default_priority,
+        expiration:'int'=_default_expiration,
         correl_id:'strnone'=None,
         in_reply_to:'strnone'=None,
         ext_client_id:'strnone'=None,
@@ -89,26 +101,42 @@ class RedisPubSubBackend:
     ) -> 'PublishResult':
         """ Publish a message to a topic stream.
         """
-        # Normalize topic name to lowercase for case-insensitivity
+
+        # .. normalize topic name to lowercase for case-insensitivity ..
         topic_name = topic_name.lower()
 
-        # Generate message ID
-        msg_id = new_msg_id()
+        # .. generate message ID ..
+        message_id = new_msg_id()
 
-        # Timestamps
+        # .. build timestamps ..
         now = utcnow()
-        pub_time_iso = pub_time if pub_time else now.isoformat()
-        expiration_time = now + timedelta(seconds=expiration)
+
+        if pub_time:
+            pub_time_iso = pub_time
+        else:
+            now_iso = now.isoformat()
+            pub_time_iso = now_iso
+
+        expiration_delta = timedelta(seconds=expiration)
+        expiration_time = now + expiration_delta
         expiration_time_iso = expiration_time.isoformat()
 
-        # Build message
+        # .. serialize data ..
+        if isinstance(data, str):
+            serialized_data = data
+        else:
+            serialized_data = json.dumps(data)
+
+        # .. build the message ..
+        recv_time_iso = now.isoformat()
+
         message = {
-            'msg_id': msg_id,
-            'data': data if isinstance(data, str) else json.dumps(data),
+            'msg_id': message_id,
+            'data': serialized_data,
             'topic_name': topic_name,
             'priority': str(priority),
             'pub_time_iso': pub_time_iso,
-            'recv_time_iso': now.isoformat(),
+            'recv_time_iso': recv_time_iso,
             'expiration': str(expiration),
             'expiration_time_iso': expiration_time_iso,
         }
@@ -125,39 +153,42 @@ class RedisPubSubBackend:
         if publisher:
             message['publisher'] = publisher
 
-        # Add to stream
+        # .. add to stream ..
         stream_key = self._get_stream_key(topic_name)
-        _ = self.redis.xadd(stream_key, message, maxlen=ModuleCtx.Default_Max_Len)
+        redis_stream_id = self.redis.xadd(stream_key, message, maxlen=_default_stream_max_len)
 
-        _ = zato_pubsub_messages_published_total.labels(topic_name=topic_name).inc()
+        counter = zato_pubsub_messages_published_total.labels(topic_name=topic_name)
+        _ = counter.inc()
 
-        return PublishResult(msg_id=msg_id)
+        out = PublishResult()
+        out.msg_id = message_id
+
+        return out
 
 # ################################################################################################################################
 
     def subscribe(self, sub_key:'str', topic_name:'str') -> 'None':
         """ Subscribe a user to a topic.
         """
-        # Normalize topic name to lowercase for case-insensitivity
+
+        # .. normalize topic name to lowercase for case-insensitivity ..
         topic_name = topic_name.lower()
 
         subs_key = self._get_subs_key(sub_key)
         topic_subs_key = self._get_topic_subs_key(topic_name)
         stream_key = self._get_stream_key(topic_name)
 
-        # Add topic to subscriber's set
+        # .. add topic to subscriber's set ..
         _ = self.redis.sadd(subs_key, topic_name)
 
-        # Add subscriber to topic's set
+        # .. add subscriber to topic's set ..
         _ = self.redis.sadd(topic_subs_key, sub_key)
 
-        # Create consumer group if not exists
+        # .. create consumer group if not exists ..
         try:
-            _ = self.redis.xgroup_create(stream_key, sub_key, id='$', mkstream=True)
-        except ResponseError as e:
-            if 'BUSYGROUP' in str(e):
-                pass  # Group already exists
-            else:
+            _ = self.redis.xgroup_create(stream_key, sub_key, id='0', mkstream=True)
+        except ResponseError as error:
+            if 'BUSYGROUP' not in error.args[0]:
                 raise
 
 # ################################################################################################################################
@@ -165,188 +196,237 @@ class RedisPubSubBackend:
     def unsubscribe(self, sub_key:'str', topic_name:'str') -> 'None':
         """ Unsubscribe a user from a topic.
         """
-        # Normalize topic name to lowercase for case-insensitivity
+
+        # .. normalize topic name to lowercase for case-insensitivity ..
         topic_name = topic_name.lower()
 
         subs_key = self._get_subs_key(sub_key)
         topic_subs_key = self._get_topic_subs_key(topic_name)
         stream_key = self._get_stream_key(topic_name)
 
-        # Remove topic from subscriber's set
+        # .. remove topic from subscriber's set ..
         _ = self.redis.srem(subs_key, topic_name)
 
-        # Remove subscriber from topic's set
+        # .. remove subscriber from topic's set ..
         _ = self.redis.srem(topic_subs_key, sub_key)
 
-        # Check if subscriber has any remaining subscriptions
+        # .. check if subscriber has any remaining subscriptions ..
         remaining = self.redis.scard(subs_key)
 
-        # If no remaining subscriptions, destroy the consumer group
+        # .. if no remaining subscriptions, destroy the consumer group ..
         if remaining == 0:
             try:
                 _ = self.redis.xgroup_destroy(stream_key, sub_key)
             except ResponseError:
-                pass  # Group may not exist
+                pass
 
 # ################################################################################################################################
 
     def fetch_messages(
         self,
         sub_key:'str',
-        max_messages:'int'=50,
-        max_len:'int'=5_000_000
+        max_messages:'int'=_default_max_messages,
+        max_len:'int'=_default_max_len,
+        block_ms:'int'=0,
+        stream_id:'str'='>'
     ) -> 'anylist':
         """ Fetch messages for a subscriber from all subscribed topics.
+        Does not acknowledge messages - the caller is responsible for calling
+        ack_message after successful processing.
         """
         subs_key = self._get_subs_key(sub_key)
 
-        # Get all topics this subscriber is subscribed to
+        # .. get all topics this subscriber is subscribed to ..
         topics = self.redis.smembers(subs_key)
 
         if not topics:
             return []
 
-        # Decode topic names if needed
-        topics = [t.decode('utf-8') if isinstance(t, bytes) else t for t in topics]
+        # .. build streams dict for xreadgroup ..
+        streams:'anydict' = {}
 
-        # Build streams dict for xreadgroup
-        streams = {self._get_stream_key(topic): '>' for topic in topics}
+        for topic in topics:
+            stream_key = self._get_stream_key(topic)
+            streams[stream_key] = stream_id
 
-        # Read from all subscribed streams
+        # .. read from all subscribed streams ..
         try:
+            block_value = block_ms if block_ms else None
+
             result = self.redis.xreadgroup(
                 groupname=sub_key,
                 consumername=sub_key,
                 streams=streams,
-                count=max_messages
+                count=max_messages,
+                block=block_value
             )
-        except ResponseError as e:
-            if 'NOGROUP' in str(e):
+
+        except ResponseError as error:
+            if 'NOGROUP' in error.args[0]:
                 return []
             raise
 
         if not result:
             return []
 
-        messages = []
+        messages:'anylist' = []
         total_len = 0
 
         for stream_name, stream_messages in result:
-            for redis_msg_id, msg_data in stream_messages:
+            for redis_message_id, message_data in stream_messages:
 
-                # Decode message data
-                decoded = {}
-                for key, value in msg_data.items():
-                    key = key.decode('utf-8') if isinstance(key, bytes) else key
-                    value = value.decode('utf-8') if isinstance(value, bytes) else value
-                    decoded[key] = value
+                # .. message_data is already dict[str, str] because decode_responses=True ..
+                decoded = message_data
 
-                # Check expiration - skip expired messages
-                expiration_time_iso = decoded.get('expiration_time_iso', '')
-                if expiration_time_iso:
-                    try:
-                        expiration_time = datetime.fromisoformat(expiration_time_iso.replace('Z', '+00:00'))
-                        now = utcnow()
-                        if now > expiration_time:
-                            # Message expired, acknowledge and skip
-                            stream_name_str = stream_name.decode('utf-8') if isinstance(stream_name, bytes) else stream_name
-                            _ = self.redis.xack(stream_name_str, sub_key, redis_msg_id)
-                            continue
-                    except (ValueError, TypeError):
-                        pass
+                # .. check expiration - ack expired messages immediately and skip them ..
+                expiration_time_iso = decoded['expiration_time_iso']
 
-                # Check max_len constraint
-                data_len = len(decoded.get('data', ''))
+                normalized_expiration_iso = expiration_time_iso.replace('Z', '+00:00')
+                expiration_time = datetime.fromisoformat(normalized_expiration_iso)
+
+                now = utcnow()
+
+                if now > expiration_time:
+                    _ = self.redis.xack(stream_name, sub_key, redis_message_id)
+                    continue
+
+                # .. check max_len constraint ..
+                data_len = len(decoded['data'])
+
                 if total_len + data_len > max_len:
                     break
 
                 total_len += data_len
 
-                # Convert priority back to int for sorting
-                decoded['priority'] = int(decoded.get('priority', 5))
-                decoded['_redis_msg_id'] = redis_msg_id
+                # .. convert priority and expiration from string to int once ..
+                decoded['priority'] = int(decoded['priority'])
+                decoded['expiration'] = int(decoded['expiration'])
+
+                decoded['_redis_message_id'] = redis_message_id
                 decoded['_stream_name'] = stream_name
 
                 messages.append(decoded)
 
-                # Acknowledge the message for this consumer group
-                stream_name_str = stream_name.decode('utf-8') if isinstance(stream_name, bytes) else stream_name
-                _ = self.redis.xack(stream_name_str, sub_key, redis_msg_id)
+        # .. sort by priority desc, then by pub_time asc ..
+        def _sort_key(message:'anydict') -> 'tuple':
+            negated_priority = -message['priority']
+            pub_time = message['pub_time_iso']
 
-                delivered_topic = decoded.get('topic_name', '')
-                if delivered_topic:
-                    _ = zato_pubsub_messages_delivered_total.labels(topic_name=delivered_topic).inc()
+            out = (negated_priority, pub_time)
+            return out
 
-        # Sort by priority desc, then by pub_time asc
-        messages.sort(key=lambda m: (-m['priority'], m.get('pub_time_iso', '')))
+        messages.sort(key=_sort_key)
 
-        # Format messages according to documentation: {data, meta}
+        return messages[:max_messages]
+
+# ################################################################################################################################
+
+    def ack_message(self, stream_name:'str', sub_key:'str', redis_message_id:'str') -> 'None':
+        """ Acknowledge a single message after successful processing.
+        """
+        _ = self.redis.xack(stream_name, sub_key, redis_message_id)
+
+# ################################################################################################################################
+
+    def fetch_pending(self, sub_key:'str', max_messages:'int'=_default_max_messages) -> 'anylist':
+        """ Fetch previously read but unacknowledged messages for a subscriber.
+        Used on startup to retry messages that were not delivered before the process stopped.
+        """
+        return self.fetch_messages(sub_key, max_messages=max_messages, stream_id='0')
+
+# ################################################################################################################################
+
+    def format_messages_for_rest(self, messages:'anylist', sub_key:'str') -> 'anylist':
+        """ Format raw messages into the {data, meta} structure expected by the REST API.
+        Also acknowledges each message and increments delivery counters.
+        """
         now = utcnow()
-        formatted_messages = []
 
-        for msg in messages[:max_messages]:
-            _ = msg.pop('_redis_msg_id', None)
-            _ = msg.pop('_stream_name', None)
+        out:'anylist' = []
 
-            data_raw = msg.pop('data', '')
+        for message in messages:
 
-            # Deserialize JSON data if possible
+            redis_message_id = message.pop('_redis_message_id')
+            stream_name = message.pop('_stream_name')
+
+            data_raw = message.pop('data')
+
+            # .. deserialize JSON data if possible ..
             try:
                 data = json.loads(data_raw)
             except (json.JSONDecodeError, TypeError):
                 data = data_raw
 
-            data_size = len(data_raw) if isinstance(data_raw, str) else 0
+            data_size = len(data_raw)
 
-            pub_time_iso = msg.get('pub_time_iso', '')
-            recv_time_iso = msg.get('recv_time_iso', '')
+            pub_time_iso = message['pub_time_iso']
+            recv_time_iso = message['recv_time_iso']
+
+            time_since_pub = self._compute_time_since(pub_time_iso, now)
+            time_since_recv = self._compute_time_since(recv_time_iso, now)
 
             meta = {
-                'topic_name': msg.get('topic_name', ''),
+                'topic_name': message['topic_name'],
                 'size': data_size,
-                'priority': msg.get('priority', 5),
-                'expiration': int(msg.get('expiration', 31536000)),
-                'msg_id': msg.get('msg_id', ''),
+                'priority': message['priority'],
+                'expiration': message['expiration'],
+                'msg_id': message['msg_id'],
+                'sub_key': sub_key,
                 'pub_time_iso': pub_time_iso,
                 'recv_time_iso': recv_time_iso,
-                'expiration_time_iso': msg.get('expiration_time_iso', ''),
-                'time_since_pub': self._compute_time_since(pub_time_iso, now),
-                'time_since_recv': self._compute_time_since(recv_time_iso, now),
+                'expiration_time_iso': message['expiration_time_iso'],
+                'time_since_pub': time_since_pub,
+                'time_since_recv': time_since_recv,
             }
 
-            if msg.get('correl_id'):
-                meta['correl_id'] = msg['correl_id']
-            if msg.get('in_reply_to'):
-                meta['in_reply_to'] = msg['in_reply_to']
-            if msg.get('ext_client_id'):
-                meta['ext_client_id'] = msg['ext_client_id']
+            if correl_id := message.get('correl_id'):
+                meta['correl_id'] = correl_id
 
-            formatted_messages.append({
+            if in_reply_to := message.get('in_reply_to'):
+                meta['in_reply_to'] = in_reply_to
+
+            if ext_client_id := message.get('ext_client_id'):
+                meta['ext_client_id'] = ext_client_id
+
+            out.append({
                 'data': data,
                 'meta': meta
             })
 
-        return formatted_messages
+            # .. acknowledge and count after formatting ..
+            self.ack_message(stream_name, sub_key, redis_message_id)
+
+            counter = zato_pubsub_messages_delivered_total.labels(topic_name=message['topic_name'])
+            _ = counter.inc()
+
+        return out
 
 # ################################################################################################################################
 
     @staticmethod
     def _compute_time_since(iso_timestamp:'str', now:'datetime') -> 'str':
-        if not iso_timestamp:
-            return ''
-        try:
-            ts = datetime.fromisoformat(iso_timestamp.replace('Z', '+00:00'))
 
-            # Strip tzinfo from both sides so subtraction always works
-            ts_naive = ts.replace(tzinfo=None) if ts.tzinfo else ts
-            now_naive = now.replace(tzinfo=None) if now.tzinfo else now
+        normalized_iso = iso_timestamp.replace('Z', '+00:00')
+        timestamp = datetime.fromisoformat(normalized_iso)
 
-            delta = now_naive - ts_naive
-            if delta.total_seconds() < 0:
-                delta = timedelta(0)
-            return str(delta)
-        except (ValueError, TypeError):
-            return ''
+        # .. strip tzinfo from both sides so subtraction always works ..
+        if timestamp.tzinfo:
+            timestamp_naive = timestamp.replace(tzinfo=None)
+        else:
+            timestamp_naive = timestamp
+
+        if now.tzinfo:
+            now_naive = now.replace(tzinfo=None)
+        else:
+            now_naive = now
+
+        delta = now_naive - timestamp_naive
+
+        if delta.total_seconds() < 0:
+            delta = timedelta(0)
+
+        out = str(delta)
+        return out
 
 # ################################################################################################################################
 
@@ -355,7 +435,9 @@ class RedisPubSubBackend:
         """
         subs_key = self._get_subs_key(sub_key)
         topics = self.redis.smembers(subs_key)
-        return [t.decode('utf-8') if isinstance(t, bytes) else t for t in topics]
+
+        out = list(topics)
+        return out
 
 # ################################################################################################################################
 
@@ -363,8 +445,10 @@ class RedisPubSubBackend:
         """ Get list of subscribers for a topic.
         """
         topic_subs_key = self._get_topic_subs_key(topic_name)
-        subs = self.redis.smembers(topic_subs_key)
-        return [s.decode('utf-8') if isinstance(s, bytes) else s for s in subs]
+        subscriptions = self.redis.smembers(topic_subs_key)
+
+        out = list(subscriptions)
+        return out
 
 # ################################################################################################################################
 
@@ -374,24 +458,24 @@ class RedisPubSubBackend:
         stream_key = self._get_stream_key(topic_name)
         topic_subs_key = self._get_topic_subs_key(topic_name)
 
-        # Get all subscribers to this topic
-        subs = self.get_topic_subscribers(topic_name)
+        # .. get all subscribers to this topic ..
+        subscriptions = self.get_topic_subscribers(topic_name)
 
-        # Remove topic from each subscriber's set
-        for sub_key in subs:
+        # .. remove topic from each subscriber's set ..
+        for sub_key in subscriptions:
             subs_key = self._get_subs_key(sub_key)
             _ = self.redis.srem(subs_key, topic_name)
 
-            # Destroy consumer group
+            # .. destroy consumer group ..
             try:
                 _ = self.redis.xgroup_destroy(stream_key, sub_key)
             except ResponseError:
-                pass
+                logger.debug('Consumer group %s not found for stream %s during delete', sub_key, stream_key)
 
-        # Delete the stream
+        # .. delete the stream ..
         _ = self.redis.delete(stream_key)
 
-        # Delete the topic subscribers set
+        # .. delete the topic subscribers set ..
         _ = self.redis.delete(topic_subs_key)
 
 # ################################################################################################################################
@@ -404,23 +488,23 @@ class RedisPubSubBackend:
         old_topic_subs_key = self._get_topic_subs_key(old_topic_name)
         new_topic_subs_key = self._get_topic_subs_key(new_topic_name)
 
-        # Get all subscribers
-        subs = self.get_topic_subscribers(old_topic_name)
+        # .. get all subscribers ..
+        subscriptions = self.get_topic_subscribers(old_topic_name)
 
-        # Rename stream
+        # .. rename stream ..
         try:
             _ = self.redis.rename(old_stream_key, new_stream_key)
         except ResponseError:
-            pass  # Stream may not exist
+            logger.debug('Stream %s not found during rename', old_stream_key)
 
-        # Rename topic subscribers set
+        # .. rename topic subscribers set ..
         try:
             _ = self.redis.rename(old_topic_subs_key, new_topic_subs_key)
         except ResponseError:
-            pass  # Set may not exist
+            logger.debug('Topic subscribers set %s not found during rename', old_topic_subs_key)
 
-        # Update each subscriber's topic set
-        for sub_key in subs:
+        # .. update each subscriber's topic set ..
+        for sub_key in subscriptions:
             subs_key = self._get_subs_key(sub_key)
             _ = self.redis.srem(subs_key, old_topic_name)
             _ = self.redis.sadd(subs_key, new_topic_name)

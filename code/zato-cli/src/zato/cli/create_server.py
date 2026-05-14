@@ -13,7 +13,7 @@ from dataclasses import dataclass
 # Zato
 from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, \
     common_scheduler_server_address_opts, sql_conf_contents, ZatoCommand
-from zato.common.api import CONTENT_TYPE, Default_Extra_Service_File_Data, Default_Service_File_Data, NotGiven, SCHEDULER
+from zato.common.api import CONTENT_TYPE, Default_Extra_Service_File_Data, Default_Service_File_Data, NotGiven, REDIS, SCHEDULER
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.util.api import as_bool, get_demo_extra_py_fs_locations, get_demo_py_fs_locations
 from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
@@ -120,11 +120,11 @@ service_invoker_allow_internal="demo.ping", "zato.api.invoke"
 [http]
 methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
 
-[kvdb]
-host={{kvdb_host}}
-port={{kvdb_port}}
+[redis]
+host={{redis_host}}
+port={{redis_port}}
 unix_socket_path=
-password=zato+secret://zato.server_conf.kvdb.password
+password=zato+secret://zato.server_conf.redis.password
 db=0
 socket_timeout=
 charset=
@@ -244,7 +244,7 @@ key1={keys_key1}
 
 [zato]
 well_known_data={zato_well_known_data} # Pi number
-server_conf.kvdb.password={zato_kvdb_password}
+server_conf.redis.password={zato_redis_password}
 server_conf.main.token={zato_main_token}
 server_conf.odb.password={zato_odb_password}
 """
@@ -304,6 +304,8 @@ class Create(ZatoCommand):
 
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to join'})
     opts.append({'name':'server_name', 'help':'Server\'s name'})
+    opts.append({'name':'--redis-host', 'help':'Redis host', 'default':REDIS.DEFAULT.HOST})
+    opts.append({'name':'--redis-port', 'help':'Redis port', 'default':str(REDIS.DEFAULT.PORT)})
     opts.append({'name':'--pub-key-path', 'help':'Path to the server\'s public key in PEM'})
     opts.append({'name':'--priv-key-path', 'help':'Path to the server\'s private key in PEM'})
     opts.append({'name':'--cert-path', 'help':'Path to the server\'s certificate in PEM'})
@@ -539,8 +541,8 @@ class Create(ZatoCommand):
                     odb_port=args.odb_port or '',
                     odb_pool_size=default_odb_pool_size,
                     odb_user=args.odb_user or '',
-                    kvdb_host=self.get_arg('kvdb_host'),
-                    kvdb_port=self.get_arg('kvdb_port'),
+                    redis_host=self.get_arg('redis_host'),
+                    redis_port=self.get_arg('redis_port'),
                     initial_cluster_name=args.cluster_name,
                     initial_server_name=args.server_name,
                     scheduler_host=scheduler_config.scheduler_host,
@@ -590,10 +592,10 @@ class Create(ZatoCommand):
             secrets_conf_loc = os.path.join(self.target_dir, 'config/repo/secrets.conf')
             secrets_conf = open_w(secrets_conf_loc)
 
-            kvdb_password = self.get_arg('kvdb_password') or ''
-            kvdb_password = kvdb_password.encode('utf8')
-            kvdb_password = fernet1.encrypt(kvdb_password)
-            kvdb_password = kvdb_password.decode('utf8')
+            redis_password = self.get_arg('redis_password') or ''
+            redis_password = redis_password.encode('utf8')
+            redis_password = fernet1.encrypt(redis_password)
+            redis_password = redis_password.decode('utf8')
 
             odb_password = self.get_arg('odb_password') or ''
             odb_password = odb_password.encode('utf8')
@@ -612,7 +614,7 @@ class Create(ZatoCommand):
             _ = secrets_conf.write(secrets_conf_template.format(
                 keys_key1=secret_key,
                 zato_well_known_data=zato_well_known_data,
-                zato_kvdb_password=kvdb_password,
+                zato_redis_password=redis_password,
                 zato_main_token=zato_main_token,
                 zato_odb_password=odb_password,
             ))

@@ -12,6 +12,7 @@ from copy import deepcopy
 
 # Zato
 from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, ZatoCommand
+from zato.common.api import REDIS
 from zato.common.typing_ import cast_
 from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
 from zato.common.util.platform_ import is_windows
@@ -305,6 +306,8 @@ class Create(ZatoCommand):
     opts.append({'name':'--secret-key', 'help':'Main secret key the server(s) will use'})
     opts.append({'name':'--no-scheduler', 'help':'Create all the components but not a scheduler', 'action':'store_true'})
     opts.append({'name':'--scheduler-only', 'help':'Only create a scheduler, without other components', 'action':'store_true'})
+    opts.append({'name':'--redis-host', 'help':'Redis host', 'default':REDIS.DEFAULT.HOST})
+    opts.append({'name':'--redis-port', 'help':'Redis port', 'default':str(REDIS.DEFAULT.PORT)})
     opts.append({'name':'--preamble-script', 'help':'Extra script to add to startup scripts'})
     opts.append({'name':'--force', 'help':'Delete the directory if it already exists', 'action':'store_true'})
     opts.append({'name':'--password', 'help':'Password for the environment (same as Zato_Password env variable)'})
@@ -327,12 +330,12 @@ class Create(ZatoCommand):
         out.odb_port = args.odb_port
         out.odb_user = args.odb_user
         out.odb_db_name = args.odb_db_name
-        out.kvdb_host = self.get_arg('kvdb_host')
-        out.kvdb_port = self.get_arg('kvdb_port')
+        out.redis_host = self.get_arg('redis_host')
+        out.redis_port = self.get_arg('redis_port')
         out.sqlite_path = getattr(args, 'sqlite_path', None)
         out.postgresql_schema = getattr(args, 'postgresql_schema', None)
         out.odb_password = args.odb_password
-        out.kvdb_password = self.get_arg('kvdb_password')
+        out.redis_password = self.get_arg('redis_password')
         out.cluster_name = cluster_name
         out.scheduler_name = 'scheduler1'
         out.scheduler_address_for_server = getattr(args, 'scheduler_address_for_server', '')

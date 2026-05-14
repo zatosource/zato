@@ -41,5 +41,21 @@ class TestAuth(BaseTestCase):
         self.assertEqual(result.get('status'), '401 Unauthorized')
         self.assertEqual(result.get('http_status_code'), 401)
 
+    def test_get_messages_with_wrong_password(self):
+        client = self.get_client(self.config.user1_username, 'wrong_password')
+
+        result = client.get_messages()
+        self.assertFalse(result['is_ok'])
+        self.assertEqual(result['status'], '401 Unauthorized')
+        self.assertEqual(result['http_status_code'], 401)
+
+    def test_get_messages_with_nonexistent_user(self):
+        client = self.get_client('nonexistent_user', 'some_password')
+
+        result = client.get_messages()
+        self.assertFalse(result['is_ok'])
+        self.assertEqual(result['status'], '401 Unauthorized')
+        self.assertEqual(result['http_status_code'], 401)
+
 # ################################################################################################################################
 # ################################################################################################################################
