@@ -17,8 +17,6 @@ Poll JSON contract returned by _get_dashboard_data:
             "is_active": bool,
             "depth": int,
             "subscriber_count": int,
-            "total_published": int,
-            "last_pub_ts": int (epoch ms, 0 if never),
             "pub_rate": float (messages/s)
         }
     ],
@@ -31,9 +29,9 @@ Poll JSON contract returned by _get_dashboard_data:
         }
     ],
     "history_timeline": {
-        "publishes": [{ts: int (epoch ms), count: int}],
-        "deliveries": [{ts: int (epoch ms), count: int}],
-        "depth": [{ts: int (epoch ms), value: int}]
+        "publishes": [{"ts": int (epoch ms), "count": int}],
+        "deliveries": [{"ts": int (epoch ms), "count": int}],
+        "depth": [{"ts": int (epoch ms), "value": int}]
     }
 }
 """
@@ -61,67 +59,80 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
-dashboard_base_url = '/zato/pubsub/dashboard/'
+_Dashboard_Base_Url = '/zato/pubsub/dashboard/'
+
+# Metrics not yet available from the backend - depth, rates, and age
+# will be populated once the corresponding services are implemented.
+_No_Depth         = 0
+_No_Rate          = 0
+_No_Age           = 0
+_No_Unacked_Age   = 0
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def _get_dashboard_data(req:'any_') -> 'str':
 
+    # Get the list of topics ..
     try:
         response = req.zato.client.invoke('zato.pubsub.topic.get-list', {
             'cluster_id': default_cluster_id,
         })
         if response.ok:
-            topics = response.data if isinstance(response.data, list) else []
+            topics = response.data
         else:
             topics = []
-    except Exception as e:
-        logger.warning('Pub/sub dashboard - could not get topics: %s', e)
+    except Exception as error:
+        logger.warning('Pub/sub dashboard - could not get topics: %s', error)
         topics = []
 
+    # .. get the list of subscriptions ..
     try:
         sub_response = req.zato.client.invoke('zato.pubsub.subscription.get-list', {
             'cluster_id': default_cluster_id,
         })
         if sub_response.ok:
-            subscriptions = sub_response.data if isinstance(sub_response.data, list) else []
+            subscriptions = sub_response.data
         else:
             subscriptions = []
-    except Exception as e:
-        logger.warning('Pub/sub dashboard - could not get subscriptions: %s', e)
+    except Exception as error:
+        logger.warning('Pub/sub dashboard - could not get subscriptions: %s', error)
         subscriptions = []
 
+    # .. build the topic list ..
     topic_count = len(topics)
     total_subscribers = len(subscriptions)
 
     topic_list = []
+
     for item in topics:
-        subscriber_count = item.get('subscriber_count', 0) or 0
         topic_list.append({
             'name': item['name'],
-            'is_active': item.get('is_active', True),
-            'depth': 0,
-            'subscriber_count': subscriber_count,
-            'pub_rate': 0,
+            'is_active': item['is_active'],
+            'depth': _No_Depth,
+            'subscriber_count': item['subscriber_count'],
+            'pub_rate': _No_Rate,
         })
 
+    # .. build the queue list ..
     queue_list = []
-    for sub in subscriptions:
+
+    for subscription in subscriptions:
         queue_list.append({
-            'name': sub.get('sub_key', ''),
-            'depth': 0,
-            'oldest_msg_age_seconds': 0,
-            'delivery_rate': 0,
+            'name': subscription['sub_key'],
+            'depth': _No_Depth,
+            'oldest_msg_age_seconds': _No_Age,
+            'delivery_rate': _No_Rate,
         })
 
+    # .. and return the combined data.
     data = {
         'topic_count': topic_count,
         'total_subscribers': total_subscribers,
-        'total_depth': 0,
+        'total_depth': _No_Depth,
         'topics': topic_list,
         'queues': queue_list,
-        'oldest_unacked_age_seconds': 0,
+        'oldest_unacked_age_seconds': _No_Unacked_Age,
         'history_timeline': {
             'publishes': [],
             'deliveries': [],
@@ -129,7 +140,8 @@ def _get_dashboard_data(req:'any_') -> 'str':
         },
     }
 
-    return json.dumps(data)
+    out = json.dumps(data)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -142,7 +154,7 @@ def index(req:'any_') -> 'TemplateResponse':
     return TemplateResponse(req, 'zato/pubsub/dashboard.html', {
         'cluster_id': default_cluster_id,
         'dashboard_data': data_json,
-        'dashboard_base_url': dashboard_base_url,
+        'dashboard_base_url': _Dashboard_Base_Url,
         'zato_clusters': True,
         'zato_template_name': 'zato/pubsub/dashboard.html',
     })
@@ -156,10 +168,11 @@ def poll(req:'any_') -> 'HttpResponse':
     try:
         data_json = _get_dashboard_data(req)
         return HttpResponse(data_json.encode('utf-8'), content_type='application/json')
-    except Exception as e:
-        logger.error('Pub/sub dashboard poll error: %s', e)
+    except Exception as error:
+        logger.error('Pub/sub dashboard poll error: %s', error)
+        error_json = json.dumps({'error': str(error)})
         return HttpResponse(
-            json.dumps({'error': str(e)}).encode('utf-8'),
+            error_json.encode('utf-8'),
             content_type='application/json',
             status=500,
         )
@@ -170,14 +183,26 @@ def poll(req:'any_') -> 'HttpResponse':
 @method_allowed('GET')
 def import_demo_config(req:'any_') -> 'HttpResponse':
 
-    response = req.zato.client.invoke('zato.server.invoker', {
-        'func_name': 'import_demo_pubsub',
-    })
+    try:
+        response = req.zato.client.invoke('zato.server.invoker', {
+            'func_name': 'import_demo_pubsub',
+        })
 
-    out = HttpResponse()
-    out.content = str(response.data)
+        content = str(response.data)
 
-    return out
+        out = HttpResponse()
+        out.content = content
+
+        return out
+
+    except Exception as error:
+        logger.error('Pub/sub import demo config error: %s', error)
+        error_message = str(error)
+        return HttpResponse(
+            error_message.encode('utf-8'),
+            content_type='text/plain',
+            status=500,
+        )
 
 # ################################################################################################################################
 # ################################################################################################################################
