@@ -134,6 +134,21 @@ def _get_dashboard_data(req:'any_') -> 'str':
         if queue_age > oldest_unacked_age_seconds:
             oldest_unacked_age_seconds = queue_age
 
+    # .. get the publish timeline from Redis streams ..
+    try:
+        timeline_response = req.zato.client.invoke('zato.pubsub.topic.get-publish-timeline', {
+            'since_minutes': 60,
+        })
+        if timeline_response.ok:
+            publishes_timeline = timeline_response.data
+            if isinstance(publishes_timeline, str):
+                publishes_timeline = json.loads(publishes_timeline)
+        else:
+            publishes_timeline = []
+    except Exception as error:
+        logger.warning('Pub/sub dashboard - could not get timeline: %s', error)
+        publishes_timeline = []
+
     # .. and return the combined data.
     data = {
         'topic_count': topic_count,
@@ -145,7 +160,7 @@ def _get_dashboard_data(req:'any_') -> 'str':
         'topics': topic_list,
         'queues': queue_list,
         'history_timeline': {
-            'publishes': [],
+            'publishes': publishes_timeline,
             'deliveries': [],
             'depth': [],
         },
