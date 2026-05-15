@@ -791,10 +791,12 @@ class EnmasseYAMLImporter:
         # Wait for all services referenced in the configuration to be available
         if server_dir:
             timeout = wait_for_services_timeout or Default_Service_Wait_Timeout
-            services_available = wait_for_services(yaml_config, server_dir, timeout_seconds=timeout)
+            missing_services = wait_for_services(yaml_config, server_dir, timeout_seconds=timeout)
 
-            if not services_available:
-                raise Exception('Expected services not found')
+            if missing_services:
+                count = len(missing_services)
+                noun = 'service' if count == 1 else 'services'
+                raise Exception(f'{count} {noun} not found after {timeout}s: {sorted(missing_services)}')
 
         # Process security definitions first
         sec_created, sec_updated = self.sync_security(yaml_config.get('security', []), session)

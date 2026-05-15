@@ -10,8 +10,20 @@ security:
     password: demo.pubsub.subscriber.secret
 
 pubsub_topic:
-  - name: demo.events
-    description: Demo pub/sub topic
+  - name: demo.employee.onboarded
+    description: New hire finalized
+
+  - name: demo.employee.departed
+    description: Employee leaving the company
+
+  - name: demo.invoice.received
+    description: Supplier invoice submitted
+
+  - name: demo.invoice.approved
+    description: Invoice approved by manager
+
+  - name: demo.order.created
+    description: New order placed
 
 pubsub_permission:
   - security: demo_pubsub.publisher
@@ -28,4 +40,15 @@ pubsub_subscription:
     push_type: service
     push_service_name: demo.pubsub.subscriber
     topic_list:
-      - demo.events
+      - demo.employee.onboarded
+      - demo.employee.departed
+      - demo.invoice.received
+      - demo.invoice.approved
+      - demo.order.created
+
+scheduler:
+  - name: demo.pubsub
+    service: demo.pubsub.publisher
+    job_type: interval_based
+    seconds: 2
+    is_active: true

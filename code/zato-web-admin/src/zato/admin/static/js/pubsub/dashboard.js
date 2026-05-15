@@ -67,11 +67,11 @@ $.fn.zato.pubsub.dashboard.series_labels = {
         return kit.format_compact_duration(seconds);
     };
 
-    dash._backlog_trend_label = function(current, previous) {
+    dash._backlog_trend_html = function(current, previous) {
         if (previous === null) return '';
-        if (current > previous) return '\u2191 rising';
-        if (current < previous) return '\u2193 falling';
-        return '\u2192 flat';
+        if (current > previous) return 'rising';
+        if (current < previous) return 'falling';
+        return 'flat';
     };
 
     dash.render = function(data) {
@@ -103,8 +103,8 @@ $.fn.zato.pubsub.dashboard.series_labels = {
         $('#stat-oldest-unacked').text(age_text);
 
         // .. set the backlog trend sublabel on the delivery rate tile ..
-        var trend_label = dash._backlog_trend_label(delivery_rate, dash._prev_delivery_rate);
-        $('#stat-delivery-rate-sublabel').text(trend_label);
+        var trend_html = dash._backlog_trend_html(delivery_rate, dash._prev_delivery_rate);
+        $('#stat-delivery-rate-sublabel').html(trend_html);
         dash._prev_delivery_rate = delivery_rate;
 
         dash._spark_buffers.push('topics', topic_count);
