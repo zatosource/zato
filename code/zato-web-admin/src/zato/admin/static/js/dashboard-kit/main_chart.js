@@ -171,6 +171,22 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             var bucket_count = state.zoom_bucket_count > 0
                 ? Math.min(MAX_BUCKETS, Math.max(MIN_BUCKETS, state.zoom_bucket_count))
                 : auto_bucket_count;
+
+            if (timestamps.length >= 2) {
+                var sorted_ts = timestamps.slice().sort(function(a, b) { return a - b; });
+                var min_gap = Infinity;
+                for (var gi = 1; gi < sorted_ts.length; gi++) {
+                    var gap = sorted_ts[gi] - sorted_ts[gi - 1];
+                    if (gap > 0 && gap < min_gap) min_gap = gap;
+                }
+                if (min_gap < Infinity) {
+                    var data_buckets = Math.max(1, Math.round(time_range / min_gap)) + 1;
+                    if (data_buckets < bucket_count) {
+                        bucket_count = data_buckets;
+                    }
+                }
+            }
+
             var bucket_size = time_range / bucket_count;
             var buckets = [];
             for (var bi = 0; bi < bucket_count; bi++) {
