@@ -81,6 +81,14 @@ $.fn.zato.pubsub.dashboard.series_labels = {
 
     dash.render = function(data) {
 
+        console.log('[DEBUG-PUBSUB-DASH] render called, topic_count=' + data.topic_count +
+            ' total_publishers=' + data.total_publishers +
+            ' total_subscribers=' + data.total_subscribers +
+            ' timeline.publishes.length=' + data.history_timeline.publishes.length +
+            ' timeline.deliveries.length=' + data.history_timeline.deliveries.length);
+        console.log('[DEBUG-PUBSUB-DASH] timeline.publishes:', JSON.stringify(data.history_timeline.publishes));
+        console.log('[DEBUG-PUBSUB-DASH] topics:', JSON.stringify(data.topics));
+
         var topic_count = data.topic_count;
         var total_publishers = data.total_publishers;
         var total_subscribers = data.total_subscribers;
@@ -237,6 +245,8 @@ $.fn.zato.pubsub.dashboard.series_labels = {
             records.push({ts: deliveries[deliveryIdx].ts, series: 'delivered', count: deliveries[deliveryIdx].count});
         }
 
+        console.log('[DEBUG-PUBSUB-DASH] chart records count=' + records.length + ' records:', JSON.stringify(records));
+
         if (dash._chart_handle) {
             dash._chart_handle.render(records);
         }
@@ -260,9 +270,12 @@ $.fn.zato.pubsub.dashboard.series_labels = {
                 if (typeof data === 'string') {
                     try { data = JSON.parse(data); } catch(parse_error) { return; }
                 }
+                console.log('[DEBUG-PUBSUB-DASH] poll response:', JSON.stringify(data));
                 dash.render(data);
             },
-            error: function() {}
+            error: function(xhr, status, err) {
+                console.log('[DEBUG-PUBSUB-DASH] poll error:', status, err);
+            }
         });
     };
 
@@ -271,6 +284,8 @@ $.fn.zato.pubsub.dashboard.series_labels = {
     // ////////////////////////////////////////////////////////////////////////
 
     dash.init = function(initial_data) {
+
+        console.log('[DEBUG-PUBSUB-DASH] init called, initial_data:', JSON.stringify(initial_data));
 
         // Main chart via kit
         dash._chart_handle = kit.main_chart.init({

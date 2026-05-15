@@ -115,6 +115,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             var $legend = $(config.legend);
             var filtered = timeline || [];
 
+            console.log('[DEBUG-CHART] render called, filtered.length=' + filtered.length);
+
             if (!filtered || filtered.length === 0) {
                 $container.html('<div class="dashboard-no-data">No data yet</div>');
                 $legend.empty();
@@ -127,8 +129,13 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             var name_prefix = range_minutes > 0 && range_names[range_minutes]
                 ? range_names[range_minutes]
                 : 'All';
-            $count.text(name_prefix + ' \u00b7 ' + count_label(filtered.length));
-            $count.attr('title', name_prefix + ' \u00b7 ' + count_label_full(filtered.length));
+            var total_count = 0;
+            for (var ci = 0; ci < filtered.length; ci++) {
+                var rc = filtered[ci].count;
+                total_count += (rc !== undefined ? rc : 1);
+            }
+            $count.text(name_prefix + ' \u00b7 ' + count_label(total_count));
+            $count.attr('title', name_prefix + ' \u00b7 ' + count_label_full(total_count));
 
             var chart_width = $container.width() || 800;
             var series_keys = config.series_keys;
@@ -186,8 +193,19 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 if (target_bucket >= bucket_count) target_bucket = bucket_count - 1;
                 if (target_bucket < 0) target_bucket = 0;
                 if (buckets[target_bucket][skey] !== undefined) {
-                    buckets[target_bucket][skey]++;
+                    var record_count = record.count !== undefined ? record.count : 1;
+                    buckets[target_bucket][skey] += record_count;
                 }
+            }
+
+            console.log('[DEBUG-CHART] bucket_count=' + bucket_count + ' bucket_size_ms=' + bucket_size.toFixed(0) + ' min_time=' + min_time + ' max_time=' + max_time);
+            for (var _dbg = 0; _dbg < buckets.length; _dbg++) {
+                var _dbg_b = buckets[_dbg];
+                var _dbg_vals = [];
+                for (var _dbg_k = 0; _dbg_k < series_keys.length; _dbg_k++) {
+                    _dbg_vals.push(series_keys[_dbg_k] + '=' + _dbg_b[series_keys[_dbg_k]]);
+                }
+                console.log('[DEBUG-CHART] bucket[' + _dbg + '] start=' + new Date(_dbg_b.start).toISOString() + ' ' + _dbg_vals.join(' '));
             }
 
             var visible_keys = [];
@@ -218,6 +236,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 }
             }
             if (max_stack === 0) max_stack = 1;
+
+            console.log('[DEBUG-CHART] visible_keys=' + JSON.stringify(visible_keys) + ' max_stack=' + max_stack + ' show_bars=' + state.show_bars);
 
             var draw_width = chart_width - PADDING_LEFT - PADDING_RIGHT;
             var draw_height = CHART_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
