@@ -4,6 +4,11 @@ security:
     username: demo.pubsub.publisher
     password: demo.pubsub.publisher.secret
 
+  - name: demo_pubsub.subscriber
+    type: basic_auth
+    username: demo.pubsub.subscriber
+    password: demo.pubsub.subscriber.secret
+
 pubsub_topic:
   - name: demo.messages
     description: Demo messages
@@ -12,6 +17,18 @@ pubsub_permission:
   - security: demo_pubsub.publisher
     pub:
       - demo.*
+
+  - security: demo_pubsub.subscriber
+    sub:
+      - demo.*
+
+pubsub_subscription:
+  - security: demo_pubsub.subscriber
+    delivery_type: push
+    push_type: service
+    push_service_name: demo.echo
+    topic_list:
+      - demo.messages
 
 scheduler:
   - name: demo.pubsub
