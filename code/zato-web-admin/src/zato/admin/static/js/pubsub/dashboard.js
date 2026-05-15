@@ -118,6 +118,15 @@ $.fn.zato.pubsub.dashboard.series_labels = {
         $('#stat-delivery-rate-sublabel').html(trend_html);
         dash._prev_delivery_rate = delivery_rate;
 
+        dash._spark_buffers.seed_flat({
+            topics: topic_count,
+            publishers: total_publishers,
+            subscribers: total_subscribers,
+            pub_rate: pub_rate_per_minute,
+            delivery_rate: delivery_rate,
+            depth: total_depth
+        });
+
         dash._spark_buffers.push('topics', topic_count);
         dash._spark_buffers.push('publishers', total_publishers);
         dash._spark_buffers.push('subscribers', total_subscribers);
