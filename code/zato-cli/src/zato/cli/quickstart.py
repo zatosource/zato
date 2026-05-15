@@ -484,6 +484,31 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
         #
+        # 2b) Clear Zato-related data from Redis
+        #
+        from redis import Redis as RedisClient
+
+        redis_host = self.get_arg('redis_host') or REDIS.DEFAULT.HOST
+        redis_port = int(self.get_arg('redis_port') or REDIS.DEFAULT.PORT)
+        redis_password = self.get_arg('redis_password') or None
+
+        redis_conn = RedisClient(host=redis_host, port=redis_port, password=redis_password, db=REDIS.DEFAULT.DB)
+
+        cursor = 0
+        while True:
+            cursor, keys = redis_conn.scan(cursor, match='zato:*', count=1000)
+            if keys:
+                redis_conn.delete(*keys)
+            if cursor == 0:
+                break
+
+        redis_conn.close()
+
+        self.logger.info('Redis database cleared')
+
+# ################################################################################################################################
+
+        #
         # 3) servers
         #
 

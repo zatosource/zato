@@ -4,51 +4,18 @@ security:
     username: demo.pubsub.publisher
     password: demo.pubsub.publisher.secret
 
-  - name: demo_pubsub.subscriber
-    type: basic_auth
-    username: demo.pubsub.subscriber
-    password: demo.pubsub.subscriber.secret
-
 pubsub_topic:
-  - name: demo.employee.onboarded
-    description: New hire finalized
-
-  - name: demo.employee.departed
-    description: Employee leaving the company
-
-  - name: demo.invoice.received
-    description: Supplier invoice submitted
-
-  - name: demo.invoice.approved
-    description: Invoice approved by manager
-
-  - name: demo.order.created
-    description: New order placed
+  - name: demo.messages
+    description: Demo messages
 
 pubsub_permission:
   - security: demo_pubsub.publisher
     pub:
       - demo.*
 
-  - security: demo_pubsub.subscriber
-    sub:
-      - demo.*
-
-pubsub_subscription:
-  - security: demo_pubsub.subscriber
-    delivery_type: push
-    push_type: service
-    push_service_name: demo.pubsub.subscriber
-    topic_list:
-      - demo.employee.onboarded
-      - demo.employee.departed
-      - demo.invoice.received
-      - demo.invoice.approved
-      - demo.order.created
-
 scheduler:
   - name: demo.pubsub
     service: demo.pubsub.publisher
     job_type: interval_based
-    seconds: 2
+    seconds: 1
     is_active: true
