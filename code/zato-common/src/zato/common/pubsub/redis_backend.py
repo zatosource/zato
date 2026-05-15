@@ -25,7 +25,7 @@ from zato.server.metrics import zato_pubsub_messages_delivered_total, zato_pubsu
 
 if 0:
     from redis import Redis
-    from zato.common.typing_ import any_, anydict, anylist, strlist, strnone
+    from zato.common.typing_ import any_, anydict, anylist, dictlist, strlist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -477,6 +477,59 @@ class RedisPubSubBackend:
 
         # .. delete the topic subscribers set ..
         _ = self.redis.delete(topic_subs_key)
+
+# ################################################################################################################################
+
+    def get_publish_timeline(self, topic_names:'strlist', since_minutes:'int'=60) -> 'dictlist':
+        """ Return a per-minute publish count timeline aggregated across the given topics.
+        Each entry is {'ts': <epoch_ms>, 'count': <int>}.
+        """
+
+        # Compute the cutoff timestamp for the XRANGE query ..
+        now = utcnow()
+        cutoff_delta = timedelta(minutes=since_minutes)
+        cutoff = now - cutoff_delta
+
+        # .. Redis stream IDs are <ms_epoch>-<seq>, so build the min ID from the cutoff ..
+        cutoff_epoch_ms = int(cutoff.timestamp() * 1000)
+        min_stream_id = f'{cutoff_epoch_ms}-0'
+
+        # .. bucket all messages by minute ..
+        buckets:'anydict' = {}
+
+        for topic_name in topic_names:
+            stream_key = self._get_stream_key(topic_name)
+
+            try:
+                messages = self.redis.xrange(stream_key, min=min_stream_id)
+            except ResponseError:
+                continue
+
+            for _message_id, message_data in messages:
+
+                pub_time_iso = message_data['pub_time_iso']
+
+                # .. parse the timestamp and truncate to the start of the minute ..
+                normalized_iso = pub_time_iso.replace('Z', '+00:00')
+                pub_time = datetime.fromisoformat(normalized_iso)
+                minute_start = pub_time.replace(second=0, microsecond=0)
+                bucket_key_ms = int(minute_start.timestamp() * 1000)
+
+                if bucket_key_ms in buckets:
+                    buckets[bucket_key_ms] += 1
+                else:
+                    buckets[bucket_key_ms] = 1
+
+        # .. sort by timestamp and build the output list ..
+        sorted_keys = sorted(buckets.keys())
+
+        out:'dictlist' = []
+
+        for key_ms in sorted_keys:
+            entry = {'ts': key_ms, 'count': buckets[key_ms]}
+            out.append(entry)
+
+        return out
 
 # ################################################################################################################################
 

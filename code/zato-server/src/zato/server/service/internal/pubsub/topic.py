@@ -257,3 +257,32 @@ class GetMatches(AdminService):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class GetPublishTimeline(AdminService):
+    """ Returns a per-minute publish count timeline aggregated across all topics.
+    """
+
+    name = 'zato.pubsub.topic.get-publish-timeline'
+
+    def handle(self) -> 'None':
+
+        # Get the time window from the request ..
+        since_minutes = self.request.raw_request['since_minutes']
+
+        # .. collect all topic names from Redis ..
+        stream_prefix = 'zato:pubsub:stream:'
+        all_keys = self.server.pubsub_redis.redis.keys(f'{stream_prefix}*')
+
+        prefix_len = len(stream_prefix)
+
+        topic_names = []
+
+        for key in all_keys:
+            topic_name = key[prefix_len:]
+            topic_names.append(topic_name)
+
+        # .. and query the backend for the timeline.
+        self.response.payload = self.server.pubsub_redis.get_publish_timeline(topic_names, since_minutes)
+
+# ################################################################################################################################
+# ################################################################################################################################
