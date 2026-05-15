@@ -8,7 +8,7 @@
      - a "chart type" toggle and a linked "N items" pill
 
    The caller supplies the palette/labels/series keys so the same code
-   drives scheduler outcomes, EDA per-topic counts, and whatever else
+   drives scheduler outcomes, pub/sub per-topic counts, and whatever else
    a future dashboard needs. */
 
 if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }

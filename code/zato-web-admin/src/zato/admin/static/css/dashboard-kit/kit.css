@@ -3,7 +3,7 @@
 /* Dashboard kit - foundation.
    Page-level primitives shared by every dashboard: top nav override,
    hero strip, section wrappers, responsive breakpoints, skeleton
-   shimmer. Nothing in here is specific to scheduler or EDA. */
+   shimmer. Nothing in here is specific to scheduler or pub/sub. */
 
 .dashboard-page {
     min-height: calc(100vh - 60px);
