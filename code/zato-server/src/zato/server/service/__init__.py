@@ -1184,7 +1184,7 @@ class Service:
         service.static_config = server.static_config
         service.time = server.time_util
         service.security = SecurityFacade(service.server)
-        service.pubsub = PubSubFacade(service.server)
+        service.pubsub = PubSubFacade(service.server, service.name)
         service.metrics = ServiceMetrics(service)
 
         if channel_params:

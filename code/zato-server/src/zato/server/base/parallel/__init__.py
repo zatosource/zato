@@ -709,6 +709,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         path = os.path.join(self.deploy_auto_from, 'enmasse')
         path = Path(path)
 
+        logger.info('[DEBUG-DEMO-PUBSUB] handle_enmasse_auto_from path=%s, exists=%s', path, path.exists())
+        if path.exists():
+            _dbg_files = sorted(path.iterdir())
+            logger.info('[DEBUG-DEMO-PUBSUB] enmasse auto-from files: %s', [str(f) for f in _dbg_files])
+
         # enmasse --import --input ./zato-export.yml /path/to/server/
 
         # .. find all the enmasse files in this directory ..
@@ -936,6 +941,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         })
 
         # Touch all the hot-directory files to trigger their deployment
+        logger.info('[DEBUG-DEMO-PUBSUB] Starting hot-deploy of pickup dir: %s', self.hot_deploy_config.pickup_dir)
         py_files = get_python_files(self.hot_deploy_config.pickup_dir)
         for item in py_files:
             _ = self.invoke('zato.hot-deploy.create', {
@@ -947,6 +953,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self._build_mcp_tool_registries()
 
         # The server is started so we can deploy what we were told to handle on startup.
+        logger.info('[DEBUG-DEMO-PUBSUB] deploy_auto_from=%r, will_run_enmasse_auto=%s', self.deploy_auto_from, bool(self.deploy_auto_from))
         if self.deploy_auto_from:
             self.handle_enmasse_auto_from()
 
@@ -1001,6 +1008,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             logger.info('Connecting to scheduler')
 
             scheduler_adapter = SchedulerODBAdapter(self.odb, self.cluster_id)
+            logger.info('[DEBUG-DEMO-PUBSUB] Scheduler ODB adapter created for cluster_id=%s, odb=%s', self.cluster_id, self.odb)
 
             self._scheduler = SchedulerClient()
             self._scheduler.reload(odb_adapter=scheduler_adapter)
@@ -1048,7 +1056,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
                     for stream_name, messages in result:  # type: ignore[union-attr]
                         for msg_id, fields in messages:
-                            # logger.info('Fire listener received: stream=%s msg_id=%s fields=%s', stream_name, msg_id, fields)
+                            logger.info('[DEBUG-DEMO-PUBSUB] Fire listener received: stream=%s msg_id=%s fields=%s', stream_name, msg_id, fields)
                             if stream_name == fire_stream:
                                 _ = spawn(self._handle_fire_event, fields)
                             elif stream_name == timeout_stream:
@@ -1096,6 +1104,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                         for msg_id, fields in messages:
                             command = fields['command']
                             if command == 'request_jobs':
+                                logger.info('[DEBUG-DEMO-PUBSUB] Scheduler sent request_jobs, triggering reload from ODB')
                                 logger.info('Scheduler requested jobs, sending reload')
                                 self._scheduler.reload(odb_adapter=scheduler_adapter)
                             _ = req_redis.xack(stream_name, group_name, msg_id)
@@ -1118,6 +1127,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         payload_json = fields['payload']
         ctx = json_loads(payload_json)
+
+        logger.info('[DEBUG-DEMO-PUBSUB] _handle_fire_event ctx=%s', ctx)
 
         job_id = ctx['job_id']
         job_name = ctx['name']
@@ -1157,6 +1168,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         outcome = SCHEDULER.OUTCOME.OK
         error_traceback = ''
         _t0 = _time.monotonic()
+
+        logger.info('[DEBUG-DEMO-PUBSUB] About to invoke service=%s for job_id=%s name=%s', msg['service'], job_id, job_name)
 
         try:
             self.config_manager.on_message_invoke_service(msg, 'scheduler', 'SCHEDULER_JOB_EXECUTED')
@@ -1765,6 +1778,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
     def import_demo_pubsub(self):
 
+        logger.info('[DEBUG-DEMO-PUBSUB] import_demo_pubsub called')
+
         import zato.server.service.internal.pubsub
         from zato.common.api import Default_Demo_PubSub_Service_File_Data
         from zato.common.util.open_ import open_w
@@ -1783,6 +1798,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         facade.init(self)
 
         result = facade.run_enmasse_sync_import(config_path)
+
+        logger.info('[DEBUG-DEMO-PUBSUB] import_demo_pubsub result=%s', result.is_ok)
 
         return result.is_ok
 

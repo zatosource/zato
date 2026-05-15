@@ -58,7 +58,7 @@ class TestPubSubFacadePublish(unittest.TestCase):
         publish_result.msg_id = 'test-message-id-001'
         self.server.pubsub_redis.publish.return_value = publish_result
 
-        self.facade = PubSubFacade(self.server)
+        self.facade = PubSubFacade(self.server, 'test.service')
 
 # ################################################################################################################################
 
@@ -181,10 +181,9 @@ class TestPubSubFacadePublish(unittest.TestCase):
             'test data',
             priority=9,
             expiration=7200,
-            correl_id='correl-123',
+            cid='correl-123',
             in_reply_to='reply-456',
             ext_client_id='ext-789',
-            publisher='test-publisher',
             pub_time='2026-05-13T12:00:00',
         )
 
@@ -195,7 +194,7 @@ class TestPubSubFacadePublish(unittest.TestCase):
         self.assertEqual(call_kwargs['correl_id'], 'correl-123')
         self.assertEqual(call_kwargs['in_reply_to'], 'reply-456')
         self.assertEqual(call_kwargs['ext_client_id'], 'ext-789')
-        self.assertEqual(call_kwargs['publisher'], 'test-publisher')
+        self.assertEqual(call_kwargs['publisher'], 'test.service')
         self.assertEqual(call_kwargs['pub_time'], '2026-05-13T12:00:00')
 
 # ################################################################################################################################
@@ -221,7 +220,7 @@ class TestPubSubFacadePublishInputModel(unittest.TestCase):
         publish_result.msg_id = 'test-typed-msg-001'
         self.server.pubsub_redis.publish.return_value = publish_result
 
-        self.facade = PubSubFacade(self.server)
+        self.facade = PubSubFacade(self.server, 'my.typed.service')
 
 # ################################################################################################################################
 

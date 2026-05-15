@@ -258,6 +258,29 @@ class GetMatches(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
+_Stream_Prefix = 'zato:pubsub:stream:'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_all_topic_names_from_redis(server:'any_') -> 'list':
+    """ Collect all topic names by scanning Redis stream keys.
+    """
+    all_keys = server.pubsub_redis.redis.keys(f'{_Stream_Prefix}*')
+
+    prefix_len = len(_Stream_Prefix)
+
+    out = []
+
+    for key in all_keys:
+        topic_name = key[prefix_len:]
+        out.append(topic_name)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GetPublishTimeline(AdminService):
     """ Returns a per-minute publish count timeline aggregated across all topics.
     """
@@ -270,19 +293,33 @@ class GetPublishTimeline(AdminService):
         since_minutes = self.request.raw_request['since_minutes']
 
         # .. collect all topic names from Redis ..
-        stream_prefix = 'zato:pubsub:stream:'
-        all_keys = self.server.pubsub_redis.redis.keys(f'{stream_prefix}*')
-
-        prefix_len = len(stream_prefix)
-
-        topic_names = []
-
-        for key in all_keys:
-            topic_name = key[prefix_len:]
-            topic_names.append(topic_name)
+        topic_names = _get_all_topic_names_from_redis(self.server)
 
         # .. and query the backend for the timeline.
         self.response.payload = self.server.pubsub_redis.get_publish_timeline(topic_names, since_minutes)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetPublisherCount(AdminService):
+    """ Returns the number of distinct publishers in the last N minutes.
+    """
+
+    name = 'zato.pubsub.topic.get-publisher-count'
+
+    def handle(self) -> 'None':
+
+        # Get the time window from the request ..
+        since_minutes = self.request.raw_request['since_minutes']
+
+        # .. collect all topic names from Redis ..
+        topic_names = _get_all_topic_names_from_redis(self.server)
+
+        # .. count distinct publishers ..
+        publisher_count = self.server.pubsub_redis.count_distinct_publishers(topic_names, since_minutes)
+
+        # .. and return the count.
+        self.response.payload = {'publisher_count': publisher_count}
 
 # ################################################################################################################################
 # ################################################################################################################################

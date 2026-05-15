@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 Poll JSON contract returned by _get_dashboard_data:
 {
     "topic_count": int,
-    "total_publishers": int,
     "total_subscribers": int,
     "total_depth": int,
     "oldest_unacked_age_seconds": int,
@@ -101,15 +100,13 @@ def _get_dashboard_data(req:'any_') -> 'str':
         logger.warning('Pub/sub dashboard - could not get subscriptions: %s', error)
         subscriptions = []
 
-    # .. build the topic list and count publishers ..
+    # .. build the topic list ..
     topic_count = len(topics)
-    total_publishers = 0
     total_subscribers = len(subscriptions)
 
     topic_list = []
 
     for item in topics:
-        total_publishers += item['publisher_count']
         topic_list.append({
             'name': item['name'],
             'is_active': item['is_active'],
@@ -151,6 +148,22 @@ def _get_dashboard_data(req:'any_') -> 'str':
     except Exception as error:
         logger.warning('Pub/sub dashboard - could not get timeline: %s', error)
         publishes_timeline = []
+
+    # .. get the distinct publisher count ..
+    try:
+        publisher_response = req.zato.client.invoke('zato.pubsub.topic.get-publisher-count', {
+            'since_minutes': 60,
+        })
+        if publisher_response.ok:
+            publisher_data = publisher_response.data
+            if isinstance(publisher_data, str):
+                publisher_data = json.loads(publisher_data)
+            total_publishers = publisher_data['publisher_count']
+        else:
+            total_publishers = _No_Rate
+    except Exception as error:
+        logger.warning('Pub/sub dashboard - could not get publisher count: %s', error)
+        total_publishers = _No_Rate
 
     # .. and return the combined data.
     data = {

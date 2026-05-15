@@ -456,6 +456,8 @@ class EnmasseYAMLImporter:
         noun = 'definition' if count == 1 else 'definitions'
         logger.info(f'Processing {count} scheduler job {noun}')
 
+        logger.info('[DEBUG-DEMO-PUBSUB] sync_scheduler called with %d jobs: %s', count, [(j.get('name'), j.get('service')) for j in job_list])
+
         # Examine each scheduler job item
         for idx, item in enumerate(job_list):
             logger.info('Scheduler job item %d: %s', idx, item)

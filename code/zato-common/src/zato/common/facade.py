@@ -72,8 +72,9 @@ class SecurityFacade:
 
 class PubSubFacade:
 
-    def __init__(self, server:'ParallelServer') -> 'None':
+    def __init__(self, server:'ParallelServer', service_name:'str') -> 'None':
         self.server = server
+        self.service_name = service_name
 
 # ################################################################################################################################
 
@@ -87,7 +88,6 @@ class PubSubFacade:
         cid:'strnone'=None,
         in_reply_to:'strnone'=None,
         ext_client_id:'strnone'=None,
-        publisher:'strnone'=None,
         pub_time:'strnone'=None,
     ) -> 'PublishResult':
 
@@ -106,7 +106,7 @@ class PubSubFacade:
             correl_id=cid,
             in_reply_to=in_reply_to,
             ext_client_id=ext_client_id,
-            publisher=publisher,
+            publisher=self.service_name,
             pub_time=pub_time,
         )
 
