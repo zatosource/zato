@@ -115,8 +115,6 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             var $legend = $(config.legend);
             var filtered = timeline || [];
 
-            console.log('[DEBUG-CHART] render called, filtered.length=' + filtered.length);
-
             if (!filtered || filtered.length === 0) {
                 $container.html('<div class="dashboard-no-data">No data yet</div>');
                 $legend.empty();
@@ -159,7 +157,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             }
 
             var min_time = Math.min.apply(null, timestamps);
-            var max_time = Date.now();
+            var max_time = Math.max.apply(null, timestamps);
             var time_range = max_time - min_time;
             if (time_range === 0) {
                 time_range = 3600000;
@@ -198,16 +196,6 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 }
             }
 
-            console.log('[DEBUG-CHART] bucket_count=' + bucket_count + ' bucket_size_ms=' + bucket_size.toFixed(0) + ' min_time=' + min_time + ' max_time=' + max_time);
-            for (var _dbg = 0; _dbg < buckets.length; _dbg++) {
-                var _dbg_b = buckets[_dbg];
-                var _dbg_vals = [];
-                for (var _dbg_k = 0; _dbg_k < series_keys.length; _dbg_k++) {
-                    _dbg_vals.push(series_keys[_dbg_k] + '=' + _dbg_b[series_keys[_dbg_k]]);
-                }
-                console.log('[DEBUG-CHART] bucket[' + _dbg + '] start=' + new Date(_dbg_b.start).toISOString() + ' ' + _dbg_vals.join(' '));
-            }
-
             var visible_keys = [];
             for (var vk = 0; vk < series_keys.length; vk++) {
                 if (hidden[series_keys[vk]]) continue;
@@ -236,8 +224,6 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 }
             }
             if (max_stack === 0) max_stack = 1;
-
-            console.log('[DEBUG-CHART] visible_keys=' + JSON.stringify(visible_keys) + ' max_stack=' + max_stack + ' show_bars=' + state.show_bars);
 
             var draw_width = chart_width - PADDING_LEFT - PADDING_RIGHT;
             var draw_height = CHART_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
