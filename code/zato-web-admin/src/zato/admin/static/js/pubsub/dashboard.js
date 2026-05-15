@@ -38,7 +38,7 @@ $.fn.zato.pubsub.dashboard.theme = {
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.dashboard.series_colors = {
-    'published': '#60a5fa',
+    'published': '#28C840',
     'delivered': '#a78bfa'
 };
 
@@ -56,7 +56,7 @@ $.fn.zato.pubsub.dashboard.series_labels = {
     var dash = $.fn.zato.pubsub.dashboard;
 
     dash._spark_buffers = kit.spark.create({
-        keys: ['topics', 'publishers', 'subscribers', 'pub_rate', 'delivery_rate', 'depth', 'oldest_unacked'],
+        keys: ['topics', 'publishers', 'subscribers', 'pub_rate', 'delivery_rate', 'depth'],
         window_ms: 60 * 60 * 1000,
         bucket_count: 60
     });
@@ -103,19 +103,15 @@ $.fn.zato.pubsub.dashboard.series_labels = {
             pub_rate += topics[pubIdx].pub_rate;
         }
 
-        // .. compute pub rate per hour for display ..
-        var pub_rate_per_hour = pub_rate * 3600;
+        // .. compute pub rate per minute for display ..
+        var pub_rate_per_minute = pub_rate * 60;
 
         kit.set_number($('#stat-topics'), topic_count);
         kit.set_number($('#stat-publishers'), total_publishers);
         kit.set_number($('#stat-subscribers'), total_subscribers);
-        kit.set_number($('#stat-pub-rate'), pub_rate_per_hour);
+        kit.set_number($('#stat-pub-rate'), pub_rate_per_minute);
         kit.set_number($('#stat-delivery-rate'), delivery_rate);
         kit.set_number($('#stat-depth'), total_depth);
-
-        // .. display the oldest unacked age as a human-readable duration ..
-        var age_text = dash._format_age(oldest_unacked_age);
-        $('#stat-oldest-unacked').text(age_text);
 
         // .. set the backlog trend sublabel on the delivery rate tile ..
         var trend_html = dash._backlog_trend_html(delivery_rate, dash._prev_delivery_rate);
@@ -125,22 +121,20 @@ $.fn.zato.pubsub.dashboard.series_labels = {
         dash._spark_buffers.push('topics', topic_count);
         dash._spark_buffers.push('publishers', total_publishers);
         dash._spark_buffers.push('subscribers', total_subscribers);
-        dash._spark_buffers.push('pub_rate', pub_rate_per_hour);
+        dash._spark_buffers.push('pub_rate', pub_rate_per_minute);
         dash._spark_buffers.push('delivery_rate', delivery_rate);
         dash._spark_buffers.push('depth', total_depth);
-        dash._spark_buffers.push('oldest_unacked', oldest_unacked_age);
 
         // Render sparklines for all tiles ..
         var spark_base = {height: 36, dot_radius: 3.5, dot_style: 'filled_halo'};
 
         var tile_specs = [
             {selector: '#spark-topics',         key: 'topics',         options: $.extend({}, spark_base, {color: dash.theme.tile_topics,      dot_color: dash.theme.tile_topics})},
-            {selector: '#spark-publishers',     key: 'publishers',    options: $.extend({}, spark_base, {color: dash.theme.tile_publishers,  dot_color: dash.theme.tile_publishers})},
-            {selector: '#spark-subscribers',     key: 'subscribers',    options: $.extend({}, spark_base, {color: dash.theme.tile_subscribers, dot_color: dash.theme.tile_subscribers})},
+            {selector: '#spark-publishers',     key: 'publishers',    options: $.extend({}, spark_base, {color: dash.theme.tile_topics,      dot_color: dash.theme.tile_topics})},
+            {selector: '#spark-subscribers',     key: 'subscribers',    options: $.extend({}, spark_base, {color: dash.theme.tile_topics,      dot_color: dash.theme.tile_topics})},
             {selector: '#spark-pub-rate',        key: 'pub_rate',       options: $.extend({}, spark_base, {color: dash.theme.tile_pub_rate,   dot_color: dash.theme.tile_pub_rate})},
-            {selector: '#spark-delivery-rate',   key: 'delivery_rate',  options: $.extend({}, spark_base, {color: dash.theme.tile_delivery,   dot_color: dash.theme.tile_delivery})},
-            {selector: '#spark-depth',           key: 'depth',          options: $.extend({}, spark_base, {color: dash.theme.spark_warn,      dot_color: dash.theme.spark_warn})},
-            {selector: '#spark-oldest-unacked',  key: 'oldest_unacked', options: $.extend({}, spark_base, {color: dash.theme.spark_err,       dot_color: dash.theme.spark_err})}
+            {selector: '#spark-delivery-rate',   key: 'delivery_rate',  options: $.extend({}, spark_base, {color: dash.theme.tile_pub_rate,   dot_color: dash.theme.tile_pub_rate})},
+            {selector: '#spark-depth',           key: 'depth',          options: $.extend({}, spark_base, {color: dash.theme.spark_warn,      dot_color: dash.theme.spark_warn})}
         ];
 
         for (var tileIdx = 0; tileIdx < tile_specs.length; tileIdx++) {
@@ -340,12 +334,11 @@ $.fn.zato.pubsub.dashboard.series_labels = {
         dash._stat_tile_handle = kit.stat_tile.init({
             tiles: [
                 {sparkline_selector: '#spark-topics', buffer_key: 'topics', label: 'Topics', color: dash.theme.tile_topics},
-                {sparkline_selector: '#spark-publishers', buffer_key: 'publishers', label: 'Publishers', color: dash.theme.tile_publishers},
-                {sparkline_selector: '#spark-subscribers', buffer_key: 'subscribers', label: 'Subscribers', color: dash.theme.tile_subscribers},
-                {sparkline_selector: '#spark-pub-rate', buffer_key: 'pub_rate', label: 'Publishes/hr', color: dash.theme.tile_pub_rate},
-                {sparkline_selector: '#spark-delivery-rate', buffer_key: 'delivery_rate', label: 'Delivery rate/min', color: dash.theme.tile_delivery},
-                {sparkline_selector: '#spark-depth', buffer_key: 'depth', label: 'Depth', color: dash.theme.spark_warn},
-                {sparkline_selector: '#spark-oldest-unacked', buffer_key: 'oldest_unacked', label: 'Oldest unacked', color: dash.theme.spark_err, exclude_from_hover: true}
+                {sparkline_selector: '#spark-publishers', buffer_key: 'publishers', label: 'Publishers', color: dash.theme.tile_topics},
+                {sparkline_selector: '#spark-subscribers', buffer_key: 'subscribers', label: 'Subscribers', color: dash.theme.tile_topics},
+                {sparkline_selector: '#spark-pub-rate', buffer_key: 'pub_rate', label: 'Publishes/m', color: dash.theme.tile_pub_rate},
+                {sparkline_selector: '#spark-delivery-rate', buffer_key: 'delivery_rate', label: 'Deliveries/m', color: dash.theme.tile_pub_rate},
+                {sparkline_selector: '#spark-depth', buffer_key: 'depth', label: 'Total depth', color: dash.theme.spark_warn}
             ],
             get_buffer: function(key) {
                 return dash._spark_buffers.data(key);
