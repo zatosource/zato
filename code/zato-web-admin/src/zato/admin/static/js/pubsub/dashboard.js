@@ -24,7 +24,7 @@ $.fn.zato.pubsub.dashboard.theme = {
     tile_publishers:  '#34d399',
     tile_subscribers: '#a78bfa',
     tile_pub_rate:    '#60a5fa',
-    tile_delivery:    '#f59e0b',
+    tile_delivery:    '#8944AB',
     pill_bg:        '#065f46',
     pill_color:     '#d1fae5',
     pill_link_bg:   '#064e3b',
@@ -37,10 +37,7 @@ $.fn.zato.pubsub.dashboard.theme = {
 // Series palette
 // ////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.dashboard.series_colors = {
-    'published': '#28C840',
-    'delivered': '#a78bfa'
-};
+$.fn.zato.pubsub.dashboard.series_colors = {};
 
 $.fn.zato.pubsub.dashboard.series_labels = {
     'published': 'Published',
@@ -54,6 +51,9 @@ $.fn.zato.pubsub.dashboard.series_labels = {
 (function($) {
     var kit = $.fn.zato.dashboard_kit;
     var dash = $.fn.zato.pubsub.dashboard;
+
+    dash.series_colors['published'] = dash.theme.tile_pub_rate;
+    dash.series_colors['delivered'] = dash.theme.tile_delivery;
 
     dash._spark_buffers = kit.spark.create({
         keys: ['topics', 'publishers', 'subscribers', 'pub_rate', 'delivery_rate', 'depth'],
@@ -133,7 +133,7 @@ $.fn.zato.pubsub.dashboard.series_labels = {
             {selector: '#spark-publishers',     key: 'publishers',    options: $.extend({}, spark_base, {color: dash.theme.tile_topics,      dot_color: dash.theme.tile_topics})},
             {selector: '#spark-subscribers',     key: 'subscribers',    options: $.extend({}, spark_base, {color: dash.theme.tile_topics,      dot_color: dash.theme.tile_topics})},
             {selector: '#spark-pub-rate',        key: 'pub_rate',       options: $.extend({}, spark_base, {color: dash.theme.tile_pub_rate,   dot_color: dash.theme.tile_pub_rate})},
-            {selector: '#spark-delivery-rate',   key: 'delivery_rate',  options: $.extend({}, spark_base, {color: dash.theme.tile_pub_rate,   dot_color: dash.theme.tile_pub_rate})},
+            {selector: '#spark-delivery-rate',   key: 'delivery_rate',  options: $.extend({}, spark_base, {color: dash.theme.tile_delivery,   dot_color: dash.theme.tile_delivery})},
             {selector: '#spark-depth',           key: 'depth',          options: $.extend({}, spark_base, {color: dash.theme.spark_warn,      dot_color: dash.theme.spark_warn})}
         ];
 
@@ -337,7 +337,7 @@ $.fn.zato.pubsub.dashboard.series_labels = {
                 {sparkline_selector: '#spark-publishers', buffer_key: 'publishers', label: 'Publishers', color: dash.theme.tile_topics},
                 {sparkline_selector: '#spark-subscribers', buffer_key: 'subscribers', label: 'Subscribers', color: dash.theme.tile_topics},
                 {sparkline_selector: '#spark-pub-rate', buffer_key: 'pub_rate', label: 'Publishes/m', color: dash.theme.tile_pub_rate},
-                {sparkline_selector: '#spark-delivery-rate', buffer_key: 'delivery_rate', label: 'Deliveries/m', color: dash.theme.tile_pub_rate},
+                {sparkline_selector: '#spark-delivery-rate', buffer_key: 'delivery_rate', label: 'Deliveries/m', color: dash.theme.tile_delivery},
                 {sparkline_selector: '#spark-depth', buffer_key: 'depth', label: 'Total depth', color: dash.theme.spark_warn}
             ],
             get_buffer: function(key) {
