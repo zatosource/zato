@@ -14,7 +14,9 @@ $(document).ready(function() {
 {% endblock %}
 
 {% block dashboard_header_pill %}
+{% if 0 %}
                 <div class="dashboard-hero-pill-group" id="dashboard-hero-pill-group"></div>
+{% endif %}
 {% endblock %}
 
 {% block dashboard_tiles %}
@@ -24,6 +26,14 @@ $(document).ready(function() {
                     <div class="dashboard-tile-row">
                         <div class="dashboard-tile-value" id="stat-topics">-</div>
                         <div class="dashboard-tile-spark" id="spark-topics"></div>
+                    </div>
+                </div>
+
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">Publishers</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-publishers">-</div>
+                        <div class="dashboard-tile-spark" id="spark-publishers"></div>
                     </div>
                 </div>
 
