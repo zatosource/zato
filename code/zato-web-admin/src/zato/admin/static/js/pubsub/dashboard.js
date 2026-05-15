@@ -14,18 +14,23 @@ $.fn.zato.pubsub.dashboard.config = {
 
 $.fn.zato.pubsub.dashboard.theme = {
     name: 'Pub/sub',
-    accent:       '#4db8a0',
-    accent_light: '#8fd4c4',
-    accent_dark:  '#2a7a68',
-    spark_color:  '#4db8a0',
-    spark_warn:   '#e6a817',
-    spark_err:    '#ff6b6b',
-    pill_bg:        '#1a6e5e',
-    pill_color:     '#e0f5f0',
-    pill_link_bg:   '#0f4a3e',
-    pill_link_color: '#c0e8df',
+    accent:       '#10b981',
+    accent_light: '#6ee7b7',
+    accent_dark:  '#059669',
+    spark_color:  '#34d399',
+    spark_warn:   '#fbbf24',
+    spark_err:    '#f87171',
+    tile_topics:      '#10b981',
+    tile_publishers:  '#34d399',
+    tile_subscribers: '#a78bfa',
+    tile_pub_rate:    '#60a5fa',
+    tile_delivery:    '#f59e0b',
+    pill_bg:        '#065f46',
+    pill_color:     '#d1fae5',
+    pill_link_bg:   '#064e3b',
+    pill_link_color: '#a7f3d0',
     pill_links: [],
-    row_recency_color: '77, 184, 160'
+    row_recency_color: '16, 185, 129'
 };
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -33,8 +38,8 @@ $.fn.zato.pubsub.dashboard.theme = {
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.dashboard.series_colors = {
-    'published': '#4db8a0',
-    'delivered': '#2a7a68'
+    'published': '#60a5fa',
+    'delivered': '#a78bfa'
 };
 
 $.fn.zato.pubsub.dashboard.series_labels = {
@@ -51,7 +56,7 @@ $.fn.zato.pubsub.dashboard.series_labels = {
     var dash = $.fn.zato.pubsub.dashboard;
 
     dash._spark_buffers = kit.spark.create({
-        keys: ['topics', 'subscribers', 'pub_rate', 'delivery_rate', 'depth', 'oldest_unacked'],
+        keys: ['topics', 'publishers', 'subscribers', 'pub_rate', 'delivery_rate', 'depth', 'oldest_unacked'],
         window_ms: 60 * 60 * 1000,
         bucket_count: 60
     });
@@ -77,6 +82,7 @@ $.fn.zato.pubsub.dashboard.series_labels = {
     dash.render = function(data) {
 
         var topic_count = data.topic_count;
+        var total_publishers = data.total_publishers;
         var total_subscribers = data.total_subscribers;
         var total_depth = data.total_depth;
         var oldest_unacked_age = data.oldest_unacked_age_seconds;
@@ -93,6 +99,7 @@ $.fn.zato.pubsub.dashboard.series_labels = {
         var pub_rate_per_hour = pub_rate * 3600;
 
         kit.set_number($('#stat-topics'), topic_count);
+        kit.set_number($('#stat-publishers'), total_publishers);
         kit.set_number($('#stat-subscribers'), total_subscribers);
         kit.set_number($('#stat-pub-rate'), pub_rate_per_hour);
         kit.set_number($('#stat-delivery-rate'), delivery_rate);
@@ -108,6 +115,7 @@ $.fn.zato.pubsub.dashboard.series_labels = {
         dash._prev_delivery_rate = delivery_rate;
 
         dash._spark_buffers.push('topics', topic_count);
+        dash._spark_buffers.push('publishers', total_publishers);
         dash._spark_buffers.push('subscribers', total_subscribers);
         dash._spark_buffers.push('pub_rate', pub_rate_per_hour);
         dash._spark_buffers.push('delivery_rate', delivery_rate);
@@ -115,17 +123,16 @@ $.fn.zato.pubsub.dashboard.series_labels = {
         dash._spark_buffers.push('oldest_unacked', oldest_unacked_age);
 
         // Render sparklines for all tiles ..
-        var base_spark = {height: 36, color: dash.theme.spark_color, dot_color: dash.theme.spark_color, dot_radius: 3.5, dot_style: 'filled_halo'};
-        var spark_warn  = {height: 36, color: dash.theme.spark_warn, dot_color: dash.theme.spark_warn, dot_radius: 3.5, dot_style: 'filled_halo'};
-        var spark_err   = {height: 36, color: dash.theme.spark_err, dot_color: dash.theme.spark_err, dot_radius: 3.5, dot_style: 'filled_halo'};
+        var spark_base = {height: 36, dot_radius: 3.5, dot_style: 'filled_halo'};
 
         var tile_specs = [
-            {selector: '#spark-topics',         key: 'topics',         options: base_spark},
-            {selector: '#spark-subscribers',     key: 'subscribers',    options: base_spark},
-            {selector: '#spark-pub-rate',        key: 'pub_rate',       options: base_spark},
-            {selector: '#spark-delivery-rate',   key: 'delivery_rate',  options: base_spark},
-            {selector: '#spark-depth',           key: 'depth',          options: spark_warn},
-            {selector: '#spark-oldest-unacked',  key: 'oldest_unacked', options: spark_err}
+            {selector: '#spark-topics',         key: 'topics',         options: $.extend({}, spark_base, {color: dash.theme.tile_topics,      dot_color: dash.theme.tile_topics})},
+            {selector: '#spark-publishers',     key: 'publishers',    options: $.extend({}, spark_base, {color: dash.theme.tile_publishers,  dot_color: dash.theme.tile_publishers})},
+            {selector: '#spark-subscribers',     key: 'subscribers',    options: $.extend({}, spark_base, {color: dash.theme.tile_subscribers, dot_color: dash.theme.tile_subscribers})},
+            {selector: '#spark-pub-rate',        key: 'pub_rate',       options: $.extend({}, spark_base, {color: dash.theme.tile_pub_rate,   dot_color: dash.theme.tile_pub_rate})},
+            {selector: '#spark-delivery-rate',   key: 'delivery_rate',  options: $.extend({}, spark_base, {color: dash.theme.tile_delivery,   dot_color: dash.theme.tile_delivery})},
+            {selector: '#spark-depth',           key: 'depth',          options: $.extend({}, spark_base, {color: dash.theme.spark_warn,      dot_color: dash.theme.spark_warn})},
+            {selector: '#spark-oldest-unacked',  key: 'oldest_unacked', options: $.extend({}, spark_base, {color: dash.theme.spark_err,       dot_color: dash.theme.spark_err})}
         ];
 
         for (var tileIdx = 0; tileIdx < tile_specs.length; tileIdx++) {
@@ -265,9 +272,6 @@ $.fn.zato.pubsub.dashboard.series_labels = {
 
     dash.init = function(initial_data) {
 
-        // Hero pill
-        kit.init_hero_pill('#dashboard-hero-pill-group', dash.theme);
-
         // Main chart via kit
         dash._chart_handle = kit.main_chart.init({
             container: '#dashboard-bar-chart',
@@ -320,10 +324,11 @@ $.fn.zato.pubsub.dashboard.series_labels = {
         // Stat tile hover
         dash._stat_tile_handle = kit.stat_tile.init({
             tiles: [
-                {sparkline_selector: '#spark-topics', buffer_key: 'topics', label: 'Topics', color: dash.theme.spark_color},
-                {sparkline_selector: '#spark-subscribers', buffer_key: 'subscribers', label: 'Subscribers', color: dash.theme.spark_color},
-                {sparkline_selector: '#spark-pub-rate', buffer_key: 'pub_rate', label: 'Publishes/hr', color: dash.theme.spark_color},
-                {sparkline_selector: '#spark-delivery-rate', buffer_key: 'delivery_rate', label: 'Delivery rate/min', color: dash.theme.spark_color},
+                {sparkline_selector: '#spark-topics', buffer_key: 'topics', label: 'Topics', color: dash.theme.tile_topics},
+                {sparkline_selector: '#spark-publishers', buffer_key: 'publishers', label: 'Publishers', color: dash.theme.tile_publishers},
+                {sparkline_selector: '#spark-subscribers', buffer_key: 'subscribers', label: 'Subscribers', color: dash.theme.tile_subscribers},
+                {sparkline_selector: '#spark-pub-rate', buffer_key: 'pub_rate', label: 'Publishes/hr', color: dash.theme.tile_pub_rate},
+                {sparkline_selector: '#spark-delivery-rate', buffer_key: 'delivery_rate', label: 'Delivery rate/min', color: dash.theme.tile_delivery},
                 {sparkline_selector: '#spark-depth', buffer_key: 'depth', label: 'Depth', color: dash.theme.spark_warn},
                 {sparkline_selector: '#spark-oldest-unacked', buffer_key: 'oldest_unacked', label: 'Oldest unacked', color: dash.theme.spark_err, exclude_from_hover: true}
             ],

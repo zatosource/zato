@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 Poll JSON contract returned by _get_dashboard_data:
 {
     "topic_count": int,
+    "total_publishers": int,
     "total_subscribers": int,
     "total_depth": int,
     "oldest_unacked_age_seconds": int,
@@ -100,13 +101,15 @@ def _get_dashboard_data(req:'any_') -> 'str':
         logger.warning('Pub/sub dashboard - could not get subscriptions: %s', error)
         subscriptions = []
 
-    # .. build the topic list ..
+    # .. build the topic list and count publishers ..
     topic_count = len(topics)
+    total_publishers = 0
     total_subscribers = len(subscriptions)
 
     topic_list = []
 
     for item in topics:
+        total_publishers += item['publisher_count']
         topic_list.append({
             'name': item['name'],
             'is_active': item['is_active'],
@@ -152,6 +155,7 @@ def _get_dashboard_data(req:'any_') -> 'str':
     # .. and return the combined data.
     data = {
         'topic_count': topic_count,
+        'total_publishers': total_publishers,
         'total_subscribers': total_subscribers,
         'total_depth': _No_Depth,
         'oldest_unacked_age_seconds': oldest_unacked_age_seconds,
