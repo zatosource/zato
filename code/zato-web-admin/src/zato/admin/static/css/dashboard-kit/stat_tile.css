@@ -59,6 +59,7 @@
 
 .dashboard-tile-sublabel {
     margin-top: 6px;
+    min-height: 12px;
     font-size: 10px;
     font-weight: 600;
     text-transform: uppercase;

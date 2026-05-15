@@ -5,7 +5,7 @@
    on_tick to do the actual data fetch. Selection persists to localStorage
    and (optionally) to the URL query string.
 
-   Nothing in here knows about the scheduler, EDA, or any concrete page. */
+   Nothing in here knows about the scheduler, pub/sub, or any concrete page. */
 
 if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
 if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = {}; }

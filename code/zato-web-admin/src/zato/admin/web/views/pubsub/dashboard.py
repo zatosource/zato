@@ -11,6 +11,8 @@ Poll JSON contract returned by _get_dashboard_data:
     "total_subscribers": int,
     "total_depth": int,
     "oldest_unacked_age_seconds": int,
+    "delivery_rate_per_min": float,
+    "prev_delivery_rate_per_min": float | None,
     "topics": [
         {
             "name": str,
@@ -66,7 +68,6 @@ _Dashboard_Base_Url = '/zato/pubsub/dashboard/'
 _No_Depth         = 0
 _No_Rate          = 0
 _No_Age           = 0
-_No_Unacked_Age   = 0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -125,14 +126,24 @@ def _get_dashboard_data(req:'any_') -> 'str':
             'delivery_rate': _No_Rate,
         })
 
+    # .. find the oldest unacked message age across all queues ..
+    oldest_unacked_age_seconds = _No_Age
+
+    for queue in queue_list:
+        queue_age = queue['oldest_msg_age_seconds']
+        if queue_age > oldest_unacked_age_seconds:
+            oldest_unacked_age_seconds = queue_age
+
     # .. and return the combined data.
     data = {
         'topic_count': topic_count,
         'total_subscribers': total_subscribers,
         'total_depth': _No_Depth,
+        'oldest_unacked_age_seconds': oldest_unacked_age_seconds,
+        'delivery_rate_per_min': _No_Rate,
+        'prev_delivery_rate_per_min': None,
         'topics': topic_list,
         'queues': queue_list,
-        'oldest_unacked_age_seconds': _No_Unacked_Age,
         'history_timeline': {
             'publishes': [],
             'deliveries': [],

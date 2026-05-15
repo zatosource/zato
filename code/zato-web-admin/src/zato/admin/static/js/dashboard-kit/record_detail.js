@@ -1,7 +1,7 @@
 
 /* Dashboard kit - generic record detail and log panel component.
    All domain knowledge comes through config objects - nothing is
-   hardcoded to any specific domain (scheduler, EDA, etc.). */
+   hardcoded to any specific domain (scheduler, pub/sub, etc.). */
 
 if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
 if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = {}; }
