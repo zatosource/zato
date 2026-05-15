@@ -240,7 +240,8 @@ $.fn.zato.pubsub.dashboard.series_labels = {
             records.push({ts: deliveries[deliveryIdx].ts, series: 'delivered', count: deliveries[deliveryIdx].count});
         }
 
-        console.log('[pubsub] chart line: ' + publishes.map(function(p) { return p.count; }).join(', '));
+        console.log('[pubsub] pub: ' + publishes.map(function(p) { return p.count; }).join(', '));
+        console.log('[pubsub] del: ' + deliveries.map(function(d) { return d.count; }).join(', '));
 
         if (dash._chart_handle) {
             dash._chart_handle.render(records);
