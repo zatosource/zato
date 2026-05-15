@@ -384,7 +384,7 @@ class CommandsFacade:
         # Build the full command to execute
         command = f'{zato_bin} {command}'
 
-        return self.invoke(command)
+        return self.invoke(command, callback=callback)
 
 # ################################################################################################################################
 

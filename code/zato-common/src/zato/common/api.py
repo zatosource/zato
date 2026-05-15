@@ -1144,6 +1144,7 @@ Default_Demo_PubSub_Service_File_Data = """\
 
 # stdlib
 from datetime import datetime, timezone
+from random import choice, randint, sample
 
 # Zato
 from zato.server.service import Service
@@ -1151,13 +1152,46 @@ from zato.server.service import Service
 # ################################################################################################################################
 # ################################################################################################################################
 
-_topic = 'demo.events'
+_messages_by_topic = {
 
-_messages = [
-    {'event': 'order_created', 'order_id': 'ORD-55210', 'customer': 'Acme Corp', 'total': 1560.00},
-    {'event': 'contact_updated', 'contact_id': 'C-10042', 'name': 'Alice Novak', 'change': 'email_updated'},
-    {'event': 'payment_received', 'payment_id': 'PAY-6621', 'amount': 3200.00, 'currency': 'EUR'},
-]
+    'demo.employee.onboarded': [
+        {'employee': 'Alice Novak', 'department': 'Engineering', 'role': 'Backend Developer', 'office': 'Prague'},
+        {'employee': 'Ben Carter', 'department': 'Sales', 'role': 'Account Executive', 'office': 'London'},
+        {'employee': 'Clara Diaz', 'department': 'Finance', 'role': 'Financial Analyst', 'office': 'New York'},
+        {'employee': 'David Kim', 'department': 'Support', 'role': 'Support Engineer', 'office': 'Seoul'},
+        {'employee': 'Eva Richter', 'department': 'Marketing', 'role': 'Content Strategist', 'office': 'Berlin'},
+    ],
+
+    'demo.employee.departed': [
+        {'employee': 'Frank Olsen', 'department': 'Engineering', 'reason': 'resignation', 'tenure_months': 36},
+        {'employee': 'Grace Liu', 'department': 'Product', 'reason': 'internal_transfer', 'tenure_months': 18},
+        {'employee': 'Hiro Tanaka', 'department': 'Sales', 'reason': 'retirement', 'tenure_months': 120},
+    ],
+
+    'demo.invoice.received': [
+        {'supplier': 'Acme Corp', 'amount': 15600.00, 'currency': 'EUR', 'category': 'hardware'},
+        {'supplier': 'CloudScale Inc', 'amount': 8400.00, 'currency': 'USD', 'category': 'cloud_services'},
+        {'supplier': 'Office Supplies Ltd', 'amount': 340.50, 'currency': 'EUR', 'category': 'office'},
+        {'supplier': 'SecureNet AG', 'amount': 22000.00, 'currency': 'CHF', 'category': 'security'},
+        {'supplier': 'DataFlow Systems', 'amount': 5750.00, 'currency': 'GBP', 'category': 'software'},
+    ],
+
+    'demo.invoice.approved': [
+        {'invoice_id': 'INV-10042', 'approver': 'Maria Santos', 'amount': 15600.00, 'department': 'Engineering'},
+        {'invoice_id': 'INV-10043', 'approver': 'James Wright', 'amount': 8400.00, 'department': 'Infrastructure'},
+        {'invoice_id': 'INV-10044', 'approver': 'Lena Braun', 'amount': 340.50, 'department': 'Operations'},
+    ],
+
+    'demo.order.created': [
+        {'order_id': 'ORD-55210', 'customer': 'Pinnacle Industries', 'total': 4200.00, 'items': 3},
+        {'order_id': 'ORD-55211', 'customer': 'Greenfield Corp', 'total': 890.00, 'items': 1},
+        {'order_id': 'ORD-55212', 'customer': 'Summit Partners', 'total': 27500.00, 'items': 12},
+        {'order_id': 'ORD-55213', 'customer': 'Lakeside Medical', 'total': 1340.00, 'items': 5},
+        {'order_id': 'ORD-55214', 'customer': 'Northern Logistics', 'total': 6100.00, 'items': 8},
+    ],
+}
+
+_all_topics = list(_messages_by_topic.keys())
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1170,11 +1204,24 @@ class DemoPubSubPublisher(Service):
 
         now = datetime.now(timezone.utc).strftime('%H:%M:%S')
 
-        for data in _messages:
-            self.pubsub.publish(_topic, data)
+        topic_count = randint(1, 3)
+        topics = sample(_all_topics, topic_count)
 
-        self.logger.info('\\033[36m[pub/sub demo]\\033[0m Published %d messages to `%s` at %s',
-            len(_messages), _topic, now)
+        published = 0
+
+        for topic in topics:
+            pool = _messages_by_topic[topic]
+            data = dict(choice(pool))
+            data['timestamp'] = now
+            self.pubsub.publish(topic, data)
+            published += 1
+
+        msg_word = 'message' if published == 1 else 'messages'
+        topic_word = 'topic' if topic_count == 1 else 'topics'
+
+        self.logger.info(
+            '\\033[36m[pub/sub demo]\\033[0m Published %d %s to %d %s at %s',
+            published, msg_word, topic_count, topic_word, now)
 
 # ################################################################################################################################
 # ################################################################################################################################
