@@ -25,6 +25,16 @@ class SchedulerODBAdapter:
 
         with closing(self.odb.session()) as session:
             jobs = session.query(Job).filter_by(cluster_id=self.cluster_id).all()
+
+            logger.info('[DEBUG-DEMO-PUBSUB] ODB has %d scheduler jobs for cluster_id=%s', len(jobs), self.cluster_id)
+            for _dbg_job in jobs:
+                logger.info(
+                    '[DEBUG-DEMO-PUBSUB] ODB job id=%s name=%s service=%s is_active=%s',
+                    _dbg_job.id, _dbg_job.name,
+                    _dbg_job.service.name if _dbg_job.service else '<no-service>',
+                    _dbg_job.is_active,
+                )
+
             result = {}
             for job in jobs:
                 entry = {

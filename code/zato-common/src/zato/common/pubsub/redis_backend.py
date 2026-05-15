@@ -533,6 +533,37 @@ class RedisPubSubBackend:
 
 # ################################################################################################################################
 
+    def count_distinct_publishers(self, topic_names:'strlist', since_minutes:'int'=60) -> 'int':
+        """ Count distinct publisher identifiers across all given topics within the time window.
+        """
+
+        # Compute the cutoff ..
+        now = utcnow()
+        cutoff_delta = timedelta(minutes=since_minutes)
+        cutoff = now - cutoff_delta
+        cutoff_epoch_ms = int(cutoff.timestamp() * 1000)
+        min_stream_id = f'{cutoff_epoch_ms}-0'
+
+        # .. collect distinct publishers ..
+        publishers:'set' = set()
+
+        for topic_name in topic_names:
+            stream_key = self._get_stream_key(topic_name)
+
+            try:
+                messages = self.redis.xrange(stream_key, min=min_stream_id)
+            except ResponseError:
+                continue
+
+            for _message_id, message_data in messages:
+                if publisher := message_data.get('publisher'):
+                    publishers.add(publisher)
+
+        out = len(publishers)
+        return out
+
+# ################################################################################################################################
+
     def rename_topic(self, old_topic_name:'str', new_topic_name:'str') -> 'None':
         """ Rename a topic.
         """

@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # Default timeout for waiting for services to become available
-Default_Service_Wait_Timeout = 2
+Default_Service_Wait_Timeout = 10
 
 # ################################################################################################################################
 # ################################################################################################################################
