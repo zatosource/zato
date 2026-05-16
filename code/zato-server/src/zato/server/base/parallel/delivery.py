@@ -193,11 +193,16 @@ class RedisPushDelivery:
         deadline = monotonic() + _max_retry_time
         interval = _retry_interval_initial
 
+        attempt = 0
+
         while monotonic() < deadline:
             try:
                 self._deliver_message(message, sub_config)
                 break
             except Exception:
+                attempt += 1
+                logger.warning('PubSub delivery attempt %d failed for sub_key `%s`, msg_id `%s`: %s',
+                    attempt, sub_key, message['msg_id'], format_exc())
 
                 # .. compute jitter as a fraction of the current interval ..
                 jitter = interval * _retry_jitter_percent / 100
@@ -207,8 +212,8 @@ class RedisPushDelivery:
                 # .. grow the interval logarithmically, capped at the configured maximum ..
                 interval = min(interval * log2(interval + 1), _retry_interval_max)
         else:
-            logger.error('PubSub delivery deadline exhausted for sub_key `%s`, msg_id `%s`',
-                sub_key, message.get('msg_id', '?'))
+            logger.error('PubSub delivery deadline exhausted for sub_key `%s`, msg_id `%s` after %d attempts',
+                sub_key, message['msg_id'], attempt)
 
         backend.ack_message(stream_name, sub_key, redis_message_id)
 
