@@ -413,13 +413,14 @@ fn log_scheduler_status(state: &SchedulerState, now: chrono::DateTime<Utc>) {
     }
 
     let paused = total - active;
+    let jobs_label = crate::plural(total, "job", "jobs");
 
     if let Some(name) = soonest_name {
         let soonest_human = crate::humanize_ms(u64::try_from(soonest_ms.max(0)).unwrap_or(0));
         tracing::info!(
-            "Status: {total} jobs ({active} active, {paused} paused, {in_flight} in-flight), next fire: {name} in {soonest_human}"
+            "Status: {total} {jobs_label} ({active} active, {paused} paused, {in_flight} in-flight), next fire: {name} in {soonest_human}"
         );
     } else {
-        tracing::info!("Status: {total} jobs ({active} active, {paused} paused, {in_flight} in-flight), no upcoming fires");
+        tracing::info!("Status: {total} {jobs_label} ({active} active, {paused} paused, {in_flight} in-flight), no upcoming fires");
     }
 }

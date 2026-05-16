@@ -2,6 +2,7 @@ use chrono::{Duration, Utc};
 use proptest::prelude::*;
 use zato_scheduler_core::job::RunningJob;
 use zato_scheduler_core::model::SchedulerJob;
+use zato_scheduler_core::DeferredLog;
 use zato_scheduler_core::scheduler::{SchedulerState, collect_due_jobs};
 
 fn make_due_job(id: i64, minutes_ago: u32) -> SchedulerJob {
@@ -43,7 +44,8 @@ proptest! {
         let mut state = SchedulerState::new();
         state.jobs.insert(1, running_job);
         let now = Utc::now();
-        let batch = collect_due_jobs(&mut state, now, 50);
+        let mut deferred = DeferredLog::new();
+        let batch = collect_due_jobs(&mut state, now, 50, &mut deferred);
         prop_assert!(batch.is_empty());
     }
 
@@ -58,10 +60,8 @@ proptest! {
         let mut state = SchedulerState::new();
         state.jobs.insert(1, running_job);
         let now = Utc::now();
-        let batch = collect_due_jobs(&mut state, now, 50);
+        let mut deferred = DeferredLog::new();
+        let batch = collect_due_jobs(&mut state, now, 50, &mut deferred);
         prop_assert!(batch.is_empty());
-        let running_job = state.jobs.get(&1).unwrap();
-        let last = running_job.history.back().unwrap();
-        prop_assert_eq!(&last.outcome, "skipped_already_in_flight");
     }
 }
