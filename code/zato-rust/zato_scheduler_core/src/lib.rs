@@ -89,6 +89,12 @@ pub fn humanize_ms(millis: u64) -> String {
     humantime::format_duration(Duration::from_millis(millis)).to_string()
 }
 
+/// Returns the singular or plural form of a word based on the count.
+#[must_use]
+pub fn plural<'a>(n: usize, singular: &'a str, plural_form: &'a str) -> &'a str {
+    if n == 1 { singular } else { plural_form }
+}
+
 /// Reconciles the running-job map with a freshly loaded list of scheduler jobs.
 /// A reload means the server (re)started, so any previously in-flight jobs
 /// will never receive completion callbacks - clear their in_flight state.

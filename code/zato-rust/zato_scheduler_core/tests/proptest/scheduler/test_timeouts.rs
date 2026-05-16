@@ -3,6 +3,7 @@ use proptest::prelude::*;
 use std::time::Instant;
 use zato_scheduler_core::job::{ExecutionRecord, RunningJob};
 use zato_scheduler_core::model::SchedulerJob;
+use zato_scheduler_core::DeferredLog;
 use zato_scheduler_core::scheduler::{SchedulerState, check_in_flight_timeouts};
 
 fn make_active_job() -> SchedulerJob {
@@ -40,7 +41,8 @@ proptest! {
         let running_job = RunningJob::from_scheduler_job(&scheduler_job);
         let mut state = SchedulerState::new();
         state.jobs.insert(1, running_job);
-        check_in_flight_timeouts(&mut state);
+        let mut deferred = DeferredLog::new();
+        check_in_flight_timeouts(&mut state, &mut deferred);
         let running_job = state.jobs.get(&1).unwrap();
         prop_assert!(!running_job.in_flight);
         prop_assert!(running_job.history.is_empty());
@@ -56,7 +58,8 @@ proptest! {
         running_job.record_execution(ExecutionRecord::new("p", "a", "executed", 1));
         let mut state = SchedulerState::new();
         state.jobs.insert(1, running_job);
-        check_in_flight_timeouts(&mut state);
+        let mut deferred = DeferredLog::new();
+        check_in_flight_timeouts(&mut state, &mut deferred);
         let running_job = state.jobs.get(&1).unwrap();
         prop_assert!(running_job.in_flight);
     }
