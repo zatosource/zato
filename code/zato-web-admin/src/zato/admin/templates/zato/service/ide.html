@@ -209,6 +209,19 @@ Ctrl+K for full history"></textarea></form>
     $.fn.zato.ide.init_editor("{{ current_object_name_url_safe }}");
     $.fn.zato.log_streaming.init();
 
+    // #region agent log
+    setTimeout(function() {
+        var dataRequest = document.getElementById('data-request');
+        var indicator = dataRequest ? dataRequest.parentElement.querySelector('div') : null;
+        if (dataRequest && indicator && indicator.textContent.trim() === '⋯') {
+            var rect = dataRequest.getBoundingClientRect();
+            var indicatorRect = indicator.getBoundingClientRect();
+            var parentRect = dataRequest.parentElement.getBoundingClientRect();
+            console.log('[DEBUG-8efefd]', JSON.stringify({textarea_bottom:rect.bottom,textarea_height:rect.height,indicator_top:indicatorRect.top,indicator_bottom:indicatorRect.bottom,indicator_height:indicatorRect.height,parent_top:parentRect.top,offset_used:indicator.style.top,gap_from_textarea_bottom:indicatorRect.top-rect.bottom}));
+        }
+    }, 2000);
+    // #endregion
+
     window.addEventListener('beforeunload', function() {
         if ($.fn.zato.log_streaming.eventSource) {
             $.fn.zato.log_streaming.eventSource.close();
