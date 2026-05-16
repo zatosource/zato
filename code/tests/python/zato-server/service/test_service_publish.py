@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import json
 import unittest
 from dataclasses import dataclass
 from unittest.mock import MagicMock
@@ -42,7 +43,7 @@ class TestServicePublishRoundTrip(unittest.TestCase):
         backend = RedisPubSubBackend(mock_redis)
 
         # .. publish the data ..
-        _ = backend.publish('test.topic', data, publisher='test.publisher')
+        backend.publish('test.topic', data, publisher='test.publisher')
 
         # .. extract the message dict that was passed to xadd ..
         xadd_call_args = mock_redis.xadd.call_args
@@ -117,10 +118,8 @@ class TestServicePublishRoundTrip(unittest.TestCase):
         received = self._publish_and_deliver(request)
 
         self.assertIsInstance(received, CustomerRequest)
-
-        received_model:'CustomerRequest' = received # type: ignore[assignment]
-        self.assertEqual(received_model.customer_id, 'CUST-001')
-        self.assertEqual(received_model.name, 'Test Customer')
+        self.assertEqual(received.customer_id, 'CUST-001')
+        self.assertEqual(received.name, 'Test Customer')
 
 # ################################################################################################################################
 
@@ -144,7 +143,7 @@ class TestServicePublishRoundTrip(unittest.TestCase):
         payload kwargs, only the payload keys reach the subscriber.
         This tests the Service.publish layer that separates them.
         """
-        from zato.server.service import Service
+        from zato.server.service import Service, _publish_meta_keys
 
         # Build a minimally wired Service instance ..
         service = Service.__new__(Service)
@@ -153,7 +152,7 @@ class TestServicePublishRoundTrip(unittest.TestCase):
         service.pubsub = MagicMock()
 
         # .. call publish with a mix of payload and metadata kwargs ..
-        _ = service.publish('test.topic', order_id=123, priority=5)
+        service.publish('test.topic', order_id=123, priority=5)
 
         # .. verify pubsub.publish received the payload dict
         # .. with only the non-meta keys ..
@@ -182,7 +181,7 @@ class TestServicePublishRoundTrip(unittest.TestCase):
         request.customer_id = 'CUST-001'
         request.name = 'Test Customer'
 
-        _ = backend.publish('test.topic', request, publisher='test.publisher')
+        backend.publish('test.topic', request, publisher='test.publisher')
 
         xadd_call_args = mock_redis.xadd.call_args
         captured_message = xadd_call_args[0][1]
