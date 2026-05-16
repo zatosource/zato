@@ -150,6 +150,15 @@ _async_callback = CHANNEL.INVOKE_ASYNC_CALLBACK
 _default_priority = PubSub.Message.Priority_Default
 _default_expiration = PubSub.Message.Default_Expiration
 
+_publish_meta_keys = {
+    'priority',
+    'expiration',
+    'cid',
+    'in_reply_to',
+    'ext_client_id',
+    'pub_time',
+}
+
 # ################################################################################################################################
 
 _wsgi_channels = {CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC}
@@ -1019,24 +1028,26 @@ class Service:
         self,
         topic_name:'str',
         data:'any_'='',
-        *,
-        priority:'int'=_default_priority,
-        expiration:'int'=_default_expiration,
-        cid:'strnone'=None,
-        in_reply_to:'strnone'=None,
-        ext_client_id:'strnone'=None,
-        pub_time:'strnone'=None,
+        **kwargs:'any_'
     ) -> 'PublishResult':
-        return self.pubsub.publish(
-            topic_name,
-            data,
-            priority=priority,
-            expiration=expiration,
-            cid=cid,
-            in_reply_to=in_reply_to,
-            ext_client_id=ext_client_id,
-            pub_time=pub_time,
-        )
+
+        # If there is no explicit data, check if the caller passed
+        # any extra keyword arguments that can be turned into a payload ..
+        if not data:
+            if kwargs:
+                extra_keys = set(kwargs) - _publish_meta_keys
+
+                # .. if extra keys were found, build a dict payload
+                # .. from them and pop each one so it does not leak
+                # .. into the downstream publish call ..
+                if extra_keys:
+                    data = {}
+                    for key in extra_keys:
+                        data[key] = kwargs.pop(key)
+
+        # .. now, publish the message with whatever remains in kwargs
+        # .. (metadata like priority, expiration, etc.).
+        return self.pubsub.publish(topic_name, data, **kwargs)
 
 # ################################################################################################################################
 

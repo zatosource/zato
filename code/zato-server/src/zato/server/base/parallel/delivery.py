@@ -235,11 +235,31 @@ class RedisPushDelivery:
     def _deliver_to_service(self, message:'anydict', sub_config:'anydict') -> 'None':
         """ Deliver a raw message by invoking a Zato service.
         """
-        from zato.common.ext.bunch import bunchify
+
+        # stdlib
+        import json
+        from importlib import import_module
 
         service_name = sub_config['push_service_name']
 
-        payload = bunchify(message)
+        # Extract and deserialize the user data ..
+        data_raw = message['data']
+
+        try:
+            data = json.loads(data_raw)
+        except (json.JSONDecodeError, TypeError):
+            data = data_raw
+
+        # .. if a data_class was stored, reconstruct the original Model ..
+        if data_class_name := message.get('data_class'):
+            module_path, _, class_name = data_class_name.rpartition('.')
+            module = import_module(module_path)
+            model_class = getattr(module, class_name)
+            payload = model_class.from_dict(data)
+
+        # .. otherwise, use the deserialized data as-is.
+        else:
+            payload = data
 
         self.server.invoke(service_name, payload)
 
