@@ -33,7 +33,7 @@ class TestPublishToService(unittest.TestCase):
 # ################################################################################################################################
 
     def setUp(self) -> 'None':
-        self.client.invoke('test.pubsub.clear-received')
+        _ = self.client.invoke('test.pubsub.clear-received')
 
 # ################################################################################################################################
 
@@ -105,7 +105,7 @@ class TestPublishToService(unittest.TestCase):
         """ Publishing a dict to a typed service delivers the data parsed against the input model.
         """
 
-        self.client.invoke('test.pubsub.publish-to-service', {
+        _ = self.client.invoke('test.pubsub.publish-to-service', {
             'topic_name': 'test.pubsub.typed-receiver',
             'data': {'customer_name': 'Test Corp', 'customer_id': 42},
         })
@@ -120,7 +120,7 @@ class TestPublishToService(unittest.TestCase):
         """ After publishing to a service, the implicit zato.s.to.{name} topic exists in Redis.
         """
 
-        self.client.invoke('test.pubsub.publish-to-service', {
+        _ = self.client.invoke('test.pubsub.publish-to-service', {
             'topic_name': 'test.pubsub.simple-receiver',
             'data': 'topic creation test',
         })
@@ -143,12 +143,12 @@ class TestPublishToService(unittest.TestCase):
         """
 
         # Publish twice ..
-        self.client.invoke('test.pubsub.publish-to-service', {
+        _ = self.client.invoke('test.pubsub.publish-to-service', {
             'topic_name': 'test.pubsub.simple-receiver',
             'data': 'first message',
         })
 
-        self.client.invoke('test.pubsub.publish-to-service', {
+        _ = self.client.invoke('test.pubsub.publish-to-service', {
             'topic_name': 'test.pubsub.simple-receiver',
             'data': 'second message',
         })

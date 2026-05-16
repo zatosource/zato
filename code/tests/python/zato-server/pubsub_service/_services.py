@@ -350,7 +350,7 @@ class PubSubTestClearChainReceived(Service):
 
 _pad = 5
 
-def _service_name(number):
+def _service_name(number:'int') -> 'str':
     """ Returns a zero-padded service short name like 'service-00001'. """
     out = f'service-{number:0{_pad}d}'
     return out
@@ -391,17 +391,16 @@ for _short_name in _service_routing:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_forwarder_handle(short_name, targets):
+def _make_forwarder_handle(short_name:'str', targets:'list | str') -> 'object':
     """ Builds a handle method that appends a suffix and publishes to downstream targets.
     """
 
     suffix = '-via-' + short_name.split('-')[1]
-    service_name = 'test.pubsub.' + short_name
     full_targets = []
     for target in targets:
         full_targets.append('test.pubsub.' + target)
 
-    def handle(self):
+    def handle(self:'Service') -> 'None':
         data = self.request.raw_request
         if isinstance(data, dict):
             data = data.get('data', data)
@@ -413,15 +412,14 @@ def _make_forwarder_handle(short_name, targets):
 
 # ################################################################################################################################
 
-def _make_sink_handle(short_name):
+def _make_sink_handle(short_name:'str') -> 'object':
     """ Builds a handle method that appends a suffix and stores the result.
     """
 
     suffix = '-via-' + short_name.split('-')[1]
-    service_name = 'test.pubsub.' + short_name
     received_list = _service_received[short_name]
 
-    def handle(self):
+    def handle(self:'Service') -> 'None':
         data = self.request.raw_request
         if isinstance(data, dict):
             data = data.get('data', data)
@@ -432,7 +430,7 @@ def _make_sink_handle(short_name):
 
 # ################################################################################################################################
 
-def _make_ring_handle(short_name):
+def _make_ring_handle(short_name:'str') -> 'object':
     """ Builds a handle method for the ring topology that decrements TTL and republishes to itself.
     """
 
@@ -443,7 +441,7 @@ def _make_ring_handle(short_name):
     full_name = 'test.pubsub.' + short_name
     received_list = _service_received[short_name]
 
-    def handle(self):
+    def handle(self:'Service') -> 'None':
         data = self.request.raw_request
         if isinstance(data, dict):
             data = data.get('data', data)
@@ -475,7 +473,7 @@ def _make_ring_handle(short_name):
 
 for _short_name, _targets in _service_routing.items():
 
-    _service_name = 'test.pubsub.' + _short_name
+    _full_service_name = 'test.pubsub.' + _short_name
     _class_name = 'PubSubTestService' + _short_name.replace('-', '').title()
 
     if _targets == '_ring':
@@ -486,7 +484,7 @@ for _short_name, _targets in _service_routing.items():
         _handle = _make_sink_handle(_short_name)
 
     _cls = type(_class_name, (Service,), {
-        'name': _service_name,
+        'name': _full_service_name,
         'handle': _handle,
     })
 
