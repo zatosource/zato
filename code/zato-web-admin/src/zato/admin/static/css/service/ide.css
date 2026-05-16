@@ -283,18 +283,17 @@ td.data-input-field-name {
 }
 
 /* *********************************** */
-/*   Response panel                    */
+/*   Invoker area                      */
 /* *********************************** */
 
-.response-panel {
+.invoker-area {
     border: 1px solid #dde1e6;
     border-radius: 6px;
     background: #f8f9fa;
     padding: 6px;
-    margin-top: 4px;
 }
 
-.response-panel #data-response {
+.invoker-area textarea {
     width: 100%;
     border: none;
     border-radius: 4px;
@@ -314,21 +313,9 @@ td.data-input-field-name {
     padding-left: 0.2rem;
 }
 
-#data-request {
-    resize: vertical;
-    border-bottom: 3px solid #ccc;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-}
-
-#data-request::-webkit-resizer {
-    background: linear-gradient(135deg, transparent 50%, #999 50%);
-}
-
 #data-response {
     overflow-y: scroll !important;
     overflow-x: hidden !important;
-    resize: none;
 }
 
 @keyframes rainbow {
