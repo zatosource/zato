@@ -13,7 +13,7 @@ use std::sync::Arc;
 use chrono::Utc;
 use serde::Deserialize;
 
-use crate::job::{LogEntry, RunningJob};
+use crate::job::{ExecutionRecord, LogEntry, RunningJob};
 use crate::model::SchedulerJob;
 use crate::scheduler::SchedulerShared;
 use crate::types::FireBatch;
@@ -367,7 +367,7 @@ fn handle_delete_job(shared: &SchedulerShared, payload: &str) {
     tracing::info!("Deleted job: id={}", parsed.job_id);
 }
 
-fn handle_execute_job(shared: &SchedulerShared, payload: &str) {
+pub fn handle_execute_job(shared: &SchedulerShared, payload: &str) {
     let parsed: JobIdPayload = match serde_json::from_str(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
@@ -375,16 +375,58 @@ fn handle_execute_job(shared: &SchedulerShared, payload: &str) {
             return;
         }
     };
+
+    let sender = shared.fire_sender.lock().clone();
+    let Some(sender) = sender else {
+        tracing::error!("Fire sender not available for forced execution of job_id={}", parsed.job_id);
+        return;
+    };
+
     let mut state = shared.state.lock();
-    if let Some(running_job) = state.jobs.get_mut(&parsed.job_id) {
-        let now = Utc::now();
-        running_job.next_fire_utc = Some(now);
-        running_job.sync_instant_from_utc_pub(now);
-    }
-    state.dirty = true;
+    let Some(running_job) = state.jobs.get_mut(&parsed.job_id) else {
+        tracing::warn!("Forced execute: job_id={} not found", parsed.job_id);
+        return;
+    };
+
+    let now = Utc::now();
+    let now_iso = now.to_rfc3339();
+
+    running_job.current_run += 1;
+
+    let batch = FireBatch {
+        job_id: running_job.id,
+        name: running_job.name.clone(),
+        service: running_job.service.clone(),
+        extra: running_job.extra.clone(),
+        job_type: running_job.job_type.clone(),
+        current_run: running_job.current_run,
+        on_success_service: running_job.on_success_service.clone(),
+        on_success_job: running_job.on_success_job.clone(),
+        on_error_service: running_job.on_error_service.clone(),
+        on_error_job: running_job.on_error_job.clone(),
+    };
+
+    running_job.in_flight = true;
+    running_job.in_flight_since = Some(std::time::Instant::now());
+    running_job.in_flight_run = Some(running_job.current_run);
+
+    let mut rec = ExecutionRecord::new(&now_iso, &now_iso, crate::types::outcome::RUNNING, running_job.current_run);
+    rec.log_entries.push(LogEntry {
+        timestamp_iso: now_iso,
+        level: "SYSTEM".into(),
+        message: "Job started (forced execute)".into(),
+    });
+    running_job.record_execution(rec);
+
+    let job_name = running_job.name.clone();
+    let current_run = running_job.current_run;
     drop(state);
-    shared.condvar.notify_one();
-    tracing::info!("Forced execution of job: id={}", parsed.job_id);
+
+    if let Err(err) = sender.send(batch) {
+        tracing::error!("Failed to send forced fire event for job `{job_name}`: {err}");
+    } else {
+        tracing::info!("Forced execution of job: name={job_name} run={current_run} job_id={}", parsed.job_id);
+    }
 }
 
 fn handle_mark_complete(shared: &SchedulerShared, payload: &str) {
@@ -499,9 +541,6 @@ fn handle_reload(shared: &SchedulerShared, payload: &str) {
     drop(state);
     shared.condvar.notify_one();
     let count = parsed.jobs.len();
-    if count == 1 {
-        tracing::info!("Reloaded 1 job");
-    } else {
-        tracing::info!("Reloaded {count} jobs");
-    }
+    let label = crate::plural(count, "job", "jobs");
+    tracing::info!("Reloaded {count} {label}");
 }
