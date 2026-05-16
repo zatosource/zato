@@ -308,6 +308,11 @@ td.data-input-field-name {
 /*   IDE-specific invoker overrides    */
 /* *********************************** */
 
+.invoker-tr,
+.invoker-tr * {
+    overflow: visible !important;
+}
+
 #result-header {
     padding: 0.4rem;
     padding-left: 0.2rem;
