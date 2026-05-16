@@ -82,13 +82,7 @@ class PubSubFacade:
         self,
         topic_name:'str',
         data:'any_'='',
-        *,
-        priority:'int'=_default_priority,
-        expiration:'int'=_default_expiration,
-        cid:'strnone'=None,
-        in_reply_to:'strnone'=None,
-        ext_client_id:'strnone'=None,
-        pub_time:'strnone'=None,
+        **kwargs:'any_'
     ) -> 'PublishResult':
 
         is_service = topic_name in self.server.service_store.name_to_impl_name
@@ -97,18 +91,15 @@ class PubSubFacade:
         if is_service:
             topic_name = self._ensure_service_topic(topic_name)
 
-        # .. now, publish the message to the topic ..
-        out = self.server.pubsub_redis.publish(
-            topic_name,
-            data,
-            priority=priority,
-            expiration=expiration,
-            correl_id=cid,
-            in_reply_to=in_reply_to,
-            ext_client_id=ext_client_id,
-            publisher=self.service_name,
-            pub_time=pub_time,
-        )
+        # .. remap 'cid' to 'correl_id' for the Redis backend ..
+        if 'cid' in kwargs:
+            kwargs['correl_id'] = kwargs.pop('cid')
+
+        # .. always set the publisher to the calling service name ..
+        kwargs['publisher'] = self.service_name
+
+        # .. now, publish the message to the topic.
+        out = self.server.pubsub_redis.publish(topic_name, data, **kwargs)
 
         return out
 
