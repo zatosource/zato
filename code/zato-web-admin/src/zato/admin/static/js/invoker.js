@@ -181,7 +181,7 @@ $.fn.zato.invoker.on_form_ended_common_impl = function(
             responseData = $.fn.zato.to_json(response.data[0].zato_env);
         }
         else {
-            responseData = '';
+            responseData = '(No response)';
         }
     }
 
