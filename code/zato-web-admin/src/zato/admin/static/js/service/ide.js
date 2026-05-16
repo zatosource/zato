@@ -233,14 +233,14 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
         let resizeIndicator = document.createElement('div');
         resizeIndicator.textContent = '⋯';
-        resizeIndicator.style.cssText = 'position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); font-size: 20px; color: red; pointer-events: none; padding: 0 5px; z-index: 10;';
+        resizeIndicator.style.cssText = 'position: absolute; left: 50%; transform: translate(-50%, -50%); font-size: 18px; color: #999; pointer-events: none; padding: 0 5px; z-index: 10; line-height: 1;';
         dataRequest.parentElement.style.position = 'relative';
         dataRequest.parentElement.appendChild(resizeIndicator);
 
         function updateIndicatorPosition() {
             let rect = dataRequest.getBoundingClientRect();
             let parentRect = dataRequest.parentElement.getBoundingClientRect();
-            let top = rect.bottom - parentRect.top - 3;
+            let top = rect.bottom - parentRect.top + 2;
             resizeIndicator.style.top = top + 'px';
         }
         updateIndicatorPosition();
@@ -258,20 +258,17 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
             if (Math.abs(mouseY - bottomEdge) < 10) {
                 dataRequest.style.cursor = 'ns-resize';
-                dataRequest.style.borderBottomColor = '#999';
-                resizeIndicator.style.color = 'green';
+                resizeIndicator.style.color = '#666';
             } else {
                 dataRequest.style.cursor = '';
-                dataRequest.style.borderBottomColor = '#ccc';
-                resizeIndicator.style.color = 'red';
+                resizeIndicator.style.color = '#999';
             }
         });
 
         dataRequest.addEventListener('mouseleave', function() {
             if (!isResizingTextarea) {
                 dataRequest.style.cursor = '';
-                dataRequest.style.borderBottomColor = '#ccc';
-                resizeIndicator.style.color = 'red';
+                resizeIndicator.style.color = '#999';
             }
         });
 
