@@ -253,5 +253,76 @@ class TestPubSubFacadePublishInputModel(unittest.TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class TestServicePublishDelegatesToFacade(unittest.TestCase):
+    """ Tests that Service.publish delegates to self.pubsub.publish.
+    """
+
+    def setUp(self) -> 'None':
+
+        # Build a minimal mock that behaves like a Service with a PubSubFacade ..
+        self.service = MagicMock()
+
+        publish_result = PublishResult()
+        publish_result.msg_id = 'delegated-msg-001'
+        self.service.pubsub.publish.return_value = publish_result
+
+        # .. import the unbound method so we can call it with our mock ..
+        from zato.server.service import Service
+        self.publish = Service.publish
+
+# ################################################################################################################################
+
+    def test_delegates_positional_args(self) -> 'None':
+        """ Topic name and data are forwarded to self.pubsub.publish.
+        """
+        out = self.publish(self.service, 'my.topic', 'hello')
+
+        self.service.pubsub.publish.assert_called_once()
+
+        call_args = self.service.pubsub.publish.call_args
+
+        self.assertEqual(call_args[0][0], 'my.topic')
+        self.assertEqual(call_args[0][1], 'hello')
+        self.assertEqual(out.msg_id, 'delegated-msg-001')
+
+# ################################################################################################################################
+
+    def test_delegates_all_keyword_args(self) -> 'None':
+        """ All optional keyword arguments are forwarded to self.pubsub.publish.
+        """
+        self.publish(
+            self.service,
+            'events.new',
+            'payload',
+            priority=7,
+            expiration=3600,
+            cid='cid-abc',
+            in_reply_to='reply-xyz',
+            ext_client_id='ext-111',
+            pub_time='2026-05-16T12:00:00',
+        )
+
+        call_kwargs = self.service.pubsub.publish.call_args[1]
+
+        self.assertEqual(call_kwargs['priority'], 7)
+        self.assertEqual(call_kwargs['expiration'], 3600)
+        self.assertEqual(call_kwargs['cid'], 'cid-abc')
+        self.assertEqual(call_kwargs['in_reply_to'], 'reply-xyz')
+        self.assertEqual(call_kwargs['ext_client_id'], 'ext-111')
+        self.assertEqual(call_kwargs['pub_time'], '2026-05-16T12:00:00')
+
+# ################################################################################################################################
+
+    def test_returns_publish_result(self) -> 'None':
+        """ The return value from self.pubsub.publish is passed through.
+        """
+        out = self.publish(self.service, 'my.topic', 'data')
+
+        self.assertIsInstance(out, PublishResult)
+        self.assertEqual(out.msg_id, 'delegated-msg-001')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 if __name__ == '__main__':
     _ = unittest.main()
