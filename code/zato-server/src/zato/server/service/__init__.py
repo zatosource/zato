@@ -347,6 +347,7 @@ class Service:
     or any other, regardless whether they arere built-in or user-defined ones.
     """
 
+    logger: 'Logger'
     process_name:'str' = 'No name'
 
     rest: 'RESTFacade'
