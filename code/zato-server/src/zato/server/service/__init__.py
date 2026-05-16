@@ -31,7 +31,7 @@ from zato.common.py23_ import maxint
 
 # Zato
 from zato.common.ext.bunch import Bunch
-from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, NotGiven, PARAMS_PRIORITY, \
+from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, NotGiven, PARAMS_PRIORITY, PubSub, \
      RESTAdapterResponse, zato_no_op_marker
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import PubSubFacade, SecurityFacade
@@ -94,6 +94,7 @@ if 0:
     from zato.common.rules.api import RulesManager
     from zato.common.typing_ import any_, anydict, anydictnone, boolnone, callable_, callnone, dictnone, intnone, \
         listnone, modelnone, strdict, strdictnone, strstrdict, strnone, strlist
+    from zato.common.pubsub.redis_backend import PublishResult
     from zato.common.util.time_ import TimeUtil
     from zato.distlock import Lock
     from zato.server.connection.ftp import FTPStore
@@ -143,6 +144,11 @@ Unicode = Text
 # ################################################################################################################################
 
 _async_callback = CHANNEL.INVOKE_ASYNC_CALLBACK
+
+# ################################################################################################################################
+
+_default_priority = PubSub.Message.Priority_Default
+_default_expiration = PubSub.Message.Default_Expiration
 
 # ################################################################################################################################
 
@@ -1008,16 +1014,27 @@ class Service:
 
 # ################################################################################################################################
 
-    def publish(self, topic:'str', msg:'any_') -> 'None':
-
-        if not isinstance(msg, dict):
-            msg = {'msg': msg}
-
-        self.config_dispatcher.publish(
-            msg,
-            exchange='pubsubapi',
-            routing_key=topic,
-            should_append_details=True,
+    def publish(
+        self,
+        topic_name:'str',
+        data:'any_',
+        *,
+        priority:'int'=_default_priority,
+        expiration:'int'=_default_expiration,
+        cid:'strnone'=None,
+        in_reply_to:'strnone'=None,
+        ext_client_id:'strnone'=None,
+        pub_time:'strnone'=None,
+    ) -> 'PublishResult':
+        return self.pubsub.publish(
+            topic_name,
+            data,
+            priority=priority,
+            expiration=expiration,
+            cid=cid,
+            in_reply_to=in_reply_to,
+            ext_client_id=ext_client_id,
+            pub_time=pub_time,
         )
 
 # ################################################################################################################################

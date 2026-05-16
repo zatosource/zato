@@ -149,8 +149,11 @@ Ctrl+K for full history"></textarea></form>
                     <tr colspan="2" class="invoker-tr">
                         <td style="padding-top: 0;">
                             <form id="invoke-service-form" novalidate="" method="post"></form>
-                                <div id="message-viewer-wrapper"></div>
-                                <textarea id="data-response" style="display: none;"></textarea>
+                            <div id="response-panel" class="response-panel">
+                                <textarea id="data-response" readonly
+                                    placeholder="No response yet - invoke the service to see results here"></textarea>
+                            </div>
+                            <div id="message-viewer-wrapper" style="display: none;"></div>
                             </form>
                         </td>
                     </tr>
