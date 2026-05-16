@@ -126,7 +126,7 @@ Ctrl+K for full history"></textarea></form>
                     </tr>
 
                     <tr colspan="2" class="invoker-tr">
-                        <td>
+                        <td style="padding-bottom: 4px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0;">
                                 <div style="text-align: left;">
                                     <div id="singleton-form-parent" class="hidden"></div>
@@ -208,24 +208,6 @@ Ctrl+K for full history"></textarea></form>
 <script type="text/javascript">
     $.fn.zato.ide.init_editor("{{ current_object_name_url_safe }}");
     $.fn.zato.log_streaming.init();
-
-    // #region agent log
-    setTimeout(function() {
-        var rh = document.getElementById('result-header');
-        if (rh) {
-            var cs = window.getComputedStyle(rh);
-            var parentDiv = rh.parentElement;
-            var parentCs = window.getComputedStyle(parentDiv);
-            var grandparent = parentDiv.parentElement;
-            var grandparentCs = window.getComputedStyle(grandparent);
-            var td = grandparent.parentElement;
-            var tdCs = window.getComputedStyle(td);
-            var tr = td.parentElement;
-            var trCs = window.getComputedStyle(tr);
-            fetch('http://127.0.0.1:7612/ingest/84418d1f-a8d5-4830-95f4-0aaaec06017c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8efefd'},body:JSON.stringify({sessionId:'8efefd',location:'ide.html:debug',message:'result-header-overflow-chain',data:{rh_overflow:cs.overflow,rh_lineHeight:cs.lineHeight,rh_height:cs.height,rh_padding:cs.padding,parent_overflow:parentCs.overflow,parent_height:parentCs.height,parent_tag:parentDiv.tagName,grandparent_overflow:grandparentCs.overflow,grandparent_height:grandparentCs.height,grandparent_tag:grandparent.tagName,td_overflow:tdCs.overflow,td_height:tdCs.height,tr_overflow:trCs.overflow,tr_height:trCs.height},timestamp:Date.now()})}).catch(function(){});
-        }
-    }, 2000);
-    // #endregion
 
     window.addEventListener('beforeunload', function() {
         if ($.fn.zato.log_streaming.eventSource) {
