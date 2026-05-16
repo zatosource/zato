@@ -175,6 +175,8 @@ async fn main() -> std::io::Result<()> {
     let heartbeat = watchdog_registry.register("zato-scheduler");
     let (fire_sender, fire_receiver) = std::sync::mpsc::channel();
 
+    *shared.fire_sender.lock() = Some(fire_sender.clone());
+
     let scheduler_thread = std::thread::Builder::new()
         .name("zato-scheduler".into())
         .spawn(move || {
