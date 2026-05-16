@@ -181,8 +181,6 @@ class SchedulerImporter:
         session.add(job)
         session.flush()
 
-        logger.info('[DEBUG-DEMO-PUBSUB] Created job in ODB: id=%s name=%s service=%s is_active=%s', job.id, job_name, service.name if service else '<none>', job_is_active)
-
         # Create the associated IntervalBasedJob
         interval_job = IntervalBasedJob(None, job)
 

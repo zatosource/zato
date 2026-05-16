@@ -1017,7 +1017,7 @@ class Service:
     def publish(
         self,
         topic_name:'str',
-        data:'any_',
+        data:'any_'='',
         *,
         priority:'int'=_default_priority,
         expiration:'int'=_default_expiration,

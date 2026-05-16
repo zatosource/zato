@@ -1317,8 +1317,6 @@ class ConfigManager(_ConfigManagerBase):
         else:
             payload = msg['payload']
 
-        logger.info('[DEBUG-DEMO-PUBSUB] on_message_invoke_service channel=%s action=%s service=%s', channel, action, msg['service'])
-
         service, is_active = self.server.service_store.new_instance_by_name(msg['service'])
 
         if not is_active:

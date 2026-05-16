@@ -676,7 +676,6 @@ class ServiceStore:
 # ################################################################################################################################
 
     def new_instance_by_name(self, name:'str', *args:'any_', **kwargs:'any_') -> 'tuple_[Service, bool]':
-        logger.info('[DEBUG-DEMO-PUBSUB] new_instance_by_name name=%s, known_services_count=%d', name, len(self.name_to_impl_name))
         try:
             impl_name = self.name_to_impl_name[name]
         except KeyError:

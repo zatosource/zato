@@ -212,10 +212,6 @@ class SchedulerClient:
             job['id'] = job_id
             jobs.append(job)
 
-        logger.info('[DEBUG-DEMO-PUBSUB] Sending %d jobs to scheduler via reload', len(jobs))
-        for _dbg_j in jobs:
-            logger.info('[DEBUG-DEMO-PUBSUB] reload job id=%s name=%s service=%s', _dbg_j.get('id'), _dbg_j.get('name'), _dbg_j.get('service'))
-
         self.invoke('reload', {'jobs': jobs}, needs_reply=True)
 
 # ################################################################################################################################
