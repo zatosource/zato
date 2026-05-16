@@ -1157,8 +1157,8 @@ class DemoPubSubPublisher(Service):
 
     def handle(self):
         now = datetime.now(timezone.utc).strftime('%H:%M:%S')
-        self.pubsub.publish('demo.messages', {'timestamp': now})
-        self.logger.info('\\033[36m[pub/sub demo]\\033[0m Published 1 message to demo.messages at %s', now)
+        self.publish('demo.messages', {'timestamp': now})
+        self.logger.info('Published 1 message to demo.messages at %s', now)
 
 # ################################################################################################################################
 # ################################################################################################################################
