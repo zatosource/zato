@@ -174,7 +174,7 @@ def zato_server() -> 'any_':
     # .. so they get deployed during startup ..
     pickup_directory = os.path.join(server_directory, 'pickup', 'incoming', 'services')
     destination = os.path.join(pickup_directory, 'pubsub_test_services.py')
-    shutil.copy2(_services_source, destination)
+    _ = shutil.copy2(_services_source, destination)
 
     print(f'[TIMING] copied test services to {destination}')
 
