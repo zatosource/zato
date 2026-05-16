@@ -662,7 +662,7 @@ class ServiceStore:
         service.user_config = self.server.user_config
         service.time = self.server.time_util
         service.security = SecurityFacade(service.server)
-        service.pubsub = PubSubFacade(service.server)
+        service.pubsub = PubSubFacade(service.server, service.name)
 
         # .. and return everything to our caller.
         return service, is_active

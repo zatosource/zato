@@ -1,0 +1,368 @@
+
+if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
+if (typeof $.fn.zato.pubsub === 'undefined') { $.fn.zato.pubsub = {}; }
+$.fn.zato.pubsub.dashboard = {};
+
+$.fn.zato.pubsub.dashboard.config = {
+    cluster_id: '1',
+    default_time_range: 0
+};
+
+// ////////////////////////////////////////////////////////////////////////////
+// Theme
+// ////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.pubsub.dashboard.theme = {
+    name: 'Pub/sub',
+    accent:       '#10b981',
+    accent_light: '#6ee7b7',
+    accent_dark:  '#059669',
+    spark_color:  '#34d399',
+    spark_warn:   '#fbbf24',
+    spark_err:    '#f87171',
+    tile_topics:      '#10b981',
+    tile_publishers:  '#34d399',
+    tile_subscribers: '#a78bfa',
+    tile_pub_rate:    '#60a5fa',
+    tile_delivery:    '#8944AB',
+    pill_bg:        '#065f46',
+    pill_color:     '#d1fae5',
+    pill_link_bg:   '#064e3b',
+    pill_link_color: '#a7f3d0',
+    pill_links: [],
+    row_recency_color: '16, 185, 129'
+};
+
+// ////////////////////////////////////////////////////////////////////////////
+// Series palette
+// ////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.pubsub.dashboard.series_colors = {};
+
+$.fn.zato.pubsub.dashboard.series_labels = {
+    'published': 'Published',
+    'delivered': 'Delivered'
+};
+
+// ////////////////////////////////////////////////////////////////////////////
+// Kit aliases
+// ////////////////////////////////////////////////////////////////////////////
+
+(function($) {
+    var kit = $.fn.zato.dashboard_kit;
+    var dash = $.fn.zato.pubsub.dashboard;
+
+    dash.series_colors['published'] = dash.theme.tile_pub_rate;
+    dash.series_colors['delivered'] = dash.theme.tile_delivery;
+
+    dash._spark_buffers = kit.spark.create({
+        keys: ['topics', 'publishers', 'subscribers', 'pub_rate', 'delivery_rate', 'depth'],
+        window_ms: 60 * 60 * 1000,
+        bucket_count: 60
+    });
+
+    dash._prev_delivery_rate = null;
+
+    // ////////////////////////////////////////////////////////////////////////
+    // Render
+    // ////////////////////////////////////////////////////////////////////////
+
+    dash._format_age = function(seconds) {
+        if (seconds <= 0) return '-';
+        return kit.format_compact_duration(seconds);
+    };
+
+    dash._backlog_trend_html = function(current, previous) {
+        if (previous === null) return '';
+        if (current > previous) return 'rising';
+        if (current < previous) return 'falling';
+        return 'flat';
+    };
+
+    dash.render = function(data) {
+
+        var topic_count = data.topic_count;
+        var total_publishers = data.total_publishers;
+        var total_subscribers = data.total_subscribers;
+        var total_depth = data.total_depth;
+        var oldest_unacked_age = data.oldest_unacked_age_seconds;
+        var delivery_rate = data.delivery_rate_per_min;
+        var pub_rate = 0;
+
+        // Compute aggregate pub rate from per-topic rates ..
+        var topics = data.topics;
+        for (var pubIdx = 0; pubIdx < topics.length; pubIdx++) {
+            pub_rate += topics[pubIdx].pub_rate;
+        }
+
+        // .. compute pub rate per minute for display ..
+        var pub_rate_per_minute = pub_rate * 60;
+
+        kit.set_number($('#stat-topics'), topic_count);
+        kit.set_number($('#stat-publishers'), total_publishers);
+        kit.set_number($('#stat-subscribers'), total_subscribers);
+        kit.set_number($('#stat-pub-rate'), pub_rate_per_minute);
+        kit.set_number($('#stat-delivery-rate'), delivery_rate);
+        kit.set_number($('#stat-depth'), total_depth);
+
+        // .. set the backlog trend sublabel on the delivery rate tile ..
+        var trend_html = dash._backlog_trend_html(delivery_rate, dash._prev_delivery_rate);
+        $('#stat-delivery-rate-sublabel').html(trend_html);
+        dash._prev_delivery_rate = delivery_rate;
+
+        dash._spark_buffers.seed_flat({
+            topics: topic_count,
+            publishers: total_publishers,
+            subscribers: total_subscribers,
+            pub_rate: pub_rate_per_minute,
+            delivery_rate: delivery_rate,
+            depth: total_depth
+        });
+
+        dash._spark_buffers.push('topics', topic_count);
+        dash._spark_buffers.push('publishers', total_publishers);
+        dash._spark_buffers.push('subscribers', total_subscribers);
+        dash._spark_buffers.push('pub_rate', pub_rate_per_minute);
+        dash._spark_buffers.push('delivery_rate', delivery_rate);
+        dash._spark_buffers.push('depth', total_depth);
+
+        // Render sparklines for all tiles ..
+        var spark_base = {height: 36, dot_radius: 3.5, dot_style: 'filled_halo'};
+
+        var tile_specs = [
+            {selector: '#spark-topics',         key: 'topics',         options: $.extend({}, spark_base, {color: dash.theme.tile_topics,      dot_color: dash.theme.tile_topics})},
+            {selector: '#spark-publishers',     key: 'publishers',    options: $.extend({}, spark_base, {color: dash.theme.tile_topics,      dot_color: dash.theme.tile_topics})},
+            {selector: '#spark-subscribers',     key: 'subscribers',    options: $.extend({}, spark_base, {color: dash.theme.tile_topics,      dot_color: dash.theme.tile_topics})},
+            {selector: '#spark-pub-rate',        key: 'pub_rate',       options: $.extend({}, spark_base, {color: dash.theme.tile_pub_rate,   dot_color: dash.theme.tile_pub_rate})},
+            {selector: '#spark-delivery-rate',   key: 'delivery_rate',  options: $.extend({}, spark_base, {color: dash.theme.tile_delivery,   dot_color: dash.theme.tile_delivery})},
+            {selector: '#spark-depth',           key: 'depth',          options: $.extend({}, spark_base, {color: dash.theme.spark_warn,      dot_color: dash.theme.spark_warn})}
+        ];
+
+        for (var tileIdx = 0; tileIdx < tile_specs.length; tileIdx++) {
+            var spec = tile_specs[tileIdx];
+            var values = dash._spark_buffers.values(spec.key);
+            kit.sparkline.render(spec.selector, values, spec.options);
+        }
+
+        if (dash._stat_tile_handle) {
+            dash._stat_tile_handle.bind();
+        }
+
+        // Build the topic table ..
+        var topic_body = $('#dashboard-topic-table-body');
+        topic_body.empty();
+        $('#dashboard-topics-count').text(topics.length);
+
+        for (var topicIdx = 0; topicIdx < topics.length; topicIdx++) {
+            var topic = topics[topicIdx];
+            var topic_dot_class = topic.is_active ? 'dashboard-dot-ok' : 'dashboard-dot-inactive';
+
+            var topic_row = document.createElement('tr');
+
+            var topic_dot_cell = document.createElement('td');
+            topic_dot_cell.className = 'dashboard-th-dot';
+            var topic_dot_span = document.createElement('span');
+            topic_dot_span.className = 'dashboard-dot ' + topic_dot_class;
+            topic_dot_cell.appendChild(topic_dot_span);
+            topic_row.appendChild(topic_dot_cell);
+
+            var topic_name_cell = document.createElement('td');
+            topic_name_cell.textContent = topic.name;
+            topic_row.appendChild(topic_name_cell);
+
+            var topic_sub_cell = document.createElement('td');
+            topic_sub_cell.textContent = kit.format_number_compact(topic.subscriber_count);
+            topic_row.appendChild(topic_sub_cell);
+
+            var topic_depth_cell = document.createElement('td');
+            topic_depth_cell.textContent = kit.format_number_compact(topic.depth);
+            topic_row.appendChild(topic_depth_cell);
+
+            var topic_rate_cell = document.createElement('td');
+            topic_rate_cell.textContent = kit.format_number_compact(topic.pub_rate) + '/s';
+            topic_row.appendChild(topic_rate_cell);
+
+            topic_body.append(topic_row);
+        }
+
+        // .. build the queue table ..
+        var queues = data.queues;
+        var queue_body = $('#dashboard-queue-table-body');
+        queue_body.empty();
+        $('#dashboard-queues-count').text(queues.length);
+
+        for (var queueIdx = 0; queueIdx < queues.length; queueIdx++) {
+            var queue = queues[queueIdx];
+            var queue_dot_class = queue.depth > 0 ? 'dashboard-dot-warn' : 'dashboard-dot-ok';
+
+            var queue_age_ms = queue.oldest_msg_age_seconds * 1000;
+            var queue_age_label = queue.oldest_msg_age_seconds > 0 ? kit.format_duration_ms(queue_age_ms) : '-';
+
+            var queue_row = document.createElement('tr');
+
+            var queue_dot_cell = document.createElement('td');
+            queue_dot_cell.className = 'dashboard-th-dot';
+            var queue_dot_span = document.createElement('span');
+            queue_dot_span.className = 'dashboard-dot ' + queue_dot_class;
+            queue_dot_cell.appendChild(queue_dot_span);
+            queue_row.appendChild(queue_dot_cell);
+
+            var queue_name_cell = document.createElement('td');
+            queue_name_cell.textContent = queue.name;
+            queue_row.appendChild(queue_name_cell);
+
+            var queue_depth_cell = document.createElement('td');
+            queue_depth_cell.textContent = kit.format_number_compact(queue.depth);
+            queue_row.appendChild(queue_depth_cell);
+
+            var queue_age_cell = document.createElement('td');
+            queue_age_cell.textContent = queue_age_label;
+            queue_row.appendChild(queue_age_cell);
+
+            var queue_rate_cell = document.createElement('td');
+            queue_rate_cell.textContent = kit.format_number_compact(queue.delivery_rate) + '/s';
+            queue_row.appendChild(queue_rate_cell);
+
+            queue_body.append(queue_row);
+        }
+
+        // .. flatten the timeline into records the kit expects ..
+        var timeline = data.history_timeline;
+        var records = [];
+        var publishes = timeline.publishes;
+        var deliveries = timeline.deliveries;
+
+        for (var publishIdx = 0; publishIdx < publishes.length; publishIdx++) {
+            records.push({ts: publishes[publishIdx].ts, series: 'published', count: publishes[publishIdx].count});
+        }
+
+        for (var deliveryIdx = 0; deliveryIdx < deliveries.length; deliveryIdx++) {
+            records.push({ts: deliveries[deliveryIdx].ts, series: 'delivered', count: deliveries[deliveryIdx].count});
+        }
+
+        console.log('[pubsub] pub: ' + publishes.map(function(p) { return p.count; }).join(', '));
+        console.log('[pubsub] del: ' + deliveries.map(function(d) { return d.count; }).join(', '));
+
+        if (dash._chart_handle) {
+            dash._chart_handle.render(records);
+        }
+
+        // .. and lock table column widths.
+        kit.lock_table_widths('#dashboard-topic-table');
+        kit.lock_table_widths('#dashboard-queue-table');
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+    // Poll
+    // ////////////////////////////////////////////////////////////////////////
+
+    dash.poll = function() {
+        $.ajax({
+            url: dash.config.base_url + 'poll/',
+            type: 'POST',
+            data: {},
+            headers: {'X-CSRFToken': $.cookie('csrftoken')},
+            success: function(data) {
+                if (typeof data === 'string') {
+                    try { data = JSON.parse(data); } catch(parse_error) { return; }
+                }
+                dash.render(data);
+            },
+            error: function(xhr, status, err) {
+                console.log('[pubsub] poll error:', status);
+            }
+        });
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+    // Init
+    // ////////////////////////////////////////////////////////////////////////
+
+    dash.init = function(initial_data) {
+
+        // Main chart via kit
+        dash._chart_handle = kit.main_chart.init({
+            container: '#dashboard-bar-chart',
+            legend: '#dashboard-chart-legend',
+            count_pill: '#dashboard-data-count',
+            chart_type_toggle: '#dashboard-chart-type-toggle',
+            series_keys: ['published', 'delivered'],
+            palette: dash.series_colors,
+            labels: dash.series_labels,
+            item_noun_singular: 'message',
+            item_noun_plural: 'messages',
+            range_names: {5: '5 min', 15: '15 min', 30: '30 min', 60: '1 hour', 360: '6 hours', 1440: 'Today'},
+            bucket_ts: function(record) { return record.ts; },
+            series_key: function(record) { return record.series; },
+            hidden_storage_key: 'zato_pubsub_hidden_series',
+            bars_storage_key: 'zato_pubsub_show_bars'
+        });
+
+        // Time range
+        var stored_range = parseInt(kit.storage_get('zato_pubsub_time_range'), 10);
+        dash._time_range_minutes = isNaN(stored_range) ? dash.config.default_time_range : stored_range;
+        dash._chart_handle.set_time_range_minutes(dash._time_range_minutes);
+
+        var menu = $('#dashboard-time-range-menu');
+        var pill = $('#dashboard-data-count');
+        menu.find('.dashboard-time-range-option').removeClass('dashboard-time-range-active');
+        menu.find('.dashboard-time-range-option[data-minutes="' + dash._time_range_minutes + '"]').addClass('dashboard-time-range-active');
+
+        pill.on('click', function(event) {
+            event.stopPropagation();
+            menu.toggleClass('dashboard-time-range-menu-open');
+        });
+
+        menu.on('click', '.dashboard-time-range-option', function(event) {
+            event.stopPropagation();
+            var minutes = parseInt($(this).data('minutes'), 10);
+            dash._time_range_minutes = minutes;
+            kit.storage_set('zato_pubsub_time_range', String(minutes));
+            dash._chart_handle.set_time_range_minutes(minutes);
+            menu.find('.dashboard-time-range-option').removeClass('dashboard-time-range-active');
+            $(this).addClass('dashboard-time-range-active');
+            menu.removeClass('dashboard-time-range-menu-open');
+            dash._chart_handle.redraw();
+        });
+
+        $(document).on('click', function() {
+            menu.removeClass('dashboard-time-range-menu-open');
+        });
+
+        // Stat tile hover
+        dash._stat_tile_handle = kit.stat_tile.init({
+            tiles: [
+                {sparkline_selector: '#spark-topics', buffer_key: 'topics', label: 'Topics', color: dash.theme.tile_topics},
+                {sparkline_selector: '#spark-publishers', buffer_key: 'publishers', label: 'Publishers', color: dash.theme.tile_topics},
+                {sparkline_selector: '#spark-subscribers', buffer_key: 'subscribers', label: 'Subscribers', color: dash.theme.tile_topics},
+                {sparkline_selector: '#spark-pub-rate', buffer_key: 'pub_rate', label: 'Publishes/m', color: dash.theme.tile_pub_rate},
+                {sparkline_selector: '#spark-delivery-rate', buffer_key: 'delivery_rate', label: 'Deliveries/m', color: dash.theme.tile_delivery},
+                {sparkline_selector: '#spark-depth', buffer_key: 'depth', label: 'Total depth', color: dash.theme.spark_warn}
+            ],
+            get_buffer: function(key) {
+                return dash._spark_buffers.data(key);
+            }
+        });
+
+        dash.render(initial_data);
+        kit.countdown.start();
+        kit.reveal();
+
+        dash._auto_refresh = kit.auto_refresh.init({
+            pill: '#dashboard-refresh-pill',
+            menu: '#dashboard-refresh-menu',
+            storage_key: 'zato_pubsub_refresh',
+            url_param: 'refresh',
+            default_seconds: 5,
+            on_tick: dash.poll
+        });
+
+        kit.url_state.on_pop(function(params) {
+            var refresh_val = parseInt(params.get('refresh'), 10);
+            if (!isNaN(refresh_val)) {
+                dash._auto_refresh.set_seconds(refresh_val);
+            }
+        });
+    };
+
+})(jQuery);

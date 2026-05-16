@@ -30,8 +30,8 @@ from zato.common.util.cli import read_stdin_data
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# Default timeout = 30 days in seconds
-Default_Service_Wait_Timeout = 30 * 24 * 60 * 60  # 30 days
+# Default timeout for waiting for services to become available
+Default_Service_Wait_Timeout = 10
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -284,8 +284,9 @@ def wait_for_services(
     stdin_data:'strnone'=None,
     timeout_seconds:'int'=Default_Service_Wait_Timeout,
     log_after_seconds:'int'=3
-) -> 'bool_':
+) -> 'set':
     """ Waits for all services defined in the configuration to be available in the database.
+    Returns an empty set on success, or the set of missing service names on timeout/error.
     """
     logger.info('wait_for_services called with server_dir=%s timeout=%s', server_dir, timeout_seconds)
 
@@ -310,9 +311,8 @@ def wait_for_services(
             if service := item.get('service'):
                 service_names.add(service)
 
-    # If no services to check, return True immediately
     if not service_names:
-        return True
+        return set()
 
     service_count = len(service_names)
     service_label = 'service' if service_count == 1 else 'services'
@@ -323,8 +323,9 @@ def wait_for_services(
     should_log = False
     last_log_time = utcnow()
 
+    missing_services = set(service_names)
+
     try:
-        # Keep checking until all services are found or timeout is reached
         while True:
             current_time = utcnow()
 
@@ -333,7 +334,7 @@ def wait_for_services(
             # Ensure both are float for comparison
             if elapsed_seconds > float(timeout_seconds):
                 logger.warning(f'Timeout of {timeout_seconds} seconds reached while waiting for {service_label}')
-                return False
+                return missing_services
 
             # Determine if we should start logging based on elapsed time
             # Ensure both are float for comparison
@@ -355,7 +356,7 @@ def wait_for_services(
             # If no services are missing, return success
             if not missing_services:
                 logger.info(f'All required {service_label} found in the database')
-                return True
+                return set()
 
             # Log missing services and wait before retrying (but not too frequently)
             missing_count = len(missing_services)
@@ -369,7 +370,7 @@ def wait_for_services(
 
     except Exception:
         logger.error(f'Exception while waiting for services: {format_exc()}')
-        return False
+        return missing_services
 
     finally:
         # Always close the session

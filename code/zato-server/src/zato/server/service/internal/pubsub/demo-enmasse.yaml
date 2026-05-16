@@ -10,8 +10,8 @@ security:
     password: demo.pubsub.subscriber.secret
 
 pubsub_topic:
-  - name: demo.events
-    description: Demo pub/sub topic
+  - name: demo.messages
+    description: Demo messages
 
 pubsub_permission:
   - security: demo_pubsub.publisher
@@ -26,6 +26,13 @@ pubsub_subscription:
   - security: demo_pubsub.subscriber
     delivery_type: push
     push_type: service
-    push_service_name: demo.pubsub.subscriber
+    push_service_name: demo.echo
     topic_list:
-      - demo.events
+      - demo.messages
+
+scheduler:
+  - name: demo.pubsub
+    service: demo.pubsub.publisher
+    job_type: interval_based
+    seconds: 1
+    is_active: true

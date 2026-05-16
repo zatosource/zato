@@ -1,7 +1,7 @@
 
 /* Dashboard kit - root namespace and shared helpers.
    Provides formatters, time helpers and a small utility registry used
-   by every component. Nothing in here knows about the scheduler, EDA,
+   by every component. Nothing in here knows about the scheduler, pub/sub,
    or any other concrete dashboard. */
 
 if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
