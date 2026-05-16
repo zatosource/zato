@@ -61,6 +61,8 @@ pub struct SchedulerShared {
     pub clock_jump_threshold_ms: i64,
     /// Window (ms) for coalescing nearly-due jobs into one tick.
     pub coalesce_window_ms: i64,
+    /// Channel for publishing fire events directly (used by forced execute).
+    pub fire_sender: Mutex<Option<std::sync::mpsc::Sender<FireBatch>>>,
 }
 
 impl Default for SchedulerShared {
@@ -79,6 +81,7 @@ impl SchedulerShared {
             stop_flag: AtomicBool::new(false),
             clock_jump_threshold_ms: DEFAULT_CLOCK_JUMP_THRESHOLD_MS,
             coalesce_window_ms: DEFAULT_COALESCE_WINDOW_MS,
+            fire_sender: Mutex::new(None),
         }
     }
 }
