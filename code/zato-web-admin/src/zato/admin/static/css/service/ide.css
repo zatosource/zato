@@ -308,8 +308,8 @@ td.data-input-field-name {
 /*   IDE-specific invoker overrides    */
 /* *********************************** */
 
-.invoker-tr,
-.invoker-tr * {
+#action-area .invoker-tr,
+#action-area .invoker-tr * {
     overflow: visible !important;
 }
 
