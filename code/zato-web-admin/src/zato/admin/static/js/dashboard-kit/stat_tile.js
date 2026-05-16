@@ -25,6 +25,11 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                                buffer via config.get_buffer(key)
            label:              label shown in the tooltip row
            color:              marker + dot colour
+           exclude_from_hover: (optional, boolean) if true, the tile's
+                               sparkline still shows a hover marker but
+                               its value row is omitted from the tooltip.
+                               Useful for gauge-style tiles (e.g. age)
+                               whose scale differs from the other tiles.
          get_buffer(key):      returns an array of {ts, value} objects,
                                in chronological order.
          tile_container:       CSS class used to locate the enclosing
@@ -134,12 +139,19 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                     }
                 }
 
+                // Show the marker dot on the sparkline regardless ..
+                if (mapped_index >= 0 && entry) {
+                    ns.sparkline.show_marker(tile.sparkline_selector, mapped_index, tile.color);
+                }
+
+                // .. but skip this tile's row in the tooltip if it is a gauge.
+                if (tile.exclude_from_hover) {
+                    continue;
+                }
+
                 var value_text;
                 if (mapped_index >= 0) {
                     value_text = fmt_full(buffer[mapped_index].value);
-                    if (entry) {
-                        ns.sparkline.show_marker(tile.sparkline_selector, mapped_index, tile.color);
-                    }
                 } else {
                     value_text = '\u2013';
                 }

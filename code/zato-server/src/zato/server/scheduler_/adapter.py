@@ -25,6 +25,7 @@ class SchedulerODBAdapter:
 
         with closing(self.odb.session()) as session:
             jobs = session.query(Job).filter_by(cluster_id=self.cluster_id).all()
+
             result = {}
             for job in jobs:
                 entry = {

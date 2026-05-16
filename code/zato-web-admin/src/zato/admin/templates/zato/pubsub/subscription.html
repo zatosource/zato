@@ -437,7 +437,7 @@
 
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.pubsub.subscription.create()">Create a new pub/sub subscription</a> |
-            <a href="javascript:$.fn.zato.eda.import_demo_config()" class="common">Import demo config</a>
+            <a href="javascript:$.fn.zato.pubsub.import_demo_config()" class="common">Import demo config</a>
         </div>
 
             <table class="zato-table" id="data-table">
@@ -498,7 +498,7 @@
                         </td>
                         <td>{{ item.topic_link_list|safe }}</td>
                         <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
-                        <!-- <td style="text-align:center"><a href="{% url 'eda-dashboard' %}?cluster={{ cluster_id|default:'1' }}">Queue</a></td> -->
+                        {% comment %}<td style="text-align:center"><a href="{% url 'pubsub-dashboard' %}">Queue</a></td>{% endcomment %}
 
                         <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>

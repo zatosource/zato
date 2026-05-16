@@ -1017,7 +1017,7 @@ class Service:
     def publish(
         self,
         topic_name:'str',
-        data:'any_',
+        data:'any_'='',
         *,
         priority:'int'=_default_priority,
         expiration:'int'=_default_expiration,
@@ -1201,7 +1201,7 @@ class Service:
         service.static_config = server.static_config
         service.time = server.time_util
         service.security = SecurityFacade(service.server)
-        service.pubsub = PubSubFacade(service.server)
+        service.pubsub = PubSubFacade(service.server, service.name)
         service.metrics = ServiceMetrics(service)
 
         if channel_params:

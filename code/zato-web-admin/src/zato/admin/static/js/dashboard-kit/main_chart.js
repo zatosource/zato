@@ -8,7 +8,7 @@
      - a "chart type" toggle and a linked "N items" pill
 
    The caller supplies the palette/labels/series keys so the same code
-   drives scheduler outcomes, EDA per-topic counts, and whatever else
+   drives scheduler outcomes, pub/sub per-topic counts, and whatever else
    a future dashboard needs. */
 
 if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
@@ -64,9 +64,12 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
          series_key(record):   returns the record's series key
          hidden_storage_key:   localStorage key for the hidden-series map
          bars_storage_key:     localStorage key for the bar/line mode flag
+         series_style:         optional { <key>: 'stepped_area' } - series not
+                               listed default to spline rendering
          zoom_bucket_state:    optional { get_buckets(), set_buckets(n) }
                                to share zoom with another component */
     ns.main_chart.init = function(config) {
+        var series_style = config.series_style || {};
         var state = {
             last_timeline: null,
             hidden_storage_key: config.hidden_storage_key,
@@ -127,8 +130,13 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             var name_prefix = range_minutes > 0 && range_names[range_minutes]
                 ? range_names[range_minutes]
                 : 'All';
-            $count.text(name_prefix + ' \u00b7 ' + count_label(filtered.length));
-            $count.attr('title', name_prefix + ' \u00b7 ' + count_label_full(filtered.length));
+            var total_count = 0;
+            for (var ci = 0; ci < filtered.length; ci++) {
+                var rc = filtered[ci].count;
+                total_count += (rc !== undefined ? rc : 1);
+            }
+            $count.text(name_prefix + ' \u00b7 ' + count_label(total_count));
+            $count.attr('title', name_prefix + ' \u00b7 ' + count_label_full(total_count));
 
             var chart_width = $container.width() || 800;
             var series_keys = config.series_keys;
@@ -152,7 +160,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             }
 
             var min_time = Math.min.apply(null, timestamps);
-            var max_time = Date.now();
+            var max_time = Math.max.apply(null, timestamps);
             var time_range = max_time - min_time;
             if (time_range === 0) {
                 time_range = 3600000;
@@ -166,6 +174,22 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             var bucket_count = state.zoom_bucket_count > 0
                 ? Math.min(MAX_BUCKETS, Math.max(MIN_BUCKETS, state.zoom_bucket_count))
                 : auto_bucket_count;
+
+            if (timestamps.length >= 2) {
+                var sorted_ts = timestamps.slice().sort(function(a, b) { return a - b; });
+                var min_gap = Infinity;
+                for (var gi = 1; gi < sorted_ts.length; gi++) {
+                    var gap = sorted_ts[gi] - sorted_ts[gi - 1];
+                    if (gap > 0 && gap < min_gap) min_gap = gap;
+                }
+                if (min_gap < Infinity) {
+                    var data_buckets = Math.max(1, Math.round(time_range / min_gap)) + 1;
+                    if (data_buckets > bucket_count) {
+                        bucket_count = Math.min(MAX_BUCKETS, data_buckets);
+                    }
+                }
+            }
+
             var bucket_size = time_range / bucket_count;
             var buckets = [];
             for (var bi = 0; bi < bucket_count; bi++) {
@@ -186,7 +210,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 if (target_bucket >= bucket_count) target_bucket = bucket_count - 1;
                 if (target_bucket < 0) target_bucket = 0;
                 if (buckets[target_bucket][skey] !== undefined) {
-                    buckets[target_bucket][skey]++;
+                    var record_count = record.count !== undefined ? record.count : 1;
+                    buckets[target_bucket][skey] += record_count;
                 }
             }
 
@@ -301,8 +326,51 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             } else {
                 var edge_left = PADDING_LEFT;
                 var edge_right = PADDING_LEFT + draw_width;
-                for (var sl = 0; sl < visible_keys.length; sl++) {
-                    var skey2 = visible_keys[sl];
+
+                var bg_keys = [];
+                var fg_keys = [];
+                for (var split_i = 0; split_i < visible_keys.length; split_i++) {
+                    if (series_style[visible_keys[split_i]] === 'stepped_area') {
+                        bg_keys.push(visible_keys[split_i]);
+                    } else {
+                        fg_keys.push(visible_keys[split_i]);
+                    }
+                }
+
+                for (var sa = 0; sa < bg_keys.length; sa++) {
+                    var sa_key = bg_keys[sa];
+                    var sa_pts = [];
+                    for (var sa_i = 0; sa_i < bucket_count; sa_i++) {
+                        var sa_x = PADDING_LEFT + sa_i * bucket_slot_width;
+                        var sa_v = buckets[sa_i][sa_key];
+                        var sa_y = sa_v > 0 ? baseline_y - Math.max(2, (sa_v / max_stack) * draw_height) : baseline_y;
+                        sa_pts.push({x: sa_x, y: sa_y, val: sa_v});
+                    }
+
+                    layer_points[sa_key] = [];
+                    for (var sa_h = 0; sa_h < bucket_count; sa_h++) {
+                        var sa_hv = buckets[sa_h][sa_key];
+                        var sa_hy = sa_hv > 0 ? baseline_y - (sa_hv / max_stack) * draw_height : baseline_y;
+                        layer_points[sa_key].push({x: sa_pts[sa_h].x + bucket_slot_width * 0.5, y: sa_hy, val: sa_hv});
+                    }
+
+                    var step_path = 'M' + sa_pts[0].x.toFixed(1) + ',' + sa_pts[0].y.toFixed(1);
+                    for (var sa_s = 1; sa_s < sa_pts.length; sa_s++) {
+                        step_path += ' H' + sa_pts[sa_s].x.toFixed(1);
+                        step_path += ' V' + sa_pts[sa_s].y.toFixed(1);
+                    }
+                    step_path += ' H' + (PADDING_LEFT + draw_width).toFixed(1);
+
+                    var step_fill = step_path +
+                        ' V' + baseline_y.toFixed(1) +
+                        ' H' + PADDING_LEFT.toFixed(1) + ' Z';
+
+                    svg += '<path d="' + step_fill + '" fill="' + (palette[sa_key] || '#888') + '" fill-opacity="0.10" />';
+                    svg += '<path d="' + step_path + '" fill="none" stroke="' + (palette[sa_key] || '#888') + '" stroke-width="1.2" stroke-opacity="0.45" />';
+                }
+
+                for (var sl = 0; sl < fg_keys.length; sl++) {
+                    var skey2 = fg_keys[sl];
                     var data_pts = [];
                     for (var di = 0; di < bucket_count; di++) {
                         var dx = PADDING_LEFT + (di + 0.5) * bucket_slot_width;
