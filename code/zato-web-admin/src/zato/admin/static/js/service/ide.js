@@ -249,35 +249,37 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         let startY = 0;
         let startHeight = 0;
 
-        dataRequest.addEventListener('mousemove', function(e) {
+        let invokerArea = dataRequest.closest('.invoker-area');
+
+        invokerArea.addEventListener('mousemove', function(e) {
             if (isResizingTextarea) return;
 
             let rect = dataRequest.getBoundingClientRect();
             let bottomEdge = rect.bottom;
             let mouseY = e.clientY;
 
-            if (Math.abs(mouseY - bottomEdge) < 10) {
-                dataRequest.style.cursor = 'ns-resize';
+            if (mouseY >= bottomEdge - 6 && mouseY <= bottomEdge + 10) {
+                invokerArea.style.cursor = 'ns-resize';
                 resizeIndicator.style.color = '#666';
             } else {
-                dataRequest.style.cursor = '';
+                invokerArea.style.cursor = '';
                 resizeIndicator.style.color = '#999';
             }
         });
 
-        dataRequest.addEventListener('mouseleave', function() {
+        invokerArea.addEventListener('mouseleave', function() {
             if (!isResizingTextarea) {
-                dataRequest.style.cursor = '';
+                invokerArea.style.cursor = '';
                 resizeIndicator.style.color = '#999';
             }
         });
 
-        dataRequest.addEventListener('mousedown', function(e) {
+        invokerArea.addEventListener('mousedown', function(e) {
             let rect = dataRequest.getBoundingClientRect();
             let bottomEdge = rect.bottom;
             let mouseY = e.clientY;
 
-            if (Math.abs(mouseY - bottomEdge) < 10) {
+            if (mouseY >= bottomEdge - 6 && mouseY <= bottomEdge + 10) {
                 isResizingTextarea = true;
                 startY = e.clientY;
                 startHeight = dataRequest.offsetHeight;
