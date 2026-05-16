@@ -17,6 +17,7 @@ from redis.exceptions import ResponseError
 
 # Zato
 from zato.common.api import PubSub
+from zato.common.marshal_.api import Model
 from zato.common.util.api import new_msg_id, utcnow
 from zato.server.metrics import zato_pubsub_messages_delivered_total, zato_pubsub_messages_published_total
 
@@ -122,8 +123,17 @@ class RedisPubSubBackend:
         expiration_time_iso = expiration_time.isoformat()
 
         # .. serialize data ..
+        data_class = ''
+
         if isinstance(data, str):
             serialized_data = data
+
+        elif isinstance(data, Model):
+            data_module = data.__class__.__module__
+            data_class_name = data.__class__.__qualname__
+            data_class = f'{data_module}.{data_class_name}'
+            serialized_data = data.to_json()
+
         else:
             serialized_data = json.dumps(data)
 
@@ -140,6 +150,9 @@ class RedisPubSubBackend:
             'expiration': str(expiration),
             'expiration_time_iso': expiration_time_iso,
         }
+
+        if data_class:
+            message['data_class'] = data_class
 
         if correl_id:
             message['correl_id'] = correl_id
