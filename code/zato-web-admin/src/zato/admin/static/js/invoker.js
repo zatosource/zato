@@ -177,7 +177,12 @@ $.fn.zato.invoker.on_form_ended_common_impl = function(
 
     }
     else {
-        responseData = $.fn.zato.to_json(response.data[0].zato_env);
+        if (response.data) {
+            responseData = $.fn.zato.to_json(response.data[0].zato_env);
+        }
+        else {
+            responseData = '';
+        }
     }
 
     $('#result-header').text(status);

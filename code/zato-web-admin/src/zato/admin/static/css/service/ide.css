@@ -283,6 +283,29 @@ td.data-input-field-name {
 }
 
 /* *********************************** */
+/*   Response panel                    */
+/* *********************************** */
+
+.response-panel {
+    border: 1px solid #dde1e6;
+    border-radius: 6px;
+    background: #f8f9fa;
+    padding: 6px;
+    margin-top: 4px;
+}
+
+.response-panel #data-response {
+    width: 100%;
+    border: none;
+    border-radius: 4px;
+    background: #fff;
+    font-family: Zato_IDE_Font, monospace;
+    font-size: 1rem;
+    resize: none;
+    box-sizing: border-box;
+}
+
+/* *********************************** */
 /*   IDE-specific invoker overrides    */
 /* *********************************** */
 

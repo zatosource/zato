@@ -213,7 +213,7 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         let dataResponseTop = dataResponse.getBoundingClientRect().top;
         let actionAreaTop = actionArea.getBoundingClientRect().top;
         let offsetFromTop = dataResponseTop - actionAreaTop;
-        let availableHeight = actionAreaHeight - offsetFromTop - 10;
+        let availableHeight = actionAreaHeight - offsetFromTop - 16;
 
         if (availableHeight > 100) {
             dataResponse.style.height = availableHeight + 'px';
