@@ -1885,17 +1885,25 @@ class ConfigManager(_ConfigManagerBase):
         old_name = msg.old_topic_name
         new_name = msg.new_topic_name
 
+        # .. update in-memory pattern matcher ..
         matcher = self.server.pubsub_pattern_matcher
         for client_id in list(matcher._clients):
             matcher.rename_topic(client_id, old_name, new_name)
+
+        # .. rename Redis keys and subscriber sets ..
+        self.server.pubsub_redis.rename_topic(old_name, new_name)
 
     def on_config_event_PUBSUB_TOPIC_DELETE(self, msg:'bunch_') -> 'None':
 
         topic_name = msg.topic_name
 
+        # .. update in-memory pattern matcher ..
         matcher = self.server.pubsub_pattern_matcher
         for client_id in list(matcher._clients):
             matcher.delete_topic(client_id, topic_name)
+
+        # .. delete Redis keys, subscriber sets, and disk files ..
+        self.server.pubsub_redis.delete_topic(topic_name)
 
 # ################################################################################################################################
 

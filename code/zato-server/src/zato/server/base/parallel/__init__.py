@@ -1416,7 +1416,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             # .. set up the disk store for message payloads ..
             work_dir = self.work_dir
             disk_store_base_dir = os.path.join(work_dir, 'pubsub-messages')
-            disk_store = DiskMessageStore(disk_store_base_dir)
+            disk_store = DiskMessageStore(disk_store_base_dir, crypto_manager=self.crypto_manager)
 
             redis_conn = Redis(
                 host=redis_config.host,
