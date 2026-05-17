@@ -1286,6 +1286,7 @@ class PubSub:
         Default_Expiration = 86400 * 365  # 24 hours * 365 days = 1 year in seconds
         Default_Max_Len = 20_000_000
         Default_Max_Messages = 50
+        Data_Preview_Len = 100
 
     class Delivery:
 

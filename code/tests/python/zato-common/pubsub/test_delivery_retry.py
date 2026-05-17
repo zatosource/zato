@@ -7,6 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import shutil
+import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -15,6 +17,7 @@ from redis import Redis
 
 # Zato
 from zato.common.api import PubSub
+from zato.common.pubsub.disk_store import DiskMessageStore
 from zato.common.pubsub.redis_backend import RedisPubSubBackend
 from zato.server.base.parallel.delivery import RedisPushDelivery
 
@@ -28,7 +31,7 @@ if 0:
 # ################################################################################################################################
 
 _test_topic = 'test.delivery.topic'
-_test_sub_key = 'zpsk.test.delivery'
+_test_sub_key = 'sub.test.delivery'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,12 +60,16 @@ class TestDeliveryRetry(unittest.TestCase):
     def setUp(self) -> 'None':
         self.redis = Redis(host='localhost', port=6379, db=0, decode_responses=True)
         _ = self.redis.flushall()
-        self.backend = RedisPubSubBackend(self.redis)
+        self.test_dir = tempfile.mkdtemp()
+        self.disk_store = DiskMessageStore(self.test_dir)
+        self.backend = RedisPubSubBackend(self.redis, self.disk_store)
         self.server = _MockServer()
+        self.server.pubsub_redis = self.backend
 
     def tearDown(self) -> 'None':
         _ = self.redis.flushall()
         _ = self.redis.close()
+        shutil.rmtree(self.test_dir)
 
 # ################################################################################################################################
 
