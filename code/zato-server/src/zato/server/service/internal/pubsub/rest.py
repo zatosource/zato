@@ -8,13 +8,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from base64 import b64decode
-from contextlib import closing
 from http.client import BAD_REQUEST, UNAUTHORIZED
 from logging import getLogger
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.odb.model import Cluster, PubSubTopic
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.auth import check_basic_auth
 from zato.server.service import AsIs, Int, Service
@@ -198,20 +196,6 @@ class Publish(PubSubRESTService):
         if expiration < 1:
             expiration = 1
 
-        # Look up the topic's encrypt_at_rest setting ..
-        encrypt = True
-
-        with closing(self.odb.session()) as session:
-            cluster_id = self.server.cluster_id
-
-            topic_object = session.query(PubSubTopic).filter(
-                PubSubTopic.name == topic_name,
-                PubSubTopic.cluster_id == cluster_id,
-            ).first()
-
-            if topic_object:
-                encrypt = topic_object.encrypt_at_rest
-
         # .. publish to Redis ..
         result = self.server.pubsub_redis.publish(
             topic_name,
@@ -223,7 +207,6 @@ class Publish(PubSubRESTService):
             ext_client_id=ext_client_id,
             publisher=username,
             pub_time=pub_time,
-            encrypt=encrypt,
         )
 
         # Build response
