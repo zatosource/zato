@@ -1286,7 +1286,6 @@ class PubSubTopic(Base):
     name = Column(String(400), nullable=False)
     description = Column(Text, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
-    encrypt_at_rest = Column(Boolean, nullable=False, default=True)
     created = Column(DateTime, nullable=False, default=_utcnow)
     last_updated = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
 
