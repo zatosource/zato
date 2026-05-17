@@ -69,9 +69,10 @@ class RedisPubSubBackend:
     """ Redis Streams-based pub/sub backend.
     """
 
-    def __init__(self, redis_client:'Redis', disk_store:'DiskMessageStore') -> 'None':
+    def __init__(self, redis_client:'Redis', disk_store:'DiskMessageStore', server:'any_'=None) -> 'None':
         self.redis = redis_client
         self.disk_store = disk_store
+        self.server = server
 
 # ################################################################################################################################
 
@@ -105,7 +106,6 @@ class RedisPubSubBackend:
         ext_client_id:'strnone'=None,
         publisher:'strnone'=None,
         pub_time:'strnone'=None,
-        encrypt:'bool'=False,
     ) -> 'PublishResult':
         """ Publish a message to a topic stream.
         """
@@ -145,6 +145,7 @@ class RedisPubSubBackend:
             serialized_data = json.dumps(data)
 
         # .. store the payload on disk ..
+        encrypt = self.server.encrypt_at_rest if self.server else False
         data_ref = self.disk_store.store(message_id, topic_name, serialized_data, data_class, encrypt=encrypt)
 
         # .. build the message with a reference to the disk file ..

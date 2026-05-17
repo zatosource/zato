@@ -32,7 +32,7 @@ class GetList(AdminService):
     _filter_by = PubSubTopic.name, PubSubTopic.description,
 
     input = 'cluster_id', *query_parameters
-    output = 'id', 'name', 'is_active', 'encrypt_at_rest', '-description', '-publisher_count', '-subscriber_count'
+    output = 'id', 'name', 'is_active', '-description', '-publisher_count', '-subscriber_count'
 
     def get_data(self, session):
         result = self._search(pubsub_topic_list, session, self.request.input.cluster_id, None, False)
@@ -58,7 +58,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new pub/sub topic.
     """
-    input = 'name', 'is_active', '-cluster_id', '-description', '-encrypt_at_rest'
+    input = 'name', 'is_active', '-cluster_id', '-description'
     output = 'id', 'name'
 
     def handle(self):
@@ -87,10 +87,6 @@ class Create(AdminService):
                 topic.cluster = cluster
                 topic.description = input.description
 
-                encrypt_at_rest = input.get('encrypt_at_rest')
-                if encrypt_at_rest is not None:
-                    topic.encrypt_at_rest = encrypt_at_rest
-
                 set_instance_opaque_attrs(topic, input)
 
                 session.add(topic)
@@ -116,7 +112,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a pub/sub topic.
     """
-    input = 'name', 'is_active', '-id', '-cluster_id', '-description', '-encrypt_at_rest'
+    input = 'name', 'is_active', '-id', '-cluster_id', '-description'
     output = 'id', 'name'
 
     def handle(self):
@@ -155,10 +151,6 @@ class Edit(AdminService):
                 topic.name = input.name
                 topic.is_active = input.is_active
                 topic.description = input.description
-
-                encrypt_at_rest = input.get('encrypt_at_rest')
-                if encrypt_at_rest is not None:
-                    topic.encrypt_at_rest = encrypt_at_rest
 
                 session.add(topic)
                 session.commit()

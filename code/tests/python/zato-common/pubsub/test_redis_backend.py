@@ -348,19 +348,23 @@ class TestRedisPubSubBackend(unittest.TestCase):
 # ################################################################################################################################
 
     def test_publish_with_encrypt_writes_encrypted_payload(self) -> 'None':
-        """ Test that publishing with encrypt=True stores encrypted payload on disk.
+        """ Test that publishing with encrypt_at_rest=True stores encrypted payload on disk.
         """
 
-        # .. create a backend with a crypto-enabled disk store ..
+        # .. create a backend with a crypto-enabled disk store and a mock server ..
         crypto_manager = CryptoManager.from_secret_key(secret_key=Fernet.generate_key())
         encrypted_dir = tempfile.mkdtemp()
         encrypted_store = DiskMessageStore(encrypted_dir, crypto_manager=crypto_manager)
-        encrypted_backend = RedisPubSubBackend(self.redis_mock, encrypted_store)
+
+        mock_server = unittest.mock.MagicMock()
+        mock_server.encrypt_at_rest = True
+
+        encrypted_backend = RedisPubSubBackend(self.redis_mock, encrypted_store, server=mock_server)
 
         topic_name = 'test.topic'
         data = 'sensitive payload'
 
-        _ = encrypted_backend.publish(topic_name, data, publisher='testuser', encrypt=True)
+        _ = encrypted_backend.publish(topic_name, data, publisher='testuser')
 
         # .. get the data_ref from the xadd call ..
         call_args = self.redis_mock.xadd.call_args
