@@ -72,6 +72,9 @@ class DiskMessageStore:
             _ = file_handle.write(f'data_class={data_class}\n')
             _ = file_handle.write(f'{_data_key}={data}')
 
+        data_len = len(data)
+        logger.info('Stored message payload -> message_id:%s, topic:%s, path:%s, data_len:%s', message_id, topic_name, absolute_path, data_len)
+
         return data_ref
 
 # ################################################################################################################################
@@ -81,6 +84,8 @@ class DiskMessageStore:
         """
 
         absolute_path = self._ref_to_path(data_ref)
+
+        logger.info('Loading message payload -> data_ref:%s, path:%s', data_ref, absolute_path)
 
         with open(absolute_path, 'r', encoding='utf-8') as file_handle:
             content = file_handle.read()
@@ -105,6 +110,9 @@ class DiskMessageStore:
                 if line.startswith('data_class='):
                     data_class = line[len('data_class='):]
 
+        data_len = len(data)
+        logger.info('Loaded message payload -> data_ref:%s, path:%s, data_len:%s, data_class:%s', data_ref, absolute_path, data_len, data_class)
+
         out = LoadResult(data=data, data_class=data_class)
         return out
 
@@ -116,10 +124,12 @@ class DiskMessageStore:
 
         absolute_path = self._ref_to_path(data_ref)
 
+        logger.info('Deleting message payload -> data_ref:%s, path:%s', data_ref, absolute_path)
+
         try:
             os.remove(absolute_path)
         except FileNotFoundError:
-            logger.debug('Payload file already removed: %s', absolute_path)
+            logger.info('Payload file already removed -> data_ref:%s, path:%s', data_ref, absolute_path)
 
 # ################################################################################################################################
 
