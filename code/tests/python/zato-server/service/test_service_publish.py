@@ -7,12 +7,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import tempfile
+import shutil
 import unittest
 from dataclasses import dataclass
 from unittest.mock import MagicMock
 
 # Zato
 from zato.common.marshal_.api import Model
+from zato.common.pubsub.disk_store import DiskMessageStore
 from zato.common.pubsub.redis_backend import RedisPubSubBackend
 from zato.server.base.parallel.delivery import RedisPushDelivery
 
@@ -29,6 +32,12 @@ class CustomerRequest(Model):
 
 class TestServicePublishRoundTrip(unittest.TestCase):
 
+    def setUp(self) -> 'None':
+        self.test_dir = tempfile.mkdtemp()
+
+    def tearDown(self) -> 'None':
+        shutil.rmtree(self.test_dir)
+
     def _publish_and_deliver(self, data:'object') -> 'object':
         """ Publishes data through RedisPubSubBackend with a mock Redis client,
         captures the xadd message, then feeds it into _deliver_to_service
@@ -39,7 +48,8 @@ class TestServicePublishRoundTrip(unittest.TestCase):
         mock_redis = MagicMock()
         mock_redis.xadd.return_value = b'1234567890-0'
 
-        backend = RedisPubSubBackend(mock_redis)
+        disk_store = DiskMessageStore(self.test_dir)
+        backend = RedisPubSubBackend(mock_redis, disk_store)
 
         # .. publish the data ..
         _ = backend.publish('test.topic', data, publisher='test.publisher')
@@ -47,6 +57,12 @@ class TestServicePublishRoundTrip(unittest.TestCase):
         # .. extract the message dict that was passed to xadd ..
         xadd_call_args = mock_redis.xadd.call_args
         captured_message = xadd_call_args[0][1]
+
+        # .. load the payload from disk, just like fetch_messages does ..
+        data_ref = captured_message['data_ref']
+        load_result = disk_store.load(data_ref)
+        captured_message['data'] = load_result.data
+        captured_message['data_class'] = load_result.data_class
 
         # .. now set up the delivery side with a mock server ..
         mock_server = MagicMock()
@@ -76,33 +92,33 @@ class TestServicePublishRoundTrip(unittest.TestCase):
 # ################################################################################################################################
 
     def test_dict_round_trip(self) -> 'None':
-        """ A dict payload is serialized to JSON and deserialized back to a dict.
+        """ A dict payload is serialized to JSON and delivered as a raw JSON string.
         """
         payload = {'order_id': 123, 'status': 'pending'}
 
         received = self._publish_and_deliver(payload)
 
-        self.assertEqual(received, payload)
+        self.assertEqual(received, '{"order_id": 123, "status": "pending"}')
 
 # ################################################################################################################################
 
     def test_int_round_trip(self) -> 'None':
-        """ An integer payload round-trips through JSON correctly.
+        """ An integer payload is serialized to JSON and delivered as a raw string.
         """
         received = self._publish_and_deliver(42)
 
-        self.assertEqual(received, 42)
+        self.assertEqual(received, '42')
 
 # ################################################################################################################################
 
     def test_list_round_trip(self) -> 'None':
-        """ A list payload round-trips through JSON correctly.
+        """ A list payload is serialized to JSON and delivered as a raw string.
         """
         payload = [1, 2, 3]
 
         received = self._publish_and_deliver(payload)
 
-        self.assertEqual(received, payload)
+        self.assertEqual(received, '[1, 2, 3]')
 
 # ################################################################################################################################
 
@@ -126,7 +142,7 @@ class TestServicePublishRoundTrip(unittest.TestCase):
 
     def test_inline_kwargs_round_trip(self) -> 'None':
         """ When inline kwargs are used as payload via Service.publish,
-        the resulting dict round-trips through publish-deliver correctly.
+        the resulting dict is delivered as a raw JSON string.
         """
 
         # Service.publish would build this dict from the kwargs
@@ -135,7 +151,7 @@ class TestServicePublishRoundTrip(unittest.TestCase):
 
         received = self._publish_and_deliver(payload)
 
-        self.assertEqual(received, {'order_id': 123, 'status': 'pending'})
+        self.assertEqual(received, '{"order_id": 123, "status": "pending"}')
 
 # ################################################################################################################################
 
@@ -169,14 +185,15 @@ class TestServicePublishRoundTrip(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_model_data_class_stored_in_message(self) -> 'None':
-        """ When a Model is published, the Redis message contains a
-        data_class field with the fully-qualified class name.
+    def test_model_data_class_stored_on_disk(self) -> 'None':
+        """ When a Model is published, the disk file contains the
+        data_class with the fully-qualified class name.
         """
         mock_redis = MagicMock()
         mock_redis.xadd.return_value = b'1234567890-0'
 
-        backend = RedisPubSubBackend(mock_redis)
+        disk_store = DiskMessageStore(self.test_dir)
+        backend = RedisPubSubBackend(mock_redis, disk_store)
 
         request = CustomerRequest()
         request.customer_id = 'CUST-001'
@@ -187,8 +204,11 @@ class TestServicePublishRoundTrip(unittest.TestCase):
         xadd_call_args = mock_redis.xadd.call_args
         captured_message = xadd_call_args[0][1]
 
+        data_ref = captured_message['data_ref']
+        load_result = disk_store.load(data_ref)
+
         expected_class = f'{CustomerRequest.__module__}.{CustomerRequest.__qualname__}'
-        self.assertEqual(captured_message['data_class'], expected_class)
+        self.assertEqual(load_result.data_class, expected_class)
 
 # ################################################################################################################################
 # ################################################################################################################################
