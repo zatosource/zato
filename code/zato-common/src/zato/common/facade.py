@@ -98,6 +98,10 @@ class PubSubFacade:
         # .. always set the publisher to the calling service name ..
         kwargs['publisher'] = self.service_name
 
+        # .. default encrypt to True unless the caller explicitly set it ..
+        if 'encrypt' not in kwargs:
+            kwargs['encrypt'] = True
+
         # .. now, publish the message to the topic.
         out = self.server.pubsub_redis.publish(topic_name, data, **kwargs)
 

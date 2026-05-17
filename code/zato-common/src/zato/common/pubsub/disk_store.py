@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import shutil
 from logging import getLogger
 from typing import NamedTuple
 
@@ -15,6 +16,7 @@ from typing import NamedTuple
 # ################################################################################################################################
 
 if 0:
+    from zato.common.crypto.api import CryptoManager
     from zato.common.typing_ import strnone
 
 # ################################################################################################################################
@@ -27,6 +29,7 @@ logger = getLogger(__name__)
 
 _file_version = '1'
 _data_key = 'data'
+_encrypted_key = 'encrypted'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,13 +47,14 @@ class DiskMessageStore:
     and its value extends to EOF, allowing multi-line payloads without escaping.
     """
 
-    def __init__(self, base_dir:'str') -> 'None':
+    def __init__(self, base_dir:'str', crypto_manager:'CryptoManager | None'=None) -> 'None':
         self.base_dir = base_dir
+        self.crypto_manager = crypto_manager
         os.makedirs(base_dir, exist_ok=True)
 
 # ################################################################################################################################
 
-    def store(self, message_id:'str', topic_name:'str', data:'str', data_class:'str') -> 'str':
+    def store(self, message_id:'str', topic_name:'str', data:'str', data_class:'str', encrypt:'bool'=False) -> 'str':
         """ Write a message payload file and return the data_ref (relative path).
         """
 
@@ -64,16 +68,26 @@ class DiskMessageStore:
         parent_dir = os.path.dirname(absolute_path)
         os.makedirs(parent_dir, exist_ok=True)
 
+        # .. optionally encrypt the payload before writing ..
+        if encrypt:
+            data_to_write = self.crypto_manager.encrypt(data, needs_str=True) # type: ignore[union-attr]
+        else:
+            data_to_write = data
+
         # .. write the key=value file with data as the last entry ..
         with open(absolute_path, 'w', encoding='utf-8') as file_handle:
             _ = file_handle.write(f'_version={_file_version}\n')
             _ = file_handle.write(f'msg_id={message_id}\n')
             _ = file_handle.write(f'topic_name={topic_name}\n')
             _ = file_handle.write(f'data_class={data_class}\n')
-            _ = file_handle.write(f'{_data_key}={data}')
+
+            if encrypt:
+                _ = file_handle.write(f'{_encrypted_key}=true\n')
+
+            _ = file_handle.write(f'{_data_key}={data_to_write}')
 
         data_len = len(data)
-        logger.info('Stored message payload -> message_id:%s, topic:%s, path:%s, data_len:%s', message_id, topic_name, absolute_path, data_len)
+        logger.info('Stored message payload -> message_id:%s, topic:%s, path:%s, data_len:%s, encrypted:%s', message_id, topic_name, absolute_path, data_len, encrypt)
 
         return data_ref
 
@@ -94,6 +108,7 @@ class DiskMessageStore:
         # and everything after `data=` is the value (may span multiple lines).
         data_class = ''
         data = ''
+        is_encrypted = False
 
         data_marker = f'{_data_key}='
         data_marker_position = content.find(data_marker)
@@ -109,9 +124,15 @@ class DiskMessageStore:
             for line in header.splitlines():
                 if line.startswith('data_class='):
                     data_class = line[len('data_class='):]
+                elif line.startswith(f'{_encrypted_key}='):
+                    is_encrypted = line[len(f'{_encrypted_key}='):] == 'true'
+
+        # .. decrypt the payload if the file was encrypted ..
+        if is_encrypted:
+            data = self.crypto_manager.decrypt(data) # type: ignore[union-attr]
 
         data_len = len(data)
-        logger.info('Loaded message payload -> data_ref:%s, path:%s, data_len:%s, data_class:%s', data_ref, absolute_path, data_len, data_class)
+        logger.info('Loaded message payload -> data_ref:%s, path:%s, data_len:%s, data_class:%s, encrypted:%s', data_ref, absolute_path, data_len, data_class, is_encrypted)
 
         out = LoadResult(data=data, data_class=data_class)
         return out
@@ -130,6 +151,37 @@ class DiskMessageStore:
             os.remove(absolute_path)
         except FileNotFoundError:
             logger.info('Payload file already removed -> data_ref:%s, path:%s', data_ref, absolute_path)
+
+# ################################################################################################################################
+
+    def rename_topic_dir(self, old_topic_name:'str', new_topic_name:'str') -> 'None':
+        """ Rename the on-disk directory tree for a topic.
+        """
+
+        old_path = os.path.join(self.base_dir, old_topic_name)
+        new_path = os.path.join(self.base_dir, new_topic_name)
+
+        if not os.path.exists(old_path):
+            logger.info('Topic directory does not exist, nothing to rename -> old_path:%s', old_path)
+            return
+
+        logger.info('Renaming topic directory -> old_path:%s, new_path:%s', old_path, new_path)
+        os.rename(old_path, new_path)
+
+# ################################################################################################################################
+
+    def delete_topic_dir(self, topic_name:'str') -> 'None':
+        """ Remove the entire on-disk directory tree for a topic.
+        """
+
+        topic_path = os.path.join(self.base_dir, topic_name)
+
+        if not os.path.exists(topic_path):
+            logger.info('Topic directory does not exist, nothing to delete -> topic_path:%s', topic_path)
+            return
+
+        logger.info('Deleting topic directory -> topic_path:%s', topic_path)
+        shutil.rmtree(topic_path)
 
 # ################################################################################################################################
 
