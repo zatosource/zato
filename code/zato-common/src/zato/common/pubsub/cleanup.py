@@ -17,6 +17,9 @@ from logging import basicConfig, getLogger, INFO
 # redis
 from redis import Redis
 
+# Zato
+from zato.common.pubsub.disk_store import DiskMessageStore
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -46,6 +49,7 @@ class MessageExpirationCleanup:
         redis_password:'str | None'=None,
         batch_size:'int'=ModuleCtx.Default_Batch_Size,
         sleep_seconds:'int'=ModuleCtx.Default_Sleep_Seconds,
+        disk_store_base_dir:'str'='/var/lib/zato/pubsub/messages',
     ) -> 'None':
 
         self.redis = Redis(
@@ -55,6 +59,7 @@ class MessageExpirationCleanup:
             password=redis_password,
             decode_responses=True
         )
+        self.disk_store = DiskMessageStore(disk_store_base_dir)
         self.batch_size = batch_size
         self.sleep_seconds = sleep_seconds
         self._running = False
@@ -87,6 +92,12 @@ class MessageExpirationCleanup:
                 try:
                     expiration_time = datetime.fromisoformat(expiration_time_iso)
                     if now > expiration_time:
+
+                        # .. delete the payload file from disk ..
+                        if data_ref := msg_data.get('data_ref'):
+                            self.disk_store.delete(data_ref)
+
+                        # .. then remove the stream entry ..
                         self.redis.xdel(stream_key, msg_id)
                         deleted_count += 1
                 except ValueError:
@@ -164,6 +175,7 @@ def main() -> 'int':
     _ = parser.add_argument('--batch-size', type=int, default=ModuleCtx.Default_Batch_Size, help='Messages to process per stream per pass')
     _ = parser.add_argument('--sleep', type=int, default=ModuleCtx.Default_Sleep_Seconds, help='Seconds to sleep between passes')
     _ = parser.add_argument('--once', action='store_true', help='Run once and exit')
+    _ = parser.add_argument('--disk-store-dir', default=os.environ.get('Zato_PubSub_Disk_Store_Dir', '/var/lib/zato/pubsub/messages'), help='Base directory for message payload files')
 
     args = parser.parse_args()
 
@@ -179,6 +191,7 @@ def main() -> 'int':
         redis_password=args.redis_password,
         batch_size=args.batch_size,
         sleep_seconds=args.sleep,
+        disk_store_base_dir=args.disk_store_dir,
     )
 
     try:

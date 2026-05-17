@@ -18,6 +18,7 @@ from redis.exceptions import ResponseError
 # Zato
 from zato.common.api import PubSub
 from zato.common.marshal_.api import Model
+from zato.common.pubsub.disk_store import DiskMessageStore
 from zato.common.util.api import new_msg_id, utcnow
 from zato.server.metrics import zato_pubsub_messages_delivered_total, zato_pubsub_messages_published_total
 
@@ -28,6 +29,8 @@ if 0:
     from redis import Redis
     from zato.common.typing_ import any_, anydict, anylist, dictlist, strlist, strnone
 
+browse_result = tuple['anylist', str]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -36,11 +39,13 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-_default_priority = PubSub.Message.Priority_Default
-_default_expiration = PubSub.Message.Default_Expiration
-_default_max_messages = PubSub.Message.Default_Max_Messages
-_default_max_len = PubSub.Message.Default_Max_Len
+_default_priority       = PubSub.Message.Priority_Default
+_default_expiration     = PubSub.Message.Default_Expiration
+_default_max_messages   = PubSub.Message.Default_Max_Messages
+_default_max_len        = PubSub.Message.Default_Max_Len
+_default_data_preview_len = PubSub.Message.Data_Preview_Len
 _default_stream_max_len = 100_000
+_default_page_size      = 50
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,8 +69,9 @@ class RedisPubSubBackend:
     """ Redis Streams-based pub/sub backend.
     """
 
-    def __init__(self, redis_client:'Redis') -> 'None':
+    def __init__(self, redis_client:'Redis', disk_store:'DiskMessageStore') -> 'None':
         self.redis = redis_client
+        self.disk_store = disk_store
 
 # ################################################################################################################################
 
@@ -137,12 +143,19 @@ class RedisPubSubBackend:
         else:
             serialized_data = json.dumps(data)
 
-        # .. build the message ..
+        # .. store the payload on disk ..
+        data_ref = self.disk_store.store(message_id, topic_name, serialized_data, data_class)
+
+        # .. build the message with a reference to the disk file ..
         recv_time_iso = now.isoformat()
+        data_size = len(serialized_data)
+        data_preview = serialized_data[:_default_data_preview_len]
 
         message = {
             'msg_id': message_id,
-            'data': serialized_data,
+            'data_ref': data_ref,
+            'data_size': data_size,
+            'data_preview': data_preview,
             'topic_name': topic_name,
             'priority': str(priority),
             'pub_time_iso': pub_time_iso,
@@ -150,9 +163,6 @@ class RedisPubSubBackend:
             'expiration': str(expiration),
             'expiration_time_iso': expiration_time_iso,
         }
-
-        if data_class:
-            message['data_class'] = data_class
 
         if correl_id:
             message['correl_id'] = correl_id
@@ -300,16 +310,24 @@ class RedisPubSubBackend:
                 now = utcnow()
 
                 if now > expiration_time:
+                    expired_data_ref = decoded['data_ref']
                     _ = self.redis.xack(stream_name, sub_key, redis_message_id)
+                    self.disk_store.delete(expired_data_ref)
                     continue
 
-                # .. check max_len constraint ..
-                data_len = len(decoded['data'])
+                # .. check max_len constraint using data_size from metadata ..
+                data_len = int(decoded['data_size'])
 
                 if total_len + data_len > max_len:
                     break
 
                 total_len += data_len
+
+                # .. load the actual payload from disk ..
+                data_ref = decoded['data_ref']
+                load_result = self.disk_store.load(data_ref)
+                decoded['data'] = load_result.data
+                decoded['data_class'] = load_result.data_class
 
                 # .. convert priority and expiration from string to int once ..
                 decoded['priority'] = int(decoded['priority'])
@@ -317,6 +335,7 @@ class RedisPubSubBackend:
 
                 decoded['_redis_message_id'] = redis_message_id
                 decoded['_stream_name'] = stream_name
+                decoded['_data_ref'] = data_ref
 
                 messages.append(decoded)
 
@@ -334,10 +353,14 @@ class RedisPubSubBackend:
 
 # ################################################################################################################################
 
-    def ack_message(self, stream_name:'str', sub_key:'str', redis_message_id:'str') -> 'None':
+    def ack_message(self, stream_name:'str', sub_key:'str', redis_message_id:'str', data_ref:'strnone'=None) -> 'None':
         """ Acknowledge a single message after successful processing.
         """
         _ = self.redis.xack(stream_name, sub_key, redis_message_id)
+
+        # .. clean up the payload file from disk ..
+        if data_ref:
+            self.disk_store.delete(data_ref)
 
 # ################################################################################################################################
 
@@ -361,6 +384,7 @@ class RedisPubSubBackend:
 
             redis_message_id = message.pop('_redis_message_id')
             stream_name = message.pop('_stream_name')
+            data_ref = message.pop('_data_ref')
 
             data_raw = message.pop('data')
 
@@ -406,8 +430,8 @@ class RedisPubSubBackend:
                 'meta': meta
             })
 
-            # .. acknowledge and count after formatting ..
-            self.ack_message(stream_name, sub_key, redis_message_id)
+            # .. acknowledge and clean up the disk file ..
+            self.ack_message(stream_name, sub_key, redis_message_id, data_ref)
 
             counter = zato_pubsub_messages_delivered_total.labels(topic_name=message['topic_name'])
             _ = counter.inc()
@@ -439,6 +463,91 @@ class RedisPubSubBackend:
             delta = timedelta(0)
 
         out = str(delta)
+        return out
+
+# ################################################################################################################################
+
+    def browse_messages(
+        self,
+        topic_name:'str',
+        cursor:'str'='-',
+        page_size:'int'=_default_page_size,
+        needs_data:'bool'=False,
+    ) -> 'browse_result':
+        """ Browse messages in a topic without consuming them.
+        Uses XRANGE for read-only access that does not affect consumer groups.
+        Returns (messages, next_cursor) for cursor-based pagination.
+        """
+
+        # Normalize topic name ..
+        topic_name = topic_name.lower()
+        stream_key = self._get_stream_key(topic_name)
+
+        # .. read a page from the stream ..
+        try:
+            raw_messages = self.redis.xrange(stream_key, min=cursor, count=page_size)
+        except ResponseError:
+            return [], ''
+
+        if not raw_messages:
+            return [], ''
+
+        messages:'anylist' = []
+
+        for redis_message_id, message_data in raw_messages:
+
+            entry:'anydict' = {
+                'msg_id': message_data['msg_id'],
+                'topic_name': message_data['topic_name'],
+                'priority': int(message_data['priority']),
+                'expiration': int(message_data['expiration']),
+                'pub_time_iso': message_data['pub_time_iso'],
+                'recv_time_iso': message_data['recv_time_iso'],
+                'expiration_time_iso': message_data['expiration_time_iso'],
+                'data_size': int(message_data['data_size']),
+                'data_preview': message_data['data_preview'],
+            }
+
+            # .. include optional metadata fields ..
+            if correl_id := message_data.get('correl_id'):
+                entry['correl_id'] = correl_id
+
+            if in_reply_to := message_data.get('in_reply_to'):
+                entry['in_reply_to'] = in_reply_to
+
+            if ext_client_id := message_data.get('ext_client_id'):
+                entry['ext_client_id'] = ext_client_id
+
+            if publisher := message_data.get('publisher'):
+                entry['publisher'] = publisher
+
+            # .. optionally load the full payload from disk ..
+            if needs_data:
+                data_ref = message_data['data_ref']
+                load_result = self.disk_store.load(data_ref)
+                entry['data'] = load_result.data
+                entry['data_class'] = load_result.data_class
+
+            messages.append(entry)
+
+        # .. compute next_cursor for the next page ..
+        raw_messages_len = len(raw_messages)
+
+        if raw_messages_len < page_size:
+            next_cursor = ''
+
+        # .. the next cursor is the last stream ID + 1 sequence number ..
+        else:
+            last_stream_id = raw_messages[-1][0]
+
+            # .. Redis stream IDs are '<ms>-<seq>', increment the seq ..
+            parts = last_stream_id.split('-')
+            timestamp_part = parts[0]
+            sequence_part = parts[1]
+            next_sequence = int(sequence_part) + 1
+            next_cursor = f'{timestamp_part}-{next_sequence}'
+
+        out = (messages, next_cursor)
         return out
 
 # ################################################################################################################################
