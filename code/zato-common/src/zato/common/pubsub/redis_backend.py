@@ -139,7 +139,7 @@ class RedisPubSubBackend:
             data_module = data.__class__.__module__
             data_class_name = data.__class__.__qualname__
             data_class = f'{data_module}.{data_class_name}'
-            serialized_data = data.to_json()
+            serialized_data = data.to_json().decode()
 
         else:
             serialized_data = json.dumps(data)
