@@ -7,12 +7,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 import shutil
 import tempfile
 import unittest
 from unittest.mock import MagicMock
 
+# cryptography
+from cryptography.fernet import Fernet
+
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.pubsub.disk_store import DiskMessageStore
 from zato.common.pubsub.redis_backend import PublishResult, RedisPubSubBackend, ModuleCtx
 
@@ -179,17 +184,26 @@ class TestRedisPubSubBackend(unittest.TestCase):
 # ################################################################################################################################
 
     def test_delete_topic_removes_all_data(self) -> 'None':
-        """ Test that deleting a topic removes stream and subscriber mappings.
+        """ Test that deleting a topic removes stream, subscriber mappings, and disk files.
         """
         topic_name = 'test.topic'
 
-        self.redis_mock.smembers.return_value = [b'sub.user1', b'sub.user2']
+        # .. store a message so there is a disk directory to delete ..
+        message_id = 'zpsm.20260517-113200-1234-abcdef1234567890'
+        _ = self.disk_store.store(message_id, topic_name, 'test data', '')
+
+        topic_dir = os.path.join(self.test_dir, topic_name)
+        self.assertTrue(os.path.exists(topic_dir))
+
+        self.redis_mock.smembers.return_value = ['sub.user1', 'sub.user2']
 
         self.backend.delete_topic(topic_name)
 
         self.redis_mock.delete.assert_called()
-
         self.assertTrue(self.redis_mock.srem.call_count >= 2)
+
+        # .. disk directory should be gone ..
+        self.assertFalse(os.path.exists(topic_dir))
 
 # ################################################################################################################################
 
@@ -220,19 +234,26 @@ class TestRedisPubSubBackend(unittest.TestCase):
 # ################################################################################################################################
 
     def test_rename_topic(self) -> 'None':
-        """ Test renaming a topic.
+        """ Test renaming a topic updates Redis keys but keeps disk files in place.
         """
         old_name = 'old.topic'
         new_name = 'new.topic'
 
-        self.redis_mock.smembers.return_value = [b'sub.user1']
+        # .. store a message under the old topic name ..
+        message_id = 'zpsm.20260517-113200-1234-abcdef1234567890'
+        data_ref = self.disk_store.store(message_id, old_name, 'test data', '')
+
+        self.redis_mock.smembers.return_value = ['sub.user1']
 
         self.backend.rename_topic(old_name, new_name)
 
         self.redis_mock.rename.assert_called()
-
         self.redis_mock.srem.assert_called()
         self.redis_mock.sadd.assert_called()
+
+        # .. the old disk directory should still exist because we do not rename it ..
+        old_path = os.path.join(self.test_dir, data_ref)
+        self.assertTrue(os.path.exists(old_path))
 
 # ################################################################################################################################
 
@@ -247,7 +268,6 @@ class TestRedisPubSubBackend(unittest.TestCase):
         # .. ack with data_ref should delete the file ..
         self.backend.ack_message('stream:test', 'sub1', '1-0', data_ref)
 
-        import os
         absolute_path = os.path.join(self.test_dir, data_ref)
         self.assertFalse(os.path.exists(absolute_path))
 
@@ -324,6 +344,68 @@ class TestRedisPubSubBackend(unittest.TestCase):
 
         self.assertEqual(len(messages), 2)
         self.assertEqual(next_cursor, '2000-4')
+
+# ################################################################################################################################
+
+    def test_publish_with_encrypt_writes_encrypted_payload(self) -> 'None':
+        """ Test that publishing with encrypt=True stores encrypted payload on disk.
+        """
+
+        # .. create a backend with a crypto-enabled disk store ..
+        crypto_manager = CryptoManager.from_secret_key(secret_key=Fernet.generate_key())
+        encrypted_dir = tempfile.mkdtemp()
+        encrypted_store = DiskMessageStore(encrypted_dir, crypto_manager=crypto_manager)
+        encrypted_backend = RedisPubSubBackend(self.redis_mock, encrypted_store)
+
+        topic_name = 'test.topic'
+        data = 'sensitive payload'
+
+        _ = encrypted_backend.publish(topic_name, data, publisher='testuser', encrypt=True)
+
+        # .. get the data_ref from the xadd call ..
+        call_args = self.redis_mock.xadd.call_args
+        message = call_args[0][1]
+        data_ref = message['data_ref']
+
+        # .. the preview in Redis should be plaintext ..
+        self.assertEqual(message['data_preview'], 'sensitive payload')
+
+        # .. the file on disk should contain encrypted data ..
+        absolute_path = os.path.join(encrypted_dir, data_ref)
+
+        with open(absolute_path, 'r', encoding='utf-8') as file_handle:
+            content = file_handle.read()
+
+        self.assertIn('encrypted=true', content)
+        self.assertNotIn('sensitive payload', content)
+
+        # .. but loading through the store should return plaintext ..
+        load_result = encrypted_store.load(data_ref)
+        self.assertEqual(load_result.data, data)
+
+        shutil.rmtree(encrypted_dir)
+
+# ################################################################################################################################
+
+    def test_publish_without_encrypt_writes_plaintext(self) -> 'None':
+        """ Test that publishing without encrypt stores plaintext on disk.
+        """
+        topic_name = 'test.topic'
+        data = 'not secret'
+
+        _ = self.backend.publish(topic_name, data, publisher='testuser')
+
+        call_args = self.redis_mock.xadd.call_args
+        message = call_args[0][1]
+        data_ref = message['data_ref']
+
+        absolute_path = os.path.join(self.test_dir, data_ref)
+
+        with open(absolute_path, 'r', encoding='utf-8') as file_handle:
+            content = file_handle.read()
+
+        self.assertNotIn('encrypted=true', content)
+        self.assertIn('not secret', content)
 
 # ################################################################################################################################
 # ################################################################################################################################

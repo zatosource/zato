@@ -105,6 +105,7 @@ class RedisPubSubBackend:
         ext_client_id:'strnone'=None,
         publisher:'strnone'=None,
         pub_time:'strnone'=None,
+        encrypt:'bool'=False,
     ) -> 'PublishResult':
         """ Publish a message to a topic stream.
         """
@@ -144,7 +145,7 @@ class RedisPubSubBackend:
             serialized_data = json.dumps(data)
 
         # .. store the payload on disk ..
-        data_ref = self.disk_store.store(message_id, topic_name, serialized_data, data_class)
+        data_ref = self.disk_store.store(message_id, topic_name, serialized_data, data_class, encrypt=encrypt)
 
         # .. build the message with a reference to the disk file ..
         recv_time_iso = now.isoformat()
@@ -580,6 +581,9 @@ class RedisPubSubBackend:
         stream_key = self._get_stream_key(topic_name)
         topic_subs_key = self._get_topic_subs_key(topic_name)
 
+        # .. delete all payload files from disk before removing the stream ..
+        self.disk_store.delete_topic_dir(topic_name)
+
         # .. get all subscribers to this topic ..
         subscriptions = self.get_topic_subscribers(topic_name)
 
@@ -714,6 +718,11 @@ class RedisPubSubBackend:
             subs_key = self._get_subs_key(sub_key)
             _ = self.redis.srem(subs_key, old_topic_name)
             _ = self.redis.sadd(subs_key, new_topic_name)
+
+        # Note: we do not rename the on-disk directory because Redis Streams
+        # do not support in-place field updates, so existing data_ref values
+        # in the stream must keep pointing to valid paths. New messages published
+        # after the rename will use the new topic name for their directory.
 
 # ################################################################################################################################
 # ################################################################################################################################
