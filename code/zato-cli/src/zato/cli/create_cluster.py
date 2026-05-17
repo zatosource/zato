@@ -358,37 +358,46 @@ class Create(ZatoCommand):
         from zato.common.api import DATA_FORMAT
         from zato.common.odb.model import HTTPSOAP, Service
 
+        print('[pubsub] add_pubsub_rest_channels called')
+
         # Create services
         publish_impl = 'zato.server.service.internal.pubsub.rest.Publish'
         publish_service = Service(None, 'pubsub.rest.publish', True, publish_impl, True, cluster)
         session.add(publish_service)
+        print('[pubsub] Added service: pubsub.rest.publish')
 
         get_messages_impl = 'zato.server.service.internal.pubsub.rest.GetMessages'
         get_messages_service = Service(None, 'pubsub.rest.get-messages', True, get_messages_impl, True, cluster)
         session.add(get_messages_service)
+        print('[pubsub] Added service: pubsub.rest.get-messages')
 
         subscribe_impl = 'zato.server.service.internal.pubsub.rest.Subscribe'
         subscribe_service = Service(None, 'pubsub.rest.subscribe', True, subscribe_impl, True, cluster)
         session.add(subscribe_service)
+        print('[pubsub] Added service: pubsub.rest.subscribe')
 
         unsubscribe_impl = 'zato.server.service.internal.pubsub.rest.Unsubscribe'
         unsubscribe_service = Service(None, 'pubsub.rest.unsubscribe', True, unsubscribe_impl, True, cluster)
         session.add(unsubscribe_service)
+        print('[pubsub] Added service: pubsub.rest.unsubscribe')
 
         # Create channels
         publish_channel = HTTPSOAP(
             None, 'pubsub.rest.publish', True, True, 'channel',
-            'plain_http', None, '/pubsub/topic/{topic_name}', 'POST', '', None, DATA_FORMAT.JSON,
+            'plain_http', None, '/pubsub/topic/{topic_name}', None, '', None, DATA_FORMAT.JSON,
             service=publish_service, cluster=cluster)
         session.add(publish_channel)
+        print('[pubsub] Added channel: /pubsub/topic/{topic_name} (POST)')
 
         get_messages_channel = HTTPSOAP(
             None, 'pubsub.rest.get-messages', True, True, 'channel',
-            'plain_http', None, '/pubsub/messages/get', 'POST', '', None, DATA_FORMAT.JSON,
+            'plain_http', None, '/pubsub/messages/get', None, '', None, DATA_FORMAT.JSON,
             service=get_messages_service, cluster=cluster)
         session.add(get_messages_channel)
+        print('[pubsub] Added channel: /pubsub/messages/get (POST)')
 
         # Subscribe and unsubscribe channels are intentionally not created -
         # those endpoints are disabled.
+        print('[pubsub] Skipped channels for subscribe and unsubscribe (disabled)')
 
 # ################################################################################################################################
