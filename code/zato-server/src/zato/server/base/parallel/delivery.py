@@ -93,7 +93,7 @@ class RedisPushDelivery:
         pool = _SingleConnPool(**self._redis_conn_params)
         redis_conn = Redis(connection_pool=pool)
 
-        out = RedisPubSubBackend(redis_conn, self.server.pubsub_redis.disk_store)
+        out = RedisPubSubBackend(redis_conn, self.server.pubsub_redis.disk_store, server=self.server)
         return out
 
 # ################################################################################################################################

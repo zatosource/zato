@@ -143,6 +143,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     pubsub_subscriptions: 'SubscriptionsStore'
 
     work_dir:'str'
+    encrypt_at_rest: 'bool'
 
 # ################################################################################################################################
 
@@ -754,6 +755,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # This changed in 3.2 so we need to take both into account
         self.work_dir = self.fs_server_config.main.get('work_dir') or self.fs_server_config.hot_deploy.get('work_dir')
         self.work_dir = os.path.normpath(os.path.join(self.repo_location, self.work_dir))
+
+        self.encrypt_at_rest = False
 
         for name in 'v1', 'v2':
             full_path = os.path.join(self.work_dir, 'events', name)
@@ -1425,7 +1428,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 password=redis_password,
                 decode_responses=True,
             )
-            self.pubsub_redis = RedisPubSubBackend(redis_conn, disk_store)
+            self.pubsub_redis = RedisPubSubBackend(redis_conn, disk_store, server=self)
             self._has_pubsub_redis = True
 
             self._sync_pubsub_subscriptions()
