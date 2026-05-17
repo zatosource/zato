@@ -92,7 +92,9 @@ class RedisPushDelivery:
 
         pool = _SingleConnPool(**self._redis_conn_params)
         redis_conn = Redis(connection_pool=pool)
-        return RedisPubSubBackend(redis_conn)
+
+        out = RedisPubSubBackend(redis_conn, self.server.pubsub_redis.disk_store)
+        return out
 
 # ################################################################################################################################
 
@@ -190,6 +192,7 @@ class RedisPushDelivery:
         """
         stream_name = message['_stream_name']
         redis_message_id = message['_redis_message_id']
+        data_ref = message['_data_ref']
         deadline = monotonic() + _max_retry_time
         interval = _retry_interval_initial
 
@@ -215,7 +218,7 @@ class RedisPushDelivery:
             logger.error('PubSub delivery deadline exhausted for sub_key `%s`, msg_id `%s` after %d attempts',
                 sub_key, message['msg_id'], attempt)
 
-        backend.ack_message(stream_name, sub_key, redis_message_id)
+        backend.ack_message(stream_name, sub_key, redis_message_id, data_ref)
 
 # ################################################################################################################################
 

@@ -1405,12 +1405,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def _start_pubsub_redis(self):
 
         from redis import Redis
+        from zato.common.pubsub.disk_store import DiskMessageStore
         from zato.server.base.parallel.delivery import RedisPushDelivery
 
         redis_config = self.fs_server_config.redis
         redis_password = redis_config.password if redis_config.password else None
 
         try:
+
+            # .. set up the disk store for message payloads ..
+            work_dir = self.work_dir
+            disk_store_base_dir = os.path.join(work_dir, 'pubsub-messages')
+            disk_store = DiskMessageStore(disk_store_base_dir)
+
             redis_conn = Redis(
                 host=redis_config.host,
                 port=redis_config.port,
@@ -1418,7 +1425,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 password=redis_password,
                 decode_responses=True,
             )
-            self.pubsub_redis = RedisPubSubBackend(redis_conn)
+            self.pubsub_redis = RedisPubSubBackend(redis_conn, disk_store)
             self._has_pubsub_redis = True
 
             self._sync_pubsub_subscriptions()
