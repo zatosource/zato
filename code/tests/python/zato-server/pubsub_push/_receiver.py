@@ -14,6 +14,7 @@ import threading
 import time
 import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from threading import Event
 from typing import NamedTuple
 
 # ################################################################################################################################
@@ -135,9 +136,25 @@ class ReceiverBehavior:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class _WebhookHTTPServer(HTTPServer):
+    """ HTTPServer subclass that carries the behavior, output directory, and delivery event.
+    """
+
+    def __init__(self, address:'tuple[str, int]', handler:'type', behavior:'ReceiverBehavior',
+        output_directory:'str', delivery_event:'Event') -> 'None':
+        super().__init__(address, handler)
+        self.behavior = behavior
+        self.output_directory = output_directory
+        self.delivery_event = delivery_event
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _RequestHandler(BaseHTTPRequestHandler):
     """ Handles incoming webhook POST requests.
     """
+
+    server: '_WebhookHTTPServer'
 
     def log_message(self, format:'str', *arguments:'any_') -> 'None':
         """ Routes HTTP server log messages through the module logger.
@@ -161,14 +178,14 @@ class _RequestHandler(BaseHTTPRequestHandler):
         logger.info('Received POST %s (%d bytes)', self.path, content_length)
 
         # .. evaluate the behavior ..
-        behavior:'ReceiverBehavior' = self.server.behavior # type: ignore[attr-defined]
+        behavior = self.server.behavior
         result = behavior.evaluate(body)
 
         logger.info('Evaluated -> status_code=%d, should_persist=%s', result.status_code, result.should_persist)
 
         # .. if we should persist, write the payload to disk ..
         if result.should_persist:
-            output_directory:'str' = self.server.output_directory # type: ignore[attr-defined]
+            output_directory = self.server.output_directory
             unique_id = uuid.uuid4()
             hex_string = unique_id.hex
             file_name = f'{hex_string}.json'
@@ -178,6 +195,10 @@ class _RequestHandler(BaseHTTPRequestHandler):
                 _ = output_file.write(body)
 
             logger.info('Persisted payload to %s', file_path)
+
+            # .. signal that a delivery arrived ..
+            delivery_event = self.server.delivery_event
+            _ = delivery_event.set()
 
         # .. send the response.
         self.send_response(result.status_code)
@@ -196,8 +217,9 @@ class WebhookReceiver:
         self.output_directory = output_directory
         self.expected_path = expected_path
         self.behavior = ReceiverBehavior()
-        self._server:'HTTPServer | None' = None
+        self._server:'_WebhookHTTPServer | None' = None
         self._thread:'threading.Thread | None' = None
+        self._delivery_event = threading.Event()
 
 # ################################################################################################################################
 
@@ -207,9 +229,7 @@ class WebhookReceiver:
         os.makedirs(self.output_directory, exist_ok=True)
 
         address = ('127.0.0.1', self.port)
-        server = HTTPServer(address, _RequestHandler)
-        server.behavior = self.behavior # type: ignore[attr-defined]
-        server.output_directory = self.output_directory # type: ignore[attr-defined]
+        server = _WebhookHTTPServer(address, _RequestHandler, self.behavior, self.output_directory, self._delivery_event)
 
         self._server = server
 
@@ -291,6 +311,30 @@ class WebhookReceiver:
                 count += 1
 
         return count
+
+# ################################################################################################################################
+
+    def wait_for_delivery(self, expected_count:'int'=1, timeout:'float'=30.0) -> 'anydict_list':
+        """ Blocks until at least expected_count messages have been delivered, then returns them.
+        """
+        deadline = time.monotonic() + timeout
+
+        while time.monotonic() < deadline:
+            count = self.delivered_count()
+            if count >= expected_count:
+                out = self.get_delivered_messages()
+                return out
+
+            # .. wait for the next delivery signal, then recheck ..
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+
+            _ = self._delivery_event.wait(timeout=min(remaining, 1.0))
+            self._delivery_event.clear()
+
+        out = self.get_delivered_messages()
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
