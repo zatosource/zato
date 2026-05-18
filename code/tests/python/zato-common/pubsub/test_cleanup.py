@@ -11,6 +11,7 @@ import logging
 import os
 import shutil
 import tempfile
+import time
 import unittest
 
 # redis
@@ -60,6 +61,7 @@ class BaseCleanupTestCase(unittest.TestCase):
 
         # .. track all data_refs created during the test for cleanup.
         self.created_data_refs:'strlist' = []
+        self._message_counter = 0
 
 # ################################################################################################################################
 
@@ -76,9 +78,13 @@ class BaseCleanupTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def store_message(self, message_id:'str', topic_name:'str', data:'str'='test payload') -> 'str':
-        """ Stores a message on disk and registers its data_ref for cleanup.
+    def store_message(self, topic_name:'str', data:'str'='test payload') -> 'str':
+        """ Stores a message on disk with an auto-generated ID and registers its data_ref for cleanup.
         """
+        self._message_counter += 1
+        now_int = int(time.time())
+        message_id = f'zpsm.{now_int}-{self._message_counter:08d}-aabbccdd11223344'
+
         data_ref = self.disk_store.store(message_id, topic_name, data, '')
         self.created_data_refs.append(data_ref)
         logger.info('store_message -> message_id:%s, topic_name:%s, data_ref:%s', message_id, topic_name, data_ref)
@@ -161,8 +167,7 @@ class TestCleanupSweepNoExpired(BaseCleanupTestCase):
         """
 
         # Store a message with a far-future expiry ..
-        message_id = 'zpsm.20260518-080000-1234-aabbccdd11223344'
-        data_ref = self.store_message(message_id, 'test.cleanup.no_expired')
+        data_ref = self.store_message('test.cleanup.no_expired')
 
         self.add_expiry_entry(data_ref, 4_000_000_000.0)
         self.add_pending_subscriber(data_ref, 'sub.test_subscriber')
@@ -197,8 +202,7 @@ class TestCleanupSweepOneExpired(BaseCleanupTestCase):
         """
 
         # Store a message with a past expiry ..
-        message_id = 'zpsm.20260518-080100-5678-eeff001122334455'
-        data_ref = self.store_message(message_id, 'test.cleanup.one_expired')
+        data_ref = self.store_message('test.cleanup.one_expired')
 
         self.add_expiry_entry(data_ref, 1.0)
         self.add_pending_subscriber(data_ref, 'sub.subscriber_a')
@@ -243,9 +247,8 @@ class TestCleanupSweepBatchDrain(BaseCleanupTestCase):
         # .. create 20 expired messages ..
         data_refs:'strlist' = []
 
-        for message_index in range(20):
-            message_id = f'zpsm.20260518-090000-{message_index:04d}-aabbccdd11223344'
-            data_ref = self.store_message(message_id, 'test.cleanup.batch_drain')
+        for _ in range(20):
+            data_ref = self.store_message('test.cleanup.batch_drain')
             self.add_expiry_entry(data_ref, 1.0)
             self.add_pending_subscriber(data_ref, 'sub.batch_subscriber')
             data_refs.append(data_ref)
@@ -277,6 +280,35 @@ class TestCleanupSweepBatchDrain(BaseCleanupTestCase):
 
             expiry_entry_exists = self.has_expiry_entry(data_ref)
             self.assertFalse(expiry_entry_exists)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestCleanupSweepIdempotency(BaseCleanupTestCase):
+    """ Idempotency - run sweep twice on the same expired entries, second run is a no-op.
+    """
+
+    def test_second_sweep_is_noop(self) -> 'None':
+        """ After the first sweep cleans up expired entries, a second sweep should return 0.
+        """
+
+        # Store a message with a past expiry ..
+        data_ref = self.store_message('test.cleanup.idempotency')
+
+        self.add_expiry_entry(data_ref, 1.0)
+        self.add_pending_subscriber(data_ref, 'sub.idempotency_subscriber')
+
+        # .. first sweep should clean it up ..
+        first_deleted = self.cleanup.sweep_once()
+        logger.info('First sweep -> deleted:%d', first_deleted)
+
+        self.assertEqual(first_deleted, 1)
+
+        # .. second sweep should find nothing.
+        second_deleted = self.cleanup.sweep_once()
+        logger.info('Second sweep -> deleted:%d', second_deleted)
+
+        self.assertEqual(second_deleted, 0)
 
 # ################################################################################################################################
 # ################################################################################################################################
