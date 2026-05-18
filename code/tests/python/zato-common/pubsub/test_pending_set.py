@@ -558,6 +558,35 @@ class TestBulkAckDeletesAll(BasePendingSetTestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class TestSecondPullReturnsZero(BasePendingSetTestCase):
+    """ Second pull returns zero messages (consume-once semantics).
+    """
+
+    def test_second_fetch_returns_empty(self) -> 'None':
+        """ After a subscriber fetches all available messages, a second fetch returns nothing.
+        """
+
+        # Subscribe one consumer ..
+        sub_key = f'sub.consume_once.{self._run_id}'
+        self.subscribe(sub_key)
+
+        # .. publish a message ..
+        _ = self.publish()
+        _ = self.get_data_ref_from_stream()
+
+        # .. first fetch returns the message ..
+        messages_first = self.backend.fetch_messages(sub_key)
+        logger.info('fetch_messages (first) -> %s', messages_first)
+        self.assertEqual(len(messages_first), 1)
+
+        # .. second fetch returns nothing.
+        messages_second = self.backend.fetch_messages(sub_key)
+        logger.info('fetch_messages (second) -> %s', messages_second)
+        self.assertEqual(len(messages_second), 0)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 if __name__ == '__main__':
     _ = unittest.main()
 
