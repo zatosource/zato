@@ -127,6 +127,8 @@ if 0:
 logger = logging.getLogger(__name__)
 _get_logger=logging.getLogger
 
+from zato.common.util.logging_ import current_cid as _current_cid, current_service_name as _current_service_name
+
 # ################################################################################################################################
 
 NOT_GIVEN = 'ZATO_NOT_GIVEN'
@@ -699,6 +701,9 @@ class Service:
         self.process_name = kwargs.get('process_name') or service.process_name
 
         service.logger = _get_logger(service.name) # type: Logger
+
+        _current_cid.set(cid)
+        _current_service_name.set(service.name)
 
         # .. now we can assign the logger to our request object.
         service.request.logger = service.logger
