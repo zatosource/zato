@@ -48,7 +48,7 @@ logger = logging.getLogger('zato.test.pubsub_push.conftest')
 # ################################################################################################################################
 # ################################################################################################################################
 
-_zato_base = '/home/dsuch/projects/zatosource-zato/4.1'
+_zato_base = os.environ['ZATO_TEST_BASE_DIR']
 _zato_bin  = os.path.join(_zato_base, 'code', 'bin', 'zato')
 
 _template_path = os.path.join(os.path.dirname(__file__), '_enmasse_template.yaml')

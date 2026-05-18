@@ -34,7 +34,7 @@ from _services import echo_service_source, error_service_source, forward_service
 # ################################################################################################################################
 # ################################################################################################################################
 
-_ZATO_BASE = '/home/dsuch/projects/zatosource-zato/4.1'
+_ZATO_BASE = os.environ['ZATO_TEST_BASE_DIR']
 _ZATO_BIN = os.path.join(_ZATO_BASE, 'code', 'bin', 'zato')
 _ZATO_PYTHON = os.path.join(_ZATO_BASE, 'code', 'bin', 'python')
 
