@@ -485,6 +485,79 @@ class TestAckAfterMultipleUnsubscribes(BasePendingSetTestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class TestBulkAckDeletesAll(BasePendingSetTestCase):
+    """ Publish 50 messages, ack all from both subscribers - zero pending keys remain, zero files remain.
+    """
+
+    def test_bulk_ack_cleans_everything(self) -> 'None':
+        """ Scenario:
+        1. Two subscribers (A, B) are subscribed.
+        2. 50 messages are published.
+        3. Both subscribers fetch and ack all 50 messages.
+        4. Zero pending keys remain, zero files remain, zero expiry entries remain.
+        """
+
+        # Subscribe two consumers to the topic ..
+        sub_key_a = f'sub.pending_a.{self._run_id}'
+        sub_key_b = f'sub.pending_b.{self._run_id}'
+
+        self.subscribe(sub_key_a)
+        self.subscribe(sub_key_b)
+
+        # .. publish 50 messages and collect their data_refs ..
+        data_refs:'strlist' = []
+
+        for _ in range(50):
+            _ = self.publish()
+            data_ref = self.get_data_ref_from_stream()
+            data_refs.append(data_ref)
+
+        # .. verify all 50 files exist ..
+        for data_ref in data_refs:
+            file_present = self.file_exists(data_ref)
+            self.assertTrue(file_present)
+
+        # .. subscriber A fetches and acks all ..
+        messages_a = self.backend.fetch_messages(sub_key_a, max_messages=100)
+        self.assertEqual(len(messages_a), 50)
+
+        for message in messages_a:
+            self.backend.ack_message(
+                message['_stream_name'], sub_key_a,
+                message['_redis_message_id'], message['_data_ref'])
+
+        # .. files still exist because B has not acked ..
+        for data_ref in data_refs:
+            file_present = self.file_exists(data_ref)
+            self.assertTrue(file_present)
+
+        # .. subscriber B fetches and acks all ..
+        messages_b = self.backend.fetch_messages(sub_key_b, max_messages=100)
+        self.assertEqual(len(messages_b), 50)
+
+        for message in messages_b:
+            self.backend.ack_message(
+                message['_stream_name'], sub_key_b,
+                message['_redis_message_id'], message['_data_ref'])
+
+        # .. zero pending keys remain ..
+        for data_ref in data_refs:
+            pending_count = self.get_pending_count(data_ref)
+            self.assertEqual(pending_count, 0)
+
+        # .. zero files remain ..
+        for data_ref in data_refs:
+            file_present = self.file_exists(data_ref)
+            self.assertFalse(file_present)
+
+        # .. and zero expiry entries remain.
+        for data_ref in data_refs:
+            expiry_present = self.has_expiry_entry(data_ref)
+            self.assertFalse(expiry_present)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 if __name__ == '__main__':
     _ = unittest.main()
 
