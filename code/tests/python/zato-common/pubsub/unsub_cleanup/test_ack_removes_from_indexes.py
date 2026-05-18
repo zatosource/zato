@@ -42,8 +42,8 @@ class TestAckRemovesFromBothIndexes(BaseUnsubCleanupTestCase):
         messages = self.backend.fetch_messages(sub_key_a)
         logger.info('fetch_messages(sub_key_a) -> %s', messages)
 
-        msg = messages[0]
-        self.backend.ack_message(msg['_stream_name'], sub_key_a, msg['_redis_message_id'], msg['_data_ref'])
+        message = messages[0]
+        self.backend.ack_message(message['_stream_name'], sub_key_a, message['_redis_message_id'], message['_data_ref'])
 
         # .. pending:{data_ref} no longer contains sub_a ..
         has_a = self.has_pending_member(data_ref, sub_key_a)

@@ -104,10 +104,10 @@ class BaseUnsubCleanupTestCase(unittest.TestCase):
         """ Publish a message to the test topic and track its data_ref for cleanup.
         """
         result = self.backend.publish(self.topic_name, data)
-        msg_id = result.msg_id
-        logger.info('publish -> msg_id:%s, topic_name:%s', msg_id, self.topic_name)
+        message_id = result.msg_id
+        logger.info('publish -> message_id:%s, topic_name:%s', message_id, self.topic_name)
 
-        return msg_id
+        return message_id
 
 # ################################################################################################################################
 
