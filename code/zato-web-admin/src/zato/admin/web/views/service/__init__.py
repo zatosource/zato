@@ -24,6 +24,7 @@ from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, upload_to_server
 from zato.admin.middleware import HeadersEnrichedException
 from zato.common.ext.validate_ import is_boolean
+from zato.common.util.api import parse_extra_into_dict
 # Bunch
 from zato.common.ext.bunch import Bunch
 
@@ -243,6 +244,11 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
 
     try:
         payload = req.POST.get('data-request', '')
+        first_line = payload.strip().splitlines()[0] if payload else ''
+
+        if payload and '{' not in payload and '=' in first_line:
+            payload = parse_extra_into_dict(payload, convert_bool=False)
+
         response = req.zato.client.invoke(name, payload) # type: ignore
 
     except HeadersEnrichedException as enriched_exc:
