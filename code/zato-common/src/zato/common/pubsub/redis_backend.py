@@ -408,9 +408,27 @@ class RedisPubSubBackend:
 
         _ = self.redis.xack(stream_name, sub_key, redis_message_id)
 
-        # .. clean up the payload file from disk.
+        # .. remove this subscriber from the message's pending set ..
         if data_ref:
-            self.disk_store.delete(data_ref)
+            pending_key = self._get_pending_key(data_ref)
+            _ = self.redis.srem(pending_key, sub_key)
+
+            # .. check if any subscribers still need this message ..
+            remaining = self.redis.scard(pending_key)
+
+            if remaining == 0:
+
+                # .. no one needs this message anymore, delete everything.
+                _ = self.redis.delete(pending_key)
+                _ = self.redis.zrem(ModuleCtx.Pending_Expiry_Key, data_ref)
+                self.disk_store.delete(data_ref)
+
+                logger.info('ack_message deleted file -> data_ref:%s, sub_key:%s, thread:%s',
+                    data_ref, sub_key, threading.current_thread().name)
+
+            else:
+                logger.info('ack_message pending remaining -> data_ref:%s, sub_key:%s, remaining:%s, thread:%s',
+                    data_ref, sub_key, remaining, threading.current_thread().name)
 
 # ################################################################################################################################
 
