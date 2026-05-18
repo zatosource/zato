@@ -7,11 +7,28 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 import os
+from contextvars import ContextVar
 from logging import Formatter
 
 # Zato
 from zato.common.util.platform_ import is_posix
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+current_cid: ContextVar[str] = ContextVar('current_cid', default='None')
+current_service_name: ContextVar[str] = ContextVar('current_service_name', default='None')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ServiceContextFilter(logging.Filter):
+    def filter(self, record):
+        record.cid = current_cid.get()
+        record.service_name = current_service_name.get()
+        return True
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -120,11 +137,11 @@ formatters:
     audit_pii:
         format: '%(message)s'
     default:
-        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
+        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(service_name)s - %(cid)s - %(message)s'
     http_access_log:
         format: '%(remote_ip)s %(cid_resp_time)s "%(channel_name)s" [%(req_timestamp)s] "%(method)s %(path)s %(http_version)s" %(status_code)s %(response_size)s "-" "%(user_agent)s"'
     colour:
-        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
+        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(service_name)s - %(cid)s - %(message)s'
         (): zato.common.util.api.ColorFormatter
 
 version: 1
