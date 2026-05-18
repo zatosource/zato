@@ -61,11 +61,39 @@ class PublishResult:
 # ################################################################################################################################
 
 class ModuleCtx:
-    Stream_Prefix     = 'zato:pubsub:stream:'
-    Subs_Prefix       = 'zato:pubsub:subs:'
-    Topic_Subs_Prefix = 'zato:pubsub:topic_subs:'
-    Pending_Prefix    = 'zato:pubsub:pending:'
+    Stream_Prefix      = 'zato:pubsub:stream:'
+    Subs_Prefix        = 'zato:pubsub:subs:'
+    Topic_Subs_Prefix  = 'zato:pubsub:topic_subs:'
+    Pending_Prefix     = 'zato:pubsub:pending:'
     Pending_Expiry_Key = 'zato:pubsub:pending_expiry'
+    Sub_Pending_Prefix = 'zato:pubsub:sub_pending:'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_lua_unsub_script = """
+local sub_pending_key = KEYS[1]
+local expiry_key = KEYS[2]
+local sub_key = ARGV[1]
+local pending_prefix = ARGV[2]
+
+local data_refs = redis.call('SMEMBERS', sub_pending_key)
+local deleted_refs = {}
+
+for _, data_ref in ipairs(data_refs) do
+    local pending_key = pending_prefix .. data_ref
+    redis.call('SREM', pending_key, sub_key)
+    local remaining = redis.call('SCARD', pending_key)
+    if remaining == 0 then
+        redis.call('DEL', pending_key)
+        redis.call('ZREM', expiry_key, data_ref)
+        table.insert(deleted_refs, data_ref)
+    end
+end
+
+redis.call('DEL', sub_pending_key)
+return deleted_refs
+"""
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -78,6 +106,7 @@ class RedisPubSubBackend:
         self.redis = redis_client
         self.disk_store = disk_store
         self.server = server
+        self._lua_unsub_sha:'str' = cast_('str', self.redis.script_load(_lua_unsub_script))
 
 # ################################################################################################################################
 
@@ -101,6 +130,12 @@ class RedisPubSubBackend:
 
     def _get_pending_key(self, data_ref:'str') -> 'str':
         out = f'{ModuleCtx.Pending_Prefix}{data_ref}'
+        return out
+
+# ################################################################################################################################
+
+    def _get_sub_pending_key(self, sub_key:'str') -> 'str':
+        out = f'{ModuleCtx.Sub_Pending_Prefix}{sub_key}'
         return out
 
 # ################################################################################################################################
@@ -205,6 +240,11 @@ class RedisPubSubBackend:
             pending_key = self._get_pending_key(data_ref)
             _ = self.redis.sadd(pending_key, *subscriber_keys)
 
+            # .. populate the reverse index for each subscriber ..
+            for sk in subscriber_keys:
+                sub_pending_key = self._get_sub_pending_key(sk)
+                _ = self.redis.sadd(sub_pending_key, data_ref)
+
             # .. and index the message by its expiration time for the cleanup job ..
             expiration_timestamp = expiration_time.timestamp()
             _ = self.redis.zadd(ModuleCtx.Pending_Expiry_Key, {data_ref: expiration_timestamp})
@@ -268,6 +308,22 @@ class RedisPubSubBackend:
 
         # .. remove subscriber from topic's set ..
         _ = self.redis.srem(topic_subs_key, sub_key)
+
+        # .. eagerly clean up all pending messages for this subscriber via Lua script ..
+        sub_pending_key = self._get_sub_pending_key(sub_key)
+        deleted_refs:'anylist' = cast_('anylist', self.redis.evalsha(
+            self._lua_unsub_sha, 2,
+            sub_pending_key, ModuleCtx.Pending_Expiry_Key,
+            sub_key, ModuleCtx.Pending_Prefix
+        ))
+
+        # .. delete disk files for messages that no longer have any pending subscribers ..
+        for data_ref in deleted_refs:
+            self.disk_store.delete(data_ref)
+
+        if deleted_refs:
+            logger.info('unsubscribe deleted files -> sub_key:%s, count:%d, thread:%s',
+                sub_key, len(deleted_refs), threading.current_thread().name)
 
         # .. check if subscriber has any remaining subscriptions ..
         remaining = self.redis.scard(subs_key)
@@ -408,10 +464,13 @@ class RedisPubSubBackend:
 
         _ = self.redis.xack(stream_name, sub_key, redis_message_id)
 
-        # .. remove this subscriber from the message's pending set ..
+        # .. remove this subscriber from the message's pending set and the reverse index ..
         if data_ref:
             pending_key = self._get_pending_key(data_ref)
             _ = self.redis.srem(pending_key, sub_key)
+
+            sub_pending_key = self._get_sub_pending_key(sub_key)
+            _ = self.redis.srem(sub_pending_key, data_ref)
 
             # .. check if any subscribers still need this message ..
             remaining = self.redis.scard(pending_key)
@@ -427,27 +486,8 @@ class RedisPubSubBackend:
                     data_ref, sub_key, threading.current_thread().name)
 
             else:
-
-                # .. there are still members in the pending set, but some may be
-                # .. already unsubscribed. Intersect with current topic subscribers
-                # .. to find how many are actually alive ..
-                topic_name = stream_name.removeprefix(ModuleCtx.Stream_Prefix)
-                topic_subs_key = self._get_topic_subs_key(topic_name)
-                alive_count = self.redis.sintercard(2, [pending_key, topic_subs_key])
-
-                if alive_count == 0:
-
-                    # .. all remaining pending members are already unsubscribed, clean up everything.
-                    _ = self.redis.delete(pending_key)
-                    _ = self.redis.zrem(ModuleCtx.Pending_Expiry_Key, data_ref)
-                    self.disk_store.delete(data_ref)
-
-                    logger.info('ack_message deleted file (unsubscribed subscribers) -> data_ref:%s, sub_key:%s, remaining:%s, thread:%s',
-                        data_ref, sub_key, remaining, threading.current_thread().name)
-
-                else:
-                    logger.info('ack_message pending remaining -> data_ref:%s, sub_key:%s, remaining:%s, alive:%s, thread:%s',
-                        data_ref, sub_key, remaining, alive_count, threading.current_thread().name)
+                logger.info('ack_message pending remaining -> data_ref:%s, sub_key:%s, remaining:%s, thread:%s',
+                    data_ref, sub_key, remaining, threading.current_thread().name)
 
 # ################################################################################################################################
 

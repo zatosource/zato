@@ -7,6 +7,7 @@ addopts = "-m 'not perftest'"
 [tool.pyright]
 extraPaths = [
     "./lib/python3.8/site-packages",
+    "./lib/python3.12/site-packages",
     "./src",
     "./zato-agent/src",
     "./zato-cli/src",
