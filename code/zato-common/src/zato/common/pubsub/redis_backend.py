@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import json
+import threading
 from logging import getLogger
 
 # redis
@@ -182,6 +183,9 @@ class RedisPubSubBackend:
         stream_key = self._get_stream_key(topic_name)
         redis_stream_id = self.redis.xadd(stream_key, message, maxlen=_default_stream_max_len)
 
+        logger.info('Published to stream -> message_id:%s, data_ref:%s, stream_key:%s, redis_stream_id:%s, thread:%s',
+            message_id, data_ref, stream_key, redis_stream_id, threading.current_thread().name)
+
         counter = zato_pubsub_messages_published_total.labels(topic_name=topic_name)
         _ = counter.inc()
 
@@ -300,6 +304,10 @@ class RedisPubSubBackend:
         for stream_name, stream_messages in result:
             for redis_message_id, message_data in stream_messages:
 
+                logger.info('fetch_messages -> sub_key:%s, stream_name:%s, redis_message_id:%s, msg_id:%s, data_ref:%s, thread:%s',
+                    sub_key, stream_name, redis_message_id, message_data.get('msg_id'),
+                    message_data.get('data_ref'), threading.current_thread().name)
+
                 # .. message_data is already dict[str, str] because decode_responses=True ..
                 decoded = message_data
 
@@ -313,6 +321,8 @@ class RedisPubSubBackend:
 
                 if now > expiration_time:
                     expired_data_ref = decoded['data_ref']
+                    logger.info('Expiring message -> sub_key:%s, data_ref:%s, expiration_time_iso:%s, thread:%s',
+                        sub_key, expired_data_ref, expiration_time_iso, threading.current_thread().name)
                     _ = self.redis.xack(stream_name, sub_key, redis_message_id)
                     self.disk_store.delete(expired_data_ref)
                     continue
@@ -327,6 +337,8 @@ class RedisPubSubBackend:
 
                 # .. load the actual payload from disk ..
                 data_ref = decoded['data_ref']
+                logger.info('fetch_messages loading payload -> sub_key:%s, data_ref:%s, redis_message_id:%s, stream_name:%s, thread:%s',
+                    sub_key, data_ref, redis_message_id, stream_name, threading.current_thread().name)
                 load_result = self.disk_store.load(data_ref)
                 decoded['data'] = load_result.data
                 decoded['data_class'] = load_result.data_class
@@ -358,6 +370,9 @@ class RedisPubSubBackend:
     def ack_message(self, stream_name:'str', sub_key:'str', redis_message_id:'str', data_ref:'strnone'=None) -> 'None':
         """ Acknowledge a single message after successful processing.
         """
+        logger.info('ack_message -> sub_key:%s, stream_name:%s, redis_message_id:%s, data_ref:%s, thread:%s',
+            sub_key, stream_name, redis_message_id, data_ref, threading.current_thread().name)
+
         _ = self.redis.xack(stream_name, sub_key, redis_message_id)
 
         # .. clean up the payload file from disk ..
@@ -433,6 +448,8 @@ class RedisPubSubBackend:
             })
 
             # .. acknowledge and clean up the disk file ..
+            logger.info('format_messages_for_rest acking -> sub_key:%s, data_ref:%s, redis_message_id:%s, stream_name:%s, thread:%s',
+                sub_key, data_ref, redis_message_id, stream_name, threading.current_thread().name)
             self.ack_message(stream_name, sub_key, redis_message_id, data_ref)
 
             counter = zato_pubsub_messages_delivered_total.labels(topic_name=message['topic_name'])
