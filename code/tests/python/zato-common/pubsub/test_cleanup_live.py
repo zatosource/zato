@@ -226,6 +226,66 @@ class TestCleanupLiveExpiredMessages(BaseCleanupLiveTestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class TestCleanupLiveMixedExpiry(BaseCleanupLiveTestCase):
+    """ Publish 5 messages with 1-second TTL and 5 with 1-hour TTL, wait for cleanup,
+    verify only the expired 5 are cleaned up, the live 5 are untouched.
+    """
+
+    def test_cleanup_only_removes_expired_leaves_live(self) -> 'None':
+
+        # Create 5 messages that are already expired ..
+        expired_timestamp = time.time() - 1.0
+        expired_refs:'strlist' = []
+
+        for _ in range(5):
+            data_ref = self.store_message('test.cleanup_live.expired')
+            self.add_expiry_entry(data_ref, expired_timestamp)
+            self.add_pending_subscriber(data_ref, 'sub.live_test_subscriber')
+            expired_refs.append(data_ref)
+
+        # .. create 5 messages that expire in 1 hour (still live) ..
+        live_timestamp = time.time() + 3600
+        live_refs:'strlist' = []
+
+        for _ in range(5):
+            data_ref = self.store_message('test.cleanup_live.live')
+            self.add_expiry_entry(data_ref, live_timestamp)
+            self.add_pending_subscriber(data_ref, 'sub.live_test_subscriber')
+            live_refs.append(data_ref)
+
+        # .. start the cleanup process with a 1-second interval ..
+        self.start_cleanup_process(interval=1)
+
+        # .. wait for the cleanup to run ..
+        time.sleep(3)
+
+        # .. verify all expired files, pending sets, and expiry entries are gone ..
+        for data_ref in expired_refs:
+
+            file_exists = self.file_exists(data_ref)
+            self.assertFalse(file_exists)
+
+            pending_set_exists = self.has_pending_set(data_ref)
+            self.assertFalse(pending_set_exists)
+
+            expiry_entry_exists = self.has_expiry_entry(data_ref)
+            self.assertFalse(expiry_entry_exists)
+
+        # .. and all live files, pending sets, and expiry entries are still present.
+        for data_ref in live_refs:
+
+            file_exists = self.file_exists(data_ref)
+            self.assertTrue(file_exists)
+
+            pending_set_exists = self.has_pending_set(data_ref)
+            self.assertTrue(pending_set_exists)
+
+            expiry_entry_exists = self.has_expiry_entry(data_ref)
+            self.assertTrue(expiry_entry_exists)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 if __name__ == '__main__':
     _ = unittest.main()
 
