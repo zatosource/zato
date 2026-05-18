@@ -427,8 +427,27 @@ class RedisPubSubBackend:
                     data_ref, sub_key, threading.current_thread().name)
 
             else:
-                logger.info('ack_message pending remaining -> data_ref:%s, sub_key:%s, remaining:%s, thread:%s',
-                    data_ref, sub_key, remaining, threading.current_thread().name)
+
+                # .. there are still members in the pending set, but some may be
+                # .. already unsubscribed. Intersect with current topic subscribers
+                # .. to find how many are actually alive ..
+                topic_name = stream_name.removeprefix(ModuleCtx.Stream_Prefix)
+                topic_subs_key = self._get_topic_subs_key(topic_name)
+                alive_count = self.redis.sintercard(2, [pending_key, topic_subs_key])
+
+                if alive_count == 0:
+
+                    # .. all remaining pending members are already unsubscribed, clean up everything.
+                    _ = self.redis.delete(pending_key)
+                    _ = self.redis.zrem(ModuleCtx.Pending_Expiry_Key, data_ref)
+                    self.disk_store.delete(data_ref)
+
+                    logger.info('ack_message deleted file (unsubscribed subscribers) -> data_ref:%s, sub_key:%s, remaining:%s, thread:%s',
+                        data_ref, sub_key, remaining, threading.current_thread().name)
+
+                else:
+                    logger.info('ack_message pending remaining -> data_ref:%s, sub_key:%s, remaining:%s, alive:%s, thread:%s',
+                        data_ref, sub_key, remaining, alive_count, threading.current_thread().name)
 
 # ################################################################################################################################
 
