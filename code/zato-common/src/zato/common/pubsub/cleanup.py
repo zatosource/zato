@@ -19,12 +19,13 @@ from redis import Redis
 
 # Zato
 from zato.common.pubsub.disk_store import DiskMessageStore
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strlist
+    from zato.common.typing_ import strlist, strset
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,8 +41,9 @@ _Default_Redis_Host       = 'localhost'
 _Default_Redis_Port       = 6379
 _Default_Redis_DB         = 0
 
-_Pending_Prefix     = 'zato:pubsub:pending:'
-_Pending_Expiry_Key = 'zato:pubsub:pending_expiry'
+_Pending_Prefix      = 'zato:pubsub:pending:'
+_Pending_Expiry_Key  = 'zato:pubsub:pending_expiry'
+_Sub_Pending_Prefix  = 'zato:pubsub:sub_pending:'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,9 +84,9 @@ class PubSubCleanup:
         now = time.time()
 
         # .. find all expired entries, capped by batch size ..
-        expired_refs:'strlist' = self.redis.zrangebyscore( # pyright: ignore[reportAssignmentType]
+        expired_refs:'strlist' = cast_('strlist', self.redis.zrangebyscore(
             _Pending_Expiry_Key, 0, now,
-            start=0, num=self.batch_size)
+            start=0, num=self.batch_size))
 
         if not expired_refs:
             return 0
@@ -95,6 +97,13 @@ class PubSubCleanup:
 
             # Build the pending key for this message ..
             pending_key = self._get_pending_key(data_ref)
+
+            # .. remove this data_ref from the reverse index of each remaining subscriber ..
+            remaining_subs:'strset' = cast_('strset', self.redis.smembers(pending_key))
+
+            for sub_key in remaining_subs:
+                sub_pending_key = f'{_Sub_Pending_Prefix}{sub_key}'
+                _ = self.redis.srem(sub_pending_key, data_ref)
 
             # .. delete the pending set ..
             _ = self.redis.delete(pending_key)
