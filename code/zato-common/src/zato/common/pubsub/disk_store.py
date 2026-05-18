@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import shutil
+import threading
 from logging import getLogger
 from typing import NamedTuple
 
@@ -17,7 +18,6 @@ from typing import NamedTuple
 
 if 0:
     from zato.common.crypto.api import CryptoManager
-    from zato.common.typing_ import strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -87,7 +87,9 @@ class DiskMessageStore:
             _ = file_handle.write(f'{_data_key}={data_to_write}')
 
         data_len = len(data)
-        logger.info('Stored message payload -> message_id:%s, topic:%s, path:%s, data_len:%s, encrypted:%s', message_id, topic_name, absolute_path, data_len, encrypt)
+        thread_name = threading.current_thread().name
+        logger.info('Stored message payload -> message_id:%s, topic:%s, path:%s, data_len:%s, encrypted:%s, thread:%s',
+            message_id, topic_name, absolute_path, data_len, encrypt, thread_name)
 
         return data_ref
 
@@ -98,11 +100,17 @@ class DiskMessageStore:
         """
 
         absolute_path = self._ref_to_path(data_ref)
+        file_exists = os.path.exists(absolute_path)
+        thread_name = threading.current_thread().name
 
-        logger.info('Loading message payload -> data_ref:%s, path:%s', data_ref, absolute_path)
+        logger.info('Loading message payload -> data_ref:%s, path:%s, file_exists:%s, thread:%s', data_ref, absolute_path, file_exists, thread_name)
 
-        with open(absolute_path, 'r', encoding='utf-8') as file_handle:
-            content = file_handle.read()
+        try:
+            with open(absolute_path, 'r', encoding='utf-8') as file_handle:
+                content = file_handle.read()
+        except FileNotFoundError:
+            logger.error('FileNotFoundError in load -> data_ref:%s, path:%s, thread:%s', data_ref, absolute_path, thread_name)
+            raise
 
         # Parse key=value lines. The `data` key is always last
         # and everything after `data=` is the value (may span multiple lines).
@@ -132,7 +140,8 @@ class DiskMessageStore:
             data = self.crypto_manager.decrypt(data) # type: ignore[union-attr]
 
         data_len = len(data)
-        logger.info('Loaded message payload -> data_ref:%s, path:%s, data_len:%s, data_class:%s, encrypted:%s', data_ref, absolute_path, data_len, data_class, is_encrypted)
+        logger.info('Loaded message payload -> data_ref:%s, path:%s, data_len:%s, data_class:%s, encrypted:%s',
+            data_ref, absolute_path, data_len, data_class, is_encrypted)
 
         out = LoadResult(data=data, data_class=data_class)
         return out
@@ -144,13 +153,14 @@ class DiskMessageStore:
         """
 
         absolute_path = self._ref_to_path(data_ref)
+        thread_name = threading.current_thread().name
 
-        logger.info('Deleting message payload -> data_ref:%s, path:%s', data_ref, absolute_path)
+        logger.info('Deleting message payload -> data_ref:%s, path:%s, thread:%s', data_ref, absolute_path, thread_name)
 
         try:
             os.remove(absolute_path)
         except FileNotFoundError:
-            logger.info('Payload file already removed -> data_ref:%s, path:%s', data_ref, absolute_path)
+            logger.info('Payload file already removed -> data_ref:%s, path:%s, thread:%s', data_ref, absolute_path, thread_name)
 
 # ################################################################################################################################
 

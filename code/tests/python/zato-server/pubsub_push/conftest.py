@@ -120,7 +120,14 @@ class _SessionState:
     def cleanup(self) -> 'None':
         """ Full teardown - server, receivers, temp directory.
         """
-        # Stop the server process first ..
+        # Copy server logs before killing anything ..
+        if self.quickstart_directory:
+            server_log_path = os.path.join(self.quickstart_directory, 'server1', 'logs', 'server.log')
+            if os.path.exists(server_log_path):
+                shutil.copy(server_log_path, '/tmp/server-logs.txt')
+                logger.info('Copied server logs to /tmp/server-logs.txt')
+
+        # Stop the server process ..
         self.kill_server()
 
         # .. then stop all receivers ..
