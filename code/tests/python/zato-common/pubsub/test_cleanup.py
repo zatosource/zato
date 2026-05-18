@@ -225,6 +225,62 @@ class TestCleanupSweepOneExpired(BaseCleanupTestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class TestCleanupSweepBatchDrain(BaseCleanupTestCase):
+    """ Batch size limit - publish 20 messages with expired TTL, set batch_size=5, verify sweep drains all in multiple passes.
+    """
+
+    def test_sweep_drains_all_expired_in_batches(self) -> 'None':
+        """ With batch_size=5 and 20 expired messages, sweeping repeatedly should remove all 20.
+        """
+
+        # Create a cleanup instance with batch_size=5 ..
+        cleanup = PubSubCleanup(
+            redis_client=self.redis,
+            disk_store=self.disk_store,
+            batch_size=5,
+        )
+
+        # .. create 20 expired messages ..
+        data_refs:'strlist' = []
+
+        for message_index in range(20):
+            message_id = f'zpsm.20260518-090000-{message_index:04d}-aabbccdd11223344'
+            data_ref = self.store_message(message_id, 'test.cleanup.batch_drain')
+            self.add_expiry_entry(data_ref, 1.0)
+            self.add_pending_subscriber(data_ref, 'sub.batch_subscriber')
+            data_refs.append(data_ref)
+
+        # .. keep sweeping until nothing is left ..
+        total_deleted = 0
+
+        while True:
+            deleted_count = cleanup.sweep_once()
+            total_deleted += deleted_count
+            logger.info('Batch sweep pass -> deleted_count:%d, total_deleted:%d', deleted_count, total_deleted)
+
+            if deleted_count == 0:
+                break
+            else:
+                self.assertEqual(deleted_count, 5)
+
+        # .. verify all 20 were cleaned up ..
+        self.assertEqual(total_deleted, 20)
+
+        # .. and verify every file, pending set, and expiry entry is gone.
+        for data_ref in data_refs:
+
+            file_exists = self.file_exists(data_ref)
+            self.assertFalse(file_exists)
+
+            pending_set_exists = self.has_pending_set(data_ref)
+            self.assertFalse(pending_set_exists)
+
+            expiry_entry_exists = self.has_expiry_entry(data_ref)
+            self.assertFalse(expiry_entry_exists)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 if __name__ == '__main__':
     _ = unittest.main()
 
