@@ -265,6 +265,9 @@ class TestRedisPubSubBackend(unittest.TestCase):
         message_id = 'zpsm.20260517-113200-1234-abcdef1234567890'
         data_ref = self.disk_store.store(message_id, 'test.topic', 'test data', '')
 
+        # .. make the mock return 0 remaining subscribers after SREM ..
+        self.redis_mock.scard.return_value = 0
+
         # .. ack with data_ref should delete the file ..
         self.backend.ack_message('stream:test', 'sub1', '1-0', data_ref)
 
