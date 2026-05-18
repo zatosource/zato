@@ -9,10 +9,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import logging
+import time
 import unittest
 
 # local
-from _client import PublishClient
+from _client import PublishClient, PullClient
 from config import TestConfig
 
 # ################################################################################################################################
@@ -103,6 +104,53 @@ class TestCustomerOrderPushDelivery(unittest.TestCase):
 
         # .. and verify the count.
         self.assertEqual(len(messages), burst_count)
+
+# ################################################################################################################################
+
+    def test_priority_ordering_via_pull(self) -> 'None':
+        """ Publish messages with different priorities, pull them, verify they arrive
+        ordered by priority descending.
+        """
+
+        topic_name = 'iam.user.created'
+        puller = PullClient(TestConfig.base_url, TestConfig.puller_username, TestConfig.puller_password)
+
+        # Drain any leftover messages ..
+        puller.drain()
+
+        # Publish 3 messages with different priorities ..
+        expected_priorities = [5, 1, 9]
+
+        _ = self.publisher.publish(topic_name, {'label': 'high'},   priority=expected_priorities[0])
+        _ = self.publisher.publish(topic_name, {'label': 'low'},    priority=expected_priorities[1])
+        _ = self.publisher.publish(topic_name, {'label': 'medium'}, priority=expected_priorities[2])
+
+        message_count = len(expected_priorities)
+        logger.info('Published %d messages with priorities %s to %s', message_count, expected_priorities, topic_name)
+
+        # .. give the server a moment to ingest ..
+        time.sleep(1)
+
+        # .. pull all messages ..
+        result = puller.pull(max_messages=10)
+        logger.info('Pull result -> %s', result)
+
+        self.assertEqual(result['message_count'], message_count)
+
+        # .. extract priorities from the response ..
+        messages = result['messages']
+        received_priorities = []
+
+        for message in messages:
+            meta = message['meta']
+            priority = meta['priority']
+            received_priorities.append(priority)
+
+        logger.info('Received priorities -> %s', received_priorities)
+
+        # .. and verify descending order.
+        expected_sorted = sorted(expected_priorities, reverse=True)
+        self.assertEqual(received_priorities, expected_sorted)
 
 # ################################################################################################################################
 # ################################################################################################################################
