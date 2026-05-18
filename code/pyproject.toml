@@ -3,6 +3,8 @@ markers = [
     "perftest: long-running performance tests, skipped by default",
 ]
 addopts = "-m 'not perftest'"
+log_cli = true
+log_cli_level = "INFO"
 
 [tool.pyright]
 extraPaths = [
