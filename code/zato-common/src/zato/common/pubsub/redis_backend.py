@@ -213,6 +213,7 @@ class RedisPubSubBackend:
             logger.info('Populated pending set -> data_ref:%s, subscriber_count:%d, expiration_timestamp:%.1f, thread:%s',
                 data_ref, subscriber_count, expiration_timestamp, threading.current_thread().name)
 
+        # .. update the publish counter and return the result.
         counter = zato_pubsub_messages_published_total.labels(topic_name=topic_name)
         _ = counter.inc()
 
@@ -240,7 +241,7 @@ class RedisPubSubBackend:
         # .. add subscriber to topic's set ..
         _ = self.redis.sadd(topic_subs_key, sub_key)
 
-        # .. create consumer group if not exists ..
+        # .. create consumer group if not exists.
         try:
             _ = self.redis.xgroup_create(stream_key, sub_key, id='0', mkstream=True)
         except ResponseError as error:
@@ -269,7 +270,7 @@ class RedisPubSubBackend:
         # .. check if subscriber has any remaining subscriptions ..
         remaining = self.redis.scard(subs_key)
 
-        # .. if no remaining subscriptions, destroy the consumer group ..
+        # .. if no remaining subscriptions, destroy the consumer group.
         if remaining == 0:
             try:
                 _ = self.redis.xgroup_destroy(stream_key, sub_key)
@@ -380,7 +381,7 @@ class RedisPubSubBackend:
 
                 messages.append(decoded)
 
-        # .. sort by priority desc, then by pub_time asc ..
+        # .. sort by priority desc, then by pub_time asc.
         def _sort_key(message:'anydict') -> 'tuple':
             negated_priority = -message['priority']
             pub_time = message['pub_time_iso']
@@ -402,7 +403,7 @@ class RedisPubSubBackend:
 
         _ = self.redis.xack(stream_name, sub_key, redis_message_id)
 
-        # .. clean up the payload file from disk ..
+        # .. clean up the payload file from disk.
         if data_ref:
             self.disk_store.delete(data_ref)
 
@@ -474,7 +475,7 @@ class RedisPubSubBackend:
                 'meta': meta
             })
 
-            # .. acknowledge and clean up the disk file ..
+            # .. acknowledge and clean up the disk file.
             logger.info('format_messages_for_rest acking -> sub_key:%s, data_ref:%s, redis_message_id:%s, stream_name:%s, thread:%s',
                 sub_key, data_ref, redis_message_id, stream_name, threading.current_thread().name)
             self.ack_message(stream_name, sub_key, redis_message_id, data_ref)
@@ -492,7 +493,7 @@ class RedisPubSubBackend:
         normalized_iso = iso_timestamp.replace('Z', '+00:00')
         timestamp = datetime.fromisoformat(normalized_iso)
 
-        # .. strip tzinfo from both sides so subtraction always works ..
+        # .. strip tzinfo from both sides so subtraction always works.
         if timestamp.tzinfo:
             timestamp_naive = timestamp.replace(tzinfo=None)
         else:
@@ -586,7 +587,7 @@ class RedisPubSubBackend:
         else:
             last_stream_id = raw_messages[-1][0]
 
-            # .. Redis stream IDs are '<ms>-<seq>', increment the seq ..
+            # .. Redis stream IDs are '<ms>-<seq>', increment the seq.
             parts = last_stream_id.split('-')
             timestamp_part = parts[0]
             sequence_part = parts[1]
@@ -646,7 +647,7 @@ class RedisPubSubBackend:
         # .. delete the stream ..
         _ = self.redis.delete(stream_key)
 
-        # .. delete the topic subscribers set ..
+        # .. delete the topic subscribers set.
         _ = self.redis.delete(topic_subs_key)
 
 # ################################################################################################################################
@@ -691,7 +692,7 @@ class RedisPubSubBackend:
                 else:
                     buckets[bucket_key_ms] = 1
 
-        # .. sort by timestamp and build the output list ..
+        # .. sort by timestamp and build the output list.
         sorted_keys = sorted(buckets.keys())
 
         out:'dictlist' = []
@@ -715,7 +716,7 @@ class RedisPubSubBackend:
         cutoff_epoch_ms = int(cutoff.timestamp() * 1000)
         min_stream_id = f'{cutoff_epoch_ms}-0'
 
-        # .. collect distinct publishers ..
+        # .. collect distinct publishers.
         publishers:'set' = set()
 
         for topic_name in topic_names:
@@ -758,7 +759,7 @@ class RedisPubSubBackend:
         except ResponseError:
             logger.debug('Topic subscribers set %s not found during rename', old_topic_subs_key)
 
-        # .. update each subscriber's topic set ..
+        # .. update each subscriber's topic set.
         for sub_key in subscriptions:
             subs_key = self._get_subs_key(sub_key)
             _ = self.redis.srem(subs_key, old_topic_name)
