@@ -83,7 +83,8 @@ class _SessionState:
 
     def __init__(self) -> 'None':
         self.server_process:'subprocess.Popen[bytes] | None' = None
-        self.temp_directory:'str | None' = None
+        self.quickstart_directory:'str | None' = None
+        self.test_data_directory:'str | None' = None
         self.receivers:'webhook_receiver_list' = []
 
 # ################################################################################################################################
@@ -125,12 +126,17 @@ class _SessionState:
         # .. then stop all receivers ..
         self.stop_all_receivers()
 
-        # .. then clean up the temporary directory.
-        if self.temp_directory:
-            shutil.rmtree(self.temp_directory, ignore_errors=True)
-            logger.info('Removed tempprary directory %s', self.temp_directory)
+        # .. then clean up the temporary directories.
+        if self.quickstart_directory:
+            shutil.rmtree(self.quickstart_directory, ignore_errors=True)
+            logger.info('Removed quickstart directory %s', self.quickstart_directory)
 
-        self.temp_directory = None
+        if self.test_data_directory:
+            shutil.rmtree(self.test_data_directory, ignore_errors=True)
+            logger.info('Removed test data directory %s', self.test_data_directory)
+
+        self.quickstart_directory = None
+        self.test_data_directory = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -250,7 +256,8 @@ def zato_server() -> 'any_':
         subscriber_passwords[key] = 'test.sub.' + random_suffix
 
     # Allocate ports and start receivers ..
-    _state.temp_directory = tempfile.mkdtemp(prefix='zato_pubsub_push_test_')
+    _state.quickstart_directory = tempfile.mkdtemp(prefix='zato_pubsub_push_qs_')
+    _state.test_data_directory = tempfile.mkdtemp(prefix='zato_pubsub_push_data_')
     endpoints:'endpoint_config_dict' = {}
     placeholders:'str_strint_dict' = {}
 
@@ -268,7 +275,7 @@ def zato_server() -> 'any_':
         placeholders[f'port_{key}'] = port
 
         # .. output directory ..
-        output_directory = os.path.join(_state.temp_directory, 'receivers', key)
+        output_directory = os.path.join(_state.test_data_directory, 'receivers', key)
         os.makedirs(output_directory, exist_ok=True)
 
         # .. start the receiver ..
@@ -289,7 +296,7 @@ def zato_server() -> 'any_':
 
     # Render the enmasse template ..
     rendered_yaml = _render_template(placeholders)
-    rendered_path = os.path.join(_state.temp_directory, 'enmasse.yaml')
+    rendered_path = os.path.join(_state.test_data_directory, 'enmasse.yaml')
 
     with open(rendered_path, 'w') as rendered_file:
         _ = rendered_file.write(rendered_yaml)
@@ -299,7 +306,7 @@ def zato_server() -> 'any_':
     _ = quickstart_environment.pop('COVERAGE_PROCESS_START', None)
 
     quickstart_command = [
-        _zato_bin, 'quickstart', 'create', _state.temp_directory,
+        _zato_bin, 'quickstart', 'create', _state.quickstart_directory,
         '--force',
         '--password', invoke_password,
         '--servers', '1',
@@ -318,7 +325,7 @@ def zato_server() -> 'any_':
     quickstart_elapsed = quickstart_time - receiver_time
     logger.info('Quickstart create: %.1fs', quickstart_elapsed)
 
-    server_directory = os.path.join(_state.temp_directory, 'server1')
+    server_directory = os.path.join(_state.quickstart_directory, 'server1')
 
     # Import the enmasse YAML into the ODB before starting the server ..
     enmasse_environment = os.environ.copy()
