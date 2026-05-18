@@ -302,10 +302,28 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
+    def _deploy_user_conf(self, payload:'str', payload_name:'str') -> 'None':
+
+        data = b64decode(payload).decode('utf8')
+        file_name = os.path.basename(payload_name)
+
+        self.invoke('zato.pickup.on-update-user-conf', {
+            'data': data,
+            'file_name': file_name,
+            'full_path': payload_name,
+            'relative_dir': '',
+        })
+
+# ################################################################################################################################
+
     def deploy_package(self, payload:'str', payload_name:'str') -> 'any_':
 
         if is_archive_file(payload_name) or is_python_file(payload_name):
             return self._deploy_package(payload, payload_name)
+
+        elif payload_name.endswith('.ini') or payload_name.endswith('.zrules'):
+            self._deploy_user_conf(payload, payload_name)
+
         else:
             self.logger.warning('Ignoring package id:`%s`, payload_name:`%s`, not a Python file nor an archive', payload_name)
 
