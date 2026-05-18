@@ -313,6 +313,65 @@ class TestCleanupSweepIdempotency(BaseCleanupTestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class TestCleanupSweepMixedExpiredAndUnexpired(BaseCleanupTestCase):
+    """ Mixed expired and unexpired - sweep deletes only the expired, unexpired files and pending sets untouched.
+    """
+
+    def test_sweep_deletes_only_expired_leaves_unexpired(self) -> 'None':
+        """ With 5 expired and 5 unexpired messages, sweep should delete only the 5 expired.
+        """
+
+        # Create 5 expired messages ..
+        expired_refs:'strlist' = []
+
+        for _ in range(5):
+            data_ref = self.store_message('test.cleanup.mixed_expired')
+            self.add_expiry_entry(data_ref, 1.0)
+            self.add_pending_subscriber(data_ref, 'sub.mixed_subscriber')
+            expired_refs.append(data_ref)
+
+        # .. create 5 unexpired messages with far-future expiry ..
+        unexpired_refs:'strlist' = []
+
+        for _ in range(5):
+            data_ref = self.store_message('test.cleanup.mixed_unexpired')
+            self.add_expiry_entry(data_ref, 4_000_000_000.0)
+            self.add_pending_subscriber(data_ref, 'sub.mixed_subscriber')
+            unexpired_refs.append(data_ref)
+
+        # .. run the sweep ..
+        deleted_count = self.cleanup.sweep_once()
+        logger.info('Mixed sweep -> deleted:%d', deleted_count)
+
+        # .. verify only the 5 expired were cleaned up ..
+        self.assertEqual(deleted_count, 5)
+
+        for data_ref in expired_refs:
+
+            file_exists = self.file_exists(data_ref)
+            self.assertFalse(file_exists)
+
+            pending_set_exists = self.has_pending_set(data_ref)
+            self.assertFalse(pending_set_exists)
+
+            expiry_entry_exists = self.has_expiry_entry(data_ref)
+            self.assertFalse(expiry_entry_exists)
+
+        # .. and verify all 5 unexpired messages are untouched.
+        for data_ref in unexpired_refs:
+
+            file_exists = self.file_exists(data_ref)
+            self.assertTrue(file_exists)
+
+            pending_set_exists = self.has_pending_set(data_ref)
+            self.assertTrue(pending_set_exists)
+
+            expiry_entry_exists = self.has_expiry_entry(data_ref)
+            self.assertTrue(expiry_entry_exists)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 if __name__ == '__main__':
     _ = unittest.main()
 
