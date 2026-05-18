@@ -127,9 +127,8 @@ class _SessionState:
 
         # .. then clean up the temporary directory.
         if self.temp_directory:
-            if os.path.isdir(self.temp_directory):
-                shutil.rmtree(self.temp_directory, ignore_errors=True)
-                logger.info('Removed temp directory %s', self.temp_directory)
+            shutil.rmtree(self.temp_directory, ignore_errors=True)
+            logger.info('Removed tempprary directory %s', self.temp_directory)
 
         self.temp_directory = None
 

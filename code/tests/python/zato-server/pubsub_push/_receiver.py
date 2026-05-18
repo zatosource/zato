@@ -284,10 +284,6 @@ class WebhookReceiver:
     def delivered_count(self) -> 'int':
         """ Returns the number of delivered message files.
         """
-        if not os.path.isdir(self.output_directory):
-            logger.warning('Output directory does not exist for count: %s', self.output_directory)
-            return 0
-
         count = 0
 
         for file_name in os.listdir(self.output_directory):
