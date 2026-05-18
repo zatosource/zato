@@ -45,7 +45,7 @@ class _CoverageConfig(NamedTuple): # type: ignore
 # ################################################################################################################################
 # ################################################################################################################################
 
-_zato_base = '/home/dsuch/projects/zatosource-zato/4.1'
+_zato_base = os.environ['ZATO_TEST_BASE_DIR']
 _zato_bin  = os.path.join(_zato_base, 'code', 'bin', 'zato')
 _zato_py   = os.path.join(_zato_base, 'code', 'bin', 'python')
 
