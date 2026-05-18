@@ -45,7 +45,7 @@ class TestIAMPushDelivery(unittest.TestCase):
         """
 
         topic_name = 'iam.user.created'
-        publish_data:'anydict' = {'user_id': 'u001', 'action': 'created'}
+        publish_data:'anydict' = {'user_id': 'user1', 'action': 'created'}
 
         # Publish ..
         _ = self.publisher.publish(topic_name, publish_data)
@@ -65,7 +65,38 @@ class TestIAMPushDelivery(unittest.TestCase):
         if isinstance(received_data, str):
             received_data = json.loads(received_data)
 
-        self.assertEqual(received_data['user_id'], 'u001')
+        logger.info('received_data -> %s', received_data)
+        self.assertEqual(received_data['user_id'], 'user1')
+
+# ################################################################################################################################
+
+    def test_publish_to_iam_user_deleted(self) -> 'None':
+        """ Publish to iam.user.deleted, verify receiver got 1 message with correct data.
+        """
+
+        topic_name = 'iam.user.deleted'
+        publish_data:'anydict' = {'user_id': 'user2', 'reason': 'account_closed'}
+
+        # Publish ..
+        _ = self.publisher.publish(topic_name, publish_data)
+
+        # .. wait for push delivery ..
+        receiver = TestConfig.endpoints[topic_name].receiver
+        messages = receiver.wait_for_delivery(expected_count=1)
+        logger.info('Delivered messages -> %s', messages)
+
+        # .. verify exactly 1 message arrived ..
+        self.assertEqual(len(messages), 1)
+
+        # .. and the data round-tripped correctly.
+        message = messages[0]
+        received_data = message['data']
+
+        if isinstance(received_data, str):
+            received_data = json.loads(received_data)
+
+        logger.info('received_data -> %s', received_data)
+        self.assertEqual(received_data['user_id'], 'user2')
 
 # ################################################################################################################################
 # ################################################################################################################################
