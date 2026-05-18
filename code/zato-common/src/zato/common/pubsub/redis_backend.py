@@ -20,6 +20,7 @@ from redis.exceptions import ResponseError
 from zato.common.api import PubSub
 from zato.common.marshal_.api import Model
 from zato.common.pubsub.disk_store import DiskMessageStore
+from zato.common.typing_ import cast_
 from zato.common.util.api import new_msg_id, utcnow
 from zato.server.metrics import zato_pubsub_messages_delivered_total, zato_pubsub_messages_published_total
 
@@ -28,9 +29,10 @@ from zato.server.metrics import zato_pubsub_messages_delivered_total, zato_pubsu
 
 if 0:
     from redis import Redis
-    from zato.common.typing_ import any_, anydict, anylist, dictlist, strlist, strnone
+    from redis.typing import EncodableT, FieldT
+    from zato.common.typing_ import any_, anydict, anylist, dictlist, strlist, strnone, strset
 
-browse_result = tuple['anylist', str]
+    browse_result = tuple['anylist', str]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -162,7 +164,7 @@ class RedisPubSubBackend:
         data_size = len(serialized_data)
         data_preview = serialized_data[:_default_data_preview_len]
 
-        message = {
+        message:'dict[FieldT, EncodableT]' = {
             'msg_id': message_id,
             'data_ref': data_ref,
             'data_size': data_size,
@@ -196,7 +198,7 @@ class RedisPubSubBackend:
 
         # .. populate the pending subscriber set and index by expiration time ..
         topic_subs_key = self._get_topic_subs_key(topic_name)
-        subscriber_keys = self.redis.smembers(topic_subs_key)
+        subscriber_keys:'strset' = cast_('strset', self.redis.smembers(topic_subs_key))
 
         # .. if there are any subscribers, record which ones still need this message ..
         if subscriber_keys:
@@ -291,7 +293,7 @@ class RedisPubSubBackend:
         subs_key = self._get_subs_key(sub_key)
 
         # .. get all topics this subscriber is subscribed to ..
-        topics = self.redis.smembers(subs_key)
+        topics:'strset' = cast_('strset', self.redis.smembers(subs_key))
 
         if not topics:
             return []
@@ -307,13 +309,13 @@ class RedisPubSubBackend:
         try:
             block_value = block_ms if block_ms else None
 
-            result = self.redis.xreadgroup(
+            result:'anylist' = cast_('anylist', self.redis.xreadgroup(
                 groupname=sub_key,
                 consumername=sub_key,
                 streams=streams,
                 count=max_messages,
                 block=block_value
-            )
+            ))
 
         except ResponseError as error:
             if 'NOGROUP' in error.args[0]:
@@ -529,7 +531,7 @@ class RedisPubSubBackend:
 
         # .. read a page from the stream ..
         try:
-            raw_messages = self.redis.xrange(stream_key, min=cursor, count=page_size)
+            raw_messages:'anylist' = cast_('anylist', self.redis.xrange(stream_key, min=cursor, count=page_size))
         except ResponseError:
             return [], ''
 
@@ -538,7 +540,7 @@ class RedisPubSubBackend:
 
         messages:'anylist' = []
 
-        for redis_message_id, message_data in raw_messages:
+        for _, message_data in raw_messages:
 
             entry:'anydict' = {
                 'msg_id': message_data['msg_id'],
@@ -600,7 +602,7 @@ class RedisPubSubBackend:
         """ Get list of topics a subscriber is subscribed to.
         """
         subs_key = self._get_subs_key(sub_key)
-        topics = self.redis.smembers(subs_key)
+        topics:'strset' = cast_('strset', self.redis.smembers(subs_key))
 
         out = list(topics)
         return out
@@ -611,7 +613,7 @@ class RedisPubSubBackend:
         """ Get list of subscribers for a topic.
         """
         topic_subs_key = self._get_topic_subs_key(topic_name)
-        subscriptions = self.redis.smembers(topic_subs_key)
+        subscriptions:'strset' = cast_('strset', self.redis.smembers(topic_subs_key))
 
         out = list(subscriptions)
         return out
@@ -670,11 +672,11 @@ class RedisPubSubBackend:
             stream_key = self._get_stream_key(topic_name)
 
             try:
-                messages = self.redis.xrange(stream_key, min=min_stream_id)
+                messages:'anylist' = cast_('anylist', self.redis.xrange(stream_key, min=min_stream_id))
             except ResponseError:
                 continue
 
-            for _message_id, message_data in messages:
+            for _, message_data in messages:
 
                 pub_time_iso = message_data['pub_time_iso']
 
@@ -720,11 +722,11 @@ class RedisPubSubBackend:
             stream_key = self._get_stream_key(topic_name)
 
             try:
-                messages = self.redis.xrange(stream_key, min=min_stream_id)
+                messages:'anylist' = cast_('anylist', self.redis.xrange(stream_key, min=min_stream_id))
             except ResponseError:
                 continue
 
-            for _message_id, message_data in messages:
+            for _, message_data in messages:
                 if publisher := message_data.get('publisher'):
                     publishers.add(publisher)
 
