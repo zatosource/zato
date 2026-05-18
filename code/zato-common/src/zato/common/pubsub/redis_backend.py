@@ -59,9 +59,11 @@ class PublishResult:
 # ################################################################################################################################
 
 class ModuleCtx:
-    Stream_Prefix = 'zato:pubsub:stream:'
-    Subs_Prefix = 'zato:pubsub:subs:'
+    Stream_Prefix     = 'zato:pubsub:stream:'
+    Subs_Prefix       = 'zato:pubsub:subs:'
     Topic_Subs_Prefix = 'zato:pubsub:topic_subs:'
+    Pending_Prefix    = 'zato:pubsub:pending:'
+    Pending_Expiry_Key = 'zato:pubsub:pending_expiry'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -91,6 +93,12 @@ class RedisPubSubBackend:
 
     def _get_topic_subs_key(self, topic_name:'str') -> 'str':
         out = f'{ModuleCtx.Topic_Subs_Prefix}{topic_name}'
+        return out
+
+# ################################################################################################################################
+
+    def _get_pending_key(self, data_ref:'str') -> 'str':
+        out = f'{ModuleCtx.Pending_Prefix}{data_ref}'
         return out
 
 # ################################################################################################################################
@@ -185,6 +193,23 @@ class RedisPubSubBackend:
 
         logger.info('Published to stream -> message_id:%s, data_ref:%s, stream_key:%s, redis_stream_id:%s, thread:%s',
             message_id, data_ref, stream_key, redis_stream_id, threading.current_thread().name)
+
+        # .. populate the pending subscriber set and index by expiration time ..
+        topic_subs_key = self._get_topic_subs_key(topic_name)
+        subscriber_keys = self.redis.smembers(topic_subs_key)
+
+        # .. if there are any subscribers, record which ones still need this message ..
+        if subscriber_keys:
+            pending_key = self._get_pending_key(data_ref)
+            _ = self.redis.sadd(pending_key, *subscriber_keys)
+
+            # .. and index the message by its expiration time for the cleanup job ..
+            expiration_timestamp = expiration_time.timestamp()
+            _ = self.redis.zadd(ModuleCtx.Pending_Expiry_Key, {data_ref: expiration_timestamp})
+
+            subscriber_count = len(subscriber_keys)
+            logger.info('Populated pending set -> data_ref:%s, subscriber_count:%d, expiration_timestamp:%.1f, thread:%s',
+                data_ref, subscriber_count, expiration_timestamp, threading.current_thread().name)
 
         counter = zato_pubsub_messages_published_total.labels(topic_name=topic_name)
         _ = counter.inc()
