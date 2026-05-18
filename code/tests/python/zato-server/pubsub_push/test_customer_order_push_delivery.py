@@ -107,6 +107,100 @@ class TestCustomerOrderPushDelivery(unittest.TestCase):
 
 # ################################################################################################################################
 
+    def test_ordering_ten_sequential_messages(self) -> 'None':
+        """ Publish 10 sequential messages to a pull subscriber, pull them,
+        verify they arrive in monotonic order.
+        """
+
+        topic_name = 'iam.user.created'
+        puller = PullClient(TestConfig.base_url, TestConfig.puller_username, TestConfig.puller_password)
+
+        # Drain any leftover messages ..
+        puller.drain()
+
+        # Publish messages with a sequence number in the payload ..
+        message_count = 10
+
+        for idx in range(message_count):
+            _ = self.publisher.publish(topic_name, {'seq': idx})
+
+        logger.info('Published %d sequential messages to %s', message_count, topic_name)
+
+        # .. give the server a moment to ingest ..
+        time.sleep(1)
+
+        # .. pull all messages ..
+        result = puller.pull(max_messages=message_count)
+        logger.info('Pull result -> %s', result)
+
+        self.assertEqual(result['message_count'], message_count)
+
+        # .. extract the sequence numbers from the response ..
+        messages = result['messages']
+        received_sequences = []
+
+        for message in messages:
+            data = message['data']
+            if isinstance(data, str):
+                data = json.loads(data)
+            received_sequences.append(data['seq'])
+
+        logger.info('Received sequences -> %s', received_sequences)
+
+        # .. and verify monotonic (non-decreasing) order.
+        for idx in range(1, len(received_sequences)):
+            previous = received_sequences[idx - 1]
+            current = received_sequences[idx]
+            self.assertLessEqual(previous, current,
+                f'Order violation at position {idx}: {previous} > {current}')
+
+# ################################################################################################################################
+
+    def test_large_payload_intact_delivery(self) -> 'None':
+        """ Publish a 100 KB payload, pull it back, verify it arrived intact.
+        """
+
+        topic_name = 'iam.user.created'
+        puller = PullClient(TestConfig.base_url, TestConfig.puller_username, TestConfig.puller_password)
+
+        # Drain any leftover messages ..
+        puller.drain()
+
+        # Build a 100 KB payload ..
+        payload_size_kb = 100
+        payload_char_count = payload_size_kb * 1024
+        large_value = 'X' * payload_char_count
+        publish_data = {'bulk': large_value}
+
+        _ = self.publisher.publish(topic_name, publish_data)
+        logger.info('Published %d KB payload to %s', payload_size_kb, topic_name)
+
+        # .. give the server a moment to ingest ..
+        time.sleep(1)
+
+        # .. pull the message back ..
+        result = puller.pull(max_messages=1)
+        logger.info('Pull result message_count -> %s', result['message_count'])
+
+        self.assertEqual(result['message_count'], 1)
+
+        # .. extract and deserialize the data ..
+        messages = result['messages']
+        message = messages[0]
+        received_data = message['data']
+
+        if isinstance(received_data, str):
+            received_data = json.loads(received_data)
+
+        # .. and verify the payload is intact.
+        received_value = received_data['bulk']
+        logger.info('Received payload length -> %d', len(received_value))
+
+        self.assertEqual(len(received_value), payload_char_count)
+        self.assertEqual(received_value, large_value)
+
+# ################################################################################################################################
+
     def test_priority_ordering_via_pull(self) -> 'None':
         """ Publish messages with different priorities, pull them, verify they arrive
         ordered by priority descending.
