@@ -198,6 +198,8 @@ class TestAckFirstSubscriber(BasePendingSetTestCase):
 
         # .. fetch messages for subscriber A so we can ack ..
         messages = self.backend.fetch_messages(sub_key_a)
+        logger.info('fetch_messages(sub_key_a) -> %s', messages)
+
         self.assertEqual(len(messages), 1)
 
         msg = messages[0]
@@ -225,6 +227,58 @@ class TestAckFirstSubscriber(BasePendingSetTestCase):
         # .. and verify the expiry entry still exists.
         expiry_present = self.has_expiry_entry(data_ref)
         self.assertTrue(expiry_present)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestAckSecondSubscriber(BasePendingSetTestCase):
+    """ Ack from second subscriber - pending set deleted, expiry entry deleted, file deleted.
+    """
+
+    def test_ack_from_both_subscribers_deletes_everything(self) -> 'None':
+        """ After both subscribers ack, the pending set, expiry entry, and disk file should all be gone.
+        """
+
+        # Subscribe two consumers to the topic ..
+        sub_key_a = f'sub.pending_a.{self._run_id}'
+        sub_key_b = f'sub.pending_b.{self._run_id}'
+
+        self.subscribe(sub_key_a)
+        self.subscribe(sub_key_b)
+
+        # .. publish a message ..
+        _ = self.publish()
+        data_ref = self.get_data_ref_from_stream()
+
+        # .. fetch and ack from subscriber A ..
+        messages_a = self.backend.fetch_messages(sub_key_a)
+        logger.info('fetch_messages(sub_key_a) -> %s', messages_a)
+
+        msg_a = messages_a[0]
+        self.backend.ack_message(msg_a['_stream_name'], sub_key_a, msg_a['_redis_message_id'], msg_a['_data_ref'])
+
+        # .. verify file still exists after first ack ..
+        file_present = self.file_exists(data_ref)
+        self.assertTrue(file_present)
+
+        # .. fetch and ack from subscriber B ..
+        messages_b = self.backend.fetch_messages(sub_key_b)
+        logger.info('fetch_messages(sub_key_b) -> %s', messages_b)
+
+        msg_b = messages_b[0]
+        self.backend.ack_message(msg_b['_stream_name'], sub_key_b, msg_b['_redis_message_id'], msg_b['_data_ref'])
+
+        # .. verify the pending set is gone ..
+        pending_count = self.get_pending_count(data_ref)
+        self.assertEqual(pending_count, 0)
+
+        # .. verify the disk file is gone ..
+        file_present = self.file_exists(data_ref)
+        self.assertFalse(file_present)
+
+        # .. and verify the expiry entry is gone.
+        expiry_present = self.has_expiry_entry(data_ref)
+        self.assertFalse(expiry_present)
 
 # ################################################################################################################################
 # ################################################################################################################################
