@@ -42,8 +42,8 @@ class TestAckLastSubscriberDeletesFile(BaseUnsubCleanupTestCase):
         messages_a = self.backend.fetch_messages(sub_key_a)
         logger.info('fetch_messages(sub_key_a) -> %s', messages_a)
 
-        msg_a = messages_a[0]
-        self.backend.ack_message(msg_a['_stream_name'], sub_key_a, msg_a['_redis_message_id'], msg_a['_data_ref'])
+        message_a = messages_a[0]
+        self.backend.ack_message(message_a['_stream_name'], sub_key_a, message_a['_redis_message_id'], message_a['_data_ref'])
 
         # .. file still exists after first ack ..
         file_present = self.file_exists(data_ref)
@@ -53,8 +53,8 @@ class TestAckLastSubscriberDeletesFile(BaseUnsubCleanupTestCase):
         messages_b = self.backend.fetch_messages(sub_key_b)
         logger.info('fetch_messages(sub_key_b) -> %s', messages_b)
 
-        msg_b = messages_b[0]
-        self.backend.ack_message(msg_b['_stream_name'], sub_key_b, msg_b['_redis_message_id'], msg_b['_data_ref'])
+        message_b = messages_b[0]
+        self.backend.ack_message(message_b['_stream_name'], sub_key_b, message_b['_redis_message_id'], message_b['_data_ref'])
 
         # .. pending:{data_ref} key is gone ..
         pending_count = self.get_pending_count(data_ref)
