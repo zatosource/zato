@@ -83,6 +83,8 @@ class BasePendingSetTestCase(unittest.TestCase):
         for sub_key in self.subscribed_keys:
             subs_key = f'{ModuleCtx.Subs_Prefix}{sub_key}'
             _ = self.redis.delete(subs_key)
+            sub_pending_key = f'{ModuleCtx.Sub_Pending_Prefix}{sub_key}'
+            _ = self.redis.delete(sub_pending_key)
 
         # .. and the temp directory.
         shutil.rmtree(self.test_dir)
@@ -328,27 +330,16 @@ class TestAckOnlySubscriber(BasePendingSetTestCase):
 # ################################################################################################################################
 
 class TestAckAfterUnsubscribe(BasePendingSetTestCase):
-    """ Unsubscribe one subscriber, ack from the other - unsubscribed sub_key cleaned via intersection, file deleted.
+    """ Unsubscribe one subscriber, then ack from the other - file deleted after ack.
     """
 
-    def test_ack_cleans_up_when_other_subscriber_is_unsubscribed(self) -> 'None':
+    def test_ack_after_unsubscribe_deletes_file(self) -> 'None':
         """ Scenario:
         1. Two subscribers (A, B) are subscribed to the topic.
-        2. A message is published - pending set gets {A, B}.
-        3. Subscriber B is unsubscribed (removed from the topic's subscriber set).
-           The pending set still contains B because unsubscribe does not retroactively
-           clean pending sets for already-published messages.
-        4. Subscriber A fetches and acks the message.
-           - ack_message removes A from the pending set, leaving {B}.
-           - remaining count is 1, so ack_message checks: are any of the remaining
-             members still active subscribers? It intersects the pending set with
-             the topic's current subscriber set.
-           - B is no longer in the topic subscriber set (it was unsubscribed in step 3),
-             so the intersection is empty (alive_count == 0).
-           - Since no live subscriber will ever ack this message, ack_message deletes
-             the pending set, the expiry entry, and the disk file.
-        5. Result: the file is cleaned up immediately upon A's ack, even though B
-           never acked, because B is already unsubscribed and will never come back.
+        2. A message is published - pending set gets {A, B}, sub_pending sets populated.
+        3. Subscriber B is unsubscribed - the Lua script eagerly removes B from pending:{data_ref},
+           leaving only {A}. sub_pending:{B} is deleted. File stays because A still needs it.
+        4. Subscriber A fetches and acks - pending set becomes empty, file deleted.
         """
 
         # Subscribe two consumers to the topic ..
@@ -366,14 +357,21 @@ class TestAckAfterUnsubscribe(BasePendingSetTestCase):
         pending_count = self.get_pending_count(data_ref)
         self.assertEqual(pending_count, 2)
 
-        # .. now unsubscribe B - this removes B from the topic's subscriber set
-        # .. but does NOT touch the pending set for already-published messages ..
+        # .. unsubscribe B - Lua script eagerly removes B from the pending set ..
         self.backend.unsubscribe(sub_key_b, self.topic_name)
         logger.info('unsubscribed sub_key_b:%s from topic:%s', sub_key_b, self.topic_name)
 
-        # .. the pending set still has B in it ..
+        # .. the pending set no longer contains B (eagerly cleaned) ..
         has_b = self.has_pending_member(data_ref, sub_key_b)
-        self.assertTrue(has_b)
+        self.assertFalse(has_b)
+
+        # .. but A is still there ..
+        has_a = self.has_pending_member(data_ref, sub_key_a)
+        self.assertTrue(has_a)
+
+        # .. and the file still exists because A needs it ..
+        file_present = self.file_exists(data_ref)
+        self.assertTrue(file_present)
 
         # .. subscriber A fetches and acks the message ..
         messages = self.backend.fetch_messages(sub_key_a)
@@ -384,8 +382,7 @@ class TestAckAfterUnsubscribe(BasePendingSetTestCase):
         msg = messages[0]
         self.backend.ack_message(msg['_stream_name'], sub_key_a, msg['_redis_message_id'], msg['_data_ref'])
 
-        # .. after A's ack, the pending set had {B} remaining, but B is already unsubscribed
-        # .. (not in the topic subscriber set), so ack_message cleaned everything up ..
+        # .. after A's ack, pending set is empty, everything cleaned up ..
         pending_count = self.get_pending_count(data_ref)
         self.assertEqual(pending_count, 0)
 
@@ -401,27 +398,17 @@ class TestAckAfterUnsubscribe(BasePendingSetTestCase):
 # ################################################################################################################################
 
 class TestAckAfterMultipleUnsubscribes(BasePendingSetTestCase):
-    """ Unsubscribe 3 of 5 subscribers, ack from remaining 2 - unsubscribed sub_keys cleaned via intersection, file deleted.
+    """ Unsubscribe 3 of 5 subscribers, ack from remaining 2 - file deleted after both ack.
     """
 
-    def test_ack_cleans_up_with_multiple_unsubscribed_subscribers(self) -> 'None':
+    def test_ack_after_multiple_unsubscribes_deletes_file(self) -> 'None':
         """ Scenario:
         1. Five subscribers (A through E) are subscribed to the topic.
         2. A message is published - pending set gets {A, B, C, D, E}.
-        3. Subscribers C, D, E are unsubscribed. They are removed from the topic's
-           subscriber set but remain in the pending set for this already-published message.
-        4. Subscriber A fetches and acks.
-           - ack_message removes A from pending set, leaving {B, C, D, E}.
-           - remaining is 4, so ack_message intersects pending set with topic subs {A, B}.
-           - intersection is {B}, alive_count = 1, so the file stays.
-        5. Subscriber B fetches and acks.
-           - ack_message removes B from pending set, leaving {C, D, E}.
-           - remaining is 3, so ack_message intersects {C, D, E} with topic subs {A, B}.
-           - intersection is empty, alive_count = 0.
-           - No live subscriber will ever ack, so ack_message deletes the pending set,
-             expiry entry, and disk file.
-        6. Result: the file is cleaned up after the last live subscriber acks,
-           even though 3 already-unsubscribed entries remain in the pending set.
+        3. Subscribers C, D, E are unsubscribed. The Lua script eagerly removes each
+           from pending:{data_ref}, leaving {A, B}. sub_pending keys for C, D, E are deleted.
+        4. Subscriber A fetches and acks - pending set becomes {B}, file stays.
+        5. Subscriber B fetches and acks - pending set becomes empty, file deleted.
         """
 
         # Subscribe five consumers to the topic ..
@@ -438,15 +425,29 @@ class TestAckAfterMultipleUnsubscribes(BasePendingSetTestCase):
         pending_count = self.get_pending_count(data_ref)
         self.assertEqual(pending_count, 5)
 
-        # .. unsubscribe C, D, E - they are removed from the topic subscriber set
-        # .. but remain in the pending set for this message ..
+        # .. unsubscribe C, D, E - Lua script eagerly removes each from the pending set ..
         for sub_key in sub_keys[2:]:
             self.backend.unsubscribe(sub_key, self.topic_name)
             logger.info('unsubscribed %s from topic:%s', sub_key, self.topic_name)
 
-        # .. the pending set still has all 5 ..
+        # .. the pending set now has only {A, B} ..
         pending_count = self.get_pending_count(data_ref)
-        self.assertEqual(pending_count, 5)
+        self.assertEqual(pending_count, 2)
+
+        has_a = self.has_pending_member(data_ref, sub_keys[0])
+        self.assertTrue(has_a)
+
+        has_b = self.has_pending_member(data_ref, sub_keys[1])
+        self.assertTrue(has_b)
+
+        # .. C, D, E are gone from the pending set ..
+        for sub_key in sub_keys[2:]:
+            has_sub = self.has_pending_member(data_ref, sub_key)
+            self.assertFalse(has_sub)
+
+        # .. file still exists because A and B need it ..
+        file_present = self.file_exists(data_ref)
+        self.assertTrue(file_present)
 
         # .. subscriber A fetches and acks ..
         messages_a = self.backend.fetch_messages(sub_keys[0])
@@ -455,10 +456,9 @@ class TestAckAfterMultipleUnsubscribes(BasePendingSetTestCase):
         msg_a = messages_a[0]
         self.backend.ack_message(msg_a['_stream_name'], sub_keys[0], msg_a['_redis_message_id'], msg_a['_data_ref'])
 
-        # .. after A's ack, pending set is {B, C, D, E}, but B is still alive,
-        # .. so the file must stay ..
+        # .. after A's ack, pending set is {B}, file stays ..
         pending_count = self.get_pending_count(data_ref)
-        self.assertEqual(pending_count, 4)
+        self.assertEqual(pending_count, 1)
 
         file_present = self.file_exists(data_ref)
         self.assertTrue(file_present)
@@ -470,8 +470,7 @@ class TestAckAfterMultipleUnsubscribes(BasePendingSetTestCase):
         msg_b = messages_b[0]
         self.backend.ack_message(msg_b['_stream_name'], sub_keys[1], msg_b['_redis_message_id'], msg_b['_data_ref'])
 
-        # .. after B's ack, pending set is {C, D, E}, all already unsubscribed - intersection
-        # .. with current topic subscribers is empty, so everything gets cleaned up ..
+        # .. after B's ack, pending set is empty, everything cleaned up ..
         pending_count = self.get_pending_count(data_ref)
         self.assertEqual(pending_count, 0)
 
