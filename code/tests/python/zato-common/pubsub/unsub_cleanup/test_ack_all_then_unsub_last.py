@@ -27,12 +27,12 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestUnsubWithoutAck(BaseUnsubCleanupTestCase):
-    """ Publish 3 messages, 2 subs, unsubscribe A without acking -
-        sub_pending:{sub_a} key gone, all 3 pending sets no longer contain sub_a, sub_b intact, all files exist.
+class TestAckAllThenUnsubLastDeletes(BaseUnsubCleanupTestCase):
+    """ Publish 2 messages, 2 subs, sub B acks both, unsubscribe A -
+        both files deleted (A was last pending), both pending keys gone, pending_expiry empty.
     """
 
-    def test_unsub_without_ack_clears_sub_a(self) -> 'None':
+    def test_ack_all_then_unsub_last_deletes_files(self) -> 'None':
 
         # Subscribe two consumers ..
         sub_key_a = f'sub.unsub_a.{self._run_id}'
@@ -41,50 +41,47 @@ class TestUnsubWithoutAck(BaseUnsubCleanupTestCase):
         self.subscribe(sub_key_a)
         self.subscribe(sub_key_b)
 
-        # .. publish 3 messages and collect their data_refs ..
+        # .. publish 2 messages and collect their data_refs ..
         data_refs:'strlist' = []
-        for _ in range(3):
+
+        for _ in range(2):
             _ = self.publish()
             data_ref = self.get_data_ref_from_stream()
             data_refs.append(data_ref)
 
-        # .. confirm sub_a is in all pending sets before unsubscribe ..
+        # .. sub_b acks both messages ..
+        messages_b = self.backend.fetch_messages(sub_key_b)
+
+        for message in messages_b:
+            self.backend.ack_message(
+                message['_stream_name'], sub_key_b,
+                message['_redis_message_id'], message['_data_ref'])
+
+        # .. after sub_b acks, pending sets still contain sub_a, files still exist ..
         for data_ref in data_refs:
             has_a = self.has_pending_member(data_ref, sub_key_a)
             self.assertTrue(has_a)
 
-        # .. confirm sub_pending:{sub_a} has all 3 data_refs ..
-        for data_ref in data_refs:
-            has_ref = self.has_sub_pending_member(sub_key_a, data_ref)
-            self.assertTrue(has_ref)
-
-        # .. unsubscribe sub_a without acking anything ..
-        self.backend.unsubscribe(sub_key_a, self.topic_name)
-
-        # .. sub_pending:{sub_a} key is gone (no members) ..
-        sub_pending_key = f'zato:pubsub:sub_pending:{sub_key_a}'
-        count = self.redis.scard(sub_pending_key)
-        self.assertEqual(count, 0)
-
-        # .. all 3 pending sets no longer contain sub_a ..
-        for data_ref in data_refs:
-            has_a = self.has_pending_member(data_ref, sub_key_a)
-            self.assertFalse(has_a)
-
-        # .. sub_b is still in all 3 pending sets ..
-        for data_ref in data_refs:
-            has_b = self.has_pending_member(data_ref, sub_key_b)
-            self.assertTrue(has_b)
-
-        # .. sub_pending:{sub_b} still has all 3 data_refs ..
-        for data_ref in data_refs:
-            has_ref = self.has_sub_pending_member(sub_key_b, data_ref)
-            self.assertTrue(has_ref)
-
-        # .. and all files still exist.
-        for data_ref in data_refs:
             file_present = self.file_exists(data_ref)
             self.assertTrue(file_present)
+
+        # .. now unsubscribe sub_a (the last pending subscriber) ..
+        self.backend.unsubscribe(sub_key_a, self.topic_name)
+
+        # .. both pending keys are gone ..
+        for data_ref in data_refs:
+            pending_count = self.get_pending_count(data_ref)
+            self.assertEqual(pending_count, 0)
+
+        # .. pending_expiry has neither data_ref ..
+        for data_ref in data_refs:
+            has_expiry = self.has_expiry_entry(data_ref)
+            self.assertFalse(has_expiry)
+
+        # .. and both files are deleted.
+        for data_ref in data_refs:
+            file_present = self.file_exists(data_ref)
+            self.assertFalse(file_present)
 
 # ################################################################################################################################
 # ################################################################################################################################
