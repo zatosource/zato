@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2025, Zato Source s.r.o. https://zato.io
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import json
-import threading
 from logging import getLogger
 
 # redis
@@ -228,8 +227,8 @@ class RedisPubSubBackend:
         stream_key = self._get_stream_key(topic_name)
         redis_stream_id = self.redis.xadd(stream_key, message, maxlen=_default_stream_max_len)
 
-        logger.info('Published to stream -> message_id:%s, data_ref:%s, stream_key:%s, redis_stream_id:%s, thread:%s',
-            message_id, data_ref, stream_key, redis_stream_id, threading.current_thread().name)
+        logger.info('Published to stream -> message_id:%s, data_ref:%s, stream_key:%s, redis_stream_id:%s',
+            message_id, data_ref, stream_key, redis_stream_id)
 
         # .. populate the pending subscriber set and index by expiration time ..
         topic_subs_key = self._get_topic_subs_key(topic_name)
@@ -250,8 +249,8 @@ class RedisPubSubBackend:
             _ = self.redis.zadd(ModuleCtx.Pending_Expiry_Key, {data_ref: expiration_timestamp})
 
             subscriber_count = len(subscriber_keys)
-            logger.info('Populated pending set -> data_ref:%s, subscriber_count:%d, expiration_timestamp:%.1f, thread:%s',
-                data_ref, subscriber_count, expiration_timestamp, threading.current_thread().name)
+            logger.info('Populated pending set -> data_ref:%s, subscriber_count:%d, expiration_timestamp:%.1f',
+                data_ref, subscriber_count, expiration_timestamp)
 
         # .. update the publish counter and return the result.
         counter = zato_pubsub_messages_published_total.labels(topic_name=topic_name)
@@ -322,8 +321,8 @@ class RedisPubSubBackend:
             self.disk_store.delete(data_ref)
 
         if deleted_refs:
-            logger.info('unsubscribe deleted files -> sub_key:%s, count:%d, thread:%s',
-                sub_key, len(deleted_refs), threading.current_thread().name)
+            logger.info('unsubscribe deleted files -> sub_key:%s, count:%d',
+                sub_key, len(deleted_refs))
 
         # .. check if subscriber has any remaining subscriptions ..
         remaining = self.redis.scard(subs_key)
@@ -391,9 +390,9 @@ class RedisPubSubBackend:
         for stream_name, stream_messages in result:
             for redis_message_id, message_data in stream_messages:
 
-                logger.info('fetch_messages -> sub_key:%s, stream_name:%s, redis_message_id:%s, msg_id:%s, data_ref:%s, thread:%s',
+                logger.info('fetch_messages -> sub_key:%s, stream_name:%s, redis_message_id:%s, msg_id:%s, data_ref:%s',
                     sub_key, stream_name, redis_message_id, message_data.get('msg_id'),
-                    message_data.get('data_ref'), threading.current_thread().name)
+                    message_data.get('data_ref'))
 
                 # .. message_data is already dict[str, str] because decode_responses=True ..
                 decoded = message_data
@@ -408,8 +407,8 @@ class RedisPubSubBackend:
 
                 if now > expiration_time:
                     expired_data_ref = decoded['data_ref']
-                    logger.info('Expiring message -> sub_key:%s, data_ref:%s, expiration_time_iso:%s, thread:%s',
-                        sub_key, expired_data_ref, expiration_time_iso, threading.current_thread().name)
+                    logger.info('Expiring message -> sub_key:%s, data_ref:%s, expiration_time_iso:%s',
+                        sub_key, expired_data_ref, expiration_time_iso)
                     _ = self.redis.xack(stream_name, sub_key, redis_message_id)
                     self.disk_store.delete(expired_data_ref)
                     continue
@@ -424,8 +423,8 @@ class RedisPubSubBackend:
 
                 # .. load the actual payload from disk ..
                 data_ref = decoded['data_ref']
-                logger.info('fetch_messages loading payload -> sub_key:%s, data_ref:%s, redis_message_id:%s, stream_name:%s, thread:%s',
-                    sub_key, data_ref, redis_message_id, stream_name, threading.current_thread().name)
+                logger.info('fetch_messages loading payload -> sub_key:%s, data_ref:%s, redis_message_id:%s, stream_name:%s',
+                    sub_key, data_ref, redis_message_id, stream_name)
                 load_result = self.disk_store.load(data_ref)
                 decoded['data'] = load_result.data
                 decoded['data_class'] = load_result.data_class
@@ -459,8 +458,8 @@ class RedisPubSubBackend:
         """ Acknowledge a single message after successful processing.
         """
         # Acknowledge the message in the stream ..
-        logger.info('ack_message -> sub_key:%s, stream_name:%s, redis_message_id:%s, data_ref:%s, thread:%s',
-            sub_key, stream_name, redis_message_id, data_ref, threading.current_thread().name)
+        logger.info('ack_message -> sub_key:%s, stream_name:%s, redis_message_id:%s, data_ref:%s',
+            sub_key, stream_name, redis_message_id, data_ref)
 
         _ = self.redis.xack(stream_name, sub_key, redis_message_id)
 
@@ -482,12 +481,12 @@ class RedisPubSubBackend:
                 _ = self.redis.zrem(ModuleCtx.Pending_Expiry_Key, data_ref)
                 self.disk_store.delete(data_ref)
 
-                logger.info('ack_message deleted file -> data_ref:%s, sub_key:%s, thread:%s',
-                    data_ref, sub_key, threading.current_thread().name)
+                logger.info('ack_message deleted file -> data_ref:%s, sub_key:%s',
+                    data_ref, sub_key)
 
             else:
-                logger.info('ack_message pending remaining -> data_ref:%s, sub_key:%s, remaining:%s, thread:%s',
-                    data_ref, sub_key, remaining, threading.current_thread().name)
+                logger.info('ack_message pending remaining -> data_ref:%s, sub_key:%s, remaining:%s',
+                    data_ref, sub_key, remaining)
 
 # ################################################################################################################################
 
@@ -559,8 +558,8 @@ class RedisPubSubBackend:
             })
 
             # .. acknowledge and clean up the disk file ..
-            logger.info('format_messages_for_rest acking -> sub_key:%s, data_ref:%s, redis_message_id:%s, stream_name:%s, thread:%s',
-                sub_key, data_ref, redis_message_id, stream_name, threading.current_thread().name)
+            logger.info('format_messages_for_rest acking -> sub_key:%s, data_ref:%s, redis_message_id:%s, stream_name:%s',
+                sub_key, data_ref, redis_message_id, stream_name)
             self.ack_message(stream_name, sub_key, redis_message_id, data_ref)
 
             # .. update the delivery counter.
