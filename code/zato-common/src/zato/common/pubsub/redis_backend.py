@@ -121,7 +121,7 @@ class RedisPubSubBackend:
         """ Publish a message to a topic stream.
         """
 
-        # .. normalize topic name to lowercase for case-insensitivity ..
+        # Normalize topic name to lowercase for case-insensitivity ..
         topic_name = topic_name.lower()
 
         # .. generate message ID ..
@@ -228,9 +228,10 @@ class RedisPubSubBackend:
         """ Subscribe a user to a topic.
         """
 
-        # .. normalize topic name to lowercase for case-insensitivity ..
+        # Normalize topic name to lowercase for case-insensitivity ..
         topic_name = topic_name.lower()
 
+        # .. build key names ..
         subs_key = self._get_subs_key(sub_key)
         topic_subs_key = self._get_topic_subs_key(topic_name)
         stream_key = self._get_stream_key(topic_name)
@@ -254,9 +255,10 @@ class RedisPubSubBackend:
         """ Unsubscribe a user from a topic.
         """
 
-        # .. normalize topic name to lowercase for case-insensitivity ..
+        # Normalize topic name to lowercase for case-insensitivity ..
         topic_name = topic_name.lower()
 
+        # .. build key names ..
         subs_key = self._get_subs_key(sub_key)
         topic_subs_key = self._get_topic_subs_key(topic_name)
         stream_key = self._get_stream_key(topic_name)
@@ -291,6 +293,7 @@ class RedisPubSubBackend:
         Does not acknowledge messages - the caller is responsible for calling
         ack_message after successful processing.
         """
+        # Build the subscriber's key ..
         subs_key = self._get_subs_key(sub_key)
 
         # .. get all topics this subscriber is subscribed to ..
@@ -375,13 +378,14 @@ class RedisPubSubBackend:
                 decoded['priority'] = int(decoded['priority'])
                 decoded['expiration'] = int(decoded['expiration'])
 
+                # .. store internal routing metadata for ack ..
                 decoded['_redis_message_id'] = redis_message_id
                 decoded['_stream_name'] = stream_name
                 decoded['_data_ref'] = data_ref
 
                 messages.append(decoded)
 
-        # .. sort by priority desc, then by pub_time asc.
+        # .. sort by priority desc, then by pub_time asc and return the page.
         def _sort_key(message:'anydict') -> 'tuple':
             negated_priority = -message['priority']
             pub_time = message['pub_time_iso']
@@ -398,6 +402,7 @@ class RedisPubSubBackend:
     def ack_message(self, stream_name:'str', sub_key:'str', redis_message_id:'str', data_ref:'strnone'=None) -> 'None':
         """ Acknowledge a single message after successful processing.
         """
+        # Acknowledge the message in the stream ..
         logger.info('ack_message -> sub_key:%s, stream_name:%s, redis_message_id:%s, data_ref:%s, thread:%s',
             sub_key, stream_name, redis_message_id, data_ref, threading.current_thread().name)
 
@@ -427,6 +432,7 @@ class RedisPubSubBackend:
 
         for message in messages:
 
+            # Extract internal routing metadata ..
             redis_message_id = message.pop('_redis_message_id')
             stream_name = message.pop('_stream_name')
             data_ref = message.pop('_data_ref')
@@ -475,11 +481,12 @@ class RedisPubSubBackend:
                 'meta': meta
             })
 
-            # .. acknowledge and clean up the disk file.
+            # .. acknowledge and clean up the disk file ..
             logger.info('format_messages_for_rest acking -> sub_key:%s, data_ref:%s, redis_message_id:%s, stream_name:%s, thread:%s',
                 sub_key, data_ref, redis_message_id, stream_name, threading.current_thread().name)
             self.ack_message(stream_name, sub_key, redis_message_id, data_ref)
 
+            # .. update the delivery counter.
             counter = zato_pubsub_messages_delivered_total.labels(topic_name=message['topic_name'])
             _ = counter.inc()
 
@@ -490,10 +497,11 @@ class RedisPubSubBackend:
     @staticmethod
     def _compute_time_since(iso_timestamp:'str', now:'datetime') -> 'str':
 
+        # Parse the ISO timestamp into a datetime ..
         normalized_iso = iso_timestamp.replace('Z', '+00:00')
         timestamp = datetime.fromisoformat(normalized_iso)
 
-        # .. strip tzinfo from both sides so subtraction always works.
+        # .. strip tzinfo from both sides so subtraction always works ..
         if timestamp.tzinfo:
             timestamp_naive = timestamp.replace(tzinfo=None)
         else:
@@ -504,6 +512,7 @@ class RedisPubSubBackend:
         else:
             now_naive = now
 
+        # .. compute the delta, clamping negative values to zero.
         delta = now_naive - timestamp_naive
 
         if delta.total_seconds() < 0:
@@ -624,6 +633,7 @@ class RedisPubSubBackend:
     def delete_topic(self, topic_name:'str') -> 'None':
         """ Delete a topic and all its data.
         """
+        # Build the key names ..
         stream_key = self._get_stream_key(topic_name)
         topic_subs_key = self._get_topic_subs_key(topic_name)
 
@@ -716,7 +726,7 @@ class RedisPubSubBackend:
         cutoff_epoch_ms = int(cutoff.timestamp() * 1000)
         min_stream_id = f'{cutoff_epoch_ms}-0'
 
-        # .. collect distinct publishers.
+        # .. collect distinct publishers from all topics.
         publishers:'set' = set()
 
         for topic_name in topic_names:
@@ -739,6 +749,7 @@ class RedisPubSubBackend:
     def rename_topic(self, old_topic_name:'str', new_topic_name:'str') -> 'None':
         """ Rename a topic.
         """
+        # Build old and new key names ..
         old_stream_key = self._get_stream_key(old_topic_name)
         new_stream_key = self._get_stream_key(new_topic_name)
         old_topic_subs_key = self._get_topic_subs_key(old_topic_name)
