@@ -33,8 +33,8 @@ class TestPublishRejection(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_wrong_credentials_returns_403(self) -> 'None':
-        """ Publishing with wrong credentials must return 403.
+    def test_wrong_credentials_returns_401(self) -> 'None':
+        """ Publishing with wrong credentials must return 401.
         """
 
         topic_name = 'iam.user.created'
@@ -43,8 +43,8 @@ class TestPublishRejection(unittest.TestCase):
         result = self.publisher.publish_raw(topic_name, 'rejected payload', username='wrong_user', password='wrong_pass')
         logger.info('Wrong credentials -> status_code:%d, body:%s', result.status_code, result.body)
 
-        # .. must be rejected with 403.
-        self.assertEqual(result.status_code, 403)
+        # .. must be rejected with 401.
+        self.assertEqual(result.status_code, 401)
 
 # ################################################################################################################################
 
