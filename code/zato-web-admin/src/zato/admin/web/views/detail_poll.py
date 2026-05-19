@@ -36,6 +36,8 @@ _action_registry = {
     'get-log-entries':    'zato.scheduler.job.get-log-entries',
     'get-run-detail':     'zato.scheduler.job.get-run-detail',
     'get-queue-messages': 'zato.pubsub.subscription.browse-queue',
+    'get-message-detail': 'zato.pubsub.subscription.get-message-detail',
+    'update-message':     'zato.pubsub.subscription.update-message',
 }
 
 # ################################################################################################################################

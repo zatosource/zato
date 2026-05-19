@@ -17,7 +17,6 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,6 +29,9 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 _Default_Error_Message = 'Error'
 
 # ################################################################################################################################
@@ -38,15 +40,39 @@ _Default_Error_Message = 'Error'
 @method_allowed('GET')
 def index(request:'any_') -> 'TemplateResponse':
     """ Displays a read-only message browser for a subscription queue.
-    The pagination kit fetches page 1 via AJAX on init, so no service call is needed here.
     """
 
+    # Extract parameters from the request ..
     sub_key = request.GET['sub_key']
+    cursor = request.GET.get('cursor')
 
-    out = TemplateResponse(request, 'zato/pubsub/queue.html', {
-        'cluster_id': default_cluster_id,
+    if not cursor:
+        cursor = '-'
+
+    # .. invoke the browse service ..
+    invoke_payload = {
         'sub_key': sub_key,
-        'poll_url': '/zato/dashboard/detail-poll/',
+        'cursor': cursor,
+    }
+
+    response = request.zato.client.invoke('zato.pubsub.subscription.browse-queue', invoke_payload)
+
+    if response.ok:
+        raw = response.data
+        if isinstance(raw, str):
+            data = json.loads(raw)
+        else:
+            data = raw
+    else:
+        data = {'messages': [], 'depth': 0, 'next_cursor': '', 'sub_key': sub_key}
+
+    # .. and render the template.
+    out = TemplateResponse(request, 'zato/pubsub/queue.html', {
+        'cluster_id': 1,
+        'sub_key': sub_key,
+        'queue_data': json.dumps(data),
+        'next_cursor': data['next_cursor'],
+        'depth': data['depth'],
         'zato_clusters': True,
         'zato_template_name': 'zato/pubsub/queue.html',
     })
@@ -63,12 +89,10 @@ def purge(request:'any_') -> 'HttpResponse':
 
     sub_key = request.POST['sub_key']
 
-    service_request = {
-        'sub_key': sub_key,
-    }
-
     try:
-        response = request.zato.client.invoke('zato.pubsub.subscription.purge-queue', service_request)
+        response = request.zato.client.invoke('zato.pubsub.subscription.purge-queue', {
+            'sub_key': sub_key,
+        })
 
         if response.ok:
             raw = response.data
@@ -76,32 +100,89 @@ def purge(request:'any_') -> 'HttpResponse':
                 out = HttpResponse(raw, content_type='application/json')
                 return out
 
-            response_json = json.dumps(raw)
-
-            out = HttpResponse(response_json, content_type='application/json')
+            out = HttpResponse(json.dumps(raw), content_type='application/json')
             return out
 
-        else:
-            error_message = response.details
-            if not error_message:
-                error_message = _Default_Error_Message
+        # .. the service returned an error.
+        error_message = response.details
+        if not error_message:
+            error_message = _Default_Error_Message
 
-            error_json = json.dumps({'error': error_message})
-
-            out = HttpResponse(
-                error_json,
-                content_type='application/json',
-                status=500,
-            )
-            return out
-
-    except Exception as error:
-        error_text = format_exc()
-        logger.error('Pub/sub queue purge error: %s', error_text)
-        error_json = json.dumps({'error': error_text})
-
-        out = HttpResponse(error_json, content_type='application/json', status=500)
+        out = HttpResponse(
+            json.dumps({'error': error_message}),
+            content_type='application/json',
+            status=500,
+        )
         return out
+
+    except Exception:
+        logger.error('Pub/sub queue purge error: %s', format_exc())
+
+        out = HttpResponse(
+            json.dumps({'error': _Default_Error_Message}),
+            content_type='application/json',
+            status=500,
+        )
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def message_detail(request:'any_') -> 'TemplateResponse':
+    """ Displays the detail/edit form for a single message.
+    """
+
+    # Extract parameters from the request ..
+    sub_key = request.GET['sub_key']
+    msg_id = request.GET['msg_id']
+    topic_name = request.GET['topic_name']
+    redis_stream_id = request.GET['redis_stream_id']
+
+    # .. invoke the get-message-detail service ..
+    invoke_payload = {
+        'msg_id': msg_id,
+        'topic_name': topic_name,
+        'redis_stream_id': redis_stream_id,
+    }
+
+    response = request.zato.client.invoke('zato.pubsub.subscription.get-message-detail', invoke_payload)
+
+    if response.ok:
+        raw = response.data
+        if isinstance(raw, str):
+            message_data = json.loads(raw)
+        else:
+            message_data = raw
+    else:
+        message_data = {
+            'msg_id': msg_id,
+            'topic_name': topic_name,
+            'redis_stream_id': redis_stream_id,
+            'data': '',
+            'data_class': '',
+            'priority': 5,
+            'expiration': 0,
+            'pub_time_iso': '',
+            'recv_time_iso': '',
+            'expiration_time_iso': '',
+            'data_size': 0,
+        }
+
+    # .. and render the template.
+    out = TemplateResponse(request, 'zato/pubsub/queue_message.html', {
+        'cluster_id': 1,
+        'sub_key': sub_key,
+        'msg_id': msg_id,
+        'topic_name': topic_name,
+        'message_data_json': json.dumps(message_data),
+        'poll_url': '/zato/dashboard/detail-poll/',
+        'queue_url': f'/zato/pubsub/subscription/queue/?cluster=1&sub_key={sub_key}',
+        'zato_clusters': True,
+        'zato_template_name': 'zato/pubsub/queue_message.html',
+    })
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

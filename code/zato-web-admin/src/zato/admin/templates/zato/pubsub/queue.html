@@ -1,39 +1,28 @@
 {% extends "zato/detail_base.html" %}
-{% load extras %}
 
 {% block page_title %}Queue: {{ sub_key }}{% endblock %}
 
-{% block detail_css %}
-<link rel="stylesheet" type="text/css" href="/static/css/eda.css">
-<style nonce="{{ CSP_NONCE }}">img.help-icon[id=""] { display: none; }</style>
-{% endblock %}
+{% block detail_css %}{% endblock %}
 
-{% block section_title %}
-<div class="detail-header-row-1">
-    <span id="detail-section-title">
-        <a href="/zato/pubsub/subscription/?cluster={{ cluster_id }}" class="detail-component-pill menu-link">Subscriptions</a>
-        Queue browser
-    </span>
-</div>
-{% endblock %}
-{% block help_icon_id %}{% endblock %}
-
-{% block detail_page_class %}detail-page-queue{% endblock %}
+{% block section_title %}Queue: {{ sub_key }}{% endblock %}
+{% block help_icon_id %}pubsub-queue-help{% endblock %}
 
 {% block detail_js %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/queue.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
-    $.fn.zato.pubsub.queue.init(
-        '{{ sub_key }}',
-        '{{ cluster_id }}',
-        {poll_url: '{{ poll_url }}'}
-    );
+    $.fn.zato.pubsub.queue.init('{{ sub_key }}', {{ queue_data|safe }});
 });
 </script>
 {% endblock %}
 
-{% block stat_cards %}{% endblock %}
+{% block stat_cards %}
+<div class="stat-cards">
+    <div class="stat-card">
+        <div><div class="stat-card-label">Depth</div><div class="stat-card-value" id="stat-depth">{{ depth }}</div></div>
+    </div>
+</div>
+{% endblock %}
 
 {% block actions %}
 <div class="button-container">
@@ -44,49 +33,16 @@ $(document).ready(function() {
 {% block tabs %}{% endblock %}
 
 {% block tab_panels %}
-<h3 class="section-title detail-section-title-with-stats">
-    Messages
-    <span class="detail-inline-stats">
-        <span class="detail-inline-stat"><span class="detail-inline-stat-label">Depth</span> <span id="stat-depth">-</span></span>
-    </span>
-</h3>
-
-<div class="detail-pagination-controls" id="detail-history-pagination-top"></div>
-<table class="detail-table detail-table-fixed detail-table-header" id="detail-history-table-head">
-    <colgroup>
-        <col style="width:22%">
-        <col style="width:20%">
-        <col style="width:36%">
-        <col style="width:8%">
-        <col style="width:14%">
-    </colgroup>
-    <thead>
-        <tr>
-            <th>Message ID</th>
-            <th>Topic</th>
-            <th>Data</th>
-            <th style="text-align:center">Size</th>
-            <th>Published</th>
-        </tr>
-    </thead>
+<h3 class="section-title">Pending messages</h3>
+<table class="detail-table">
+    <thead><tr><th>Message ID</th><th>Topic</th><th>Data</th><th>Size</th><th>Published</th></tr></thead>
+    <tbody id="messages-body"></tbody>
 </table>
-<div class="detail-card-scroll-body">
-    <table class="detail-table detail-table-fixed" id="detail-history-table">
-        <colgroup>
-            <col style="width:22%">
-            <col style="width:20%">
-            <col style="width:36%">
-            <col style="width:8%">
-            <col style="width:14%">
-        </colgroup>
-        <tbody id="detail-history-table-body">
-            <tr class="detail-loading-row">
-                <td colspan="5">
-                    <img src="/static/gfx/spinner.svg" class="detail-spinner"> Loading...
-                </td>
-            </tr>
-        </tbody>
-    </table>
+
+{% if next_cursor %}
+<div class="detail-pagination-bar">
+    <a href="?cluster={{ cluster_id }}&sub_key={{ sub_key }}&cursor={{ next_cursor }}">Next page</a>
 </div>
-<div class="detail-pagination-controls" id="detail-history-pagination-bottom"></div>
+{% endif %}
+
 {% endblock %}

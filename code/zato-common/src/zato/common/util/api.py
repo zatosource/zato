@@ -510,6 +510,8 @@ def get_config_from_file(conf_location, config_name):
 def set_up_logging(repo_location:'str') -> 'None':
     with open_r(os.path.join(repo_location, 'logging.conf')) as f:
         dictConfig(yaml.load(f, yaml.FullLoader))
+    from zato.common.util.logging_ import attach_service_context_filter
+    attach_service_context_filter()
 
 # ################################################################################################################################
 
