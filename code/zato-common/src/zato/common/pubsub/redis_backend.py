@@ -626,9 +626,10 @@ class RedisPubSubBackend:
 
         messages:'anylist' = []
 
-        for _, message_data in raw_messages:
+        for redis_stream_id, message_data in raw_messages:
 
             entry:'anydict' = {
+                'redis_stream_id': redis_stream_id,
                 'msg_id': message_data['msg_id'],
                 'topic_name': message_data['topic_name'],
                 'priority': int(message_data['priority']),

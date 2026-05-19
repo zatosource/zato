@@ -1,125 +1,157 @@
+
+// ////////////////////////////////////////////////////////////////////////
+
 (function($) {
 
-if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
-if (typeof $.fn.zato.pubsub === 'undefined') { $.fn.zato.pubsub = {}; }
-$.fn.zato.pubsub.queue = {};
+    $.namespace('zato.pubsub.queue');
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.queue.config = {
-    pageSize: 50,
-    purgeUrl: '/zato/pubsub/subscription/queue/purge/'
-};
+    $.fn.zato.pubsub.queue._subKey = '';
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.queue._subscriptionKey = '';
-$.fn.zato.pubsub.queue._pagination = null;
+    $.fn.zato.pubsub.queue.relativeTime = function(isoTimestamp) {
 
-// ////////////////////////////////////////////////////////////////////////
+        // Parse the ISO timestamp into epoch seconds ..
+        var date = new Date(isoTimestamp);
+        var timestampSeconds = date.getTime() / 1000;
 
-$.fn.zato.pubsub.queue._renderPage = function($body, rows, total) {
-    var kit = $.fn.zato.dashboard_kit;
-    var queue = $.fn.zato.pubsub.queue;
-
-    $('#stat-depth').text(kit.format_number_full(total));
-
-    $body.empty();
-
-    if (rows.length === 0) {
-        $body.append('<tr><td colspan="5" class="dashboard-inline-empty">No pending messages</td></tr>');
-        return;
-    }
-
-    for (var rowIdx = 0; rowIdx < rows.length; rowIdx++) {
-        $body.append(queue._buildRow(rows[rowIdx]));
-    }
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.pubsub.queue._renderNew = function($body, rows, maxRows) {
-    var queue = $.fn.zato.pubsub.queue;
-
-    $body.find('.dashboard-inline-empty').closest('tr').remove();
-
-    for (var rowIdx = rows.length - 1; rowIdx >= 0; rowIdx--) {
-        $body.prepend(queue._buildRow(rows[rowIdx]));
-    }
-
-    while ($body.find('tr').length > maxRows) {
-        $body.find('tr:last').remove();
-    }
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.pubsub.queue._buildRow = function(message) {
-    var kit = $.fn.zato.dashboard_kit;
-    var relativeTime = kit.relative_time_past(message.pub_time_iso);
-    var localTime = kit.format_local_time(message.pub_time_iso);
-    var topicLink = '/zato/pubsub/topic/?cluster=1&query=' + encodeURIComponent(message.topic_name);
-
-    var html = '<tr>';
-    html += '<td style="font-family:monospace;font-size:12px">' + kit._esc_html(message.msg_id) + '</td>';
-    html += '<td><a href="' + topicLink + '">' + kit._esc_html(message.topic_name) + '</a></td>';
-    html += '<td class="data-preview">' + kit._esc_html(message.data_preview) + '</td>';
-    html += '<td style="text-align:center">' + message.data_size + ' B</td>';
-    html += '<td title="' + kit._esc_html(localTime) + '">' + relativeTime + '</td>';
-    html += '</tr>';
-
-    return html;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.pubsub.queue.purge = function() {
-    var queue = $.fn.zato.pubsub.queue;
-
-    if (!confirm('Purge all pending messages from this queue?')) {
-        return;
-    }
-
-    $.ajax({
-        url: queue.config.purgeUrl,
-        type: 'POST',
-        data: {sub_key: queue._subscriptionKey},
-        headers: {'X-CSRFToken': $.cookie('csrftoken')},
-        success: function() {
-            window.location.reload();
-        },
-        error: function(xhr) {
-            var errorMessage = 'Unknown error';
-            if (xhr.responseJSON) {
-                errorMessage = xhr.responseJSON.error;
-            }
-            alert('Error: ' + errorMessage);
+        if (timestampSeconds <= 0) {
+            return '-';
         }
-    });
-};
+
+        // .. compute the difference from now ..
+        var nowSeconds = Date.now() / 1000;
+        var diff = nowSeconds - timestampSeconds;
+
+        if (diff < 0) {
+            diff = 0;
+        }
+
+        // .. and format it as a human-readable string.
+        if (diff < 60) {
+            return Math.floor(diff) + ' sec ago';
+        }
+
+        if (diff < 3600) {
+            return Math.floor(diff / 60) + ' min ago';
+        }
+
+        if (diff < 86400) {
+            return Math.floor(diff / 3600) + 'h ago';
+        }
+
+        return Math.floor(diff / 86400) + 'd ago';
+    };
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.queue.init = function(subKey, clusterID, pollConfig) {
-    var kit = $.fn.zato.dashboard_kit;
-    var queue = $.fn.zato.pubsub.queue;
+    $.fn.zato.pubsub.queue.formatLocalTime = function(isoTimestamp) {
 
-    queue._subscriptionKey = subKey;
+        var date = new Date(isoTimestamp);
+        var year = date.getFullYear();
+        var month = ('0' + (date.getMonth() + 1)).slice(-2);
+        var day = ('0' + date.getDate()).slice(-2);
+        var hours = ('0' + date.getHours()).slice(-2);
+        var minutes = ('0' + date.getMinutes()).slice(-2);
+        var seconds = ('0' + date.getSeconds()).slice(-2);
 
-    queue._pagination = kit.pagination.init({
-        poll_url: pollConfig.poll_url,
-        action: 'get-queue-messages',
-        object_id: subKey,
-        page_size: queue.config.pageSize,
-        filters: {},
-        ts_field: 'pub_time_iso',
-        table_body: '#detail-history-table-body',
-        container_top: '#detail-history-pagination-top',
-        container_bottom: '#detail-history-pagination-bottom',
-        render_page: queue._renderPage,
-        render_new: queue._renderNew
-    });
-};
+        return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.pubsub.queue.render = function(data) {
+
+        // Update the depth stat card ..
+        var depth = data.depth;
+        $('#stat-depth').text(depth.toLocaleString());
+
+        // .. render the messages table ..
+        var $messagesBody = $('#messages-body');
+        $messagesBody.empty();
+
+        var messages = data.messages;
+        var subKey = $.fn.zato.pubsub.queue._subKey;
+
+        if (messages.length === 0) {
+            $messagesBody.append('<tr><td colspan="5">No pending messages</td></tr>');
+            return;
+        }
+
+        for (var messageIdx = 0; messageIdx < messages.length; messageIdx++) {
+            var message = messages[messageIdx];
+            var relativeTime = $.fn.zato.pubsub.queue.relativeTime(message.pub_time_iso);
+            var localTime = $.fn.zato.pubsub.queue.formatLocalTime(message.pub_time_iso);
+            var topicName = message.topic_name;
+
+            // .. build the message detail link ..
+            var messageLink = '/zato/pubsub/subscription/queue/message/?cluster=1' +
+                '&sub_key=' + encodeURIComponent(subKey) +
+                '&msg_id=' + encodeURIComponent(message.msg_id) +
+                '&topic_name=' + encodeURIComponent(topicName) +
+                '&redis_stream_id=' + encodeURIComponent(message.redis_stream_id);
+
+            // .. build the topic link ..
+            var topicLink = '/zato/pubsub/topic/?cluster=1&query=' + encodeURIComponent(topicName);
+
+            // .. and render the row.
+            var row = '<tr>';
+            row += '<td style="font-family:monospace; font-size:12px"><a href="' + messageLink + '">' + message.msg_id + '</a></td>';
+            row += '<td><a href="' + topicLink + '">' + topicName + '</a></td>';
+            row += '<td class="data-preview">' + $('<span>').text(message.data_preview).html() + '</td>';
+            row += '<td>' + message.data_size + ' B</td>';
+            row += '<td title="' + localTime + '">' + relativeTime + '</td>';
+            row += '</tr>';
+
+            $messagesBody.append(row);
+        }
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.pubsub.queue.purge = function() {
+
+        if (!confirm('Purge all pending messages from this queue?')) {
+            return;
+        }
+
+        $.ajax({
+            url: '/zato/pubsub/subscription/queue/purge/',
+            type: 'POST',
+            data: {
+                sub_key: $.fn.zato.pubsub.queue._subKey
+            },
+            headers: {'X-CSRFToken': $.cookie('csrftoken')},
+            success: function() {
+                window.location.reload();
+            },
+            error: function(xhr) {
+                var errorMessage = 'Unknown error';
+                if (xhr.responseJSON) {
+                    errorMessage = xhr.responseJSON.error;
+                }
+                alert('Error: ' + errorMessage);
+            }
+        });
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.pubsub.queue.init = function(subKey, initialData) {
+
+        // Store the sub_key for purge operations ..
+        $.fn.zato.pubsub.queue._subKey = subKey;
+
+        // .. parse the initial data if it is a string ..
+        if (typeof initialData === 'string') {
+            initialData = JSON.parse(initialData);
+        }
+
+        // .. and render the page.
+        $.fn.zato.pubsub.queue.render(initialData);
+    };
 
 // ////////////////////////////////////////////////////////////////////////
 

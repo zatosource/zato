@@ -59,7 +59,7 @@ class DiskMessageStore:
         """
 
         # Build the sharded relative path ..
-        data_ref = self._make_ref(message_id, topic_name)
+        data_ref = self.make_ref(message_id, topic_name)
 
         # .. resolve to absolute ..
         absolute_path = self._ref_to_path(data_ref)
@@ -204,7 +204,7 @@ class DiskMessageStore:
 
 # ################################################################################################################################
 
-    def _make_ref(self, message_id:'str', topic_name:'str') -> 'str':
+    def make_ref(self, message_id:'str', topic_name:'str') -> 'str':
         """ Compute the sharded relative path for a message.
 
         Layout: <topic_name>/<shard1>/<shard2>/<message_id>.msg

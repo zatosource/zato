@@ -1,0 +1,99 @@
+/* ------------------------------------------------------------ */
+/* Record edit - form layout                                     */
+/* ------------------------------------------------------------ */
+
+.record-edit-readonly-section {
+    margin-bottom: 24px;
+    padding: 16px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.record-edit-editable-section {
+    margin-bottom: 24px;
+}
+
+.record-edit-field-row {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    gap: 12px;
+}
+
+.record-edit-field-readonly {
+    margin-bottom: 8px;
+}
+
+.record-edit-label {
+    display: inline-block;
+    width: 140px;
+    min-width: 140px;
+    font-size: 13px;
+    color: #8a8a8a;
+    padding-top: 6px;
+}
+
+.record-edit-value {
+    font-size: 13px;
+    color: #d0d0d0;
+    padding-top: 6px;
+}
+
+/* ------------------------------------------------------------ */
+/* Record edit - input fields                                    */
+/* ------------------------------------------------------------ */
+
+.record-edit-input {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 13px;
+    color: #e0e0e0;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+}
+
+.record-edit-input:focus {
+    outline: none;
+    border-color: rgba(100, 160, 255, 0.5);
+}
+
+.record-edit-textarea {
+    min-height: 200px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.record-edit-monospace {
+    font-family: monospace;
+    font-size: 12px;
+}
+
+/* ------------------------------------------------------------ */
+/* Record edit - footer and status                               */
+/* ------------------------------------------------------------ */
+
+.record-edit-footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.record-edit-status {
+    font-size: 13px;
+}
+
+.record-edit-status-saving {
+    color: #8a8a8a;
+}
+
+.record-edit-status-success {
+    color: #4caf50;
+}
+
+.record-edit-status-error {
+    color: #f44336;
+}

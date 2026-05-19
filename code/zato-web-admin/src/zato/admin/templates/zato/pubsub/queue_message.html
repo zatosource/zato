@@ -1,0 +1,31 @@
+{% extends "zato/detail_base.html" %}
+
+{% block page_title %}Message: {{ msg_id }}{% endblock %}
+
+{% block detail_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/detail-kit/record_edit.css">
+{% endblock %}
+
+{% block section_title %}
+<a href="{{ queue_url }}" class="detail-component-pill menu-link">Queue</a>
+Message detail
+{% endblock %}
+{% block help_icon_id %}{% endblock %}
+
+{% block detail_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/record_edit.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/queue_message.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.pubsub.queue_message.init({{ message_data_json|safe }}, '{{ poll_url }}');
+});
+</script>
+{% endblock %}
+
+{% block stat_cards %}{% endblock %}
+{% block actions %}{% endblock %}
+{% block tabs %}{% endblock %}
+
+{% block tab_panels %}
+<div id="record-edit-form"></div>
+{% endblock %}
