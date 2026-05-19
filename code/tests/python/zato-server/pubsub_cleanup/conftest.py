@@ -24,6 +24,7 @@ from urllib.request import Request, urlopen
 _pubsub_push_dir = os.path.join(os.path.dirname(__file__), '..', 'pubsub_push')
 _pubsub_push_dir = os.path.abspath(_pubsub_push_dir)
 
+sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, _pubsub_push_dir)
 
 # pytest
