@@ -1075,11 +1075,11 @@ class GetMessageDetail(AdminService):
         topic_name = self.request.input.topic_name
         redis_stream_id = self.request.input.redis_stream_id
 
-        # .. load the full payload from disk via deterministic path - O(1) ..
+        # .. load the full payload from disk ..
         data_ref = self.server.pubsub_redis.disk_store.make_ref(msg_id, topic_name)
         load_result = self.server.pubsub_redis.disk_store.load(data_ref)
 
-        # .. fetch the stream entry metadata via XRANGE with min=max=redis_stream_id - O(1) ..
+        # .. fetch the stream entry metadata ..
         stream_key = self.server.pubsub_redis._get_stream_key(topic_name)
         raw_entries = self.server.pubsub_redis.redis.xrange(stream_key, min=redis_stream_id, max=redis_stream_id)
 

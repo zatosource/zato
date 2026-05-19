@@ -65,14 +65,14 @@
     $.fn.zato.pubsub.queue.render = function(data) {
 
         // Update the depth stat card ..
-        var depth = data.depth;
+        var depth = data.total;
         $('#stat-depth').text(depth.toLocaleString());
 
         // .. render the messages table ..
         var $messagesBody = $('#messages-body');
         $messagesBody.empty();
 
-        var messages = data.messages;
+        var messages = data.rows;
         var subKey = $.fn.zato.pubsub.queue._subKey;
 
         if (messages.length === 0) {
