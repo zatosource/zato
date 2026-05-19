@@ -284,6 +284,12 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     # Store a pidfile before doing anything else
     store_pidfile(base_dir)
 
+    # Ensure the file exists
+    _blocked_paths_file = os.path.join(os.path.expanduser('~'), 'env', 'qs-1', 'blocked-paths.txt')
+    if not os.path.exists(_blocked_paths_file):
+        with open(_blocked_paths_file, 'w') as _f:
+            _ = _f.write('/.env\n')
+
     # Now, import environment variables and store the variable for later use
     if env_file := options.get('env_file', ''):
         initial_env_variables = populate_environment_from_file(env_file)
