@@ -232,7 +232,7 @@ class RedisPushDelivery:
                 attempt += 1
                 msg = f'PubSub delivery attempt {attempt} failed for sub_key `{sub_key}`'
                 msg += f', msg_id `{msg_id}`: {format_exc()}'
-                logger.warning(msg)
+                logger.debug(msg)
 
                 # .. compute jitter as a fraction of the current interval ..
                 jitter = interval * _retry_jitter_percent / 100
