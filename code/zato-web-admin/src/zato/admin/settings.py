@@ -58,6 +58,9 @@ if log_config:
 else:
     logging.basicConfig(level=logging.DEBUG)
 
+from zato.common.util.logging_ import attach_service_context_filter
+attach_service_context_filter()
+
 # ################################################################################################################################
 # ################################################################################################################################
 
