@@ -171,12 +171,18 @@ def message_detail(request:'any_') -> 'TemplateResponse':
             'data_size': 0,
         }
 
+    # .. resolve the active tab from the URL ..
+    active_tab = request.GET.get('tab')
+    if not active_tab:
+        active_tab = 'data'
+
     # .. and render the template.
     out = TemplateResponse(request, 'zato/pubsub/queue_message.html', {
         'cluster_id': 1,
         'sub_key': sub_key,
         'msg_id': msg_id,
         'topic_name': topic_name,
+        'active_tab': active_tab,
         'message_data_json': json.dumps(message_data),
         'poll_url': '/zato/dashboard/detail-poll/',
         'queue_url': f'/zato/pubsub/subscription/queue/?cluster=1&sub_key={sub_key}',

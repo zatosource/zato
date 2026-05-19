@@ -48,24 +48,12 @@
             hidden_fields: ['msg_id', 'topic_name', 'redis_stream_id'],
             data: messageData
         });
+
     };
 
 // ////////////////////////////////////////////////////////////////////////
 
     $.fn.zato.pubsub.queue_message.init_tabs = function() {
-
-        var kit = $.fn.zato.dashboard_kit;
-
-        var url_tab = kit.url_state.get('tab');
-        if (url_tab) {
-            var $target = $('.dashboard-tab[data-tab="' + url_tab + '"]');
-            if ($target.length) {
-                $('.dashboard-tab').removeClass('dashboard-tab-active').attr('aria-selected', 'false');
-                $target.addClass('dashboard-tab-active').attr('aria-selected', 'true');
-                $('.dashboard-tab-panel').attr('hidden', true);
-                $('#dashboard-tab-panel-' + url_tab).removeAttr('hidden');
-            }
-        }
 
         $('.dashboard-tab').on('click', function() {
             var tab_name = $(this).data('tab');
@@ -73,7 +61,10 @@
             $(this).addClass('dashboard-tab-active').attr('aria-selected', 'true');
             $('.dashboard-tab-panel').attr('hidden', true);
             $('#dashboard-tab-panel-' + tab_name).removeAttr('hidden');
-            kit.url_state.set({tab: tab_name});
+
+            var url = new URL(window.location.href);
+            url.searchParams.set('tab', tab_name);
+            window.history.replaceState(null, '', url.toString());
         });
     };
 

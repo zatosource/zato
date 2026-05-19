@@ -27,16 +27,16 @@ $(document).ready(function() {
 {% block actions %}{% endblock %}
 
 {% block tabs %}
-    <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="data" role="tab" aria-selected="true">Message data</button>
-    <button type="button" class="dashboard-tab" data-tab="metadata" role="tab" aria-selected="false">Metadata</button>
+    <button type="button" class="dashboard-tab{% if active_tab == 'data' %} dashboard-tab-active{% endif %}" data-tab="data" role="tab" aria-selected="{% if active_tab == 'data' %}true{% else %}false{% endif %}">Message data</button>
+    <button type="button" class="dashboard-tab{% if active_tab == 'metadata' %} dashboard-tab-active{% endif %}" data-tab="metadata" role="tab" aria-selected="{% if active_tab == 'metadata' %}true{% else %}false{% endif %}">Metadata</button>
 {% endblock %}
 
 {% block tab_panels %}
-<div class="dashboard-tab-panel" id="dashboard-tab-panel-data" role="tabpanel">
+<div class="dashboard-tab-panel" id="dashboard-tab-panel-data" role="tabpanel"{% if active_tab != 'data' %} hidden{% endif %}>
     <div id="record-edit-form"></div>
 </div>
 
-<div class="dashboard-tab-panel" id="dashboard-tab-panel-metadata" role="tabpanel" hidden>
+<div class="dashboard-tab-panel" id="dashboard-tab-panel-metadata" role="tabpanel"{% if active_tab != 'metadata' %} hidden{% endif %}>
     <div id="message-metadata-cards"></div>
 </div>
 {% endblock %}
