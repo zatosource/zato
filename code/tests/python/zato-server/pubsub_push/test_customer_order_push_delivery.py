@@ -65,10 +65,11 @@ class TestCustomerOrderPushDelivery(unittest.TestCase):
 
             receiver = TestConfig.endpoints[topic_name].receiver
             messages = receiver.wait_for_delivery(expected_count=1)
-            logger.info('Delivered to %s -> %s', topic_name, messages)
+            delivered_count = len(messages)
+            logger.info('Delivered %d message(s) to %s -> %s', delivered_count, topic_name, messages)
 
             # .. verify exactly 1 message arrived ..
-            self.assertEqual(len(messages), 1)
+            self.assertEqual(delivered_count, 1)
 
             # .. extract and deserialize the data ..
             message = messages[0]
@@ -100,10 +101,11 @@ class TestCustomerOrderPushDelivery(unittest.TestCase):
 
         # .. wait for all to be delivered ..
         messages = receiver.wait_for_delivery(expected_count=burst_count)
-        logger.info('Delivered %s messages to %s', messages, topic_name)
+        delivered_count = len(messages)
+        logger.info('Delivered %d message(s) to %s -> %s', delivered_count, topic_name, messages)
 
         # .. and verify the count.
-        self.assertEqual(len(messages), burst_count)
+        self.assertEqual(delivered_count, burst_count)
 
 # ################################################################################################################################
 
@@ -194,7 +196,8 @@ class TestCustomerOrderPushDelivery(unittest.TestCase):
 
         # .. and verify the payload is intact.
         received_value = received_data['bulk']
-        logger.info('Received payload length -> %d', len(received_value))
+        preview_length = 80
+        logger.info('Received payload length -> %d, preview -> %s', len(received_value), received_value[:preview_length])
 
         self.assertEqual(len(received_value), payload_char_count)
         self.assertEqual(received_value, large_value)

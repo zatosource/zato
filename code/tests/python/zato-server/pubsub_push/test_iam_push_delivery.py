@@ -64,10 +64,11 @@ class TestIAMPushDelivery(unittest.TestCase):
 
             receiver = TestConfig.endpoints[topic_name].receiver
             messages = receiver.wait_for_delivery(expected_count=1)
-            logger.info('Delivered to %s -> %s', topic_name, messages)
+            delivered_count = len(messages)
+            logger.info('Delivered %d message(s) to %s -> %s', delivered_count, topic_name, messages)
 
             # .. verify exactly 1 message arrived ..
-            self.assertEqual(len(messages), 1)
+            self.assertEqual(delivered_count, 1)
 
             # .. extract and deserialize the data ..
             message = messages[0]
@@ -95,7 +96,8 @@ class TestIAMPushDelivery(unittest.TestCase):
         # .. wait for push delivery ..
         receiver = TestConfig.endpoints[topic_name].receiver
         messages = receiver.wait_for_delivery(expected_count=1)
-        logger.info('Delivered messages -> %s', messages)
+        delivered_count = len(messages)
+        logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
 
         # .. verify the envelope fields are present.
         message = messages[0]
