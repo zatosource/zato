@@ -1125,104 +1125,22 @@ _default_data_class = ''
 # ################################################################################################################################
 # ################################################################################################################################
 
-_update_message_lua = """
-local stream_key = KEYS[1]
-local stream_id = ARGV[1]
-
-redis.call('XDEL', stream_key, stream_id)
-
-local field_count = (#ARGV - 1) / 2
-local args = {}
-args[1] = stream_id
-
-for i = 1, field_count do
-    local key_idx = 2 + (i - 1) * 2
-    local val_idx = key_idx + 1
-    args[#args + 1] = ARGV[key_idx]
-    args[#args + 1] = ARGV[val_idx]
-end
-
-redis.call('XADD', stream_key, unpack(args))
-
-return 1
-"""
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class UpdateMessage(AdminService):
-    """ Updates a message's metadata in the stream and optionally rewrites the payload on disk.
+    """ Updates a message's payload on disk.
     """
 
     name = 'zato.pubsub.subscription.update-message'
-    input = 'msg_id', 'topic_name', 'redis_stream_id', 'data', 'priority', 'expiration', \
-        '-correl_id', '-in_reply_to', '-ext_client_id'
+    input = 'msg_id', 'topic_name', 'redis_stream_id', 'data'
 
     def handle(self) -> 'None':
 
         # Extract request parameters ..
         msg_id = self.request.input.msg_id
         topic_name = self.request.input.topic_name
-        redis_stream_id = self.request.input.redis_stream_id
         data = self.request.input.data
-        priority = self.request.input.priority
-        expiration = self.request.input.expiration
-
-        correl_id = self.request.input.get('correl_id')
-        in_reply_to = self.request.input.get('in_reply_to')
-        ext_client_id = self.request.input.get('ext_client_id')
-
-        # .. fetch the current stream entry to preserve fields we are not updating ..
-        stream_key = self.server.pubsub_redis._get_stream_key(topic_name)
-        raw_entries = self.server.pubsub_redis.redis.xrange(stream_key, min=redis_stream_id, max=redis_stream_id)
-        first_entry = raw_entries[0]
-        current_entry = first_entry[1]
-
-        # .. compute the data preview and size ..
-        data_size = len(data)
-        data_preview = data[:100]
-
-        # .. build the full field set for the new stream entry ..
-        fields = [
-            'msg_id', msg_id,
-            'data_ref', current_entry['data_ref'],
-            'data_size', str(data_size),
-            'data_preview', data_preview,
-            'topic_name', topic_name,
-            'priority', str(priority),
-            'pub_time_iso', current_entry['pub_time_iso'],
-            'recv_time_iso', current_entry['recv_time_iso'],
-            'expiration', str(expiration),
-            'expiration_time_iso', current_entry['expiration_time_iso'],
-        ]
-
-        # .. include optional metadata ..
-        if correl_id:
-            fields.append('correl_id')
-            fields.append(correl_id)
-
-        if in_reply_to:
-            fields.append('in_reply_to')
-            fields.append(in_reply_to)
-
-        if ext_client_id:
-            fields.append('ext_client_id')
-            fields.append(ext_client_id)
-
-        if publisher := current_entry.get('publisher'):
-            fields.append('publisher')
-            fields.append(publisher)
-
-        # .. execute the atomic Lua script (XDEL + XADD with same stream ID) ..
-        lua_args = [redis_stream_id] + fields
-
-        _ = self.server.pubsub_redis.redis.eval(_update_message_lua, 1, stream_key, *lua_args)
 
         # .. overwrite the payload file on disk ..
-        data_class = current_entry.get('data_class')
-        if not data_class:
-            data_class = _default_data_class
-        _ = self.server.pubsub_redis.disk_store.store(msg_id, topic_name, data, data_class)
+        _ = self.server.pubsub_redis.disk_store.store(msg_id, topic_name, data, _default_data_class)
 
         # .. and return success.
         self.response.payload = {
