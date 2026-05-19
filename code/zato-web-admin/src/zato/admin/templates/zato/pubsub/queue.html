@@ -39,9 +39,9 @@ $(document).ready(function() {
     <tbody id="messages-body"></tbody>
 </table>
 
-{% if next_cursor %}
+{% if page and depth > 50 %}
 <div class="detail-pagination-bar">
-    <a href="?cluster={{ cluster_id }}&sub_key={{ sub_key }}&cursor={{ next_cursor }}">Next page</a>
+    <a href="?cluster={{ cluster_id }}&sub_key={{ sub_key }}&page={{ page|add:1 }}">Next page</a>
 </div>
 {% endif %}
 

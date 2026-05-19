@@ -44,15 +44,17 @@ def index(request:'any_') -> 'TemplateResponse':
 
     # Extract parameters from the request ..
     sub_key = request.GET['sub_key']
-    cursor = request.GET.get('cursor')
 
-    if not cursor:
-        cursor = '-'
+    page_raw = request.GET.get('page')
+    if page_raw:
+        page = int(page_raw)
+    else:
+        page = 1
 
     # .. invoke the browse service ..
     invoke_payload = {
         'sub_key': sub_key,
-        'cursor': cursor,
+        'page': page,
     }
 
     response = request.zato.client.invoke('zato.pubsub.subscription.browse-queue', invoke_payload)
@@ -64,15 +66,15 @@ def index(request:'any_') -> 'TemplateResponse':
         else:
             data = raw
     else:
-        data = {'messages': [], 'depth': 0, 'next_cursor': '', 'sub_key': sub_key}
+        data = {'rows': [], 'total': 0, 'page': 1, 'sub_key': sub_key}
 
     # .. and render the template.
     out = TemplateResponse(request, 'zato/pubsub/queue.html', {
         'cluster_id': 1,
         'sub_key': sub_key,
         'queue_data': json.dumps(data),
-        'next_cursor': data['next_cursor'],
-        'depth': data['depth'],
+        'depth': data['total'],
+        'page': data['page'],
         'zato_clusters': True,
         'zato_template_name': 'zato/pubsub/queue.html',
     })
