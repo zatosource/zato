@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import logging
+from traceback import format_exc
 
 # Django
 from django.http import HttpResponse
@@ -29,18 +30,20 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
+_Default_Error_Message = 'Error'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('GET')
-def index(req:'any_') -> 'TemplateResponse':
+def index(request:'any_') -> 'TemplateResponse':
     """ Displays a read-only message browser for a subscription queue.
     The pagination kit fetches page 1 via AJAX on init, so no service call is needed here.
     """
 
-    sub_key = req.GET['sub_key']
+    sub_key = request.GET['sub_key']
 
-    out = TemplateResponse(req, 'zato/pubsub/queue.html', {
+    out = TemplateResponse(request, 'zato/pubsub/queue.html', {
         'cluster_id': default_cluster_id,
         'sub_key': sub_key,
         'poll_url': '/zato/dashboard/detail-poll/',
@@ -54,40 +57,50 @@ def index(req:'any_') -> 'TemplateResponse':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def purge(req:'any_') -> 'HttpResponse':
+def purge(request:'any_') -> 'HttpResponse':
     """ Purges all pending messages from a subscription queue.
     """
 
-    sub_key = req.POST['sub_key']
+    sub_key = request.POST['sub_key']
+
+    service_request = {
+        'sub_key': sub_key,
+    }
 
     try:
-        response = req.zato.client.invoke('zato.pubsub.subscription.purge-queue', {
-            'sub_key': sub_key,
-        })
+        response = request.zato.client.invoke('zato.pubsub.subscription.purge-queue', service_request)
+
         if response.ok:
             raw = response.data
             if isinstance(raw, str):
                 out = HttpResponse(raw, content_type='application/json')
                 return out
 
-            out = HttpResponse(json.dumps(raw), content_type='application/json')
+            response_json = json.dumps(raw)
+
+            out = HttpResponse(response_json, content_type='application/json')
             return out
 
         else:
             error_message = response.details
             if not error_message:
-                error_message = 'Error'
+                error_message = _Default_Error_Message
+
+            error_json = json.dumps({'error': error_message})
 
             out = HttpResponse(
-                json.dumps({'error': error_message}),
+                error_json,
                 content_type='application/json',
                 status=500,
             )
             return out
 
     except Exception as error:
-        logger.error('Pub/sub queue purge error: %s', error)
-        out = HttpResponse(json.dumps({'error': str(error)}), content_type='application/json', status=500)
+        error_text = format_exc()
+        logger.error('Pub/sub queue purge error: %s', error_text)
+        error_json = json.dumps({'error': error_text})
+
+        out = HttpResponse(error_json, content_type='application/json', status=500)
         return out
 
 # ################################################################################################################################
