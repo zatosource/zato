@@ -58,6 +58,15 @@ if log_config:
 else:
     logging.basicConfig(level=logging.DEBUG)
 
+from zato.common.util.logging_ import ServiceContextFilter
+_ctx_filter = ServiceContextFilter()
+for handler in logging.root.handlers:
+    handler.addFilter(_ctx_filter)
+for logger_obj in logging.Logger.manager.loggerDict.values():
+    if hasattr(logger_obj, 'handlers'):
+        for handler in logger_obj.handlers:
+            handler.addFilter(_ctx_filter)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
