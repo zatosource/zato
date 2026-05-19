@@ -110,3 +110,25 @@ def test_deploy_zrules_file(zato_server:'any_') -> 'None':
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+def test_deploy_enmasse_file(zato_server:'any_') -> 'None':
+    """ A .yaml enmasse file dropped into the project is picked up and executed.
+    """
+    enmasse_content = '''channel_rest:
+  - name: "hot-deploy-test-channel"
+    service: "demo.my-service"
+    url_path: "/hot-deploy-test"
+    security: "anonymous"
+'''
+
+    file_path = os.path.join(TestConfig.project_directory, 'src', 'enmasse.yaml')
+    _write_file(file_path, enmasse_content)
+
+    time.sleep(_deploy_wait)
+
+    log_content = _read_server_log(TestConfig.server_directory)
+    assert 'enmasse' in log_content.lower(), \
+        f'Expected enmasse reference in server log but not found. Last 2000 chars:\n{log_content[-2000:]}'
+
+# ################################################################################################################################
+# ################################################################################################################################
