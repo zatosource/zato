@@ -48,6 +48,9 @@ class BaseCleanupTestCase(unittest.TestCase):
         # Set up a real Redis connection ..
         self.redis = Redis(host=_test_redis_host, port=_test_redis_port, db=_test_redis_db, decode_responses=True)
 
+        # .. flush any stale expiry entries left by previous tests ..
+        _ = self.redis.delete(_Pending_Expiry_Key)
+
         # .. set up a temp directory for disk store ..
         self.test_dir = tempfile.mkdtemp()
         self.disk_store = DiskMessageStore(self.test_dir)
