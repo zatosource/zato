@@ -13,6 +13,7 @@ Message detail
 {% block help_icon_id %}{% endblock %}
 
 {% block detail_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/meta_cards.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/record_edit.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/queue_message.js"></script>
 <script nonce="{{ CSP_NONCE }}">
@@ -24,8 +25,18 @@ $(document).ready(function() {
 
 {% block stat_cards %}{% endblock %}
 {% block actions %}{% endblock %}
-{% block tabs %}{% endblock %}
+
+{% block tabs %}
+    <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="data" role="tab" aria-selected="true">Message data</button>
+    <button type="button" class="dashboard-tab" data-tab="metadata" role="tab" aria-selected="false">Metadata</button>
+{% endblock %}
 
 {% block tab_panels %}
-<div id="record-edit-form"></div>
+<div class="dashboard-tab-panel" id="dashboard-tab-panel-data" role="tabpanel">
+    <div id="record-edit-form"></div>
+</div>
+
+<div class="dashboard-tab-panel" id="dashboard-tab-panel-metadata" role="tabpanel" hidden>
+    <div id="message-metadata-cards"></div>
+</div>
 {% endblock %}
