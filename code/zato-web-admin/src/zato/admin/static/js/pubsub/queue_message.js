@@ -18,16 +18,21 @@
         kit.meta_cards.render({
             container: '#message-metadata-cards',
             data: messageData,
-            fields: [
-                {name: 'msg_id', label: 'Message ID', format: 'mono'},
-                {name: 'topic_name', label: 'Topic'},
-                {name: 'pub_time_iso', label: 'Published', format: 'time'},
-                {name: 'recv_time_iso', label: 'Received', format: 'time'},
-                {name: 'expiration_time_iso', label: 'Expires', format: 'time'},
-                {name: 'data_size', label: 'Size', suffix: ' B'},
-                {name: 'priority', label: 'Priority'},
-                {name: 'expiration', label: 'Expiration (ms)'},
-                {name: 'redis_stream_id', label: 'Stream ID', format: 'mono'}
+            groups: [
+                {fields: [
+                    {name: 'msg_id', label: 'Message ID', format: 'mono'},
+                    {name: 'topic_name', label: 'Topic'}
+                ]},
+                {fields: [
+                    {name: 'pub_time_iso', label: 'Published', format: 'time'},
+                    {name: 'recv_time_iso', label: 'Received', format: 'time'},
+                    {name: 'expiration_time_iso', label: 'Expires', format: 'time'}
+                ]},
+                {fields: [
+                    {name: 'data_size', label: 'Size', suffix: ' B'},
+                    {name: 'priority', label: 'Priority'},
+                    {name: 'expiration', label: 'Expiration (ms)'}
+                ]}
             ]
         });
 
