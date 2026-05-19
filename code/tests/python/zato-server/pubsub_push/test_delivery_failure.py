@@ -112,6 +112,79 @@ class TestDeliveryFailure(unittest.TestCase):
         self.assertEqual(delivered_count, 1)
 
 # ################################################################################################################################
+
+    def test_slow_receiver(self) -> 'None':
+        """ Configure receiver to delay 5 seconds before responding.
+        Publish a message, wait for delivery, verify it arrives intact
+        and no premature retry caused a duplicate.
+        """
+
+        topic_name = 'customer.deactivated'
+        receiver = TestConfig.endpoints[topic_name].receiver
+
+        # Configure the receiver to hang for 5 seconds before responding ..
+        hang_duration = 5.0
+        receiver.behavior.set_hang(hang_duration)
+
+        # Publish a message ..
+        publish_data:'anydict' = {'customer_id': 'slow_test', 'source': 'test_slow_receiver'}
+        _ = self.publisher.publish(topic_name, publish_data)
+        logger.info('Published message to %s with %s second hang configured', topic_name, hang_duration)
+
+        # .. wait for delivery (longer than the hang duration) ..
+        delivery_timeout = 60.0
+        messages = receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
+        delivered_count = len(messages)
+        logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
+
+        # .. verify exactly 1 message arrived (no duplicate from premature retry) ..
+        self.assertEqual(delivered_count, 1)
+
+        # .. reset behavior for subsequent tests.
+        receiver.behavior.reset()
+
+# ################################################################################################################################
+
+    def test_expired_message_not_pushed(self) -> 'None':
+        """ Publish a message with 1-second TTL while the receiver is rejecting.
+        The delivery task retries, but the TTL expires before a successful push.
+        Verify the receiver got zero deliveries.
+        """
+
+        topic_name = 'order.placed'
+        receiver = TestConfig.endpoints[topic_name].receiver
+
+        # Configure the receiver to reject indefinitely (no auto-recover) ..
+        receiver.behavior.set_reject_503(auto_recover_after=0)
+
+        # Publish a message with a very short TTL ..
+        ttl_seconds = 1
+        publish_data:'anydict' = {'order_id': 'expired_test', 'source': 'test_expired_not_pushed'}
+        _ = self.publisher.publish(topic_name, publish_data, expiration=ttl_seconds)
+        logger.info('Published message to %s with TTL=%d second(s), receiver rejecting', topic_name, ttl_seconds)
+
+        # .. wait for the message to expire and the delivery task to give up ..
+        expiry_wait = 10.0
+        time.sleep(expiry_wait)
+
+        # .. now switch receiver to accept and clear output ..
+        receiver.behavior.reset()
+        receiver.clear_output()
+        logger.info('Receiver switched to accept after expiry wait of %s seconds', expiry_wait)
+
+        # .. wait generously to confirm no late delivery arrives ..
+        post_recovery_wait = 10.0
+        time.sleep(post_recovery_wait)
+
+        # .. check what arrived ..
+        messages = receiver.get_delivered_messages()
+        delivered_count = len(messages)
+        logger.info('Delivered %d message(s) after expiry -> %s', delivered_count, messages)
+
+        # .. verify nothing was delivered (message expired before successful push).
+        self.assertEqual(delivered_count, 0)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
