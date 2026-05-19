@@ -1,0 +1,50 @@
+{% extends "zato/detail_base.html" %}
+
+{% block page_title %}Queue: {{ sub_key }}{% endblock %}
+
+{% block detail_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/eda.css">
+{% endblock %}
+
+{% block section_title %}Queue: {{ sub_key }}{% endblock %}
+{% block help_icon_id %}pubsub-queue-help{% endblock %}
+
+{% block detail_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/queue.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.pubsub.queue.init('{{ sub_key }}', {{ queue_data|safe }});
+});
+</script>
+{% endblock %}
+
+{% block stat_cards %}
+<div class="stat-cards">
+    <div class="stat-card">
+        <div><div class="stat-card-label">Depth</div><div class="stat-card-value" id="stat-depth">{{ depth }}</div></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block actions %}
+<div class="button-container">
+    <button class="action-button" onclick="$.fn.zato.pubsub.queue.purge()">Purge queue</button>
+</div>
+{% endblock %}
+
+{% block tabs %}{% endblock %}
+
+{% block tab_panels %}
+<h3 class="section-title">Pending messages</h3>
+<table class="detail-table">
+    <thead><tr><th>Message ID</th><th>Topic</th><th>Data</th><th>Size</th><th>Published</th></tr></thead>
+    <tbody id="messages-body"></tbody>
+</table>
+
+{% if next_cursor %}
+<div class="detail-pagination-bar">
+    <a href="?cluster={{ cluster_id }}&sub_key={{ sub_key }}&cursor={{ next_cursor }}">Next page</a>
+</div>
+{% endif %}
+
+{% endblock %}

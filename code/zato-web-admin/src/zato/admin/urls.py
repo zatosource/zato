@@ -50,6 +50,7 @@ from zato.admin.web.views.monitoring import dashboard as monitoring_dashboard
 from zato.admin.web.views.monitoring.wizard import health as monitoring_wizard_health
 from zato.admin.web.views.vendors import keysight_vision
 from zato.admin.web.views.pubsub import dashboard as pubsub_dashboard
+from zato.admin.web.views.pubsub import queue as pubsub_queue
 from zato.admin.web.views.pubsub import topic
 from zato.admin.web.views.pubsub import permission
 from zato.admin.web.views.pubsub import subscription
@@ -982,6 +983,13 @@ urlpatterns += [
     path('zato/pubsub/subscription/sec-def-topic-sub-list/<str:sec_base_id>/cluster/<int:cluster_id>/',
         login_required(subscription.sec_def_topic_sub_list),
         name='pubsub-subscription-sec-def-topic-sub-list'),
+
+    # PubSub Queue Browser
+
+    url(r'^zato/pubsub/subscription/queue/$',
+        login_required(pubsub_queue.index), name='pubsub-subscription-queue'),
+    url(r'^zato/pubsub/subscription/queue/purge/$',
+        login_required(pubsub_queue.purge), name='pubsub-subscription-queue-purge'),
 ]
 
 # ################################################################################################################################

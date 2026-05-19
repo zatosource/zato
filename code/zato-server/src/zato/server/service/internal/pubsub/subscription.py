@@ -84,7 +84,7 @@ def _build_topic_objects_list(topic_data_list=None, topics=None, topic_data_by_n
 
 if 0:
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import strdict, strlist
+    from zato.common.typing_ import anylist, strdict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -990,6 +990,66 @@ class HandleDelivery(Service):
         else:
             msg = f'Unrecognized push_type: {repr(input.get("push_type"))} ({input.get("msg_id")} - {input.get("correl_id")})'
             raise Exception(msg)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class BrowseQueue(AdminService):
+    """ Browses messages in a subscription's queue without consuming them.
+    Uses XRANGE for read-only access that does not affect consumer groups.
+    """
+
+    input = 'sub_key', '-cursor', '-page_size'
+
+    def handle(self) -> 'None':
+
+        # Extract request parameters ..
+        sub_key = self.request.input.sub_key
+
+        cursor = self.request.input.get('cursor')
+        if not cursor:
+            cursor = '-'
+
+        page_size_raw = self.request.input.get('page_size')
+        if page_size_raw:
+            page_size = int(page_size_raw)
+        else:
+            page_size = 50
+
+        # .. get all topics this subscriber is subscribed to ..
+        topic_names = self.server.pubsub_redis.get_subscribed_topics(sub_key)
+
+        # .. browse messages from each topic, collecting them into a single list ..
+        all_messages:'anylist' = []
+        next_cursor = ''
+
+        for topic_name in topic_names:
+            messages, topic_cursor = self.server.pubsub_redis.browse_messages(
+                topic_name, cursor=cursor, page_size=page_size, needs_data=False)
+
+            for message in messages:
+                all_messages.append(message)
+
+            # .. keep the latest cursor for pagination ..
+            if topic_cursor:
+                next_cursor = topic_cursor
+
+        # .. sort by pub_time descending so newest messages appear first ..
+        all_messages.sort(key=itemgetter('pub_time_iso'), reverse=True)
+
+        # .. trim to the requested page size ..
+        page = all_messages[:page_size]
+
+        # .. build the depth count (total messages across all topics) ..
+        depth = len(all_messages)
+
+        # .. and return the response.
+        self.response.payload = {
+            'messages': page,
+            'depth': depth,
+            'next_cursor': next_cursor,
+            'sub_key': sub_key,
+        }
 
 # ################################################################################################################################
 # ################################################################################################################################
