@@ -994,6 +994,12 @@ class HandleDelivery(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
+_Browse_Cursor_Start = '-'
+_Browse_Max_Messages = 10000
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class BrowseQueue(AdminService):
     """ Browses messages in a subscription's queue without consuming them.
     Uses XRANGE for read-only access that does not affect consumer groups.
@@ -1030,7 +1036,7 @@ class BrowseQueue(AdminService):
 
         for topic_name in topic_names:
             messages, _ = self.server.pubsub_redis.browse_messages(
-                topic_name, cursor='-', page_size=10000, needs_data=False)
+                topic_name, cursor=_Browse_Cursor_Start, page_size=_Browse_Max_Messages, needs_data=False)
 
             for message in messages:
                 all_messages.append(message)
@@ -1040,7 +1046,8 @@ class BrowseQueue(AdminService):
 
         # .. compute total and slice to the requested page ..
         total = len(all_messages)
-        offset = (page_number - 1) * page_size
+        page_offset = page_number - 1
+        offset = page_offset * page_size
         page_rows = all_messages[offset:offset + page_size]
 
         # .. and return the response in the kit pagination contract.

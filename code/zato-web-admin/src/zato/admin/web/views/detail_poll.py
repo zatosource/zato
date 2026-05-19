@@ -20,6 +20,12 @@ from zato.admin.web.views import method_allowed
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
@@ -36,17 +42,29 @@ _action_registry = {
 # ################################################################################################################################
 
 @method_allowed('POST')
-def detail_poll(req):
-    body = json.loads(req.body)
+def detail_poll(request:'any_') -> 'HttpResponse':
+
+    body = json.loads(request.body)
     action = body['action']
     service_name = _action_registry[action]
-    service_payload = {key: value for key, value in body.items() if key != 'action'}
+
+    service_payload:'dict' = {}
+
+    for key in body:
+        if key != 'action':
+            service_payload[key] = body[key]
+
     t0 = time.monotonic()
-    response = req.zato.client.invoke(service_name, service_payload)
+    response = request.zato.client.invoke(service_name, service_payload)
     elapsed = time.monotonic() - t0
+
     if elapsed > 2.0:
         logger.warning('detail_poll invoke %s took %.1fs', service_name, elapsed)
-    return HttpResponse(json.dumps(response.data), content_type='application/json')
+
+    response_json = json.dumps(response.data)
+
+    out = HttpResponse(response_json, content_type='application/json')
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
