@@ -175,14 +175,12 @@ class TestCustomerOrderPushDelivery(unittest.TestCase):
         publish_data = {'bulk': large_value}
 
         _ = self.publisher.publish(topic_name, publish_data)
-        logger.info('Published %d KB payload to %s', payload_size_kb, topic_name)
 
         # .. give the server a moment to ingest ..
         time.sleep(1)
 
         # .. pull the message back ..
         result = puller.pull(max_messages=1)
-        logger.info('Pull result message_count -> %s', result['message_count'])
 
         self.assertEqual(result['message_count'], 1)
 
