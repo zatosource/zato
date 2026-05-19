@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from datetime import datetime
 from logging import getLogger
 from math import log2
 from random import uniform
@@ -21,6 +22,7 @@ from gevent.lock import RLock
 # Zato
 from zato.common.api import PubSub
 from zato.common.pubsub.redis_backend import RedisPubSubBackend
+from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -187,25 +189,48 @@ class RedisPushDelivery:
         backend:'RedisPubSubBackend'
     ) -> 'None':
         """ Attempt to deliver a message, retrying with logarithmic backoff and jitter
-        until the delivery deadline is reached. Acknowledges the message regardless of
-        whether delivery ultimately succeeded or the deadline was exhausted.
+        until the delivery deadline is reached or the message expires.
+        Acknowledges the message regardless of outcome so it is removed from the stream.
         """
+
+        # Extract routing metadata from the message ..
         stream_name = message['_stream_name']
         redis_message_id = message['_redis_message_id']
         data_ref = message['_data_ref']
+        msg_id = message['msg_id']
+
+        # .. parse the expiration time for TTL checks on each retry ..
+        expiration_time_iso = message['expiration_time_iso']
+        normalized_expiration_iso = expiration_time_iso.replace('Z', '+00:00')
+        expiration_time = datetime.fromisoformat(normalized_expiration_iso)
+
+        # .. set up the retry loop with logarithmic backoff ..
         deadline = monotonic() + _max_retry_time
         interval = _retry_interval_initial
-
         attempt = 0
+        delivered = False
 
         while monotonic() < deadline:
+
+            # .. check if the message has expired - if so, drop it without delivery
+            # .. because there is no point pushing stale data to the endpoint ..
+            now = utcnow()
+            if now > expiration_time:
+                msg = f'PubSub message expired before delivery for sub_key `{sub_key}`'
+                msg += f', msg_id `{msg_id}`, expiration_time_iso `{expiration_time_iso}`'
+                logger.info(msg)
+                break
+
+            # .. attempt the actual delivery ..
             try:
                 self._deliver_message(message, sub_config)
+                delivered = True
                 break
             except Exception:
                 attempt += 1
-                logger.warning('PubSub delivery attempt %d failed for sub_key `%s`, msg_id `%s`: %s',
-                    attempt, sub_key, message['msg_id'], format_exc())
+                msg = f'PubSub delivery attempt {attempt} failed for sub_key `{sub_key}`'
+                msg += f', msg_id `{msg_id}`: {format_exc()}'
+                logger.warning(msg)
 
                 # .. compute jitter as a fraction of the current interval ..
                 jitter = interval * _retry_jitter_percent / 100
@@ -215,9 +240,13 @@ class RedisPushDelivery:
                 # .. grow the interval logarithmically, capped at the configured maximum ..
                 interval = min(interval * log2(interval + 1), _retry_interval_max)
         else:
-            logger.error('PubSub delivery deadline exhausted for sub_key `%s`, msg_id `%s` after %d attempts',
-                sub_key, message['msg_id'], attempt)
+            if not delivered:
+                msg = f'PubSub delivery deadline exhausted for sub_key `{sub_key}`'
+                msg += f', msg_id `{msg_id}` after {attempt} attempts'
+                logger.error(msg)
 
+        # .. regardless of whether the message was delivered, expired, or the deadline was exhausted,
+        # .. acknowledge it in the stream so it is not retried on the next fetch cycle.
         backend.ack_message(stream_name, sub_key, redis_message_id, data_ref)
 
 # ################################################################################################################################
