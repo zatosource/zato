@@ -100,7 +100,6 @@ class PublishClient:
         except HTTPError as error:
             raw = error.read()
             error_text = raw.decode('utf-8', errors='replace')
-            logger.error('Publish to %s returned HTTP %d: %s', topic_name, error.code, error_text)
             raise Exception(f'Publish to {topic_name} returned HTTP {error.code}: {error_text}')
 
         out = json.loads(raw)
@@ -196,7 +195,6 @@ class PullClient:
         except HTTPError as error:
             raw = error.read()
             error_text = raw.decode('utf-8', errors='replace')
-            logger.error('Pull returned HTTP %d: %s', error.code, error_text)
             raise Exception(f'Pull returned HTTP {error.code}: {error_text}')
 
         out = json.loads(raw)

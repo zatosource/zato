@@ -259,7 +259,6 @@ class RedisPubSubBackend:
             subscriber_count = len(subscriber_keys)
             logger.info('Populated pending set -> data_ref:%s, subscriber_count:%d, expiration_timestamp:%.1f',
                 data_ref, subscriber_count, expiration_timestamp)
-
         # .. update the publish counter and return the result.
         counter = zato_pubsub_messages_published_total.labels(topic_name=topic_name)
         _ = counter.inc()
@@ -396,11 +395,8 @@ class RedisPubSubBackend:
         total_len = 0
 
         for stream_name, stream_messages in result:
-            for redis_message_id, message_data in stream_messages:
 
-                logger.info('fetch_messages -> sub_key:%s, stream_name:%s, redis_message_id:%s, msg_id:%s, data_ref:%s',
-                    sub_key, stream_name, redis_message_id, message_data.get('msg_id'),
-                    message_data.get('data_ref'))
+            for redis_message_id, message_data in stream_messages:
 
                 # .. message_data is already dict[str, str] because decode_responses=True ..
                 decoded = message_data
@@ -415,8 +411,6 @@ class RedisPubSubBackend:
 
                 if now > expiration_time:
                     expired_data_ref = decoded['data_ref']
-                    logger.info('Expiring message -> sub_key:%s, data_ref:%s, expiration_time_iso:%s',
-                        sub_key, expired_data_ref, expiration_time_iso)
                     _ = self.redis.xack(stream_name, sub_key, redis_message_id)
                     self.disk_store.delete(expired_data_ref)
                     continue
@@ -431,9 +425,15 @@ class RedisPubSubBackend:
 
                 # .. load the actual payload from disk ..
                 data_ref = decoded['data_ref']
-                logger.info('fetch_messages loading payload -> sub_key:%s, data_ref:%s, redis_message_id:%s, stream_name:%s',
-                    sub_key, data_ref, redis_message_id, stream_name)
-                load_result = self.disk_store.load(data_ref)
+
+                try:
+                    load_result = self.disk_store.load(data_ref)
+                except FileNotFoundError:
+                    logger.warning('Orphaned message -> sub_key:%s, data_ref:%s, redis_id:%s - acking and skipping',
+                        sub_key, data_ref, redis_message_id)
+                    _ = self.redis.xack(stream_name, sub_key, redis_message_id)
+                    continue
+
                 decoded['data'] = load_result.data
                 decoded['data_class'] = load_result.data_class
 
@@ -458,7 +458,8 @@ class RedisPubSubBackend:
 
         messages.sort(key=_sort_key)
 
-        return messages[:max_messages]
+        out = messages[:max_messages]
+        return out
 
 # ################################################################################################################################
 
@@ -474,6 +475,7 @@ class RedisPubSubBackend:
         # .. remove this subscriber from the message's pending set and the reverse index ..
         if data_ref:
             pending_key = self._get_pending_key(data_ref)
+
             _ = self.redis.srem(pending_key, sub_key)
 
             sub_pending_key = self._get_sub_pending_key(sub_key)
@@ -566,8 +568,6 @@ class RedisPubSubBackend:
             })
 
             # .. acknowledge and clean up the disk file ..
-            logger.info('format_messages_for_rest acking -> sub_key:%s, data_ref:%s, redis_message_id:%s, stream_name:%s',
-                sub_key, data_ref, redis_message_id, stream_name)
             self.ack_message(stream_name, sub_key, redis_message_id, data_ref)
 
             # .. update the delivery counter.
