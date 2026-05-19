@@ -352,8 +352,7 @@
             '_delivery_type',
             'topic_link_list',
             '_edit',
-
-            /* '_queue', */
+            '_queue',
             '_delete',
             'id',
             'is_delivery_active',
@@ -454,7 +453,7 @@
                         <th style="text-align:center">Delivery type</th>
                         <th>Topics</th>
                         <th style="text-align:center">Edit</th>
-                        <!-- <th style="text-align:center">Queue</th> -->
+                        <th style="text-align:center">Queue</th>
 
                         <th style="text-align:center">Delete</th>
                         <th class='ignore'>&nbsp;</th>
@@ -498,7 +497,7 @@
                         </td>
                         <td>{{ item.topic_link_list|safe }}</td>
                         <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
-                        {% comment %}<td style="text-align:center"><a href="{% url 'pubsub-dashboard' %}">Queue</a></td>{% endcomment %}
+                        <td style="text-align:center"><a href="/zato/pubsub/subscription/queue/?cluster={{ cluster_id }}&sub_key={{ item.sub_key }}">Browse</a></td>
 
                         <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
