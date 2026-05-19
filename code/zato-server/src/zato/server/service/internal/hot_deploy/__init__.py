@@ -316,10 +316,23 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
+    def _deploy_enmasse(self, payload_name:'str') -> 'None':
+        self.invoke('zato.pickup.update-enmasse', {'full_path': payload_name})
+
+# ################################################################################################################################
+
+    def _is_enmasse_file(self, payload_name:'str') -> 'bool':
+        return 'enmasse' in payload_name and (payload_name.endswith('.yml') or payload_name.endswith('.yaml'))
+
+# ################################################################################################################################
+
     def deploy_package(self, payload:'str', payload_name:'str') -> 'any_':
 
         if is_archive_file(payload_name) or is_python_file(payload_name):
             return self._deploy_package(payload, payload_name)
+
+        elif self._is_enmasse_file(payload_name):
+            self._deploy_enmasse(payload_name)
 
         elif payload_name.endswith('.ini') or payload_name.endswith('.zrules'):
             self._deploy_user_conf(payload, payload_name)
