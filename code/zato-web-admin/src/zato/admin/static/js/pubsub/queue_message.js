@@ -56,16 +56,28 @@
 
         // Bind tab click handlers to switch panels and update the URL ..
         $('.dashboard-tab').on('click', function() {
+
             var tabName = $(this).data('tab');
-            $('.dashboard-tab').removeClass('dashboard-tab-active').attr('aria-selected', 'false');
-            $(this).addClass('dashboard-tab-active').attr('aria-selected', 'true');
+
+            // .. deactivate all tabs ..
+            var $allTabs = $('.dashboard-tab');
+            $allTabs.removeClass('dashboard-tab-active');
+            $allTabs.attr('aria-selected', 'false');
+
+            // .. activate the clicked tab ..
+            var $clickedTab = $(this);
+            $clickedTab.addClass('dashboard-tab-active');
+            $clickedTab.attr('aria-selected', 'true');
+
+            // .. hide all panels and show the target ..
             $('.dashboard-tab-panel').attr('hidden', true);
             $('#dashboard-tab-panel-' + tabName).removeAttr('hidden');
 
             // .. and persist the tab selection in the URL.
             var url = new URL(window.location.href);
             url.searchParams.set('tab', tabName);
-            window.history.replaceState(null, '', url.toString());
+            var urlString = url.toString();
+            window.history.replaceState(null, '', urlString);
         });
     };
 

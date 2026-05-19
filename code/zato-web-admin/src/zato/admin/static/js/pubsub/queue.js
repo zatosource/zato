@@ -18,7 +18,8 @@
 
         // Update the depth stat card ..
         var depth = data.total;
-        $('#stat-depth').text(depth.toLocaleString());
+        var depthFormatted = depth.toLocaleString();
+        $('#stat-depth').text(depthFormatted);
 
         // .. render the messages table ..
         var $messagesBody = $('#messages-body');
@@ -27,12 +28,14 @@
         var messages = data.rows;
         var subKey = $.fn.zato.pubsub.queue._subKey;
 
-        if (messages.length === 0) {
+        var messageCount = messages.length;
+
+        if (messageCount === 0) {
             $messagesBody.append('<tr><td colspan="5">No pending messages</td></tr>');
             return;
         }
 
-        for (var messageIndex = 0; messageIndex < messages.length; messageIndex++) {
+        for (var messageIndex = 0; messageIndex < messageCount; messageIndex++) {
             var message = messages[messageIndex];
             var relativeTime = kit.relative_time_past(message.pub_time_iso);
             var localTime = kit.format_local_time(message.pub_time_iso);

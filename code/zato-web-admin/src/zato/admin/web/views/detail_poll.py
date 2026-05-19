@@ -70,7 +70,7 @@ def detail_poll(request:'any_') -> 'HttpResponse':
     elapsed = time.monotonic() - invoke_start
 
     if elapsed > _slow_invoke_threshold:
-        logger.warning('detail_poll invoke %s took %.1fs', service_name, elapsed)
+        logger.warning(f'detail_poll invoke {service_name} took {elapsed:.1f}s')
 
     # .. and return the response as JSON.
     response_json = json.dumps(response.data)

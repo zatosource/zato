@@ -5,9 +5,9 @@
 .record-edit-readonly-section {
     margin-bottom: 24px;
     padding: 16px;
-    background: var(--background-light);
     border: 1px solid var(--border-light);
     border-radius: 6px;
+    background: var(--background-light);
 }
 
 .record-edit-editable-section {
@@ -47,16 +47,16 @@
 .record-edit-input {
     flex: 1;
     padding: 6px 10px;
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
     font-size: 13px;
     color: var(--primary-dark);
     background: var(--background-light);
-    border: 1px solid var(--border-light);
-    border-radius: 4px;
 }
 
 .record-edit-input:focus {
-    border-color: var(--component-accent);
     outline: none;
+    border-color: var(--component-accent);
 }
 
 .record-edit-textarea {

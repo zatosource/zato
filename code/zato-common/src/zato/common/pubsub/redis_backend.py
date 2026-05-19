@@ -113,7 +113,13 @@ class RedisPubSubBackend:
         out = f'{ModuleCtx.Stream_Prefix}{topic_name}'
         return out
 
-    get_stream_key = _get_stream_key
+# ################################################################################################################################
+
+    def get_stream_key(self, topic_name:'str') -> 'str':
+        """ Returns the Redis stream key for a given topic name.
+        """
+        out = self._get_stream_key(topic_name)
+        return out
 
 # ################################################################################################################################
 
@@ -604,14 +610,17 @@ class RedisPubSubBackend:
     def browse_messages(
         self,
         topic_name:'str',
-        cursor:'str'='-',
-        page_size:'int'=_default_page_size,
-        needs_data:'bool'=False,
-    ) -> 'browse_result':
+        cursor:'str' = '-',
+        page_size:'int' = _default_page_size,
+        needs_data:'bool' = False,
+        ) -> 'browse_result':
         """ Browse messages in a topic without consuming them.
         Uses XRANGE for read-only access that does not affect consumer groups.
         Returns (messages, next_cursor) for cursor-based pagination.
         """
+
+        # Our response to produce
+        out:'browse_result' = ([], '')
 
         # Normalize topic name ..
         topic_name = topic_name.lower()
@@ -619,13 +628,14 @@ class RedisPubSubBackend:
 
         # .. read a page from the stream ..
         try:
-            raw_messages:'anylist' = cast_('anylist', self.redis.xrange(stream_key, min=cursor, count=page_size))
+            xrange_result = self.redis.xrange(stream_key, min=cursor, count=page_size)
+            raw_messages:'anylist' = cast_('anylist', xrange_result)
         except ResponseError:
-            out = ([], '')
+            logger.warning(f'XRANGE failed for stream_key:{stream_key}, cursor:{cursor}')
             return out
 
+        # .. handle empty result ..
         if not raw_messages:
-            out = ([], '')
             return out
 
         messages:'anylist' = []
@@ -660,8 +670,8 @@ class RedisPubSubBackend:
 
             # .. optionally load the full payload from disk ..
             if needs_data:
-                data_ref = message_data['data_ref']
-                load_result = self.disk_store.load(data_ref)
+                data_reference = message_data['data_ref']
+                load_result = self.disk_store.load(data_reference)
                 entry['data'] = load_result.data
                 entry['data_class'] = load_result.data_class
 
@@ -682,9 +692,11 @@ class RedisPubSubBackend:
             parts = last_stream_id.split('-')
             timestamp_part = parts[0]
             sequence_part = parts[1]
-            next_sequence = int(sequence_part) + 1
+            sequence_number = int(sequence_part)
+            next_sequence = sequence_number + 1
             next_cursor = f'{timestamp_part}-{next_sequence}'
 
+        # .. and return the result.
         out = (messages, next_cursor)
         return out
 
