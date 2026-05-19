@@ -263,6 +263,47 @@ class TestDeliveryFailure(unittest.TestCase):
         self.assertEqual(final_count, 1)
 
 # ################################################################################################################################
+
+    def test_burst_with_intermittent_failure(self) -> 'None':
+        """ Configure receiver to reject 3 requests then accept all subsequent ones.
+        Publish 10 messages in rapid succession, wait for all to be delivered,
+        verify all 10 arrived with no duplicates.
+        """
+
+        topic_name = 'customer.registered'
+        receiver = TestConfig.endpoints[topic_name].receiver
+
+        # Configure the receiver to reject the first 3 requests then accept ..
+        initial_reject_count = 3
+        receiver.behavior.set_reject_503(auto_recover_after=initial_reject_count)
+        self.addCleanup(receiver.behavior.reset)
+
+        # Publish messages in rapid succession ..
+        burst_count = 10
+
+        for idx in range(burst_count):
+            publish_data:'anydict' = {'customer_id': f'burst_{idx}', 'source': 'test_burst_intermittent'}
+            _ = self.publisher.publish(topic_name, publish_data)
+
+        logger.info('Published %d messages to %s with %d initial rejections configured',
+            burst_count, topic_name, initial_reject_count)
+
+        # .. wait for all messages to be delivered ..
+        delivery_timeout = 120.0
+        messages = receiver.wait_for_delivery(expected_count=burst_count, timeout=delivery_timeout)
+        delivered_count = len(messages)
+        logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
+
+        # .. verify all messages arrived ..
+        self.assertEqual(delivered_count, burst_count)
+
+        # .. verify no duplicates by checking unique msg_ids ..
+        msg_ids = [message['msg_id'] for message in messages]
+        unique_count = len(set(msg_ids))
+        logger.info('Unique msg_ids -> %d out of %d', unique_count, delivered_count)
+        self.assertEqual(unique_count, delivered_count)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
