@@ -997,18 +997,18 @@ class HandleDelivery(Service):
 class BrowseQueue(AdminService):
     """ Browses messages in a subscription's queue without consuming them.
     Uses XRANGE for read-only access that does not affect consumer groups.
+    Compatible with the dashboard kit pagination contract (accepts page/page_size, returns rows/total/page).
     """
 
-    input = 'sub_key', '-cursor', '-page_size'
+    input = '-sub_key', '-id', '-page', '-page_size'
 
     def handle(self) -> 'None':
 
         # Extract request parameters ..
-        sub_key = self.request.input.sub_key
-
-        cursor = self.request.input.get('cursor')
-        if not cursor:
-            cursor = '-'
+        # .. the kit sends 'id', direct callers send 'sub_key' ..
+        sub_key = self.request.input.get('sub_key')
+        if not sub_key:
+            sub_key = self.request.input.get('id')
 
         page_size_raw = self.request.input.get('page_size')
         if page_size_raw:
@@ -1016,38 +1016,38 @@ class BrowseQueue(AdminService):
         else:
             page_size = 50
 
+        page_number_raw = self.request.input.get('page')
+        if page_number_raw:
+            page_number = int(page_number_raw)
+        else:
+            page_number = 1
+
         # .. get all topics this subscriber is subscribed to ..
         topic_names = self.server.pubsub_redis.get_subscribed_topics(sub_key)
 
-        # .. browse messages from each topic, collecting them into a single list ..
+        # .. browse all messages from each topic ..
         all_messages:'anylist' = []
-        next_cursor = ''
 
         for topic_name in topic_names:
-            messages, topic_cursor = self.server.pubsub_redis.browse_messages(
-                topic_name, cursor=cursor, page_size=page_size, needs_data=False)
+            messages, _ = self.server.pubsub_redis.browse_messages(
+                topic_name, cursor='-', page_size=10000, needs_data=False)
 
             for message in messages:
                 all_messages.append(message)
 
-            # .. keep the latest cursor for pagination ..
-            if topic_cursor:
-                next_cursor = topic_cursor
-
         # .. sort by pub_time descending so newest messages appear first ..
         all_messages.sort(key=itemgetter('pub_time_iso'), reverse=True)
 
-        # .. trim to the requested page size ..
-        page = all_messages[:page_size]
+        # .. compute total and slice to the requested page ..
+        total = len(all_messages)
+        offset = (page_number - 1) * page_size
+        page_rows = all_messages[offset:offset + page_size]
 
-        # .. build the depth count (total messages across all topics) ..
-        depth = len(all_messages)
-
-        # .. and return the response.
+        # .. and return the response in the kit pagination contract.
         self.response.payload = {
-            'messages': page,
-            'depth': depth,
-            'next_cursor': next_cursor,
+            'rows': page_rows,
+            'total': total,
+            'page': page_number,
             'sub_key': sub_key,
         }
 

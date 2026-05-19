@@ -26,9 +26,10 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 _action_registry = {
-    'get-history':     'zato.scheduler.job.get-history',
-    'get-log-entries': 'zato.scheduler.job.get-log-entries',
-    'get-run-detail':  'zato.scheduler.job.get-run-detail',
+    'get-history':        'zato.scheduler.job.get-history',
+    'get-log-entries':    'zato.scheduler.job.get-log-entries',
+    'get-run-detail':     'zato.scheduler.job.get-run-detail',
+    'get-queue-messages': 'zato.pubsub.subscription.browse-queue',
 }
 
 # ################################################################################################################################
