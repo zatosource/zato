@@ -71,15 +71,14 @@ class BaseCleanupLiveTestCase(unittest.TestCase):
 # ################################################################################################################################
 
     def _find_file_on_disk(self, data_ref:'str') -> 'bool':
-        """ Walks the disk store directory to find if a file matching data_ref exists.
+        """ Checks whether a file for the given data_ref exists on disk.
         """
         disk_store_dir = self._get_disk_store_dir()
+        full_path = os.path.join(disk_store_dir, data_ref)
 
-        for dirpath, _, filenames in os.walk(disk_store_dir):
-            if data_ref in filenames:
-                full_path = os.path.join(dirpath, data_ref)
-                logger.info('_find_file_on_disk -> found %s', full_path)
-                return True
+        if os.path.exists(full_path):
+            logger.info('_find_file_on_disk -> found %s', full_path)
+            return True
 
         return False
 

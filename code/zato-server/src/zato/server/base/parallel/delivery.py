@@ -209,6 +209,7 @@ class RedisPushDelivery:
         interval = _retry_interval_initial
         attempt = 0
         delivered = False
+        expired = False
 
         while monotonic() < deadline:
 
@@ -219,6 +220,7 @@ class RedisPushDelivery:
                 msg = f'PubSub message expired before delivery for sub_key `{sub_key}`'
                 msg += f', msg_id `{msg_id}`, expiration_time_iso `{expiration_time_iso}`'
                 logger.info(msg)
+                expired = True
                 break
 
             # .. attempt the actual delivery ..
@@ -245,9 +247,13 @@ class RedisPushDelivery:
                 msg += f', msg_id `{msg_id}` after {attempt} attempts'
                 logger.error(msg)
 
-        # .. regardless of whether the message was delivered, expired, or the deadline was exhausted,
-        # .. acknowledge it in the stream so it is not retried on the next fetch cycle.
-        backend.ack_message(stream_name, sub_key, redis_message_id, data_ref)
+        # .. if the message expired, only ack the stream entry so it is not re-fetched,
+        # .. but leave the disk file and pending sets for the cleanup job to handle ..
+        if expired:
+            _ = backend.redis.xack(stream_name, sub_key, redis_message_id)
+        else:
+            # .. otherwise do a full ack which cleans up disk and pending state.
+            backend.ack_message(stream_name, sub_key, redis_message_id, data_ref)
 
 # ################################################################################################################################
 
