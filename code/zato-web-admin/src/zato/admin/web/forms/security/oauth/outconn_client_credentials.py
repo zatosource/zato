@@ -46,7 +46,7 @@ class CreateForm(forms.Form):
     static_token = forms.CharField(
         required=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
     static_prefix = forms.CharField(
-        required=False, widget=forms.TextInput(attrs={'style':'width:100%'}), initial='bearer')
+        required=False, widget=forms.TextInput(attrs={'style':'width:100%'}), initial='Bearer')
 
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
