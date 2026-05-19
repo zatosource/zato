@@ -16,6 +16,7 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
+from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,39 +35,15 @@ logger = logging.getLogger(__name__)
 @method_allowed('GET')
 def index(req:'any_') -> 'TemplateResponse':
     """ Displays a read-only message browser for a subscription queue.
+    The pagination kit fetches page 1 via AJAX on init, so no service call is needed here.
     """
 
-    # Extract parameters from the request ..
-    cluster_id = req.GET.get('cluster', '')
-    sub_key = req.GET.get('sub_key', '')
-    cursor = req.GET.get('cursor', '-')
+    sub_key = req.GET['sub_key']
 
-    # .. invoke the browse service ..
-    try:
-        response = req.zato.client.invoke('zato.pubsub.subscription.browse-queue', {
-            'sub_key': sub_key,
-            'cursor': cursor,
-        })
-        if response.ok:
-            raw = response.data
-            if isinstance(raw, str):
-                data = json.loads(raw)
-            else:
-                data = raw
-        else:
-            data = {'messages': [], 'depth': 0, 'next_cursor': '', 'sub_key': sub_key}
-    except Exception as error:
-        logger.error('Pub/sub queue browse error: %s', error)
-        data = {'messages': [], 'depth': 0, 'next_cursor': '', 'sub_key': sub_key}
-
-    # .. and render the template.
     out = TemplateResponse(req, 'zato/pubsub/queue.html', {
-        'cluster_id': cluster_id,
+        'cluster_id': default_cluster_id,
         'sub_key': sub_key,
-        'queue_data': json.dumps(data),
-        'next_cursor': data['next_cursor'],
-        'depth': data['depth'],
-        'messages_json': json.dumps(data['messages']),
+        'poll_url': '/zato/dashboard/detail-poll/',
         'zato_clusters': True,
         'zato_template_name': 'zato/pubsub/queue.html',
     })
@@ -81,7 +58,7 @@ def purge(req:'any_') -> 'HttpResponse':
     """ Purges all pending messages from a subscription queue.
     """
 
-    sub_key = req.POST.get('sub_key', '')
+    sub_key = req.POST['sub_key']
 
     try:
         response = req.zato.client.invoke('zato.pubsub.subscription.purge-queue', {
@@ -90,14 +67,12 @@ def purge(req:'any_') -> 'HttpResponse':
         if response.ok:
             raw = response.data
             if isinstance(raw, str):
-
                 out = HttpResponse(raw, content_type='application/json')
                 return out
 
             out = HttpResponse(json.dumps(raw), content_type='application/json')
             return out
 
-        # .. the service returned an error.
         else:
             error_message = response.details
             if not error_message:
