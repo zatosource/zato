@@ -137,11 +137,11 @@ formatters:
     audit_pii:
         format: '%(message)s'
     default:
-        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(service_name)s - %(cid)s - %(message)s'
+        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(service_name)s - %(cid)s - %(name)s:%(lineno)d - %(message)s'
     http_access_log:
         format: '%(remote_ip)s %(cid_resp_time)s "%(channel_name)s" [%(req_timestamp)s] "%(method)s %(path)s %(http_version)s" %(status_code)s %(response_size)s "-" "%(user_agent)s"'
     colour:
-        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(service_name)s - %(cid)s - %(message)s'
+        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(service_name)s - %(cid)s - %(name)s:%(lineno)d - %(message)s'
         (): zato.common.util.api.ColorFormatter
 
 version: 1
@@ -190,6 +190,18 @@ class ColorFormatter(Formatter):
             record.levelname = levelname_color
 
         return Formatter.format(self, record)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def attach_service_context_filter() -> 'None':
+    _ctx_filter = ServiceContextFilter()
+    for handler in logging.root.handlers:
+        handler.addFilter(_ctx_filter)
+    for logger_obj in logging.Logger.manager.loggerDict.values():
+        if hasattr(logger_obj, 'handlers'):
+            for handler in logger_obj.handlers:
+                handler.addFilter(_ctx_filter)
 
 # ################################################################################################################################
 # ################################################################################################################################

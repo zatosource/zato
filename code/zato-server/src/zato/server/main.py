@@ -348,14 +348,8 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
         logging_config = yaml.safe_load(_logging_config)
         dictConfig(logging_config)
 
-    from zato.common.util.logging_ import ServiceContextFilter
-    _ctx_filter = ServiceContextFilter()
-    for handler in logging.root.handlers:
-        handler.addFilter(_ctx_filter)
-    for logger_obj in logging.Logger.manager.loggerDict.values():
-        if hasattr(logger_obj, 'handlers'):
-            for handler in logger_obj.handlers:
-                handler.addFilter(_ctx_filter)
+    from zato.common.util.logging_ import attach_service_context_filter
+    attach_service_context_filter()
 
     logger = logging.getLogger(__name__)
 
