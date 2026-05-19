@@ -794,7 +794,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 
     row += String.format('<td>{0}</td>', item.topic_link_list);
     row += String.format('<td style="text-align:center">{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.edit('{0}');\">Edit</a>", item.id));
-    row += '<td style="text-align:center"><a href="/zato/pubsub/subscription/queue/?cluster=1&sub_key=' + encodeURIComponent(item.sub_key) + '">Browse</a></td>';
+    row += String.format('<td style="text-align:center"><a href="/zato/pubsub/subscription/queue/?cluster=1&sub_key={0}">Browse</a></td>', encodeURIComponent(item.sub_key));
     row += String.format('<td style="text-align:center">{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.delete_('{0}');\">Delete</a>", item.id));
 
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);

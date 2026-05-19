@@ -994,8 +994,10 @@ class HandleDelivery(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Browse_Cursor_Start = '-'
-_Browse_Max_Messages = 10000
+_browse_cursor_start = '-'
+_browse_max_messages = 10000
+_browse_default_page_size = 50
+_browse_default_page_number = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1006,6 +1008,7 @@ class BrowseQueue(AdminService):
     Compatible with the dashboard kit pagination contract (accepts page/page_size, returns rows/total/page).
     """
 
+    name = 'zato.pubsub.subscription.browse-queue'
     input = '-sub_key', '-id', '-page', '-page_size'
 
     def handle(self) -> 'None':
@@ -1020,13 +1023,13 @@ class BrowseQueue(AdminService):
         if page_size_raw:
             page_size = int(page_size_raw)
         else:
-            page_size = 50
+            page_size = _browse_default_page_size
 
         page_number_raw = self.request.input.get('page')
         if page_number_raw:
             page_number = int(page_number_raw)
         else:
-            page_number = 1
+            page_number = _browse_default_page_number
 
         # .. get all topics this subscriber is subscribed to ..
         topic_names = self.server.pubsub_redis.get_subscribed_topics(sub_key)
@@ -1036,10 +1039,8 @@ class BrowseQueue(AdminService):
 
         for topic_name in topic_names:
             messages, _ = self.server.pubsub_redis.browse_messages(
-                topic_name, cursor=_Browse_Cursor_Start, page_size=_Browse_Max_Messages, needs_data=False)
-
-            for message in messages:
-                all_messages.append(message)
+                topic_name, cursor=_browse_cursor_start, page_size=_browse_max_messages, needs_data=False)
+            all_messages.extend(messages)
 
         # .. sort by pub_time descending so newest messages appear first ..
         all_messages.sort(key=itemgetter('pub_time_iso'), reverse=True)
@@ -1051,12 +1052,14 @@ class BrowseQueue(AdminService):
         page_rows = all_messages[offset:offset + page_size]
 
         # .. and return the response in the kit pagination contract.
-        self.response.payload = {
+        out = {
             'rows': page_rows,
             'total': total,
             'page': page_number,
             'sub_key': sub_key,
         }
+
+        self.response.payload = out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1080,8 +1083,12 @@ class GetMessageDetail(AdminService):
         load_result = self.server.pubsub_redis.disk_store.load(data_ref)
 
         # .. fetch the stream entry metadata ..
-        stream_key = self.server.pubsub_redis._get_stream_key(topic_name)
+        stream_key = self.server.pubsub_redis.get_stream_key(topic_name)
         raw_entries = self.server.pubsub_redis.redis.xrange(stream_key, min=redis_stream_id, max=redis_stream_id)
+
+        if not raw_entries:
+            self.response.payload = {'error': f'Stream entry not found: {redis_stream_id}'}
+            return
 
         # .. build the response with metadata from the stream entry ..
         first_entry = raw_entries[0]

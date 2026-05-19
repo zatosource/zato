@@ -12,7 +12,7 @@
         var kit = $.fn.zato.dashboard_kit;
 
         // Initialize tabs ..
-        $.fn.zato.pubsub.queue_message.init_tabs();
+        $.fn.zato.pubsub.queue_message.initTabs();
 
         // .. render the metadata cards in the Metadata tab ..
         kit.meta_cards.render({
@@ -36,7 +36,7 @@
             ]
         });
 
-        // .. render the editable payload form in the Message data tab ..
+        // .. and render the editable payload form in the Message data tab.
         kit.record_edit.init({
             container: '#record-edit-form',
             poll_url: pollUrl,
@@ -48,22 +48,23 @@
             hidden_fields: ['msg_id', 'topic_name', 'redis_stream_id'],
             data: messageData
         });
-
     };
 
 // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.pubsub.queue_message.init_tabs = function() {
+    $.fn.zato.pubsub.queue_message.initTabs = function() {
 
+        // Bind tab click handlers to switch panels and update the URL ..
         $('.dashboard-tab').on('click', function() {
-            var tab_name = $(this).data('tab');
+            var tabName = $(this).data('tab');
             $('.dashboard-tab').removeClass('dashboard-tab-active').attr('aria-selected', 'false');
             $(this).addClass('dashboard-tab-active').attr('aria-selected', 'true');
             $('.dashboard-tab-panel').attr('hidden', true);
-            $('#dashboard-tab-panel-' + tab_name).removeAttr('hidden');
+            $('#dashboard-tab-panel-' + tabName).removeAttr('hidden');
 
+            // .. and persist the tab selection in the URL.
             var url = new URL(window.location.href);
-            url.searchParams.set('tab', tab_name);
+            url.searchParams.set('tab', tabName);
             window.history.replaceState(null, '', url.toString());
         });
     };
