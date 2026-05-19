@@ -12,33 +12,38 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
 
         var $container = $(config.container);
         var data = config.data;
-        var fields = config.fields;
+        var groups = config.groups;
         var html = '';
 
-        html += '<div class="detail-config-cards detail-metadata">';
+        for (var groupIdx = 0; groupIdx < groups.length; groupIdx++) {
+            var group = groups[groupIdx];
 
-        for (var idx = 0; idx < fields.length; idx++) {
-            var field = fields[idx];
-            var value = data[field.name];
+            html += '<div class="detail-config-cards detail-metadata">';
 
-            if (field.format === 'time') {
-                value = kit.format_local_time(value);
+            for (var idx = 0; idx < group.fields.length; idx++) {
+                var field = group.fields[idx];
+                var value = data[field.name];
+
+                if (field.format === 'time') {
+                    value = kit.format_local_time(value);
+                }
+
+                if (field.suffix) {
+                    value = value + field.suffix;
+                }
+
+                if (field.format === 'mono') {
+                    value = '<span style="font-family:monospace; font-size:12px">' + kit._esc_html(String(value)) + '</span>';
+                    html += kit.meta_cards._card(field.label, value, true);
+                }
+                else {
+                    html += kit.meta_cards._card(field.label, String(value), false);
+                }
             }
 
-            if (field.suffix) {
-                value = value + field.suffix;
-            }
-
-            if (field.format === 'mono') {
-                value = '<span style="font-family:monospace; font-size:12px">' + kit._esc_html(String(value)) + '</span>';
-                html += kit.meta_cards._card(field.label, value, true);
-            }
-            else {
-                html += kit.meta_cards._card(field.label, String(value), false);
-            }
+            html += '</div>';
         }
 
-        html += '</div>';
         $container.html(html);
     };
 
