@@ -52,6 +52,7 @@ class TestDeliveryFailure(unittest.TestCase):
         # Configure the receiver to reject 3 times then auto-recover ..
         reject_count = 3
         receiver.behavior.set_reject_503(auto_recover_after=reject_count)
+        self.addCleanup(receiver.behavior.reset)
 
         # Publish a message ..
         publish_data:'anydict' = {'customer_id': 'retry_test', 'source': 'test_transient_503'}
@@ -67,13 +68,10 @@ class TestDeliveryFailure(unittest.TestCase):
         # .. verify exactly 1 message arrived ..
         self.assertEqual(delivered_count, 1)
 
-        # .. verify the rejection count matches what we configured ..
+        # .. verify the rejection count matches what we configured.
         actual_reject_count = receiver.behavior.reject_count
         logger.info('Rejection count -> %d', actual_reject_count)
         self.assertEqual(actual_reject_count, reject_count)
-
-        # .. reset behavior for subsequent tests.
-        receiver.behavior.reset()
 
 # ################################################################################################################################
 
@@ -125,6 +123,7 @@ class TestDeliveryFailure(unittest.TestCase):
         # Configure the receiver to hang for 5 seconds before responding ..
         hang_duration = 5.0
         receiver.behavior.set_hang(hang_duration)
+        self.addCleanup(receiver.behavior.reset)
 
         # Publish a message ..
         publish_data:'anydict' = {'customer_id': 'slow_test', 'source': 'test_slow_receiver'}
@@ -137,11 +136,8 @@ class TestDeliveryFailure(unittest.TestCase):
         delivered_count = len(messages)
         logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
 
-        # .. verify exactly 1 message arrived (no duplicate from premature retry) ..
+        # .. verify exactly 1 message arrived (no duplicate from premature retry).
         self.assertEqual(delivered_count, 1)
-
-        # .. reset behavior for subsequent tests.
-        receiver.behavior.reset()
 
 # ################################################################################################################################
 
@@ -156,6 +152,7 @@ class TestDeliveryFailure(unittest.TestCase):
 
         # Configure the receiver to reject indefinitely (no auto-recover) ..
         receiver.behavior.set_reject_503(auto_recover_after=0)
+        self.addCleanup(receiver.behavior.reset)
 
         # Publish a message with a very short TTL ..
         ttl_seconds = 1
@@ -183,6 +180,87 @@ class TestDeliveryFailure(unittest.TestCase):
 
         # .. verify nothing was delivered (message expired before successful push).
         self.assertEqual(delivered_count, 0)
+
+# ################################################################################################################################
+
+    def test_failure_isolation_between_endpoints(self) -> 'None':
+        """ One receiver rejects all requests while another is healthy.
+        Publish one message to each topic, verify the healthy endpoint
+        gets its message regardless of the failing one.
+        """
+
+        failing_topic = 'order.placed'
+        healthy_topic = 'order.shipped'
+
+        failing_receiver = TestConfig.endpoints[failing_topic].receiver
+        healthy_receiver = TestConfig.endpoints[healthy_topic].receiver
+
+        # Configure the failing receiver to reject indefinitely ..
+        failing_receiver.behavior.set_reject_503(auto_recover_after=0)
+        self.addCleanup(failing_receiver.behavior.reset)
+
+        # Publish one message to each topic ..
+        failing_data:'anydict' = {'order_id': 'fail_iso', 'source': 'failing_endpoint'}
+        healthy_data:'anydict' = {'order_id': 'healthy_iso', 'source': 'healthy_endpoint'}
+
+        _ = self.publisher.publish(failing_topic, failing_data)
+        _ = self.publisher.publish(healthy_topic, healthy_data)
+        logger.info('Published to %s (rejecting) and %s (healthy)', failing_topic, healthy_topic)
+
+        # .. wait for the healthy receiver to get its message ..
+        delivery_timeout = 30.0
+        messages = healthy_receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
+        delivered_count = len(messages)
+        logger.info('Healthy receiver delivered %d message(s) -> %s', delivered_count, messages)
+
+        # .. verify the healthy endpoint got exactly 1 message ..
+        self.assertEqual(delivered_count, 1)
+
+        # .. verify the failing receiver got nothing.
+        failing_messages = failing_receiver.get_delivered_messages()
+        failing_count = len(failing_messages)
+        logger.info('Failing receiver delivered %d message(s) -> %s', failing_count, failing_messages)
+        self.assertEqual(failing_count, 0)
+
+# ################################################################################################################################
+
+    def test_no_duplicates_on_retry(self) -> 'None':
+        """ Configure receiver to reject 2 times then recover. Publish a single message,
+        wait generously after delivery, verify exactly 1 copy arrived.
+        """
+
+        topic_name = 'order.shipped'
+        receiver = TestConfig.endpoints[topic_name].receiver
+
+        # Configure the receiver to reject 2 times then auto-recover ..
+        reject_count = 2
+        receiver.behavior.set_reject_503(auto_recover_after=reject_count)
+        self.addCleanup(receiver.behavior.reset)
+
+        # Publish a single message ..
+        publish_data:'anydict' = {'order_id': 'dup_test', 'source': 'test_no_duplicates'}
+        _ = self.publisher.publish(topic_name, publish_data)
+        logger.info('Published message to %s with %d rejections configured', topic_name, reject_count)
+
+        # .. wait for delivery to succeed ..
+        delivery_timeout = 60.0
+        messages = receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
+        delivered_count = len(messages)
+        logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
+
+        self.assertEqual(delivered_count, 1)
+
+        # .. now wait generously to confirm no second delivery arrives ..
+        generous_wait = 15.0
+        time.sleep(generous_wait)
+
+        # .. re-check the total count ..
+        all_messages = receiver.get_delivered_messages()
+        final_count = len(all_messages)
+        logger.info('Final count after %s second wait -> %d message(s) -> %s', generous_wait, final_count, all_messages)
+
+        # .. verify still exactly 1 (no duplicates).
+        self.assertEqual(final_count, 1)
 
 # ################################################################################################################################
 # ################################################################################################################################
