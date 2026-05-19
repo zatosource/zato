@@ -26,7 +26,7 @@ from zato.common.odb.query import pubsub_subscription_list
 from zato.common.pubsub.util import evaluate_pattern_match, get_security_definition, set_time_since
 from zato.common.util.api import as_bool, new_sub_key, utcnow
 from zato.common.util.sql import elems_with_opaque
-from zato.server.service import AsIs, PubSubMessage, Service
+from zato.server.service import AsIs, Int, PubSubMessage, Service
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -1008,28 +1008,16 @@ class BrowseQueue(AdminService):
     Compatible with the dashboard kit pagination contract (accepts page/page_size, returns rows/total/page).
     """
 
-    name = 'zato.pubsub.subscription.browse-queue'
-    input = '-sub_key', '-id', '-page', '-page_size'
+    name  = 'zato.pubsub.subscription.browse-queue'
+    input = '-sub_key', '-id', Int('-page'), Int('-page_size')
 
     def handle(self) -> 'None':
 
         # Extract request parameters ..
         # .. the kit sends 'id', direct callers send 'sub_key' ..
-        sub_key = self.request.input.get('sub_key')
-        if not sub_key:
-            sub_key = self.request.input.get('id')
-
-        page_size_raw = self.request.input.get('page_size')
-        if page_size_raw:
-            page_size = int(page_size_raw)
-        else:
-            page_size = _browse_default_page_size
-
-        page_number_raw = self.request.input.get('page')
-        if page_number_raw:
-            page_number = int(page_number_raw)
-        else:
-            page_number = _browse_default_page_number
+        sub_key     = self.request.input.sub_key or self.request.input.id
+        page_size   = self.request.input.page_size or _browse_default_page_size
+        page_number = self.request.input.page or _browse_default_page_number
 
         # .. get all topics this subscriber is subscribed to ..
         topic_names = self.server.pubsub_redis.get_subscribed_topics(sub_key)
@@ -1049,7 +1037,8 @@ class BrowseQueue(AdminService):
         total = len(all_messages)
         page_offset = page_number - 1
         offset = page_offset * page_size
-        page_rows = all_messages[offset:offset + page_size]
+        page_end = offset + page_size
+        page_rows = all_messages[offset:page_end]
 
         # .. and return the response in the kit pagination contract.
         out = {
@@ -1068,26 +1057,31 @@ class GetMessageDetail(AdminService):
     """ Returns the full detail of a single message for the edit form.
     """
 
-    name = 'zato.pubsub.subscription.get-message-detail'
+    name  = 'zato.pubsub.subscription.get-message-detail'
     input = 'msg_id', 'topic_name', 'redis_stream_id'
 
     def handle(self) -> 'None':
 
+        # Our response to produce
+        out:'anydict' = {}
+
         # Extract request parameters ..
-        msg_id = self.request.input.msg_id
-        topic_name = self.request.input.topic_name
+        msg_id          = self.request.input.msg_id
+        topic_name      = self.request.input.topic_name
         redis_stream_id = self.request.input.redis_stream_id
 
         # .. load the full payload from disk ..
-        data_ref = self.server.pubsub_redis.disk_store.make_ref(msg_id, topic_name)
-        load_result = self.server.pubsub_redis.disk_store.load(data_ref)
+        data_reference = self.server.pubsub_redis.disk_store.make_ref(msg_id, topic_name)
+        load_result = self.server.pubsub_redis.disk_store.load(data_reference)
 
         # .. fetch the stream entry metadata ..
         stream_key = self.server.pubsub_redis.get_stream_key(topic_name)
         raw_entries = self.server.pubsub_redis.redis.xrange(stream_key, min=redis_stream_id, max=redis_stream_id)
 
         if not raw_entries:
-            self.response.payload = {'error': f'Stream entry not found: {redis_stream_id}'}
+            out = {'error': f'Stream entry not found: {redis_stream_id}'}
+
+            self.response.payload = out
             return
 
         # .. build the response with metadata from the stream entry ..
@@ -1136,24 +1130,26 @@ class UpdateMessage(AdminService):
     """ Updates a message's payload on disk.
     """
 
-    name = 'zato.pubsub.subscription.update-message'
-    input = 'msg_id', 'topic_name', 'redis_stream_id', 'data'
+    name  = 'zato.pubsub.subscription.update-message'
+    input = 'msg_id', 'topic_name', 'data'
 
     def handle(self) -> 'None':
 
         # Extract request parameters ..
-        msg_id = self.request.input.msg_id
+        msg_id     = self.request.input.msg_id
         topic_name = self.request.input.topic_name
-        data = self.request.input.data
+        data       = self.request.input.data
 
         # .. overwrite the payload file on disk ..
         _ = self.server.pubsub_redis.disk_store.store(msg_id, topic_name, data, _default_data_class)
 
         # .. and return success.
-        self.response.payload = {
+        out = {
             'msg_id': msg_id,
             'status': 'ok',
         }
+
+        self.response.payload = out
 
 # ################################################################################################################################
 # ################################################################################################################################

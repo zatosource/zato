@@ -1,14 +1,17 @@
 
-/* Dashboard kit - generic record edit form component.
-   Renders a form from a field definition array, collects values,
-   POSTs via AJAX to detail_poll with a configurable action,
-   and provides status feedback. Domain-agnostic - all field
-   knowledge comes through the config object. */
-
-if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
-if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = {}; }
+// ////////////////////////////////////////////////////////////////////////
+// Dashboard kit - generic record edit form component.
+// Renders a form from a field definition array, collects values,
+// POSTs via AJAX to detail_poll with a configurable action,
+// and provides status feedback. Domain-agnostic - all field
+// knowledge comes through the config object.
+// ////////////////////////////////////////////////////////////////////////
 
 (function($) {
+
+    if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
+    if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = {}; }
+
     var kit = $.fn.zato.dashboard_kit;
     kit.record_edit = {};
 
@@ -22,7 +25,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         save: 'Save',
         saving: 'Saving...',
         saved: 'Saved',
-        save_failed: 'Save failed'
+        saveFailed: 'Save failed'
     };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -50,10 +53,11 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
 
         var config = kit.record_edit._config;
         var data = config.data;
-        var html = '';
 
-        // Render the read-only fields section ..
-        html += '<div class="record-edit-readonly-section">';
+        // Build the read-only fields section ..
+        var out = '';
+
+        out += '<div class="record-edit-readonly-section">';
 
         for (var readonlyIndex = 0; readonlyIndex < config.readonly_fields.length; readonlyIndex++) {
             var readonlyField = config.readonly_fields[readonlyIndex];
@@ -67,16 +71,16 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 readonlyValue = readonlyValue + readonlyField.suffix;
             }
 
-            html += '<div class="record-edit-field-row record-edit-field-readonly">';
-            html += '<label class="record-edit-label">' + readonlyField.label + '</label>';
-            html += '<span class="record-edit-value">' + kit._esc_html(String(readonlyValue)) + '</span>';
-            html += '</div>';
+            out += '<div class="record-edit-field-row record-edit-field-readonly">';
+            out += '<label class="record-edit-label">' + readonlyField.label + '</label>';
+            out += '<span class="record-edit-value">' + kit._esc_html(String(readonlyValue)) + '</span>';
+            out += '</div>';
         }
 
-        html += '</div>';
+        out += '</div>';
 
         // .. render the editable fields section ..
-        html += '<div class="record-edit-editable-section">';
+        out += '<div class="record-edit-editable-section">';
 
         for (var fieldIndex = 0; fieldIndex < config.fields.length; fieldIndex++) {
             var field = config.fields[fieldIndex];
@@ -89,47 +93,47 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 fieldValue = '';
             }
 
-            html += '<div class="record-edit-field-row">';
-            html += '<label class="record-edit-label" for="record-edit-' + field.name + '">' + field.label + '</label>';
+            out += '<div class="record-edit-field-row">';
+            out += '<label class="record-edit-label" for="record-edit-' + field.name + '">' + field.label + '</label>';
 
             if (field.type === 'textarea') {
                 var monoClass = field.monospace ? ' record-edit-monospace' : '';
-                html += '<textarea id="record-edit-' + field.name + '" class="record-edit-input record-edit-textarea' + monoClass + '"';
-                html += ' data-field="' + field.name + '">';
-                html += kit._esc_html(String(fieldValue));
-                html += '</textarea>';
+                out += '<textarea id="record-edit-' + field.name + '" class="record-edit-input record-edit-textarea' + monoClass + '"';
+                out += ' data-field="' + field.name + '">';
+                out += kit._esc_html(String(fieldValue));
+                out += '</textarea>';
             }
             else if (field.type === 'number') {
-                html += '<input id="record-edit-' + field.name + '" class="record-edit-input" type="number"';
-                html += ' data-field="' + field.name + '"';
-                html += ' value="' + kit._esc_html(String(fieldValue)) + '">';
+                out += '<input id="record-edit-' + field.name + '" class="record-edit-input" type="number"';
+                out += ' data-field="' + field.name + '"';
+                out += ' value="' + kit._esc_html(String(fieldValue)) + '">';
             }
             else {
-                html += '<input id="record-edit-' + field.name + '" class="record-edit-input" type="text"';
-                html += ' data-field="' + field.name + '"';
-                html += ' value="' + kit._esc_html(String(fieldValue)) + '">';
+                out += '<input id="record-edit-' + field.name + '" class="record-edit-input" type="text"';
+                out += ' data-field="' + field.name + '"';
+                out += ' value="' + kit._esc_html(String(fieldValue)) + '">';
             }
 
-            html += '</div>';
+            out += '</div>';
         }
 
-        html += '</div>';
+        out += '</div>';
 
         // .. render hidden fields ..
         for (var hiddenIndex = 0; hiddenIndex < config.hidden_fields.length; hiddenIndex++) {
             var hiddenName = config.hidden_fields[hiddenIndex];
             var hiddenValue = data[hiddenName];
-            html += '<input type="hidden" data-field="' + hiddenName + '" value="' + kit._esc_html(String(hiddenValue)) + '">';
+            out += '<input type="hidden" data-field="' + hiddenName + '" value="' + kit._esc_html(String(hiddenValue)) + '">';
         }
 
         // .. render the save button and status area ..
-        html += '<div class="record-edit-footer">';
-        html += '<button class="action-button record-edit-save-button" type="button">' + kit.record_edit._labels.save + '</button>';
-        html += '<span class="record-edit-status"></span>';
-        html += '</div>';
+        out += '<div class="record-edit-footer">';
+        out += '<button class="action-button record-edit-save-button" type="button">' + kit.record_edit._labels.save + '</button>';
+        out += '<span class="record-edit-status"></span>';
+        out += '</div>';
 
         // .. and inject into the container.
-        kit.record_edit._$container.html(html);
+        kit.record_edit._$container.html(out);
         kit.record_edit._$status = kit.record_edit._$container.find('.record-edit-status');
     };
 
@@ -138,9 +142,10 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     kit.record_edit.collect = function() {
 
         var $container = kit.record_edit._$container;
-        var out = {};
 
         // Collect all fields with data-field attribute ..
+        var out = {};
+
         $container.find('[data-field]').each(function() {
             var $field = $(this);
             var fieldName = $field.attr('data-field');
@@ -148,6 +153,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             out[fieldName] = fieldValue;
         });
 
+        // .. and return the collected payload.
         return out;
     };
 
@@ -181,7 +187,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             },
             error: function(xhr) {
 
-                var errorMessage = kit.record_edit._labels.save_failed;
+                var errorMessage = kit.record_edit._labels.saveFailed;
                 if (xhr.responseJSON) {
                     if (xhr.responseJSON.error) {
                         errorMessage = xhr.responseJSON.error;
@@ -205,11 +211,12 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
 
         var $status = kit.record_edit._$status;
 
+        // Update the status display ..
         $status.removeClass('record-edit-status-success record-edit-status-error record-edit-status-saving');
         $status.addClass('record-edit-status-' + type);
         $status.text(message);
 
-        // .. auto-clear success after a delay.
+        // .. and auto-clear success after a delay.
         if (type === 'success') {
             setTimeout(function() {
                 $status.text('');
