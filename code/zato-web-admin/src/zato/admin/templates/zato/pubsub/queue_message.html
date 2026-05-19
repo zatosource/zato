@@ -10,15 +10,16 @@
 <a href="{{ queue_url }}" class="detail-component-pill menu-link">Queue</a>
 Message detail
 {% endblock %}
-{% block help_icon_id %}{% endblock %}
 
 {% block detail_js %}
+{{ message_data_json|json_script:"message-data-json" }}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/meta_cards.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/record_edit.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/queue_message.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
-    $.fn.zato.pubsub.queue_message.init({{ message_data_json|safe }}, '{{ poll_url }}');
+    var messageData = JSON.parse(document.getElementById('message-data-json').textContent);
+    $.fn.zato.pubsub.queue_message.init(messageData, '{{ poll_url|escapejs }}');
 });
 </script>
 {% endblock %}

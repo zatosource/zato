@@ -8,10 +8,12 @@
 {% block help_icon_id %}pubsub-queue-help{% endblock %}
 
 {% block detail_js %}
+{{ queue_data|json_script:"queue-data-json" }}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/queue.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
-    $.fn.zato.pubsub.queue.init('{{ sub_key }}', {{ queue_data|safe }});
+    var queueData = JSON.parse(document.getElementById('queue-data-json').textContent);
+    $.fn.zato.pubsub.queue.init('{{ sub_key|escapejs }}', queueData);
 });
 </script>
 {% endblock %}
@@ -26,7 +28,7 @@ $(document).ready(function() {
 
 {% block actions %}
 <div class="button-container">
-    <button class="action-button" onclick="$.fn.zato.pubsub.queue.purge()">Purge queue</button>
+    <button class="action-button" id="purge-queue-button" type="button">Purge queue</button>
 </div>
 {% endblock %}
 
@@ -39,9 +41,9 @@ $(document).ready(function() {
     <tbody id="messages-body"></tbody>
 </table>
 
-{% if page and depth > 50 %}
+{% if depth > page_size %}
 <div class="detail-pagination-bar">
-    <a href="?cluster={{ cluster_id }}&sub_key={{ sub_key }}&page={{ page|add:1 }}">Next page</a>
+    <a href="?cluster={{ cluster_id }}&sub_key={{ sub_key|urlencode }}&page={{ page|add:1 }}">Next page</a>
 </div>
 {% endif %}
 

@@ -8,61 +8,13 @@
 // ////////////////////////////////////////////////////////////////////////
 
     $.fn.zato.pubsub.queue._subKey = '';
-
-// ////////////////////////////////////////////////////////////////////////
-
-    $.fn.zato.pubsub.queue.relativeTime = function(isoTimestamp) {
-
-        // Parse the ISO timestamp into epoch seconds ..
-        var date = new Date(isoTimestamp);
-        var timestampSeconds = date.getTime() / 1000;
-
-        if (timestampSeconds <= 0) {
-            return '-';
-        }
-
-        // .. compute the difference from now ..
-        var nowSeconds = Date.now() / 1000;
-        var diff = nowSeconds - timestampSeconds;
-
-        if (diff < 0) {
-            diff = 0;
-        }
-
-        // .. and format it as a human-readable string.
-        if (diff < 60) {
-            return Math.floor(diff) + ' sec ago';
-        }
-
-        if (diff < 3600) {
-            return Math.floor(diff / 60) + ' min ago';
-        }
-
-        if (diff < 86400) {
-            return Math.floor(diff / 3600) + 'h ago';
-        }
-
-        return Math.floor(diff / 86400) + 'd ago';
-    };
-
-// ////////////////////////////////////////////////////////////////////////
-
-    $.fn.zato.pubsub.queue.formatLocalTime = function(isoTimestamp) {
-
-        var date = new Date(isoTimestamp);
-        var year = date.getFullYear();
-        var month = ('0' + (date.getMonth() + 1)).slice(-2);
-        var day = ('0' + date.getDate()).slice(-2);
-        var hours = ('0' + date.getHours()).slice(-2);
-        var minutes = ('0' + date.getMinutes()).slice(-2);
-        var seconds = ('0' + date.getSeconds()).slice(-2);
-
-        return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
-    };
+    $.fn.zato.pubsub.queue._defaultErrorMessage = 'Unknown error';
 
 // ////////////////////////////////////////////////////////////////////////
 
     $.fn.zato.pubsub.queue.render = function(data) {
+
+        var kit = $.fn.zato.dashboard_kit;
 
         // Update the depth stat card ..
         var depth = data.total;
@@ -80,10 +32,10 @@
             return;
         }
 
-        for (var messageIdx = 0; messageIdx < messages.length; messageIdx++) {
-            var message = messages[messageIdx];
-            var relativeTime = $.fn.zato.pubsub.queue.relativeTime(message.pub_time_iso);
-            var localTime = $.fn.zato.pubsub.queue.formatLocalTime(message.pub_time_iso);
+        for (var messageIndex = 0; messageIndex < messages.length; messageIndex++) {
+            var message = messages[messageIndex];
+            var relativeTime = kit.relative_time_past(message.pub_time_iso);
+            var localTime = kit.format_local_time(message.pub_time_iso);
             var topicName = message.topic_name;
 
             // .. build the message detail link ..
@@ -128,7 +80,7 @@
                 window.location.reload();
             },
             error: function(xhr) {
-                var errorMessage = 'Unknown error';
+                var errorMessage = $.fn.zato.pubsub.queue._defaultErrorMessage;
                 if (xhr.responseJSON) {
                     errorMessage = xhr.responseJSON.error;
                 }
@@ -148,6 +100,11 @@
         if (typeof initialData === 'string') {
             initialData = JSON.parse(initialData);
         }
+
+        // .. bind the purge button ..
+        $('#purge-queue-button').on('click', function() {
+            $.fn.zato.pubsub.queue.purge();
+        });
 
         // .. and render the page.
         $.fn.zato.pubsub.queue.render(initialData);

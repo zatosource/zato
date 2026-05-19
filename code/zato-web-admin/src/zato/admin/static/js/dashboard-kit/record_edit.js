@@ -18,6 +18,13 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     kit.record_edit._$container = null;
     kit.record_edit._$status = null;
 
+    kit.record_edit._labels = {
+        save: 'Save',
+        saving: 'Saving...',
+        saved: 'Saved',
+        save_failed: 'Save failed'
+    };
+
 // ////////////////////////////////////////////////////////////////////////
 
     kit.record_edit.init = function(config) {
@@ -48,8 +55,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         // Render the read-only fields section ..
         html += '<div class="record-edit-readonly-section">';
 
-        for (var readonlyIdx = 0; readonlyIdx < config.readonly_fields.length; readonlyIdx++) {
-            var readonlyField = config.readonly_fields[readonlyIdx];
+        for (var readonlyIndex = 0; readonlyIndex < config.readonly_fields.length; readonlyIndex++) {
+            var readonlyField = config.readonly_fields[readonlyIndex];
             var readonlyValue = data[readonlyField.name];
 
             if (readonlyField.format === 'time') {
@@ -71,8 +78,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         // .. render the editable fields section ..
         html += '<div class="record-edit-editable-section">';
 
-        for (var fieldIdx = 0; fieldIdx < config.fields.length; fieldIdx++) {
-            var field = config.fields[fieldIdx];
+        for (var fieldIndex = 0; fieldIndex < config.fields.length; fieldIndex++) {
+            var field = config.fields[fieldIndex];
             var fieldValue = data[field.name];
 
             if (fieldValue === null) {
@@ -109,19 +116,19 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         html += '</div>';
 
         // .. render hidden fields ..
-        for (var hiddenIdx = 0; hiddenIdx < config.hidden_fields.length; hiddenIdx++) {
-            var hiddenName = config.hidden_fields[hiddenIdx];
+        for (var hiddenIndex = 0; hiddenIndex < config.hidden_fields.length; hiddenIndex++) {
+            var hiddenName = config.hidden_fields[hiddenIndex];
             var hiddenValue = data[hiddenName];
             html += '<input type="hidden" data-field="' + hiddenName + '" value="' + kit._esc_html(String(hiddenValue)) + '">';
         }
 
         // .. render the save button and status area ..
         html += '<div class="record-edit-footer">';
-        html += '<button class="action-button record-edit-save-button" type="button">Save</button>';
+        html += '<button class="action-button record-edit-save-button" type="button">' + kit.record_edit._labels.save + '</button>';
         html += '<span class="record-edit-status"></span>';
         html += '</div>';
 
-        // .. inject into the container.
+        // .. and inject into the container.
         kit.record_edit._$container.html(html);
         kit.record_edit._$status = kit.record_edit._$container.find('.record-edit-status');
     };
@@ -130,18 +137,18 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
 
     kit.record_edit.collect = function() {
 
-        var payload = {};
         var $container = kit.record_edit._$container;
+        var out = {};
 
         // Collect all fields with data-field attribute ..
         $container.find('[data-field]').each(function() {
             var $field = $(this);
             var fieldName = $field.attr('data-field');
             var fieldValue = $field.val();
-            payload[fieldName] = fieldValue;
+            out[fieldName] = fieldValue;
         });
 
-        return payload;
+        return out;
     };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -153,7 +160,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         payload.action = config.save_action;
 
         // Show saving status ..
-        kit.record_edit.set_status('saving', 'Saving...');
+        kit.record_edit.set_status('saving', kit.record_edit._labels.saving);
 
         // .. POST to the poll URL ..
         $.ajax({
@@ -165,7 +172,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             success: function(response) {
 
                 // .. show success ..
-                kit.record_edit.set_status('success', 'Saved');
+                kit.record_edit.set_status('success', kit.record_edit._labels.saved);
 
                 // .. and call the domain callback if provided.
                 if (config.on_save_success) {
@@ -174,7 +181,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             },
             error: function(xhr) {
 
-                var errorMessage = 'Save failed';
+                var errorMessage = kit.record_edit._labels.save_failed;
                 if (xhr.responseJSON) {
                     if (xhr.responseJSON.error) {
                         errorMessage = xhr.responseJSON.error;

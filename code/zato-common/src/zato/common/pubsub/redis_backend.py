@@ -113,6 +113,8 @@ class RedisPubSubBackend:
         out = f'{ModuleCtx.Stream_Prefix}{topic_name}'
         return out
 
+    get_stream_key = _get_stream_key
+
 # ################################################################################################################################
 
     def _get_subs_key(self, sub_key:'str') -> 'str':
@@ -619,10 +621,12 @@ class RedisPubSubBackend:
         try:
             raw_messages:'anylist' = cast_('anylist', self.redis.xrange(stream_key, min=cursor, count=page_size))
         except ResponseError:
-            return [], ''
+            out = ([], '')
+            return out
 
         if not raw_messages:
-            return [], ''
+            out = ([], '')
+            return out
 
         messages:'anylist' = []
 
@@ -671,7 +675,8 @@ class RedisPubSubBackend:
 
         # .. the next cursor is the last stream ID + 1 sequence number ..
         else:
-            last_stream_id = raw_messages[-1][0]
+            last_message = raw_messages[-1]
+            last_stream_id = last_message[0]
 
             # .. Redis stream IDs are '<ms>-<seq>', increment the seq.
             parts = last_stream_id.split('-')

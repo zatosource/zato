@@ -18,6 +18,9 @@ from typing import NamedTuple
 
 if 0:
     from zato.common.crypto.api import CryptoManager
+    from zato.common.typing_ import cast_
+    CryptoManager = CryptoManager
+    cast_ = cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,7 +73,8 @@ class DiskMessageStore:
 
         # .. optionally encrypt the payload before writing ..
         if encrypt:
-            data_to_write = self.crypto_manager.encrypt(data, needs_str=True) # type: ignore[union-attr]
+            crypto_manager = cast_('CryptoManager', self.crypto_manager)
+            data_to_write = crypto_manager.encrypt(data, needs_str=True)
         else:
             data_to_write = data
 
@@ -91,7 +95,8 @@ class DiskMessageStore:
         logger.info('Stored message payload -> message_id:%s, topic:%s, path:%s, data_len:%s, encrypted:%s, thread:%s',
             message_id, topic_name, absolute_path, data_len, encrypt, thread_name)
 
-        return data_ref
+        out = data_ref
+        return out
 
 # ################################################################################################################################
 
@@ -137,7 +142,8 @@ class DiskMessageStore:
 
         # .. decrypt the payload if the file was encrypted ..
         if is_encrypted:
-            data = self.crypto_manager.decrypt(data) # type: ignore[union-attr]
+            crypto_manager = cast_('CryptoManager', self.crypto_manager)
+            data = crypto_manager.decrypt(data)
 
         data_len = len(data)
         logger.info('Loaded message payload -> data_ref:%s, path:%s, data_len:%s, data_class:%s, encrypted:%s',
