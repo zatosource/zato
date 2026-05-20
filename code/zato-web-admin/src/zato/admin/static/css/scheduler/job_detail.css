@@ -293,6 +293,3 @@ tbody.detail-dimmed > tr.detail-panel-row.expanded {
     display: none;
 }
 
-.progress-panel:has(.detail-page-run) {
-    padding-bottom: 24px;
-}

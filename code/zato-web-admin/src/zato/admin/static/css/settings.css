@@ -49,6 +49,22 @@
     padding-bottom: 3px;
 }
 
+.progress-panel-flush {
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+}
+
+.settings-main h3.section-heading-flush {
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+
+.settings-main-flush {
+    padding-top: 0;
+}
+
 .info-container {
     display: flex;
     flex-direction: column;
