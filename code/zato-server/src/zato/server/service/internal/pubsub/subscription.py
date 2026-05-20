@@ -1121,6 +1121,68 @@ class GetMessageDetail(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class GetMessageMetadata(AdminService):
+    """ Returns only the Redis stream metadata for a single message (no disk read).
+    """
+
+    name  = 'zato.pubsub.subscription.get-message-metadata'
+    input = 'msg_id', 'topic_name', 'redis_stream_id'
+
+    def handle(self) -> 'None':
+
+        # Our response to produce
+        out:'anydict' = {}
+
+        # Extract request parameters ..
+        msg_id          = self.request.input.msg_id
+        topic_name      = self.request.input.topic_name
+        redis_stream_id = self.request.input.redis_stream_id
+
+        # .. fetch the stream entry metadata ..
+        stream_key = self.server.pubsub_redis.get_stream_key(topic_name)
+        raw_entries = self.server.pubsub_redis.redis.xrange(stream_key, min=redis_stream_id, max=redis_stream_id)
+
+        if not raw_entries:
+            out = {'error': f'Stream entry not found: {redis_stream_id}'}
+
+            self.response.payload = out
+            return
+
+        # .. build the response with metadata from the stream entry ..
+        first_entry = raw_entries[0]
+        entry_data = first_entry[1]
+
+        out = {
+            'msg_id': msg_id,
+            'topic_name': topic_name,
+            'redis_stream_id': redis_stream_id,
+            'priority': int(entry_data['priority']),
+            'expiration': int(entry_data['expiration']),
+            'pub_time_iso': entry_data['pub_time_iso'],
+            'recv_time_iso': entry_data['recv_time_iso'],
+            'expiration_time_iso': entry_data['expiration_time_iso'],
+            'data_size': int(entry_data['data_size']),
+        }
+
+        # .. include optional metadata fields ..
+        if correl_id := entry_data.get('correl_id'):
+            out['correl_id'] = correl_id
+
+        if in_reply_to := entry_data.get('in_reply_to'):
+            out['in_reply_to'] = in_reply_to
+
+        if ext_client_id := entry_data.get('ext_client_id'):
+            out['ext_client_id'] = ext_client_id
+
+        if publisher := entry_data.get('publisher'):
+            out['publisher'] = publisher
+
+        # .. and return the response.
+        self.response.payload = out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _default_data_class = ''
 
 # ################################################################################################################################

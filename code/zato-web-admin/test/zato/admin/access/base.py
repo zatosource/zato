@@ -31,6 +31,7 @@ if os.environ.get('ZATO_TEST_DASHBOARD'):
 
 # Zato
 from zato.admin.zato_settings import update_globals
+from zato.common.defaults import default_env_base_dir
 from zato.common.util import new_cid
 
 # ################################################################################################################################
@@ -42,7 +43,7 @@ class Config:
     user_password = 'sJNlk8XOQs74E'
     user_email = 'test@example.com'
 
-    web_admin_location = os.path.expanduser('~/env/qs-1/web-admin')
+    web_admin_location = os.path.join(default_env_base_dir, 'web-admin')
     web_admin_address  = 'http://localhost:8183'
 
     status_ok = {FOUND, MOVED_PERMANENTLY, NOT_MODIFIED, OK}

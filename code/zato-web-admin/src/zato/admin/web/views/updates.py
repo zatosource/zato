@@ -16,6 +16,7 @@ from zato.admin.web.views.settings.base import SettingsBaseView
 from zato.admin.web.views.settings.config import updates_page_config
 from zato.admin.web.views.settings.handlers import ScheduleHandler, AuditLogHandler
 from zato.admin.web.views.settings.utils import json_response
+from zato.common.defaults import default_env_base_dir
 from zato.common.util.updates import Updater, UpdaterConfig
 
 # ################################################################################################################################
@@ -135,7 +136,7 @@ def download_logs(req):
     import os
     from django.http import FileResponse, HttpResponse
 
-    base_dir = os.path.expanduser('~/env/qs-1')
+    base_dir = default_env_base_dir
     update_log_path = os.path.join(base_dir, 'server1', 'logs', 'update.log')
 
     if not os.path.exists(update_log_path):

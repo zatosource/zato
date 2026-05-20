@@ -23,6 +23,7 @@ from urllib.request import Request, urlopen
 import humanize
 
 # Zato
+from zato.common.defaults import default_env_base_dir
 from zato.common.json_internal import dumps, loads
 from zato.common.util.tcp import wait_until_port_free
 
@@ -46,7 +47,7 @@ def setup_update_file_logger(base_dir:'strnone'=None, component_name:'str'='unkn
     """
     try:
         if not base_dir:
-            base_dir = os.path.expanduser('~/env/qs-1')
+            base_dir = default_env_base_dir
 
         update_log_path = os.path.join(base_dir, 'server1', 'logs', 'update.log')
         os.makedirs(os.path.dirname(update_log_path), exist_ok=True)
@@ -97,7 +98,7 @@ class UpdaterConfig:
         self.redis_port = redis_port
         self.redis_db = redis_db
         self.current_dir = current_dir or os.path.dirname(os.path.abspath(__file__))
-        self.base_dir = base_dir or os.path.expanduser('~/env/qs-1')
+        self.base_dir = base_dir or default_env_base_dir
         self.zato_path = zato_path
         self.github_repo = github_repo
         self.github_branch = github_branch

@@ -7,7 +7,7 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.pubsub.queue_message.init = function(messageData, pollUrl) {
+    $.fn.zato.pubsub.queue_message.init = function(messageData, pollUrl, payloadUrl) {
 
         var kit = $.fn.zato.dashboard_kit;
 
@@ -46,7 +46,34 @@
             ],
             readonly_fields: [],
             hidden_fields: ['msg_id', 'topic_name', 'redis_stream_id'],
-            data: messageData
+            data: messageData,
+            on_save_success: function() {
+                $.fn.zato.pubsub.queue_message.refreshPayload(payloadUrl, messageData);
+            }
+        });
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.pubsub.queue_message.refreshPayload = function(payloadUrl, messageData) {
+
+        var payload = {
+            msg_id: messageData.msg_id,
+            topic_name: messageData.topic_name
+        };
+
+        $.ajax({
+            type: 'POST',
+            url: payloadUrl,
+            headers: {'X-CSRFToken': $.cookie('csrftoken')},
+            data: JSON.stringify(payload),
+            contentType: 'application/json',
+            success: function(response) {
+                var $textarea = $('#record-edit-data');
+                if ($textarea.length) {
+                    $textarea.val(response.data);
+                }
+            }
         });
     };
 

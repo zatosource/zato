@@ -11,6 +11,9 @@ import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+# Zato
+from zato.common.defaults import default_env_base_dir
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -19,7 +22,7 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-_SQLITE_PATH = os.path.expanduser('~/env/qs-1/zato.db')
+_SQLITE_PATH = os.path.join(default_env_base_dir, 'zato.db')
 _ENGINE = create_engine(f'sqlite:///{_SQLITE_PATH}')
 Session = sessionmaker(bind=_ENGINE)
 CLUSTER_ID = 1
