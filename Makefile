@@ -9,7 +9,7 @@
 	scheduler-rust-unit-tests scheduler-shim-tests scheduler-integration-tests scheduler-fuzzy \
 	server-io-tests server-marshall-tests server-config-store-tests server-commands-tests \
 	server-connection-tests server-pattern-tests server-pubsub-unit-tests server-pubsub-tests \
-	server-pubsub-push-tests server-pubsub-cleanup-tests server-mcp-live-tests server-fuzzy server-tests \
+	server-pubsub-push-tests server-pubsub-cleanup-tests server-mcp-live-tests server-django-plugin-tests server-fuzzy server-tests \
 	rate-limiting-rust-unit-tests rate-limiting-python-unit-tests test-rate-limiting \
 	enmasse-tests cli-odb-default-tests cli-tests \
 	common-tests distlock-tests web-admin-tests \
@@ -323,6 +323,9 @@ test-pubsub: server-pubsub-unit-tests server-pubsub-tests server-pubsub-push-tes
 server-mcp-live-tests: ## MCP live API integration tests (spins up a temp server).
 	$(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/mcp_live/ -v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mcp_live -W ignore::DeprecationWarning $(FAIL_FAST) $(SKIP_PASSED) $(FROM_LAST_CS) $(WITH_COVERAGE) $(PYTEST_ARGS)
 
+server-django-plugin-tests: ## Django plugin live integration tests (spins up a temp server).
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/django_plugin -v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_django_plugin $(FAIL_FAST) $(SKIP_PASSED) $(FROM_LAST) $(PYTEST_ARGS)
+
 server-tests: ## Aggregate server-side test target running every server tests group.
 	$(MAKE) -C $(CURDIR)/code/zato-server test
 
@@ -357,7 +360,7 @@ test-fast: server-io-tests server-marshall-tests scheduler-shim-tests ## Fastest
 
 test-rust-unit: scheduler-rust-unit-tests rate-limiting-rust-unit-tests ## Rust unit tests (cargo test).
 
-test-integration: enmasse-tests scheduler-integration-tests test-pubsub cli-odb-default-tests server-config-store-tests server-mcp-live-tests ## Python integration tests.
+test-integration: enmasse-tests scheduler-integration-tests test-pubsub cli-odb-default-tests server-config-store-tests server-mcp-live-tests server-django-plugin-tests ## Python integration tests.
 
 test-fuzzy: server-fuzzy scheduler-fuzzy ## Proptest + cargo-fuzz across all crates.
 

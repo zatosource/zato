@@ -471,22 +471,6 @@ class ServiceInvoker(Service):
 
 # ################################################################################################################################
 
-    def _set_request_context(self):
-        """ Propagates Django and forwarded-for context from HTTP headers into wsgi_environ.
-        """
-        django_user = self.wsgi_environ.get('HTTP_X_ZATO_USER', '')
-        correlation_id = self.wsgi_environ.get('HTTP_X_ZATO_CORRELATION_ID', '')
-        forwarded_for = self.wsgi_environ.get('HTTP_X_ZATO_FORWARDED_FOR', '')
-
-        if django_user or correlation_id or forwarded_for:
-            self.wsgi_environ['zato.request_ctx'] = {
-                'django_user': django_user,
-                'correlation_id': correlation_id,
-                'forwarded_for': forwarded_for,
-            }
-
-# ################################################################################################################################
-
     def handle(self, _internal=('zato', 'pub.zato')): # type: ignore
 
         # We track response time for all invocations
@@ -511,9 +495,6 @@ class ServiceInvoker(Service):
         # Per-channel service allowlist enforcement
         self._check_gateway_allowed(service_name)
 
-        # Propagate context headers from callers like the Django plugin
-        self._set_request_context()
-
         # Make sure the service exists
         if self.server.service_store.has_service(service_name):
 
@@ -526,11 +507,19 @@ class ServiceInvoker(Service):
             # A dictionary of headers that the target service may want to produce
             zato_response_headers_container = {}
 
+            # Build the wsgi_environ for the target service ..
+            target_wsgi_environ = {'HTTP_METHOD':self.request.http.method}
+
+            # .. propagate context headers so the target service can read them ..
+            for key in ('HTTP_X_ZATO_USER', 'HTTP_X_ZATO_CORRELATION_ID', 'HTTP_X_ZATO_FORWARDED_FOR'):
+                if value := self.wsgi_environ.get(key):
+                    target_wsgi_environ[key] = value
+
             # Invoke the service now
             response = self.invoke(
                 service_name,
                 payload,
-                wsgi_environ={'HTTP_METHOD':self.request.http.method},
+                wsgi_environ=target_wsgi_environ,
                 zato_response_headers_container=zato_response_headers_container
                 )
 
