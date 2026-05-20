@@ -44,7 +44,7 @@
 .progress-panel {
     background: var(--white);
     border: 3px solid var(--primary-dark);
-    padding: 24px;
+    padding: 20px;
     margin-bottom: 32px;
     padding-bottom: 3px;
 }
@@ -54,6 +54,12 @@
     margin: 0;
     border: none;
     background: transparent;
+}
+
+.progress-panel-borderless {
+    border: none;
+    padding-left: 0;
+    padding-right: 0;
 }
 
 .settings-main h3.section-heading-flush {

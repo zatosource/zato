@@ -42,6 +42,8 @@
             poll_url: pollUrl,
             save_action: 'update-message',
             show_labels: false,
+            show_copy_button: true,
+            copy_field: 'data',
             fields: [
                 {name: 'data', type: 'textarea', monospace: true}
             ],

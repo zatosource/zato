@@ -41,9 +41,17 @@
         // .. render the form ..
         kit.record_edit._render();
 
-        // .. and bind the save button.
+        // .. bind the save button ..
         kit.record_edit._$container.on('click', '.record-edit-save-button', function() {
             kit.record_edit.save();
+        });
+
+        // .. and bind the copy button if enabled.
+        kit.record_edit._$container.on('click', '.record-edit-copy-button', function() {
+            var text = kit.record_edit._get_copy_text();
+            if (text) {
+                kit.copy_to_clipboard(this, text);
+            }
         });
     };
 
@@ -131,8 +139,11 @@
             out += '<input type="hidden" data-field="' + hiddenName + '" value="' + kit._esc_html(String(hiddenValue)) + '">';
         }
 
-        // .. render the save button and status area ..
+        // .. render the footer buttons and status area ..
         out += '<div class="record-edit-footer">';
+        if (config.show_copy_button) {
+            out += '<button class="action-button record-edit-copy-button" type="button">Copy</button>';
+        }
         out += '<button class="action-button record-edit-save-button" type="button">' + kit.record_edit._labels.save + '</button>';
         out += '<span class="record-edit-status"></span>';
         out += '</div>';
@@ -208,6 +219,15 @@
                 }
             }
         });
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    kit.record_edit._get_copy_text = function() {
+        var config = kit.record_edit._config;
+        var field_name = config.copy_field;
+        var $field = kit.record_edit._$container.find('[data-field="' + field_name + '"]');
+        return $field.val();
     };
 
 // ////////////////////////////////////////////////////////////////////////

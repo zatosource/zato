@@ -7,6 +7,8 @@
 <link rel="stylesheet" type="text/css" href="/static/css/pubsub/queue_message.css">
 {% endblock %}
 
+{% block progress_panel_class %}progress-panel-borderless{% endblock %}
+
 {% block section_title %}
 <a href="{{ queue_url }}" class="detail-component-pill menu-link">{{ queue_name }}</a>
 {{ msg_id }}
