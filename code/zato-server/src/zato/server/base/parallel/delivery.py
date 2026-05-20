@@ -248,7 +248,10 @@ class RedisPushDelivery:
                 logger.error(msg)
 
         # .. if the message expired, only ack the stream entry so it is not re-fetched,
-        # .. but leave the disk file and pending sets for the cleanup job to handle ..
+        # .. but leave the disk file and custom pending sets intact - other subscribers
+        # .. may still need this message (it only expired for this subscriber's delivery
+        # .. attempt). The global expiry sweep in cleanup.py will delete the disk file
+        # .. once the message's TTL passes for all subscribers.
         if expired:
             _ = backend.redis.xack(stream_name, sub_key, redis_message_id)
         else:

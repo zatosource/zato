@@ -92,6 +92,53 @@ class TestBrowsePending(BaseFetchTestCase):
 
 # ################################################################################################################################
 
+    def test_pending_includes_unread_messages(self) -> 'None':
+
+        # Subscribe ..
+        sub_key = f'sub.browse.pending.unread.{self._run_id}'
+        self.subscribe(sub_key)
+
+        # .. publish 3 messages but do NOT fetch them -
+        # .. they are unread (beyond the consumer group's last-delivered-id)
+        # .. and should still appear as pending ..
+        for idx in range(3):
+            _ = self.backend.publish(self.topic_name, f'msg-{idx}')
+            _ = self.get_data_ref_from_stream()
+
+        # .. browse pending should return all 3 as unread messages.
+        result, next_cursor = self.backend.browse_messages(self.topic_name, sub_key=sub_key, state='pending')
+        logger.info('browse_messages(pending, unread) -> %d entries, next_cursor:%s', len(result), next_cursor)
+        self.assertEqual(len(result), 3)
+
+# ################################################################################################################################
+
+    def test_pending_combines_unread_and_unacked(self) -> 'None':
+
+        # Subscribe ..
+        sub_key = f'sub.browse.pending.combined.{self._run_id}'
+        self.subscribe(sub_key)
+
+        # .. publish 2 messages and fetch them (into PEL) ..
+        for idx in range(2):
+            _ = self.backend.publish(self.topic_name, f'msg-fetched-{idx}')
+            _ = self.get_data_ref_from_stream()
+
+        messages = self.backend.fetch_messages(sub_key)
+        logger.info('fetch_messages -> %d messages fetched', len(messages))
+        self.assertEqual(len(messages), 2)
+
+        # .. publish 2 more messages without fetching (unread) ..
+        for idx in range(2):
+            _ = self.backend.publish(self.topic_name, f'msg-unread-{idx}')
+            _ = self.get_data_ref_from_stream()
+
+        # .. browse pending should return all 4: 2 in PEL + 2 unread.
+        result, next_cursor = self.backend.browse_messages(self.topic_name, sub_key=sub_key, state='pending')
+        logger.info('browse_messages(pending, combined) -> %d entries, next_cursor:%s', len(result), next_cursor)
+        self.assertEqual(len(result), 4)
+
+# ################################################################################################################################
+
     def test_pending_pagination(self) -> 'None':
 
         # Subscribe ..
@@ -247,6 +294,36 @@ class TestBrowseDelivered(BaseFetchTestCase):
         result, next_cursor = self.backend.browse_messages(self.topic_name, sub_key=sub_key, state='delivered')
         logger.info('browse_messages(delivered) -> %d entries, next_cursor:%s', len(result), next_cursor)
         self.assertEqual(len(result), 0)
+
+# ################################################################################################################################
+
+    def test_delivered_excludes_unread_messages(self) -> 'None':
+
+        # Subscribe ..
+        sub_key = f'sub.browse.delivered.excludes_unread.{self._run_id}'
+        self.subscribe(sub_key)
+
+        # .. publish 3 messages, fetch and ack all ..
+        for idx in range(3):
+            _ = self.backend.publish(self.topic_name, f'msg-{idx}')
+            _ = self.get_data_ref_from_stream()
+
+        messages = self.backend.fetch_messages(sub_key)
+        self.assertEqual(len(messages), 3)
+
+        stream_key = f'{ModuleCtx.Stream_Prefix}{self.topic_name}'
+        for message in messages:
+            self.backend.ack_message(stream_key, sub_key, message['_redis_message_id'], message['_data_ref'])
+
+        # .. publish 2 more without fetching (unread) ..
+        for idx in range(2):
+            _ = self.backend.publish(self.topic_name, f'msg-unread-{idx}')
+            _ = self.get_data_ref_from_stream()
+
+        # .. browse delivered should return only the 3 acked, not the 2 unread.
+        result, next_cursor = self.backend.browse_messages(self.topic_name, sub_key=sub_key, state='delivered')
+        logger.info('browse_messages(delivered, excludes_unread) -> %d entries, next_cursor:%s', len(result), next_cursor)
+        self.assertEqual(len(result), 3)
 
 # ################################################################################################################################
 # ################################################################################################################################

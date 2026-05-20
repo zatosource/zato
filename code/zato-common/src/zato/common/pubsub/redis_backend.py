@@ -344,8 +344,8 @@ class RedisPubSubBackend:
         if remaining == 0:
             try:
                 _ = self.redis.xgroup_destroy(stream_key, sub_key)
-            except ResponseError:
-                pass
+            except ResponseError as e:
+                logger.warning('xgroup_destroy failed -> stream_key:%s, sub_key:%s, error:%s', stream_key, sub_key, e)
 
 # ################################################################################################################################
 
@@ -417,8 +417,7 @@ class RedisPubSubBackend:
 
                 if now > expiration_time:
                     expired_data_ref = decoded['data_ref']
-                    _ = self.redis.xack(stream_name, sub_key, redis_message_id)
-                    self.disk_store.delete(expired_data_ref)
+                    self.ack_message(stream_name, sub_key, redis_message_id, expired_data_ref)
                     continue
 
                 # .. check max_len constraint using data_size from metadata ..
@@ -437,7 +436,7 @@ class RedisPubSubBackend:
                 except FileNotFoundError:
                     logger.warning('Orphaned message -> sub_key:%s, data_ref:%s, redis_id:%s - acking and skipping',
                         sub_key, data_ref, redis_message_id)
-                    _ = self.redis.xack(stream_name, sub_key, redis_message_id)
+                    self.ack_message(stream_name, sub_key, redis_message_id, data_ref)
                     continue
 
                 decoded['data'] = load_result.data
@@ -670,6 +669,36 @@ class RedisPubSubBackend:
 
 # ################################################################################################################################
 
+    def _get_last_delivered_id(self, stream_key:'str', group_name:'str') -> 'strnone':
+        """ Returns the last-delivered-id for a consumer group, or None if the group does not exist.
+        """
+        try:
+            groups:'anylist' = cast_('anylist', self.redis.xinfo_groups(stream_key))
+        except ResponseError as e:
+            logger.warning('xinfo_groups failed -> stream_key:%s, error:%s', stream_key, e)
+            return None
+
+        for group in groups:
+            if group['name'] == group_name:
+                return group['last-delivered-id']
+
+        return None
+
+# ################################################################################################################################
+
+    @staticmethod
+    def _increment_stream_id(stream_id:'str') -> 'str':
+        """ Increments the sequence part of a Redis stream ID by 1.
+        """
+        parts = stream_id.split('-')
+        timestamp_part = parts[0]
+        sequence_part = parts[1]
+        next_sequence = int(sequence_part) + 1
+        out = f'{timestamp_part}-{next_sequence}'
+        return out
+
+# ################################################################################################################################
+
     def _browse_pending(
         self,
         topic_name:'str',
@@ -678,7 +707,10 @@ class RedisPubSubBackend:
         page_size:'int',
         needs_data:'bool',
         ) -> 'browse_result':
-        """ Returns only messages that are still pending (undelivered) for the subscriber.
+        """ Returns messages that are still pending for the subscriber.
+        This covers two categories:
+        - Messages read via XREADGROUP but not yet acked (from the consumer group PEL via XPENDING)
+        - Messages not yet read by this consumer group (after the group's last-delivered-id)
         """
 
         # Our response to produce
@@ -688,26 +720,60 @@ class RedisPubSubBackend:
         topic_name = topic_name.lower()
         stream_key = self._get_stream_key(topic_name)
 
-        # .. get the pending message IDs for this consumer ..
+        # .. find the group's last-delivered-id so we know where unread messages start ..
+        last_delivered_id = self._get_last_delivered_id(stream_key, sub_key)
+
+        # .. 1) read-but-unacked entries from the pending entries list ..
         pending_min = cursor if cursor != '-' else '-'
-        pending_entries:'anylist' = cast_('anylist', self.redis.xpending_range(
-            stream_key, sub_key, min=pending_min, max='+', count=page_size, consumername=sub_key))
 
-        if not pending_entries:
-            return out
+        try:
+            pending_entries:'anylist' = cast_('anylist', self.redis.xpending_range(
+                stream_key, sub_key, min=pending_min, max='+', count=page_size, consumername=sub_key))
+        except ResponseError as e:
+            logger.warning('xpending_range failed -> stream_key:%s, sub_key:%s, error:%s', stream_key, sub_key, e)
+            pending_entries = []
 
-        # .. extract the message IDs ..
         pending_ids:'anylist' = [entry['message_id'] for entry in pending_entries]
+
+        # .. 2) unread entries beyond the last-delivered-id ..
+        if last_delivered_id:
+            unread_min = cursor if cursor != '-' else self._increment_stream_id(last_delivered_id)
+            unread_entries:'anylist' = cast_('anylist', self.redis.xrange(
+                stream_key, min=unread_min, count=page_size))
+        else:
+            unread_entries = []
+
+        unread_ids:'anylist' = [entry[0] for entry in unread_entries]
+
+        # .. merge and deduplicate the two sets of IDs, keeping order ..
+        seen:'set' = set()
+        all_ids:'anylist' = []
+
+        for stream_id in pending_ids:
+            if stream_id not in seen:
+                all_ids.append(stream_id)
+                seen.add(stream_id)
+
+        for stream_id in unread_ids:
+            if stream_id not in seen:
+                all_ids.append(stream_id)
+                seen.add(stream_id)
+
+        all_ids.sort()
+        all_ids = all_ids[:page_size]
+
+        if not all_ids:
+            return out
 
         # .. fetch the actual message data using a pipeline ..
         pipe = self.redis.pipeline()
 
-        for message_id in pending_ids:
+        for message_id in all_ids:
             _ = pipe.xrange(stream_key, min=message_id, max=message_id)
 
         pipeline_results:'anylist' = pipe.execute()
 
-        # .. flatten the pipeline results into a single list of (id, data) tuples ..
+        # .. flatten the pipeline results ..
         raw_messages:'anylist' = []
 
         for result_list in pipeline_results:
@@ -736,7 +802,9 @@ class RedisPubSubBackend:
         page_size:'int',
         needs_data:'bool',
         ) -> 'browse_result':
-        """ Returns only messages that have been delivered (no longer pending) for the subscriber.
+        """ Returns only messages that have been delivered (acked) for the subscriber.
+        "Delivered" means the subscriber read the message and acked it - it is no longer
+        in the pending entries list and it is at or before the last-delivered-id.
         """
 
         # Our response to produce
@@ -746,8 +814,15 @@ class RedisPubSubBackend:
         topic_name = topic_name.lower()
         stream_key = self._get_stream_key(topic_name)
 
-        # .. read a page from the stream ..
-        xrange_result = self.redis.xrange(stream_key, min=cursor, count=page_size)
+        # .. find the group's last-delivered-id - messages beyond it are unread, not delivered ..
+        last_delivered_id = self._get_last_delivered_id(stream_key, sub_key)
+
+        if not last_delivered_id:
+            return out
+
+        # .. read a page from the stream, capped at last-delivered-id ..
+        xrange_max = last_delivered_id
+        xrange_result = self.redis.xrange(stream_key, min=cursor, max=xrange_max, count=page_size)
         raw_messages:'anylist' = cast_('anylist', xrange_result)
 
         if not raw_messages:
@@ -757,12 +832,16 @@ class RedisPubSubBackend:
         first_id = raw_messages[0][0]
         last_id = raw_messages[-1][0]
 
-        pending_entries:'anylist' = cast_('anylist', self.redis.xpending_range(
-            stream_key, sub_key, min=first_id, max=last_id, count=page_size, consumername=sub_key))
+        try:
+            pending_entries:'anylist' = cast_('anylist', self.redis.xpending_range(
+                stream_key, sub_key, min=first_id, max=last_id, count=page_size, consumername=sub_key))
+        except ResponseError as e:
+            logger.warning('xpending_range failed -> stream_key:%s, sub_key:%s, error:%s', stream_key, sub_key, e)
+            pending_entries = []
 
         pending_ids:'set' = {entry['message_id'] for entry in pending_entries}
 
-        # .. keep only messages that are not in the pending set ..
+        # .. keep only messages that are not pending (i.e. already acked) ..
         delivered_messages:'anylist' = [
             entry for entry in raw_messages if entry[0] not in pending_ids
         ]
@@ -931,7 +1010,8 @@ class RedisPubSubBackend:
 
             try:
                 messages:'anylist' = cast_('anylist', self.redis.xrange(stream_key, min=min_stream_id))
-            except ResponseError:
+            except ResponseError as e:
+                logger.warning('xrange failed -> stream_key:%s, error:%s', stream_key, e)
                 continue
 
             for _, message_data in messages:
@@ -981,7 +1061,8 @@ class RedisPubSubBackend:
 
             try:
                 messages:'anylist' = cast_('anylist', self.redis.xrange(stream_key, min=min_stream_id))
-            except ResponseError:
+            except ResponseError as e:
+                logger.warning('xrange failed -> stream_key:%s, error:%s', stream_key, e)
                 continue
 
             for _, message_data in messages:
