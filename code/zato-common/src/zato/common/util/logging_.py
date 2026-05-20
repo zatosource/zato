@@ -18,8 +18,8 @@ from zato.common.util.platform_ import is_posix
 # ################################################################################################################################
 # ################################################################################################################################
 
-current_cid: ContextVar[str] = ContextVar('current_cid', default='None')
-current_service_name: ContextVar[str] = ContextVar('current_service_name', default='None')
+current_cid: ContextVar[str] = ContextVar('current_cid', default='')
+current_service_name: ContextVar[str] = ContextVar('current_service_name', default='')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -137,11 +137,11 @@ formatters:
     audit_pii:
         format: '%(message)s'
     default:
-        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(service_name)s - %(cid)s - %(message)s'
+        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(service_name)s - %(cid)s - %(name)s:%(lineno)d - %(message)s'
     http_access_log:
         format: '%(remote_ip)s %(cid_resp_time)s "%(channel_name)s" [%(req_timestamp)s] "%(method)s %(path)s %(http_version)s" %(status_code)s %(response_size)s "-" "%(user_agent)s"'
     colour:
-        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(service_name)s - %(cid)s - %(message)s'
+        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(service_name)s - %(cid)s - %(name)s:%(lineno)d - %(message)s'
         (): zato.common.util.api.ColorFormatter
 
 version: 1

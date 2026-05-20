@@ -953,11 +953,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         if self.deploy_auto_from:
             self.handle_enmasse_auto_from()
 
-        # Start the Rust scheduler thread (in-process)
-        self._start_scheduler()
-
         # Start the Redis pub/sub backend
         self._start_pubsub_redis()
+
+        # Start the Rust scheduler thread (in-process)
+        self._start_scheduler()
 
         # Start the queue bridge (Kafka, SQS, etc.)
         self._start_queue_bridge()
