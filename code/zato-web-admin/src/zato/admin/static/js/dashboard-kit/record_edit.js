@@ -44,13 +44,32 @@
             kit.record_edit.save(this);
         });
 
-        // .. and bind the copy button if enabled.
+        // .. bind the copy button if enabled ..
         kit.record_edit._$container.on('click', '.record-edit-copy-button', function() {
             var text = kit.record_edit._get_copy_text();
             if (text) {
                 kit.copy_to_clipboard(this, text);
             }
         });
+
+        // .. and bind the highlight overlay if any field uses it.
+        var $highlight_textarea = kit.record_edit._$container.find('.record-edit-highlight-container .record-edit-textarea');
+        if ($highlight_textarea.length) {
+            kit.record_edit._$highlight_textarea = $highlight_textarea;
+            kit.record_edit._$highlight_layer = kit.record_edit._$container.find('.record-edit-highlight-layer');
+
+            $highlight_textarea.on('input', function() {
+                kit.record_edit._sync_highlight();
+            });
+
+            $highlight_textarea.on('scroll', function() {
+                var layer = kit.record_edit._$highlight_layer[0];
+                layer.scrollTop = this.scrollTop;
+                layer.scrollLeft = this.scrollLeft;
+            });
+
+            kit.record_edit._sync_highlight();
+        }
     };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -109,10 +128,17 @@
 
             if (field.type === 'textarea') {
                 var monoClass = field.monospace ? ' record-edit-monospace' : '';
+                if (field.highlight) {
+                    out += '<div class="record-edit-highlight-container">';
+                }
                 out += '<textarea id="record-edit-' + field.name + '" class="record-edit-input record-edit-textarea' + monoClass + '"';
                 out += ' data-field="' + field.name + '">';
                 out += kit._esc_html(String(fieldValue));
                 out += '</textarea>';
+                if (field.highlight) {
+                    out += '<pre class="record-edit-highlight-layer"></pre>';
+                    out += '</div>';
+                }
             }
             else if (field.type === 'number') {
                 out += '<input id="record-edit-' + field.name + '" class="record-edit-input" type="number"';
@@ -221,6 +247,14 @@
         var field_name = config.copy_field;
         var $field = kit.record_edit._$container.find('[data-field="' + field_name + '"]');
         return $field.val();
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    kit.record_edit._sync_highlight = function() {
+        var text = kit.record_edit._$highlight_textarea.val();
+        var highlighted = kit.syntax_highlight_light(text);
+        kit.record_edit._$highlight_layer[0].innerHTML = highlighted;
     };
 
 // ////////////////////////////////////////////////////////////////////////

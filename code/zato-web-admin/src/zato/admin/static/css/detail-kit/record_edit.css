@@ -67,7 +67,82 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Record edit - footer and status                               */
+/* Record edit - syntax highlight overlay                        */
+/* ------------------------------------------------------------ */
+
+.record-edit-highlight-container {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+}
+
+.record-edit-highlight-container .record-edit-textarea,
+.record-edit-highlight-layer {
+    padding: 6px 10px;
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    font-family: Menlo, Consolas, Monaco, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.record-edit-highlight-container .record-edit-textarea {
+    position: relative;
+    z-index: 1;
+    display: block;
+    min-height: 200px;
+    margin: 0;
+    background: transparent;
+    color: transparent;
+    caret-color: var(--primary-dark);
+    resize: vertical;
+    overflow: auto;
+}
+
+.record-edit-highlight-container .record-edit-textarea:focus {
+    outline: none;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.record-edit-highlight-container .record-edit-textarea::selection {
+    background: rgba(0, 100, 200, 0.25);
+}
+
+.record-edit-highlight-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    overflow: hidden;
+    pointer-events: none;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: var(--primary-dark);
+    background: var(--background-light);
+}
+
+.record-edit-highlight-container .record-edit-textarea:focus ~ .record-edit-highlight-layer {
+    border-color: var(--component-accent);
+}
+
+.record-edit-highlight-layer .hl-key     { color: #0550ae; }
+.record-edit-highlight-layer .hl-str     { color: #116329; }
+.record-edit-highlight-layer .hl-num     { color: #0550ae; }
+.record-edit-highlight-layer .hl-bool    { color: #cf222e; }
+.record-edit-highlight-layer .hl-punct   { color: #6e7781; }
+.record-edit-highlight-layer .hl-tag     { color: #116329; }
+.record-edit-highlight-layer .hl-error   { color: #cf222e; }
+.record-edit-highlight-layer .hl-text    { color: #24292f; }
+.record-edit-highlight-layer .hl-comment { color: #6e7781; font-style: italic; }
+
+/* ------------------------------------------------------------ */
+/* Record edit - footer                                          */
 /* ------------------------------------------------------------ */
 
 .record-edit-footer {

@@ -701,6 +701,46 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     };
 
+    kit._json_token_classes_monokai = {
+        key: 'na',
+        str: 's',
+        num: 'm',
+        bool: 'kc',
+        punct: 'p'
+    };
+
+    kit._json_token_classes_light = {
+        key: 'hl-key',
+        str: 'hl-str',
+        num: 'hl-num',
+        bool: 'hl-bool',
+        punct: 'hl-punct'
+    };
+
+    kit._color_json_tokens = function(out, token_classes) {
+        out = out.replace(
+            /(&quot;)((?:[^&]|&(?!quot;))*)(&quot;)\s*:/g,
+            '<span class="' + token_classes.key + '">$1$2$3</span>:'
+        );
+        out = out.replace(
+            /:\s*(&quot;)((?:[^&]|&(?!quot;))*)(&quot;)/g,
+            ': <span class="' + token_classes.str + '">$1$2$3</span>'
+        );
+        out = out.replace(
+            /:\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
+            ': <span class="' + token_classes.num + '">$1</span>'
+        );
+        out = out.replace(
+            /:\s*(true|false|null)/g,
+            ': <span class="' + token_classes.bool + '">$1</span>'
+        );
+        out = out.replace(
+            /([{}\[\],])/g,
+            '<span class="' + token_classes.punct + '">$1</span>'
+        );
+        return out;
+    };
+
     kit._highlight_json = function(text) {
         var trimmed = text.trim();
         try {
@@ -710,28 +750,19 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             return null;
         }
         var out = kit._esc_html(pretty);
+        out = kit._color_json_tokens(out, kit._json_token_classes_monokai);
+        return out;
+    };
 
-        // .. color JSON tokens: keys, strings, numbers, booleans, null, punctuation
-        out = out.replace(
-            /(&quot;)((?:[^&]|&(?!quot;))*)(&quot;)\s*:/g,
-            '<span class="na">$1$2$3</span>:'
-        );
-        out = out.replace(
-            /:\s*(&quot;)((?:[^&]|&(?!quot;))*)(&quot;)/g,
-            ': <span class="s">$1$2$3</span>'
-        );
-        out = out.replace(
-            /:\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
-            ': <span class="m">$1</span>'
-        );
-        out = out.replace(
-            /:\s*(true|false|null)/g,
-            ': <span class="kc">$1</span>'
-        );
-        out = out.replace(
-            /([{}\[\],])/g,
-            '<span class="p">$1</span>'
-        );
+    kit._highlight_json_raw = function(text) {
+        var trimmed = text.trim();
+        try {
+            JSON.parse(trimmed);
+        } catch(e) {
+            return null;
+        }
+        var out = kit._esc_html(text);
+        out = kit._color_json_tokens(out, kit._json_token_classes_light);
         return out;
     };
 
@@ -768,6 +799,20 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         out = out.replace(
             /([\w:.-]+)(=)(&quot;)(.*?)(&quot;)/g,
             '<span class="na">$1</span>$2<span class="s">$3$4$5</span>'
+        );
+        return out;
+    };
+
+    kit._highlight_xml_raw = function(text) {
+        var out = kit._esc_html(text);
+
+        out = out.replace(
+            /(&lt;\/?)([\w:.-]+)/g,
+            '$1<span class="hl-tag">$2</span>'
+        );
+        out = out.replace(
+            /([\w:.-]+)(=)(&quot;)(.*?)(&quot;)/g,
+            '<span class="hl-key">$1</span>$2<span class="hl-str">$3$4$5</span>'
         );
         return out;
     };
@@ -853,6 +898,84 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         return parts.join('');
     };
 
+    kit._highlight_mixed_raw = function(text) {
+        var parts = [];
+        var remaining = text;
+
+        while (remaining.length) {
+            var json_start = -1;
+            var open_char = '';
+            var close_char = '';
+            var idx_obj = remaining.indexOf('{');
+            var idx_arr = remaining.indexOf('[');
+
+            if (idx_obj !== -1 && (idx_arr === -1 || idx_obj < idx_arr)) {
+                json_start = idx_obj;
+                open_char = '{';
+                close_char = '}';
+            } else if (idx_arr !== -1) {
+                json_start = idx_arr;
+                open_char = '[';
+                close_char = ']';
+            }
+
+            if (json_start === -1) {
+                parts.push(kit._esc_html(remaining));
+                break;
+            }
+
+            var depth = 0;
+            var in_string = false;
+            var escape_next = false;
+            var end_pos = -1;
+            for (var c = json_start; c < remaining.length; c++) {
+                var ch = remaining.charAt(c);
+                if (escape_next) {
+                    escape_next = false;
+                    continue;
+                }
+                if (ch === '\\' && in_string) {
+                    escape_next = true;
+                    continue;
+                }
+                if (ch === '"') {
+                    in_string = !in_string;
+                    continue;
+                }
+                if (in_string) continue;
+                if (ch === open_char) depth++;
+                else if (ch === close_char) {
+                    depth--;
+                    if (depth === 0) {
+                        end_pos = c;
+                        break;
+                    }
+                }
+            }
+
+            if (end_pos === -1) {
+                parts.push(kit._esc_html(remaining));
+                break;
+            }
+
+            var candidate = remaining.substring(json_start, end_pos + 1);
+            var highlighted = kit._highlight_json_raw(candidate);
+
+            if (highlighted) {
+                if (json_start > 0) {
+                    parts.push(kit._esc_html(remaining.substring(0, json_start)));
+                }
+                parts.push(highlighted);
+                remaining = remaining.substring(end_pos + 1);
+            } else {
+                parts.push(kit._esc_html(remaining.substring(0, json_start + 1)));
+                remaining = remaining.substring(json_start + 1);
+            }
+        }
+
+        return parts.join('');
+    };
+
     kit.syntax_highlight = function(text) {
         var trimmed = text.trim();
         var html = null;
@@ -884,6 +1007,30 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         }
 
         return '<span class="syntax-monokai">' + html + '</span>';
+    };
+
+    kit.syntax_highlight_light = function(text) {
+        var trimmed = text.trim();
+        var html = null;
+
+        if ((trimmed.charAt(0) === '{' && trimmed.charAt(trimmed.length - 1) === '}') ||
+            (trimmed.charAt(0) === '[' && trimmed.charAt(trimmed.length - 1) === ']')) {
+            html = kit._highlight_json_raw(text);
+        }
+
+        if (!html && trimmed.charAt(0) === '<') {
+            html = kit._highlight_xml_raw(text);
+        }
+
+        if (!html && (trimmed.indexOf('{') !== -1 || trimmed.indexOf('[') !== -1)) {
+            html = kit._highlight_mixed_raw(text);
+        }
+
+        if (!html) {
+            html = kit._esc_html(text);
+        }
+
+        return html;
     };
 
     /* Pre-measure every outcome badge from a palette and set min-width
