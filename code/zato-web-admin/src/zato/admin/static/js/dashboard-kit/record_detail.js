@@ -200,8 +200,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             e.stopPropagation();
             var $line = $(this).closest('.detail-log-line');
             var raw = $line.find('.detail-log-msg').attr('data-raw');
-            if (raw && navigator.clipboard) {
-                navigator.clipboard.writeText(raw);
+            if (raw) {
+                kit.copy_to_clipboard(this, raw);
             }
         });
 
@@ -212,8 +212,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 var raw = $(this).find('.detail-log-msg').attr('data-raw');
                 if (raw) lines.push(raw);
             });
-            if (lines.length && navigator.clipboard) {
-                navigator.clipboard.writeText(lines.join('\n'));
+            if (lines.length) {
+                kit.copy_to_clipboard(this, lines.join('\n'));
             }
         });
 
