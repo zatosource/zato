@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import logging
+import os
 from traceback import format_exc
 from urllib.parse import quote
 
@@ -18,7 +19,8 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.common.defaults import default_cluster_id
+from zato.common.defaults import default_cluster_id, default_server_base_dir
+from zato.common.pubsub.disk_store import DiskMessageStore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,6 +38,12 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+_disk_store_base_dir = os.path.join(default_server_base_dir, 'work', 'pubsub-messages')
+_disk_store = DiskMessageStore(_disk_store_base_dir)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _default_error_message = 'Error'
 _default_active_tab    = 'data'
 _default_page          = 1
@@ -47,7 +55,8 @@ _default_data_class    = ''
 _default_data_size     = 0
 _default_time_iso      = ''
 
-_poll_url = '/zato/dashboard/detail-poll/'
+_poll_url    = '/zato/dashboard/detail-poll/'
+_payload_url = '/zato/pubsub/subscription/queue/message/payload/'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -173,14 +182,18 @@ def message_detail(request:'any_') -> 'TemplateResponse':
     topic_name      = request.GET['topic_name']
     redis_stream_id = request.GET['redis_stream_id']
 
-    # .. invoke the get-message-detail service ..
+    # .. read the payload directly from disk ..
+    data_reference = _disk_store.make_ref(msg_id, topic_name)
+    load_result = _disk_store.load(data_reference)
+
+    # .. invoke the metadata-only service for Redis stream data ..
     invoke_payload = {
         'msg_id': msg_id,
         'topic_name': topic_name,
         'redis_stream_id': redis_stream_id,
     }
 
-    response = request.zato.client.invoke('zato.pubsub.subscription.get-message-detail', invoke_payload)
+    response = request.zato.client.invoke('zato.pubsub.subscription.get-message-metadata', invoke_payload)
 
     if response.ok:
         message_data = _parse_response_data(response)
@@ -189,8 +202,6 @@ def message_detail(request:'any_') -> 'TemplateResponse':
             'msg_id':              msg_id,
             'topic_name':          topic_name,
             'redis_stream_id':     redis_stream_id,
-            'data':                _default_data,
-            'data_class':          _default_data_class,
             'priority':            _default_priority,
             'expiration':          _default_expiration,
             'pub_time_iso':        _default_time_iso,
@@ -198,6 +209,10 @@ def message_detail(request:'any_') -> 'TemplateResponse':
             'expiration_time_iso': _default_time_iso,
             'data_size':           _default_data_size,
         }
+
+    # .. attach the disk-loaded payload to the response ..
+    message_data['data'] = load_result.data
+    message_data['data_class'] = load_result.data_class
 
     # .. resolve the active tab from the URL ..
     active_tab = request.GET.get('tab')
@@ -216,11 +231,40 @@ def message_detail(request:'any_') -> 'TemplateResponse':
         'active_tab':        active_tab,
         'message_data_json': message_data,
         'poll_url':          _poll_url,
+        'payload_url':       _payload_url,
         'queue_url':         queue_url,
         'zato_clusters':     True,
         'zato_template_name': 'zato/pubsub/queue_message.html',
     })
 
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def message_payload(request:'any_') -> 'HttpResponse':
+    """ Returns the message payload read directly from disk (no server round-trip).
+    """
+
+    # Parse the request body ..
+    body = json.loads(request.body)
+    msg_id     = body['msg_id']
+    topic_name = body['topic_name']
+
+    # .. read directly from disk ..
+    data_reference = _disk_store.make_ref(msg_id, topic_name)
+    load_result = _disk_store.load(data_reference)
+
+    # .. and return the payload as JSON.
+    response_data = {
+        'data': load_result.data,
+        'data_class': load_result.data_class,
+    }
+
+    response_json = json.dumps(response_data)
+
+    out = HttpResponse(response_json, content_type='application/json')
     return out
 
 # ################################################################################################################################

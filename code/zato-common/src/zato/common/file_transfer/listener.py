@@ -511,8 +511,9 @@ def _build_session() -> 'tuple':
     """
     # Zato
     from zato.common.crypto.api import WebAdminCryptoManager
+    from zato.common.defaults import default_env_base_dir
 
-    repo_dir = os.environ.get('Zato_Web_Admin_Repo_Dir') or os.path.expanduser('~/env/qs-1/web-admin/config/repo')
+    repo_dir = os.environ.get('Zato_Web_Admin_Repo_Dir') or os.path.join(default_env_base_dir, 'web-admin', 'config', 'repo')
 
     # Read the web-admin config ..
     conf_path = os.path.join(repo_dir, 'web-admin.conf')

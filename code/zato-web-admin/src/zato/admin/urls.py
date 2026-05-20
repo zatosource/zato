@@ -992,6 +992,8 @@ urlpatterns += [
         login_required(pubsub_queue.purge), name='pubsub-subscription-queue-purge'),
     url(r'^zato/pubsub/subscription/queue/message/$',
         login_required(pubsub_queue.message_detail), name='pubsub-subscription-queue-message'),
+    url(r'^zato/pubsub/subscription/queue/message/payload/$',
+        login_required(pubsub_queue.message_payload), name='pubsub-subscription-queue-message-payload'),
 ]
 
 # ################################################################################################################################

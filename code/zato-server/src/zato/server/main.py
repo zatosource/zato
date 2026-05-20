@@ -63,7 +63,7 @@ from zato.common.ipaddress_ import get_preferred_ip
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
 from zato.common.ext.bunch import Bunch
-from zato.common.defaults import secret_fields_exact, secret_fields_prefix, secret_fields_suffix
+from zato.common.defaults import default_env_base_dir, secret_fields_exact, secret_fields_prefix, secret_fields_suffix
 from zato.common.util.api import asbool, get_config, is_encrypted, new_cid_server, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.env import populate_environment_from_file
@@ -285,7 +285,7 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     store_pidfile(base_dir)
 
     # Ensure the file exists
-    _blocked_paths_file = os.path.join(os.path.expanduser('~'), 'env', 'qs-1', 'blocked-paths.txt')
+    _blocked_paths_file = os.path.join(default_env_base_dir, 'blocked-paths.txt')
     if not os.path.exists(_blocked_paths_file):
         with open(_blocked_paths_file, 'w') as _f:
             _ = _f.write('/.env\n')

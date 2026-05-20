@@ -19,7 +19,7 @@ Message detail
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
     var messageData = JSON.parse(document.getElementById('message-data-json').textContent);
-    $.fn.zato.pubsub.queue_message.init(messageData, '{{ poll_url|escapejs }}');
+    $.fn.zato.pubsub.queue_message.init(messageData, '{{ poll_url|escapejs }}', '{{ payload_url|escapejs }}');
 });
 </script>
 {% endblock %}
