@@ -19,12 +19,10 @@
 
     kit.record_edit._config = null;
     kit.record_edit._$container = null;
-    kit.record_edit._$status = null;
 
     kit.record_edit._labels = {
         save: 'Save',
-        saving: 'Saving...',
-        saved: 'Saved',
+        saved: 'OK, saved',
         saveFailed: 'Save failed'
     };
 
@@ -43,7 +41,7 @@
 
         // .. bind the save button ..
         kit.record_edit._$container.on('click', '.record-edit-save-button', function() {
-            kit.record_edit.save();
+            kit.record_edit.save(this);
         });
 
         // .. and bind the copy button if enabled.
@@ -139,18 +137,16 @@
             out += '<input type="hidden" data-field="' + hiddenName + '" value="' + kit._esc_html(String(hiddenValue)) + '">';
         }
 
-        // .. render the footer buttons and status area ..
+        // .. render the footer buttons ..
         out += '<div class="record-edit-footer">';
         if (config.show_copy_button) {
             out += '<button class="action-button record-edit-copy-button" type="button">Copy</button>';
         }
         out += '<button class="action-button record-edit-save-button" type="button">' + kit.record_edit._labels.save + '</button>';
-        out += '<span class="record-edit-status"></span>';
         out += '</div>';
 
         // .. and inject into the container.
         kit.record_edit._$container.html(out);
-        kit.record_edit._$status = kit.record_edit._$container.find('.record-edit-status');
     };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -175,16 +171,13 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-    kit.record_edit.save = function() {
+    kit.record_edit.save = function(buttonElement) {
 
         var config = kit.record_edit._config;
         var payload = kit.record_edit.collect();
         payload.action = config.save_action;
 
-        // Show saving status ..
-        kit.record_edit.set_status('saving', kit.record_edit._labels.saving);
-
-        // .. POST to the poll URL ..
+        // POST to the poll URL ..
         $.ajax({
             type: 'POST',
             url: config.poll_url,
@@ -194,7 +187,7 @@
             success: function(response) {
 
                 // .. show success ..
-                kit.record_edit.set_status('success', kit.record_edit._labels.saved);
+                kit.flash_tooltip(buttonElement, kit.record_edit._labels.saved);
 
                 // .. and call the domain callback if provided.
                 if (config.on_save_success) {
@@ -211,7 +204,7 @@
                 }
 
                 // .. show error ..
-                kit.record_edit.set_status('error', errorMessage);
+                kit.flash_tooltip(buttonElement, errorMessage);
 
                 // .. and call the domain callback if provided.
                 if (config.on_save_error) {
@@ -228,26 +221,6 @@
         var field_name = config.copy_field;
         var $field = kit.record_edit._$container.find('[data-field="' + field_name + '"]');
         return $field.val();
-    };
-
-// ////////////////////////////////////////////////////////////////////////
-
-    kit.record_edit.set_status = function(type, message) {
-
-        var $status = kit.record_edit._$status;
-
-        // Update the status display ..
-        $status.removeClass('record-edit-status-success record-edit-status-error record-edit-status-saving');
-        $status.addClass('record-edit-status-' + type);
-        $status.text(message);
-
-        // .. and auto-clear success after a delay.
-        if (type === 'success') {
-            setTimeout(function() {
-                $status.text('');
-                $status.removeClass('record-edit-status-success');
-            }, 3000);
-        }
     };
 
 // ////////////////////////////////////////////////////////////////////////

@@ -10,10 +10,6 @@
     background: var(--background-light);
 }
 
-.record-edit-editable-section {
-    margin-bottom: 24px;
-}
-
 .record-edit-field-row {
     display: flex;
     align-items: flex-start;
@@ -81,20 +77,4 @@
     gap: 12px;
     padding-top: 16px;
     border-top: 1px solid var(--border-light);
-}
-
-.record-edit-status {
-    font-size: 13px;
-}
-
-.record-edit-status-saving {
-    color: var(--text-muted);
-}
-
-.record-edit-status-success {
-    color: var(--component-accent);
-}
-
-.record-edit-status-error {
-    color: var(--detail-link-color);
 }
