@@ -33,7 +33,7 @@ SSL_CERT_FILE = None # type: ignore
 SSL_KEY_FILE = None  # type: ignore
 
 # Zato Django plugin configuration
-ZATO_URL = os.environ.get('ZATO_URL', 'http://localhost:17010/django')
+ZATO_URL = os.environ.get('ZATO_URL', 'http://localhost:17010/zato/api/invoke/django/{}')
 ZATO_USERNAME = 'django'
 ZATO_PASSWORD = os.environ.get('Zato_Django_Password') or os.environ.get('Zato_Password', '')
 

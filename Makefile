@@ -3,7 +3,8 @@
 	server-install scheduler-install io-install common-core-install queue-bridge-install \
 	ruff pyright qa-reqs-install unify \
 	update cron-update stop-server restart-server restart-server-with-scheduler \
-	stop-dashboard restart-dashboard scheduler queue-bridge file-listener
+	stop-dashboard restart-dashboard scheduler queue-bridge file-listener \
+	server-django-plugin-tests
 
 MAKEFLAGS += --silent
 
@@ -148,3 +149,8 @@ stop-dashboard:
 
 restart-dashboard:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-dashboard
+
+ZATO_PY := $(CURDIR)/code/bin/python
+
+server-django-plugin-tests:
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/django_plugin -v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_django_plugin
