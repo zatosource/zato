@@ -305,7 +305,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
             }),
         ]
 
-        messages, next_cursor = self.backend.browse_messages(topic_name)
+        messages, next_cursor = self.backend.browse_messages(topic_name, sub_key='test.sub', state='all')
 
         self.assertEqual(len(messages), 1)
         self.assertEqual(messages[0]['msg_id'], 'msg1')
@@ -343,7 +343,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
             }),
         ]
 
-        messages, next_cursor = self.backend.browse_messages(topic_name, page_size=2)
+        messages, next_cursor = self.backend.browse_messages(topic_name, sub_key='test.sub', state='all', page_size=2)
 
         self.assertEqual(len(messages), 2)
         self.assertEqual(next_cursor, '2000-4')

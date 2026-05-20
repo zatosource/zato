@@ -57,27 +57,29 @@
         // Build the read-only fields section ..
         var out = '';
 
-        out += '<div class="record-edit-readonly-section">';
+        if (config.readonly_fields.length > 0) {
+            out += '<div class="record-edit-readonly-section">';
 
-        for (var readonlyIndex = 0; readonlyIndex < config.readonly_fields.length; readonlyIndex++) {
-            var readonlyField = config.readonly_fields[readonlyIndex];
-            var readonlyValue = data[readonlyField.name];
+            for (var readonlyIndex = 0; readonlyIndex < config.readonly_fields.length; readonlyIndex++) {
+                var readonlyField = config.readonly_fields[readonlyIndex];
+                var readonlyValue = data[readonlyField.name];
 
-            if (readonlyField.format === 'time') {
-                readonlyValue = kit.format_local_time(readonlyValue);
+                if (readonlyField.format === 'time') {
+                    readonlyValue = kit.format_local_time(readonlyValue);
+                }
+
+                if (readonlyField.suffix) {
+                    readonlyValue = readonlyValue + readonlyField.suffix;
+                }
+
+                out += '<div class="record-edit-field-row record-edit-field-readonly">';
+                out += '<label class="record-edit-label">' + readonlyField.label + '</label>';
+                out += '<span class="record-edit-value">' + kit._esc_html(String(readonlyValue)) + '</span>';
+                out += '</div>';
             }
 
-            if (readonlyField.suffix) {
-                readonlyValue = readonlyValue + readonlyField.suffix;
-            }
-
-            out += '<div class="record-edit-field-row record-edit-field-readonly">';
-            out += '<label class="record-edit-label">' + readonlyField.label + '</label>';
-            out += '<span class="record-edit-value">' + kit._esc_html(String(readonlyValue)) + '</span>';
             out += '</div>';
         }
-
-        out += '</div>';
 
         // .. render the editable fields section ..
         out += '<div class="record-edit-editable-section">';
@@ -94,7 +96,10 @@
             }
 
             out += '<div class="record-edit-field-row">';
-            out += '<label class="record-edit-label" for="record-edit-' + field.name + '">' + field.label + '</label>';
+
+            if (config.show_labels !== false) {
+                out += '<label class="record-edit-label" for="record-edit-' + field.name + '">' + field.label + '</label>';
+            }
 
             if (field.type === 'textarea') {
                 var monoClass = field.monospace ? ' record-edit-monospace' : '';

@@ -49,6 +49,12 @@ _default_data_preview_len = PubSub.Message.Data_Preview_Len
 _default_stream_max_len = 100_000
 _default_page_size      = 50
 
+_browse_state_handlers = {
+    'pending':   '_browse_pending',
+    'all':       '_browse_all',
+    'delivered': '_browse_delivered',
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -610,13 +616,32 @@ class RedisPubSubBackend:
     def browse_messages(
         self,
         topic_name:'str',
+        sub_key:'str',
+        state:'str' = 'pending',
         cursor:'str' = '-',
         page_size:'int' = _default_page_size,
         needs_data:'bool' = False,
         ) -> 'browse_result':
-        """ Browse messages in a topic without consuming them.
-        Uses XRANGE for read-only access that does not affect consumer groups.
+        """ Browse messages in a topic filtered by delivery state.
+        Dispatches to a state-specific handler method.
         Returns (messages, next_cursor) for cursor-based pagination.
+        """
+        handler_name = _browse_state_handlers[state]
+        handler = getattr(self, handler_name)
+        out = handler(topic_name, sub_key, cursor, page_size, needs_data)
+        return out
+
+# ################################################################################################################################
+
+    def _browse_all(
+        self,
+        topic_name:'str',
+        sub_key:'str',
+        cursor:'str',
+        page_size:'int',
+        needs_data:'bool',
+        ) -> 'browse_result':
+        """ Returns all messages in the stream regardless of delivery state.
         """
 
         # Our response to produce
@@ -627,16 +652,140 @@ class RedisPubSubBackend:
         stream_key = self._get_stream_key(topic_name)
 
         # .. read a page from the stream ..
-        try:
-            xrange_result = self.redis.xrange(stream_key, min=cursor, count=page_size)
-            raw_messages:'anylist' = cast_('anylist', xrange_result)
-        except ResponseError:
-            logger.warning(f'XRANGE failed for stream_key:{stream_key}, cursor:{cursor}')
-            return out
+        xrange_result = self.redis.xrange(stream_key, min=cursor, count=page_size)
+        raw_messages:'anylist' = cast_('anylist', xrange_result)
 
         # .. handle empty result ..
         if not raw_messages:
             return out
+
+        messages = self._build_entries(raw_messages, needs_data)
+
+        # .. compute next_cursor ..
+        next_cursor = self._compute_next_cursor(raw_messages, page_size)
+
+        # .. and return the result.
+        out = (messages, next_cursor)
+        return out
+
+# ################################################################################################################################
+
+    def _browse_pending(
+        self,
+        topic_name:'str',
+        sub_key:'str',
+        cursor:'str',
+        page_size:'int',
+        needs_data:'bool',
+        ) -> 'browse_result':
+        """ Returns only messages that are still pending (undelivered) for the subscriber.
+        """
+
+        # Our response to produce
+        out:'browse_result' = ([], '')
+
+        # Normalize topic name ..
+        topic_name = topic_name.lower()
+        stream_key = self._get_stream_key(topic_name)
+
+        # .. get the pending message IDs for this consumer ..
+        pending_min = cursor if cursor != '-' else '-'
+        pending_entries:'anylist' = cast_('anylist', self.redis.xpending_range(
+            stream_key, sub_key, min=pending_min, max='+', count=page_size, consumername=sub_key))
+
+        if not pending_entries:
+            return out
+
+        # .. extract the message IDs ..
+        pending_ids:'anylist' = [entry['message_id'] for entry in pending_entries]
+
+        # .. fetch the actual message data using a pipeline ..
+        pipe = self.redis.pipeline()
+
+        for message_id in pending_ids:
+            _ = pipe.xrange(stream_key, min=message_id, max=message_id)
+
+        pipeline_results:'anylist' = pipe.execute()
+
+        # .. flatten the pipeline results into a single list of (id, data) tuples ..
+        raw_messages:'anylist' = []
+
+        for result_list in pipeline_results:
+            if result_list:
+                raw_messages.append(result_list[0])
+
+        if not raw_messages:
+            return out
+
+        messages = self._build_entries(raw_messages, needs_data)
+
+        # .. compute next_cursor ..
+        next_cursor = self._compute_next_cursor(raw_messages, page_size)
+
+        # .. and return the result.
+        out = (messages, next_cursor)
+        return out
+
+# ################################################################################################################################
+
+    def _browse_delivered(
+        self,
+        topic_name:'str',
+        sub_key:'str',
+        cursor:'str',
+        page_size:'int',
+        needs_data:'bool',
+        ) -> 'browse_result':
+        """ Returns only messages that have been delivered (no longer pending) for the subscriber.
+        """
+
+        # Our response to produce
+        out:'browse_result' = ([], '')
+
+        # Normalize topic name ..
+        topic_name = topic_name.lower()
+        stream_key = self._get_stream_key(topic_name)
+
+        # .. read a page from the stream ..
+        xrange_result = self.redis.xrange(stream_key, min=cursor, count=page_size)
+        raw_messages:'anylist' = cast_('anylist', xrange_result)
+
+        if not raw_messages:
+            return out
+
+        # .. get the pending IDs in the same range to filter them out ..
+        first_id = raw_messages[0][0]
+        last_id = raw_messages[-1][0]
+
+        pending_entries:'anylist' = cast_('anylist', self.redis.xpending_range(
+            stream_key, sub_key, min=first_id, max=last_id, count=page_size, consumername=sub_key))
+
+        pending_ids:'set' = {entry['message_id'] for entry in pending_entries}
+
+        # .. keep only messages that are not in the pending set ..
+        delivered_messages:'anylist' = [
+            entry for entry in raw_messages if entry[0] not in pending_ids
+        ]
+
+        if not delivered_messages:
+            next_cursor = self._compute_next_cursor(raw_messages, page_size)
+            out = ([], next_cursor)
+            return out
+
+        messages = self._build_entries(delivered_messages, needs_data)
+
+        # .. compute next_cursor from the full XRANGE page (not the filtered result) ..
+        next_cursor = self._compute_next_cursor(raw_messages, page_size)
+
+        # .. and return the result.
+        out = (messages, next_cursor)
+        return out
+
+# ################################################################################################################################
+
+    def _build_entries(self, raw_messages:'anylist', needs_data:'bool') -> 'anylist':
+        """ Builds entry dicts from raw (redis_stream_id, message_data) tuples.
+        """
 
         messages:'anylist' = []
 
@@ -677,28 +826,32 @@ class RedisPubSubBackend:
 
             messages.append(entry)
 
-        # .. compute next_cursor for the next page ..
+        return messages
+
+# ################################################################################################################################
+
+    def _compute_next_cursor(self, raw_messages:'anylist', page_size:'int') -> 'str':
+        """ Computes the next pagination cursor from the last message in the result set.
+        """
+
         raw_messages_len = len(raw_messages)
 
         if raw_messages_len < page_size:
-            next_cursor = ''
+            return ''
 
         # .. the next cursor is the last stream ID + 1 sequence number ..
-        else:
-            last_message = raw_messages[-1]
-            last_stream_id = last_message[0]
+        last_message = raw_messages[-1]
+        last_stream_id = last_message[0]
 
-            # .. Redis stream IDs are '<ms>-<seq>', increment the seq.
-            parts = last_stream_id.split('-')
-            timestamp_part = parts[0]
-            sequence_part = parts[1]
-            sequence_number = int(sequence_part)
-            next_sequence = sequence_number + 1
-            next_cursor = f'{timestamp_part}-{next_sequence}'
+        # .. Redis stream IDs are '<ms>-<seq>', increment the seq.
+        parts = last_stream_id.split('-')
+        timestamp_part = parts[0]
+        sequence_part = parts[1]
+        sequence_number = int(sequence_part)
+        next_sequence = sequence_number + 1
+        next_cursor = f'{timestamp_part}-{next_sequence}'
 
-        # .. and return the result.
-        out = (messages, next_cursor)
-        return out
+        return next_cursor
 
 # ################################################################################################################################
 

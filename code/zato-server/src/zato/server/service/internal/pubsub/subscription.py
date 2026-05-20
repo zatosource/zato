@@ -84,7 +84,7 @@ def _build_topic_objects_list(topic_data_list=None, topics=None, topic_data_by_n
 
 if 0:
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import anylist, strdict, strlist
+    from zato.common.typing_ import anydict, anylist, strdict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1003,13 +1003,12 @@ _browse_default_page_number = 1
 # ################################################################################################################################
 
 class BrowseQueue(AdminService):
-    """ Browses messages in a subscription's queue without consuming them.
-    Uses XRANGE for read-only access that does not affect consumer groups.
+    """ Browses messages in a subscription's queue filtered by delivery state.
     Compatible with the dashboard kit pagination contract (accepts page/page_size, returns rows/total/page).
     """
 
     name  = 'zato.pubsub.subscription.browse-queue'
-    input = '-sub_key', '-id', Int('-page'), Int('-page_size')
+    input = '-sub_key', '-id', Int('-page'), Int('-page_size'), '-state'
 
     def handle(self) -> 'None':
 
@@ -1018,16 +1017,18 @@ class BrowseQueue(AdminService):
         sub_key     = self.request.input.sub_key or self.request.input.id
         page_size   = self.request.input.page_size or _browse_default_page_size
         page_number = self.request.input.page or _browse_default_page_number
+        state       = self.request.input.state or 'pending'
 
         # .. get all topics this subscriber is subscribed to ..
         topic_names = self.server.pubsub_redis.get_subscribed_topics(sub_key)
 
-        # .. browse all messages from each topic ..
+        # .. browse messages from each topic filtered by state ..
         all_messages:'anylist' = []
 
         for topic_name in topic_names:
             messages, _ = self.server.pubsub_redis.browse_messages(
-                topic_name, cursor=_browse_cursor_start, page_size=_browse_max_messages, needs_data=False)
+                topic_name, sub_key=sub_key, state=state,
+                cursor=_browse_cursor_start, page_size=_browse_max_messages, needs_data=False)
             all_messages.extend(messages)
 
         # .. sort by pub_time descending so newest messages appear first ..

@@ -77,6 +77,7 @@
 .record-edit-footer {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 12px;
     padding-top: 16px;
     border-top: 1px solid var(--border-light);

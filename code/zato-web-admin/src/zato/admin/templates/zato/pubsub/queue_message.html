@@ -4,11 +4,12 @@
 
 {% block detail_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/detail-kit/record_edit.css">
+<link rel="stylesheet" type="text/css" href="/static/css/pubsub/queue_message.css">
 {% endblock %}
 
 {% block section_title %}
-<a href="{{ queue_url }}" class="detail-component-pill menu-link">Queue</a>
-Message detail
+<a href="{{ queue_url }}" class="detail-component-pill menu-link">{{ queue_name }}</a>
+{{ msg_id }}
 {% endblock %}
 
 {% block detail_js %}
