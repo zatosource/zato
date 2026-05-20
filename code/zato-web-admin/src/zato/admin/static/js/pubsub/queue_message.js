@@ -45,7 +45,7 @@
             show_copy_button: true,
             copy_field: 'data',
             fields: [
-                {name: 'data', type: 'textarea', monospace: true}
+                {name: 'data', type: 'textarea', monospace: true, highlight: true}
             ],
             readonly_fields: [],
             hidden_fields: ['msg_id', 'topic_name', 'redis_stream_id'],
@@ -75,6 +75,7 @@
                 var $textarea = $('#record-edit-data');
                 if ($textarea.length) {
                     $textarea.val(response.data);
+                    $textarea.trigger('input');
                 }
             }
         });
