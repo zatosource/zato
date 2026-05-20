@@ -285,11 +285,16 @@ tbody.detail-dimmed > tr.detail-panel-row.expanded {
     flex-shrink: 0;
 }
 
-.detail-page-run img.help-icon[id=""] {
+.section-heading-flush img.help-icon {
     display: none;
 }
 
 .detail-page-run .dashboard-tabs {
     display: none;
+    margin: 0;
+}
+
+.detail-page-run #run-nav-top {
+    padding-top: 0;
 }
 
