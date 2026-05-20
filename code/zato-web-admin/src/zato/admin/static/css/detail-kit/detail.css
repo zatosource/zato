@@ -750,6 +750,8 @@ input.detail-search-input::placeholder {
     letter-spacing: 0.5px;
     vertical-align: middle;
     margin-right: 6px;
+    background: #e0f0ff;
+    color: #012845;
 }
 
 a.detail-component-pill,

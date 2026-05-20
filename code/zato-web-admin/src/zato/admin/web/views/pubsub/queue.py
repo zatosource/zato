@@ -227,6 +227,7 @@ def message_detail(request:'any_') -> 'TemplateResponse':
     # .. and render the template.
     sub_key_encoded = quote(sub_key, safe='')
     queue_url = f'/zato/pubsub/subscription/queue/?cluster={default_cluster_id}&sub_key={sub_key_encoded}&state=pending'
+    topic_url = f'/zato/pubsub/topic/?cluster={default_cluster_id}'
 
     out = TemplateResponse(request, 'zato/pubsub/queue_message.html', {
         'cluster_id':        default_cluster_id,
@@ -239,6 +240,7 @@ def message_detail(request:'any_') -> 'TemplateResponse':
         'poll_url':          _poll_url,
         'payload_url':       _payload_url,
         'queue_url':         queue_url,
+        'topic_url':         topic_url,
         'zato_clusters':     True,
         'zato_template_name': 'zato/pubsub/queue_message.html',
     })

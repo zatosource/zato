@@ -9,11 +9,6 @@
     --detail-search-icon-color: #8a8a8a;
 }
 
-.detail-component-pill {
-    background: #e0f0ff;
-    color: #012845;
-}
-
 #btn-execute-now {
     cursor: pointer;
 }
