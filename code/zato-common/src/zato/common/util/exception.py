@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from datetime import datetime
+from datetime import datetime, timezone
 from traceback import TracebackException
 
 # Zato
@@ -54,7 +54,7 @@ def pretty_format_exception(e:'Exception', cid:'str', utcnow_func:'callnone'=Non
 
     details = ''.join(list(tb.format()))
 
-    now = utcnow_func() if utcnow_func else datetime.utcnow().isoformat() + ' (UTC)'
+    now = utcnow_func() if utcnow_func else datetime.now(timezone.utc).isoformat() + ' (UTC)'
 
     out.append(header1)
     out.append('\n')
