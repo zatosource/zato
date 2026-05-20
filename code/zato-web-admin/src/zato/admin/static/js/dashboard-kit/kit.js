@@ -678,15 +678,19 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
 
     kit.copy_to_clipboard = function(elem, text) {
         navigator.clipboard.writeText(text).then(function() {
-            var tip = tippy(elem, {
-                content: 'Copied to clipboard',
-                trigger: 'manual',
-                placement: 'right',
-                duration: [100, 100]
-            });
-            tip.show();
-            setTimeout(function() { tip.hide(); tip.destroy(); }, 600);
+            kit.flash_tooltip(elem, 'Copied to clipboard');
         });
+    };
+
+    kit.flash_tooltip = function(elem, message) {
+        var tip = tippy(elem, {
+            content: message,
+            trigger: 'manual',
+            placement: 'top',
+            duration: [100, 100]
+        });
+        tip.show();
+        setTimeout(function() { tip.hide(); tip.destroy(); }, 600);
     };
 
     // ////////////////////////////////////////////////////////////////////////
