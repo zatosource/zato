@@ -35,6 +35,10 @@ def handle_default(obj):
         return obj._asdict()
     if hasattr(obj, 'asdict'):
         return obj.asdict()
+    if hasattr(obj, 'to_dict'):
+        return obj.to_dict()
+    if hasattr(obj, '__dict__'):
+        return obj.__dict__
     raise TypeError('Object of type {} is not JSON serializable'.format(type(obj).__name__))
 
 def dumps(obj, **kwargs):
