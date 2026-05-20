@@ -35,7 +35,17 @@ $(document).ready(function() {
 {% block tabs %}{% endblock %}
 
 {% block tab_panels %}
-<h3 class="section-title">Pending messages</h3>
+
+<div class="state-switcher">
+    <a href="?cluster={{ cluster_id }}&sub_key={{ sub_key|urlencode }}&state=pending"
+       class="state-link{% if state == 'pending' %} active{% endif %}">Pending</a>
+    <a href="?cluster={{ cluster_id }}&sub_key={{ sub_key|urlencode }}&state=all"
+       class="state-link{% if state == 'all' %} active{% endif %}">All</a>
+    <a href="?cluster={{ cluster_id }}&sub_key={{ sub_key|urlencode }}&state=delivered"
+       class="state-link{% if state == 'delivered' %} active{% endif %}">Delivered</a>
+</div>
+
+<h3 class="section-title">{% if state == 'pending' %}Pending messages{% elif state == 'delivered' %}Delivered messages{% else %}All messages{% endif %}</h3>
 <table class="detail-table">
     <thead><tr><th>Message ID</th><th>Topic</th><th>Data</th><th>Size</th><th>Published</th></tr></thead>
     <tbody id="messages-body"></tbody>
@@ -43,7 +53,7 @@ $(document).ready(function() {
 
 {% if depth > page_size %}
 <div class="detail-pagination-bar">
-    <a href="?cluster={{ cluster_id }}&sub_key={{ sub_key|urlencode }}&page={{ page|add:1 }}">Next page</a>
+    <a href="?cluster={{ cluster_id }}&sub_key={{ sub_key|urlencode }}&state={{ state }}&page={{ page|add:1 }}">Next page</a>
 </div>
 {% endif %}
 

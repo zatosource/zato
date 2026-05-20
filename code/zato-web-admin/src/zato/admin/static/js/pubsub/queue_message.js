@@ -41,8 +41,9 @@
             container: '#record-edit-form',
             poll_url: pollUrl,
             save_action: 'update-message',
+            show_labels: false,
             fields: [
-                {name: 'data', type: 'textarea', label: 'Payload', monospace: true}
+                {name: 'data', type: 'textarea', monospace: true}
             ],
             readonly_fields: [],
             hidden_fields: ['msg_id', 'topic_name', 'redis_stream_id'],

@@ -26,8 +26,12 @@ current_service_name: ContextVar[str] = ContextVar('current_service_name', defau
 
 class ServiceContextFilter(logging.Filter):
     def filter(self, record):
-        record.cid = current_cid.get()
-        record.service_name = current_service_name.get()
+        _cid = current_cid.get()
+        _service_name = current_service_name.get()
+        if _cid:
+            record.zato_ctx = ' ' + _service_name + ' - ' + _cid + ' -'
+        else:
+            record.zato_ctx = ''
         return True
 
 # ################################################################################################################################
@@ -137,11 +141,11 @@ formatters:
     audit_pii:
         format: '%(message)s'
     default:
-        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(service_name)s - %(cid)s - %(name)s:%(lineno)d - %(message)s'
+        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s -%(zato_ctx)s %(name)s:%(lineno)d - %(message)s'
     http_access_log:
         format: '%(remote_ip)s %(cid_resp_time)s "%(channel_name)s" [%(req_timestamp)s] "%(method)s %(path)s %(http_version)s" %(status_code)s %(response_size)s "-" "%(user_agent)s"'
     colour:
-        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(service_name)s - %(cid)s - %(name)s:%(lineno)d - %(message)s'
+        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s -%(zato_ctx)s %(name)s:%(lineno)d - %(message)s'
         (): zato.common.util.api.ColorFormatter
 
 version: 1
