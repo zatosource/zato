@@ -908,7 +908,10 @@ $.fn.zato.pubsub.permission.data_table.new_row = function(item, data, include_tr
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
     }
 
-    // Normalize the access_type to lowercase for consistent comparison
+    if (item.security) {
+        item.name = item.security;
+    }
+
     if (item.access_type) {
         item.access_type = item.access_type.toLowerCase();
     }
@@ -935,7 +938,7 @@ $.fn.zato.pubsub.permission.data_table.new_row = function(item, data, include_tr
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     // Format security definition name as a clickable link
-    var secLink = String.format('<a href="/zato/security/basic-auth/?cluster1&query={0}">{1}</a>',
+    var secLink = String.format('<a href="/zato/security/basic-auth/?cluster=1&query={0}">{1}</a>',
                               encodeURIComponent(item.name),
                               item.name);
     row += String.format('<td>{0}</td>', secLink);
