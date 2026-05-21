@@ -275,14 +275,10 @@
         var text = kit.record_edit._$highlight_textarea.val();
         var layer = kit.record_edit._$highlight_layer[0];
 
-        // Show escaped text immediately ..
-        var escaped = kit.syntax_highlight_light(text, function(html) {
-
-            // .. then replace with Pygments-highlighted HTML.
+        // Keep the previous highlighted content visible while the request is in flight.
+        kit.syntax_highlight_light(text, function(html) {
             layer.innerHTML = html;
         });
-
-        layer.innerHTML = escaped;
     };
 
 // ////////////////////////////////////////////////////////////////////////
