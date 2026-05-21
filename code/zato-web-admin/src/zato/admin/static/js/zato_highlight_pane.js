@@ -161,7 +161,7 @@
                 for (var buttonIndex = 0; buttonIndex < config.buttons.length; buttonIndex++) {
                     var buttonConfig = config.buttons[buttonIndex];
                     var buttonElement = document.createElement('button');
-                    buttonElement.className = 'zato-highlight-pane-button';
+                    buttonElement.className = 'zato-action-button';
                     buttonElement.setAttribute('type', 'button');
                     buttonElement.textContent = buttonConfig.label;
 
