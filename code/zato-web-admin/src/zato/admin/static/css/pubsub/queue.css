@@ -2,12 +2,18 @@
 @import url("../dashboard-kit/time_range.css");
 @import url("../dashboard-kit/main_chart.css");
 @import url("../dashboard-kit/outcome.css");
+@import url("../syntax_light.css");
 
-.preview {
+.data-preview {
     max-width: 300px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.data-preview .syntax-light {
+    font-family: Menlo, Consolas, Monaco, monospace;
+    font-size: 12px;
 }
 
 #queue-pagination-top,
@@ -21,7 +27,7 @@
     width: 1%;
 }
 
-.detail-table .preview {
+.detail-table .data-preview {
     width: auto;
 }
 
