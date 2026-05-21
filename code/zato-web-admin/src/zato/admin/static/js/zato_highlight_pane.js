@@ -1,5 +1,85 @@
 
 // ////////////////////////////////////////////////////////////////////////
+//
+// Reusable syntax-highlighted editor pane for the Zato Dashboard.
+//
+// Wraps Ace editor with auto-detected language mode (json, xml, plain text),
+// Monokai theme, and an optional configurable button footer.
+// Has no dependency on dashboard-kit - only on zato_ui_helpers.js and Ace.
+//
+// Prerequisites (load before this script):
+//   - jQuery
+//   - ace.js (from /static/ace-builds/src/ace.js)
+//   - zato_ui_helpers.js
+//   - zato_highlight_pane.css
+//
+// Usage - syntax-only, no buttons:
+//
+//   $.fn.zato.highlight_pane.init({
+//       container: '#my-container',
+//       text: '{"hello": "world"}',
+//       editable: false
+//   });
+//
+// Usage - editable with copy and save buttons:
+//
+//   var pane = $.fn.zato.highlight_pane.init({
+//       container: '#my-container',
+//       text: myData,
+//       editable: true,
+//       buttons: [
+//           $.fn.zato.highlight_pane.buttons.copy(),
+//           $.fn.zato.highlight_pane.buttons.save({
+//               poll_url: '/zato/dashboard/detail-poll/',
+//               save_action: 'update-something',
+//               hidden_fields: {my_id: '123'},
+//               on_success: function(response, pane) { ... },
+//               on_error: function(errorMessage, pane) { ... }
+//           })
+//       ]
+//   });
+//
+// Usage - custom buttons:
+//
+//   $.fn.zato.highlight_pane.init({
+//       container: '#viewer',
+//       text: logOutput,
+//       editable: false,
+//       buttons: [
+//           {id: 'my-button', label: 'Download', on_click: function(buttonElement, pane) {
+//               downloadAsFile(pane.getValue());
+//           }}
+//       ]
+//   });
+//
+// Config options for init:
+//
+//   container        - css selector for the mount point (required)
+//   text             - initial text content (required)
+//   editable         - boolean, default true, whether the editor allows editing
+//   ace_options      - optional object with theme and fontSize overrides
+//   buttons          - optional array of {id, label, on_click} button definitions,
+//                      if omitted or empty, no footer is rendered
+//   on_mode_detected - optional callback(modeName) fired after auto-detection
+//
+// Returned pane instance:
+//
+//   pane.getValue()   - returns the current editor text
+//   pane.setValue(text) - sets editor text and re-detects language mode
+//   pane.getEditor()  - returns the raw Ace editor instance
+//   pane.destroy()    - tears down the Ace editor and clears the container
+//
+// Built-in button factories:
+//
+//   $.fn.zato.highlight_pane.buttons.copy()
+//     Creates a Copy button that copies selected text (or all text if nothing
+//     is selected) to the clipboard with a tooltip confirmation.
+//
+//   $.fn.zato.highlight_pane.buttons.save(config)
+//     Creates a Save button that posts editor content to config.poll_url.
+//     Config: poll_url, save_action, hidden_fields (object), on_success, on_error.
+//
+// ////////////////////////////////////////////////////////////////////////
 
 (function($) {
 
