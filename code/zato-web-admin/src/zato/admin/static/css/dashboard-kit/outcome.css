@@ -1,7 +1,5 @@
 /* Dashboard kit - outcome helpers.
-   Small coloured squares, tinted pill badges, pulsing status dots.
-   Colours themselves are applied inline by the renderer so the palette
-   can be injected per dashboard. */
+   Small coloured squares, tinted pill badges, pulsing status dots. */
 
 /* Status dots */
 
@@ -90,3 +88,9 @@
     font-size: 11px;
     letter-spacing: 0.3px;
 }
+
+.dashboard-outcome-ok      { color: #2a7fbf; background: rgba(42, 127, 191, 0.12); }
+.dashboard-outcome-error   { color: #e0226e; background: rgba(224, 34, 110, 0.12); }
+.dashboard-outcome-timeout { color: #b35e00; background: rgba(179, 94, 0, 0.12); }
+.dashboard-outcome-running { color: #888;    background: rgba(136, 136, 136, 0.12); }
+.dashboard-outcome-skipped { color: #7b5ea7; background: rgba(123, 94, 167, 0.12); }

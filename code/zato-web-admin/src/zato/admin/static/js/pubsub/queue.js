@@ -34,7 +34,7 @@
 
         var row = '<tr>';
         row += '<td class="queue-row-num"></td>';
-        row += '<td class="queue-msg-id"><a href="' + messageLink + '">' + message.msg_id + '</a></td>';
+        row += '<td class="queue-msg-id"><span class="dashboard-outcome-badge dashboard-outcome-ok"><a href="' + messageLink + '">' + message.msg_id + '</a></span></td>';
         row += '<td><a href="' + topicLink + '">' + topicName + '</a></td>';
         row += '<td class="data-preview">' + $('<span>').text(message.data_preview).html() + '</td>';
         row += '<td>' + message.data_size + ' B</td>';

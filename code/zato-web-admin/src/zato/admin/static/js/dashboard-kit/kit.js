@@ -257,7 +257,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
          palette:         { key: dot_colour }
          labels:          { key: display_label }
          text_colors:     { key: text_colour }   (optional, falls back to palette)
-         bg_colors:       { key: bg_colour }      (optional, falls back to muted grey)
+         backgrounds:       { key: bg_colour }      (optional, falls back to muted grey)
          hidden:          { key: true } map of currently hidden keys
          on_toggle(key, hidden_map):  called after a badge is clicked
        Skips rebuild if skip===true. */
@@ -270,14 +270,14 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var labels = config.labels || {};
         var hidden = config.hidden || {};
         var text_colors = config.text_colors || {};
-        var bg_colors = config.bg_colors || {};
+        var backgrounds = config.backgrounds || {};
 
         for (var i = 0; i < keys.length; i++) {
             var k = keys[i];
             var is_off = !!hidden[k];
             var dot = palette[k] || '#888';
             var tc = text_colors[k] || dot;
-            var bg = bg_colors[k] || 'rgba(110,110,115,0.12)';
+            var bg = backgrounds[k] || 'rgba(110,110,115,0.12)';
             var badge = $('<span class="dashboard-legend-badge' +
                 (is_off ? ' dashboard-legend-badge-off' : '') +
                 '" data-key="' + k + '"></span>');
@@ -949,7 +949,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
        on a table header cell so the column never resizes when transient
        outcomes (e.g. "Running" with spinner) appear and disappear.
        config:
-         palette:        outcome palette with .colors, .bg_colors, .labels
+         palette:        outcome palette with .colors, .backgrounds, .labels
          spinner_key:    outcome key that gets a spinner prefix (e.g. 'running')
          th_selector:    jQuery selector for the <th> to stabilize */
     kit.stabilize_badge_column = function(config) {
@@ -975,8 +975,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             if (!labels.hasOwnProperty(key)) continue;
             var label = (short_labels && short_labels[key]) ? short_labels[key] : labels[key];
             var prefix = (key === spinner_key) ? '<span class="badge-running-spinner"></span>' : '';
-            var badge = $('<span class="dashboard-outcome-badge" style="color:' +
-                palette.colors[key] + ';background:' + palette.bg_colors[key] + '">' +
+            var css_class = kit.outcome.css_classes[key];
+            var badge = $('<span class="dashboard-outcome-badge ' + css_class + '">' +
                 prefix + label + '</span>');
             probe.empty().append(badge);
             var w = badge.outerWidth();

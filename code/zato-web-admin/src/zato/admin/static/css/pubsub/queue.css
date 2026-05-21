@@ -1,6 +1,7 @@
 @import url("../dashboard-kit/kit.css");
 @import url("../dashboard-kit/time_range.css");
 @import url("../dashboard-kit/main_chart.css");
+@import url("../dashboard-kit/outcome.css");
 
 .data-preview {
     max-width: 300px;
@@ -14,7 +15,6 @@
     min-height: 31px;
 }
 
-.detail-table .queue-msg-id,
 .detail-table .queue-msg-id a {
     font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
     font-size: 12px;

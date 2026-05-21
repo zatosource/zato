@@ -841,8 +841,15 @@ class RedisPubSubBackend:
         pending_ids:'anylist' = [entry['message_id'] for entry in pending_entries]
 
         # .. 2) unread entries beyond the last-delivered-id ..
+        # .. entries at or before last_delivered_id have already been delivered,
+        # .. so the unread boundary is always at least increment(last_delivered_id),
+        # .. even when the pagination cursor is behind it.
         if last_delivered_id:
-            unread_min = cursor if cursor != '-' else self._increment_stream_id(last_delivered_id)
+            after_delivered = self._increment_stream_id(last_delivered_id)
+            if cursor != '-' and cursor > after_delivered:
+                unread_min = cursor
+            else:
+                unread_min = after_delivered
             unread_entries:'anylist' = cast_('anylist', self.redis.xrange(
                 stream_key, min=unread_min, count=page_size))
         else:

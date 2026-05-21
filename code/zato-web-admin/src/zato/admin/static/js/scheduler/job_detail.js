@@ -47,7 +47,7 @@ $.fn.zato.scheduler.job_detail.config = {
                 'running': '#bbb',
                 'skipped_already_in_flight': '#c4a8e8'
             },
-            bg_colors: {
+            backgrounds: {
                 'ok': 'rgba(91, 155, 213, 0.22)',
                 'error': 'rgba(224, 82, 82, 0.22)',
                 'timeout': 'rgba(212, 160, 23, 0.22)',
@@ -434,7 +434,7 @@ $.fn.zato.scheduler.job_detail._build_legend = function() {
         palette: bar_colors,
         labels: dashboard.outcome_labels,
         text_colors: dashboard.outcome_colors,
-        bg_colors: dashboard.outcome_bg_colors,
+        backgrounds: dashboard.outcome_backgrounds,
         hidden: detail._get_hidden_series(),
         on_toggle: function(_key, h) {
             detail._apply_outcome_filter(h);
