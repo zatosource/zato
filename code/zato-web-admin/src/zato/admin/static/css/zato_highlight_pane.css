@@ -1,4 +1,21 @@
 /* ------------------------------------------------------------ */
+/* Highlight pane - component color variables                   */
+/* ------------------------------------------------------------ */
+
+.zato-highlight-pane-editor,
+.zato-highlight-pane-footer,
+.zato-highlight-pane-button {
+    --pane-border: #3e3d32;
+    --pane-border-dark: #2e2d24;
+    --pane-border-darkest: #1a1a14;
+    --pane-text: #f8f8f2;
+    --pane-button-gradient-start: #4e4d40;
+    --pane-button-gradient-end: #3e3d32;
+    --pane-disabled-background: rgba(0, 0, 0, 0.06);
+    --pane-disabled-text: #aaa;
+}
+
+/* ------------------------------------------------------------ */
 /* Highlight pane - Ace editor container                        */
 /* ------------------------------------------------------------ */
 
@@ -6,7 +23,7 @@
     width: 100%;
     min-height: 200px;
     height: 340px;
-    border: 1px solid #3e3d32;
+    border: 1px solid var(--pane-border);
     border-radius: 4px;
 }
 
@@ -27,44 +44,34 @@
 /* Highlight pane - action buttons                              */
 /* ------------------------------------------------------------ */
 
-.zato-highlight-pane-button {
+.zato-highlight-pane-button,
+.zato-highlight-pane-button:hover,
+.zato-highlight-pane-button:active,
+.zato-highlight-pane-button:focus,
+.zato-highlight-pane-button:focus-visible {
     display: inline-block;
     padding: 4px 10px;
     font-size: 11px;
     font-weight: 400;
-    color: #f8f8f2;
-    background: linear-gradient(to bottom, #4e4d40, #3e3d32);
-    border: 1px solid #2e2d24;
-    border-bottom: 2px solid #1a1a14;
+    color: var(--pane-text);
+    background: linear-gradient(to bottom, var(--pane-button-gradient-start), var(--pane-button-gradient-end)) !important;
+    border: 1px solid var(--pane-border-dark);
+    border-bottom: 2px solid var(--pane-border-darkest);
     border-radius: 3px;
     min-width: 42px;
     text-align: center;
     cursor: pointer;
     letter-spacing: 0.5px;
     text-transform: uppercase;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
     text-shadow: none;
-    outline: none;
+    outline: none !important;
     transition: box-shadow 0.15s, background 0.15s;
 }
 
-.zato-highlight-pane-button:hover,
-.zato-highlight-pane-button:active,
-.zato-highlight-pane-button:focus,
-.zato-highlight-pane-button:focus-visible {
-    background: linear-gradient(to bottom, #4e4d40, #3e3d32) !important;
-    background-image: linear-gradient(to bottom, #4e4d40, #3e3d32) !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
-    border-color: #2e2d24 !important;
-    outline: none !important;
-}
-
-.zato-highlight-pane-button:disabled {
-    color: #aaa;
-    background: rgba(0, 0, 0, 0.06);
-    cursor: not-allowed;
-}
-
+.zato-highlight-pane-button:disabled,
 .zato-highlight-pane-button:disabled:hover {
-    background: rgba(0, 0, 0, 0.06);
+    color: var(--pane-disabled-text);
+    background: var(--pane-disabled-background) !important;
+    cursor: not-allowed;
 }
