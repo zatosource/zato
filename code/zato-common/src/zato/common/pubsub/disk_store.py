@@ -177,6 +177,15 @@ class DiskMessageStore:
 
 # ################################################################################################################################
 
+    def exists(self, data_reference:'str') -> 'bool':
+        """ Returns True if the payload file exists on disk.
+        """
+        absolute_path = self._ref_to_path(data_reference)
+        out = os.path.exists(absolute_path)
+        return out
+
+# ################################################################################################################################
+
     def delete(self, data_reference:'str') -> 'None':
         """ Remove the payload file from disk.
         """

@@ -68,7 +68,15 @@ def detail_poll(request:'any_') -> 'HttpResponse':
 
     # .. invoke the service and measure elapsed time ..
     invoke_start = time.monotonic()
-    response = request.zato.client.invoke(service_name, service_payload)
+
+    try:
+        response = request.zato.client.invoke(service_name, service_payload)
+    except Exception as e:
+        logger.warning('detail_poll invoke %s failed -> %s', service_name, e)
+        error_json = json.dumps({'error': str(e)})
+        out = HttpResponse(error_json, content_type='application/json', status=500)
+        return out
+
     elapsed = time.monotonic() - invoke_start
 
     if elapsed > _slow_invoke_threshold:

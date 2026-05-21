@@ -7,7 +7,7 @@
     kit.preview_overlay = {};
 
     var _$overlay = null;
-    var _raw_text = '';
+    var _config = null;
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -21,27 +21,11 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-    function _update_gutter($pre, $gutter) {
-        var text = $pre.text();
-        if (!text) {
-            $gutter.html('');
-            return;
-        }
-        var count = text.split('\n').length;
-        var lines = [];
-        for (var i = 1; i <= count; i++) {
-            lines.push(i + ' ');
-        }
-        $gutter.html(lines.join('\n'));
-    }
+    function _sync_highlight() {
+        var text = $('#kit-overlay-textarea').val();
+        var $layer = $('#kit-overlay-highlight');
 
-// ////////////////////////////////////////////////////////////////////////
-
-    function _highlight($pre, $gutter, text) {
-        var escaped = _escape_html(text);
-        $pre.html(escaped);
-        $pre.addClass('syntax-monokai');
-        _update_gutter($pre, $gutter);
+        $layer[0].innerHTML = _escape_html(text + '\n');
 
         $.ajax({
             type: 'POST',
@@ -50,9 +34,7 @@
             headers: {'X-CSRFToken': $.cookie('csrftoken')},
             dataType: 'json',
             success: function(data) {
-                $pre.html(data.html);
-                $pre.addClass('syntax-monokai');
-                _update_gutter($pre, $gutter);
+                $layer[0].innerHTML = data.html;
             }
         });
     }
@@ -98,14 +80,13 @@
                         '<button class="kit-overlay-close-btn">\u00d7</button>' +
                     '</div>' +
                     '<div class="kit-overlay-body">' +
-                        '<div class="kit-overlay-actions">' +
-                            '<a class="kit-overlay-action-link" id="kit-overlay-copy" href="javascript:void(0)">Copy</a>' +
-                            '<span id="kit-overlay-save-sep">|</span>' +
-                            '<a class="kit-overlay-action-link" id="kit-overlay-save" href="javascript:void(0)">Save</a>' +
+                        '<div class="kit-overlay-editor">' +
+                            '<textarea id="kit-overlay-textarea" class="kit-overlay-textarea" spellcheck="false"></textarea>' +
+                            '<pre id="kit-overlay-highlight" class="kit-overlay-highlight syntax-monokai"></pre>' +
                         '</div>' +
-                        '<div class="kit-overlay-response-wrap">' +
-                            '<div class="kit-overlay-gutter" id="kit-overlay-gutter"></div>' +
-                            '<pre class="kit-overlay-pre" id="kit-overlay-pre"></pre>' +
+                        '<div class="kit-overlay-footer">' +
+                            '<button class="record-edit-action-button" id="kit-overlay-copy" type="button">Copy</button>' +
+                            '<button class="record-edit-action-button" id="kit-overlay-save" type="button">Save</button>' +
                         '</div>' +
                     '</div>' +
                 '</div>' +
@@ -122,24 +103,47 @@
             kit.preview_overlay.close();
         });
 
+        $('#kit-overlay-textarea').on('input', _sync_highlight);
+
+        $('#kit-overlay-textarea').on('scroll', function() {
+            var layer = $('#kit-overlay-highlight')[0];
+            layer.scrollTop = this.scrollTop;
+            layer.scrollLeft = this.scrollLeft;
+        });
+
         $('#kit-overlay-copy').on('click', function() {
-            var link = this;
-            navigator.clipboard.writeText(_raw_text).then(function() {
-                kit.flash_tooltip(link, 'Copied to clipboard');
+            var text = $('#kit-overlay-textarea').val();
+            var btn = this;
+            navigator.clipboard.writeText(text).then(function() {
+                kit.flash_tooltip(btn, 'Copied to clipboard');
             });
         });
 
         $('#kit-overlay-save').on('click', function() {
-            var filename = _$overlay.data('save-filename');
-            var blob = new Blob([_raw_text], {type: 'text/plain;charset=utf-8'});
-            var url = URL.createObjectURL(blob);
-            var a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            var btn = this;
+            var text = $('#kit-overlay-textarea').val();
+
+            var payload = {
+                action: _config.save_action,
+                msg_id: _config.msg_id,
+                topic_name: _config.topic_name,
+                redis_stream_id: _config.redis_stream_id,
+                data: text
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: _config.poll_url,
+                headers: {'X-CSRFToken': $.cookie('csrftoken')},
+                data: JSON.stringify(payload),
+                contentType: 'application/json',
+                success: function() {
+                    kit.flash_tooltip(btn, 'OK, saved');
+                },
+                error: function() {
+                    kit.flash_tooltip(btn, 'Save failed');
+                }
+            });
         });
 
         $(document).on('keydown.kit_overlay', function(e) {
@@ -158,26 +162,24 @@
             _build_dom();
         }
 
-        _raw_text = config.text;
+        _config = config;
 
         $('#kit-overlay-title').text(config.title);
 
+        var $textarea = $('#kit-overlay-textarea');
+        $textarea.val(config.text);
+
+        var editable = config.editable !== false;
+        $textarea.prop('readonly', !editable);
+
         var show_save = config.show_save !== false;
         $('#kit-overlay-save').toggle(show_save);
-        $('#kit-overlay-save-sep').toggle(show_save);
-
-        if (show_save && config.save_filename) {
-            _$overlay.data('save-filename', config.save_filename);
-        }
 
         var $content = _$overlay.find('.kit-overlay-content');
         $content.css({position: '', margin: '', left: '', top: '', transform: ''});
 
         _$overlay.removeClass('hidden');
-
-        var $pre = $('#kit-overlay-pre');
-        var $gutter = $('#kit-overlay-gutter');
-        _highlight($pre, $gutter, _raw_text);
+        _sync_highlight();
     };
 
 // ////////////////////////////////////////////////////////////////////////

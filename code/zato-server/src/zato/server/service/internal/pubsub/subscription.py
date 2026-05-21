@@ -1153,9 +1153,12 @@ class GetMessageDetail(AdminService):
         topic_name      = self.request.input.topic_name
         redis_stream_id = self.request.input.redis_stream_id
 
-        # .. load the full payload from disk ..
+        # .. check if the full payload still exists on disk ..
         data_reference = self.server.pubsub_redis.disk_store.make_ref(msg_id, topic_name)
-        load_result = self.server.pubsub_redis.disk_store.load(data_reference)
+        has_data = self.server.pubsub_redis.disk_store.exists(data_reference)
+
+        if has_data:
+            load_result = self.server.pubsub_redis.disk_store.load(data_reference)
 
         # .. fetch the stream entry metadata ..
         stream_key = self.server.pubsub_redis.get_stream_key(topic_name)
@@ -1175,8 +1178,9 @@ class GetMessageDetail(AdminService):
             'msg_id': msg_id,
             'topic_name': topic_name,
             'redis_stream_id': redis_stream_id,
-            'data': load_result.data,
-            'data_class': load_result.data_class,
+            'has_data': has_data,
+            'data': load_result.data if has_data else '',
+            'data_class': load_result.data_class if has_data else '',
             'priority': int(entry_data['priority']),
             'expiration': int(entry_data['expiration']),
             'pub_time_iso': entry_data['pub_time_iso'],
