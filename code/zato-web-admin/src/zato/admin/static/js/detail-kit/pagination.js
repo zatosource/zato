@@ -13,7 +13,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var page_size = config.page_size;
         var filters = config.filters;
         var $body = $(config.table_body);
-        var csrf_token = $.cookie('csrftoken');
+        function csrf_token() { return $.cookie('csrftoken'); }
         var render_page = config.render_page;
         var render_new = config.render_new;
         var on_page_change = config.on_page_change;
@@ -135,7 +135,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 type: 'POST',
                 data: JSON.stringify(build_request({page: page, page_size: page_size})),
                 contentType: 'application/json',
-                headers: {'X-CSRFToken': csrf_token},
+                headers: {'X-CSRFToken': csrf_token()},
                 success: function(data) {
                     if (typeof data === 'string') {
                         data = JSON.parse(data);
@@ -148,6 +148,11 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
 
                     update_last_ts(rows);
                     update_controls();
+
+                    // .. keep the URL in sync with the current page ..
+                    var urlParams = new URLSearchParams(window.location.search);
+                    urlParams.set('page', current_page);
+                    history.replaceState(null, '', '?' + urlParams.toString());
 
                     if (typeof on_page_change === 'function') {
                         on_page_change(current_page, total_pages());
@@ -162,7 +167,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 type: 'POST',
                 data: JSON.stringify(build_request({page: 1, page_size: 100000})),
                 contentType: 'application/json',
-                headers: {'X-CSRFToken': csrf_token},
+                headers: {'X-CSRFToken': csrf_token()},
                 success: function(data) {
                     if (typeof data === 'string') {
                         data = JSON.parse(data);
@@ -195,7 +200,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 type: 'POST',
                 data: JSON.stringify(build_request(poll_extra)),
                 contentType: 'application/json',
-                headers: {'X-CSRFToken': csrf_token},
+                headers: {'X-CSRFToken': csrf_token()},
                 success: function(data) {
                     if (typeof data === 'string') {
                         data = JSON.parse(data);
@@ -224,15 +229,38 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         }
 
         if (config.initial_data) {
-            var id = config.initial_data;
-            var rows = id.rows;
-            total_count = id.total;
-            current_page = id.page;
-            render_page($body, rows, total_count);
-            update_last_ts(rows);
+            var initialRows = config.initial_data.rows;
+            total_count = config.initial_data.total;
+            current_page = config.initial_data.page;
+            render_page($body, initialRows, total_count);
+            update_last_ts(initialRows);
             update_controls();
         } else {
             fetch_page(1);
+        }
+
+        // Bind filter tabs if configured ..
+        // .. config.filter_tabs = {selector: '.dashboard-tab[data-state]', filter_key: 'state', url_key: 'state'}
+        if (config.filter_tabs) {
+            var filterTabConfig = config.filter_tabs;
+            $(filterTabConfig.selector).on('click', function() {
+                var newValue = $(this).data(filterTabConfig.filter_key);
+                var updatePayload = {};
+                updatePayload[filterTabConfig.filter_key] = newValue;
+
+                // .. update active tab styling ..
+                $(filterTabConfig.selector).removeClass('dashboard-tab-active').attr('aria-selected', 'false');
+                $(this).addClass('dashboard-tab-active').attr('aria-selected', 'true');
+
+                // .. update filters and re-fetch page 1 ..
+                set_filters(updatePayload);
+                fetch_page(1);
+
+                // .. and update the URL without reload.
+                var urlParams = new URLSearchParams(window.location.search);
+                urlParams.set(filterTabConfig.url_key, newValue);
+                history.replaceState(null, '', '?' + urlParams.toString());
+            });
         }
 
         return {

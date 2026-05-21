@@ -352,9 +352,9 @@
 
             '_delivery_type',
             'topic_link_list',
-            '_edit',
+            '_pending_depth',
 
-            '_queue',
+            '_edit',
             '_delete',
             'id',
             'is_delivery_active',
@@ -369,6 +369,7 @@
 
             'push_service_name',
             'topic_name_list',
+            'pending_depth',
         ]
     }
     </script>
@@ -454,8 +455,8 @@
 
                         <th style="text-align:center">Delivery type</th>
                         <th>Topics</th>
+                        <th style="text-align:center">Pending messages</th>
                         <th style="text-align:center">Edit</th>
-                        <th style="text-align:center">Queue</th>
 
                         <th style="text-align:center">Delete</th>
                         <th class='ignore'>&nbsp;</th>
@@ -469,6 +470,7 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -498,8 +500,8 @@
                             {% endif %}
                         </td>
                         <td>{{ item.topic_link_list|safe }}</td>
+                        <td style="text-align:center"><a href="/zato/pubsub/subscription/queue/?cluster={{ cluster_id }}&sub_key={{ item.sub_key }}&state=pending">{{ item.pending_depth }}</a></td>
                         <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
-                        <td style="text-align:center"><a href="/zato/pubsub/subscription/queue/?cluster={{ cluster_id }}&sub_key={{ item.sub_key }}&state=pending">Browse</a></td>
 
                         <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -515,6 +517,7 @@
 
                         <td class='ignore'>{{ item.push_service_name }}</td>
                         <td class='ignore'>{{ item.topic_name_list }}</td>
+                        <td class='ignore'>{{ item.pending_depth }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}

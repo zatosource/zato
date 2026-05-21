@@ -45,7 +45,12 @@
     $.fn.zato.pubsub.queue._render_page = function($body, rows, total) {
 
         $body.empty();
-        $('#stat-depth').text((total || 0).toLocaleString());
+
+        var depthFormatted = total.toLocaleString();
+        var $depth = $('#stat-depth');
+        if ($depth.text() !== depthFormatted) {
+            $depth.text(depthFormatted);
+        }
 
         if (rows.length === 0) {
             $body.append('<tr><td colspan="5">No messages</td></tr>');
@@ -112,11 +117,6 @@
             $.fn.zato.pubsub.queue.purge();
         });
 
-        // .. bind tab clicks to navigate via data-href ..
-        $('.dashboard-tab[data-href]').on('click', function() {
-            window.location.href = $(this).data('href');
-        });
-
         // .. and initialize pagination.
         $.fn.zato.pubsub.queue._pagination = kit.pagination.init({
             poll_url: config.poll_url,
@@ -131,6 +131,11 @@
             render_page: $.fn.zato.pubsub.queue._render_page,
             render_new: $.fn.zato.pubsub.queue._render_new,
             initial_data: config.initial_data,
+            filter_tabs: {
+                selector: '.dashboard-tab[data-state]',
+                filter_key: 'state',
+                url_key: 'state'
+            },
             on_page_change: function() {
             },
             on_new_rows: function(rows, total) {
