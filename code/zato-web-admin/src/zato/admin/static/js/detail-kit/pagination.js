@@ -223,7 +223,17 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             }
         }
 
-        fetch_page(1);
+        if (config.initial_data) {
+            var id = config.initial_data;
+            var rows = id.rows;
+            total_count = id.total;
+            current_page = id.page;
+            render_page($body, rows, total_count);
+            update_last_ts(rows);
+            update_controls();
+        } else {
+            fetch_page(1);
+        }
 
         return {
             fetch_page: fetch_page,
