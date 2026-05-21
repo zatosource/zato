@@ -41,7 +41,7 @@ class Index(_Index):
     input_required = 'cluster_id',
     output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_base_id', 'security', 'delivery_type', \
         'push_type', 'rest_push_endpoint_id', 'rest_push_endpoint_name', 'push_service_name', 'topic_name_list', \
-        'topic_link_list'
+        'topic_link_list', 'pending_depth'
     output_repeated = True
 
     def on_before_append_item(self, item):

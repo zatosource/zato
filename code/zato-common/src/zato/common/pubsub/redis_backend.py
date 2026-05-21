@@ -103,6 +103,92 @@ return deleted_refs
 # ################################################################################################################################
 # ################################################################################################################################
 
+_lua_pending_depths_script = """
+
+-- Extract a named field from a flat key-value array returned by XINFO ..
+local function get_field(info, field_name)
+    for field_index = 1, #info, 2 do
+        if info[field_index] == field_name then
+            return info[field_index + 1]
+        end
+    end
+
+    -- .. the field was not found.
+    return false
+end
+
+-- Find a consumer group by name in XINFO GROUPS output ..
+local function get_group_lag(groups, group_name)
+
+    -- .. walk each group entry ..
+    for group_index = 1, #groups do
+        local group = groups[group_index]
+        local name = get_field(group, 'name')
+
+        -- .. and return the lag for the matching group.
+        if name == group_name then
+            return get_field(group, 'lag')
+        end
+    end
+
+    -- .. the group was not found.
+    return false
+end
+
+-- Get the PEL (Pending Entries List) count for a consumer group ..
+-- .. PEL is Redis's internal list of messages delivered via XREADGROUP but not yet acked.
+-- .. XPENDING summary returns a 4-element array where index [1] is the count.
+-- .. The call can fail if the stream or group does not exist.
+local function get_pel_count(stream_key, group_name)
+    local ok, pending = pcall(redis.call, 'XPENDING', stream_key, group_name)
+    if not ok then
+        return 0
+    end
+    return pending[1]
+end
+
+-- Get the unread backlog count for a consumer group ..
+-- .. these are messages in the stream that the group has not consumed yet.
+-- .. XINFO GROUPS returns a 'lag' field (Redis 7+) with this count.
+-- .. The call can fail if the stream does not exist ..
+-- .. and 'lag' can be nil (false in Lua) after XDEL or stream trimming.
+local function get_lag_count(stream_key, group_name)
+    local ok, groups = pcall(redis.call, 'XINFO', 'GROUPS', stream_key)
+    if not ok then
+        return 0
+    end
+
+    local lag = get_group_lag(groups, group_name)
+    if lag == false then
+        return 0
+    end
+    return lag
+end
+
+-- Compute pending depths for all (stream_key, group_name) pairs ..
+-- .. ARGV contains repeated pairs: stream_key_1, group_name_1, stream_key_2, group_name_2, ...
+local result = {}
+
+for pair_index = 1, #ARGV, 2 do
+    local stream_key = ARGV[pair_index]
+    local group_name = ARGV[pair_index + 1]
+
+    -- .. get delivered-but-unacked count ..
+    local pel = get_pel_count(stream_key, group_name)
+
+    -- .. get not-yet-delivered count ..
+    local lag = get_lag_count(stream_key, group_name)
+
+    -- .. and sum them into the total pending depth for this pair.
+    table.insert(result, pel + lag)
+end
+
+return result
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class RedisPubSubBackend:
     """ Redis Streams-based pub/sub backend.
     """
@@ -112,6 +198,7 @@ class RedisPubSubBackend:
         self.disk_store = disk_store
         self.server = server
         self._lua_unsub_sha:'str' = cast_('str', self.redis.script_load(_lua_unsub_script))
+        self._lua_pending_depths_sha:'str' = cast_('str', self.redis.script_load(_lua_pending_depths_script))
 
 # ################################################################################################################################
 
@@ -941,6 +1028,40 @@ class RedisPubSubBackend:
         topics:'strset' = cast_('strset', self.redis.smembers(subs_key))
 
         out = list(topics)
+        return out
+
+# ################################################################################################################################
+
+    def get_pending_depths(self, sub_topic_pairs:'anylist') -> 'anydict':
+        """ Get the total pending depth for each subscriber across its topics.
+        Accepts a list of (sub_key, topic_name) pairs.
+        Returns a dict mapping sub_key to total pending message count.
+        Uses a Lua script to compute PEL + lag per pair in a single EVALSHA call.
+        """
+
+        # Build the ARGV list of (stream_key, group_name) pairs ..
+        argv:'anylist' = []
+
+        for sub_key, topic_name in sub_topic_pairs:
+            stream_key = self._get_stream_key(topic_name)
+            argv.append(stream_key)
+            argv.append(sub_key)
+
+        # .. call the Lua script ..
+        counts:'anylist' = cast_('anylist', self.redis.evalsha(self._lua_pending_depths_sha, 0, *argv))
+
+        # .. and sum the per-pair results into per-subscriber totals.
+        out:'anydict' = {}
+
+        for pair_index in range(len(sub_topic_pairs)):
+            sub_key = sub_topic_pairs[pair_index][0]
+            count = counts[pair_index]
+
+            if sub_key in out:
+                out[sub_key] = out[sub_key] + count
+            else:
+                out[sub_key] = count
+
         return out
 
 # ################################################################################################################################

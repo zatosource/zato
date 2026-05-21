@@ -28,9 +28,9 @@
 {% block actions %}{% endblock %}
 
 {% block tabs %}
-    <button type="button" class="dashboard-tab{% if state == 'pending' %} dashboard-tab-active{% endif %}" data-href="?cluster={{ cluster_id }}&sub_key={{ sub_key|urlencode }}&state=pending" role="tab" aria-selected="{% if state == 'pending' %}true{% else %}false{% endif %}">Pending</button>
-    <button type="button" class="dashboard-tab{% if state == 'all' %} dashboard-tab-active{% endif %}" data-href="?cluster={{ cluster_id }}&sub_key={{ sub_key|urlencode }}&state=all" role="tab" aria-selected="{% if state == 'all' %}true{% else %}false{% endif %}">All</button>
-    <button type="button" class="dashboard-tab{% if state == 'delivered' %} dashboard-tab-active{% endif %}" data-href="?cluster={{ cluster_id }}&sub_key={{ sub_key|urlencode }}&state=delivered" role="tab" aria-selected="{% if state == 'delivered' %}true{% else %}false{% endif %}">Delivered</button>
+    <button type="button" class="dashboard-tab{% if state == 'pending' %} dashboard-tab-active{% endif %}" data-state="pending" role="tab" aria-selected="{% if state == 'pending' %}true{% else %}false{% endif %}">Pending</button>
+    <button type="button" class="dashboard-tab{% if state == 'all' %} dashboard-tab-active{% endif %}" data-state="all" role="tab" aria-selected="{% if state == 'all' %}true{% else %}false{% endif %}">All</button>
+    <button type="button" class="dashboard-tab{% if state == 'delivered' %} dashboard-tab-active{% endif %}" data-state="delivered" role="tab" aria-selected="{% if state == 'delivered' %}true{% else %}false{% endif %}">Delivered</button>
 {% endblock %}
 
 {% block tab_panels %}

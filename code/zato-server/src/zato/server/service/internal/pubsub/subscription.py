@@ -121,7 +121,7 @@ class GetList(AdminService):
     input = 'cluster_id', '-needs_password', *query_parameters
     output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', AsIs('topic_link_list'), 'sec_base_id', \
         'sec_name', 'security', 'username', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name', \
-        '-rest_push_endpoint_name', AsIs('-topic_name_list'), '-password'
+        '-rest_push_endpoint_name', AsIs('-topic_name_list'), '-password', Int('-pending_depth')
 
     def get_data(self, session):
 
@@ -177,19 +177,41 @@ class GetList(AdminService):
             if not topic_exists:
                 topics_by_id[sub_id].append(topic_dict)
 
-        # Process data for each subscription
-        data = []
+        # Build (sub_key, topic_name) pairs for the pending depth lookup ..
+        sub_topic_pairs:'anylist' = []
+
+        for sub_id in subscriptions_by_id:
+            sub_key = subscriptions_by_id[sub_id]['sub_key']
+            for topic_dict in topics_by_id[sub_id]:
+                topic_name = topic_dict['topic_name']
+                sub_topic_pairs.append((sub_key, topic_name))
+
+        # .. get pending depths from Redis in a single Lua call ..
+        pending_depths = self.server.pubsub_redis.get_pending_depths(sub_topic_pairs)
+
+        # .. and process data for each subscription.
+        data:'anylist' = []
+
         for sub_id, sub_dict in subscriptions_by_id.items():
 
-            # Sort topics by name
+            # Sort topics by name ..
             sorted_topics = sorted(topics_by_id[sub_id], key=lambda x: x['topic_name'])
 
-            # Create topic links from sorted topics
-            topic_link_list = [get_topic_link(topic['topic_name'], topic['is_pub_enabled'], topic['is_delivery_enabled']) for topic in sorted_topics]
+            # .. create topic links from sorted topics ..
+            topic_link_list:'anylist' = []
 
-            # Store both fields
+            for topic in sorted_topics:
+                topic_link = get_topic_link(topic['topic_name'], topic['is_pub_enabled'], topic['is_delivery_enabled'])
+                topic_link_list.append(topic_link)
+
+            # .. store fields including the pending depth.
+            sub_key = sub_dict['sub_key']
             sub_dict['topic_link_list'] = ', '.join(topic_link_list)
             sub_dict['topic_name_list'] = sorted_topics
+            if sub_key in pending_depths:
+                sub_dict['pending_depth'] = pending_depths[sub_key]
+            else:
+                sub_dict['pending_depth'] = 0
 
             data.append(sub_dict)
 
