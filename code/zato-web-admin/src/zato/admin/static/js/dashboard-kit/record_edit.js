@@ -57,6 +57,7 @@
         if ($highlight_textarea.length) {
             kit.record_edit._$highlight_textarea = $highlight_textarea;
             kit.record_edit._$highlight_layer = kit.record_edit._$container.find('.record-edit-highlight-layer');
+            kit.record_edit._$highlight_layer.addClass('syntax-monokai');
 
             $highlight_textarea.on('input', function() {
                 kit.record_edit._sync_highlight();
@@ -68,7 +69,16 @@
                 layer.scrollLeft = this.scrollLeft;
             });
 
-            kit.record_edit._sync_highlight();
+            // .. use server-side pre-highlighted HTML if available ..
+            var highlightFieldName = $highlight_textarea.attr('data-field');
+            var preHighlighted = config.data[highlightFieldName + '_highlighted'];
+
+            if (preHighlighted) {
+                kit.record_edit._$highlight_layer[0].innerHTML = preHighlighted;
+            }
+            else {
+                kit.record_edit._sync_highlight();
+            }
         }
     };
 
@@ -163,12 +173,22 @@
             out += '<input type="hidden" data-field="' + hiddenName + '" value="' + kit._esc_html(String(hiddenValue)) + '">';
         }
 
-        // .. render the footer buttons ..
-        out += '<div class="record-edit-footer">';
-        if (config.show_copy_button) {
-            out += '<button class="action-button record-edit-copy-button" type="button">Copy</button>';
+        // .. check if any field uses highlighting ..
+        var hasHighlight = false;
+        for (var highlightCheckIndex = 0; highlightCheckIndex < config.fields.length; highlightCheckIndex++) {
+            if (config.fields[highlightCheckIndex].highlight) {
+                hasHighlight = true;
+                break;
+            }
         }
-        out += '<button class="action-button record-edit-save-button" type="button">' + kit.record_edit._labels.save + '</button>';
+
+        // .. render the footer buttons ..
+        var footerClass = hasHighlight ? 'record-edit-footer record-edit-footer-dark' : 'record-edit-footer';
+        out += '<div class="' + footerClass + '">';
+        if (config.show_copy_button) {
+            out += '<button class="record-edit-action-button record-edit-copy-button" type="button">Copy</button>';
+        }
+        out += '<button class="record-edit-action-button record-edit-save-button" type="button">' + kit.record_edit._labels.save + '</button>';
         out += '</div>';
 
         // .. and inject into the container.
@@ -253,8 +273,16 @@
 
     kit.record_edit._sync_highlight = function() {
         var text = kit.record_edit._$highlight_textarea.val();
-        var highlighted = kit.syntax_highlight_light(text);
-        kit.record_edit._$highlight_layer[0].innerHTML = highlighted;
+        var layer = kit.record_edit._$highlight_layer[0];
+
+        // Show escaped text immediately ..
+        var escaped = kit.syntax_highlight_light(text, function(html) {
+
+            // .. then replace with Pygments-highlighted HTML.
+            layer.innerHTML = html;
+        });
+
+        layer.innerHTML = escaped;
     };
 
 // ////////////////////////////////////////////////////////////////////////

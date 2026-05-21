@@ -17,8 +17,13 @@ from urllib.parse import quote
 from django.http import HttpResponse
 from django.template.response import TemplateResponse
 
+# pygments
+from pygments import highlight as pygments_highlight
+from pygments.formatters import HtmlFormatter
+
 # Zato
 from zato.admin.web.views import method_allowed
+from zato.admin.web.views.highlight import _guess_pygments_lexer
 from zato.common.defaults import default_cluster_id, default_server_base_dir
 from zato.common.pubsub.disk_store import DiskMessageStore
 
@@ -215,6 +220,11 @@ def message_detail(request:'any_') -> 'TemplateResponse':
     # .. attach the disk-loaded payload to the response ..
     message_data['data'] = load_result.data
     message_data['data_class'] = load_result.data_class
+
+    # .. pre-render syntax-highlighted HTML so the page loads without a highlight delay ..
+    lexer = _guess_pygments_lexer(load_result.data)
+    formatter = HtmlFormatter(nowrap=True)
+    message_data['data_highlighted'] = pygments_highlight(load_result.data, lexer, formatter)
 
     # .. resolve the active tab from the URL ..
     active_tab = request.GET.get('tab')
