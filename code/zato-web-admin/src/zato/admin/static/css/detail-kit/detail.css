@@ -541,6 +541,15 @@ a {
     text-decoration: none !important;
 }
 
+.detail-metadata .meta-card-copyable {
+    cursor: pointer;
+    transition: box-shadow 0.15s;
+}
+
+.detail-metadata .meta-card-copyable:hover {
+    box-shadow: 4px 4px 0px var(--shadow-dark);
+}
+
 .detail-copy-target {
     cursor: pointer;
     border-bottom: 1px dashed var(--text-muted);

@@ -20,6 +20,7 @@
         var $container = $(config.container);
         var data = config.data;
         var groups = config.groups;
+        var copyable = config.copy_as_json;
 
         // Build the HTML for all groups ..
         var out = '';
@@ -49,25 +50,46 @@
                     value = value + field.suffix;
                 }
 
-                out += kit.meta_cards._card(field.label, String(value), false);
+                var copyKey = copyable ? field.copy_key : null;
+                out += kit.meta_cards._card(field.label, String(value), false, copyKey);
             }
 
             out += '</div>';
         }
 
-        // .. and inject into the container.
+        // .. inject into the container ..
         $container.html(out);
+
+        // .. and bind click handlers for copyable cards.
+        if (copyable) {
+            $container.on('click', '.meta-card-copyable', function() {
+                var cardKey = $(this).attr('data-copy-key');
+                var cardValue = $(this).attr('data-copy-value');
+                var jsonObject = {};
+                jsonObject[cardKey] = cardValue;
+                var jsonString = JSON.stringify(jsonObject);
+                kit.copy_to_clipboard(this, jsonString);
+            });
+        }
     };
 
 // ////////////////////////////////////////////////////////////////////////
 
-    kit.meta_cards._card = function(label, value, isHtml) {
+    kit.meta_cards._card = function(label, value, isHtml, copyKey) {
 
         // Build a single meta-card element ..
         var escapedLabel = kit._esc_html(label);
         var renderedValue = isHtml ? value : kit._esc_html(value);
 
-        var out = '<div class="meta-card">';
+        if (copyKey) {
+            var escapedCopyKey = kit._esc_html(copyKey);
+            var escapedCopyValue = kit._esc_html(value);
+            var out = '<div class="meta-card meta-card-copyable" data-copy-key="' + escapedCopyKey + '" data-copy-value="' + escapedCopyValue + '">';
+        }
+        else {
+            var out = '<div class="meta-card">';
+        }
+
         out += '<div class="meta-label">' + escapedLabel + '</div>';
         out += '<div class="meta-value">' + renderedValue + '</div>';
         out += '</div>';
