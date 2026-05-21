@@ -62,13 +62,35 @@
 
         // .. and bind click handlers for copyable cards.
         if (copyable) {
-            $container.on('click', '.meta-card-copyable', function() {
+            var followCursor = config.copy_tooltip_follows_cursor;
+
+            $container.on('click', '.meta-card-copyable', function(event) {
                 var cardKey = $(this).attr('data-copy-key');
                 var cardValue = $(this).attr('data-copy-value');
                 var jsonObject = {};
                 jsonObject[cardKey] = cardValue;
                 var jsonString = JSON.stringify(jsonObject);
-                kit.copy_to_clipboard(this, jsonString);
+
+                if (followCursor) {
+                    var card = this;
+                    var clickX = event.clientX;
+                    var clickY = event.clientY;
+                    navigator.clipboard.writeText(jsonString).then(function() {
+                        var anchor = document.createElement('span');
+                        anchor.style.position = 'fixed';
+                        anchor.style.left = clickX + 'px';
+                        anchor.style.top = clickY + 'px';
+                        anchor.style.width = '0';
+                        anchor.style.height = '0';
+                        anchor.style.pointerEvents = 'none';
+                        document.body.appendChild(anchor);
+                        kit.flash_tooltip(anchor, 'Copied to clipboard');
+                        setTimeout(function() { anchor.remove(); }, 700);
+                    });
+                }
+                else {
+                    kit.copy_to_clipboard(this, jsonString);
+                }
             });
         }
     };

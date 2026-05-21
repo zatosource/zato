@@ -19,6 +19,7 @@
             container: '#message-metadata-cards',
             data: messageData,
             copy_as_json: true,
+            copy_tooltip_follows_cursor: true,
             groups: [
                 {fields: [
                     {name: 'msg_id', label: 'Message ID', format: 'mono', copy_key: 'message_id'},
