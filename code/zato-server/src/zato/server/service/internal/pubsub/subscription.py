@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
-from datetime import datetime
 from logging import getLogger
 from operator import itemgetter
 from traceback import format_exc
@@ -1024,17 +1023,14 @@ _browse_default_page_number = 1
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _iso_to_stream_id(iso_ts:'str') -> 'str':
-    """ Converts an ISO timestamp to a Redis stream ID (ms_epoch-0).
-    The resulting ID can be used as a cursor to XRANGE / XPENDING_RANGE
-    to fetch only entries newer than the given timestamp.
+def _since_ts_to_cursor(stream_id:'str') -> 'str':
+    """ Increments the sequence part of a Redis stream ID by 1
+    so that the cursor excludes the last-seen entry.
     """
-    normalized = iso_ts.replace('Z', '+00:00')
-    dt = datetime.fromisoformat(normalized)
-    epoch_ms = int(dt.timestamp() * 1000)
-
-    # Increment by 1 ms so we get strictly-after semantics
-    out = f'{epoch_ms + 1}-0'
+    parts = stream_id.split('-')
+    timestamp_part = parts[0]
+    next_sequence = int(parts[1]) + 1
+    out = f'{timestamp_part}-{next_sequence}'
     return out
 
 # ################################################################################################################################
@@ -1059,7 +1055,7 @@ class BrowseQueue(AdminService):
         state       = self.request.input.state or 'pending'
 
         if since_ts := self.request.input.get('since_ts'):
-            cursor = _iso_to_stream_id(since_ts)
+            cursor = _since_ts_to_cursor(since_ts)
         else:
             cursor = _browse_cursor_start
 
