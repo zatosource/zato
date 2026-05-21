@@ -16,13 +16,18 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
+    $.fn.zato.pubsub.queue._badge_class = 't4';
+
     $.fn.zato.pubsub.queue._render_row = function(message) {
 
         var kit = $.fn.zato.dashboard_kit;
-        var subKey = $.fn.zato.pubsub.queue._subKey;
+        var ns = $.fn.zato.pubsub.queue;
+        var subKey = ns._subKey;
         var relativeTime = kit.relative_time_past(message.pub_time_iso);
         var localTime = kit.format_local_time(message.pub_time_iso);
         var topicName = message.topic_name;
+
+        var badgeKey = ns._badge_class;
 
         var messageLink = '/zato/pubsub/subscription/queue/message/?cluster=1' +
             '&sub_key=' + encodeURIComponent(subKey) +
@@ -34,7 +39,7 @@
 
         var row = '<tr>';
         row += '<td class="queue-row-num"></td>';
-        row += '<td class="queue-msg-id"><span class="dashboard-outcome-badge dashboard-outcome-ok"><a href="' + messageLink + '">' + message.msg_id + '</a></span></td>';
+        row += '<td class="queue-msg-id"><span class="dashboard-outcome-badge dashboard-outcome-' + badgeKey + '"><a href="' + messageLink + '">' + message.msg_id + '</a></span></td>';
         row += '<td><a href="' + topicLink + '">' + topicName + '</a></td>';
         row += '<td class="data-preview">' + $('<span>').text(message.data_preview).html() + '</td>';
         row += '<td>' + message.data_size + ' B</td>';
@@ -85,9 +90,11 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
+    $.fn.zato.pubsub.queue._recency_max_alpha = 0.20;
+
     $.fn.zato.pubsub.queue._apply_recency_gradient = function() {
         var kit = $.fn.zato.dashboard_kit;
-        var max_a = kit.recency.MAX_ALPHA;
+        var max_a = $.fn.zato.pubsub.queue._recency_max_alpha;
         var steps = kit.recency.STEPS;
         var limit = Math.min($.fn.zato.pubsub.queue._new_row_count, steps);
         var rgb = '218, 165, 32';
