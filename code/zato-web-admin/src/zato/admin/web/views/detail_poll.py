@@ -16,6 +16,7 @@ from django.http import HttpResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
+from zato.admin.web.views.highlight import highlight_data_previews
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,8 +74,16 @@ def detail_poll(request:'any_') -> 'HttpResponse':
     if elapsed > _slow_invoke_threshold:
         logger.warning(f'detail_poll invoke {service_name} took {elapsed:.1f}s')
 
+    # .. post-process actions that need server-side enrichment ..
+    response_data = response.data
+    if isinstance(response_data, str):
+        response_data = json.loads(response_data)
+
+    if action == 'get-queue-messages':
+        highlight_data_previews(response_data['rows'])
+
     # .. and return the response as JSON.
-    response_json = json.dumps(response.data)
+    response_json = json.dumps(response_data)
 
     out = HttpResponse(response_json, content_type='application/json')
     return out

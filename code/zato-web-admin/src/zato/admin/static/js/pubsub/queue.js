@@ -44,7 +44,7 @@
         row += '<td class="queue-msg-id"><span class="dashboard-outcome-badge dashboard-outcome-' + badgeKey + '"><a href="' + messageLink + '">' + message.msg_id + '</a></span></td>';
         row += '<td><a href="' + topicLink + '">' + topicName + '</a></td>';
         row += '<td>' + deliveredLabel + '</td>';
-        row += '<td class="preview">' + $('<span>').text(message.preview).html() + '</td>';
+        row += '<td class="data-preview"><span class="syntax-light">' + message.data_preview_highlighted + '</span></td>';
         row += '<td>' + message.data_size + ' B</td>';
         row += '<td class="queue-time" data-ts="' + message.pub_time_iso + '" title="' + localTime + '">' + relativeTime + '</td>';
         row += '</tr>';

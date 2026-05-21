@@ -310,7 +310,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(messages[0]['msg_id'], 'msg1')
         self.assertEqual(messages[0]['data_size'], 12)
-        self.assertEqual(messages[0]['preview'], 'test payload')
+        self.assertEqual(messages[0]['data_preview'], 'test payload')
         self.assertNotIn('data', messages[0])
 
         # .. single message returned, fewer than page_size, so no more pages ..

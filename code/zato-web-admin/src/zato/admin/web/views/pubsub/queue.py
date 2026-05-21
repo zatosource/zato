@@ -23,7 +23,7 @@ from pygments.formatters import HtmlFormatter
 
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.admin.web.views.highlight import _guess_pygments_lexer
+from zato.admin.web.views.highlight import _guess_pygments_lexer, highlight_data_previews
 from zato.common.defaults import default_cluster_id, default_server_base_dir
 from zato.common.pubsub.disk_store import DiskMessageStore
 
@@ -109,6 +109,7 @@ def index(request:'any_') -> 'TemplateResponse':
 
     if response.ok:
         data = _parse_response_data(response)
+        highlight_data_previews(data['rows'])
     else:
         data = {'rows': [], 'total': 0, 'page': _default_page, 'sub_key': sub_key}
 
