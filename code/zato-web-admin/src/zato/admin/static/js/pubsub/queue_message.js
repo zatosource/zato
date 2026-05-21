@@ -7,7 +7,7 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.pubsub.queue_message.init = function(messageData, pollUrl, payloadUrl) {
+    $.fn.zato.pubsub.queue_message.init = function(messageData, pollUrl) {
 
         var kit = $.fn.zato.dashboard_kit;
 
@@ -38,48 +38,23 @@
             ]
         });
 
-        // .. and render the editable payload form in the Message data tab.
-        kit.record_edit.init({
+        // .. and render the editable payload in the Message data tab.
+        $.fn.zato.highlight_pane.init({
             container: '#record-edit-form',
-            poll_url: pollUrl,
-            save_action: 'update-message',
-            show_labels: false,
-            show_copy_button: true,
-            copy_field: 'data',
-            fields: [
-                {name: 'data', type: 'textarea', monospace: true, highlight: true}
-            ],
-            readonly_fields: [],
-            hidden_fields: ['msg_id', 'topic_name', 'redis_stream_id'],
-            data: messageData,
-            on_save_success: function() {
-                $.fn.zato.pubsub.queue_message.refreshPayload(payloadUrl, messageData);
-            }
-        });
-    };
-
-// ////////////////////////////////////////////////////////////////////////
-
-    $.fn.zato.pubsub.queue_message.refreshPayload = function(payloadUrl, messageData) {
-
-        var payload = {
-            msg_id: messageData.msg_id,
-            topic_name: messageData.topic_name
-        };
-
-        $.ajax({
-            type: 'POST',
-            url: payloadUrl,
-            headers: {'X-CSRFToken': $.cookie('csrftoken')},
-            data: JSON.stringify(payload),
-            contentType: 'application/json',
-            success: function(response) {
-                var $textarea = $('#record-edit-data');
-                if ($textarea.length) {
-                    $textarea.val(response.data);
-                    $textarea.trigger('input');
-                }
-            }
+            text: messageData.data,
+            editable: true,
+            buttons: [
+                $.fn.zato.highlight_pane.buttons.copy(),
+                $.fn.zato.highlight_pane.buttons.save({
+                    poll_url: pollUrl,
+                    save_action: 'update-message',
+                    hidden_fields: {
+                        msg_id: messageData.msg_id,
+                        topic_name: messageData.topic_name,
+                        redis_stream_id: messageData.redis_stream_id
+                    }
+                })
+            ]
         });
     };
 

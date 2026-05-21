@@ -3,7 +3,7 @@
 {% block page_title %}Message: {{ msg_id }}{% endblock %}
 
 {% block detail_css %}
-<link rel="stylesheet" type="text/css" href="/static/css/detail-kit/record_edit.css">
+<link rel="stylesheet" type="text/css" href="/static/css/zato_highlight_pane.css">
 <link rel="stylesheet" type="text/css" href="/static/css/syntax_monokai.css">
 {% endblock %}
 
@@ -20,13 +20,13 @@
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ace.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ext-error_marker.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ext-language_tools.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_highlight_pane.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/meta_cards.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/record_edit.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/queue_message.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
     var messageData = JSON.parse(document.getElementById('message-data-json').textContent);
-    $.fn.zato.pubsub.queue_message.init(messageData, '{{ poll_url|escapejs }}', '{{ payload_url|escapejs }}');
+    $.fn.zato.pubsub.queue_message.init(messageData, '{{ poll_url|escapejs }}');
 });
 </script>
 {% endblock %}
