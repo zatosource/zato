@@ -1,3 +1,5 @@
+@import url("../zato_action_button.css");
+
 /* ------------------------------------------------------------ */
 /* Record edit - form layout                                     */
 /* ------------------------------------------------------------ */
@@ -158,46 +160,4 @@
 
 .record-edit-footer-dark {
     margin-top: 6px;
-}
-
-.record-edit-action-button {
-    display: inline-block;
-    padding: 4px 10px;
-    font-size: 11px;
-    font-weight: 400;
-    color: #f8f8f2;
-    background: linear-gradient(to bottom, #4e4d40, #3e3d32);
-    border: 1px solid #2e2d24;
-    border-bottom: 2px solid #1a1a14;
-    border-radius: 3px;
-    min-width: 42px;
-    text-align: center;
-    cursor: pointer;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25);
-    text-shadow: none;
-    outline: none;
-    transition: box-shadow 0.15s, background 0.15s;
-}
-
-.record-edit-action-button:hover,
-.record-edit-action-button:active,
-.record-edit-action-button:focus,
-.record-edit-action-button:focus-visible {
-    background: linear-gradient(to bottom, #4e4d40, #3e3d32) !important;
-    background-image: linear-gradient(to bottom, #4e4d40, #3e3d32) !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
-    border-color: #2e2d24 !important;
-    outline: none !important;
-}
-
-.record-edit-action-button:disabled {
-    color: #aaa;
-    background: rgba(0, 0, 0, 0.06);
-    cursor: not-allowed;
-}
-
-.record-edit-action-button:disabled:hover {
-    background: rgba(0, 0, 0, 0.06);
 }
