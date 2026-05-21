@@ -1059,13 +1059,18 @@ class BrowseQueue(AdminService):
         else:
             cursor = _browse_cursor_start
 
+        logger.info('BrowseQueue -> sub_key:%s, state:%s, page:%s, page_size:%s, since_ts:%s, cursor:%s',
+            sub_key, state, page_number, page_size, since_ts, cursor)
+
         # .. get all topics this subscriber is subscribed to ..
         topic_names = self.server.pubsub_redis.get_subscribed_topics(sub_key)
 
         # .. get the real total from O(1) Redis commands ..
         total = 0
         for topic_name in topic_names:
-            total += self.server.pubsub_redis.get_total_count(sub_key, topic_name, state)
+            count = self.server.pubsub_redis.get_total_count(sub_key, topic_name, state)
+            logger.info('BrowseQueue total_count -> topic:%s, state:%s, count:%s', topic_name, state, count)
+            total += count
 
         if since_ts:
 
@@ -1073,12 +1078,18 @@ class BrowseQueue(AdminService):
             new_rows:'anylist' = []
 
             for topic_name in topic_names:
-                messages, _ = self.server.pubsub_redis.browse_messages(
+                messages, next_cursor = self.server.pubsub_redis.browse_messages(
                     topic_name, sub_key=sub_key, state=state,
                     cursor=cursor, page_size=page_size, needs_data=False)
+                logger.info('BrowseQueue since_ts browse -> topic:%s, cursor:%s, got:%d, next_cursor:%s',
+                    topic_name, cursor, len(messages), next_cursor)
                 new_rows.extend(messages)
 
-            new_rows.sort(key=itemgetter('pub_time_iso'), reverse=True)
+            new_rows.sort(key=itemgetter('pub_time_iso'))
+
+            if new_rows:
+                logger.info('BrowseQueue since_ts result -> rows:%d, first_id:%s, last_id:%s',
+                    len(new_rows), new_rows[0]['redis_stream_id'], new_rows[-1]['redis_stream_id'])
 
             out = {
                 'rows': new_rows,
@@ -1093,14 +1104,24 @@ class BrowseQueue(AdminService):
             page_rows:'anylist' = []
 
             for topic_name in topic_names:
-                messages, _ = self.server.pubsub_redis.browse_messages(
+                messages, next_cursor = self.server.pubsub_redis.browse_messages(
                     topic_name, sub_key=sub_key, state=state,
                     cursor=cursor, page_size=page_size, needs_data=False,
                     reverse=True)
+                logger.info('BrowseQueue reverse browse -> topic:%s, cursor:%s, got:%d, next_cursor:%s',
+                    topic_name, cursor, len(messages), next_cursor)
+                if messages:
+                    logger.info('BrowseQueue reverse browse first/last -> first_id:%s, first_pub:%s, last_id:%s, last_pub:%s',
+                        messages[0]['redis_stream_id'], messages[0]['pub_time_iso'],
+                        messages[-1]['redis_stream_id'], messages[-1]['pub_time_iso'])
                 page_rows.extend(messages)
 
             page_rows.sort(key=itemgetter('pub_time_iso'), reverse=True)
             page_rows = page_rows[:page_size]
+
+            if page_rows:
+                logger.info('BrowseQueue final page -> rows:%d, first_pub:%s, last_pub:%s',
+                    len(page_rows), page_rows[0]['pub_time_iso'], page_rows[-1]['pub_time_iso'])
 
             out = {
                 'rows': page_rows,
