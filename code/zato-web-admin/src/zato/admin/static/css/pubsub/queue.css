@@ -1,3 +1,7 @@
+@import url("../dashboard-kit/kit.css");
+@import url("../dashboard-kit/time_range.css");
+@import url("../dashboard-kit/main_chart.css");
+
 .data-preview {
     max-width: 300px;
     white-space: nowrap;

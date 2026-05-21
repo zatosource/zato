@@ -707,14 +707,16 @@ class RedisPubSubBackend:
         cursor:'str' = '-',
         page_size:'int' = _default_page_size,
         needs_data:'bool' = False,
+        reverse:'bool' = False,
         ) -> 'browse_result':
         """ Browse messages in a topic filtered by delivery state.
         Dispatches to a state-specific handler method.
         Returns (messages, next_cursor) for cursor-based pagination.
+        When reverse=True, returns newest messages first.
         """
         handler_name = _browse_state_handlers[state]
         handler = getattr(self, handler_name)
-        out = handler(topic_name, sub_key, cursor, page_size, needs_data)
+        out = handler(topic_name, sub_key, cursor, page_size, needs_data, reverse)
         return out
 
 # ################################################################################################################################
@@ -726,6 +728,7 @@ class RedisPubSubBackend:
         cursor:'str',
         page_size:'int',
         needs_data:'bool',
+        reverse:'bool' = False,
         ) -> 'browse_result':
         """ Returns all messages in the stream regardless of delivery state.
         """
@@ -738,7 +741,12 @@ class RedisPubSubBackend:
         stream_key = self._get_stream_key(topic_name)
 
         # .. read a page from the stream ..
-        xrange_result = self.redis.xrange(stream_key, min=cursor, count=page_size)
+        if reverse:
+            xrange_max = '+' if cursor == '-' else cursor
+            xrange_result = self.redis.xrevrange(stream_key, max=xrange_max, count=page_size)
+        else:
+            xrange_result = self.redis.xrange(stream_key, min=cursor, count=page_size)
+
         raw_messages:'anylist' = cast_('anylist', xrange_result)
 
         # .. handle empty result ..
@@ -793,6 +801,7 @@ class RedisPubSubBackend:
         cursor:'str',
         page_size:'int',
         needs_data:'bool',
+        reverse:'bool' = False,
         ) -> 'browse_result':
         """ Returns messages that are still pending for the subscriber.
         This covers two categories:
@@ -846,7 +855,7 @@ class RedisPubSubBackend:
                 all_ids.append(stream_id)
                 seen.add(stream_id)
 
-        all_ids.sort()
+        all_ids.sort(reverse=reverse)
         all_ids = all_ids[:page_size]
 
         if not all_ids:
@@ -888,6 +897,7 @@ class RedisPubSubBackend:
         cursor:'str',
         page_size:'int',
         needs_data:'bool',
+        reverse:'bool' = False,
         ) -> 'browse_result':
         """ Returns only messages that have been delivered (acked) for the subscriber.
         "Delivered" means the subscriber read the message and acked it - it is no longer
@@ -908,8 +918,13 @@ class RedisPubSubBackend:
             return out
 
         # .. read a page from the stream, capped at last-delivered-id ..
-        xrange_max = last_delivered_id
-        xrange_result = self.redis.xrange(stream_key, min=cursor, max=xrange_max, count=page_size)
+        if reverse:
+            xrange_max = last_delivered_id if cursor == '-' else cursor
+            xrange_result = self.redis.xrevrange(stream_key, max=xrange_max, min='-', count=page_size)
+        else:
+            xrange_max = last_delivered_id
+            xrange_result = self.redis.xrange(stream_key, min=cursor, max=xrange_max, count=page_size)
+
         raw_messages:'anylist' = cast_('anylist', xrange_result)
 
         if not raw_messages:
@@ -1063,6 +1078,53 @@ class RedisPubSubBackend:
                 out[sub_key] = count
 
         return out
+
+# ################################################################################################################################
+
+    def get_total_count(self, sub_key:'str', topic_name:'str', state:'str') -> 'int':
+        """ Returns the total message count for a (sub_key, topic) pair by delivery state.
+        """
+
+        if state == 'pending':
+
+            # Reuse the existing Lua script (PEL + lag) for pending depth ..
+            depths = self.get_pending_depths([(sub_key, topic_name)])
+            out = depths[sub_key]
+            return out
+
+        elif state == 'all':
+
+            # XLEN gives the total number of entries in the stream ..
+            stream_key = self._get_stream_key(topic_name)
+
+            try:
+                out = self.redis.xlen(stream_key)
+            except ResponseError:
+                out = 0
+
+            return out
+
+        elif state == 'delivered':
+
+            # Delivered = total - pending ..
+            stream_key = self._get_stream_key(topic_name)
+
+            try:
+                total = self.redis.xlen(stream_key)
+            except ResponseError:
+                total = 0
+
+            depths = self.get_pending_depths([(sub_key, topic_name)])
+            pending = depths[sub_key]
+
+            out = total - pending
+            if out < 0:
+                out = 0
+
+            return out
+
+        else:
+            return 0
 
 # ################################################################################################################################
 

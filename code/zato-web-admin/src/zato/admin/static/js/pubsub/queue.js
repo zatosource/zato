@@ -10,6 +10,8 @@
     $.fn.zato.pubsub.queue._subKey = '';
     $.fn.zato.pubsub.queue._defaultErrorMessage = 'Unknown error';
     $.fn.zato.pubsub.queue._pagination = null;
+    $.fn.zato.pubsub.queue._auto_refresh = null;
+    $.fn.zato.pubsub.queue._new_row_count = 0;
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -45,6 +47,7 @@
     $.fn.zato.pubsub.queue._render_page = function($body, rows, total) {
 
         $body.empty();
+        $.fn.zato.pubsub.queue._new_row_count = rows.length;
 
         var depthFormatted = total.toLocaleString();
         var $depth = $('#stat-depth');
@@ -60,6 +63,8 @@
         for (var i = 0; i < rows.length; i++) {
             $body.append($.fn.zato.pubsub.queue._render_row(rows[i]));
         }
+
+        $.fn.zato.pubsub.queue._apply_recency_gradient();
     };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -68,11 +73,34 @@
 
         for (var i = 0; i < rows.length; i++) {
             $body.prepend($.fn.zato.pubsub.queue._render_row(rows[i]));
+            $.fn.zato.pubsub.queue._new_row_count++;
         }
 
         while ($body.children().length > max_rows) {
             $body.children().last().remove();
         }
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.pubsub.queue._apply_recency_gradient = function() {
+        var kit = $.fn.zato.dashboard_kit;
+        var max_a = kit.recency.MAX_ALPHA;
+        var steps = kit.recency.STEPS;
+        var limit = Math.min($.fn.zato.pubsub.queue._new_row_count, steps);
+        var rgb = '218, 165, 32';
+        var $body = $('#messages-body');
+        var rows = $body.children('tr');
+
+        rows.each(function(idx) {
+            var $row = $(this);
+            if (idx < limit) {
+                var alpha = max_a * Math.pow(1 - idx / steps, 2.5);
+                $row.css('background', 'rgba(' + rgb + ', ' + alpha.toFixed(4) + ')');
+            } else {
+                $row.css('background', '');
+            }
+        });
     };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -117,7 +145,7 @@
             $.fn.zato.pubsub.queue.purge();
         });
 
-        // .. and initialize pagination.
+        // .. initialize pagination ..
         $.fn.zato.pubsub.queue._pagination = kit.pagination.init({
             poll_url: config.poll_url,
             action: 'get-queue-messages',
@@ -139,7 +167,21 @@
             on_page_change: function() {
             },
             on_new_rows: function(rows, total) {
+                $.fn.zato.pubsub.queue._new_row_count += rows.length;
                 $('#stat-depth').text(total.toLocaleString());
+                $.fn.zato.pubsub.queue._apply_recency_gradient();
+            }
+        });
+
+        // .. and initialize auto-refresh.
+        $.fn.zato.pubsub.queue._auto_refresh = kit.auto_refresh.init({
+            pill: '#queue-refresh-pill',
+            menu: '#queue-refresh-menu',
+            storage_key: 'zato_queue_refresh_' + subKey,
+            url_param: 'refresh',
+            default_seconds: 5,
+            on_tick: function() {
+                $.fn.zato.pubsub.queue._pagination.poll_new();
             }
         });
     };
