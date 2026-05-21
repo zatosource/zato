@@ -68,7 +68,7 @@
                 fontFamily: 'Menlo, Consolas, Monaco, monospace',
                 firstLineNumber: 1
             });
-            editor.renderer.setScrollMargin(10, 10, 0, 0);
+            editor.renderer.setScrollMargin(7, 7, 0, 0);
 
             var mode = kit.record_edit._guess_ace_mode(editor.getValue());
             editor.session.setMode(mode);
@@ -270,6 +270,10 @@
         var field_name = config.copy_field;
 
         if (field_name === kit.record_edit._ace_field_name && kit.record_edit._ace_editor) {
+            var selected = kit.record_edit._ace_editor.getSelectedText();
+            if (selected) {
+                return selected;
+            }
             return kit.record_edit._ace_editor.getValue();
         }
 
