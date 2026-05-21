@@ -755,6 +755,11 @@ class RedisPubSubBackend:
 
         messages = self._build_entries(raw_messages, needs_data)
 
+        # .. stamp delivery status per message ..
+        last_delivered_id = self._get_last_delivered_id(stream_key, sub_key)
+        for msg in messages:
+            msg['is_delivered'] = bool(last_delivered_id and msg['redis_stream_id'] <= last_delivered_id)
+
         # .. compute next_cursor ..
         next_cursor = self._compute_next_cursor(raw_messages, page_size)
 
@@ -885,6 +890,9 @@ class RedisPubSubBackend:
 
         messages = self._build_entries(raw_messages, needs_data)
 
+        for msg in messages:
+            msg['is_delivered'] = False
+
         # .. compute next_cursor ..
         next_cursor = self._compute_next_cursor(raw_messages, page_size)
 
@@ -969,6 +977,10 @@ class RedisPubSubBackend:
             return out
 
         messages = self._build_entries(raw_messages, needs_data)
+
+        for msg in messages:
+            msg['is_delivered'] = False
+
         next_cursor = self._compute_next_cursor(raw_messages, page_size)
 
         out = (messages, next_cursor)
@@ -1060,6 +1072,9 @@ class RedisPubSubBackend:
             return out
 
         messages = self._build_entries(delivered_messages, needs_data)
+
+        for msg in messages:
+            msg['is_delivered'] = True
 
         # .. compute next_cursor from the full XRANGE page (not the filtered result) ..
         next_cursor = self._compute_next_cursor(raw_messages, page_size)
