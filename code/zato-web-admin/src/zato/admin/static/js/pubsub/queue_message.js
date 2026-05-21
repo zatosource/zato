@@ -18,20 +18,21 @@
         kit.meta_cards.render({
             container: '#message-metadata-cards',
             data: messageData,
+            copy_as_json: true,
             groups: [
                 {fields: [
-                    {name: 'msg_id', label: 'Message ID', format: 'mono'},
-                    {name: 'topic_name', label: 'Topic'}
+                    {name: 'msg_id', label: 'Message ID', format: 'mono', copy_key: 'message_id'},
+                    {name: 'topic_name', label: 'Topic', copy_key: 'topic_name'}
                 ]},
                 {fields: [
-                    {name: 'pub_time_iso', label: 'Published', format: 'time'},
-                    {name: 'recv_time_iso', label: 'Received', format: 'time'},
-                    {name: 'expiration_time_iso', label: 'Expires', format: 'time'}
+                    {name: 'pub_time_iso', label: 'Published', format: 'time', copy_key: 'published'},
+                    {name: 'recv_time_iso', label: 'Received', format: 'time', copy_key: 'received'},
+                    {name: 'expiration_time_iso', label: 'Expires', format: 'time', copy_key: 'expires'}
                 ]},
                 {fields: [
-                    {name: 'data_size', label: 'Size', suffix: ' B'},
-                    {name: 'priority', label: 'Priority'},
-                    {name: 'expiration', label: 'Expiration (ms)'}
+                    {name: 'data_size', label: 'Size', suffix: ' B', copy_key: 'size'},
+                    {name: 'priority', label: 'Priority', copy_key: 'priority'},
+                    {name: 'expiration', label: 'Expiration (ms)', copy_key: 'expiration_ms'}
                 ]}
             ]
         });
