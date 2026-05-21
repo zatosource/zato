@@ -275,7 +275,10 @@
         var text = kit.record_edit._$highlight_textarea.val();
         var layer = kit.record_edit._$highlight_layer[0];
 
-        // Keep the previous highlighted content visible while the request is in flight.
+        // Show plain escaped text immediately so keystrokes are never invisible ..
+        layer.innerHTML = kit._esc_html(text);
+
+        // .. then replace with Pygments-highlighted HTML when it arrives.
         kit.syntax_highlight_light(text, function(html) {
             layer.innerHTML = html;
         });
