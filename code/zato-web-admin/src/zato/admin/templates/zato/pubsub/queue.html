@@ -45,12 +45,14 @@
 {% endblock %}
 
 {% block detail_js %}
+{{ queue_data|json_script:"queue-data-json" }}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/queue.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
     $.fn.zato.pubsub.queue.init('{{ sub_key|escapejs }}', {
         poll_url: '{{ poll_url }}',
-        state: '{{ state }}'
+        state: '{{ state }}',
+        initial_data: JSON.parse(document.getElementById('queue-data-json').textContent)
     });
 });
 </script>

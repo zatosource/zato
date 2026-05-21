@@ -130,6 +130,7 @@
             container_bottom: '#queue-pagination-bottom',
             render_page: $.fn.zato.pubsub.queue._render_page,
             render_new: $.fn.zato.pubsub.queue._render_new,
+            initial_data: config.initial_data,
             on_page_change: function() {
             },
             on_new_rows: function(rows, total) {

@@ -4,3 +4,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+#queue-pagination-top,
+#queue-pagination-bottom {
+    min-height: 31px;
+}
