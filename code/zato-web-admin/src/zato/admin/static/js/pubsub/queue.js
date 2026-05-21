@@ -9,58 +9,64 @@
 
     $.fn.zato.pubsub.queue._subKey = '';
     $.fn.zato.pubsub.queue._defaultErrorMessage = 'Unknown error';
+    $.fn.zato.pubsub.queue._pagination = null;
 
 // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.pubsub.queue.render = function(data) {
+    $.fn.zato.pubsub.queue._render_row = function(message) {
 
         var kit = $.fn.zato.dashboard_kit;
-
-        // Update the depth stat card ..
-        var depth = data.total;
-        var depthFormatted = depth.toLocaleString();
-        $('#stat-depth').text(depthFormatted);
-
-        // .. render the messages table ..
-        var $messagesBody = $('#messages-body');
-        $messagesBody.empty();
-
-        var messages = data.rows;
         var subKey = $.fn.zato.pubsub.queue._subKey;
+        var relativeTime = kit.relative_time_past(message.pub_time_iso);
+        var localTime = kit.format_local_time(message.pub_time_iso);
+        var topicName = message.topic_name;
 
-        var messageCount = messages.length;
+        var messageLink = '/zato/pubsub/subscription/queue/message/?cluster=1' +
+            '&sub_key=' + encodeURIComponent(subKey) +
+            '&msg_id=' + encodeURIComponent(message.msg_id) +
+            '&topic_name=' + encodeURIComponent(topicName) +
+            '&redis_stream_id=' + encodeURIComponent(message.redis_stream_id);
 
-        if (messageCount === 0) {
-            $messagesBody.append('<tr><td colspan="5">No pending messages</td></tr>');
+        var topicLink = '/zato/pubsub/topic/?cluster=1&query=' + encodeURIComponent(topicName);
+
+        var row = '<tr>';
+        row += '<td style="font-family:monospace; font-size:12px"><a href="' + messageLink + '">' + message.msg_id + '</a></td>';
+        row += '<td><a href="' + topicLink + '">' + topicName + '</a></td>';
+        row += '<td class="data-preview">' + $('<span>').text(message.data_preview).html() + '</td>';
+        row += '<td>' + message.data_size + ' B</td>';
+        row += '<td title="' + localTime + '">' + relativeTime + '</td>';
+        row += '</tr>';
+
+        return row;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.pubsub.queue._render_page = function($body, rows, total) {
+
+        $body.empty();
+        $('#stat-depth').text((total || 0).toLocaleString());
+
+        if (rows.length === 0) {
+            $body.append('<tr><td colspan="5">No messages</td></tr>');
             return;
         }
 
-        for (var messageIndex = 0; messageIndex < messageCount; messageIndex++) {
-            var message = messages[messageIndex];
-            var relativeTime = kit.relative_time_past(message.pub_time_iso);
-            var localTime = kit.format_local_time(message.pub_time_iso);
-            var topicName = message.topic_name;
+        for (var i = 0; i < rows.length; i++) {
+            $body.append($.fn.zato.pubsub.queue._render_row(rows[i]));
+        }
+    };
 
-            // .. build the message detail link ..
-            var messageLink = '/zato/pubsub/subscription/queue/message/?cluster=1' +
-                '&sub_key=' + encodeURIComponent(subKey) +
-                '&msg_id=' + encodeURIComponent(message.msg_id) +
-                '&topic_name=' + encodeURIComponent(topicName) +
-                '&redis_stream_id=' + encodeURIComponent(message.redis_stream_id);
+// ////////////////////////////////////////////////////////////////////////
 
-            // .. build the topic link ..
-            var topicLink = '/zato/pubsub/topic/?cluster=1&query=' + encodeURIComponent(topicName);
+    $.fn.zato.pubsub.queue._render_new = function($body, rows, max_rows) {
 
-            // .. and render the row.
-            var row = '<tr>';
-            row += '<td style="font-family:monospace; font-size:12px"><a href="' + messageLink + '">' + message.msg_id + '</a></td>';
-            row += '<td><a href="' + topicLink + '">' + topicName + '</a></td>';
-            row += '<td class="data-preview">' + $('<span>').text(message.data_preview).html() + '</td>';
-            row += '<td>' + message.data_size + ' B</td>';
-            row += '<td title="' + localTime + '">' + relativeTime + '</td>';
-            row += '</tr>';
+        for (var i = 0; i < rows.length; i++) {
+            $body.prepend($.fn.zato.pubsub.queue._render_row(rows[i]));
+        }
 
-            $messagesBody.append(row);
+        while ($body.children().length > max_rows) {
+            $body.children().last().remove();
         }
     };
 
@@ -94,23 +100,42 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.pubsub.queue.init = function(subKey, initialData) {
+    $.fn.zato.pubsub.queue.init = function(subKey, config) {
+
+        var kit = $.fn.zato.dashboard_kit;
 
         // Store the sub_key for purge operations ..
         $.fn.zato.pubsub.queue._subKey = subKey;
-
-        // .. parse the initial data if it is a string ..
-        if (typeof initialData === 'string') {
-            initialData = JSON.parse(initialData);
-        }
 
         // .. bind the purge button ..
         $('#purge-queue-button').on('click', function() {
             $.fn.zato.pubsub.queue.purge();
         });
 
-        // .. and render the page.
-        $.fn.zato.pubsub.queue.render(initialData);
+        // .. bind tab clicks to navigate via data-href ..
+        $('.dashboard-tab[data-href]').on('click', function() {
+            window.location.href = $(this).data('href');
+        });
+
+        // .. and initialize pagination.
+        $.fn.zato.pubsub.queue._pagination = kit.pagination.init({
+            poll_url: config.poll_url,
+            action: 'get-queue-messages',
+            object_id: subKey,
+            page_size: 50,
+            filters: {sub_key: subKey, state: config.state},
+            ts_field: 'pub_time_iso',
+            table_body: '#messages-body',
+            container_top: '#queue-pagination-top',
+            container_bottom: '#queue-pagination-bottom',
+            render_page: $.fn.zato.pubsub.queue._render_page,
+            render_new: $.fn.zato.pubsub.queue._render_new,
+            on_page_change: function() {
+            },
+            on_new_rows: function(rows, total) {
+                $('#stat-depth').text(total.toLocaleString());
+            }
+        });
     };
 
 // ////////////////////////////////////////////////////////////////////////

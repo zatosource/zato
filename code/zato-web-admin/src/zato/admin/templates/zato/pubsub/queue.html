@@ -1,60 +1,57 @@
 {% extends "zato/detail_base.html" %}
 
-{% block page_title %}Queue: {{ sub_key }}{% endblock %}
+{% block page_title %}Queue: {{ queue_name }}{% endblock %}
 
-{% block detail_css %}{% endblock %}
-
-{% block section_title %}Queue: {{ sub_key }}{% endblock %}
-{% block help_icon_id %}pubsub-queue-help{% endblock %}
-
-{% block detail_js %}
-{{ queue_data|json_script:"queue-data-json" }}
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/queue.js"></script>
-<script nonce="{{ CSP_NONCE }}">
-$(document).ready(function() {
-    var queueData = JSON.parse(document.getElementById('queue-data-json').textContent);
-    $.fn.zato.pubsub.queue.init('{{ sub_key|escapejs }}', queueData);
-});
-</script>
+{% block detail_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/pubsub/queue.css">
 {% endblock %}
 
-{% block stat_cards %}
-<div class="stat-cards">
-    <div class="stat-card">
-        <div><div class="stat-card-label">Depth</div><div class="stat-card-value" id="stat-depth">{{ depth }}</div></div>
-    </div>
+{% block progress_panel_class %}progress-panel-borderless progress-panel-no-margin{% endblock %}
+
+{% block section_title %}
+<div class="detail-header-row-1">
+    <span>
+        <a href="{{ subscriptions_url }}" class="detail-component-pill menu-link">Subscriptions</a>
+        {{ queue_name }}
+    </span>
+    <span class="detail-header-right">
+        <span class="detail-inline-stats">
+            <span class="detail-inline-stat"><span class="detail-inline-stat-label">Depth</span> <span id="stat-depth">{{ depth }}</span></span>
+        </span>
+        <button class="action-button" id="purge-queue-button" type="button">Purge queue</button>
+    </span>
 </div>
 {% endblock %}
+{% block help_icon_id %}{% endblock %}
 
-{% block actions %}
-<div class="button-container">
-    <button class="action-button" id="purge-queue-button" type="button">Purge queue</button>
-</div>
+{% block stat_cards %}{% endblock %}
+{% block actions %}{% endblock %}
+
+{% block tabs %}
+    <button type="button" class="dashboard-tab{% if state == 'pending' %} dashboard-tab-active{% endif %}" data-href="?cluster={{ cluster_id }}&sub_key={{ sub_key|urlencode }}&state=pending" role="tab" aria-selected="{% if state == 'pending' %}true{% else %}false{% endif %}">Pending</button>
+    <button type="button" class="dashboard-tab{% if state == 'all' %} dashboard-tab-active{% endif %}" data-href="?cluster={{ cluster_id }}&sub_key={{ sub_key|urlencode }}&state=all" role="tab" aria-selected="{% if state == 'all' %}true{% else %}false{% endif %}">All</button>
+    <button type="button" class="dashboard-tab{% if state == 'delivered' %} dashboard-tab-active{% endif %}" data-href="?cluster={{ cluster_id }}&sub_key={{ sub_key|urlencode }}&state=delivered" role="tab" aria-selected="{% if state == 'delivered' %}true{% else %}false{% endif %}">Delivered</button>
 {% endblock %}
-
-{% block tabs %}{% endblock %}
 
 {% block tab_panels %}
 
-<div class="state-switcher">
-    <a href="?cluster={{ cluster_id }}&sub_key={{ sub_key|urlencode }}&state=pending"
-       class="state-link{% if state == 'pending' %} active{% endif %}">Pending</a>
-    <a href="?cluster={{ cluster_id }}&sub_key={{ sub_key|urlencode }}&state=all"
-       class="state-link{% if state == 'all' %} active{% endif %}">All</a>
-    <a href="?cluster={{ cluster_id }}&sub_key={{ sub_key|urlencode }}&state=delivered"
-       class="state-link{% if state == 'delivered' %} active{% endif %}">Delivered</a>
-</div>
-
-<h3 class="section-title">{% if state == 'pending' %}Pending messages{% elif state == 'delivered' %}Delivered messages{% else %}All messages{% endif %}</h3>
+<div class="detail-pagination-controls" id="queue-pagination-top"></div>
 <table class="detail-table">
     <thead><tr><th>Message ID</th><th>Topic</th><th>Data</th><th>Size</th><th>Published</th></tr></thead>
     <tbody id="messages-body"></tbody>
 </table>
+<div class="detail-pagination-controls" id="queue-pagination-bottom"></div>
 
-{% if depth > page_size %}
-<div class="detail-pagination-bar">
-    <a href="?cluster={{ cluster_id }}&sub_key={{ sub_key|urlencode }}&state={{ state }}&page={{ page|add:1 }}">Next page</a>
-</div>
-{% endif %}
+{% endblock %}
 
+{% block detail_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/queue.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.pubsub.queue.init('{{ sub_key|escapejs }}', {
+        poll_url: '{{ poll_url }}',
+        state: '{{ state }}'
+    });
+});
+</script>
 {% endblock %}

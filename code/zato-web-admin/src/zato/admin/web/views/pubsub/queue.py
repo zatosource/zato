@@ -112,20 +112,27 @@ def index(request:'any_') -> 'TemplateResponse':
     else:
         data = {'rows': [], 'total': 0, 'page': _default_page, 'sub_key': sub_key}
 
-    # .. and render the template.
+    # .. extract the queue name from the sub_key ..
     depth = data['total']
     page  = data['page']
+    queue_name = sub_key.split('.', 1)[1]
 
+    subscriptions_url = f'/zato/pubsub/subscription/?cluster={default_cluster_id}'
+
+    # .. and render the template.
     out = TemplateResponse(request, 'zato/pubsub/queue.html', {
-        'cluster_id':        default_cluster_id,
-        'sub_key':           sub_key,
-        'state':             state,
-        'queue_data':        data,
-        'depth':             depth,
-        'page':              page,
-        'page_size':         _default_page_size,
-        'zato_clusters':     True,
-        'zato_template_name': 'zato/pubsub/queue.html',
+        'cluster_id':          default_cluster_id,
+        'sub_key':             sub_key,
+        'queue_name':          queue_name,
+        'state':               state,
+        'queue_data':          data,
+        'depth':               depth,
+        'page':                page,
+        'page_size':           _default_page_size,
+        'poll_url':            _poll_url,
+        'subscriptions_url':   subscriptions_url,
+        'zato_clusters':       True,
+        'zato_template_name':  'zato/pubsub/queue.html',
     })
 
     return out
