@@ -225,8 +225,16 @@ def message_detail(request:'any_') -> 'TemplateResponse':
             'data_size':           _default_data_size,
         }
 
-    # .. attach the disk-loaded payload to the response ..
-    message_data['data'] = load_result.data
+    # .. pretty-print JSON data if possible ..
+    data = load_result.data
+    try:
+        parsed = json.loads(data)
+        data = json.dumps(parsed, indent=2, ensure_ascii=False)
+    except (ValueError, TypeError):
+        pass
+
+    # .. attach the payload to the response ..
+    message_data['data'] = data
     message_data['data_class'] = load_result.data_class
 
     # .. pre-render syntax-highlighted HTML so the page loads without a highlight delay ..
