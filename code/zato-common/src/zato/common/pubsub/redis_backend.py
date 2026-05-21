@@ -807,6 +807,11 @@ class RedisPubSubBackend:
         This covers two categories:
         - Messages read via XREADGROUP but not yet acked (from the consumer group PEL via XPENDING)
         - Messages not yet read by this consumer group (after the group's last-delivered-id)
+
+        When reverse=True, returns the newest pending messages first by scanning
+        the stream backwards and checking each entry against the PEL and last-delivered-id.
+        XPENDING_RANGE has no reverse mode (the Redis rax iterator always walks forward),
+        so the reverse path uses XREVRANGE on the stream and filters to pending entries.
         """
 
         # Our response to produce
@@ -819,7 +824,11 @@ class RedisPubSubBackend:
         # .. find the group's last-delivered-id so we know where unread messages start ..
         last_delivered_id = self._get_last_delivered_id(stream_key, sub_key)
 
-        # .. 1) read-but-unacked entries from the pending entries list ..
+        if reverse:
+            return self._browse_pending_reverse(
+                stream_key, sub_key, cursor, page_size, needs_data, last_delivered_id)
+
+        # .. forward scan: 1) read-but-unacked entries from the PEL ..
         pending_min = cursor if cursor != '-' else '-'
 
         try:
@@ -841,7 +850,7 @@ class RedisPubSubBackend:
 
         unread_ids:'anylist' = [entry[0] for entry in unread_entries]
 
-        # .. merge and deduplicate the two sets of IDs, keeping order ..
+        # .. merge and deduplicate the two sets of IDs ..
         seen:'set' = set()
         all_ids:'anylist' = []
 
@@ -855,26 +864,14 @@ class RedisPubSubBackend:
                 all_ids.append(stream_id)
                 seen.add(stream_id)
 
-        all_ids.sort(reverse=reverse)
+        all_ids.sort()
         all_ids = all_ids[:page_size]
 
         if not all_ids:
             return out
 
         # .. fetch the actual message data using a pipeline ..
-        pipe = self.redis.pipeline()
-
-        for message_id in all_ids:
-            _ = pipe.xrange(stream_key, min=message_id, max=message_id)
-
-        pipeline_results:'anylist' = pipe.execute()
-
-        # .. flatten the pipeline results ..
-        raw_messages:'anylist' = []
-
-        for result_list in pipeline_results:
-            if result_list:
-                raw_messages.append(result_list[0])
+        raw_messages = self._fetch_ids_pipeline(stream_key, all_ids)
 
         if not raw_messages:
             return out
@@ -887,6 +884,108 @@ class RedisPubSubBackend:
         # .. and return the result.
         out = (messages, next_cursor)
         return out
+
+# ################################################################################################################################
+
+    def _browse_pending_reverse(
+        self,
+        stream_key:'str',
+        sub_key:'str',
+        cursor:'str',
+        page_size:'int',
+        needs_data:'bool',
+        last_delivered_id:'strnone',
+        ) -> 'browse_result':
+        """ Returns the newest pending messages first.
+        XPENDING_RANGE has no reverse mode (the Redis rax iterator only walks forward),
+        so we scan backwards through the stream with XREVRANGE and filter to pending entries.
+        Entries after last-delivered-id are unread (pending by definition).
+        Entries at or before last-delivered-id may be in the PEL (read but not acked) -
+        we check those with a single XPENDING_RANGE call over the candidate range.
+        """
+
+        out:'browse_result' = ([], '')
+
+        # .. scan backwards through the stream ..
+        xrev_max = '+' if cursor == '-' else cursor
+        scan_batch = page_size * 3
+
+        raw_entries:'anylist' = cast_('anylist', self.redis.xrevrange(
+            stream_key, max=xrev_max, count=scan_batch))
+
+        if not raw_entries:
+            return out
+
+        # .. split candidates into unread (definitely pending) and maybe-pending (need PEL check) ..
+        maybe_pending_ids:'anylist' = []
+
+        for stream_id, _ in raw_entries:
+            if not last_delivered_id:
+                continue
+            if stream_id <= last_delivered_id:
+                maybe_pending_ids.append(stream_id)
+
+        # .. check PEL membership for the maybe-pending entries in a single call.
+        # .. maybe_pending_ids is in descending order (from XREVRANGE),
+        # .. so [-1] is the smallest and [0] is the largest.
+        pel_ids:'set' = set()
+
+        if maybe_pending_ids:
+            pel_range_min = maybe_pending_ids[-1]
+            pel_range_max = maybe_pending_ids[0]
+
+            pel_entries:'anylist' = cast_('anylist', self.redis.xpending_range(
+                stream_key, sub_key, min=pel_range_min, max=pel_range_max,
+                count=len(maybe_pending_ids), consumername=sub_key))
+            for entry in pel_entries:
+                pel_ids.add(entry['message_id'])
+
+        # .. walk through the scan results again, collecting pending IDs newest first ..
+        pending_ids:'anylist' = []
+
+        for stream_id, _ in raw_entries:
+            is_unread = last_delivered_id and stream_id > last_delivered_id
+            is_in_pel = stream_id in pel_ids
+
+            if is_unread or is_in_pel:
+                pending_ids.append(stream_id)
+                if len(pending_ids) >= page_size:
+                    break
+
+        if not pending_ids:
+            return out
+
+        # .. fetch the actual message data ..
+        raw_messages = self._fetch_ids_pipeline(stream_key, pending_ids)
+
+        if not raw_messages:
+            return out
+
+        messages = self._build_entries(raw_messages, needs_data)
+        next_cursor = self._compute_next_cursor(raw_messages, page_size)
+
+        out = (messages, next_cursor)
+        return out
+
+# ################################################################################################################################
+
+    def _fetch_ids_pipeline(self, stream_key:'str', ids:'anylist') -> 'anylist':
+        """ Fetches stream entries by ID using a pipeline.
+        """
+        pipe = self.redis.pipeline()
+
+        for message_id in ids:
+            _ = pipe.xrange(stream_key, min=message_id, max=message_id)
+
+        pipeline_results:'anylist' = pipe.execute()
+
+        raw_messages:'anylist' = []
+
+        for result_list in pipeline_results:
+            if result_list:
+                raw_messages.append(result_list[0])
+
+        return raw_messages
 
 # ################################################################################################################################
 

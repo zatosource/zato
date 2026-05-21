@@ -152,18 +152,13 @@
             object_id: subKey,
             page_size: 50,
             filters: {sub_key: subKey, state: config.state},
-            ts_field: 'pub_time_iso',
+            ts_field: 'redis_stream_id',
             table_body: '#messages-body',
             container_top: '#queue-pagination-top',
             container_bottom: '#queue-pagination-bottom',
             render_page: $.fn.zato.pubsub.queue._render_page,
             render_new: $.fn.zato.pubsub.queue._render_new,
             initial_data: config.initial_data,
-            filter_tabs: {
-                selector: '.dashboard-tab[data-state]',
-                filter_key: 'state',
-                url_key: 'state'
-            },
             on_page_change: function() {
             },
             on_new_rows: function(rows, total) {
@@ -173,7 +168,7 @@
             }
         });
 
-        // .. and initialize auto-refresh.
+        // .. initialize auto-refresh ..
         $.fn.zato.pubsub.queue._auto_refresh = kit.auto_refresh.init({
             pill: '#queue-refresh-pill',
             menu: '#queue-refresh-menu',
@@ -183,6 +178,38 @@
             on_tick: function() {
                 $.fn.zato.pubsub.queue._pagination.poll_new();
             }
+        });
+
+        // .. and wire the state pill dropdown.
+        var stateLabels = {pending: 'Pending', all: 'All', delivered: 'Delivered'};
+        var $statePill = $('#queue-state-pill');
+        var $stateMenu = $('#queue-state-menu');
+
+        $statePill.on('click', function(e) {
+            e.stopPropagation();
+            $stateMenu.toggleClass('dashboard-time-range-menu-open');
+        });
+
+        $stateMenu.on('click', '.dashboard-time-range-option', function(e) {
+            e.stopPropagation();
+            var newState = $(this).data('state');
+
+            $stateMenu.find('.dashboard-time-range-option').removeClass('dashboard-time-range-active');
+            $(this).addClass('dashboard-time-range-active');
+            $stateMenu.removeClass('dashboard-time-range-menu-open');
+
+            $statePill.text(stateLabels[newState]);
+
+            $.fn.zato.pubsub.queue._pagination.set_filters({state: newState});
+            $.fn.zato.pubsub.queue._pagination.fetch_page(1);
+
+            var urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('state', newState);
+            history.replaceState(null, '', '?' + urlParams.toString());
+        });
+
+        $(document).on('click.queue_state', function() {
+            $stateMenu.removeClass('dashboard-time-range-menu-open');
         });
     };
 

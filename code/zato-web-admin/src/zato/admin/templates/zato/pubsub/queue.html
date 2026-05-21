@@ -27,6 +27,14 @@
             <span class="dashboard-pill dashboard-pill-clickable dashboard-refresh-badge" id="queue-refresh-pill">Paused</span>
             <div class="dashboard-time-range-menu" id="queue-refresh-menu"></div>
         </span>
+        <span class="dashboard-time-range-wrapper">
+            <span class="dashboard-pill dashboard-pill-clickable" id="queue-state-pill">{{ state|title }}</span>
+            <div class="dashboard-time-range-menu" id="queue-state-menu">
+                <div class="dashboard-time-range-option{% if state == 'pending' %} dashboard-time-range-active{% endif %}" data-state="pending">Pending</div>
+                <div class="dashboard-time-range-option{% if state == 'all' %} dashboard-time-range-active{% endif %}" data-state="all">All</div>
+                <div class="dashboard-time-range-option{% if state == 'delivered' %} dashboard-time-range-active{% endif %}" data-state="delivered">Delivered</div>
+            </div>
+        </span>
     </div>
 </div>
 {% endblock %}
@@ -35,11 +43,7 @@
 {% block stat_cards %}{% endblock %}
 {% block actions %}{% endblock %}
 
-{% block tabs %}
-    <button type="button" class="dashboard-tab{% if state == 'pending' %} dashboard-tab-active{% endif %}" data-state="pending" role="tab" aria-selected="{% if state == 'pending' %}true{% else %}false{% endif %}">Pending</button>
-    <button type="button" class="dashboard-tab{% if state == 'all' %} dashboard-tab-active{% endif %}" data-state="all" role="tab" aria-selected="{% if state == 'all' %}true{% else %}false{% endif %}">All</button>
-    <button type="button" class="dashboard-tab{% if state == 'delivered' %} dashboard-tab-active{% endif %}" data-state="delivered" role="tab" aria-selected="{% if state == 'delivered' %}true{% else %}false{% endif %}">Delivered</button>
-{% endblock %}
+{% block tabs %}{% endblock %}
 
 {% block tab_panels %}
 
