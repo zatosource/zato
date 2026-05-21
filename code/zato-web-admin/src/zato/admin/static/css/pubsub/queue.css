@@ -13,3 +13,21 @@
 #queue-pagination-bottom {
     min-height: 31px;
 }
+
+.detail-table .queue-msg-id,
+.detail-table .queue-msg-id a {
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+}
+
+#messages-body {
+    counter-reset: row-num;
+}
+
+#messages-body tr td.queue-row-num {
+    counter-increment: row-num;
+}
+
+#messages-body tr td.queue-row-num::before {
+    content: counter(row-num);
+}

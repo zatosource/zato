@@ -12,6 +12,7 @@
     $.fn.zato.pubsub.queue._pagination = null;
     $.fn.zato.pubsub.queue._auto_refresh = null;
     $.fn.zato.pubsub.queue._new_row_count = 0;
+    $.fn.zato.pubsub.queue._time_ticker = null;
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -32,11 +33,12 @@
         var topicLink = '/zato/pubsub/topic/?cluster=1&query=' + encodeURIComponent(topicName);
 
         var row = '<tr>';
-        row += '<td style="font-family:monospace; font-size:12px"><a href="' + messageLink + '">' + message.msg_id + '</a></td>';
+        row += '<td class="queue-row-num"></td>';
+        row += '<td class="queue-msg-id"><a href="' + messageLink + '">' + message.msg_id + '</a></td>';
         row += '<td><a href="' + topicLink + '">' + topicName + '</a></td>';
         row += '<td class="data-preview">' + $('<span>').text(message.data_preview).html() + '</td>';
         row += '<td>' + message.data_size + ' B</td>';
-        row += '<td title="' + localTime + '">' + relativeTime + '</td>';
+        row += '<td class="queue-time" data-ts="' + message.pub_time_iso + '" title="' + localTime + '">' + relativeTime + '</td>';
         row += '</tr>';
 
         return row;
@@ -56,7 +58,7 @@
         }
 
         if (rows.length === 0) {
-            $body.append('<tr><td colspan="5">No messages</td></tr>');
+            $body.append('<tr><td colspan="6">No messages</td></tr>');
             return;
         }
 
@@ -100,6 +102,16 @@
             } else {
                 $row.css('background', '');
             }
+        });
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.pubsub.queue._tick_times = function() {
+        var kit = $.fn.zato.dashboard_kit;
+        $('#messages-body .queue-time').each(function() {
+            var $cell = $(this);
+            $cell.text(kit.relative_time_past($cell.data('ts')));
         });
     };
 
@@ -177,6 +189,7 @@
             default_seconds: 5,
             on_tick: function() {
                 $.fn.zato.pubsub.queue._pagination.poll_new();
+                $.fn.zato.pubsub.queue._tick_times();
             }
         });
 
@@ -211,6 +224,9 @@
         $(document).on('click.queue_state', function() {
             $stateMenu.removeClass('dashboard-time-range-menu-open');
         });
+
+        $.fn.zato.pubsub.queue._time_ticker = setInterval(
+            $.fn.zato.pubsub.queue._tick_times, 1000);
     };
 
 // ////////////////////////////////////////////////////////////////////////
