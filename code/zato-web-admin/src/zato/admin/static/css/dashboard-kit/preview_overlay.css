@@ -99,16 +99,19 @@
 .kit-overlay-editor {
     position: relative;
     flex: 1;
-    min-height: 0;
+    min-height: 200px;
 }
 
 .kit-overlay-textarea {
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 1;
     display: block;
     width: 100%;
     height: 100%;
-    min-height: 200px;
     margin: 0;
     padding: 6px 10px;
     border: 1px solid #3e3d32;
@@ -141,6 +144,7 @@
     left: 0;
     right: 0;
     bottom: 0;
+    margin: 0;
     padding: 6px 10px;
     border: 1px solid #3e3d32;
     border-radius: 4px;
@@ -149,9 +153,8 @@
     line-height: 1.5;
     box-sizing: border-box;
     pointer-events: none;
-    overflow: hidden;
-    white-space: pre-wrap;
-    word-wrap: break-word;
+    overflow: auto;
+    white-space: pre;
     color: #f8f8f2;
     background: #272822;
 }
