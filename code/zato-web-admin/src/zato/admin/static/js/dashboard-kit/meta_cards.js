@@ -57,6 +57,13 @@
             out += '</div>';
         }
 
+        // .. render the Copy all button if copyable ..
+        if (copyable) {
+            out += '<div class="meta-cards-footer">';
+            out += '<button class="record-edit-action-button meta-cards-copy-all-button" type="button">Copy all</button>';
+            out += '</div>';
+        }
+
         // .. inject into the container ..
         $container.html(out);
 
@@ -64,18 +71,14 @@
         if (copyable) {
             var followCursor = config.copy_tooltip_follows_cursor;
 
+            // .. single card copies just the value ..
             $container.on('click', '.meta-card-copyable', function(event) {
-                var cardKey = $(this).attr('data-copy-key');
                 var cardValue = $(this).attr('data-copy-value');
-                var jsonObject = {};
-                jsonObject[cardKey] = cardValue;
-                var jsonString = JSON.stringify(jsonObject);
 
                 if (followCursor) {
-                    var card = this;
                     var clickX = event.clientX;
                     var clickY = event.clientY;
-                    navigator.clipboard.writeText(jsonString).then(function() {
+                    navigator.clipboard.writeText(cardValue).then(function() {
                         var anchor = document.createElement('span');
                         anchor.style.position = 'fixed';
                         anchor.style.left = clickX + 'px';
@@ -89,8 +92,20 @@
                     });
                 }
                 else {
-                    kit.copy_to_clipboard(this, jsonString);
+                    kit.copy_to_clipboard(this, cardValue);
                 }
+            });
+
+            // .. Copy all builds a complete JSON object from all cards.
+            $container.on('click', '.meta-cards-copy-all-button', function() {
+                var allData = {};
+                $container.find('.meta-card-copyable').each(function() {
+                    var cardKey = $(this).attr('data-copy-key');
+                    var cardValue = $(this).attr('data-copy-value');
+                    allData[cardKey] = cardValue;
+                });
+                var jsonString = JSON.stringify(allData, null, 4);
+                kit.copy_to_clipboard(this, jsonString);
             });
         }
     };

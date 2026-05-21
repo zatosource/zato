@@ -550,6 +550,12 @@ a {
     box-shadow: 4px 4px 0px var(--shadow-dark);
 }
 
+.meta-cards-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 6px 0;
+}
+
 .detail-copy-target {
     cursor: pointer;
     border-bottom: 1px dashed var(--text-muted);
