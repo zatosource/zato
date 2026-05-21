@@ -2,7 +2,7 @@
 @import url("../dashboard-kit/time_range.css");
 @import url("../dashboard-kit/main_chart.css");
 @import url("../dashboard-kit/outcome.css");
-@import url("../dashboard-kit/preview_overlay.css");
+@import url("../zato_highlight_pane.css");
 @import url("../syntax_light.css");
 
 .data-preview {

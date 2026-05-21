@@ -342,5 +342,117 @@
     };
 
 // ////////////////////////////////////////////////////////////////////////
+// Overlay mode - mounts the highlight pane inside a draggable modal shell.
+// ////////////////////////////////////////////////////////////////////////
+
+    var _$overlay = null;
+    var _currentPane = null;
+
+    function _build_overlay_dom() {
+        var html = '' +
+            '<div class="zato-highlight-pane-overlay hidden" id="zato-highlight-pane-overlay">' +
+                '<div class="zato-highlight-pane-overlay-backdrop"></div>' +
+                '<div class="zato-highlight-pane-overlay-content">' +
+                    '<div class="zato-highlight-pane-overlay-header">' +
+                        '<h2 class="zato-highlight-pane-overlay-title"></h2>' +
+                        '<button class="zato-highlight-pane-overlay-close-btn" type="button">\u00d7</button>' +
+                    '</div>' +
+                    '<div class="zato-highlight-pane-overlay-body"></div>' +
+                '</div>' +
+            '</div>';
+
+        _$overlay = $(html);
+        $('body').append(_$overlay);
+
+        _$overlay.find('.zato-highlight-pane-overlay-backdrop').on('click', function() {
+            $.fn.zato.highlight_pane.close_overlay();
+        });
+
+        _$overlay.find('.zato-highlight-pane-overlay-close-btn').on('click', function() {
+            $.fn.zato.highlight_pane.close_overlay();
+        });
+
+        $(document).on('keydown.zato_highlight_overlay', function(e) {
+            if (e.key === 'Escape') {
+                $.fn.zato.highlight_pane.close_overlay();
+            }
+        });
+
+        _make_overlay_draggable(_$overlay);
+    }
+
+    function _make_overlay_draggable($overlay) {
+        var is_dragging = false;
+        var offset_x = 0;
+        var offset_y = 0;
+        var $content = $overlay.find('.zato-highlight-pane-overlay-content');
+        var $header = $overlay.find('.zato-highlight-pane-overlay-header');
+
+        $header.on('mousedown.zato_highlight_overlay', function(e) {
+            if ($(e.target).is('button, input, a')) return;
+            is_dragging = true;
+            var rect = $content[0].getBoundingClientRect();
+            offset_x = e.clientX - rect.left;
+            offset_y = e.clientY - rect.top;
+            $content.css({position: 'fixed', margin: '0', left: rect.left + 'px', top: rect.top + 'px', transform: 'none'});
+            e.preventDefault();
+        });
+
+        $(document).on('mousemove.zato_highlight_overlay', function(e) {
+            if (!is_dragging) return;
+            $content.css({left: (e.clientX - offset_x) + 'px', top: (e.clientY - offset_y) + 'px'});
+        });
+
+        $(document).on('mouseup.zato_highlight_overlay', function() {
+            is_dragging = false;
+        });
+    }
+
+    $.fn.zato.highlight_pane.open_overlay = function(config) {
+        if (!_$overlay) {
+            _build_overlay_dom();
+        }
+
+        // Tear down any previous pane instance ..
+        if (_currentPane) {
+            _currentPane.destroy();
+            _currentPane = null;
+        }
+
+        // .. set the title ..
+        _$overlay.find('.zato-highlight-pane-overlay-title').text(config.title);
+
+        // .. reset position ..
+        var $content = _$overlay.find('.zato-highlight-pane-overlay-content');
+        $content.css({position: '', margin: '', left: '', top: '', transform: ''});
+
+        // .. clear the body and mount the highlight pane ..
+        var $body = _$overlay.find('.zato-highlight-pane-overlay-body');
+        $body.empty();
+
+        _currentPane = $.fn.zato.highlight_pane.init({
+            container: $body,
+            text: config.text,
+            editable: config.editable,
+            buttons: config.buttons,
+            ace_options: config.ace_options,
+            on_mode_detected: config.on_mode_detected
+        });
+
+        // .. and show the overlay.
+        _$overlay.removeClass('hidden');
+    };
+
+    $.fn.zato.highlight_pane.close_overlay = function() {
+        if (_$overlay) {
+            _$overlay.addClass('hidden');
+        }
+        if (_currentPane) {
+            _currentPane.destroy();
+            _currentPane = null;
+        }
+    };
+
+// ////////////////////////////////////////////////////////////////////////
 
 })(jQuery);
