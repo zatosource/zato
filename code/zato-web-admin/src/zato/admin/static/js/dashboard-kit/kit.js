@@ -676,29 +676,20 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     // Clipboard copy with tippy tooltip
     // ////////////////////////////////////////////////////////////////////////
 
-    kit.copy_to_clipboard = function(elem, text) {
-        navigator.clipboard.writeText(text).then(function() {
-            kit.flash_tooltip(elem, 'Copied to clipboard');
-        });
+    kit.copy_to_clipboard = function(element, text) {
+        $.fn.zato.ui_helpers.copy_to_clipboard(element, text);
     };
 
-    kit.flash_tooltip = function(elem, message) {
-        var tip = tippy(elem, {
-            content: message,
-            trigger: 'manual',
-            placement: 'top',
-            duration: [100, 100]
-        });
-        tip.show();
-        setTimeout(function() { tip.hide(); tip.destroy(); }, 600);
+    kit.flash_tooltip = function(element, message) {
+        $.fn.zato.ui_helpers.flash_tooltip(element, message);
     };
 
     // ////////////////////////////////////////////////////////////////////////
     // Syntax highlighting (pure JS, no deps)
     // ////////////////////////////////////////////////////////////////////////
 
-    kit._esc_html = function(s) {
-        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    kit._esc_html = function(text) {
+        return $.fn.zato.ui_helpers.esc_html(text);
     };
 
     kit._json_token_classes_monokai = {
