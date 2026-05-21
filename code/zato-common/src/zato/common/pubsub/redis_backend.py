@@ -1103,7 +1103,7 @@ class RedisPubSubBackend:
                 'recv_time_iso': message_data['recv_time_iso'],
                 'expiration_time_iso': message_data['expiration_time_iso'],
                 'data_size': int(message_data['data_size']),
-                'data_preview': message_data['data_preview'],
+                'preview': message_data['data_preview'],
             }
 
             # .. include optional metadata fields ..
