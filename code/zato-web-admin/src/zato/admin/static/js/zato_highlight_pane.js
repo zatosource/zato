@@ -5,35 +5,72 @@
 
     $.namespace('zato.highlight_pane');
 
-    var helpers = $.fn.zato.ui_helpers;
+    var uiHelpers = $.fn.zato.ui_helpers;
+
+    var _labels = {
+        copy: 'Copy',
+        save: 'Save',
+        saved: 'OK, saved',
+        saveFailed: 'Save failed'
+    };
 
 // ////////////////////////////////////////////////////////////////////////
 
     function _guess_ace_mode(text) {
         var trimmed = text.trim();
-
-        // Check if the text looks like JSON ..
         var firstChar = trimmed.charAt(0);
         var lastChar = trimmed.charAt(trimmed.length - 1);
 
-        if ((firstChar === '{' && lastChar === '}') ||
-            (firstChar === '[' && lastChar === ']')) {
-            try {
-                JSON.parse(trimmed);
-                return 'ace/mode/json';
+        var out = 'ace/mode/text';
+
+        // Check if the text looks like JSON ..
+        if (firstChar === '{') {
+            if (lastChar === '}') {
+                try {
+                    JSON.parse(trimmed);
+                    out = 'ace/mode/json';
+                    return out;
+                }
+                catch (error) {
+                    // .. not valid JSON, fall through.
+                }
             }
-            catch (error) {
-                // .. not valid JSON, fall through.
+        }
+
+        if (firstChar === '[') {
+            if (lastChar === ']') {
+                try {
+                    JSON.parse(trimmed);
+                    out = 'ace/mode/json';
+                    return out;
+                }
+                catch (error) {
+                    // .. not valid JSON, fall through.
+                }
             }
         }
 
         // .. check if the text looks like XML ..
-        if (firstChar === '<' && trimmed.indexOf('>') !== -1) {
-            return 'ace/mode/xml';
+        if (firstChar === '<') {
+            var hasClosingBracket = trimmed.indexOf('>') !== -1;
+
+            if (hasClosingBracket) {
+                out = 'ace/mode/xml';
+                return out;
+            }
         }
 
         // .. otherwise, use plain text.
-        return 'ace/mode/text';
+        return out;
+    }
+
+// ////////////////////////////////////////////////////////////////////////
+
+    function _bindButtonClick(buttonElement, clickHandler, pane) {
+        function handleClick() {
+            clickHandler(buttonElement, pane);
+        }
+        buttonElement.addEventListener('click', handleClick);
     }
 
 // ////////////////////////////////////////////////////////////////////////
@@ -41,9 +78,15 @@
     $.fn.zato.highlight_pane.init = function(config) {
 
         var $container = $(config.container);
-        var editable = config.editable !== false;
 
-        // Build the editor element ..
+        // Determine if the editor should be editable ..
+        var editable = true;
+
+        if (config.editable === false) {
+            editable = false;
+        }
+
+        // .. build the editor element ..
         var editorElement = document.createElement('div');
         editorElement.className = 'zato-highlight-pane-editor';
         $container.append(editorElement);
@@ -90,11 +133,11 @@
 
             setValue: function(text) {
                 editor.setValue(text, -1);
-                var newMode = _guess_ace_mode(text);
-                editor.session.setMode(newMode);
+                var detectedMode = _guess_ace_mode(text);
+                editor.session.setMode(detectedMode);
 
                 if (config.on_mode_detected) {
-                    config.on_mode_detected(newMode);
+                    config.on_mode_detected(detectedMode);
                 }
             },
 
@@ -126,11 +169,7 @@
                         buttonElement.id = buttonConfig.id;
                     }
 
-                    (function(clickHandler) {
-                        buttonElement.addEventListener('click', function() {
-                            clickHandler(this, pane);
-                        });
-                    })(buttonConfig.on_click);
+                    _bindButtonClick(buttonElement, buttonConfig.on_click, pane);
 
                     footer.appendChild(buttonElement);
                 }
@@ -152,11 +191,16 @@
     $.fn.zato.highlight_pane.buttons.copy = function() {
         return {
             id: 'zato-highlight-pane-copy',
-            label: 'Copy',
+            label: _labels.copy,
             on_click: function(buttonElement, pane) {
                 var selected = pane.getEditor().getSelectedText();
-                var text = selected ? selected : pane.getValue();
-                helpers.copy_to_clipboard(buttonElement, text);
+                var text = selected;
+
+                if (!selected) {
+                    text = pane.getValue();
+                }
+
+                uiHelpers.copy_to_clipboard(buttonElement, text);
             }
         };
     };
@@ -166,13 +210,15 @@
     $.fn.zato.highlight_pane.buttons.save = function(config) {
         return {
             id: 'zato-highlight-pane-save',
-            label: 'Save',
+            label: _labels.save,
             on_click: function(buttonElement, pane) {
 
                 // Collect the payload from the editor and hidden fields ..
+                var editorValue = pane.getValue();
+
                 var payload = {
                     action: config.save_action,
-                    data: pane.getValue()
+                    data: editorValue
                 };
 
                 if (config.hidden_fields) {
@@ -189,14 +235,14 @@
                     data: JSON.stringify(payload),
                     contentType: 'application/json',
                     success: function(response) {
-                        helpers.flash_tooltip(buttonElement, 'OK, saved');
+                        uiHelpers.flash_tooltip(buttonElement, _labels.saved);
 
                         if (config.on_success) {
                             config.on_success(response, pane);
                         }
                     },
                     error: function(xhr) {
-                        var errorMessage = 'Save failed';
+                        var errorMessage = _labels.saveFailed;
 
                         if (xhr.responseJSON) {
                             if (xhr.responseJSON.error) {
@@ -204,7 +250,7 @@
                             }
                         }
 
-                        helpers.flash_tooltip(buttonElement, errorMessage);
+                        uiHelpers.flash_tooltip(buttonElement, errorMessage);
 
                         if (config.on_error) {
                             config.on_error(errorMessage, pane);

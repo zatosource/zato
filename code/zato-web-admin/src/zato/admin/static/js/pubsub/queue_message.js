@@ -82,7 +82,8 @@
             $('#dashboard-tab-panel-' + tabName).removeAttr('hidden');
 
             // .. and persist the tab selection in the URL.
-            var url = new URL(window.location.href);
+            var currentHref = window.location.href;
+            var url = new URL(currentHref);
             url.searchParams.set('tab', tabName);
             var urlString = url.toString();
             window.history.replaceState(null, '', urlString);
