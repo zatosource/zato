@@ -39,8 +39,11 @@
 
         var row = '<tr>';
         row += '<td class="queue-row-num"></td>';
+        var deliveredLabel = message.is_delivered ? 'Yes' : 'No';
+
         row += '<td class="queue-msg-id"><span class="dashboard-outcome-badge dashboard-outcome-' + badgeKey + '"><a href="' + messageLink + '">' + message.msg_id + '</a></span></td>';
         row += '<td><a href="' + topicLink + '">' + topicName + '</a></td>';
+        row += '<td>' + deliveredLabel + '</td>';
         row += '<td class="data-preview">' + $('<span>').text(message.data_preview).html() + '</td>';
         row += '<td>' + message.data_size + ' B</td>';
         row += '<td class="queue-time" data-ts="' + message.pub_time_iso + '" title="' + localTime + '">' + relativeTime + '</td>';
@@ -63,7 +66,7 @@
         }
 
         if (rows.length === 0) {
-            $body.append('<tr><td colspan="6">No messages</td></tr>');
+            $body.append('<tr><td colspan="7">No messages</td></tr>');
             return;
         }
 
