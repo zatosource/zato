@@ -1,5 +1,7 @@
 /* Dashboard kit - reusable data preview overlay.
-   Dark modal with syntax-highlighted content, Copy and Save buttons. */
+   Dark modal with editable syntax-highlighted content, Copy and Save buttons. */
+
+@import url("../detail-kit/record_edit.css");
 
 .kit-overlay {
     position: fixed;
@@ -88,70 +90,84 @@
 
 .kit-overlay-body {
     padding: 16px 24px;
-    overflow-y: auto;
     flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
 }
 
-.kit-overlay-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-family: Menlo, Consolas, Monaco, monospace;
-    color: #666;
-    margin-bottom: 10px;
-}
-
-.kit-overlay-action-link {
-    color: #7ab3ef !important;
-    cursor: pointer;
-    text-decoration: none !important;
-    background-image: none;
-    padding-bottom: 0;
-    font-family: Menlo, Consolas, Monaco, monospace;
-}
-
-.kit-overlay-response-wrap {
-    flex: 1;
-    min-height: 100px;
-    display: flex;
-    overflow: auto;
-    background: #1a1a1a;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-    box-sizing: border-box;
-}
-
-.kit-overlay-gutter {
-    padding: 12px 0;
-    min-width: 40px;
-    text-align: right;
-    color: #555;
-    font-family: Menlo, Consolas, Monaco, monospace;
-    font-size: 13px;
-    line-height: 1.4;
-    background: #161616;
-    border-right: 1px solid rgba(255, 255, 255, 0.06);
-    user-select: none;
-    flex-shrink: 0;
-    white-space: pre;
-}
-
-.kit-overlay-pre {
+.kit-overlay-editor {
+    position: relative;
     flex: 1;
     min-height: 0;
-    color: #e0e0e0;
-    font-family: Menlo, Consolas, Monaco, monospace;
-    font-size: 14px;
-    line-height: 1.4;
-    padding: 12px 16px;
+}
+
+.kit-overlay-textarea {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
     margin: 0;
+    padding: 6px 10px;
+    border: 1px solid #3e3d32;
+    border-radius: 4px;
+    font-family: Menlo, Consolas, Monaco, monospace;
+    font-size: 12px;
+    line-height: 1.5;
     box-sizing: border-box;
+    background: transparent;
+    color: transparent;
+    caret-color: #f8f8f2;
+    resize: none;
+    overflow: auto;
     white-space: pre;
-    tab-size: 2;
-    overflow: visible;
+}
+
+.kit-overlay-textarea:focus {
     outline: none;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.kit-overlay-textarea::selection {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.kit-overlay-highlight {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 6px 10px;
+    border: 1px solid #3e3d32;
+    border-radius: 4px;
+    font-family: Menlo, Consolas, Monaco, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    box-sizing: border-box;
+    pointer-events: none;
+    overflow: hidden;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: #f8f8f2;
+    background: #272822;
+}
+
+.kit-overlay-textarea[readonly] {
+    cursor: default;
+}
+
+.kit-overlay-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 10px 0 0;
+}
+
+.kit-overlay-footer .record-edit-action-button {
+    border-bottom-width: 1px;
 }

@@ -44,7 +44,7 @@
         row += '<td class="queue-msg-id"><span class="dashboard-outcome-badge dashboard-outcome-' + badgeKey + '"><a href="' + messageLink + '">' + message.msg_id + '</a></span></td>';
         row += '<td><a href="' + topicLink + '">' + topicName + '</a></td>';
         row += '<td>' + deliveredLabel + '</td>';
-        row += '<td class="data-preview"><a href="javascript:void(0)" class="queue-preview-link"' +
+        row += '<td class="data-preview"><a href="#" class="queue-preview-link"' +
             ' data-msg-id="' + message.msg_id + '"' +
             ' data-topic-name="' + topicName + '"' +
             ' data-redis-stream-id="' + message.redis_stream_id + '"' +
@@ -245,6 +245,8 @@
             var streamId = $link.data('redis-stream-id');
             var isDelivered = $link.data('is-delivered') === '1';
 
+            var previewText = $link.text();
+
             $.ajax({
                 type: 'POST',
                 url: config.poll_url,
@@ -258,12 +260,26 @@
                 headers: {'X-CSRFToken': $.cookie('csrftoken')},
                 dataType: 'json',
                 success: function(resp) {
-                    kit.preview_overlay.open({
-                        title: isDelivered ? 'Data preview' : 'Data',
-                        text: resp.data,
-                        show_save: !isDelivered,
-                        save_filename: msgId + '.json'
-                    });
+                    if (resp.has_data) {
+                        kit.preview_overlay.open({
+                            title: 'Data',
+                            text: resp.data,
+                            editable: true,
+                            show_save: true,
+                            poll_url: config.poll_url,
+                            save_action: 'update-message',
+                            msg_id: msgId,
+                            topic_name: topicName,
+                            redis_stream_id: streamId
+                        });
+                    }
+                    else {
+                        kit.preview_overlay.open({
+                            title: 'Data preview',
+                            text: previewText,
+                            show_save: false
+                        });
+                    }
                 }
             });
         });

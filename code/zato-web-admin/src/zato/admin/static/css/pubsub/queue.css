@@ -17,9 +17,12 @@
     font-size: 12px;
 }
 
-.queue-preview-link {
-    text-decoration: none !important;
+a.queue-preview-link,
+a.queue-preview-link:hover,
+a.queue-preview-link:visited {
     cursor: pointer;
+    text-decoration: none !important;
+    color: inherit;
 }
 
 #queue-pagination-top,
