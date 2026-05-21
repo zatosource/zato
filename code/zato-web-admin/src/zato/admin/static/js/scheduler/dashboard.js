@@ -52,7 +52,7 @@ $.fn.zato.scheduler.dashboard.outcome_colors = {
     'skipped_already_in_flight': '#7b5ea7'
 };
 
-$.fn.zato.scheduler.dashboard.outcome_bg_colors = {
+$.fn.zato.scheduler.dashboard.outcome_backgrounds = {
     'ok': 'rgba(42, 127, 191, 0.12)',
     'running': 'rgba(136, 136, 136, 0.12)',
     'error': 'rgba(224, 34, 110, 0.12)',
@@ -95,7 +95,7 @@ $.fn.zato.scheduler.dashboard.outcome_tooltips = {
 
 $.fn.zato.scheduler.dashboard.outcome_palette = {
     colors: $.fn.zato.scheduler.dashboard.outcome_colors,
-    bg_colors: $.fn.zato.scheduler.dashboard.outcome_bg_colors,
+    backgrounds: $.fn.zato.scheduler.dashboard.outcome_backgrounds,
     bar_colors: $.fn.zato.scheduler.dashboard.outcome_bar_colors,
     labels: $.fn.zato.scheduler.dashboard.outcome_labels,
     short_labels: $.fn.zato.scheduler.dashboard.outcome_short_labels,
@@ -601,7 +601,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             palette: bar_colors,
             labels: labels,
             text_colors: dash.outcome_colors,
-            bg_colors: dash.outcome_bg_colors,
+            backgrounds: dash.outcome_backgrounds,
             hidden: hidden_outcomes,
             on_toggle: function(_key, h) {
                 dash._set_hidden_outcomes(h);
@@ -863,7 +863,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         kit.stabilize_badge_column({
             palette: {
                 colors: dash.outcome_colors,
-                bg_colors: dash.outcome_bg_colors,
+                backgrounds: dash.outcome_backgrounds,
                 labels: dash.outcome_labels,
                 short_labels: dash.outcome_short_labels
             },
