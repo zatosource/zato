@@ -44,7 +44,12 @@
         row += '<td class="queue-msg-id"><span class="dashboard-outcome-badge dashboard-outcome-' + badgeKey + '"><a href="' + messageLink + '">' + message.msg_id + '</a></span></td>';
         row += '<td><a href="' + topicLink + '">' + topicName + '</a></td>';
         row += '<td>' + deliveredLabel + '</td>';
-        row += '<td class="data-preview"><span class="syntax-light">' + message.data_preview_highlighted + '</span></td>';
+        row += '<td class="data-preview"><a href="javascript:void(0)" class="queue-preview-link"' +
+            ' data-msg-id="' + message.msg_id + '"' +
+            ' data-topic-name="' + topicName + '"' +
+            ' data-redis-stream-id="' + message.redis_stream_id + '"' +
+            ' data-is-delivered="' + (message.is_delivered ? '1' : '0') + '"' +
+            '><span class="syntax-light">' + message.data_preview_highlighted + '</span></a></td>';
         row += '<td>' + message.data_size + ' B</td>';
         row += '<td class="queue-time" data-ts="' + message.pub_time_iso + '" title="' + localTime + '">' + relativeTime + '</td>';
         row += '</tr>';
@@ -229,6 +234,38 @@
             var urlParams = new URLSearchParams(window.location.search);
             urlParams.set('state', newState);
             history.replaceState(null, '', '?' + urlParams.toString());
+        });
+
+        // .. wire data preview clicks to the overlay ..
+        $(document).on('click', '.queue-preview-link', function(e) {
+            e.preventDefault();
+            var $link = $(this);
+            var msgId = $link.data('msg-id');
+            var topicName = $link.data('topic-name');
+            var streamId = $link.data('redis-stream-id');
+            var isDelivered = $link.data('is-delivered') === '1';
+
+            $.ajax({
+                type: 'POST',
+                url: config.poll_url,
+                data: JSON.stringify({
+                    action: 'get-message-detail',
+                    msg_id: msgId,
+                    topic_name: topicName,
+                    redis_stream_id: streamId
+                }),
+                contentType: 'application/json',
+                headers: {'X-CSRFToken': $.cookie('csrftoken')},
+                dataType: 'json',
+                success: function(resp) {
+                    kit.preview_overlay.open({
+                        title: isDelivered ? 'Data preview' : 'Data',
+                        text: resp.data,
+                        show_save: !isDelivered,
+                        save_filename: msgId + '.json'
+                    });
+                }
+            });
         });
 
         $(document).on('click.queue_state', function() {
