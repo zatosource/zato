@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from datetime import datetime
 from logging import getLogger
 from operator import itemgetter
 from traceback import format_exc
@@ -1017,9 +1018,24 @@ class HandleDelivery(Service):
 # ################################################################################################################################
 
 _browse_cursor_start = '-'
-_browse_max_messages = 10000
 _browse_default_page_size = 50
 _browse_default_page_number = 1
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _iso_to_stream_id(iso_ts:'str') -> 'str':
+    """ Converts an ISO timestamp to a Redis stream ID (ms_epoch-0).
+    The resulting ID can be used as a cursor to XRANGE / XPENDING_RANGE
+    to fetch only entries newer than the given timestamp.
+    """
+    normalized = iso_ts.replace('Z', '+00:00')
+    dt = datetime.fromisoformat(normalized)
+    epoch_ms = int(dt.timestamp() * 1000)
+
+    # Increment by 1 ms so we get strictly-after semantics
+    out = f'{epoch_ms + 1}-0'
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1027,10 +1043,11 @@ _browse_default_page_number = 1
 class BrowseQueue(AdminService):
     """ Browses messages in a subscription's queue filtered by delivery state.
     Compatible with the dashboard kit pagination contract (accepts page/page_size, returns rows/total/page).
+    Uses Redis-side pagination - only the requested page is fetched from Redis.
     """
 
     name  = 'zato.pubsub.subscription.browse-queue'
-    input = '-sub_key', '-id', Int('-page'), Int('-page_size'), '-state'
+    input = '-sub_key', '-id', Int('-page'), Int('-page_size'), '-state', '-since_ts'
 
     def handle(self) -> 'None':
 
@@ -1041,36 +1058,62 @@ class BrowseQueue(AdminService):
         page_number = self.request.input.page or _browse_default_page_number
         state       = self.request.input.state or 'pending'
 
+        if since_ts := self.request.input.get('since_ts'):
+            cursor = _iso_to_stream_id(since_ts)
+        else:
+            cursor = _browse_cursor_start
+
         # .. get all topics this subscriber is subscribed to ..
         topic_names = self.server.pubsub_redis.get_subscribed_topics(sub_key)
 
-        # .. browse messages from each topic filtered by state ..
-        all_messages:'anylist' = []
-
+        # .. get the real total from O(1) Redis commands ..
+        total = 0
         for topic_name in topic_names:
-            messages, _ = self.server.pubsub_redis.browse_messages(
-                topic_name, sub_key=sub_key, state=state,
-                cursor=_browse_cursor_start, page_size=_browse_max_messages, needs_data=False)
-            all_messages.extend(messages)
+            total += self.server.pubsub_redis.get_total_count(sub_key, topic_name, state)
 
-        # .. sort by pub_time descending so newest messages appear first ..
-        all_messages.sort(key=itemgetter('pub_time_iso'), reverse=True)
+        if since_ts:
 
-        # .. compute total and slice to the requested page ..
-        total = len(all_messages)
-        page_offset = page_number - 1
-        offset = page_offset * page_size
-        page_end = offset + page_size
-        page_rows = all_messages[offset:page_end]
+            # Incremental poll - fetch only new rows since the given timestamp ..
+            new_rows:'anylist' = []
+
+            for topic_name in topic_names:
+                messages, _ = self.server.pubsub_redis.browse_messages(
+                    topic_name, sub_key=sub_key, state=state,
+                    cursor=cursor, page_size=page_size, needs_data=False)
+                new_rows.extend(messages)
+
+            new_rows.sort(key=itemgetter('pub_time_iso'), reverse=True)
+
+            out = {
+                'rows': new_rows,
+                'total': total,
+                'page': 1,
+                'sub_key': sub_key,
+            }
+
+        else:
+
+            # Full page fetch - newest first via reverse browse ..
+            page_rows:'anylist' = []
+
+            for topic_name in topic_names:
+                messages, _ = self.server.pubsub_redis.browse_messages(
+                    topic_name, sub_key=sub_key, state=state,
+                    cursor=cursor, page_size=page_size, needs_data=False,
+                    reverse=True)
+                page_rows.extend(messages)
+
+            page_rows.sort(key=itemgetter('pub_time_iso'), reverse=True)
+            page_rows = page_rows[:page_size]
+
+            out = {
+                'rows': page_rows,
+                'total': total,
+                'page': page_number,
+                'sub_key': sub_key,
+            }
 
         # .. and return the response in the kit pagination contract.
-        out = {
-            'rows': page_rows,
-            'total': total,
-            'page': page_number,
-            'sub_key': sub_key,
-        }
-
         self.response.payload = out
 
 # ################################################################################################################################
