@@ -58,7 +58,8 @@
 
 {% block detail_js %}
 {{ queue_data|json_script:"queue-data-json" }}
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/preview_overlay.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ace.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_highlight_pane.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/queue.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {

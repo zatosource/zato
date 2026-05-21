@@ -243,7 +243,6 @@
             var msgId = $link.data('msg-id');
             var topicName = $link.data('topic-name');
             var streamId = $link.data('redis-stream-id');
-            var isDelivered = $link.data('is-delivered') === '1';
 
             var previewText = $link.text();
 
@@ -261,23 +260,32 @@
                 dataType: 'json',
                 success: function(resp) {
                     if (resp.has_data) {
-                        kit.preview_overlay.open({
+                        $.fn.zato.highlight_pane.open_overlay({
                             title: 'Data',
                             text: resp.data,
                             editable: true,
-                            show_save: true,
-                            poll_url: config.poll_url,
-                            save_action: 'update-message',
-                            msg_id: msgId,
-                            topic_name: topicName,
-                            redis_stream_id: streamId
+                            buttons: [
+                                $.fn.zato.highlight_pane.buttons.copy(),
+                                $.fn.zato.highlight_pane.buttons.save({
+                                    poll_url: config.poll_url,
+                                    save_action: 'update-message',
+                                    hidden_fields: {
+                                        msg_id: msgId,
+                                        topic_name: topicName,
+                                        redis_stream_id: streamId
+                                    }
+                                })
+                            ]
                         });
                     }
                     else {
-                        kit.preview_overlay.open({
+                        $.fn.zato.highlight_pane.open_overlay({
                             title: 'Data preview',
                             text: previewText,
-                            show_save: false
+                            editable: false,
+                            buttons: [
+                                $.fn.zato.highlight_pane.buttons.copy()
+                            ]
                         });
                     }
                 }
