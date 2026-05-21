@@ -19,6 +19,8 @@
 
     kit.record_edit._config = null;
     kit.record_edit._$container = null;
+    kit.record_edit._ace_editor = null;
+    kit.record_edit._ace_field_name = null;
 
     kit.record_edit._labels = {
         save: 'Save',
@@ -52,33 +54,26 @@
             }
         });
 
-        // .. and bind the highlight overlay if any field uses it.
-        var $highlight_textarea = kit.record_edit._$container.find('.record-edit-highlight-container .record-edit-textarea');
-        if ($highlight_textarea.length) {
-            kit.record_edit._$highlight_textarea = $highlight_textarea;
-            kit.record_edit._$highlight_layer = kit.record_edit._$container.find('.record-edit-highlight-layer');
-            kit.record_edit._$highlight_layer.addClass('syntax-monokai');
+        // .. and initialize the Ace editor if any field uses highlight.
+        var $aceContainer = kit.record_edit._$container.find('.record-edit-ace-editor');
+        if ($aceContainer.length) {
+            var fieldName = $aceContainer.attr('data-field');
+            kit.record_edit._ace_field_name = fieldName;
 
-            $highlight_textarea.on('input', function() {
-                kit.record_edit._sync_highlight();
+            var editor = ace.edit($aceContainer[0]);
+            editor.setTheme('ace/theme/monokai');
+            editor.setShowPrintMargin(false);
+            editor.setFontSize(12);
+            editor.setOptions({
+                fontFamily: 'Menlo, Consolas, Monaco, monospace',
+                firstLineNumber: 1
             });
+            editor.renderer.setScrollMargin(10, 10, 0, 0);
 
-            $highlight_textarea.on('scroll', function() {
-                var layer = kit.record_edit._$highlight_layer[0];
-                layer.scrollTop = this.scrollTop;
-                layer.scrollLeft = this.scrollLeft;
-            });
+            var mode = kit.record_edit._guess_ace_mode(editor.getValue());
+            editor.session.setMode(mode);
 
-            // .. use server-side pre-highlighted HTML if available ..
-            var highlightFieldName = $highlight_textarea.attr('data-field');
-            var preHighlighted = config.data[highlightFieldName + '_highlighted'];
-
-            if (preHighlighted) {
-                kit.record_edit._$highlight_layer[0].innerHTML = preHighlighted;
-            }
-            else {
-                kit.record_edit._sync_highlight();
-            }
+            kit.record_edit._ace_editor = editor;
         }
     };
 
@@ -137,17 +132,18 @@
             }
 
             if (field.type === 'textarea') {
-                var monoClass = field.monospace ? ' record-edit-monospace' : '';
                 if (field.highlight) {
-                    out += '<div class="record-edit-highlight-container">';
-                }
-                out += '<textarea id="record-edit-' + field.name + '" class="record-edit-input record-edit-textarea' + monoClass + '"';
-                out += ' data-field="' + field.name + '">';
-                out += kit._esc_html(String(fieldValue));
-                out += '</textarea>';
-                if (field.highlight) {
-                    out += '<pre class="record-edit-highlight-layer"></pre>';
+                    out += '<div id="record-edit-ace-' + field.name + '" class="record-edit-ace-editor"';
+                    out += ' data-field="' + field.name + '">';
+                    out += kit._esc_html(String(fieldValue));
                     out += '</div>';
+                }
+                else {
+                    var monoClass = field.monospace ? ' record-edit-monospace' : '';
+                    out += '<textarea id="record-edit-' + field.name + '" class="record-edit-input record-edit-textarea' + monoClass + '"';
+                    out += ' data-field="' + field.name + '">';
+                    out += kit._esc_html(String(fieldValue));
+                    out += '</textarea>';
                 }
             }
             else if (field.type === 'number') {
@@ -200,6 +196,7 @@
     kit.record_edit.collect = function() {
 
         var $container = kit.record_edit._$container;
+        var aceFieldName = kit.record_edit._ace_field_name;
 
         // Collect all fields with data-field attribute ..
         var out = {};
@@ -207,8 +204,14 @@
         $container.find('[data-field]').each(function() {
             var $field = $(this);
             var fieldName = $field.attr('data-field');
-            var fieldValue = $field.val();
-            out[fieldName] = fieldValue;
+
+            // .. read from the Ace editor for highlighted fields ..
+            if (fieldName === aceFieldName && kit.record_edit._ace_editor) {
+                out[fieldName] = kit.record_edit._ace_editor.getValue();
+            }
+            else {
+                out[fieldName] = $field.val();
+            }
         });
 
         // .. and return the collected payload.
@@ -265,23 +268,36 @@
     kit.record_edit._get_copy_text = function() {
         var config = kit.record_edit._config;
         var field_name = config.copy_field;
+
+        if (field_name === kit.record_edit._ace_field_name && kit.record_edit._ace_editor) {
+            return kit.record_edit._ace_editor.getValue();
+        }
+
         var $field = kit.record_edit._$container.find('[data-field="' + field_name + '"]');
         return $field.val();
     };
 
 // ////////////////////////////////////////////////////////////////////////
 
-    kit.record_edit._sync_highlight = function() {
-        var text = kit.record_edit._$highlight_textarea.val();
-        var layer = kit.record_edit._$highlight_layer[0];
+    kit.record_edit._guess_ace_mode = function(text) {
+        var trimmed = text.trim();
 
-        // Show plain escaped text immediately so keystrokes are never invisible ..
-        layer.innerHTML = kit._esc_html(text);
+        if ((trimmed.charAt(0) === '{' && trimmed.charAt(trimmed.length - 1) === '}') ||
+            (trimmed.charAt(0) === '[' && trimmed.charAt(trimmed.length - 1) === ']')) {
+            try {
+                JSON.parse(trimmed);
+                return 'ace/mode/json';
+            }
+            catch (e) {
+                // Not valid JSON, fall through
+            }
+        }
 
-        // .. then replace with Pygments-highlighted HTML when it arrives.
-        kit.syntax_highlight_light(text, function(html) {
-            layer.innerHTML = html;
-        });
+        if (trimmed.charAt(0) === '<' && trimmed.indexOf('>') !== -1) {
+            return 'ace/mode/xml';
+        }
+
+        return 'ace/mode/text';
     };
 
 // ////////////////////////////////////////////////////////////////////////

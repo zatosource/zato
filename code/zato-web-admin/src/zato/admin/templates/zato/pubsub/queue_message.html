@@ -17,6 +17,9 @@
 
 {% block detail_js %}
 {{ message_data_json|json_script:"message-data-json" }}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ace.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ext-error_marker.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ext-language_tools.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/meta_cards.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/record_edit.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/queue_message.js"></script>
