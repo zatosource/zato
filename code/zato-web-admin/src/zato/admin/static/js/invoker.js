@@ -883,9 +883,19 @@ $.fn.zato.invoker.open_overlay = function(config) {
     $('#invoker-modal-method').val(saved.method || 'POST');
     $('#invoker-modal-query-params').val(saved.query_params || '');
     $('#invoker-modal-path-params').val(saved.path_params || '');
-    $('#invoker-modal-status').text(saved.status || '');
+    $('#invoker-modal-status').text('');
 
-    // Mount the request pane ..
+    if (saved.more_options_open) {
+        $('#invoker-more-options').removeClass('hidden');
+    }
+    else {
+        $('#invoker-more-options').addClass('hidden');
+    }
+
+    // Show the overlay first so Ace can measure its container ..
+    $('#invoker-modal-overlay').removeClass('hidden');
+
+    // .. then mount the panes.
     var $requestContainer = $('#invoker-modal-request-pane');
     $requestContainer.empty();
 
@@ -897,10 +907,9 @@ $.fn.zato.invoker.open_overlay = function(config) {
         container: $requestContainer,
         text: requestValue,
         editable: true,
-        ace_options: {maxLines: 12, minLines: 12}
+        ace_options: {maxLines: 12, minLines: 12, alwaysShowScrollbars: true, resizable: true}
     });
 
-    // .. mount the response pane ..
     var $responseContainer = $('#invoker-modal-response-pane');
     $responseContainer.empty();
 
@@ -908,26 +917,16 @@ $.fn.zato.invoker.open_overlay = function(config) {
         $.fn.zato.invoker._response_pane.destroy();
     }
 
-    var responseText = saved.response_raw || '';
-
     $.fn.zato.invoker._response_pane = $.fn.zato.highlight_pane.init({
         container: $responseContainer,
-        text: responseText,
+        text: '',
         editable: false,
-        ace_options: {maxLines: 12, minLines: 12},
+        ace_options: {maxLines: 12, minLines: 12, alwaysShowScrollbars: true, resizable: true},
         buttons: [
             $.fn.zato.highlight_pane.buttons.copy()
         ]
     });
 
-    if (saved.more_options_open) {
-        $('#invoker-more-options').removeClass('hidden');
-    }
-    else {
-        $('#invoker-more-options').addClass('hidden');
-    }
-
-    $('#invoker-modal-overlay').removeClass('hidden');
     $.fn.zato.invoker._request_pane.getEditor().focus();
 };
 

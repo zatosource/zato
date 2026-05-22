@@ -203,6 +203,19 @@
             if (config.ace_options.minLines) {
                 editor.setOption('minLines', config.ace_options.minLines);
             }
+
+            if (config.ace_options.alwaysShowScrollbars) {
+                editor.renderer.$vScrollBarAlwaysVisible = true;
+                editor.renderer.$hScrollBarAlwaysVisible = true;
+            }
+
+            if (config.ace_options.resizable) {
+                editorElement.style.resize = 'vertical';
+                editorElement.style.overflow = 'hidden';
+                new ResizeObserver(function() {
+                    editor.resize();
+                }).observe(editorElement);
+            }
         }
 
         // .. set the initial text and detect the mode ..
