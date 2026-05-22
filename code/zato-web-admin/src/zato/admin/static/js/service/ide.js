@@ -2317,7 +2317,7 @@ $.fn.zato.ide.init_history_overlay_drag = function() {
     let initialY;
 
     header.addEventListener("mousedown", function(e) {
-        if (e.target.closest(".invoker-history-close-btn")) {
+        if (e.target.closest(".invoker-history-close-button")) {
             return;
         }
 

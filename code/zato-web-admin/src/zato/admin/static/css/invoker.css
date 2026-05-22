@@ -89,7 +89,7 @@
     letter-spacing: 0.3px;
 }
 
-.invoker-history-close-btn {
+.invoker-history-close-button {
     background: transparent;
     border: none;
     color: #999;
@@ -105,7 +105,7 @@
     transition: all 0.2s ease;
 }
 
-.invoker-history-close-btn:hover {
+.invoker-history-close-button:hover {
     background: rgba(255, 255, 255, 0.1);
     color: #fff;
 }
@@ -433,7 +433,7 @@
     letter-spacing: 0.3px;
 }
 
-.invoker-modal-close-btn {
+.invoker-modal-close-button {
     background: transparent;
     border: none;
     color: #999;
@@ -449,7 +449,7 @@
     transition: all 0.2s ease;
 }
 
-.invoker-modal-close-btn:hover {
+.invoker-modal-close-button:hover {
     background: rgba(255, 255, 255, 0.1);
     color: #fff;
 }
@@ -461,90 +461,6 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
-}
-
-.invoker-modal-request-textarea {
-    width: 100%;
-    min-height: 150px;
-    background: #2a2a2a;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 8px;
-    color: #e0e0e0;
-    font-family: 'Zato_IDE_Font', monospace;
-    font-size: 14px;
-    line-height: 1.4;
-    padding: 12px 16px;
-    box-sizing: border-box;
-}
-
-.invoker-modal-request-textarea:focus {
-    outline: none;
-    border-color: #4a9eff;
-    background: #333;
-    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
-}
-
-.invoker-modal-request-textarea::placeholder {
-    color: #666;
-}
-
-/* Request highlight overlay (transparent textarea over highlighted pre) */
-
-.invoker-request-highlight-container {
-    position: relative;
-    width: 100%;
-    min-height: 150px;
-}
-
-.invoker-request-highlight-container .invoker-modal-request-textarea,
-.invoker-request-highlight-layer {
-    padding: 12px 16px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 8px;
-    font-family: 'Zato_IDE_Font', monospace;
-    font-size: 14px;
-    line-height: 1.4;
-    box-sizing: border-box;
-}
-
-.invoker-request-highlight-container .invoker-modal-request-textarea {
-    position: relative;
-    z-index: 1;
-    background: transparent;
-    color: transparent;
-    caret-color: #e0e0e0;
-    resize: none;
-}
-
-.invoker-request-highlight-container .invoker-modal-request-textarea:focus {
-    background: transparent;
-    border-color: transparent;
-    box-shadow: none;
-}
-
-.invoker-request-highlight-container .invoker-modal-request-textarea::selection {
-    background: rgba(74, 158, 255, 0.3);
-}
-
-.invoker-request-highlight-layer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    margin: 0;
-    background: #2a2a2a;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    overflow: auto;
-    pointer-events: none;
-    color: #e0e0e0;
-}
-
-.invoker-request-highlight-container .invoker-modal-request-textarea:focus ~ .invoker-request-highlight-layer {
-    border-color: #4a9eff;
-    background: #333;
-    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
 }
 
 .invoker-modal-buttons {
@@ -573,12 +489,12 @@
     border-color: rgba(255, 255, 255, 0.25);
 }
 
-.invoker-modal-buttons .invoker-btn-primary {
+.invoker-modal-buttons .invoker-button-primary {
     background: #2a5a8a;
     border-color: #3a7abf;
 }
 
-.invoker-modal-buttons .invoker-btn-primary:hover {
+.invoker-modal-buttons .invoker-button-primary:hover {
     background: #3a6a9a;
 }
 
@@ -590,6 +506,8 @@
     color: #aaa;
     min-height: 20px;
 }
+
+/* Response overlay used by the action runner */
 
 .invoker-modal-response-header {
     margin-top: 12px;
@@ -615,19 +533,6 @@
     position: relative;
     display: inline-block;
     font-family: 'Zato_IDE_Font', monospace;
-}
-
-.invoker-copied-tooltip {
-    background: #333;
-    color: #e0e0e0;
-    font-family: 'Zato_IDE_Font', monospace;
-    font-size: 12px;
-    padding: 4px 10px;
-    border-radius: 4px;
-    white-space: nowrap;
-    pointer-events: none;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-    z-index: 10001;
 }
 
 .invoker-modal-response-wrap {

@@ -173,16 +173,13 @@ $.fn.zato.outgoing.graphql.invoke = function(id) {
 
     var defaultQuery = 'query IntrospectionQuery {\n  __schema {\n    types {\n      name\n      kind\n      description\n    }\n  }\n}';
 
-    var currentValue = $('#invoker-modal-request').val();
-    if (!currentValue) {
-        $('#invoker-modal-request').val(defaultQuery);
+    var pane = $.fn.zato.invoker._request_pane;
+    if (pane) {
+        if (!pane.getValue()) {
+            pane.setValue(defaultQuery);
+        }
+        pane.getEditor().session.setMode('ace/mode/graphqlschema');
     }
-
-    $('#invoker-modal-request').attr('placeholder',
-        'Enter a GraphQL query\n\nCtrl+Enter to invoke, Ctrl+K for history');
-
-    // Set up the transparent-textarea + highlight-layer overlay
-    $.fn.zato.outgoing.graphql._setupRequestHighlight();
 
     $('#invoker-more-options').html(
         '<div class="invoker-more-options-row invoker-more-options-row-compact">'
@@ -199,79 +196,14 @@ $.fn.zato.outgoing.graphql.invoke = function(id) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.outgoing.graphql._debounceTimer = null;
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.outgoing.graphql._setupRequestHighlight = function() {
-
-    var textarea = $('#invoker-modal-request');
-
-    // Wrap the textarea in a container if not already wrapped ..
-    if (!textarea.parent().hasClass('invoker-request-highlight-container')) {
-
-        textarea.wrap('<div class="invoker-request-highlight-container"></div>');
-        textarea.after('<pre class="invoker-request-highlight-layer syntax-monokai" id="invoker-request-highlight-pre"></pre>');
-    }
-
-    // .. run the initial highlight ..
-    $.fn.zato.outgoing.graphql._syncRequestHighlight();
-
-    // .. bind input events: immediate plain-text echo + debounced Pygments call ..
-    textarea.off('input.graphql_highlight');
-
-    textarea.on('input.graphql_highlight', function() {
-        var text = textarea.val();
-        var highlightPre = $('#invoker-request-highlight-pre');
-
-        // Show escaped plain text immediately so keystrokes are always visible
-        if (text) {
-            highlightPre.text(text + '\n');
-        }
-        else {
-            highlightPre.html('\n');
-        }
-
-        clearTimeout($.fn.zato.outgoing.graphql._debounceTimer);
-        $.fn.zato.outgoing.graphql._debounceTimer = setTimeout(
-            $.fn.zato.outgoing.graphql._syncRequestHighlight, 300
-        );
-    });
-
-    // .. and sync scroll between textarea and pre.
-    textarea.off('scroll.graphql_highlight');
-
-    textarea.on('scroll.graphql_highlight', function() {
-        var highlightPre = document.getElementById('invoker-request-highlight-pre');
-        highlightPre.scrollTop = this.scrollTop;
-        highlightPre.scrollLeft = this.scrollLeft;
-    });
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.outgoing.graphql._syncRequestHighlight = function() {
-    var textarea = $('#invoker-modal-request');
-    var text = textarea.val();
-    var highlightPre = $('#invoker-request-highlight-pre');
-
-    if (!text) {
-        highlightPre.html('\n');
-        return;
-    }
-
-    // Show plain text immediately so the content is always visible
-    highlightPre.text(text + '\n');
-
-    // .. then replace with server-side highlighted HTML.
-    $.fn.zato.highlightElement(highlightPre, text, 'graphql');
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 $.fn.zato.outgoing.graphql.collect_form_data = function() {
+    var requestValue = '';
+    if ($.fn.zato.invoker._request_pane) {
+        requestValue = $.fn.zato.invoker._request_pane.getValue();
+    }
+
     return {
-        'data-request': $('#invoker-modal-request').val(),
+        'data-request': requestValue,
         'variables': $('#invoker-modal-variables').val(),
     };
 }

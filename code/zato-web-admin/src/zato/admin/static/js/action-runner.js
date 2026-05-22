@@ -337,7 +337,7 @@ $.fn.zato.action_runner = {
             '<div class="invoker-modal-content" style="width:750px;max-height:80vh;display:flex;flex-direction:column;resize:both;overflow:hidden">' +
                 '<div class="invoker-modal-header" style="flex-shrink:0">' +
                     '<h2>' + escapedTitle + '</h2>' +
-                    '<button class="invoker-modal-close-btn">\u00d7</button>' +
+                    '<button class="invoker-modal-close-button">\u00d7</button>' +
                 '</div>' +
                 '<div class="invoker-modal-body" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden">' +
                     '<div class="invoker-modal-response-header" style="flex-shrink:0">' +
@@ -356,7 +356,7 @@ $.fn.zato.action_runner = {
             $.fn.zato.action_runner.close_details();
         });
 
-        $overlay.find('.invoker-modal-close-btn').on('click', function() {
+        $overlay.find('.invoker-modal-close-button').on('click', function() {
             $.fn.zato.action_runner.close_details();
         });
 
