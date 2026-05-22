@@ -688,9 +688,7 @@ $.fn.zato.invoker.render_overlay_html = function() {
         +       '<div class="invoker-modal-buttons">'
         +         '<button type="button" id="invoker-modal-invoke-button" class="zato-action-button">Invoke</button>'
         +         '<button type="button" id="invoker-modal-history-button" class="zato-action-button">History</button>'
-        +         '<div class="invoker-more-options-toggle">'
-        +           '<a href="javascript:$.fn.zato.invoker.toggle_more_options()">More options</a>'
-        +         '</div>'
+        +         '<button type="button" class="zato-action-button" onclick="$.fn.zato.invoker.toggle_more_options()">More options</button>'
         +       '</div>'
         +       '<div class="invoker-more-options-block hidden" id="invoker-more-options">'
         +         '<div class="invoker-more-options-row">'
@@ -899,7 +897,7 @@ $.fn.zato.invoker.open_overlay = function(config) {
         container: $requestContainer,
         text: requestValue,
         editable: true,
-        ace_options: {maxLines: 12, minLines: 12}
+        ace_options: {maxLines: 10, minLines: 10}
     });
 
     // .. mount the response pane ..
@@ -916,7 +914,7 @@ $.fn.zato.invoker.open_overlay = function(config) {
         container: $responseContainer,
         text: responseText,
         editable: false,
-        ace_options: {maxLines: 12, minLines: 12},
+        ace_options: {maxLines: 10, minLines: 10},
         buttons: [
             $.fn.zato.highlight_pane.buttons.copy()
         ]
