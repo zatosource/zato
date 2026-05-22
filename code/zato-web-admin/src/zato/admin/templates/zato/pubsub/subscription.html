@@ -59,8 +59,14 @@
         .ps-status-cell {
             display: flex;
             gap: 4px;
-            justify-content: center;
+            justify-content: flex-start;
             flex-wrap: nowrap;
+        }
+
+        .enabled-for-inner {
+            display: block;
+            text-align: left;
+            padding-left: 25%;
         }
 
         .ps-sub-key {
@@ -449,7 +455,7 @@
                         <th style="width:1%; white-space:nowrap">Security definition</th>
 
                         <th style="max-width:220px; white-space:nowrap;">Sub key</th>
-                        <th>Enabled for</th>
+                        <th style="text-align:center"><span class="enabled-for-inner">Enabled for</span></th>
 
                         <th style="text-align:center">Delivery type</th>
                         <th>Topics</th>
@@ -484,7 +490,7 @@
                         <td style="white-space:nowrap"><a href="/zato/security/basic-auth/?cluster={{ cluster_id }}&amp;query={{ item.security|urlencode }}">{{ item.security }}</a></td>
 
                         <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><span class="ps-sub-key" data-sub-key="{{ item.sub_key }}">{{ item.sub_key }}</span></td>
-                        <td><div class="ps-status-cell"><span class="ps-badge {{ item.is_delivery_active|yesno:'ps-badge-deliv-enabled,ps-badge-deliv-disabled' }}">Delivery</span><span class="ps-badge {{ item.is_pub_active|yesno:'ps-badge-pub-enabled,ps-badge-pub-disabled' }}">Pub</span></div></td>
+                        <td style="text-align:center"><div class="enabled-for-inner"><div class="ps-status-cell"><span class="ps-badge {{ item.is_delivery_active|yesno:'ps-badge-deliv-enabled,ps-badge-deliv-disabled' }}">Delivery</span><span class="ps-badge {{ item.is_pub_active|yesno:'ps-badge-pub-enabled,ps-badge-pub-disabled' }}">Pub</span></div></div></td>
 
                         <td style="text-align:center">
                             {% if item.delivery_type == 'pull' %}
