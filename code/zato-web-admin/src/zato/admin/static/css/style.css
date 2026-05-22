@@ -598,6 +598,10 @@ a:not(.menu-link):not(.chosen-single):not(.status-badge):is(.top):hover {
     vertical-align: baseline;
 }
 
+a.top.header-link-styled {
+    padding-bottom: 3px;
+}
+
 a.hint {
     color: #333;
     font-size: 10px

@@ -5,6 +5,9 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/zato_highlight_pane.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -16,6 +19,11 @@
 
     {% comment %} Common JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ace.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_ui_helpers.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_highlight_pane.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/invoker.js"></script>
 
     {% comment %} PubSub Topic {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/topic.js"></script>
@@ -36,6 +44,7 @@
             /* '_view', */
             '_edit',
             '_delete',
+            '_publish',
             'id',
 
             'is_active',
@@ -82,6 +91,7 @@
                         <!-- <th>&nbsp;</th> -->
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
 
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -106,6 +116,7 @@
                         <!-- <td><a href="/zato/pubsub/topic/{{ item.name }}/?cluster={{ cluster_id|default:'1' }}">View</a></td> -->
                         <td><a href="javascript:$.fn.zato.pubsub.topic.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topic.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.pubsub.topic.publishMessage('{{ item.id }}')">Publish a message</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
 
                         <td class='ignore'>{{ item.is_active }}</td>

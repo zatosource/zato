@@ -9,15 +9,25 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import logging
+from http.client import INTERNAL_SERVER_ERROR
+from traceback import format_exc
 
 # Django
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 
 # Zato
 from zato.admin.web.forms.pubsub.topic import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
+from zato.admin.web.views.http_soap import _build_invoke_response
+
 # Bunch
 from zato.common.ext.bunch import Bunch
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -120,6 +130,39 @@ def get_matches(req):
             content_type='application/json',
             status=500
         )
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def publish_message(request:'any_', id:'str') -> 'JsonResponse':
+    """ Publishes a message to a pub/sub topic from the dashboard.
+    """
+    try:
+        # Get the topic name and message data from the form ..
+        topic_name = request.POST['topic_name']
+        data = request.POST['data-request']
+
+        # .. and invoke the publish service.
+        service_response = request.zato.client.invoke('zato.pubsub.topic.publish', {
+            'topic_name': topic_name,
+            'data': data,
+        })
+
+        out = _build_invoke_response(service_response)
+        return out
+
+    except Exception:
+        traceback = format_exc()
+        logger.error('publish_message error: %s', traceback)
+
+        out = JsonResponse({
+            'data': traceback,
+            'response_time_human': '',
+            'content_type': 'text/plain',
+        }, status=INTERNAL_SERVER_ERROR)
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

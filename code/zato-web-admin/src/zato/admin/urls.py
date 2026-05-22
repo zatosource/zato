@@ -946,6 +946,8 @@ urlpatterns += [
     url(r'^zato/pubsub/topic/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(topic.Delete()), name=topic.Delete.url_name),
     url(r'^zato/pubsub/topic/get-matches/$', login_required(topic.get_matches), name='pubsub-topic-get-matches'),
+    url(r'^zato/pubsub/topic/publish/(?P<id>.*)/$',
+        login_required(topic.publish_message), name='pubsub-topic-publish'),
 
     # PubSub Permissions
 

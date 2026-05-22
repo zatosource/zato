@@ -829,7 +829,24 @@ $.fn.zato.invoker.open_overlay = function(config) {
     $.fn.zato.invoker._modal_config = config;
     window.zato_invoker_history_index = -1;
 
-    $('#invoker-modal-title').text('Invoke: ' + config.name);
+    var titlePrefix = config.title_prefix;
+    if (titlePrefix === undefined) {
+        titlePrefix = 'Invoke';
+    }
+    $('#invoker-modal-title').text(titlePrefix + ': ' + config.name);
+
+    var actionLabel = config.action_label;
+    if (actionLabel === undefined) {
+        actionLabel = 'Invoke';
+    }
+    $('#invoker-modal-invoke-button').text(actionLabel);
+
+    if (config.show_more_options === false) {
+        $('.invoker-modal-buttons .zato-action-button').last().hide();
+    }
+    else {
+        $('.invoker-modal-buttons .zato-action-button').last().show();
+    }
 
     let saved = $.fn.zato.invoker._load_overlay_state(config.history_key);
     let content = $('.invoker-modal-content');
