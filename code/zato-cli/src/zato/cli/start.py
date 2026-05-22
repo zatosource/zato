@@ -118,14 +118,22 @@ Examples:
 
         pidfile = pidfile or os.path.join(self.config_dir, MISC.PIDFILE)
 
-        # If we have a pidfile of that name then we already have a running
-        # server, in which case we refrain from starting new processes now.
         if os.path.exists(pidfile):
-            msg = 'Error - found pidfile `{}`'.format(pidfile)
-            self.logger.info(msg)
-            return self.SYS_ERROR.COMPONENT_ALREADY_RUNNING
 
-        # Returning None would have sufficed but let's be explicit.
+            # Read the PID and check if the process is still running
+            try:
+                from zato.common.util.open_ import open_r
+                pid = int(open_r(pidfile).read().strip())
+                os.kill(pid, 0)
+            except (OSError, ValueError):
+                # Process is not running, remove the stale pidfile
+                self.logger.info('Removing stale pidfile `%s`', pidfile)
+                os.remove(pidfile)
+            else:
+                msg = 'Error - found pidfile `{}`'.format(pidfile)
+                self.logger.info(msg)
+                return self.SYS_ERROR.COMPONENT_ALREADY_RUNNING
+
         return 0
 
 # ################################################################################################################################

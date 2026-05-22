@@ -6,19 +6,17 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import json
-
 # pygments
 from pygments import highlight as pygments_highlight
 from pygments.formatters import HtmlFormatter
-from pygments.lexers import get_lexer_by_name, guess_lexer, HtmlLexer, JsonLexer, TextLexer, XmlLexer
+from pygments.lexers import get_lexer_by_name, HtmlLexer, JsonLexer, TextLexer, XmlLexer
 
 # Django
 from django.http import JsonResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
+from zato.common.content_type import get_content_type
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,38 +36,30 @@ _Lexer_Whitelist = frozenset({
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _guess_pygments_lexer(text:'str') -> 'any_':
+_mime_to_pygments_lexer = {
+    'application/json':      JsonLexer,
+    'text/json':             JsonLexer,
+    'application/geo+json':  JsonLexer,
+    'application/ld+json':   JsonLexer,
+    'application/vnd.api+json': JsonLexer,
+    'text/xml':              XmlLexer,
+    'application/xml':       XmlLexer,
+    'application/soap+xml':  XmlLexer,
+    'application/rss+xml':   XmlLexer,
+    'application/atom+xml':  XmlLexer,
+    'image/svg+xml':         XmlLexer,
+    'text/html':             HtmlLexer,
+    'application/xhtml+xml': HtmlLexer,
+}
 
-    trimmed = text.strip()
+# ################################################################################################################################
+# ################################################################################################################################
 
-    # Check if the text looks like JSON ..
-    if (trimmed.startswith('{') and trimmed.endswith('}')) or \
-       (trimmed.startswith('[') and trimmed.endswith(']')):
-        try:
-            json.loads(trimmed)
-            return JsonLexer()
-        except (ValueError, TypeError):
-            pass
-
-    # .. check if the text looks like XML or HTML ..
-    if trimmed.startswith('<') and '>' in trimmed:
-        text_lower = trimmed.lower()
-
-        if '<!doctype' in text_lower:
-            return HtmlLexer()
-
-        if '<html' in text_lower:
-            return HtmlLexer()
-
-        return XmlLexer()
-
-    # .. otherwise, let Pygments try to guess.
-    try:
-        out = guess_lexer(text)
-    except ValueError:
-        out = TextLexer()
-
-    return out
+def get_pygments_lexer(content_type:'str') -> 'any_':
+    if lexer_class := _mime_to_pygments_lexer.get(content_type):
+        return lexer_class()
+    else:
+        return TextLexer()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,7 +76,8 @@ def highlight_data_previews(rows:'anylist') -> 'None':
     for row in rows:
         text = row['data_preview']
         if text.strip():
-            lexer = _guess_pygments_lexer(text)
+            content_type = get_content_type(text)
+            lexer = get_pygments_lexer(content_type)
             row['data_preview_highlighted'] = pygments_highlight(text, lexer, _nowrap_formatter)
         else:
             row['data_preview_highlighted'] = text
@@ -118,7 +109,8 @@ def highlight(request:'any_') -> 'JsonResponse':
 
     # .. otherwise, auto-detect.
     else:
-        lexer = _guess_pygments_lexer(text)
+        content_type = get_content_type(text)
+        lexer = get_pygments_lexer(content_type)
 
     formatter = HtmlFormatter(nowrap=True)
     highlighted = pygments_highlight(text, lexer, formatter)

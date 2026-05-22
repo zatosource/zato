@@ -7,16 +7,22 @@ var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 var GraphQLSchemaHighlightRules = function() {
 
     var keywords = (
-      "type|interface|union|enum|schema|input|implements|extends|scalar"
+      "type|interface|union|enum|schema|input|implements|extends|scalar" +
+      "|query|mutation|subscription|fragment|on|directive|repeatable"
     );
 
     var dataTypes = (
       "Int|Float|String|ID|Boolean"
     );
 
+    var constants = (
+      "true|false|null"
+    );
+
     var keywordMapper = this.createKeywordMapper({
         "keyword": keywords,
-        "storage.type": dataTypes
+        "storage.type": dataTypes,
+        "constant.language": constants
     }, "identifier");
 
     this.$rules = {

@@ -23,7 +23,8 @@ from pygments.formatters import HtmlFormatter
 
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.admin.web.views.highlight import _guess_pygments_lexer, highlight_data_previews
+from zato.admin.web.views.highlight import get_pygments_lexer, highlight_data_previews
+from zato.common.content_type import format_content, get_content_type
 from zato.common.defaults import default_cluster_id, default_server_base_dir
 from zato.common.pubsub.disk_store import DiskMessageStore
 
@@ -225,20 +226,18 @@ def message_detail(request:'any_') -> 'TemplateResponse':
             'data_size':           _default_data_size,
         }
 
-    # .. pretty-print JSON data if possible ..
+    # .. detect content type and pretty-print ..
     data = load_result.data
-    try:
-        parsed = json.loads(data)
-        data = json.dumps(parsed, indent=2, ensure_ascii=False)
-    except (ValueError, TypeError):
-        pass
+    content_type = get_content_type(data)
+    data = format_content(data, content_type)
 
     # .. attach the payload to the response ..
     message_data['data'] = data
     message_data['data_class'] = load_result.data_class
+    message_data['content_type'] = content_type
 
     # .. pre-render syntax-highlighted HTML so the page loads without a highlight delay ..
-    lexer = _guess_pygments_lexer(load_result.data)
+    lexer = get_pygments_lexer(content_type)
     formatter = HtmlFormatter(nowrap=True)
     message_data['data_highlighted'] = pygments_highlight(load_result.data, lexer, formatter)
 
