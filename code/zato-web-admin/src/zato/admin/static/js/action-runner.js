@@ -337,7 +337,7 @@ $.fn.zato.action_runner = {
             '<div class="invoker-modal-content" style="width:750px;max-height:80vh;display:flex;flex-direction:column;resize:both;overflow:hidden">' +
                 '<div class="invoker-modal-header" style="flex-shrink:0">' +
                     '<h2>' + escapedTitle + '</h2>' +
-                    '<button class="invoker-modal-close-button">\u00d7</button>' +
+                    '<button class="invoker-modal-close-button"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>' +
                 '</div>' +
                 '<div class="invoker-modal-body" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden">' +
                     '<div class="invoker-modal-response-header" style="flex-shrink:0">' +

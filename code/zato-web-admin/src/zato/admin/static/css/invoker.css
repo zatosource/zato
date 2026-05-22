@@ -92,23 +92,28 @@
 }
 
 .invoker-history-close-button {
-    background: transparent;
-    border: none;
-    color: #999;
-    font-size: 24px;
+    background: rgba(78, 77, 64, 0.25);
+    border: 1px solid rgba(46, 45, 36, 0.4);
+    color: #aaa;
+    font-size: 14px;
     cursor: pointer;
     padding: 0;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
-    transition: all 0.2s ease;
+    border-radius: 3px;
+    transition: all 0.15s ease;
 }
 
 .invoker-history-close-button:hover {
     background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.invoker-history-close-button:active {
+    background: rgba(255, 255, 255, 0.15);
     color: #fff;
 }
 
@@ -435,23 +440,28 @@
 }
 
 .invoker-modal-close-button {
-    background: transparent;
-    border: none;
-    color: #999;
-    font-size: 24px;
+    background: rgba(78, 77, 64, 0.25);
+    border: 1px solid rgba(46, 45, 36, 0.4);
+    color: #aaa;
+    font-size: 14px;
     cursor: pointer;
     padding: 0;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
-    transition: all 0.2s ease;
+    border-radius: 3px;
+    transition: all 0.15s ease;
 }
 
 .invoker-modal-close-button:hover {
     background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.invoker-modal-close-button:active {
+    background: rgba(255, 255, 255, 0.15);
     color: #fff;
 }
 
