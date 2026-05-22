@@ -35,7 +35,6 @@ $.fn.zato.invoker.invoke = function(
     dataType,
     context
 ) {
-    dataType = dataType || 'JSON';
     $.ajax({
         type: 'POST',
         url: url,
@@ -59,7 +58,7 @@ $.fn.zato.invoker.submit_form = function(
     dataFormat,
 ) {
 
-    let timeout = displayTimeout || 120;
+    let timeout = displayTimeout;
     let form = $(formId);
     let formData = form.serialize();
 
@@ -308,12 +307,15 @@ $.fn.zato.invoker.save_to_history = function(key, requestText, responseText) {
     if (!requestText) {
         requestText = '';
     }
+    if (responseText === undefined) {
+        responseText = '';
+    }
 
     let history = $.fn.zato.invoker.get_history(key);
 
     history.unshift({
         text: requestText,
-        response: responseText || '',
+        response: responseText,
         timestamp: Date.now()
     });
 
@@ -339,7 +341,7 @@ $.fn.zato.invoker.delete_history_item = function(key, index) {
 $.fn.zato.invoker.filter_history = function(key, searchText) {
     let history = $.fn.zato.invoker.get_history(key);
 
-    if (!searchText || searchText.trim() === '') {
+    if (searchText.trim() === '') {
         return {history: history, isSearchResult: false};
     }
 
@@ -404,8 +406,8 @@ $.fn.zato.invoker.format_timestamp = function(timestamp) {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.invoker.format_json = function(text) {
-    if (!text || typeof text !== 'string') {
-        return text || '';
+    if (typeof text !== 'string') {
+        return '';
     }
     let trimmed = text.trim();
     let startsWithBrace = trimmed.startsWith('{');
@@ -431,14 +433,14 @@ $.fn.zato.invoker.format_json = function(text) {
 $.fn.zato.invoker.populate_history_list = function(listContainer, history, isSearchResult, callbacks) {
     listContainer.empty();
 
-    if (!history || history.length === 0) {
+    if (history.length === 0) {
         let message = isSearchResult ? 'No results' : 'Nothing in history';
         listContainer.append('<div class="invoker-history-empty">' + message + '</div>');
         return;
     }
 
-    for (let historyIdx = 0; historyIdx < history.length; historyIdx++) {
-        $.fn.zato.invoker._render_history_item(listContainer, history, historyIdx, callbacks);
+    for (let historyIndex = 0; historyIndex < history.length; historyIndex++) {
+        $.fn.zato.invoker._render_history_item(listContainer, history, historyIndex, callbacks);
     }
 };
 
@@ -470,8 +472,8 @@ $.fn.zato.invoker._highlight_history_items = function(listContainer, highlightLe
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.invoker._render_history_item = function(listContainer, history, historyIdx, callbacks) {
-    let item = history[historyIdx];
+$.fn.zato.invoker._render_history_item = function(listContainer, history, historyIndex, callbacks) {
+    let item = history[historyIndex];
     let requestText = typeof item === 'string' ? item : item.text;
     let timestamp = typeof item === 'string' ? null : item.timestamp;
     let response = typeof item === 'string' ? '' : item.response;
@@ -486,9 +488,9 @@ $.fn.zato.invoker._render_history_item = function(listContainer, history, histor
     }
 
     let wrapper = $('<div class="invoker-history-item-wrapper"></div>');
-    wrapper.attr('data-index', historyIdx);
+    wrapper.attr('data-index', historyIndex);
 
-    let numberBox = $('<div class="invoker-history-item-number"></div>').text(historyIdx + 1);
+    let numberBox = $('<div class="invoker-history-item-number"></div>').text(historyIndex + 1);
     let textBox = $('<div class="invoker-history-item-text syntax-monokai"></div>');
 
     let rawText = requestText;
@@ -524,7 +526,7 @@ $.fn.zato.invoker._render_history_item = function(listContainer, history, histor
 
     showResponseBox.on('click', function(event) {
         event.stopPropagation();
-        $.fn.zato.invoker._toggle_response_detail(wrapper, historyIdx, item);
+        $.fn.zato.invoker._toggle_response_detail(wrapper, historyIndex, item);
     });
 
     deleteBox.on('click', function(event) {
@@ -804,7 +806,10 @@ $.fn.zato.invoker._bind_history_events = function() {
             result.isSearchResult,
             $.fn.zato.invoker._get_modal_history_callbacks()
         );
-        let lexer = config.highlight_lexer || '';
+        let lexer = config.highlight_lexer;
+        if (lexer === undefined) {
+            lexer = '';
+        }
         $.fn.zato.invoker._highlight_history_items(list, lexer);
     });
 };
@@ -879,10 +884,28 @@ $.fn.zato.invoker.open_overlay = function(config) {
         content.css({'position': '', 'left': '', 'top': '', 'margin': '', 'transform': ''});
     }
 
-    let requestValue = saved.request || '';
-    $('#invoker-modal-method').val(saved.method || 'POST');
-    $('#invoker-modal-query-params').val(saved.query_params || '');
-    $('#invoker-modal-path-params').val(saved.path_params || '');
+    let requestValue = saved.request;
+    if (requestValue === undefined) {
+        requestValue = '';
+    }
+
+    let savedMethod = saved.method;
+    if (savedMethod === undefined) {
+        savedMethod = 'POST';
+    }
+    $('#invoker-modal-method').val(savedMethod);
+
+    let savedQueryParams = saved.query_params;
+    if (savedQueryParams === undefined) {
+        savedQueryParams = '';
+    }
+    $('#invoker-modal-query-params').val(savedQueryParams);
+
+    let savedPathParams = saved.path_params;
+    if (savedPathParams === undefined) {
+        savedPathParams = '';
+    }
+    $('#invoker-modal-path-params').val(savedPathParams);
     $('#invoker-modal-status').text('');
 
     if (saved.more_options_open) {
@@ -947,14 +970,27 @@ $.fn.zato.invoker.close_overlay = function() {
 $.fn.zato.invoker._save_overlay_state = function(historyKey) {
     let content = $('.invoker-modal-content');
     let rect = content[0].getBoundingClientRect();
-    let widthValue = content[0].style.width || (rect.width + 'px');
-    let heightValue = content[0].style.height || (rect.height + 'px');
-    let leftValue = content[0].style.left || '';
-    let topValue = content[0].style.top || '';
+    let widthValue = content[0].style.width;
+    if (!widthValue) {
+        widthValue = rect.width + 'px';
+    }
+
+    let heightValue = content[0].style.height;
+    if (!heightValue) {
+        heightValue = rect.height + 'px';
+    }
+
+    let leftValue = content[0].style.left;
+    let topValue = content[0].style.top;
 
     let requestValue = '';
     if ($.fn.zato.invoker._request_pane) {
         requestValue = $.fn.zato.invoker._request_pane.getValue();
+    }
+
+    let responseRaw = $('#invoker-modal-response-pane').data('raw-response');
+    if (responseRaw === undefined) {
+        responseRaw = '';
     }
 
     let state = {
@@ -963,12 +999,12 @@ $.fn.zato.invoker._save_overlay_state = function(historyKey) {
         left: leftValue,
         top: topValue,
         request: requestValue,
-        method: $('#invoker-modal-method').val() || 'POST',
-        query_params: $('#invoker-modal-query-params').val() || '',
-        path_params: $('#invoker-modal-path-params').val() || '',
-        variables: $('#invoker-modal-variables').val() || '',
-        response_raw: $('#invoker-modal-response-pane').data('raw-response') || '',
-        status: $('#invoker-modal-status').text() || '',
+        method: $('#invoker-modal-method').val(),
+        query_params: $('#invoker-modal-query-params').val(),
+        path_params: $('#invoker-modal-path-params').val(),
+        variables: $('#invoker-modal-variables').val(),
+        response_raw: responseRaw,
+        status: $('#invoker-modal-status').text(),
         more_options_open: !$('#invoker-more-options').hasClass('hidden')
     };
     localStorage.setItem('zato_invoker_state_' + historyKey, JSON.stringify(state));
@@ -997,9 +1033,9 @@ $.fn.zato.invoker.collect_form_data = function() {
 
     let data = {
         'data-request': requestValue,
-        'request_method': $('#invoker-modal-method').val() || 'POST',
-        'query_params': $('#invoker-modal-query-params').val() || '',
-        'path_params': $('#invoker-modal-path-params').val() || ''
+        'request_method': $('#invoker-modal-method').val(),
+        'query_params': $('#invoker-modal-query-params').val(),
+        'path_params': $('#invoker-modal-path-params').val()
     };
     return data;
 };
@@ -1010,7 +1046,10 @@ $.fn.zato.invoker._on_modal_invoke = function() {
     let config = $.fn.zato.invoker._modal_config;
     if (!config) return;
 
-    let collectFunc = config.collect_form_data_func || $.fn.zato.invoker.collect_form_data;
+    let collectFunc = config.collect_form_data_func;
+    if (!collectFunc) {
+        collectFunc = $.fn.zato.invoker.collect_form_data;
+    }
     let formData = collectFunc();
     let url = config.get_invoke_url_func(config.id);
 
@@ -1021,6 +1060,7 @@ $.fn.zato.invoker._on_modal_invoke = function() {
         type: 'POST',
         url: url,
         data: formData,
+        dataType: 'json',
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
         success: function(data) {
             $.fn.zato.invoker._on_modal_invoke_success(data, formData['data-request']);
@@ -1045,7 +1085,7 @@ $.fn.zato.invoker._set_modal_invoking = function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.invoker._on_modal_invoke_success = function(data, requestText) {
-    let response = typeof data === 'string' ? JSON.parse(data) : data;
+    let response = data;
     let status = '200 OK';
 
     if (response.response_time_human) {
@@ -1053,7 +1093,7 @@ $.fn.zato.invoker._on_modal_invoke_success = function(data, requestText) {
     }
 
     let responseText = '';
-    if (response.data !== undefined && response.data !== null) {
+    if (response.data !== null) {
         responseText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2);
     }
 
@@ -1063,12 +1103,20 @@ $.fn.zato.invoker._on_modal_invoke_success = function(data, requestText) {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.invoker._on_modal_invoke_error = function(jqXHR, requestText) {
-    let status = jqXHR.status + ' ' + (jqXHR.statusText || 'Error');
-    let responseText = jqXHR.responseText || '';
+    let statusText = jqXHR.statusText;
+    if (statusText === null) {
+        statusText = 'Error';
+    }
+    let status = jqXHR.status + ' ' + statusText;
+
+    let responseText = jqXHR.responseText;
+    if (responseText === null) {
+        responseText = '';
+    }
 
     try {
         let parsed = JSON.parse(responseText);
-        if (parsed.data !== undefined) {
+        if (parsed.data !== null) {
             responseText = typeof parsed.data === 'string' ? parsed.data : JSON.stringify(parsed.data, null, 2);
         }
         if (parsed.response_time_human) {
@@ -1106,7 +1154,10 @@ $.fn.zato.invoker._set_modal_result = function(status, responseText, requestText
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.invoker._on_format_response = function() {
-    let raw = $('#invoker-modal-response-pane').data('raw-response') || '';
+    let raw = $('#invoker-modal-response-pane').data('raw-response');
+    if (raw === undefined) {
+        raw = '';
+    }
     let formatted = $.fn.zato.invoker._format_response_text(raw);
     $('#invoker-modal-response-pane').data('raw-response', formatted);
 
@@ -1118,8 +1169,8 @@ $.fn.zato.invoker._on_format_response = function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.invoker._format_response_text = function(text) {
-    if (!text || typeof text !== 'string') {
-        return text || '';
+    if (typeof text !== 'string') {
+        return '';
     }
     let trimmed = text.trim();
 
@@ -1154,8 +1205,8 @@ $.fn.zato.invoker._format_xml = function(xmlText) {
     let lines = [];
     let tokens = xmlText.replace(/>\s*</g, '>\n<').split('\n');
 
-    for (let tokenIdx = 0; tokenIdx < tokens.length; tokenIdx++) {
-        let token = tokens[tokenIdx].trim();
+    for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex++) {
+        let token = tokens[tokenIndex].trim();
         if (!token) {
             continue;
         }
@@ -1310,7 +1361,10 @@ $.fn.zato.invoker._open_modal_history = function() {
     $('#invoker-modal-history-search').val('').focus();
 
     // Trigger highlighting now that the overlay is visible
-    let lexer = config.highlight_lexer || '';
+    let lexer = config.highlight_lexer;
+    if (lexer === undefined) {
+        lexer = '';
+    }
     $.fn.zato.invoker._highlight_history_items($('#invoker-modal-history-list'), lexer);
 };
 
