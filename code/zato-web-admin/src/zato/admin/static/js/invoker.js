@@ -865,11 +865,11 @@ $.fn.zato.invoker.open_overlay = function(config) {
     let saved = $.fn.zato.invoker._load_overlay_state(config.history_key);
     let content = $('.invoker-modal-content');
 
-    if (saved.width && saved.height) {
-        content.css({'width': saved.width, 'height': saved.height});
+    if (saved.width) {
+        content.css({'width': saved.width});
     }
     else {
-        content.css({'width': '', 'height': ''});
+        content.css({'width': ''});
     }
 
     if (saved.left && saved.top) {
@@ -897,7 +897,7 @@ $.fn.zato.invoker.open_overlay = function(config) {
         container: $requestContainer,
         text: requestValue,
         editable: true,
-        ace_options: {maxLines: 10, minLines: 10}
+        ace_options: {maxLines: 12, minLines: 12}
     });
 
     // .. mount the response pane ..
@@ -914,7 +914,7 @@ $.fn.zato.invoker.open_overlay = function(config) {
         container: $responseContainer,
         text: responseText,
         editable: false,
-        ace_options: {maxLines: 10, minLines: 10},
+        ace_options: {maxLines: 12, minLines: 12},
         buttons: [
             $.fn.zato.highlight_pane.buttons.copy()
         ]
