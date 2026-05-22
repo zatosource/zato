@@ -465,8 +465,12 @@
     min-height: 0;
 }
 
-.invoker-modal-body .zato-action-button {
+.invoker-modal-body .zato-action-button,
+.invoker-modal-body .zato-action-button:hover,
+.invoker-modal-body .zato-action-button:active {
     border-bottom-width: 1px;
+    border-color: var(--zato-action-button-border);
+    border-bottom-color: var(--zato-action-button-border-bottom);
 }
 
 .invoker-modal-buttons {
@@ -474,6 +478,7 @@
     gap: 8px;
     margin-top: 12px;
     align-items: center;
+    justify-content: flex-end;
 }
 
 .invoker-modal-status {
@@ -554,22 +559,6 @@
     tab-size: 2;
     overflow: visible;
     outline: none;
-}
-
-/* "More options" toggle block inside the invoker modal */
-
-.invoker-more-options-toggle {
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-}
-
-.invoker-more-options-toggle a {
-    color: #7ab3ef !important;
-    text-decoration: none !important;
-    background-image: none;
-    padding-bottom: 0;
-    cursor: pointer;
 }
 
 .invoker-more-options-block {
