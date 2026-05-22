@@ -26,11 +26,11 @@ var PythonTracebackHighlightRules = function() {
                 regex: "^(>>> )(File \")([^\"]+)(\", line )(\\d+)$"
             },
             {
-                token: ["support.function", "invalid", "text", "string"],
+                token: ["support.function", "support.class", "text", "string"],
                 regex: "^(>>> )(" + excName + ")(: )(.+)$"
             },
             {
-                token: ["support.function", "invalid"],
+                token: ["support.function", "support.class"],
                 regex: "^(>>> )(" + excName + "):?$"
             },
             {
@@ -61,11 +61,11 @@ var PythonTracebackHighlightRules = function() {
             },
 
             {
-                token: ["invalid", "text", "string"],
+                token: ["support.class", "text", "string"],
                 regex: "^(" + excName + ")(: )(.+)$"
             },
             {
-                token: "invalid",
+                token: "support.class",
                 regex: "^" + excName + ":?$"
             },
 
