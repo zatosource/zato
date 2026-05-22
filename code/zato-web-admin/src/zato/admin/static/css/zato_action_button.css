@@ -33,7 +33,6 @@ div.page_prompt a:not(.common):active {
     color: var(--zato-action-button-text);
     background: linear-gradient(to bottom, var(--zato-action-button-gradient-start), var(--zato-action-button-gradient-end)) !important;
     border: 1px solid var(--zato-action-button-border);
-    border-bottom: 2px solid var(--zato-action-button-border-bottom);
     border-radius: 3px;
     min-width: 42px;
     text-align: center;
