@@ -1054,7 +1054,8 @@ $.fn.zato.invoker._on_modal_invoke = function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.invoker._set_modal_invoking = function() {
-    $('#invoker-modal-status').text('Invoking ...').addClass('invoker-blinking');
+    $.fn.zato.invoker._invoke_started_at = Date.now();
+    $('#invoker-modal-status').html('<img src="/static/gfx/spinner-white.svg" class="invoker-modal-spinner">Invoking ...').addClass('invoker-blinking');
     $('#invoker-modal-response-pane').removeData('raw-response');
 
     if ($.fn.zato.invoker._response_pane) {
@@ -1116,24 +1117,37 @@ $.fn.zato.invoker._on_modal_invoke_error = function(jqXHR, requestText) {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.invoker._set_modal_result = function(status, responseText, requestText, contentType) {
-    $('#invoker-modal-status').text(status).removeClass('invoker-blinking');
 
-    $('#invoker-modal-response-pane').data('raw-response', responseText);
+    let applyResult = function() {
+        $('#invoker-modal-status').text(status).removeClass('invoker-blinking');
 
-    if ($.fn.zato.invoker._response_pane) {
-        let aceMode = $.fn.zato.highlight_pane.mime_to_ace_mode(contentType);
-        if (!aceMode) {
-            aceMode = $.fn.zato.highlight_pane.detect_ace_mode(responseText);
+        $('#invoker-modal-response-pane').data('raw-response', responseText);
+
+        if ($.fn.zato.invoker._response_pane) {
+            let aceMode = $.fn.zato.highlight_pane.mime_to_ace_mode(contentType);
+            if (!aceMode) {
+                aceMode = $.fn.zato.highlight_pane.detect_ace_mode(responseText);
+            }
+            else if (aceMode === 'ace/mode/text') {
+                aceMode = $.fn.zato.highlight_pane.detect_ace_mode(responseText);
+            }
+            $.fn.zato.invoker._response_pane.setValue(responseText, aceMode);
         }
-        else if (aceMode === 'ace/mode/text') {
-            aceMode = $.fn.zato.highlight_pane.detect_ace_mode(responseText);
+
+        let config = $.fn.zato.invoker._modal_config;
+        if (config) {
+            $.fn.zato.invoker.save_to_history(config.history_key, requestText, responseText);
         }
-        $.fn.zato.invoker._response_pane.setValue(responseText, aceMode);
+    };
+
+    let elapsed = Date.now() - $.fn.zato.invoker._invoke_started_at;
+    let minDisplayTime = 250;
+
+    if (elapsed < minDisplayTime) {
+        setTimeout(applyResult, minDisplayTime - elapsed);
     }
-
-    let config = $.fn.zato.invoker._modal_config;
-    if (config) {
-        $.fn.zato.invoker.save_to_history(config.history_key, requestText, responseText);
+    else {
+        applyResult();
     }
 };
 
