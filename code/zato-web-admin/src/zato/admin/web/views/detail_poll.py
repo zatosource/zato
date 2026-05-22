@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 import logging
 import time
+from http import HTTPStatus
 
 # Django
 from django.http import HttpResponse
@@ -74,7 +75,7 @@ def detail_poll(request:'any_') -> 'HttpResponse':
     except Exception as e:
         logger.warning('detail_poll invoke %s failed -> %s', service_name, e)
         error_json = json.dumps({'error': str(e)})
-        out = HttpResponse(error_json, content_type='application/json', status=500)
+        out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
         return out
 
     elapsed = time.monotonic() - invoke_start

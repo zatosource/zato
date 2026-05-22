@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import logging
-from http.client import INTERNAL_SERVER_ERROR
+from http import HTTPStatus
 from traceback import format_exc
 
 # Django
@@ -128,7 +128,7 @@ def get_matches(req):
                 'error': service_response.details or 'Error retrieving matching topics'
             }),
             content_type='application/json',
-            status=500
+            status=HTTPStatus.INTERNAL_SERVER_ERROR
         )
 
 # ################################################################################################################################
@@ -160,7 +160,7 @@ def publish_message(request:'any_', id:'str') -> 'JsonResponse':
             'data': traceback,
             'response_time_human': '',
             'content_type': 'text/plain',
-        }, status=INTERNAL_SERVER_ERROR)
+        }, status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
         return out
 

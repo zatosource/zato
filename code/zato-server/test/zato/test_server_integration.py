@@ -14,7 +14,7 @@ import time
 import unittest
 
 # stdlib
-from http.client import HTTPConnection
+from http.client import HTTPConnection, NOT_FOUND, OK
 
 # ################################################################################################################################
 
@@ -34,7 +34,7 @@ def _wait_for_server(host, port, timeout=30):
             resp = conn.getresponse()
             body = resp.read()
             conn.close()
-            if resp.status == 200:
+            if resp.status == OK:
                 return True
         except (ConnectionRefusedError, OSError):
             pass
@@ -103,14 +103,14 @@ class TestServerPing(unittest.TestCase):
 
     def test_ping_get(self):
         status, body = _invoke('GET', '/zato/ping')
-        self.assertEqual(status, 200)
+        self.assertEqual(status, OK)
         data = json.loads(body)
         self.assertTrue(data['is_ok'])
         self.assertIn('cid', data)
 
     def test_ping_post(self):
         status, body = _invoke('POST', '/zato/ping')
-        self.assertEqual(status, 200)
+        self.assertEqual(status, OK)
         data = json.loads(body)
         self.assertTrue(data['is_ok'])
 
@@ -123,7 +123,7 @@ class TestServerPing(unittest.TestCase):
 
     def test_unknown_url_returns_404(self):
         status, _ = _invoke('GET', '/nonexistent/path')
-        self.assertEqual(status, 404)
+        self.assertEqual(status, NOT_FOUND)
 
 # ################################################################################################################################
 
@@ -159,7 +159,7 @@ class TestServerRestart(unittest.TestCase):
             if started:
                 # Verify ping works on each start
                 status, body = _invoke('GET', '/zato/ping')
-                self.assertEqual(status, 200)
+                self.assertEqual(status, OK)
 
             _stop_server(proc)
             time.sleep(1)
@@ -205,7 +205,7 @@ class TestHotDeployService(unittest.TestCase):
     def test_hot_deployed_service_exists(self):
         # The service was deployed -- verify server is still healthy
         status, body = _invoke('GET', '/zato/ping')
-        self.assertEqual(status, 200)
+        self.assertEqual(status, OK)
 
 # ################################################################################################################################
 

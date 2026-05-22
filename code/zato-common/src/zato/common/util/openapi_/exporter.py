@@ -8,6 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR, OK
+from http.client import responses as http_responses
 from traceback import format_exc
 
 # ################################################################################################################################
@@ -87,9 +89,9 @@ def build_openapi_spec(
             'summary': f'Invoke {service["name"]}',
             'operationId': service['name'].replace('.', '_').replace('-', '_'),
             'responses': {
-                '200': {'description': 'Successful response'},
-                '400': {'description': 'Bad Request'},
-                '500': {'description': 'Internal Server Error'}
+                str(OK):                   {'description': http_responses[OK]},
+                str(BAD_REQUEST):           {'description': http_responses[BAD_REQUEST]},
+                str(INTERNAL_SERVER_ERROR): {'description': http_responses[INTERNAL_SERVER_ERROR]},
             }
         }
 
@@ -121,7 +123,7 @@ def build_openapi_spec(
             try:
                 response_schema = openapi_generator._create_response_schema(service['output'], scan_results['models'])
                 if response_schema:
-                    operation['responses']['200']['content'] = {
+                    operation['responses'][str(OK)]['content'] = {
                         'application/json': {'schema': response_schema}
                     }
             except Exception:

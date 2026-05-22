@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import os
-from http.client import FOUND, MOVED_PERMANENTLY, NOT_MODIFIED, OK
+from http import HTTPStatus
 from unittest import TestCase
 
 # Bunch
@@ -46,7 +46,7 @@ class Config:
     web_admin_location = os.path.join(default_env_base_dir, 'web-admin')
     web_admin_address  = 'http://localhost:8183'
 
-    status_ok = {FOUND, MOVED_PERMANENTLY, NOT_MODIFIED, OK}
+    status_ok = {HTTPStatus.FOUND, HTTPStatus.MOVED_PERMANENTLY, HTTPStatus.NOT_MODIFIED, HTTPStatus.OK}
     to_skip_status = {
         '/favicon.ico'
     }

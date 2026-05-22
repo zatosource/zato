@@ -6,6 +6,9 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from http.client import OK
+
 # Bunch
 from zato.common.ext.bunch import Bunch
 
@@ -244,7 +247,7 @@ it has two lines.""",
             post['requestBody']['content']['application/json']['schema']['$ref'],
             '#/components/schemas/request_helpers_dataclass_service')
         self.assertEqual(
-            post['responses']['200']['content']['application/json']['schema']['$ref'],
+            post['responses'][str(OK)]['content']['application/json']['schema']['$ref'],
             '#/components/schemas/response_helpers_dataclass_service')
 
     #

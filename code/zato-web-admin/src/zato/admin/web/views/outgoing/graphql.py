@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from http import HTTPStatus
 from traceback import format_exc
 
 # Django
@@ -146,9 +147,9 @@ def invoke(req, id):
                 'response_time_human': response.data.response_time,
                 'content_type': content_type,
             })
-        return JsonResponse({'data': str(response.details), 'response_time_human': '', 'content_type': 'text/plain'}, status=500)
+        return JsonResponse({'data': str(response.details), 'response_time_human': '', 'content_type': 'text/plain'}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
     except Exception as e:
         logger.error('invoke error: %s', format_exc())
-        return JsonResponse({'data': str(e), 'response_time_human': '', 'content_type': 'text/plain'}, status=500)
+        return JsonResponse({'data': str(e), 'response_time_human': '', 'content_type': 'text/plain'}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
 # ################################################################################################################################

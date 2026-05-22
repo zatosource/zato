@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
+from http import HTTPStatus
 from operator import itemgetter
 from traceback import format_exc
 
@@ -399,7 +400,7 @@ def _build_invoke_response(service_response):
         'data': str(service_response.details),
         'response_time_human': '',
         'content_type': 'text/plain',
-    }, status=500)
+    }, status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -413,7 +414,7 @@ def invoke_channel(req, id):
         return _build_invoke_response(response)
     except Exception as e:
         logger.error('invoke_channel error: %s', format_exc())
-        return JsonResponse({'data': str(e), 'response_time_human': '', 'content_type': 'text/plain'}, status=500)
+        return JsonResponse({'data': str(e), 'response_time_human': '', 'content_type': 'text/plain'}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -427,7 +428,7 @@ def invoke_outconn(req, id):
         return _build_invoke_response(response)
     except Exception as e:
         logger.error('invoke_outconn error: %s', format_exc())
-        return JsonResponse({'data': str(e), 'response_time_human': '', 'content_type': 'text/plain'}, status=500)
+        return JsonResponse({'data': str(e), 'response_time_human': '', 'content_type': 'text/plain'}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -470,7 +471,7 @@ def rate_limiting_save(req, id): # type: ignore
         if response.ok:
             return JsonResponse({'status': 'ok'})
         else:
-            return JsonResponse({'status': 'error', 'message': response.details}, status=400)
+            return JsonResponse({'status': 'error', 'message': response.details}, status=HTTPStatus.BAD_REQUEST)
     except Exception:
         msg = 'Rate limiting rules could not be saved, e:`{}`'.format(format_exc())
         logger.error(msg)
@@ -489,7 +490,7 @@ def rate_limiting_clear_counters(req, id): # type: ignore
         if response.ok:
             return JsonResponse({'status': 'ok'})
         else:
-            return JsonResponse({'status': 'error', 'message': response.details}, status=400)
+            return JsonResponse({'status': 'error', 'message': response.details}, status=HTTPStatus.BAD_REQUEST)
     except Exception:
         msg = 'Rate limiting counters could not be cleared, e:`{}`'.format(format_exc())
         logger.error(msg)

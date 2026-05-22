@@ -13,6 +13,8 @@ _ = monkey.patch_all()
 # stdlib
 import random
 import time
+from http.client import INTERNAL_SERVER_ERROR, NOT_FOUND, OK
+from http.client import responses as http_responses
 
 # gevent
 from gevent import spawn # type: ignore
@@ -20,6 +22,10 @@ from gevent.pywsgi import WSGIServer # type: ignore
 
 # Zato
 from zato.common.monitoring.api import create_context, get_metrics_data, incr_global, push_global
+
+_status_ok             = f'{OK} {http_responses[OK]}'
+_status_not_found      = f'{NOT_FOUND} {http_responses[NOT_FOUND]}'
+_status_internal_error = f'{INTERNAL_SERVER_ERROR} {http_responses[INTERNAL_SERVER_ERROR]}'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,14 +48,14 @@ class PrometheusTestServer:
         if path == '/metrics':
             try:
                 metrics_data = get_metrics_data()
-                start_response('200 OK', [
+                start_response(_status_ok, [
                     ('Content-Type', 'text/plain; version=0.0.4; charset=utf-8'),
                     ('Content-Length', str(len(metrics_data)))
                 ])
                 return [metrics_data.encode('utf-8')]
             except Exception as e:
                 error_msg = f'Error generating metrics: {e}'
-                start_response('500 Internal Server Error', [
+                start_response(_status_internal_error, [
                     ('Content-Type', 'text/plain'),
                     ('Content-Length', str(len(error_msg)))
                 ])
@@ -63,7 +69,7 @@ class PrometheusTestServer:
 <p><a href="/metrics">Metrics endpoint</a></p>
 <p><a href="/demo">Demo data</a></p>
 </body></html>"""
-            start_response('200 OK', [
+            start_response(_status_ok, [
                 ('Content-Type', 'text/html'),
                 ('Content-Length', str(len(html)))
             ])
@@ -71,11 +77,11 @@ class PrometheusTestServer:
 
         elif path == '/demo':
             self._generate_demo_data()
-            start_response('200 OK', [('Content-Type', 'text/plain')])
+            start_response(_status_ok, [('Content-Type', 'text/plain')])
             return [b'Demo data generated. Check /metrics']
 
         else:
-            start_response('404 Not Found', [('Content-Type', 'text/plain')])
+            start_response(_status_not_found, [('Content-Type', 'text/plain')])
             return [b'Not Found']
 
     def _generate_demo_data(self) -> 'None':

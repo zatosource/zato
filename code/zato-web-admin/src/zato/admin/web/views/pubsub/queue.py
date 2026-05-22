@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 import logging
 import os
+from http import HTTPStatus
 from traceback import format_exc
 from urllib.parse import quote
 
@@ -173,7 +174,7 @@ def purge(request:'any_') -> 'HttpResponse':
 
             error_json = json.dumps({'error': error_message})
 
-            out = HttpResponse(error_json, content_type='application/json', status=500)
+            out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
     # .. handle any unexpected transport or connection errors.
     except Exception: # noqa: BLE001
@@ -181,7 +182,7 @@ def purge(request:'any_') -> 'HttpResponse':
 
         error_json = json.dumps({'error': _default_error_message})
 
-        out = HttpResponse(error_json, content_type='application/json', status=500)
+        out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
     return out
 

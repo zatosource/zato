@@ -41,6 +41,7 @@ Poll JSON contract returned by _get_dashboard_data:
 # stdlib
 import json
 import logging
+from http import HTTPStatus
 
 # Django
 from django.http import HttpResponse
@@ -217,7 +218,7 @@ def poll(req:'any_') -> 'HttpResponse':
         return HttpResponse(
             error_json.encode('utf-8'),
             content_type='application/json',
-            status=500,
+            status=HTTPStatus.INTERNAL_SERVER_ERROR,
         )
 
 # ################################################################################################################################
@@ -244,7 +245,7 @@ def import_demo_config(req:'any_') -> 'HttpResponse':
         return HttpResponse(
             error_message.encode('utf-8'),
             content_type='text/plain',
-            status=500,
+            status=HTTPStatus.INTERNAL_SERVER_ERROR,
         )
 
 # ################################################################################################################################
