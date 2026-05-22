@@ -6,9 +6,9 @@
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/pubsub/common.css">
     <style>
 
-        /* Pub/sub reusable design tokens */
         :root {
             --pubsub-badge-radius: 3px;
             --pubsub-badge-font-size: 11px;
@@ -17,12 +17,10 @@
             --pubsub-badge-letter-spacing: 0.5px;
 
             --pubsub-deliv-enabled-color: #012845;
-            --pubsub-deliv-enabled-bg: #e0f0ff;
             --pubsub-deliv-disabled-color: #999;
             --pubsub-deliv-disabled-bg: #eee;
 
             --pubsub-pub-enabled-color: #101010;
-            --pubsub-pub-enabled-bg: rgba(150, 223, 21, 0.3);
             --pubsub-pub-disabled-color: #999;
             --pubsub-pub-disabled-bg: #eee;
         }
@@ -40,7 +38,7 @@
 
         .ps-badge-deliv-enabled {
             color: var(--pubsub-deliv-enabled-color);
-            background: var(--pubsub-deliv-enabled-bg);
+            background: var(--pubsub-sub-bg);
         }
 
         .ps-badge-deliv-disabled {
@@ -50,7 +48,7 @@
 
         .ps-badge-pub-enabled {
             color: var(--pubsub-pub-enabled-color);
-            background: var(--pubsub-pub-enabled-bg);
+            background: var(--pubsub-pub-bg);
         }
 
         .ps-badge-pub-disabled {
@@ -451,11 +449,11 @@
                         <th style="width:1%; white-space:nowrap">Security definition</th>
 
                         <th style="max-width:220px; white-space:nowrap;">Sub key</th>
-                        <th style="text-align:center">Enabled for</th>
+                        <th>Enabled for</th>
 
                         <th style="text-align:center">Delivery type</th>
                         <th>Topics</th>
-                        <th style="text-align:center">Pending messages</th>
+                        <th>Pending messages</th>
                         <th style="text-align:center"></th>
 
                         <th style="text-align:center"></th>
@@ -500,7 +498,7 @@
                             {% endif %}
                         </td>
                         <td>{{ item.topic_link_list|safe }}</td>
-                        <td style="text-align:center"><a href="/zato/pubsub/subscription/queue/?cluster={{ cluster_id }}&sub_key={{ item.sub_key }}&state=pending">{{ item.pending_depth }}</a></td>
+                        <td><a href="/zato/pubsub/subscription/queue/?cluster={{ cluster_id }}&sub_key={{ item.sub_key }}&state=pending">{{ item.pending_depth }}</a></td>
                         <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
 
                         <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>

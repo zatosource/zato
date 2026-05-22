@@ -943,7 +943,7 @@ $.fn.zato.pubsub.permission.data_table.new_row = function(item, data, include_tr
                               item.name);
     row += String.format('<td>{0}</td>', secLink);
     row += String.format('<td>{0}</td>', pattern_display_html);
-    row += String.format('<td style="text-align:center">{0}</td>', access_type_label);
+    row += String.format('<td>{0}</td>', access_type_label);
     row += String.format('<td style="display:none" style="text-align:center">{0}</td>', item.subscription_count);
     row += String.format('<td><a href="javascript:$.fn.zato.pubsub.permission.edit(\'{0}\')">Edit</a></td>', item.id);
     row += String.format('<td><a href="javascript:$.fn.zato.pubsub.permission.delete_(\'{0}\')">Delete</a></td>', item.id);
