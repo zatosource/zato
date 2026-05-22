@@ -5,11 +5,10 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/pubsub/common.css">
 
     <style type="text/css">
         :root {
-            --pattern-pub-bg: #FFE8CC;
-            --pattern-sub-bg: #e8f0ff;
             --pattern-unknown-bg: #f5f5f5;
             --pattern-border-color: #aaa;
             --pattern-border-color2: #ccc;
@@ -118,13 +117,12 @@
 
         /* Pattern display container styles */
         .pattern-display-container {
-            width: 100%;
             border: 1px solid var(--pattern-border-color);
             border-radius: 6px;
             overflow: hidden;
             background-color: transparent;
             display: grid;
-            grid-template-columns: 60px 1fr 120px;
+            grid-template-columns: auto 1fr auto;
         }
 
         .pattern-row {
@@ -173,11 +171,11 @@
         }
 
         .pattern-type-pub {
-            background: var(--pattern-pub-bg) !important;
+            background: var(--pubsub-pub-bg) !important;
         }
 
         .pattern-type-sub {
-            background: var(--pattern-sub-bg) !important;
+            background: var(--pubsub-sub-bg) !important;
         }
 
         .pattern-type-unknown {
@@ -429,7 +427,7 @@
                         <th><a href="#">Security definition</a></th>
 
                         <th><a href="#">Patterns</a></th>
-                        <th style="text-align:center"><a href="#">Access type</a></th>
+                        <th><a href="#">Access type</a></th>
                         <th class='ignore' style="text-align:center"><a href="#">Subscriptions</a></th>
 
                         <th>&nbsp;</th>
@@ -455,7 +453,7 @@
                             <div class="pattern-display" data-patterns="{{ item.pattern|escapejs }}">
                             </div>
                         </td>
-                        <td style="text-align:center">
+                        <td>
                             {% if item.access_type == 'publisher' %}
                                 Publisher
                             {% elif item.access_type == 'subscriber' %}
