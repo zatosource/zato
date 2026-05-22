@@ -117,7 +117,8 @@ def index(request:'any_') -> 'TemplateResponse':
     # .. extract the queue name from the sub_key ..
     depth = data['total']
     page  = data['page']
-    queue_name = sub_key.split('.', 1)[1]
+    sub_key_parts = sub_key.split('.', 1)
+    queue_name = sub_key_parts[1]
 
     subscriptions_url = f'/zato/pubsub/subscription/?cluster={default_cluster_id}'
 
@@ -242,12 +243,14 @@ def message_detail(request:'any_') -> 'TemplateResponse':
     message_data['data_highlighted'] = pygments_highlight(load_result.data, lexer, formatter)
 
     # .. resolve the active tab from the URL ..
-    active_tab = request.GET.get('tab')
-    if not active_tab:
+    if active_tab := request.GET.get('tab'):
+        pass
+    else:
         active_tab = _default_active_tab
 
     # .. extract the queue name from the sub_key ..
-    queue_name = sub_key.split('.', 1)[1]
+    sub_key_parts = sub_key.split('.', 1)
+    queue_name = sub_key_parts[1]
 
     # .. and render the template.
     sub_key_encoded = quote(sub_key, safe='')

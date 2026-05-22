@@ -810,7 +810,6 @@ $.fn.zato.ide.on_file_simple_impl = function(
         options,
         _on_success_func,
         _on_error_func,
-        display_timeout,
         "json"
     );
 }
@@ -960,7 +959,6 @@ $.fn.zato.ide.on_file_delete_impl = function(fs_location) {
         options,
         _on_success_func,
         _on_error_func,
-        display_timeout,
         "json"
     );
 }

@@ -54,11 +54,9 @@ $.fn.zato.invoker.submit_form = function(
     options,
     onSuccessFunc,
     onErrorFunc,
-    displayTimeout,
     dataFormat,
 ) {
 
-    let timeout = displayTimeout;
     let form = $(formId);
     let formData = form.serialize();
 
@@ -71,17 +69,11 @@ $.fn.zato.invoker.submit_form = function(
         async: true,
 
         success: function(data, textStatus, request) {
-            let onSuccess = function() {
-                onSuccessFunc(options, data);
-            }
-            setTimeout(onSuccess, timeout)
+            onSuccessFunc(options, data);
         },
 
         error: function(jqXHR, textStatus, errorMessage) {
-            let onError = function() {
-                onErrorFunc(options, jqXHR, textStatus, errorMessage);
-            }
-            setTimeout(onError, timeout)
+            onErrorFunc(options, jqXHR, textStatus, errorMessage);
         },
 
     });
@@ -99,8 +91,8 @@ $.fn.zato.invoker.get_sync_invoke_request_url = function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.invoker.draw_attention = function(elemList) {
-    elemList.each(function(element) {
+$.fn.zato.invoker.draw_attention = function(elementList) {
+    elementList.each(function(element) {
         let wrappedElement = $(element);
         wrappedElement.removeClass('hidden');
         wrappedElement.removeClass('invoker-draw-attention');
@@ -1113,7 +1105,10 @@ $.fn.zato.invoker._set_modal_result = function(status, responseText, requestText
 
     if ($.fn.zato.invoker._response_pane) {
         let aceMode = $.fn.zato.highlight_pane.mime_to_ace_mode(contentType);
-        if (!aceMode || aceMode === 'ace/mode/text') {
+        if (!aceMode) {
+            aceMode = $.fn.zato.highlight_pane.detect_ace_mode(responseText);
+        }
+        else if (aceMode === 'ace/mode/text') {
             aceMode = $.fn.zato.highlight_pane.detect_ace_mode(responseText);
         }
         $.fn.zato.invoker._response_pane.setValue(responseText, aceMode);
