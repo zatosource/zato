@@ -39,10 +39,13 @@
         });
 
         // .. and render the editable payload in the Message data tab.
+        var aceMode = $.fn.zato.highlight_pane.mime_to_ace_mode(messageData.content_type);
+
         $.fn.zato.highlight_pane.init({
             container: '#record-edit-form',
             text: messageData.data,
             editable: true,
+            ace_mode: aceMode,
             buttons: [
                 $.fn.zato.highlight_pane.buttons.copy(),
                 $.fn.zato.highlight_pane.buttons.save({

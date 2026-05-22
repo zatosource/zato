@@ -405,31 +405,6 @@ $.fn.zato.invoker.format_timestamp = function(timestamp) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.invoker.format_json = function(text) {
-    if (typeof text !== 'string') {
-        return '';
-    }
-    let trimmed = text.trim();
-    let startsWithBrace = trimmed.startsWith('{');
-    let endsWithBrace = trimmed.endsWith('}');
-    let startsWithBracket = trimmed.startsWith('[');
-    let endsWithBracket = trimmed.endsWith(']');
-    let isObject = startsWithBrace && endsWithBrace;
-    let isArray = startsWithBracket && endsWithBracket;
-
-    if (isObject || isArray) {
-        try {
-            return JSON.stringify(JSON.parse(trimmed), null, 2);
-        }
-        catch (event) {
-            return text;
-        }
-    }
-    return text;
-};
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 $.fn.zato.invoker.populate_history_list = function(listContainer, history, isSearchResult, callbacks) {
     listContainer.empty();
 
@@ -663,10 +638,7 @@ $.fn.zato.invoker._request_ace_mode = null;
 
 $.fn.zato.invoker._set_request_value = function(text) {
     if ($.fn.zato.invoker._request_pane) {
-        $.fn.zato.invoker._request_pane.setValue(text);
-        if ($.fn.zato.invoker._request_ace_mode) {
-            $.fn.zato.invoker._request_pane.getEditor().session.setMode($.fn.zato.invoker._request_ace_mode);
-        }
+        $.fn.zato.invoker._request_pane.setValue(text, $.fn.zato.invoker._request_ace_mode);
     }
 };
 
@@ -683,7 +655,7 @@ $.fn.zato.invoker.render_overlay_html = function() {
         +   '<div class="invoker-modal-content">'
         +     '<div class="invoker-modal-header">'
         +       '<h2 id="invoker-modal-title">Invoke</h2>'
-        +       '<button class="invoker-modal-close-button" id="invoker-modal-close"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>'
+        +       '<button class="invoker-modal-close-button" id="invoker-modal-close"></button>'
         +     '</div>'
         +     '<div class="invoker-modal-body">'
         +       '<div id="invoker-modal-request-pane"></div>'
@@ -729,7 +701,7 @@ $.fn.zato.invoker.render_overlay_html = function() {
         +   '<div class="invoker-history-overlay-content">'
         +     '<div class="invoker-history-overlay-header">'
         +       '<h2>Invocation history</h2>'
-        +       '<button class="invoker-history-close-button" id="invoker-modal-history-close"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>'
+        +       '<button class="invoker-history-close-button" id="invoker-modal-history-close"></button>'
         +     '</div>'
         +     '<div class="invoker-history-overlay-search">'
         +       '<input type="text" id="invoker-modal-history-search" placeholder="Search history..." />'
@@ -1060,7 +1032,6 @@ $.fn.zato.invoker._on_modal_invoke = function() {
         type: 'POST',
         url: url,
         data: formData,
-        dataType: 'json',
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
         success: function(data) {
             $.fn.zato.invoker._on_modal_invoke_success(data, formData['data-request']);
@@ -1085,7 +1056,7 @@ $.fn.zato.invoker._set_modal_invoking = function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.invoker._on_modal_invoke_success = function(data, requestText) {
-    let response = data;
+    let response = typeof data === 'string' ? JSON.parse(data) : data;
     let status = '200 OK';
 
     if (response.response_time_human) {
@@ -1097,7 +1068,7 @@ $.fn.zato.invoker._on_modal_invoke_success = function(data, requestText) {
         responseText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2);
     }
 
-    $.fn.zato.invoker._set_modal_result(status, responseText, requestText);
+    $.fn.zato.invoker._set_modal_result(status, responseText, requestText, response.content_type);
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1114,6 +1085,8 @@ $.fn.zato.invoker._on_modal_invoke_error = function(jqXHR, requestText) {
         responseText = '';
     }
 
+    let contentType = 'text/plain';
+
     try {
         let parsed = JSON.parse(responseText);
         if (parsed.data !== null) {
@@ -1122,27 +1095,28 @@ $.fn.zato.invoker._on_modal_invoke_error = function(jqXHR, requestText) {
         if (parsed.response_time_human) {
             status += ' | ' + parsed.response_time_human;
         }
+        contentType = parsed.content_type;
     }
     catch (event) {
         // responseText is not JSON, use as-is
     }
 
-    $.fn.zato.invoker._set_modal_result(status, responseText, requestText);
+    $.fn.zato.invoker._set_modal_result(status, responseText, requestText, contentType);
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.invoker._set_modal_result = function(status, responseText, requestText) {
+$.fn.zato.invoker._set_modal_result = function(status, responseText, requestText, contentType) {
     $('#invoker-modal-status').text(status).removeClass('invoker-blinking');
 
-    let formatted = $.fn.zato.invoker._format_response_text(responseText);
+    $('#invoker-modal-response-pane').data('raw-response', responseText);
 
-    // Store the raw response for save_overlay_state ..
-    $('#invoker-modal-response-pane').data('raw-response', formatted);
-
-    // .. and mount the response into the highlight pane.
     if ($.fn.zato.invoker._response_pane) {
-        $.fn.zato.invoker._response_pane.setValue(formatted);
+        let aceMode = $.fn.zato.highlight_pane.mime_to_ace_mode(contentType);
+        if (!aceMode || aceMode === 'ace/mode/text') {
+            aceMode = $.fn.zato.highlight_pane.detect_ace_mode(responseText);
+        }
+        $.fn.zato.invoker._response_pane.setValue(responseText, aceMode);
     }
 
     let config = $.fn.zato.invoker._modal_config;
@@ -1150,86 +1124,6 @@ $.fn.zato.invoker._set_modal_result = function(status, responseText, requestText
         $.fn.zato.invoker.save_to_history(config.history_key, requestText, responseText);
     }
 };
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.invoker._on_format_response = function() {
-    let raw = $('#invoker-modal-response-pane').data('raw-response');
-    if (raw === undefined) {
-        raw = '';
-    }
-    let formatted = $.fn.zato.invoker._format_response_text(raw);
-    $('#invoker-modal-response-pane').data('raw-response', formatted);
-
-    if ($.fn.zato.invoker._response_pane) {
-        $.fn.zato.invoker._response_pane.setValue(formatted);
-    }
-};
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.invoker._format_response_text = function(text) {
-    if (typeof text !== 'string') {
-        return '';
-    }
-    let trimmed = text.trim();
-
-    let startsWithBrace = trimmed.startsWith('{');
-    let endsWithBrace = trimmed.endsWith('}');
-    let startsWithBracket = trimmed.startsWith('[');
-    let endsWithBracket = trimmed.endsWith(']');
-    let isObject = startsWithBrace && endsWithBrace;
-    let isArray = startsWithBracket && endsWithBracket;
-
-    if (isObject || isArray) {
-        try {
-            return JSON.stringify(JSON.parse(trimmed), null, 2);
-        }
-        catch (event) {}
-    }
-
-    let isXml = trimmed.startsWith('<');
-    if (isXml) {
-        if (trimmed.endsWith('>')) {
-            return $.fn.zato.invoker._format_xml(trimmed);
-        }
-    }
-
-    return text;
-};
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.invoker._format_xml = function(xmlText) {
-    let indent = 0;
-    let lines = [];
-    let tokens = xmlText.replace(/>\s*</g, '>\n<').split('\n');
-
-    for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex++) {
-        let token = tokens[tokenIndex].trim();
-        if (!token) {
-            continue;
-        }
-        let isClosing = token.startsWith('</');
-        let isSelfClosing = token.endsWith('/>') || token.startsWith('<?');
-
-        if (isClosing) {
-            indent = Math.max(0, indent - 1);
-        }
-
-        lines.push('  '.repeat(indent) + token);
-
-        if (!isClosing && !isSelfClosing) {
-            indent++;
-        }
-    }
-
-    let out = lines.join('\n');
-    return out;
-};
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

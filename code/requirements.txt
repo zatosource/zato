@@ -78,6 +78,7 @@ pyotp==2.9.0
 pytest==9.0.3
 python-dateutil==2.9.0.post0
 python-editor==1.0.1
+python-magic==0.4.27
 pytz==2025.2
 pyyaml==6.0.2
 redis==6.1.0

@@ -91,32 +91,6 @@
     letter-spacing: 0.3px;
 }
 
-.invoker-history-close-button {
-    background: rgba(78, 77, 64, 0.25);
-    border: 1px solid rgba(46, 45, 36, 0.4);
-    color: #aaa;
-    font-size: 14px;
-    cursor: pointer;
-    padding: 0;
-    width: 28px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 3px;
-    transition: all 0.15s ease;
-}
-
-.invoker-history-close-button:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
-}
-
-.invoker-history-close-button:active {
-    background: rgba(255, 255, 255, 0.15);
-    color: #fff;
-}
-
 .invoker-history-overlay-search {
     padding: 16px 24px;
     background: #1f1f1f;
@@ -439,11 +413,10 @@
     letter-spacing: 0.3px;
 }
 
-.invoker-modal-close-button {
+.invoker-modal-close-button,
+.invoker-history-close-button {
     background: rgba(78, 77, 64, 0.25);
     border: 1px solid rgba(46, 45, 36, 0.4);
-    color: #aaa;
-    font-size: 14px;
     cursor: pointer;
     padding: 0;
     width: 28px;
@@ -455,14 +428,39 @@
     transition: all 0.15s ease;
 }
 
-.invoker-modal-close-button:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
+.invoker-modal-close-button::before,
+.invoker-history-close-button::before {
+    content: '';
+    display: block;
+    width: 10px;
+    height: 10px;
+    background-color: #aaa;
+    -webkit-mask-image: url('/static/gfx/close.svg');
+    mask-image: url('/static/gfx/close.svg');
+    -webkit-mask-size: 10px 10px;
+    mask-size: 10px 10px;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
 }
 
-.invoker-modal-close-button:active {
+.invoker-modal-close-button:hover,
+.invoker-history-close-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.invoker-modal-close-button:hover::before,
+.invoker-history-close-button:hover::before {
+    background-color: #fff;
+}
+
+.invoker-modal-close-button:active,
+.invoker-history-close-button:active {
     background: rgba(255, 255, 255, 0.15);
-    color: #fff;
+}
+
+.invoker-modal-close-button:active::before,
+.invoker-history-close-button:active::before {
+    background-color: #fff;
 }
 
 .invoker-modal-body {

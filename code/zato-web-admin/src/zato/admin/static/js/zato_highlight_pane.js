@@ -3,8 +3,7 @@
 //
 // Reusable syntax-highlighted editor pane for the Zato Dashboard.
 //
-// Wraps Ace editor with auto-detected language mode (json, xml, plain text),
-// Monokai theme, and an optional configurable button footer.
+// Wraps Ace editor with Monokai theme and an optional configurable button footer.
 // Has no dependency on dashboard-kit - only on zato_ui_helpers.js and Ace.
 //
 // Prerequisites (load before this script):
@@ -58,14 +57,14 @@
 //   text             - initial text content (required)
 //   editable         - boolean, default true, whether the editor allows editing
 //   ace_options      - optional object with theme and fontSize overrides
+//   ace_mode         - optional ace mode string (e.g. 'ace/mode/json'), defaults to 'ace/mode/text'
 //   buttons          - optional array of {id, label, on_click} button definitions,
 //                      if omitted or empty, no footer is rendered
-//   on_mode_detected - optional callback(modeName) fired after auto-detection
 //
 // Returned pane instance:
 //
 //   pane.getValue()   - returns the current editor text
-//   pane.setValue(text) - sets editor text and re-detects language mode
+//   pane.setValue(text, mode) - sets editor text and optionally sets ace mode
 //   pane.getEditor()  - returns the raw Ace editor instance
 //   pane.destroy()    - tears down the Ace editor and clears the container
 //
@@ -96,52 +95,46 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-    function _guess_ace_mode(text) {
+    var _mime_ace_modes = {
+        'application/json': 'ace/mode/json',
+        'text/json': 'ace/mode/json',
+        'application/geo+json': 'ace/mode/json',
+        'application/ld+json': 'ace/mode/json',
+        'application/vnd.api+json': 'ace/mode/json',
+        'application/json5': 'ace/mode/json5',
+        'text/xml': 'ace/mode/xml',
+        'application/xml': 'ace/mode/xml',
+        'application/soap+xml': 'ace/mode/xml',
+        'application/xhtml+xml': 'ace/mode/html',
+        'application/rss+xml': 'ace/mode/xml',
+        'application/atom+xml': 'ace/mode/xml',
+        'image/svg+xml': 'ace/mode/svg',
+        'text/html': 'ace/mode/html',
+        'text/yaml': 'ace/mode/yaml',
+        'text/x-yaml': 'ace/mode/yaml',
+        'application/x-yaml': 'ace/mode/yaml',
+        'application/yaml': 'ace/mode/yaml',
+        'text/csv': 'ace/mode/text',
+        'text/plain': 'ace/mode/text',
+        'application/octet-stream': 'ace/mode/text',
+    };
+
+    $.fn.zato.highlight_pane.mime_to_ace_mode = function(mimeType) {
+        return _mime_ace_modes[mimeType];
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.highlight_pane.detect_ace_mode = _detect_ace_mode;
+
+    function _detect_ace_mode(text) {
         var trimmed = text.trim();
-        var firstChar = trimmed.charAt(0);
-        var lastChar = trimmed.charAt(trimmed.length - 1);
 
-        var out = 'ace/mode/text';
-
-        // Check if the text looks like JSON ..
-        if (firstChar === '{') {
-            if (lastChar === '}') {
-                try {
-                    JSON.parse(trimmed);
-                    out = 'ace/mode/json';
-                    return out;
-                }
-                catch (error) {
-                    // .. not valid JSON, fall through.
-                }
-            }
+        if (trimmed.indexOf('Traceback') !== -1 || trimmed.indexOf('File "') !== -1 || trimmed.indexOf('\u00b7\u00b7\u00b7 Error \u00b7\u00b7\u00b7') !== -1) {
+            return 'ace/mode/python_traceback';
         }
 
-        if (firstChar === '[') {
-            if (lastChar === ']') {
-                try {
-                    JSON.parse(trimmed);
-                    out = 'ace/mode/json';
-                    return out;
-                }
-                catch (error) {
-                    // .. not valid JSON, fall through.
-                }
-            }
-        }
-
-        // .. check if the text looks like XML ..
-        if (firstChar === '<') {
-            var hasClosingBracket = trimmed.indexOf('>') !== -1;
-
-            if (hasClosingBracket) {
-                out = 'ace/mode/xml';
-                return out;
-            }
-        }
-
-        // .. otherwise, use plain text.
-        return out;
+        return 'ace/mode/text';
     }
 
 // ////////////////////////////////////////////////////////////////////////
@@ -218,14 +211,10 @@
             }
         }
 
-        // .. set the initial text and detect the mode ..
+        // .. set the initial text and mode ..
         editor.setValue(config.text, -1);
-        var mode = _guess_ace_mode(config.text);
+        var mode = config.ace_mode ? config.ace_mode : _detect_ace_mode(config.text);
         editor.session.setMode(mode);
-
-        if (config.on_mode_detected) {
-            config.on_mode_detected(mode);
-        }
 
         // .. build the pane instance that callers interact with ..
         var pane = {
@@ -234,13 +223,10 @@
                 return editor.getValue();
             },
 
-            setValue: function(text) {
+            setValue: function(text, mode) {
                 editor.setValue(text, -1);
-                var detectedMode = _guess_ace_mode(text);
-                editor.session.setMode(detectedMode);
-
-                if (config.on_mode_detected) {
-                    config.on_mode_detected(detectedMode);
+                if (mode) {
+                    editor.session.setMode(mode);
                 }
             },
 
@@ -459,7 +445,7 @@
             editable: config.editable,
             buttons: config.buttons,
             ace_options: config.ace_options,
-            on_mode_detected: config.on_mode_detected
+            ace_mode: config.ace_mode
         });
 
         // .. and show the overlay.
