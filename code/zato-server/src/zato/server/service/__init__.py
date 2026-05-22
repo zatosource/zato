@@ -221,6 +221,7 @@ internal_invoke_keys = {
     'set_response_func',
     'skip_response_elem',
     'target',
+    'wsgi_environ',
     'zato_response_headers_container',
 }
 

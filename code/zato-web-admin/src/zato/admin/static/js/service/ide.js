@@ -1232,11 +1232,19 @@ $.fn.zato.ide.postprocess_file_buttons = function(current_file_service_list) {
     // Get the current file context
     const current_fs_location = $.fn.zato.ide.get_current_fs_location();
 
-    // If no file is selected, disable all file-related buttons and the invoke button.
+    // If no file is selected, disable all file-related buttons.
     if (!current_fs_location) {
         file_buttons.forEach(button_id => $.fn.zato.ide.disable_button(button_id));
-        $.fn.zato.ide.disable_invoke_button();
-        return; // Exit early
+
+        // Disable invoke only if no service is selected either.
+        let selected_service_name = $.fn.zato.ide.get_current_service_name();
+        if (!selected_service_name) {
+            $.fn.zato.ide.disable_invoke_button();
+        }
+        else {
+            $.fn.zato.ide.enable_invoke_button();
+        }
+        return;
     }
 
     // If a file is selected, enable buttons by default, then apply specific disabling rules.
@@ -1423,6 +1431,13 @@ $.fn.zato.ide.get_current_object_select = function() {
     let current = $("#object-select :selected");
     //  console.debug("Returning current select: "+ current.text())
     return current;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.get_current_service_name = function() {
+    let current = $.fn.zato.ide.get_current_object_select();
+    return current.attr("data-service-name");
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
