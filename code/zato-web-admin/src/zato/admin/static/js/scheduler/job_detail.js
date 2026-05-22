@@ -1424,7 +1424,7 @@ $.fn.zato.scheduler.job_detail.render_actions = function(job_id) {
                     allowHTML: false,
                     theme: 'dark',
                     trigger: 'manual',
-                    placement: 'right',
+                    placement: 'left',
                     arrow: true,
                     interactive: false,
                     inertia: true,

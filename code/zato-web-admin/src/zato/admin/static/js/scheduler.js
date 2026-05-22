@@ -153,13 +153,6 @@ $(document).ready(function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.scheduler.titles = {
-    'one_time': 'a one-time',
-    'interval_based': 'a',
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-
 $.fn.zato.scheduler.data_table.on_submit_complete = function(data, status, action, job_type) {
 
     if(status == 'success') {
@@ -214,8 +207,7 @@ $.fn.zato.scheduler._create_edit = function(action, job_type, id) {
     $.fn.zato.cleanup_chosen("");
     $.fn.zato.cleanup_form_css_attention(".data-popup");
 
-    var title = String.format('{0} {1} job',
-        action.capitalize(), $.fn.zato.scheduler.titles[job_type]);
+    var title = action == 'create' ? 'Create a new job' : 'Edit the job';
 
     if(action == 'edit') {
 

@@ -61,8 +61,8 @@
                             data-fs-location-url-safe=""
                             data-current-root-directory="{{ data.current_root_directory }}"
                             data-root-directory-count="{{ data.root_directory_count }}"
-                            {% if current_object_name == service_item.name %}selected="selected"{% endif %}
-                            data-service-name="">{% if data.current_fs_location %}(No services in current file){% else %}(Select a service or file){% endif %}</option>
+                            selected="selected"
+                            data-service-name="{{ current_object_name }}">{% if data.current_fs_location %}(No services in current file){% elif current_object_name %}{{ current_object_name }}{% else %}(Select a service or file){% endif %}</option>
                     {% endfor %}
                 </optgroup>
                 <optgroup label="All services" id="optgroup-all-services">
@@ -141,7 +141,7 @@ Ctrl+K for full history"></textarea></form>
                                     <input
                                         id="invoke-service"
                                         type="button"
-                                        {% if not data.current_fs_location %}disabled="disabled" class="no-click"{% endif %}
+                                        {% if not data.current_fs_location and not data.current_file_service_list and not current_object_name %}disabled="disabled" class="no-click"{% endif %}
                                         value="Invoke"/>
                                 </div>
                             </div>
