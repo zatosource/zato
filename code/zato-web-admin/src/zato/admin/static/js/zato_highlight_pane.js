@@ -180,7 +180,7 @@
             fontFamily: 'Menlo, Consolas, Monaco, monospace',
             firstLineNumber: 1
         });
-        editor.renderer.setScrollMargin(7, 7, 0, 0);
+        editor.renderer.setScrollMargin(7, 0, 0, 0);
         editor.setReadOnly(!editable);
 
         // .. apply any custom Ace options ..
@@ -196,6 +196,8 @@
 
             if (config.ace_options.maxLines) {
                 editor.setOption('maxLines', config.ace_options.maxLines);
+                editorElement.style.minHeight = 'auto';
+                editorElement.style.height = 'auto';
             }
 
             if (config.ace_options.minLines) {

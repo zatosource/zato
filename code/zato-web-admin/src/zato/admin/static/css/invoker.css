@@ -399,9 +399,8 @@
 .invoker-modal-content {
     position: relative;
     width: 900px;
-    height: 620px;
     min-width: 500px;
-    min-height: 350px;
+    max-height: 90vh;
     background: linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 100%);
     border-radius: 12px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.1) inset;
@@ -457,8 +456,8 @@
 }
 
 .invoker-modal-body {
-    padding: 16px 24px;
-    overflow-y: auto;
+    padding: 16px 24px 12px;
+    overflow-y: scroll;
     flex: 1;
     display: flex;
     flex-direction: column;
