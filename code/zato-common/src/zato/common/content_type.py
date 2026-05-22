@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
 
 # stdlib
 from __future__ import annotations
@@ -15,31 +22,67 @@ import magic
 # ################################################################################################################################
 
 def get_content_type(data:'str | bytes') -> 'str':
+    """ Detects the MIME content type of the given data.
+    """
+
+    # Encode string data to bytes for magic ..
     if isinstance(data, str):
         data = data.encode('utf-8')
-    return magic.from_buffer(data, mime=True)
+
+    # .. and return the detected MIME type.
+    out = magic.from_buffer(data, mime=True)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def _format_json(data:'str') -> 'str':
-    parsed = json.loads(data)
-    return json.dumps(parsed, indent=2)
+    """ Pretty-prints JSON data with 2-space indentation.
+    """
 
+    # Parse the raw JSON string ..
+    parsed = json.loads(data)
+
+    # .. and re-serialize it with indentation.
+    out = json.dumps(parsed, indent=2)
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def _format_xml(data:'str') -> 'str':
-    tree = etree.fromstring(data.encode('utf-8'))
-    etree.indent(tree)
-    return etree.tostring(tree, encoding='unicode', pretty_print=True)
+    """ Pretty-prints XML data using lxml.
+    """
 
+    # Parse the XML from raw bytes ..
+    data_bytes = data.encode('utf-8')
+    tree = etree.fromstring(data_bytes)
+
+    # .. indent the tree ..
+    etree.indent(tree)
+
+    # .. and serialize it back to a string.
+    out = etree.tostring(tree, encoding='unicode', pretty_print=True)
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def _format_html(data:'str') -> 'str':
+    """ Pretty-prints HTML data using lxml.
+    """
+
+    # Parse the HTML from a string reader ..
     parser = etree.HTMLParser()
-    doc = etree.parse(io.StringIO(data), parser)
+    string_io = io.StringIO(data)
+    doc = etree.parse(string_io, parser)
+
+    # .. indent the tree ..
     etree.indent(doc)
-    return etree.tostring(doc, encoding='unicode', method='html', pretty_print=True)
+
+    # .. and serialize it back to a string.
+    out = etree.tostring(doc, encoding='unicode', method='html', pretty_print=True)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,10 +108,15 @@ _formatters = {
 # ################################################################################################################################
 
 def format_content(data:'str', content_type:'str') -> 'str':
+    """ Formats the given data based on its content type using the appropriate formatter.
+    """
+
     if formatter := _formatters.get(content_type):
-        return formatter(data)
+        out = formatter(data)
     else:
-        return data
+        out = data
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

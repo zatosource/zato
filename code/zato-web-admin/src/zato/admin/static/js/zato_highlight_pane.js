@@ -120,7 +120,8 @@
     };
 
     $.fn.zato.highlight_pane.mime_to_ace_mode = function(mimeType) {
-        return _mime_ace_modes[mimeType];
+        var out = _mime_ace_modes[mimeType];
+        return out;
     };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -129,12 +130,25 @@
 
     function _detect_ace_mode(text) {
         var trimmed = text.trim();
+        var out;
 
-        if (trimmed.indexOf('Traceback') !== -1 || trimmed.indexOf('File "') !== -1 || trimmed.indexOf('\u00b7\u00b7\u00b7 Error \u00b7\u00b7\u00b7') !== -1) {
-            return 'ace/mode/python_traceback';
+        // Check for Python traceback markers ..
+        if (trimmed.indexOf('Traceback') !== -1) {
+            out = 'ace/mode/python_traceback';
+        }
+        else if (trimmed.indexOf('File "') !== -1) {
+            out = 'ace/mode/python_traceback';
+        }
+        else if (trimmed.indexOf('\u00b7\u00b7\u00b7 Error \u00b7\u00b7\u00b7') !== -1) {
+            out = 'ace/mode/python_traceback';
         }
 
-        return 'ace/mode/text';
+        // .. otherwise use plain text.
+        else {
+            out = 'ace/mode/text';
+        }
+
+        return out;
     }
 
 // ////////////////////////////////////////////////////////////////////////
@@ -211,9 +225,17 @@
             }
         }
 
-        // .. set the initial text and mode ..
+        // .. determine the mode from config or by detection ..
+        var mode;
+        if (config.ace_mode) {
+            mode = config.ace_mode;
+        }
+        else {
+            mode = _detect_ace_mode(config.text);
+        }
+
+        // .. and set the initial text and mode.
         editor.setValue(config.text, -1);
-        var mode = config.ace_mode ? config.ace_mode : _detect_ace_mode(config.text);
         editor.session.setMode(mode);
 
         // .. build the pane instance that callers interact with ..
@@ -391,29 +413,29 @@
     }
 
     function _make_overlay_draggable($overlay) {
-        var is_dragging = false;
-        var offset_x = 0;
-        var offset_y = 0;
+        var isDragging = false;
+        var offsetX = 0;
+        var offsetY = 0;
         var $content = $overlay.find('.zato-highlight-pane-overlay-content');
         var $header = $overlay.find('.zato-highlight-pane-overlay-header');
 
         $header.on('mousedown.zato_highlight_overlay', function(e) {
             if ($(e.target).is('button, input, a')) return;
-            is_dragging = true;
+            isDragging = true;
             var rect = $content[0].getBoundingClientRect();
-            offset_x = e.clientX - rect.left;
-            offset_y = e.clientY - rect.top;
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
             $content.css({position: 'fixed', margin: '0', left: rect.left + 'px', top: rect.top + 'px', transform: 'none'});
             e.preventDefault();
         });
 
         $(document).on('mousemove.zato_highlight_overlay', function(e) {
-            if (!is_dragging) return;
-            $content.css({left: (e.clientX - offset_x) + 'px', top: (e.clientY - offset_y) + 'px'});
+            if (!isDragging) return;
+            $content.css({left: (e.clientX - offsetX) + 'px', top: (e.clientY - offsetY) + 'px'});
         });
 
         $(document).on('mouseup.zato_highlight_overlay', function() {
-            is_dragging = false;
+            isDragging = false;
         });
     }
 

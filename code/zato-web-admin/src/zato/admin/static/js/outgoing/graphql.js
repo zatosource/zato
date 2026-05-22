@@ -30,7 +30,7 @@ $(document).ready(function() {
     var uniqueConstraints = [
         {field: 'name', entity_type: 'generic_connection', attr_name: 'name'}
     ];
-    $.each(uniqueConstraints, function(constraintIdx, constraint) {
+    $.each(uniqueConstraints, function(constraintIndex, constraint) {
         $.fn.zato.validate_unique('#id_' + constraint.field, constraint.entity_type, constraint.attr_name);
         $.fn.zato.validate_unique('#id_edit-' + constraint.field, constraint.entity_type, constraint.attr_name);
     });
@@ -81,25 +81,41 @@ $.fn.zato.outgoing.graphql.data_table.new_row = function(item, data, includeTR) 
     let isActive = item.is_active == true;
 
     var securityCell = '<span class="form_hint">---</span>';
-    var secType = '';
-    var selectedValue = $('#id_security_id').val() || $('#id_edit-security_id').val() || '';
+    var securityType = '';
 
-    if(item.security_id && selectedValue && selectedValue.indexOf('/') > -1) {
-        secType = selectedValue.split('/')[0];
-        var secName = item.security_id_select ? item.security_id_select.split('/').slice(1).join('/') : '';
+    var selectedValue = $('#id_security_id').val();
+    if (!selectedValue) {
+        selectedValue = $('#id_edit-security_id').val();
+    }
 
-        var secHref = '/zato/security/';
-        if(secType === 'oauth') {
-            secHref += 'oauth/outconn/client-credentials/';
+    if(item.security_id) {
+        if (selectedValue) {
+            if (selectedValue.indexOf('/') > -1) {
+
+                var selectedParts = selectedValue.split('/');
+                securityType = selectedParts[0];
+
+                var securityName = '';
+                if (item.security_id_select) {
+                    var selectParts = item.security_id_select.split('/');
+                    var nameParts = selectParts.slice(1);
+                    securityName = nameParts.join('/');
+                }
+
+                var securityHref = '/zato/security/';
+                if(securityType === 'oauth') {
+                    securityHref += 'oauth/outconn/client-credentials/';
+                }
+                else if(securityType === 'basic_auth') {
+                    securityHref += 'basic-auth/';
+                }
+                else if(securityType === 'apikey') {
+                    securityHref += 'apikey/';
+                }
+                securityHref += '?cluster=1&query=' + encodeURIComponent(securityName);
+                securityCell = String.format('<a href=\'{0}\'>{1}</a>', securityHref, securityName);
+            }
         }
-        else if(secType === 'basic_auth') {
-            secHref += 'basic-auth/';
-        }
-        else if(secType === 'apikey') {
-            secHref += 'apikey/';
-        }
-        secHref += '?cluster=1&query=' + encodeURIComponent(secName);
-        securityCell = String.format('<a href=\'{0}\'>{1}</a>', secHref, secName);
     }
 
     row += '<td class=\'numbering\'>&nbsp;</td>';
@@ -125,7 +141,7 @@ $.fn.zato.outgoing.graphql.data_table.new_row = function(item, data, includeTR) 
     row += String.format('<td class=\'ignore\'>{0}</td>', item.extra);
     row += String.format('<td class=\'ignore\'>{0}</td>', item.default_query_timeout);
     row += String.format('<td class=\'ignore\'>{0}</td>', item.security_id);
-    row += String.format('<td class=\'ignore\'>{0}</td>', secType);
+    row += String.format('<td class=\'ignore\'>{0}</td>', securityType);
 
     if(includeTR) {
         row += '</tr>';

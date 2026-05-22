@@ -57,9 +57,11 @@ _mime_to_pygments_lexer = {
 
 def get_pygments_lexer(content_type:'str') -> 'any_':
     if lexer_class := _mime_to_pygments_lexer.get(content_type):
-        return lexer_class()
+        out = lexer_class()
     else:
-        return TextLexer()
+        out = TextLexer()
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,9 +99,7 @@ def highlight(request:'any_') -> 'JsonResponse':
         return out
 
     # Check if an explicit lexer was requested ..
-    forced_lexer_name = request.POST.get('lexer', '')
-
-    if forced_lexer_name:
+    if forced_lexer_name := request.POST.get('lexer'):
         if forced_lexer_name in _Lexer_Whitelist:
             lexer = get_lexer_by_name(forced_lexer_name)
 
