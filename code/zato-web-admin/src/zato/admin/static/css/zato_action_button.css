@@ -22,7 +22,10 @@
 .record-edit-action-button:hover,
 .record-edit-action-button:active,
 .record-edit-action-button:focus,
-.record-edit-action-button:focus-visible {
+.record-edit-action-button:focus-visible,
+div.page_prompt a:not(.common),
+div.page_prompt a:not(.common):hover,
+div.page_prompt a:not(.common):active {
     display: inline-block;
     padding: 4px 10px;
     font-size: 11px;

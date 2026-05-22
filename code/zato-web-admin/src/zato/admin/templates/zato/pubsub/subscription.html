@@ -69,6 +69,12 @@
             padding-left: 25%;
         }
 
+        .col-center-left {
+            display: block;
+            text-align: left;
+            padding-left: 8%;
+        }
+
         .ps-sub-key {
             cursor: pointer;
         }
@@ -457,7 +463,7 @@
                         <th style="max-width:220px; white-space:nowrap;">Sub key</th>
                         <th style="text-align:center"><span class="enabled-for-inner">Enabled for</span></th>
 
-                        <th style="text-align:center">Delivery type</th>
+                        <th style="text-align:center"><span class="col-center-left">Delivery type</span></th>
                         <th>Topics</th>
                         <th>Pending messages</th>
                         <th style="text-align:center"></th>
@@ -492,7 +498,7 @@
                         <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><span class="ps-sub-key" data-sub-key="{{ item.sub_key }}">{{ item.sub_key }}</span></td>
                         <td style="text-align:center"><div class="enabled-for-inner"><div class="ps-status-cell"><span class="ps-badge {{ item.is_delivery_active|yesno:'ps-badge-deliv-enabled,ps-badge-deliv-disabled' }}">Delivery</span><span class="ps-badge {{ item.is_pub_active|yesno:'ps-badge-pub-enabled,ps-badge-pub-disabled' }}">Pub</span></div></div></td>
 
-                        <td style="text-align:center">
+                        <td style="text-align:center"><div class="col-center-left">
                             {% if item.delivery_type == 'pull' %}
                                 Pull
                             {% elif item.delivery_type == 'push' and item.push_type == 'rest' %}
@@ -502,7 +508,7 @@
                             {% else %}
                                 Push
                             {% endif %}
-                        </td>
+                        </div></td>
                         <td>{{ item.topic_link_list|safe }}</td>
                         <td><a href="/zato/pubsub/subscription/queue/?cluster={{ cluster_id }}&sub_key={{ item.sub_key }}&state=pending">{{ item.pending_depth }}</a></td>
                         <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>

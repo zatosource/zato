@@ -1,4 +1,3 @@
-@import url("zato_action_button.css");
 
 /* ***************************** */
 /*   Blinking / draw-attention   */
@@ -626,4 +625,23 @@
 .invoker-more-options-row textarea:focus {
     outline: none;
     border-color: #4a9eff;
+}
+
+/* ***************************** */
+/*   Modal invoking spinner      */
+/* ***************************** */
+
+.invoker-modal-spinner {
+    width: 19px;
+    height: 19px;
+    vertical-align: middle;
+    margin-right: 3px;
+    position: relative;
+    top: -1px;
+    animation: invoker-spin 0.5s linear infinite;
+}
+
+@keyframes invoker-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
