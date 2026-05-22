@@ -402,7 +402,7 @@
     min-width: 500px;
     max-height: 90vh;
     background: linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 100%);
-    border-radius: 12px;
+    border-radius: 4px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.1) inset;
     display: flex;
     flex-direction: column;
