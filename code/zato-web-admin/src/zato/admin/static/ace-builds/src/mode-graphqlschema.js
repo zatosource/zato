@@ -25,8 +25,6 @@ var GraphQLSchemaHighlightRules = function() {
         "constant.language": constants
     }, "identifier");
 
-    var operationKeywords = /^(?:query|mutation|subscription|fragment)$/;
-
     this.$rules = {
       "start" : [ {
         token : "comment",
@@ -49,108 +47,31 @@ var GraphQLSchemaHighlightRules = function() {
         token : "support.function",
         regex : /@[_A-Za-z][_0-9A-Za-z]*/
       }, {
-        token : function(value) {
-          var mapped = keywordMapper(value);
-          if (mapped !== "identifier") {
-            if (operationKeywords.test(value)) {
-              return "keyword";
-            }
-            return mapped;
-          }
-          return "entity.name.function";
-        },
-        regex : "[a-zA-Z_][a-zA-Z0-9_]*\\b",
-        next : "afterIdent"
+        token : "keyword",
+        regex : /(?:query|mutation|subscription|fragment)\b/,
+        next  : "operationName"
       }, {
-        token : "punctuation.operator",
-        regex : /[,:!]/
-      }, {
-        token : "keyword.operator",
-        regex : /\.\.\./
-      }, {
-        token : "keyword.operator",
-        regex : /=/
+        token : keywordMapper,
+        regex : "[a-zA-Z_$][a-zA-Z0-9_$]*\\b"
       }, {
         token : "paren.lparen",
-        regex : /[\[({]/
+        regex : /[\[({]/,
+        next  : "start"
       }, {
         token : "paren.rparen",
         regex : /[\])}]/
       } ],
-      "afterIdent" : [ {
-        token : "comment",
-        regex : "#.*$",
-        next : "start"
-      }, {
-        token : "paren.lparen",
-        regex : /\(/
-      }, {
-        token : "paren.lparen",
-        regex : /\{/,
-        next : "fields"
-      }, {
+      "operationName" : [ {
         token : "entity.name.function",
-        regex : "[a-zA-Z_][a-zA-Z0-9_]*\\b"
+        regex : "[a-zA-Z_][a-zA-Z0-9_]*\\b",
+        next  : "start"
       }, {
         token : "text",
         regex : /\s+/
       }, {
         token : "text",
         regex : "",
-        next : "start"
-      } ],
-      "fields" : [ {
-        token : "comment",
-        regex : "#.*$"
-      }, {
-        token : "string",
-        regex : '"',
-        next : [
-          {token: "constant.language.escape", regex: /\\(?:u[\da-fA-F]{4}|.)/},
-          {token: "string", regex: '"', next: "fields"},
-          {defaultToken: "string"}
-        ]
-      }, {
-        token : "constant.numeric",
-        regex : /\d+\.?\d*[eE]?[+\-]?\d*/
-      }, {
-        token : "variable",
-        regex : /\$[_A-Za-z][_0-9A-Za-z]*/
-      }, {
-        token : "support.function",
-        regex : /@[_A-Za-z][_0-9A-Za-z]*/
-      }, {
-        token : "keyword.operator",
-        regex : /\.\.\./,
-        next : "start"
-      }, {
-        token : function(value) {
-          var mapped = keywordMapper(value);
-          if (mapped !== "identifier") {
-            return mapped;
-          }
-          return "variable.language";
-        },
-        regex : "[a-zA-Z_][a-zA-Z0-9_]*\\b"
-      }, {
-        token : "punctuation.operator",
-        regex : /[,:!]/
-      }, {
-        token : "keyword.operator",
-        regex : /=/
-      }, {
-        token : "paren.lparen",
-        regex : /\{/
-      }, {
-        token : "paren.lparen",
-        regex : /\(/
-      }, {
-        token : "paren.rparen",
-        regex : /\)/
-      }, {
-        token : "paren.rparen",
-        regex : /\}/,
-        next : "start"
+        next  : "start"
       } ]
     };
     this.normalizeRules();
