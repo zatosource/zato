@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from http import HTTPStatus
 from json import loads
 
 # Zato
@@ -59,7 +60,7 @@ class Create(_CreateEdit):
 
     def __call__(self, req, *args, **kwargs):
         response = super().__call__(req, *args, **kwargs)
-        if response.status_code == 200:
+        if response.status_code == HTTPStatus.OK:
             data = loads(response.content)
             password = req.POST.get('password', '')
             if password:

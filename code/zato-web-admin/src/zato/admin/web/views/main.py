@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from http import HTTPStatus
 from logging import getLogger
 
 # Django
@@ -127,7 +128,7 @@ def login(req):
 @login_required
 @method_allowed('GET')
 def session_keepalive(req):
-    return HttpResponse(status=204)
+    return HttpResponse(status=HTTPStatus.NO_CONTENT)
 
 # ################################################################################################################################
 

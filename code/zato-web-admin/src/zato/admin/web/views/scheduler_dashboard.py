@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 import logging
 import time
+from http import HTTPStatus
 
 # Django
 from django.http import HttpResponse
@@ -68,14 +69,14 @@ def poll(req):
             return HttpResponse(
                 json.dumps({'error': response.details}),
                 content_type='application/json',
-                status=500,
+                status=HTTPStatus.INTERNAL_SERVER_ERROR,
             )
     except Exception as e:
         logger.error('Scheduler dashboard poll error: %s', e)
         return HttpResponse(
             json.dumps({'error': str(e)}),
             content_type='application/json',
-            status=500,
+            status=HTTPStatus.INTERNAL_SERVER_ERROR,
         )
 
 # ################################################################################################################################

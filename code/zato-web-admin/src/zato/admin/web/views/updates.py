@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from http import HTTPStatus
 from logging import getLogger
 
 # Zato
@@ -140,7 +141,7 @@ def download_logs(req):
     update_log_path = os.path.join(base_dir, 'server1', 'logs', 'update.log')
 
     if not os.path.exists(update_log_path):
-        return HttpResponse('Update log file not found', status=404)
+        return HttpResponse('Update log file not found', status=HTTPStatus.NOT_FOUND)
 
     try:
         response = FileResponse(open(update_log_path, 'rb'), content_type='text/plain')
@@ -148,7 +149,7 @@ def download_logs(req):
         return response
     except Exception as e:
         logger.error('download_logs: failed to read update.log: {}'.format(e))
-        return HttpResponse('Error reading update log: {}'.format(e), status=500)
+        return HttpResponse('Error reading update log: {}'.format(e), status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
 # ################################################################################################################################
 # ################################################################################################################################

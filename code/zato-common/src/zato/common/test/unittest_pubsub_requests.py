@@ -177,7 +177,7 @@ class PubSubRESTServerBaseTestCase(TestCase):
             response = requests.get(diagnostics_url, auth=self.auth)
             logger.debug(f'Response status: {response.status_code}')
             logger.debug(f'Response headers: {dict(response.headers)}')
-            if response.status_code == 200:
+            if response.status_code == http_client.OK:
                 data = response.json()
                 logger.debug(f'Diagnostics response received, data keys: {list(data.keys()) if isinstance(data, dict) else type(data)}')
                 return data
