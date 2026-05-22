@@ -173,12 +173,16 @@ $.fn.zato.outgoing.graphql.invoke = function(id) {
 
     var defaultQuery = 'query IntrospectionQuery {\n  __schema {\n    types {\n      name\n      kind\n      description\n    }\n  }\n}';
 
+    $.fn.zato.invoker._request_ace_mode = 'ace/mode/graphqlschema';
+
     var pane = $.fn.zato.invoker._request_pane;
     if (pane) {
         if (!pane.getValue()) {
-            pane.setValue(defaultQuery);
+            $.fn.zato.invoker._set_request_value(defaultQuery);
         }
-        pane.getEditor().session.setMode('ace/mode/graphqlschema');
+        else {
+            pane.getEditor().session.setMode('ace/mode/graphqlschema');
+        }
     }
 
     $('#invoker-more-options').html(

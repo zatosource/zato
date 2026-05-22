@@ -657,6 +657,16 @@ $.fn.zato.invoker.on_history_down = function(key, textareaSelector, currentIndex
 $.fn.zato.invoker._modal_config = null;
 $.fn.zato.invoker._request_pane = null;
 $.fn.zato.invoker._response_pane = null;
+$.fn.zato.invoker._request_ace_mode = null;
+
+$.fn.zato.invoker._set_request_value = function(text) {
+    if ($.fn.zato.invoker._request_pane) {
+        $.fn.zato.invoker._request_pane.setValue(text);
+        if ($.fn.zato.invoker._request_ace_mode) {
+            $.fn.zato.invoker._request_pane.getEditor().session.setMode($.fn.zato.invoker._request_ace_mode);
+        }
+    }
+};
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -676,8 +686,8 @@ $.fn.zato.invoker.render_overlay_html = function() {
         +     '<div class="invoker-modal-body">'
         +       '<div id="invoker-modal-request-pane"></div>'
         +       '<div class="invoker-modal-buttons">'
-        +         '<input type="button" id="invoker-modal-invoke-button" class="invoker-button-primary" value="Invoke" />'
-        +         '<input type="button" id="invoker-modal-history-button" value="History" />'
+        +         '<button type="button" id="invoker-modal-invoke-button" class="zato-action-button">Invoke</button>'
+        +         '<button type="button" id="invoker-modal-history-button" class="zato-action-button">History</button>'
         +         '<div class="invoker-more-options-toggle">'
         +           '<a href="javascript:$.fn.zato.invoker.toggle_more_options()">More options</a>'
         +         '</div>'
@@ -818,9 +828,7 @@ $.fn.zato.invoker._get_modal_history_callbacks = function() {
             let history = $.fn.zato.invoker.get_history(config.history_key);
             let item = history[index];
             let requestText = typeof item === 'string' ? item : item.text;
-            if ($.fn.zato.invoker._request_pane) {
-                $.fn.zato.invoker._request_pane.setValue(requestText);
-            }
+            $.fn.zato.invoker._set_request_value(requestText);
             window.zato_invoker_history_index = parseInt(index);
             $.fn.zato.invoker._close_modal_history();
             if ($.fn.zato.invoker._request_pane) {
@@ -890,7 +898,8 @@ $.fn.zato.invoker.open_overlay = function(config) {
     $.fn.zato.invoker._request_pane = $.fn.zato.highlight_pane.init({
         container: $requestContainer,
         text: requestValue,
-        editable: true
+        editable: true,
+        ace_options: {maxLines: 12, minLines: 12}
     });
 
     // .. mount the response pane ..
@@ -907,6 +916,7 @@ $.fn.zato.invoker.open_overlay = function(config) {
         container: $responseContainer,
         text: responseText,
         editable: false,
+        ace_options: {maxLines: 12, minLines: 12},
         buttons: [
             $.fn.zato.highlight_pane.buttons.copy()
         ]
@@ -932,6 +942,7 @@ $.fn.zato.invoker.close_overlay = function() {
     }
     $('#invoker-modal-overlay').addClass('hidden');
     $.fn.zato.invoker._modal_config = null;
+    $.fn.zato.invoker._request_ace_mode = null;
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1247,9 +1258,7 @@ $.fn.zato.invoker._on_modal_history_up = function() {
 
     let item = history[newIndex];
     let text = typeof item === 'string' ? item : item.text;
-    if ($.fn.zato.invoker._request_pane) {
-        $.fn.zato.invoker._request_pane.setValue(text);
-    }
+    $.fn.zato.invoker._set_request_value(text);
     window.zato_invoker_history_index = newIndex;
 };
 
@@ -1275,16 +1284,12 @@ $.fn.zato.invoker._on_modal_history_down = function() {
     }
 
     if (newIndex === -1) {
-        if ($.fn.zato.invoker._request_pane) {
-            $.fn.zato.invoker._request_pane.setValue('');
-        }
+        $.fn.zato.invoker._set_request_value('');
     }
     else {
         let item = history[newIndex];
         let text = typeof item === 'string' ? item : item.text;
-        if ($.fn.zato.invoker._request_pane) {
-            $.fn.zato.invoker._request_pane.setValue(text);
-        }
+        $.fn.zato.invoker._set_request_value(text);
     }
     window.zato_invoker_history_index = newIndex;
 };
