@@ -155,7 +155,7 @@ $(document).ready(function() {
 
 $.fn.zato.scheduler.titles = {
     'one_time': 'a one-time',
-    'interval_based': 'an interval-based',
+    'interval_based': 'a',
 }
 
 // /////////////////////////////////////////////////////////////////////////////
