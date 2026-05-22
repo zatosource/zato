@@ -1,3 +1,5 @@
+@import url("zato_action_button.css");
+
 /* ***************************** */
 /*   Blinking / draw-attention   */
 /* ***************************** */
@@ -463,39 +465,15 @@
     min-height: 0;
 }
 
+.invoker-modal-body .zato-action-button {
+    border-bottom-width: 1px;
+}
+
 .invoker-modal-buttons {
     display: flex;
     gap: 8px;
     margin-top: 12px;
     align-items: center;
-}
-
-.invoker-modal-buttons input[type="button"],
-.invoker-modal-buttons button {
-    padding: 8px 18px;
-    background: #333;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 6px;
-    color: #e0e0e0;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    text-shadow: none;
-}
-
-.invoker-modal-buttons input[type="button"]:hover,
-.invoker-modal-buttons button:hover {
-    background: #444;
-    border-color: rgba(255, 255, 255, 0.25);
-}
-
-.invoker-modal-buttons .invoker-button-primary {
-    background: #2a5a8a;
-    border-color: #3a7abf;
-}
-
-.invoker-modal-buttons .invoker-button-primary:hover {
-    background: #3a6a9a;
 }
 
 .invoker-modal-status {

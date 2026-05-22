@@ -193,6 +193,14 @@
             if (config.ace_options.fontSize) {
                 editor.setFontSize(config.ace_options.fontSize);
             }
+
+            if (config.ace_options.maxLines) {
+                editor.setOption('maxLines', config.ace_options.maxLines);
+            }
+
+            if (config.ace_options.minLines) {
+                editor.setOption('minLines', config.ace_options.minLines);
+            }
         }
 
         // .. set the initial text and detect the mode ..
