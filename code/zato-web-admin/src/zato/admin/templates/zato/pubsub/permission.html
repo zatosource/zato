@@ -14,6 +14,12 @@
             --pattern-border-color2: #ccc;
         }
 
+        .access-type-inner {
+            display: block;
+            text-align: left;
+            padding: 0 15%;
+        }
+
         .ui-helper-clearfix.ui-draggable-handle button {
             right: 6px !important;
         }
@@ -427,7 +433,7 @@
                         <th><a href="#">Security definition</a></th>
 
                         <th><a href="#">Patterns</a></th>
-                        <th><a href="#">Access type</a></th>
+                        <th style="text-align:center"><span class="access-type-inner"><a href="#">Access type</a></span></th>
                         <th class='ignore' style="text-align:center"><a href="#">Subscriptions</a></th>
 
                         <th>&nbsp;</th>
@@ -453,7 +459,8 @@
                             <div class="pattern-display" data-patterns="{{ item.pattern|escapejs }}">
                             </div>
                         </td>
-                        <td>
+                        <td style="text-align:center">
+                            <span class="access-type-inner">
                             {% if item.access_type == 'publisher' %}
                                 Publisher
                             {% elif item.access_type == 'subscriber' %}
@@ -463,6 +470,7 @@
                             {% else %}
                                 {{ item.access_type|capfirst }}
                             {% endif %}
+                            </span>
                         </td>
                         <td class='ignore' style="text-align:center">{{ item.subscription_count|default:"0" }}</td>
 
