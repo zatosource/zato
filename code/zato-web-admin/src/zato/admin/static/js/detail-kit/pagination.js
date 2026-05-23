@@ -174,7 +174,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                     }
                     var rows = data.rows;
                     total_count = data.total;
-                    render_page($body, rows);
+                    render_page($body, rows, total_count);
                     update_last_ts(rows);
                     update_controls();
                 }
