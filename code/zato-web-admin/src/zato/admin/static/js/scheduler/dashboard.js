@@ -630,7 +630,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         // .. for the 5-min range, collapse raw 5-second buckets into per-minute plot_buckets ..
         // .. for all other ranges, plot_buckets is just a reference to the raw buckets ..
         var plot_buckets;
-        if (dash._time_range_minutes === 5 || dash._time_range_minutes === 15) {
+        if (dash._time_range_minutes > 0 && dash._time_range_minutes <= 60) {
             var _seen_group_order = [];
             var _group_entries = {};
             for (var pb_idx = 0; pb_idx < buckets.length; pb_idx++) {
@@ -695,7 +695,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         svg += '</defs>';
 
         var _y_axis_values = [];
-        var _y_axis_suffix = (dash._time_range_minutes === 5 || dash._time_range_minutes === 15) ? '/min' : '';
+        var _y_axis_suffix = (dash._time_range_minutes <= 60 && dash._time_range_minutes > 0) ? '/min' : '';
         var grid_line_count = Math.min(4, max_stack);
         var prev_grid_value = -1;
         for (var grid_index = 0; grid_index <= grid_line_count; grid_index++) {
