@@ -482,7 +482,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         var server_buckets = chart_data.buckets;
         var chart_width = container.width();
         var chart_height = 200;
-        var padding_left = 40;
+        var padding_left = 62;
         var padding_bottom = 28;
         var padding_top = 12;
         var padding_right = 8;
@@ -627,19 +627,50 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             }
         }
 
+        // .. for the 5-min range, collapse raw 5-second buckets into per-minute plot_buckets ..
+        // .. for all other ranges, plot_buckets is just a reference to the raw buckets ..
+        var plot_buckets;
+        if (dash._time_range_minutes === 5 || dash._time_range_minutes === 15) {
+            var _seen_group_order = [];
+            var _group_entries = {};
+            for (var pb_idx = 0; pb_idx < buckets.length; pb_idx++) {
+                var pb_gk = dash._chart_groups[pb_idx];
+                if (_group_entries[pb_gk] === undefined) {
+                    _seen_group_order.push(pb_gk);
+                    var pb_entry = {start: buckets[pb_idx].start, end: buckets[pb_idx].end, group_key: pb_gk};
+                    for (var pb_ki = 0; pb_ki < visible_keys.length; pb_ki++) {
+                        pb_entry[visible_keys[pb_ki]] = 0;
+                    }
+                    _group_entries[pb_gk] = pb_entry;
+                }
+                var pb_target = _group_entries[pb_gk];
+                pb_target.end = buckets[pb_idx].end;
+                for (var pb_oi = 0; pb_oi < visible_keys.length; pb_oi++) {
+                    pb_target[visible_keys[pb_oi]] += buckets[pb_idx][visible_keys[pb_oi]];
+                }
+            }
+            plot_buckets = [];
+            for (var pb_si = 0; pb_si < _seen_group_order.length; pb_si++) {
+                plot_buckets.push(_group_entries[_seen_group_order[pb_si]]);
+            }
+        } else {
+            plot_buckets = buckets;
+        }
+        bucket_count = plot_buckets.length;
+
         var max_stack = 0;
         if (dash.show_bars) {
-            for (var ms_index = 0; ms_index < buckets.length; ms_index++) {
+            for (var ms_index = 0; ms_index < plot_buckets.length; ms_index++) {
                 var ms_sum = 0;
                 for (var ms_key = 0; ms_key < visible_keys.length; ms_key++) {
-                    ms_sum += buckets[ms_index][visible_keys[ms_key]];
+                    ms_sum += plot_buckets[ms_index][visible_keys[ms_key]];
                 }
                 if (ms_sum > max_stack) max_stack = ms_sum;
             }
         } else {
-            for (var ms_index2 = 0; ms_index2 < buckets.length; ms_index2++) {
+            for (var ms_index2 = 0; ms_index2 < plot_buckets.length; ms_index2++) {
                 for (var ms_key2 = 0; ms_key2 < visible_keys.length; ms_key2++) {
-                    var ms_val = buckets[ms_index2][visible_keys[ms_key2]];
+                    var ms_val = plot_buckets[ms_index2][visible_keys[ms_key2]];
                     if (ms_val > max_stack) max_stack = ms_val;
                 }
             }
@@ -664,6 +695,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         svg += '</defs>';
 
         var _y_axis_values = [];
+        var _y_axis_suffix = (dash._time_range_minutes === 5 || dash._time_range_minutes === 15) ? '/min' : '';
         var grid_line_count = Math.min(4, max_stack);
         var prev_grid_value = -1;
         for (var grid_index = 0; grid_index <= grid_line_count; grid_index++) {
@@ -675,7 +707,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             if (grid_value !== prev_grid_value) {
                 svg += '<text x="' + (padding_left - 6) + '" y="' + (grid_y + 3).toFixed(1) + '" ';
                 svg += 'text-anchor="end" font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace" data-grid-value="' + grid_value + '">';
-                svg += kit.format_number_compact(grid_value) + '</text>';
+                svg += kit.format_number_compact(grid_value) + _y_axis_suffix + '</text>';
                 _y_axis_values.push(grid_value);
                 prev_grid_value = grid_value;
             }
@@ -695,7 +727,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             layer_points[layer_key] = [];
 
             for (var bi = 0; bi < bucket_count; bi++) {
-                var val = buckets[bi][layer_key];
+                var val = plot_buckets[bi][layer_key];
                 var bar_h = val > 0 ? Math.max(2, (val / max_stack) * draw_height) : 0;
                 var bar_x = padding_left + bi * bucket_slot_width + group_padding + layer * (bar_width + bar_gap);
                 var bar_y = baseline_y - bar_h;
@@ -722,7 +754,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
 
                 for (var sk2 = 0; sk2 < visible_keys.length; sk2++) {
                     var sk_key = visible_keys[sk2];
-                    var sk_val = buckets[sbi][sk_key];
+                    var sk_val = plot_buckets[sbi][sk_key];
                     var sk_h = sk_val > 0 ? Math.max(2, (sk_val / max_stack) * draw_height) : 0;
 
                     if (sk_val > 0) {
@@ -751,7 +783,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
                 var data_pts = [];
                 for (var si = 0; si < bucket_count; si++) {
                     var sx = padding_left + (si + 0.5) * bucket_slot_width;
-                    var sv = buckets[si][spline_key];
+                    var sv = plot_buckets[si][spline_key];
                     var sy = sv > 0 ? baseline_y - Math.max(2, (sv / max_stack) * draw_height) : baseline_y;
                     data_pts.push({x: sx, y: sy, bucket_index: si});
                 }
@@ -765,7 +797,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
 
                 layer_points[spline_key] = [];
                 for (var spi = 0; spi < bucket_count; spi++) {
-                    var hover_val = buckets[spi][spline_key];
+                    var hover_val = plot_buckets[spi][spline_key];
                     var hover_y = hover_val > 0 ? baseline_y - (hover_val / max_stack) * draw_height : baseline_y;
                     layer_points[spline_key].push({x: data_pts[spi].x, y: hover_y, val: hover_val});
                 }
@@ -797,7 +829,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         var label_step = Math.max(1, Math.floor(bucket_count / label_count));
         for (var label_index = 0; label_index < bucket_count; label_index += label_step) {
             var label_x = padding_left + (label_index + 0.5) * bucket_slot_width;
-            var label_date = new Date(buckets[label_index].start);
+            var label_date = new Date(plot_buckets[label_index].start);
             var label_text = dash.formatTimeLabel(label_date, label_range);
             _x_axis_labels.push(label_text);
             svg += '<text x="' + label_x.toFixed(1) + '" y="' + (chart_height - 6) + '" text-anchor="middle" ';
@@ -805,7 +837,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         }
 
         // .. emit the final time label at the right edge if it differs from the last loop label ..
-        var final_label_date = new Date(buckets[bucket_count - 1].start);
+        var final_label_date = new Date(plot_buckets[bucket_count - 1].start);
         var final_label_text = dash.formatTimeLabel(final_label_date, label_range);
         if (final_label_text !== _x_axis_labels[_x_axis_labels.length - 1]) {
             var final_label_x = chart_width - padding_right;
@@ -814,32 +846,37 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             svg += 'font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">' + final_label_text + '</text>';
         }
 
-        // .. store visible chart state for the copy button, grouped ..
-        var _all_group_infos = [];
-        var _seen_groups = {};
-        for (var cp = 0; cp < buckets.length; cp++) {
-            var cp_gk = dash._chart_groups[cp];
-            if (_seen_groups[cp_gk] !== undefined) {
-                var existing = _all_group_infos[_seen_groups[cp_gk]];
-                for (var cp_vk = 0; cp_vk < visible_keys.length; cp_vk++) {
-                    var cp_key = visible_keys[cp_vk];
-                    existing.outcomes[cp_vk].count += buckets[cp][cp_key];
-                    existing.total_runs += buckets[cp][cp_key];
-                }
-                existing.runs_label = existing.total_runs === 1 ? '1 run' : kit.format_number_full(existing.total_runs) + ' runs';
-                existing.end = buckets[cp].end;
-                continue;
+        var _copy_buckets = [];
+        for (var cp = 0; cp < plot_buckets.length; cp++) {
+            var cp_bucket = plot_buckets[cp];
+            var cp_gk = cp_bucket.group_key !== undefined ? cp_bucket.group_key : dash._chart_groups[cp];
+            var cp_label = dash._chart_group_labels[cp_gk];
+            if (!cp_label) {
+                cp_label = dash.formatTimeLabel(new Date(cp_bucket.start), label_range);
             }
-            _seen_groups[cp_gk] = _all_group_infos.length;
-            var cp_info = dash.get_bucket_info(cp);
-            cp_info.time_label = dash._chart_group_labels[cp_gk] || cp_info.time_label;
-            _all_group_infos.push(cp_info);
+            var cp_total = 0;
+            var cp_outcomes = [];
+            for (var cp_vk = 0; cp_vk < visible_keys.length; cp_vk++) {
+                var cp_key = visible_keys[cp_vk];
+                var cp_count = cp_bucket[cp_key];
+                cp_total += cp_count;
+                cp_outcomes.push({key: cp_key, label: labels[cp_key], count: cp_count, color: bar_colors[cp_key]});
+            }
+            _copy_buckets.push({
+                index: cp,
+                time_label: cp_label,
+                total_runs: cp_total,
+                runs_label: cp_total === 1 ? '1 run' : kit.format_number_full(cp_total) + ' runs',
+                outcomes: cp_outcomes,
+                start: cp_bucket.start,
+                end: cp_bucket.end
+            });
         }
 
         dash._copy_data = {
             y_axis: _y_axis_values,
             x_axis: _x_axis_labels,
-            buckets: _all_group_infos
+            buckets: _copy_buckets
         };
 
         svg += '</svg>';
@@ -860,7 +897,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             }
         });
 
-        dash._setup_chart_interactions(container, buckets, padding_left, draw_width, bucket_count, padding_top, draw_height, padding_bottom, chart_height, visible_keys, layer_points, bar_colors);
+        dash._setup_chart_interactions(container, plot_buckets, padding_left, draw_width, bucket_count, padding_top, draw_height, padding_bottom, chart_height, visible_keys, layer_points, bar_colors);
 
         kit.build_legend({
             container: '#dashboard-chart-legend',
@@ -918,74 +955,61 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             if (bucket_index >= bucket_count) bucket_index = bucket_count - 1;
             if (bucket_index < 0) bucket_index = 0;
 
-            var group_key = dash._chart_groups[bucket_index];
-            var group_range = dash._chart_group_ranges[group_key];
-            var group_first = group_range.first;
-            var group_last = group_range.last;
+            var hover_bucket = buckets[bucket_index];
+            var hover_group_key, hover_first, hover_last, hover_totals;
 
-            var band_left = padding_left + group_first * bucket_width_px;
-            var band_width = (group_last - group_first + 1) * bucket_width_px;
-            var band_html = '<svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none" xmlns="http://www.w3.org/2000/svg">';
-            band_html += '<rect x="' + band_left.toFixed(1) + '" y="' + padding_top + '" width="' + band_width.toFixed(1) + '" height="' + draw_height + '" fill="rgba(0,0,0,0.06)" rx="2" />';
-
-            band_html += '</svg>';
-            overlay.html(band_html);
-
-            var agg_totals = {};
-            for (var ak = 0; ak < visible_keys.length; ak++) {
-                agg_totals[visible_keys[ak]] = 0;
-            }
-            for (var ai = group_first; ai <= group_last; ai++) {
-                for (var aj = 0; aj < visible_keys.length; aj++) {
-                    agg_totals[visible_keys[aj]] += buckets[ai][visible_keys[aj]];
+            if (hover_bucket.group_key !== undefined) {
+                hover_first = bucket_index;
+                hover_last = bucket_index;
+                hover_group_key = hover_bucket.group_key;
+                hover_totals = {};
+                for (var hk = 0; hk < visible_keys.length; hk++) {
+                    hover_totals[visible_keys[hk]] = hover_bucket[visible_keys[hk]];
+                }
+            } else {
+                hover_group_key = dash._chart_groups[bucket_index];
+                var hover_range = dash._chart_group_ranges[hover_group_key];
+                hover_first = hover_range.first;
+                hover_last = hover_range.last;
+                hover_totals = {};
+                for (var ak = 0; ak < visible_keys.length; ak++) {
+                    hover_totals[visible_keys[ak]] = 0;
+                }
+                for (var ai = hover_first; ai <= hover_last; ai++) {
+                    for (var aj = 0; aj < visible_keys.length; aj++) {
+                        hover_totals[visible_keys[aj]] += buckets[ai][visible_keys[aj]];
+                    }
                 }
             }
 
-            var _hover_buckets = [];
-            for (var hb = group_first; hb <= group_last; hb++) {
-                _hover_buckets.push({
-                    index: hb,
-                    start: new Date(buckets[hb].start).toISOString(),
-                    end: new Date(buckets[hb].end).toISOString(),
-                    data: agg_totals
-                });
-            }
-            console.log('hover-group', JSON.stringify({
-                group_key: group_key,
-                group_type: dash._chart_group_type,
-                label: dash._chart_group_labels[group_key],
-                bucket_range: [group_first, group_last],
-                start: new Date(buckets[group_first].start).toISOString(),
-                end: new Date(buckets[group_last].end).toISOString(),
-                agg_totals: agg_totals,
-                buckets: _hover_buckets
-            }, null, 2));
+            var band_left = padding_left + hover_first * bucket_width_px;
+            var band_width = (hover_last - hover_first + 1) * bucket_width_px;
+            var band_html = '<svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none" xmlns="http://www.w3.org/2000/svg">';
+            band_html += '<rect x="' + band_left.toFixed(1) + '" y="' + padding_top + '" width="' + band_width.toFixed(1) + '" height="' + draw_height + '" fill="rgba(0,0,0,0.06)" rx="2" />';
+            band_html += '</svg>';
+            overlay.html(band_html);
 
-            var group_time_label = dash._chart_group_labels[group_key];
-            if (!group_time_label) {
+            var hover_label = dash._chart_group_labels[hover_group_key];
+            if (!hover_label) {
                 var lr = dash._chart_label_range;
-                var group_start = new Date(buckets[group_first].start);
-                var group_end = new Date(buckets[group_last].end);
-                group_time_label = (group_first === group_last)
-                    ? dash.formatTimeLabel(group_start, lr)
-                    : dash.formatTimeLabel(group_start, lr) + ' \u2192 ' + dash.formatTimeLabel(group_end, lr);
+                hover_label = dash.formatTimeLabel(new Date(buckets[hover_first].start), lr);
             }
 
-            var group_total = 0;
+            var hover_total = 0;
             for (var gt = 0; gt < visible_keys.length; gt++) {
-                group_total += agg_totals[visible_keys[gt]];
+                hover_total += hover_totals[visible_keys[gt]];
             }
-            var group_runs_label = group_total === 1 ? '1 run' : kit.format_number_full(group_total) + ' runs';
+            var hover_runs_label = hover_total === 1 ? '1 run' : kit.format_number_full(hover_total) + ' runs';
 
             var tooltip_html = '<div class="dashboard-tooltip-header">' +
-                '<div class="dashboard-tooltip-title">' + group_time_label + '</div>' +
-                '<div class="dashboard-tooltip-subtitle">' + group_runs_label + '</div>' +
+                '<div class="dashboard-tooltip-title">' + hover_label + '</div>' +
+                '<div class="dashboard-tooltip-subtitle">' + hover_runs_label + '</div>' +
                 '</div>';
 
             var body_lines = [];
             for (var key_index = 0; key_index < visible_keys.length; key_index++) {
                 var vk = visible_keys[key_index];
-                var count = agg_totals[vk];
+                var count = hover_totals[vk];
                 var chart_run_word = count === 1 ? 'run' : 'runs';
                 body_lines.push('<div class="dashboard-tooltip-row">' +
                     '<span class="dashboard-tooltip-dot" style="background:' + bar_colors[vk] + '"></span>' +
