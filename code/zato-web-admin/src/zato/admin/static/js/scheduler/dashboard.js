@@ -191,12 +191,15 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
     dash._zoom_bucket_count = 0;
 
     dash._redraw_chart_from_cache = function() {
+        console.log('[redraw_from_cache] called, have buckets=' + !!dash._last_chart_buckets);
         if (dash._last_chart_buckets) {
+            var _t0 = performance.now();
             dash._skip_legend_rebuild = true;
             dash.render_bar_chart(dash._last_chart_buckets);
             dash._skip_legend_rebuild = false;
             var filtered_recent = dash._filter_recent_by_range(dash._last_recent_events);
             dash.render_recent(filtered_recent, dash._last_jobs);
+            console.log('[redraw_from_cache] completed in ' + (performance.now() - _t0).toFixed(0) + 'ms');
         }
     };
 
@@ -276,6 +279,8 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
     // ////////////////////////////////////////////////////////////////////////
 
     dash.render_bar_chart = function(chart_data) {
+        var _bar_t0 = performance.now();
+        console.log('[render_bar_chart] called, buckets=' + (chart_data && chart_data.buckets ? chart_data.buckets.length : 0));
         dash._last_chart_buckets = chart_data;
         var container = $('#dashboard-bar-chart');
 
@@ -568,6 +573,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
                 dash._redraw_chart_from_cache();
             }
         }, dash._skip_legend_rebuild);
+        console.log('[render_bar_chart] completed in ' + (performance.now() - _bar_t0).toFixed(0) + 'ms');
     };
 
     // ////////////////////////////////////////////////////////////////////////
@@ -938,6 +944,8 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
 
     dash.render = function(data) {
         if (!data || !data.outcome_counts) return;
+        console.log('[render] chart_buckets.buckets=' + (data.chart_buckets && data.chart_buckets.buckets ? data.chart_buckets.buckets.length : 'none') +
+            ', recent_events=' + (data.recent_events ? data.recent_events.length : 'none'));
 
         var total_jobs = data.total_jobs;
         var active_jobs = data.active_jobs;
@@ -1075,16 +1083,24 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             recent_since_iso: dash._last_event_ts
         };
 
+        var _poll_t0 = performance.now();
+        console.log('[poll] start, chart_since_iso=' + (post_data.chart_since_iso || '(all)') +
+            ', recent_since_iso=' + (post_data.recent_since_iso || '(none)'));
+
         $.ajax({
             url: dash.config.base_url + 'poll/',
             type: 'POST',
             data: post_data,
             headers: {'X-CSRFToken': $.cookie('csrftoken')},
             success: function(data) {
+                var _poll_t1 = performance.now();
+                console.log('[poll] response received in ' + (_poll_t1 - _poll_t0).toFixed(0) + 'ms');
                 if (typeof data === 'string') {
                     try { data = JSON.parse(data); } catch(parse_error) { return; }
                 }
+                var _render_t0 = performance.now();
                 dash.render(data);
+                console.log('[poll] render() took ' + (performance.now() - _render_t0).toFixed(0) + 'ms');
 
                 if (had_runs) {
                     var new_list = [];
@@ -1323,12 +1339,15 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         menu.on('click', '.dashboard-time-range-option', function(event) {
             event.stopPropagation();
             var minutes = parseInt($(this).data('minutes'), 10);
+            console.log('[time-range] changed to ' + minutes + ' minutes');
             dash._time_range_minutes = minutes;
             kit.storage_set('zato_scheduler_time_range', String(minutes));
             menu.find('.dashboard-time-range-option').removeClass('dashboard-time-range-active');
             $(this).addClass('dashboard-time-range-active');
             menu.removeClass('dashboard-time-range-menu-open');
             dash._redraw_chart_from_cache();
+            console.log('[time-range] triggering immediate poll');
+            dash.poll();
         });
 
         $(document).on('click', function() {
