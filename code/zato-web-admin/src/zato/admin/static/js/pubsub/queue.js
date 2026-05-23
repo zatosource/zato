@@ -13,6 +13,7 @@
     $.fn.zato.pubsub.queue._auto_refresh = null;
     $.fn.zato.pubsub.queue._new_row_count = 0;
     $.fn.zato.pubsub.queue._time_ticker = null;
+    $.fn.zato.pubsub.queue._page_size = 50;
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -79,12 +80,21 @@
             $body.append($.fn.zato.pubsub.queue._render_row(rows[i]));
         }
 
+        var ns = $.fn.zato.pubsub.queue;
+        var pag = ns._pagination;
+        var offset = pag ? (pag.current_page() - 1) * ns._page_size : 0;
+        $body.find('.queue-row-num').each(function(idx) {
+            $(this).text(kit.format_number_full(offset + idx + 1));
+        });
+
         $.fn.zato.pubsub.queue._apply_recency_gradient();
     };
 
 // ////////////////////////////////////////////////////////////////////////
 
     $.fn.zato.pubsub.queue._render_new = function($body, rows, max_rows) {
+
+        var kit = $.fn.zato.dashboard_kit;
 
         for (var i = 0; i < rows.length; i++) {
             $body.prepend($.fn.zato.pubsub.queue._render_row(rows[i]));
@@ -94,6 +104,13 @@
         while ($body.children().length > max_rows) {
             $body.children().last().remove();
         }
+
+        var ns = $.fn.zato.pubsub.queue;
+        var pag = ns._pagination;
+        var offset = pag ? (pag.current_page() - 1) * ns._page_size : 0;
+        $body.find('.queue-row-num').each(function(idx) {
+            $(this).text(kit.format_number_full(offset + idx + 1));
+        });
     };
 
 // ////////////////////////////////////////////////////////////////////////

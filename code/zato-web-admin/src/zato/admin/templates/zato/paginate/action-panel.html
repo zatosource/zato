@@ -1,3 +1,4 @@
+{% load humanize %}
 
 {% if meta.total %}
 
@@ -5,10 +6,10 @@
 
   <form novalidate action="." method="get" style="display:inline-block;">
     <span style="vertical-align:middle;" class="pagination-wrapper">
-      <span class="form_hint">{{ meta.total }}</span>
+      <span class="form_hint">{{ meta.total|intcomma }}</span>
       <span class="form_hint">result{% if meta.total > 1 %}s{% endif %}</span>
       |
-      <span class="form_hint">Page {{ meta.cur_page }} of {{ meta.num_pages }}</span>
+      <span class="form_hint">Page {{ meta.cur_page|intcomma }} of {{ meta.num_pages|intcomma }}</span>
       |
 
   {% if meta.has_prev_page%}

@@ -1,5 +1,6 @@
 {% extends "zato/index.html" %}
 {% load extras %}
+{% load humanize %}
 
 {% block html_title %}Pub/sub subscriptions{% endblock %}
 
@@ -510,7 +511,7 @@
                             {% endif %}
                         </div></td>
                         <td>{{ item.topic_link_list|safe }}</td>
-                        <td><a href="/zato/pubsub/subscription/queue/?cluster={{ cluster_id }}&sub_key={{ item.sub_key }}&state=pending">{{ item.pending_depth }}</a></td>
+                        <td><a href="/zato/pubsub/subscription/queue/?cluster={{ cluster_id }}&sub_key={{ item.sub_key }}&state=pending">{{ item.pending_depth|intcomma }}</a></td>
                         <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
 
                         <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>

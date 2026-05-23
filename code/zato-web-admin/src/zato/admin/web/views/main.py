@@ -128,6 +128,7 @@ def login(req):
 @login_required
 @method_allowed('GET')
 def session_keepalive(req):
+    req.session.modified = True
     return HttpResponse(status=HTTPStatus.NO_CONTENT)
 
 # ################################################################################################################################

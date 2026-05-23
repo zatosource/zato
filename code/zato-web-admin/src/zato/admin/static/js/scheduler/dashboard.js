@@ -1395,7 +1395,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             var entry = timeline[row_index];
             var time_text = kit.relative_time_past(entry.actual_fire_time_iso);
             var time_tooltip = kit.format_local_time(entry.actual_fire_time_iso);
-            var run_number = entry.current_run !== undefined ? entry.current_run : '';
+            var run_number = entry.current_run !== undefined ? kit.format_number_full(entry.current_run) : '';
 
             var row_ts = entry.actual_fire_time_iso;
             html += '<tr data-ts="' + row_ts + '">';

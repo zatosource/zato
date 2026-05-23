@@ -50,16 +50,7 @@ a.queue-preview-link:visited {
     font-size: 12px;
 }
 
-#messages-body {
-    counter-reset: row-num;
-}
-
 #messages-body tr td.queue-row-num {
-    counter-increment: row-num;
     width: 1%;
     white-space: nowrap;
-}
-
-#messages-body tr td.queue-row-num::before {
-    content: counter(row-num);
 }
