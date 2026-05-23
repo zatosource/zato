@@ -153,14 +153,14 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.pubsub.queue.purge = function() {
+    $.fn.zato.pubsub.queue.clear_queue = function() {
 
-        if (!confirm('Purge all pending messages from this queue?')) {
+        if (!confirm('Clear all pending messages from this queue?')) {
             return;
         }
 
         $.ajax({
-            url: '/zato/pubsub/subscription/queue/purge/',
+            url: '/zato/pubsub/subscription/queue/clear/',
             type: 'POST',
             data: {
                 sub_key: $.fn.zato.pubsub.queue._subKey
@@ -196,9 +196,9 @@
             show_table_header: true
         });
 
-        // .. bind the purge button ..
-        $('#purge-queue-button').on('click', function() {
-            $.fn.zato.pubsub.queue.purge();
+        // .. bind the clear button ..
+        $('#clear-queue-button').on('click', function() {
+            $.fn.zato.pubsub.queue.clear_queue();
         });
 
         // .. initialize pagination ..

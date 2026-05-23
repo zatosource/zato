@@ -1378,6 +1378,129 @@ class RedisPubSubBackend:
 
 # ################################################################################################################################
 
+    def clear_queue(self, sub_key:'str') -> 'anydict':
+        """ Clears all pending messages for a subscriber across all subscribed topics.
+        For each topic:
+        - Acks all PEL entries (read but unacked)
+        - Advances the consumer group cursor past unread entries
+        - Cleans up pending sets, sub_pending set, and disk files
+        Returns a dict with 'cleared_count'.
+        """
+
+        # Get all topics this subscriber is subscribed to ..
+        topic_names = self.get_subscribed_topics(sub_key)
+        cleared_count = 0
+
+        for topic_name in topic_names:
+
+            stream_key = self._get_stream_key(topic_name)
+
+            # Phase 1: ack all PEL entries (read but unacked) ..
+            pel_batch_size = 1000
+
+            while True:
+
+                try:
+                    pel_entries:'anylist' = cast_('anylist', self.redis.xpending_range(
+                        stream_key, sub_key, min='-', max='+',
+                        count=pel_batch_size, consumername=sub_key))
+                except ResponseError:
+                    break
+
+                if not pel_entries:
+                    break
+
+                # .. collect stream IDs and fetch their data_refs for cleanup ..
+                pel_ids:'anylist' = [entry['message_id'] for entry in pel_entries]
+
+                raw_messages = self._fetch_ids_pipeline(stream_key, pel_ids)
+
+                for raw_msg in raw_messages:
+                    redis_stream_id = raw_msg[0]
+                    message_data = raw_msg[1]
+                    data_ref = message_data['data_ref']
+
+                    # .. ack and clean up pending indexes and disk ..
+                    self.ack_message(stream_key, sub_key, redis_stream_id, data_ref)
+                    cleared_count += 1
+
+                # .. if we got fewer than the batch size, we're done with PEL.
+                if len(pel_entries) < pel_batch_size:
+                    break
+
+            # Phase 2: advance the consumer group cursor past all unread entries ..
+            # .. get the current stream tip ..
+            try:
+                stream_info = self.redis.xinfo_stream(stream_key)
+                last_entry_id = stream_info['last-generated-id']
+            except ResponseError:
+                continue
+
+            # .. count unread entries beyond the current cursor ..
+            last_delivered_id = self._get_last_delivered_id(stream_key, sub_key)
+
+            if last_delivered_id and last_delivered_id < last_entry_id:
+
+                # .. scan unread entries to clean up their pending sets and disk files ..
+                after_delivered = self._increment_stream_id(last_delivered_id)
+                scan_batch_size = 1000
+
+                scan_cursor = after_delivered
+
+                while True:
+                    unread_entries:'anylist' = cast_('anylist', self.redis.xrange(
+                        stream_key, min=scan_cursor, count=scan_batch_size))
+
+                    if not unread_entries:
+                        break
+
+                    for redis_stream_id, message_data in unread_entries:
+                        data_ref = message_data['data_ref']
+
+                        # .. remove this subscriber from the message's pending set ..
+                        pending_key = self._get_pending_key(data_ref)
+                        _ = self.redis.srem(pending_key, sub_key)
+
+                        sub_pending_key = self._get_sub_pending_key(sub_key)
+                        _ = self.redis.srem(sub_pending_key, data_ref)
+
+                        # .. if no subscribers remain, delete the pending key, expiry entry, and disk file ..
+                        remaining = self.redis.scard(pending_key)
+                        if remaining == 0:
+                            _ = self.redis.delete(pending_key)
+                            _ = self.redis.zrem(ModuleCtx.Pending_Expiry_Key, data_ref)
+                            self.disk_store.delete(data_ref)
+
+                        cleared_count += 1
+
+                    # .. advance the scan cursor past the last entry we processed ..
+                    last_scanned_id = unread_entries[-1][0]
+                    scan_cursor = self._increment_stream_id(last_scanned_id)
+
+                    if len(unread_entries) < scan_batch_size:
+                        break
+
+            # .. advance the consumer group cursor to the stream tip so new reads start fresh.
+            try:
+                _ = self.redis.xgroup_setid(stream_key, sub_key, last_entry_id)
+            except ResponseError as error:
+                logger.warning('xgroup_setid failed -> stream_key:%s, sub_key:%s, error:%s',
+                    stream_key, sub_key, error)
+
+        # .. clean out the sub_pending set entirely ..
+        sub_pending_key = self._get_sub_pending_key(sub_key)
+        _ = self.redis.delete(sub_pending_key)
+
+        logger.info('clear_queue -> sub_key:%s, cleared_count:%d', sub_key, cleared_count)
+
+        out:'anydict' = {
+            'cleared_count': cleared_count,
+        }
+
+        return out
+
+# ################################################################################################################################
+
     def rename_topic(self, old_topic_name:'str', new_topic_name:'str') -> 'None':
         """ Rename a topic.
         """
