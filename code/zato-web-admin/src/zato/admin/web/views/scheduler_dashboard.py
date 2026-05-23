@@ -58,13 +58,30 @@ def index(req):
 def poll(req):
 
     try:
+        chart_since_iso = req.POST.get('chart_since_iso', '')
+        recent_since_iso = req.POST.get('recent_since_iso', '')
+
         t0 = time.monotonic()
-        response = req.zato.client.invoke('zato.scheduler.job.get-current-state', {})
+        response = req.zato.client.invoke('zato.scheduler.job.get-current-state', {
+            'chart_since_iso': chart_since_iso,
+            'recent_since_iso': recent_since_iso,
+        })
         elapsed = time.monotonic() - t0
         if elapsed > 2.0:
             logger.warning('Scheduler dashboard poll invoke took %.1fs', elapsed)
+
         if response.ok:
-            return HttpResponse(json.dumps(response.data), content_type='application/json')
+            data = response.data
+
+            # .. regression guard - warn if incremental mode returned too many recent events ..
+            if recent_since_iso:
+                recent_count = len(data.get('recent_events') or [])
+                if recent_count > 500:
+                    logger.warning('Scheduler poll regression: recent_since_iso was set but got %d recent_events', recent_count)
+
+            return HttpResponse(json.dumps(data), content_type='application/json')
+
+        # .. otherwise return the error details.
         else:
             return HttpResponse(
                 json.dumps({'error': response.details}),
