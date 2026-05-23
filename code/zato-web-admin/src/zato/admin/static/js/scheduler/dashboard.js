@@ -795,13 +795,18 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         container.html(svg);
 
         container.find('text[data-grid-value]').each(function() {
-            tippy(this, {
-                content: kit.format_number_full(parseInt(this.dataset.gridValue, 10)),
-                placement: 'left',
-                theme: 'dark',
-                arrow: true,
-                delay: [0, 0]
-            });
+            var raw = parseInt(this.dataset.gridValue, 10);
+            var compact = kit.format_number_compact(raw);
+            var full = kit.format_number_full(raw);
+            if (compact !== full) {
+                tippy(this, {
+                    content: full,
+                    placement: 'left',
+                    theme: 'dark',
+                    arrow: true,
+                    delay: [0, 0]
+                });
+            }
         });
 
         dash._setup_chart_interactions(container, buckets, padding_left, draw_width, bucket_count, padding_top, draw_height, padding_bottom, chart_height, visible_keys, layer_points, bar_colors);
