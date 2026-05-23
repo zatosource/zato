@@ -793,7 +793,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     }
 
     row += String.format('<td>{0}</td>', item.topic_link_list);
-    row += String.format('<td style="text-align:center"><a href="/zato/pubsub/subscription/queue/?cluster=1&sub_key={0}&queue_name={1}&state=pending">0</a></td>', encodeURIComponent(item.sub_key), encodeURIComponent(item.sec_name));
+    row += String.format('<td style="text-align:center"><a href="/zato/pubsub/subscription/queue/?cluster=1&sub_key={0}&queue_name={1}&state=pending">{2}</a></td>', encodeURIComponent(item.sub_key), encodeURIComponent(item.sec_name), item.pending_depth);
     row += String.format('<td style="text-align:center">{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.edit('{0}');\">Edit</a>", item.id));
     row += String.format('<td style="text-align:center">{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.delete_('{0}');\">Delete</a>", item.id));
 
@@ -809,7 +809,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += String.format("<td class='ignore'>{0}</td>", item.rest_push_endpoint_name);
     row += String.format("<td class='ignore'>{0}</td>", item.push_service_name);
     row += String.format("<td class='ignore'>{0}</td>", item.topic_name_list || '');
-    row += "<td class='ignore'>0</td>";
+    row += String.format("<td class='ignore'>{0}</td>", item.pending_depth);
 
     if(include_tr) {
         row += '</tr>';
