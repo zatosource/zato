@@ -524,7 +524,7 @@ Examples:
             try:
                 process.wait()
             except KeyboardInterrupt:
-                process.terminate()
+                process.kill()
             finally:
                 try:
                     os.remove(pidfile)
