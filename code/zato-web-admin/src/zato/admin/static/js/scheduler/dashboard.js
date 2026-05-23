@@ -630,7 +630,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         // .. for the 5-min range, collapse raw 5-second buckets into per-minute plot_buckets ..
         // .. for all other ranges, plot_buckets is just a reference to the raw buckets ..
         var plot_buckets;
-        if (dash._time_range_minutes > 0 && dash._time_range_minutes <= 360) {
+        if (dash._time_range_minutes > 0) {
             var _seen_group_order = [];
             var _group_entries = {};
             for (var pb_idx = 0; pb_idx < buckets.length; pb_idx++) {
@@ -697,7 +697,9 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         var _y_axis_values = [];
         var _y_axis_suffix = '';
         if (dash._time_range_minutes > 0 && dash._time_range_minutes <= 60) _y_axis_suffix = '/min';
-        else if (dash._time_range_minutes > 60 && dash._time_range_minutes <= 360) _y_axis_suffix = '/hr';
+        else if (dash._time_range_minutes > 60 && dash._time_range_minutes <= 2880) _y_axis_suffix = '/hr';
+        else if (dash._time_range_minutes > 2880 && dash._time_range_minutes < 525600) _y_axis_suffix = '/day';
+        else if (dash._time_range_minutes >= 525600) _y_axis_suffix = '/mo';
         var grid_line_count = Math.min(4, max_stack);
         var prev_grid_value = -1;
         for (var grid_index = 0; grid_index <= grid_line_count; grid_index++) {
@@ -708,7 +710,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             svg += 'stroke="rgba(0,0,0,0.05)" stroke-width="1" />';
             if (grid_value !== prev_grid_value) {
                 svg += '<text x="' + (padding_left - 6) + '" y="' + (grid_y + 3).toFixed(1) + '" ';
-                svg += 'text-anchor="end" font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace" data-grid-value="' + grid_value + '">';
+                svg += 'text-anchor="end" font-size="10" fill="rgba(0,0,0,0.6)" font-family="Menlo, Consolas, Monaco, monospace" data-grid-value="' + grid_value + '">';
                 svg += kit.format_number_compact(grid_value) + _y_axis_suffix + '</text>';
                 _y_axis_values.push(grid_value);
                 prev_grid_value = grid_value;
@@ -835,7 +837,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             var label_text = dash.formatTimeLabel(label_date, label_range);
             _x_axis_labels.push(label_text);
             svg += '<text x="' + label_x.toFixed(1) + '" y="' + (chart_height - 6) + '" text-anchor="middle" ';
-            svg += 'font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">' + label_text + '</text>';
+            svg += 'font-size="10" fill="rgba(0,0,0,0.6)" font-family="Menlo, Consolas, Monaco, monospace">' + label_text + '</text>';
         }
 
         // .. emit the final time label at the right edge if it differs from the last loop label ..
@@ -845,7 +847,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             var final_label_x = chart_width - padding_right;
             _x_axis_labels.push(final_label_text);
             svg += '<text x="' + final_label_x.toFixed(1) + '" y="' + (chart_height - 6) + '" text-anchor="end" ';
-            svg += 'font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">' + final_label_text + '</text>';
+            svg += 'font-size="10" fill="rgba(0,0,0,0.6)" font-family="Menlo, Consolas, Monaco, monospace">' + final_label_text + '</text>';
         }
 
         var _copy_buckets = [];
