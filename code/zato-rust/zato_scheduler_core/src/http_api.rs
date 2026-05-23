@@ -134,10 +134,6 @@ struct ChartDataParams {
     /// fixed-grid bucketing. When both are present, records outside [since_iso, until_iso) are
     /// excluded and the 120 buckets are distributed evenly across this fixed window.
     until_iso: Option<String>,
-    /// Chart pixel width - used as maxDataPoints to compute the interval (bucket size).
-    /// Follows Grafana's formula: intervalMs = roundInterval(range_ms / max_data_points).
-    /// If absent, defaults to 1345 (typical dashboard chart width).
-    max_data_points: Option<u32>,
 }
 
 /// A single time bucket with per-outcome counts.
@@ -166,45 +162,11 @@ struct ChartDataResponse {
     min_time_iso: String,
     /// ISO timestamp of the latest event in the window.
     max_time_iso: String,
-    /// Bucket width in milliseconds (the rounded interval).
-    interval_ms: i64,
 }
 
-/// Snaps a raw interval (ms) to the nearest human-friendly bucket size.
-/// Matches Grafana's `roundInterval()` from `rangeutil.ts`.
-fn round_interval(interval_ms: i64) -> i64 {
-    match interval_ms {
-        ms if ms < 5 => 1,
-        ms if ms < 10 => 5,
-        ms if ms < 25 => 10,
-        ms if ms < 50 => 25,
-        ms if ms < 100 => 50,
-        ms if ms < 250 => 100,
-        ms if ms < 500 => 250,
-        ms if ms < 1_000 => 500,
-        ms if ms < 2_500 => 1_000,
-        ms if ms < 5_000 => 2_500,
-        ms if ms < 7_500 => 5_000,
-        ms if ms < 10_000 => 7_500,
-        ms if ms < 15_000 => 10_000,
-        ms if ms < 30_000 => 15_000,
-        ms if ms < 60_000 => 30_000,
-        ms if ms < 120_000 => 60_000,
-        ms if ms < 300_000 => 120_000,
-        ms if ms < 600_000 => 300_000,
-        ms if ms < 900_000 => 600_000,
-        ms if ms < 1_800_000 => 900_000,
-        ms if ms < 3_600_000 => 1_800_000,
-        ms if ms < 7_200_000 => 3_600_000,
-        ms if ms < 21_600_000 => 7_200_000,
-        ms if ms < 43_200_000 => 21_600_000,
-        ms if ms < 86_400_000 => 43_200_000,
-        ms if ms < 604_800_000 => 86_400_000,
-        ms if ms < 2_592_000_000 => 604_800_000,
-        ms if ms < 31_536_000_000 => 2_592_000_000,
-        _ => 31_536_000_000,
-    }
-}
+/// Number of fixed buckets returned by the chart data endpoint.
+const CHART_BUCKET_COUNT: usize = 120;
+
 
 /// Returns pre-aggregated chart data as 120 time buckets with per-outcome counts.
 ///
@@ -255,8 +217,6 @@ fn round_interval(interval_ms: i64) -> i64 {
 /// the actual data extent (min/max of all records). This is the only mode where the chart
 /// can shift on every poll, which is acceptable because "All" has no fixed span to anchor to.
 async fn get_chart_data(state: web::Data<AppState>, params: web::Query<ChartDataParams>) -> HttpResponse {
-
-    let max_data_points = params.max_data_points.unwrap_or(1345) as i64;
 
     let fixed_window = match (params.since_iso.as_deref(), params.until_iso.as_deref()) {
         (Some(since), Some(until)) if !since.is_empty() && !until.is_empty() => {
@@ -324,23 +284,20 @@ async fn get_chart_data(state: web::Data<AppState>, params: web::Query<ChartData
 
     let time_range = window_max - window_min;
     let effective_range = if time_range == 0 { 3_600_000 } else { time_range };
+    let bucket_size_ms = effective_range as f64 / CHART_BUCKET_COUNT as f64;
 
-    let raw_interval = effective_range / max_data_points;
-    let interval_ms = round_interval(raw_interval.max(1));
-    let bucket_count = (effective_range / interval_ms).max(1) as usize;
-
-    let mut bucket_counts = vec![[0u64; 4]; bucket_count];
+    let mut bucket_counts = vec![[0u64; 4]; CHART_BUCKET_COUNT];
 
     for (ms, outcome_index) in &events {
-        let bucket_index = ((*ms - window_min) / interval_ms)
-            .clamp(0, (bucket_count - 1) as i64) as usize;
+        let bucket_index = ((*ms - window_min) as f64 / bucket_size_ms) as i64;
+        let bucket_index = bucket_index.clamp(0, (CHART_BUCKET_COUNT - 1) as i64) as usize;
         bucket_counts[bucket_index][*outcome_index] += 1;
     }
 
-    let mut buckets: Vec<ChartBucket> = Vec::with_capacity(bucket_count);
-    for bucket_index in 0..bucket_count {
-        let start_ms = window_min + (bucket_index as i64) * interval_ms;
-        let end_ms = start_ms + interval_ms;
+    let mut buckets: Vec<ChartBucket> = Vec::with_capacity(CHART_BUCKET_COUNT);
+    for bucket_index in 0..CHART_BUCKET_COUNT {
+        let start_ms = window_min + (bucket_index as f64 * bucket_size_ms) as i64;
+        let end_ms = window_min + ((bucket_index + 1) as f64 * bucket_size_ms) as i64;
 
         let start_iso = DateTime::from_timestamp_millis(start_ms)
             .unwrap_or_else(|| Utc::now())
@@ -371,7 +328,6 @@ async fn get_chart_data(state: web::Data<AppState>, params: web::Query<ChartData
         buckets,
         min_time_iso,
         max_time_iso,
-        interval_ms,
     };
 
     HttpResponse::Ok().json(response)

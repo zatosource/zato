@@ -314,6 +314,72 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
     };
 
     // ////////////////////////////////////////////////////////////////////////
+    // Monotone cubic Hermite spline (Fritsch-Carlson)
+    // ////////////////////////////////////////////////////////////////////////
+
+    // Builds an SVG path string using monotone cubic Hermite interpolation
+    // (Fritsch-Carlson method, same algorithm as Grafana/uPlot).
+    // Guarantees the curve never overshoots between adjacent knots,
+    // so it cannot dip below zero when all input values are >= 0.
+    dash.buildMonotoneCubicPath = function(points) {
+        var pointCount = points.length;
+        var path = 'M' + points[0].x.toFixed(1) + ',' + points[0].y.toFixed(1);
+
+        if (pointCount === 2) {
+            path += ' L' + points[1].x.toFixed(1) + ',' + points[1].y.toFixed(1);
+            return path;
+        }
+
+        // .. compute segment deltas and slopes ..
+        var segmentDeltaX = [];
+        var segmentDeltaY = [];
+        var segmentSlopes = [];
+
+        for (var segmentIdx = 0; segmentIdx < pointCount - 1; segmentIdx++) {
+            segmentDeltaX[segmentIdx] = points[segmentIdx + 1].x - points[segmentIdx].x;
+            segmentDeltaY[segmentIdx] = points[segmentIdx + 1].y - points[segmentIdx].y;
+            segmentSlopes[segmentIdx] = segmentDeltaX[segmentIdx] !== 0
+                ? segmentDeltaY[segmentIdx] / segmentDeltaX[segmentIdx]
+                : 0;
+        }
+
+        // .. compute tangent slopes using Fritsch-Carlson monotonicity constraint ..
+        var tangentSlopes = [];
+        tangentSlopes[0] = segmentSlopes[0];
+
+        for (var knotIdx = 1; knotIdx < pointCount - 1; knotIdx++) {
+            var slopeBefore = segmentSlopes[knotIdx - 1];
+            var slopeAfter  = segmentSlopes[knotIdx];
+
+            if (slopeAfter === 0 || slopeBefore === 0 || (slopeBefore > 0) !== (slopeAfter > 0)) {
+                tangentSlopes[knotIdx] = 0;
+            } else {
+                var weightedHarmonicMean = 3 * (segmentDeltaX[knotIdx - 1] + segmentDeltaX[knotIdx]) / (
+                    (2 * segmentDeltaX[knotIdx] + segmentDeltaX[knotIdx - 1]) / slopeBefore +
+                    (segmentDeltaX[knotIdx] + 2 * segmentDeltaX[knotIdx - 1]) / slopeAfter
+                );
+                tangentSlopes[knotIdx] = isFinite(weightedHarmonicMean) ? weightedHarmonicMean : 0;
+            }
+        }
+
+        tangentSlopes[pointCount - 1] = segmentSlopes[pointCount - 2];
+
+        // .. emit cubic Bezier segments with control points at 1/3 of segment width ..
+        for (var curveIdx = 0; curveIdx < pointCount - 1; curveIdx++) {
+            var deltaX = segmentDeltaX[curveIdx];
+            var controlPoint1X = points[curveIdx].x + deltaX / 3;
+            var controlPoint1Y = points[curveIdx].y + tangentSlopes[curveIdx] * deltaX / 3;
+            var controlPoint2X = points[curveIdx + 1].x - deltaX / 3;
+            var controlPoint2Y = points[curveIdx + 1].y - tangentSlopes[curveIdx + 1] * deltaX / 3;
+            path += ' C' + controlPoint1X.toFixed(1) + ',' + controlPoint1Y.toFixed(1) +
+                    ' ' + controlPoint2X.toFixed(1) + ',' + controlPoint2Y.toFixed(1) +
+                    ' ' + points[curveIdx + 1].x.toFixed(1) + ',' + points[curveIdx + 1].y.toFixed(1);
+        }
+
+        return path;
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
     // Bar chart
     // ////////////////////////////////////////////////////////////////////////
 
@@ -348,24 +414,29 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         var labels = dash.outcome_labels;
         var hidden_outcomes = dash._get_hidden_outcomes();
 
+        var display_bucket_count = Math.min(60, Math.max(12, Math.floor(chart_width / 16)));
+        var merge_factor = Math.max(1, Math.floor(server_buckets.length / display_bucket_count));
         var buckets = [];
-        for (var bi = 0; bi < server_buckets.length; bi++) {
-            var sb = server_buckets[bi];
-            buckets.push({
-                ok: sb.ok,
-                error: sb.error,
-                timeout: sb.timeout,
-                skipped_already_in_flight: sb.skipped_already_in_flight,
-                start: new Date(sb.start_iso).getTime(),
-                end: new Date(sb.end_iso).getTime()
-            });
+        for (var merge_index = 0; merge_index < server_buckets.length; merge_index += merge_factor) {
+            var merged = {ok: 0, error: 0, timeout: 0, skipped_already_in_flight: 0, start: 0, end: 0};
+            var merge_end = Math.min(merge_index + merge_factor, server_buckets.length);
+            merged.start = new Date(server_buckets[merge_index].start_iso).getTime();
+            merged.end = new Date(server_buckets[merge_end - 1].end_iso).getTime();
+            for (var sub_index = merge_index; sub_index < merge_end; sub_index++) {
+                var source = server_buckets[sub_index];
+                merged.ok += source.ok;
+                merged.error += source.error;
+                merged.timeout += source.timeout;
+                merged.skipped_already_in_flight += source.skipped_already_in_flight;
+            }
+            buckets.push(merged);
         }
 
         var bucket_count = buckets.length;
 
         console.log('[chart-debug] bucket config: server_buckets=' + server_buckets.length +
-            ', bucket_count=' + bucket_count +
-            ', interval_ms=' + (chart_data.interval_ms || '(none)'));
+            ', merge_factor=' + merge_factor + ', display_bucket_count=' + display_bucket_count +
+            ', merged_bucket_count=' + bucket_count);
 
         var total_exec_count = 0;
         for (var tc = 0; tc < buckets.length; tc++) {
@@ -576,15 +647,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
                     layer_points[spline_key].push({x: data_pts[spi].x, y: hover_y, val: hover_val});
                 }
 
-                var area_path = 'M' + spline_pts[0].x.toFixed(1) + ',' + spline_pts[0].y.toFixed(1);
-                for (var sp = 1; sp < spline_pts.length; sp++) {
-                    var sp_prev = spline_pts[sp - 1];
-                    var sp_curr = spline_pts[sp];
-                    var sp_cpx = (sp_prev.x + sp_curr.x) / 2;
-                    area_path += ' C' + sp_cpx.toFixed(1) + ',' + sp_prev.y.toFixed(1) +
-                                 ' ' + sp_cpx.toFixed(1) + ',' + sp_curr.y.toFixed(1) +
-                                 ' ' + sp_curr.x.toFixed(1) + ',' + sp_curr.y.toFixed(1);
-                }
+                var area_path = dash.buildMonotoneCubicPath(spline_pts);
                 var area_fill = area_path +
                     ' L' + edge_right.toFixed(1) + ',' + baseline_y.toFixed(1) +
                     ' L' + edge_left.toFixed(1) + ',' + baseline_y.toFixed(1) + ' Z';
@@ -1141,13 +1204,10 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         var had_runs = Object.keys(old_run_ts).length > 0;
 
         var _chart_window = dash._get_chart_window();
-        var _chart_el = document.getElementById('dashboard-bar-chart');
-        var _max_data_points = _chart_el ? _chart_el.clientWidth : 1345;
         var post_data = {
             chart_since_iso: _chart_window.since_iso,
             chart_until_iso: _chart_window.until_iso,
-            recent_since_iso: dash._last_event_ts,
-            max_data_points: _max_data_points
+            recent_since_iso: dash._last_event_ts
         };
 
         var _poll_t0 = performance.now();
