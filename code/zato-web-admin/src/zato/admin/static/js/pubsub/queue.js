@@ -167,6 +167,46 @@
         // Store the sub_key for purge operations ..
         $.fn.zato.pubsub.queue._subKey = subKey;
 
+        // .. apply layout config if provided ..
+        if (config.layout_config) {
+            var layoutConfig = config.layout_config;
+
+            // Apply CSS custom properties
+            var root = document.documentElement;
+            if (layoutConfig.header_row_2_margin_bottom) {
+                root.style.setProperty('--queue-header-row-2-margin-bottom', layoutConfig.header_row_2_margin_bottom);
+            }
+            if (layoutConfig.pagination_controls_padding_y) {
+                root.style.setProperty('--queue-pagination-controls-padding-y', layoutConfig.pagination_controls_padding_y);
+            }
+            if (layoutConfig.pagination_controls_min_height) {
+                root.style.setProperty('--queue-pagination-controls-min-height', layoutConfig.pagination_controls_min_height);
+            }
+            if (layoutConfig.progress_panel_padding_top) {
+                root.style.setProperty('--queue-progress-panel-padding-top', layoutConfig.progress_panel_padding_top);
+            }
+            if (layoutConfig.section_title_padding_bottom) {
+                root.style.setProperty('--queue-section-title-padding-bottom', layoutConfig.section_title_padding_bottom);
+            }
+
+            // Hide/show elements based on config
+            if (!layoutConfig.show_header_controls) {
+                $('#queue-header-row-2').addClass('queue-hidden');
+            }
+
+            if (!layoutConfig.show_inline_stats) {
+                $('.detail-inline-stats').addClass('queue-hidden');
+            }
+
+            if (!layoutConfig.show_pagination_top) {
+                $('#queue-pagination-top').addClass('queue-hidden');
+            }
+
+            if (!layoutConfig.show_pagination_bottom) {
+                $('#queue-pagination-bottom').addClass('queue-hidden');
+            }
+        }
+
         // .. bind the purge button ..
         $('#purge-queue-button').on('click', function() {
             $.fn.zato.pubsub.queue.purge();

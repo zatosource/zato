@@ -89,6 +89,12 @@
     letter-spacing: 0.3px;
 }
 
+/* Outcome column in dashboard tables */
+.dashboard-card-scroll > table thead th:last-child,
+.dashboard-card-scroll > table tbody td:last-child {
+    text-align: center;
+}
+
 .dashboard-outcome-ok      { color: #2a7fbf; background: rgba(42, 127, 191, 0.12); }
 .dashboard-outcome-error   { color: #e0226e; background: rgba(224, 34, 110, 0.12); }
 .dashboard-outcome-timeout { color: #b35e00; background: rgba(179, 94, 0, 0.12); }
