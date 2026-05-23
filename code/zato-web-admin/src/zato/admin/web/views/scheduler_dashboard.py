@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 import logging
 import time
+from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 
 # Django
@@ -27,6 +28,52 @@ logger = logging.getLogger(__name__)
 
 dashboard_base_url = '/zato/scheduler/dashboard/'
 
+_calendar_ranges = {
+    1440: 'today',
+    2880: 'yesterday',
+    10080: 'this_week',
+    43200: 'this_month',
+    525600: 'this_year',
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _chart_window_for_range(now:'datetime', range_minutes:'int') -> 'tuple':
+    """ Computes (chart_since_iso, chart_until_iso) matching the JS _get_chart_window logic. """
+
+    calendar_key = _calendar_ranges.get(range_minutes)
+
+    if calendar_key == 'today':
+        since = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        until = since + timedelta(days=1)
+    elif calendar_key == 'yesterday':
+        until = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        since = until - timedelta(days=1)
+    elif calendar_key == 'this_week':
+        days_since_monday = now.weekday()
+        since = (now - timedelta(days=days_since_monday)).replace(hour=0, minute=0, second=0, microsecond=0)
+        until = since + timedelta(days=7)
+    elif calendar_key == 'this_month':
+        since = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if now.month == 12:
+            until = since.replace(year=now.year + 1, month=1)
+        else:
+            until = since.replace(month=now.month + 1)
+    elif calendar_key == 'this_year':
+        since = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        until = since.replace(year=now.year + 1)
+    elif range_minutes > 0:
+        since = now - timedelta(minutes=range_minutes)
+        until = now
+    else:
+        since = now - timedelta(minutes=5)
+        until = now
+
+    chart_since_iso = since.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+    chart_until_iso = until.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+    return chart_since_iso, chart_until_iso
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -34,7 +81,15 @@ dashboard_base_url = '/zato/scheduler/dashboard/'
 def index(req):
 
     try:
-        response = req.zato.client.invoke('zato.scheduler.job.get-current-state', {})
+        range_minutes = int(req.GET.get('range', '5'))
+        now = datetime.now(timezone.utc)
+
+        chart_since_iso, chart_until_iso = _chart_window_for_range(now, range_minutes)
+
+        response = req.zato.client.invoke('zato.scheduler.job.get-current-state', {
+            'chart_since_iso': chart_since_iso,
+            'chart_until_iso': chart_until_iso,
+        })
         if response.ok:
             data_json = json.dumps(response.data)
         else:

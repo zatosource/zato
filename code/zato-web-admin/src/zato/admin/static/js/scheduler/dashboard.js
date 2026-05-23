@@ -11,7 +11,16 @@ $.fn.zato.scheduler.dashboard.config = {
     error_message: 'Error executing job',
     show_live_status: false,
     show_tab_counts: false,
-    max_upcoming_rows: 100
+    max_upcoming_rows: 100,
+    ms_per_minute: 60000,
+    ms_per_hour:   3600000,
+    ms_per_day:    86400000,
+    ms_per_week:   604800000,
+    ms_per_month:  2764800000,
+    ms_per_year:   31536000000,
+    day_names:   ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    month_names: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 };
 
 $.fn.zato.scheduler.dashboard.Outcome_All = 'all';
@@ -311,6 +320,35 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
                ' a' + r + ',' + r + ' 0 0 1 ' + r + ',' + r +
                ' v' + (h - r) +
                ' z';
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+    // Time label formatting
+    // ////////////////////////////////////////////////////////////////////////
+
+    dash.formatTimeLabel = function(date, timeRangeMs) {
+
+        var hours   = ('0' + date.getHours()).slice(-2);
+        var minutes = ('0' + date.getMinutes()).slice(-2);
+        var seconds = ('0' + date.getSeconds()).slice(-2);
+
+        var dayName   = dash.config.day_names[date.getDay()];
+        var monthName = dash.config.month_names[date.getMonth()];
+        var shortYear = String(date.getFullYear()).slice(-2);
+
+        if (timeRangeMs < 10 * dash.config.ms_per_minute) {
+            return hours + ':' + minutes + ':' + seconds;
+        } else if (timeRangeMs < dash.config.ms_per_day) {
+            return hours + ':' + minutes;
+        } else if (timeRangeMs < dash.config.ms_per_week) {
+            return dayName + ' ' + hours + ':' + minutes;
+        } else if (timeRangeMs < dash.config.ms_per_month) {
+            return monthName + ' ' + date.getDate();
+        } else if (timeRangeMs < dash.config.ms_per_year) {
+            return monthName;
+        } else {
+            return monthName + ' ' + shortYear;
+        }
     };
 
     // ////////////////////////////////////////////////////////////////////////
@@ -669,17 +707,15 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             }
         }
 
-        var bucket_size = (max_time - min_time) / bucket_count;
-        var show_seconds = bucket_size < 120000;
+        var label_range = dash._time_range_minutes > 0
+            ? dash._time_range_minutes * dash.config.ms_per_minute
+            : time_range;
         var label_count = Math.min(6, bucket_count);
         var label_step = Math.max(1, Math.floor(bucket_count / label_count));
         for (var label_index = 0; label_index < bucket_count; label_index += label_step) {
             var label_x = padding_left + (label_index + 0.5) * bucket_slot_width;
             var label_date = new Date(buckets[label_index].start);
-            var label_text = ('0' + label_date.getHours()).slice(-2) + ':' + ('0' + label_date.getMinutes()).slice(-2);
-            if (show_seconds) {
-                label_text += ':' + ('0' + label_date.getSeconds()).slice(-2);
-            }
+            var label_text = dash.formatTimeLabel(label_date, label_range);
             svg += '<text x="' + label_x.toFixed(1) + '" y="' + (chart_height - 6) + '" text-anchor="middle" ';
             svg += 'font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">' + label_text + '</text>';
         }
@@ -687,10 +723,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         // .. always emit the final time label at the right edge ..
         var final_label_x = chart_width - padding_right;
         var final_label_date = new Date(buckets[bucket_count - 1].end);
-        var final_label_text = ('0' + final_label_date.getHours()).slice(-2) + ':' + ('0' + final_label_date.getMinutes()).slice(-2);
-        if (show_seconds) {
-            final_label_text += ':' + ('0' + final_label_date.getSeconds()).slice(-2);
-        }
+        var final_label_text = dash.formatTimeLabel(final_label_date, label_range);
         svg += '<text x="' + final_label_x.toFixed(1) + '" y="' + (chart_height - 6) + '" text-anchor="end" ';
         svg += 'font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">' + final_label_text + '</text>';
 
@@ -1464,9 +1497,19 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             dash._redraw_chart_from_cache();
         });
 
-        // Time range
-        var _stored_range = parseInt(kit.storage_get('zato_scheduler_time_range'), 10);
+        // Time range - read from URL first, then localStorage
+        var _url_range = new URLSearchParams(window.location.search).get('range');
+        var _stored_range = _url_range !== null
+            ? parseInt(_url_range, 10)
+            : parseInt(kit.storage_get('zato_scheduler_time_range'), 10);
         dash._time_range_minutes = isNaN(_stored_range) ? dash.config.default_time_range : _stored_range;
+
+        // .. ensure the URL always has the range param ..
+        var _init_url = new URL(window.location.href);
+        if (_init_url.searchParams.get('range') !== String(dash._time_range_minutes)) {
+            _init_url.searchParams.set('range', dash._time_range_minutes);
+            window.history.replaceState(null, '', _init_url.toString());
+        }
 
         var menu = $('#dashboard-time-range-menu');
         var pill = $('#dashboard-data-count');
@@ -1484,6 +1527,9 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             console.log('[time-range] changed to ' + minutes + ' minutes');
             dash._time_range_minutes = minutes;
             kit.storage_set('zato_scheduler_time_range', String(minutes));
+            var url = new URL(window.location.href);
+            url.searchParams.set('range', minutes);
+            window.history.replaceState(null, '', url.toString());
             menu.find('.dashboard-time-range-option').removeClass('dashboard-time-range-active');
             $(this).addClass('dashboard-time-range-active');
             menu.removeClass('dashboard-time-range-menu-open');
