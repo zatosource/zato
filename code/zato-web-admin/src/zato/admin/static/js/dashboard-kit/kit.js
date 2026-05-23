@@ -1017,15 +1017,20 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         kit.urls._cluster_id = config.cluster_id;
         kit.urls._object_path = config.object_path || '';
         kit.urls._run_path = config.run_path || '';
+        kit.urls._range_minutes = config.range_minutes;
+    };
+
+    kit.urls.set_range_minutes = function(minutes) {
+        kit.urls._range_minutes = minutes;
     };
 
     kit.urls.dashboard = function() {
-        return kit.urls._base + '?cluster=' + kit.urls._cluster_id;
+        return kit.urls._base + '?cluster=' + kit.urls._cluster_id + '&range=' + kit.urls._range_minutes;
     };
 
     kit.urls.object_detail = function(object_id, params) {
         var path = kit.urls._object_path.replace('{id}', encodeURIComponent(object_id));
-        var url = kit.urls._base + path + '?cluster=' + kit.urls._cluster_id;
+        var url = kit.urls._base + path + '?cluster=' + kit.urls._cluster_id + '&range=' + kit.urls._range_minutes;
         if (params) {
             for (var key in params) {
                 url += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
@@ -1038,7 +1043,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var path = kit.urls._run_path
             .replace('{id}', encodeURIComponent(object_id))
             .replace('{run_id}', encodeURIComponent(run_id));
-        var url = kit.urls._base + path + '?cluster=' + kit.urls._cluster_id;
+        var url = kit.urls._base + path + '?cluster=' + kit.urls._cluster_id + '&range=' + kit.urls._range_minutes;
         if (params) {
             for (var key in params) {
                 url += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
