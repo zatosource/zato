@@ -1452,7 +1452,8 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             base_url: dash.config.base_url,
             cluster_id: dash.config.cluster_id,
             object_path: 'job/{id}/',
-            run_path: 'job/{id}/run/{run_id}/'
+            run_path: 'job/{id}/run/{run_id}/',
+            range_minutes: parseInt(new URLSearchParams(window.location.search).get('range'), 10)
         });
 
         $('#dashboard-hero-pill-group').hide();
@@ -1497,19 +1498,9 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             dash._redraw_chart_from_cache();
         });
 
-        // Time range - read from URL first, then localStorage
-        var _url_range = new URLSearchParams(window.location.search).get('range');
-        var _stored_range = _url_range !== null
-            ? parseInt(_url_range, 10)
-            : parseInt(kit.storage_get('zato_scheduler_time_range'), 10);
-        dash._time_range_minutes = isNaN(_stored_range) ? dash.config.default_time_range : _stored_range;
-
-        // .. ensure the URL always has the range param ..
-        var _init_url = new URL(window.location.href);
-        if (_init_url.searchParams.get('range') !== String(dash._time_range_minutes)) {
-            _init_url.searchParams.set('range', dash._time_range_minutes);
-            window.history.replaceState(null, '', _init_url.toString());
-        }
+        // Time range - from URL only (templates and redirects always supply range)
+        dash._time_range_minutes = parseInt(new URLSearchParams(window.location.search).get('range'), 10);
+        kit.urls.set_range_minutes(dash._time_range_minutes);
 
         var menu = $('#dashboard-time-range-menu');
         var pill = $('#dashboard-data-count');
@@ -1526,7 +1517,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             var minutes = parseInt($(this).data('minutes'), 10);
             console.log('[time-range] changed to ' + minutes + ' minutes');
             dash._time_range_minutes = minutes;
-            kit.storage_set('zato_scheduler_time_range', String(minutes));
+            kit.urls.set_range_minutes(minutes);
             var url = new URL(window.location.href);
             url.searchParams.set('range', minutes);
             window.history.replaceState(null, '', url.toString());

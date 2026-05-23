@@ -1682,36 +1682,25 @@ $.fn.zato.scheduler.job_detail.render = function(job, job_id, cluster_id) {
     };
 
     var url_range = kit.url_state.get('range');
-    var initial_range = url_range !== null ? parseInt(url_range, 10) : null;
+    var initial_range = parseInt(url_range, 10);
 
     kit.time_range.init({
         pill: '#detail-timeline-range-pill',
         menu: '#detail-timeline-range-menu',
-        storage_key: 'zato_job_detail_time_range',
+        initial_minutes: initial_range,
         on_change: function(minutes) {
             detail._time_range_minutes = minutes;
+            kit.urls.set_range_minutes(minutes);
             $('#detail-timeline-range-pill').text(range_names[minutes]);
             kit.url_state.set({range: minutes, page: null});
             detail._redraw();
         }
     });
 
-    if (initial_range !== null && !isNaN(initial_range)) {
-        detail._time_range_minutes = initial_range;
-        if (range_names[initial_range]) {
-            $('#detail-timeline-range-pill').text(range_names[initial_range]);
-        }
-        kit.storage_set('zato_job_detail_time_range', initial_range);
-        var $menu = $('#detail-timeline-range-menu');
-        $menu.find('.dashboard-time-range-option').removeClass('dashboard-time-range-active');
-        $menu.find('.dashboard-time-range-option[data-minutes="' + initial_range + '"]').addClass('dashboard-time-range-active');
-    } else {
-        var stored = parseInt(kit.storage_get('zato_job_detail_time_range'), 10);
-        if (isNaN(stored)) stored = detail.config.default_time_range;
-        detail._time_range_minutes = stored;
-        if (stored && range_names[stored]) {
-            $('#detail-timeline-range-pill').text(range_names[stored]);
-        }
+    detail._time_range_minutes = initial_range;
+    kit.urls.set_range_minutes(initial_range);
+    if (range_names[initial_range]) {
+        $('#detail-timeline-range-pill').text(range_names[initial_range]);
     }
 
     detail._auto_refresh = kit.auto_refresh.init({
@@ -1743,8 +1732,8 @@ $.fn.zato.scheduler.job_detail.render = function(job, job_id, cluster_id) {
         }
 
         var range_val = parseInt(params.get('range'), 10);
-        if (isNaN(range_val)) range_val = detail.config.default_time_range;
         detail._time_range_minutes = range_val;
+        kit.urls.set_range_minutes(range_val);
         $('#detail-timeline-range-pill').text(range_names[range_val]);
         var $m = $('#detail-timeline-range-menu');
         $m.find('.dashboard-time-range-option').removeClass('dashboard-time-range-active');
@@ -1851,7 +1840,8 @@ $.fn.zato.scheduler.job_detail.init = function(job_data, job_id, cluster_id, pol
         base_url: dash.config.base_url,
         cluster_id: cluster_id,
         object_path: 'job/{id}/',
-        run_path: 'job/{id}/run/{run_id}/'
+        run_path: 'job/{id}/run/{run_id}/',
+        range_minutes: parseInt(new URLSearchParams(window.location.search).get('range'), 10)
     });
     detail._job_data = job_data;
     detail._object_id = Number(job_id);

@@ -27,6 +27,7 @@ from zato.common.defaults import default_cluster_id
 logger = logging.getLogger(__name__)
 
 dashboard_base_url = '/zato/scheduler/dashboard/'
+default_time_range_minutes = 0
 
 _calendar_ranges = {
     1440: 'today',
@@ -42,7 +43,10 @@ _calendar_ranges = {
 def _chart_window_for_range(now:'datetime', range_minutes:'int') -> 'tuple':
     """ Computes (chart_since_iso, chart_until_iso) matching the JS _get_chart_window logic. """
 
-    calendar_key = _calendar_ranges.get(range_minutes)
+    if range_minutes in _calendar_ranges:
+        calendar_key = _calendar_ranges[range_minutes]
+    else:
+        calendar_key = None
 
     if calendar_key == 'today':
         since = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -63,11 +67,8 @@ def _chart_window_for_range(now:'datetime', range_minutes:'int') -> 'tuple':
     elif calendar_key == 'this_year':
         since = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
         until = since.replace(year=now.year + 1)
-    elif range_minutes > 0:
-        since = now - timedelta(minutes=range_minutes)
-        until = now
     else:
-        since = now - timedelta(minutes=5)
+        since = now - timedelta(minutes=range_minutes)
         until = now
 
     chart_since_iso = since.strftime('%Y-%m-%dT%H:%M:%S.000Z')
@@ -80,16 +81,18 @@ def _chart_window_for_range(now:'datetime', range_minutes:'int') -> 'tuple':
 @method_allowed('GET')
 def index(req):
 
+    range_minutes = int(req.GET['range'])
+
     try:
-        range_minutes = int(req.GET.get('range', '5'))
         now = datetime.now(timezone.utc)
 
-        chart_since_iso, chart_until_iso = _chart_window_for_range(now, range_minutes)
+        invoke_kwargs = {}
+        if range_minutes > 0:
+            chart_since_iso, chart_until_iso = _chart_window_for_range(now, range_minutes)
+            invoke_kwargs['chart_since_iso'] = chart_since_iso
+            invoke_kwargs['chart_until_iso'] = chart_until_iso
 
-        response = req.zato.client.invoke('zato.scheduler.job.get-current-state', {
-            'chart_since_iso': chart_since_iso,
-            'chart_until_iso': chart_until_iso,
-        })
+        response = req.zato.client.invoke('zato.scheduler.job.get-current-state', invoke_kwargs)
         if response.ok:
             data_json = json.dumps(response.data)
         else:
@@ -100,6 +103,7 @@ def index(req):
 
     return TemplateResponse(req, 'zato/scheduler/dashboard.html', {
         'cluster_id': default_cluster_id,
+        'range_minutes': range_minutes,
         'dashboard_data': data_json,
         'dashboard_base_url': dashboard_base_url,
         'zato_clusters': True,
@@ -159,6 +163,8 @@ def poll(req):
 @method_allowed('GET')
 def job_detail(req, job_id:'int'):
 
+    range_minutes = int(req.GET['range'])
+
     job_data = {}
 
     try:
@@ -193,6 +199,7 @@ def job_detail(req, job_id:'int'):
 
     return TemplateResponse(req, 'zato/scheduler/job_detail.html', {
         'cluster_id': default_cluster_id,
+        'range_minutes': range_minutes,
         'job_id': job_id,
         'job_data': json.dumps(job_data),
         'dashboard_base_url': dashboard_base_url,
@@ -209,6 +216,8 @@ def run_detail(req, job_id:'int', run_number:'int'):
     """ Shows the log entries for a single execution record of a scheduler job.
     """
 
+    range_minutes = int(req.GET['range'])
+
     job_data = {}
 
     try:
@@ -223,6 +232,7 @@ def run_detail(req, job_id:'int', run_number:'int'):
 
     return TemplateResponse(req, 'zato/scheduler/run_detail.html', {
         'cluster_id': default_cluster_id,
+        'range_minutes': range_minutes,
         'job_id': job_id,
         'run_number': run_number,
         'job_data': json.dumps(job_data),

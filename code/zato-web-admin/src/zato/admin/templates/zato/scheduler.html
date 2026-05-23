@@ -66,6 +66,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler.js"></script>
     <script nonce="{{ CSP_NONCE }}">
     $.fn.zato.scheduler.dashboard_base_url = '{{ dashboard_base_url }}';
+    $.fn.zato.scheduler.default_time_range_minutes = {{ default_time_range_minutes }};
     </script>
 
 {% endblock %}
@@ -90,7 +91,7 @@
     <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.scheduler.create('interval_based')">Create a new job</a> |
             <a href="javascript:$.fn.zato.scheduler.import_demo_config()" class="common">Import demo config</a> |
-            <a href="{% url "scheduler-dashboard" %}?cluster={{ cluster_id }}" class="common">Go to dashboard</a>
+            <a href="{% url "scheduler-dashboard" %}?cluster={{ cluster_id }}&range={{ default_time_range_minutes }}" class="common">Go to dashboard</a>
     </div>
 
             <table class="zato-table" id="data-table">
