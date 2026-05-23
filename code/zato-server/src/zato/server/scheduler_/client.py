@@ -221,10 +221,14 @@ class SchedulerClient:
 
 # ################################################################################################################################
 
-    def get_chart_data(self, since_iso:'str'='') -> 'anydict':
+    def get_chart_data(self, since_iso:'str'='', until_iso:'str'='', max_data_points:'int'=0) -> 'anydict':
         params = {}
         if since_iso:
             params['since_iso'] = since_iso
+        if until_iso:
+            params['until_iso'] = until_iso
+        if max_data_points:
+            params['max_data_points'] = max_data_points
         return self._http_get('/api/get_chart_data', params)
 
 # ################################################################################################################################

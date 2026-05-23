@@ -127,8 +127,17 @@ struct JobSummaryResponse {
 /// Query parameters for get_chart_data.
 #[derive(Deserialize)]
 struct ChartDataParams {
-    /// ISO timestamp cutoff - only aggregate events at or after this time. If absent, aggregate all.
+    /// ISO timestamp of the window start. If absent (together with `until_iso`), the server
+    /// derives bucket boundaries from the actual data extent (used by the "All" range).
     since_iso: Option<String>,
+    /// ISO timestamp of the window end. Must be provided together with `since_iso` to enable
+    /// fixed-grid bucketing. When both are present, records outside [since_iso, until_iso) are
+    /// excluded and the 120 buckets are distributed evenly across this fixed window.
+    until_iso: Option<String>,
+    /// Chart pixel width - used as maxDataPoints to compute the interval (bucket size).
+    /// Follows Grafana's formula: intervalMs = roundInterval(range_ms / max_data_points).
+    /// If absent, defaults to 1345 (typical dashboard chart width).
+    max_data_points: Option<u32>,
 }
 
 /// A single time bucket with per-outcome counts.
@@ -157,63 +166,124 @@ struct ChartDataResponse {
     min_time_iso: String,
     /// ISO timestamp of the latest event in the window.
     max_time_iso: String,
+    /// Bucket width in milliseconds (the rounded interval).
+    interval_ms: i64,
 }
 
-/// Number of fixed buckets returned by the chart data endpoint.
-const CHART_BUCKET_COUNT: usize = 120;
+/// Snaps a raw interval (ms) to the nearest human-friendly bucket size.
+/// Matches Grafana's `roundInterval()` from `rangeutil.ts`.
+fn round_interval(interval_ms: i64) -> i64 {
+    match interval_ms {
+        ms if ms < 5 => 1,
+        ms if ms < 10 => 5,
+        ms if ms < 25 => 10,
+        ms if ms < 50 => 25,
+        ms if ms < 100 => 50,
+        ms if ms < 250 => 100,
+        ms if ms < 500 => 250,
+        ms if ms < 1_000 => 500,
+        ms if ms < 2_500 => 1_000,
+        ms if ms < 5_000 => 2_500,
+        ms if ms < 7_500 => 5_000,
+        ms if ms < 10_000 => 7_500,
+        ms if ms < 15_000 => 10_000,
+        ms if ms < 30_000 => 15_000,
+        ms if ms < 60_000 => 30_000,
+        ms if ms < 120_000 => 60_000,
+        ms if ms < 300_000 => 120_000,
+        ms if ms < 600_000 => 300_000,
+        ms if ms < 900_000 => 600_000,
+        ms if ms < 1_800_000 => 900_000,
+        ms if ms < 3_600_000 => 1_800_000,
+        ms if ms < 7_200_000 => 3_600_000,
+        ms if ms < 21_600_000 => 7_200_000,
+        ms if ms < 43_200_000 => 21_600_000,
+        ms if ms < 86_400_000 => 43_200_000,
+        ms if ms < 604_800_000 => 86_400_000,
+        ms if ms < 2_592_000_000 => 604_800_000,
+        ms if ms < 31_536_000_000 => 2_592_000_000,
+        _ => 31_536_000_000,
+    }
+}
 
 /// Returns pre-aggregated chart data as 120 time buckets with per-outcome counts.
+///
+/// # Bucket boundary stability
+///
+/// The client sends `since_iso` and `until_iso` to define a fixed time window for bucketing.
+/// This ensures bucket boundaries are deterministic and do not shift when new records arrive.
+/// Without fixed boundaries, every new record would shift `max_ms`, redistribute all 120 buckets,
+/// and make the chart visually unstable across consecutive polls.
+///
+/// The client computes these boundaries using one of two strategies depending on the selected
+/// time range:
+///
+/// ## Category A - Sliding windows (5 min, 15 min, 30 min, 1 hour, 6 hours)
+///
+/// These are relative to "now" and use grid-snapped boundaries:
+///
+/// ```text
+/// bucket_size_ms = range_ms / 120
+/// until_ms       = ceil(now_ms / bucket_size_ms) * bucket_size_ms
+/// since_ms       = until_ms - range_ms
+/// ```
+///
+/// Grid advance intervals (how often boundaries shift by one bucket):
+/// - 5 min range:  bucket = 2,500ms,  grid advances every 2.5 seconds
+/// - 15 min range: bucket = 7,500ms,  grid advances every 7.5 seconds
+/// - 30 min range: bucket = 15,000ms, grid advances every 15 seconds
+/// - 1 hour range: bucket = 30,000ms, grid advances every 30 seconds
+/// - 6 hour range: bucket = 180,000ms, grid advances every 3 minutes
+///
+/// Within each advance interval, the bucket boundaries are identical no matter how many
+/// times the client polls.
+///
+/// ## Category B - Calendar-anchored (Today, Yesterday, This week, This month, This year)
+///
+/// These use hard calendar boundaries that never shift within their period:
+/// - Today:      since = today 00:00:00 local,     until = tomorrow 00:00:00 local
+/// - Yesterday:  since = yesterday 00:00:00 local, until = today 00:00:00 local
+/// - This week:  since = Monday 00:00:00 local,    until = next Monday 00:00:00 local
+/// - This month: since = 1st 00:00:00 local,       until = 1st next month 00:00:00 local
+/// - This year:  since = Jan 1 00:00:00 local,     until = Jan 1 next year 00:00:00 local
+///
+/// These produce completely stable bucket boundaries for their entire period.
+///
+/// ## "All" range
+///
+/// When `since_iso` and `until_iso` are both absent, the server derives boundaries from
+/// the actual data extent (min/max of all records). This is the only mode where the chart
+/// can shift on every poll, which is acceptable because "All" has no fixed span to anchor to.
 async fn get_chart_data(state: web::Data<AppState>, params: web::Query<ChartDataParams>) -> HttpResponse {
-    let since_cutoff = params.since_iso.as_deref().unwrap_or("");
 
-    let (min_ms, max_ms, bucket_counts) = {
+    let max_data_points = params.max_data_points.unwrap_or(1345) as i64;
+
+    let fixed_window = match (params.since_iso.as_deref(), params.until_iso.as_deref()) {
+        (Some(since), Some(until)) if !since.is_empty() && !until.is_empty() => {
+            let since_ms = DateTime::parse_from_rfc3339(since)
+                .map(|dt| dt.timestamp_millis())
+                .unwrap_or(0);
+            let until_ms = DateTime::parse_from_rfc3339(until)
+                .map(|dt| dt.timestamp_millis())
+                .unwrap_or(0);
+            if since_ms > 0 && until_ms > since_ms {
+                Some((since_ms, until_ms))
+            } else {
+                None
+            }
+        }
+        _ => None,
+    };
+
+    // outcome_index: 0=ok, 1=error, 2=timeout, 3=skipped
+    let (window_min, window_max, events) = {
         let scheduler_state = state.shared.state.lock();
 
-        let mut min_ms: i64 = i64::MAX;
-        let mut max_ms: i64 = i64::MIN;
-        let mut timestamps_and_outcomes: Vec<(i64, &str)> = Vec::new();
+        let mut collected: Vec<(i64, usize)> = Vec::new();
 
         for running_job in scheduler_state.jobs.values() {
             for rec in &running_job.history {
-                if !since_cutoff.is_empty() {
-                    if rec.actual_fire_time_iso.as_str() < since_cutoff {
-                        continue;
-                    }
-                }
-
-                if rec.outcome == outcome::RUNNING {
-                    continue;
-                }
-
-                if let Ok(parsed) = DateTime::parse_from_rfc3339(&rec.actual_fire_time_iso) {
-                    let ms = parsed.timestamp_millis();
-                    if ms < min_ms {
-                        min_ms = ms;
-                    }
-                    if ms > max_ms {
-                        max_ms = ms;
-                    }
-                    timestamps_and_outcomes.push((ms, &rec.outcome));
-                }
-            }
-        }
-
-        if timestamps_and_outcomes.is_empty() {
-            let now = Utc::now();
-            let now_ms = now.timestamp_millis();
-            (now_ms, now_ms, vec![[0u64; 4]; CHART_BUCKET_COUNT])
-        } else {
-            let time_range = max_ms - min_ms;
-            let effective_range = if time_range == 0 { 3_600_000 } else { time_range };
-            let effective_min = if time_range == 0 { max_ms - effective_range } else { min_ms };
-
-            let mut bucket_counts = vec![[0u64; 4]; CHART_BUCKET_COUNT];
-
-            for (ms, outcome_label) in &timestamps_and_outcomes {
-                let bucket_index = ((*ms - effective_min) * CHART_BUCKET_COUNT as i64 / effective_range)
-                    .clamp(0, (CHART_BUCKET_COUNT - 1) as i64) as usize;
-
-                let outcome_index = match *outcome_label {
+                let outcome_index = match rec.outcome.as_str() {
                     outcome::EXECUTED => 0,
                     outcome::ERROR => 1,
                     outcome::TIMEOUT => 2,
@@ -221,21 +291,56 @@ async fn get_chart_data(state: web::Data<AppState>, params: web::Query<ChartData
                     _ => continue,
                 };
 
-                bucket_counts[bucket_index][outcome_index] += 1;
-            }
+                if let Ok(parsed) = DateTime::parse_from_rfc3339(&rec.actual_fire_time_iso) {
+                    let ms = parsed.timestamp_millis();
 
-            (effective_min, max_ms, bucket_counts)
+                    if let Some((since_ms, until_ms)) = fixed_window {
+                        if ms < since_ms || ms >= until_ms {
+                            continue;
+                        }
+                    }
+
+                    collected.push((ms, outcome_index));
+                }
+            }
+        }
+
+        if let Some((since_ms, until_ms)) = fixed_window {
+            (since_ms, until_ms, collected)
+        } else if collected.is_empty() {
+            let now_ms = Utc::now().timestamp_millis();
+            (now_ms, now_ms, collected)
+        } else {
+            let mut min_ms: i64 = i64::MAX;
+            let mut max_ms: i64 = i64::MIN;
+            for (ms, _) in &collected {
+                if *ms < min_ms { min_ms = *ms; }
+                if *ms > max_ms { max_ms = *ms; }
+            }
+            let effective_min = if max_ms == min_ms { max_ms - 3_600_000 } else { min_ms };
+            (effective_min, max_ms, collected)
         }
     };
 
-    let time_range = max_ms - min_ms;
+    let time_range = window_max - window_min;
     let effective_range = if time_range == 0 { 3_600_000 } else { time_range };
-    let bucket_size_ms = effective_range as f64 / CHART_BUCKET_COUNT as f64;
 
-    let mut buckets: Vec<ChartBucket> = Vec::with_capacity(CHART_BUCKET_COUNT);
-    for bucket_index in 0..CHART_BUCKET_COUNT {
-        let start_ms = min_ms + (bucket_index as f64 * bucket_size_ms) as i64;
-        let end_ms = min_ms + ((bucket_index + 1) as f64 * bucket_size_ms) as i64;
+    let raw_interval = effective_range / max_data_points;
+    let interval_ms = round_interval(raw_interval.max(1));
+    let bucket_count = (effective_range / interval_ms).max(1) as usize;
+
+    let mut bucket_counts = vec![[0u64; 4]; bucket_count];
+
+    for (ms, outcome_index) in &events {
+        let bucket_index = ((*ms - window_min) / interval_ms)
+            .clamp(0, (bucket_count - 1) as i64) as usize;
+        bucket_counts[bucket_index][*outcome_index] += 1;
+    }
+
+    let mut buckets: Vec<ChartBucket> = Vec::with_capacity(bucket_count);
+    for bucket_index in 0..bucket_count {
+        let start_ms = window_min + (bucket_index as i64) * interval_ms;
+        let end_ms = start_ms + interval_ms;
 
         let start_iso = DateTime::from_timestamp_millis(start_ms)
             .unwrap_or_else(|| Utc::now())
@@ -255,10 +360,10 @@ async fn get_chart_data(state: web::Data<AppState>, params: web::Query<ChartData
         });
     }
 
-    let min_time_iso = DateTime::from_timestamp_millis(min_ms)
+    let min_time_iso = DateTime::from_timestamp_millis(window_min)
         .unwrap_or_else(|| Utc::now())
         .to_rfc3339();
-    let max_time_iso = DateTime::from_timestamp_millis(max_ms)
+    let max_time_iso = DateTime::from_timestamp_millis(window_max)
         .unwrap_or_else(|| Utc::now())
         .to_rfc3339();
 
@@ -266,6 +371,7 @@ async fn get_chart_data(state: web::Data<AppState>, params: web::Query<ChartData
         buckets,
         min_time_iso,
         max_time_iso,
+        interval_ms,
     };
 
     HttpResponse::Ok().json(response)

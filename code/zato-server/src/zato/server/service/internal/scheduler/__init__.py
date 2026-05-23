@@ -645,7 +645,7 @@ class GetCurrentState(_SchedulerAdmin):
     """
     name = _service_name_prefix + 'get-current-state'
 
-    input = '-chart_since_iso', '-recent_since_iso', Int('-recent_limit')
+    input = '-chart_since_iso', '-chart_until_iso', '-recent_since_iso', Int('-recent_limit'), Int('-max_data_points')
 
     def handle(self) -> 'None':
         try:
@@ -654,8 +654,10 @@ class GetCurrentState(_SchedulerAdmin):
             scheduler = self.server._scheduler
 
             chart_since_iso = self.request.input.chart_since_iso or ''
+            chart_until_iso = self.request.input.chart_until_iso or ''
             recent_since_iso = self.request.input.recent_since_iso or ''
             recent_limit = self.request.input.recent_limit or 100
+            max_data_points = self.request.input.max_data_points or 0
 
             with closing(self.odb.session()) as session:
                 job_rows = session.query(Job).filter_by(cluster_id=default_cluster_id).all()
@@ -744,7 +746,7 @@ class GetCurrentState(_SchedulerAdmin):
                     total_executions += per_job[outcome_key]
 
             # .. get chart_buckets from Rust (pre-aggregated) ..
-            chart_buckets = scheduler.get_chart_data(chart_since_iso)
+            chart_buckets = scheduler.get_chart_data(chart_since_iso, chart_until_iso, max_data_points)
 
             # .. get recent events for the table ..
             recent_events = scheduler.get_timeline_events_since(recent_since_iso, recent_limit)

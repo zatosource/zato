@@ -59,12 +59,16 @@ def poll(req):
 
     try:
         chart_since_iso = req.POST.get('chart_since_iso', '')
+        chart_until_iso = req.POST.get('chart_until_iso', '')
         recent_since_iso = req.POST.get('recent_since_iso', '')
+        max_data_points = int(req.POST.get('max_data_points', '0'))
 
         t0 = time.monotonic()
         response = req.zato.client.invoke('zato.scheduler.job.get-current-state', {
             'chart_since_iso': chart_since_iso,
+            'chart_until_iso': chart_until_iso,
             'recent_since_iso': recent_since_iso,
+            'max_data_points': max_data_points,
         })
         elapsed = time.monotonic() - t0
         if elapsed > 2.0:
