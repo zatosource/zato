@@ -120,6 +120,56 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
     var dash = $.fn.zato.scheduler.dashboard;
 
     dash._recent_runs_ts = [];
+    dash._chart_buckets = null;
+    dash._chart_visible_keys = [];
+    dash._chart_bar_colors = {};
+    dash._chart_labels = {};
+
+    // Returns info about a single chart bucket by index,
+    // or null if the index is out of range.
+    dash.get_bucket_info = function(bucket_index) {
+        var buckets = dash._chart_buckets;
+        if (!buckets || bucket_index < 0 || bucket_index >= buckets.length) return null;
+
+        var bucket = buckets[bucket_index];
+        var visible_keys = dash._chart_visible_keys;
+        var bar_colors = dash._chart_bar_colors;
+        var outcome_labels = dash._chart_labels;
+
+        var time_start = new Date(bucket.start);
+        var time_end = new Date(bucket.end);
+        var fmt_time = function(d) {
+            return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ':' + ('0' + d.getSeconds()).slice(-2);
+        };
+        var bucket_span_s = Math.round((bucket.end - bucket.start) / 1000);
+        var time_label = bucket_span_s >= 1
+            ? fmt_time(time_start) + ' \u2192 ' + fmt_time(time_end)
+            : fmt_time(time_start);
+
+        var total_runs = 0;
+        var outcomes = [];
+        for (var ki = 0; ki < visible_keys.length; ki++) {
+            var key = visible_keys[ki];
+            var count = bucket[key];
+            total_runs += count;
+            outcomes.push({
+                key: key,
+                label: outcome_labels[key],
+                count: count,
+                color: bar_colors[key]
+            });
+        }
+
+        return {
+            index: bucket_index,
+            time_label: time_label,
+            total_runs: total_runs,
+            runs_label: total_runs === 1 ? '1 run' : kit.format_number_full(total_runs) + ' runs',
+            outcomes: outcomes,
+            start: bucket.start,
+            end: bucket.end
+        };
+    };
 
     // Thin aliases so job_detail.js (and any future callers that used
     // the old scheduler-level API) keep working without changes.
@@ -540,6 +590,11 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             if (has_data) visible_keys.push(outcome_keys[vk]);
         }
 
+        dash._chart_buckets = buckets;
+        dash._chart_visible_keys = visible_keys;
+        dash._chart_bar_colors = bar_colors;
+        dash._chart_labels = labels;
+
         var max_stack = 0;
         if (dash.show_bars) {
             for (var ms_index = 0; ms_index < buckets.length; ms_index++) {
@@ -836,38 +891,21 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             band_html += '</svg>';
             overlay.html(band_html);
 
-            var bucket = buckets[bucket_index];
-            var time_start = new Date(bucket.start);
-            var time_end = new Date(bucket.end);
-            var fmt_time = function(d) {
-                return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ':' + ('0' + d.getSeconds()).slice(-2);
-            };
-            var bucket_span_s = Math.round((bucket.end - bucket.start) / 1000);
-            var time_label = bucket_span_s >= 1
-                ? fmt_time(time_start) + ' \u2192 ' + fmt_time(time_end)
-                : fmt_time(time_start);
-
-            var total_runs = 0;
-            for (var tk = 0; tk < visible_keys.length; tk++) {
-                total_runs += bucket[visible_keys[tk]];
-            }
-            var runs_label = total_runs === 1
-                ? '1 run'
-                : kit.format_number_full(total_runs) + ' runs';
+            var info = dash.get_bucket_info(bucket_index);
+            if (!info) return;
 
             var tooltip_html = '<div class="dashboard-tooltip-header">' +
-                '<div class="dashboard-tooltip-title">' + time_label + '</div>' +
-                '<div class="dashboard-tooltip-subtitle">' + runs_label + '</div>' +
+                '<div class="dashboard-tooltip-title">' + info.time_label + '</div>' +
+                '<div class="dashboard-tooltip-subtitle">' + info.runs_label + '</div>' +
                 '</div>';
 
             var body_lines = [];
-            for (var key_index = 0; key_index < visible_keys.length; key_index++) {
-                var key = visible_keys[key_index];
-                var count = bucket[key];
-                var chart_run_word = count === 1 ? 'run' : 'runs';
+            for (var key_index = 0; key_index < info.outcomes.length; key_index++) {
+                var outcome = info.outcomes[key_index];
+                var chart_run_word = outcome.count === 1 ? 'run' : 'runs';
                 body_lines.push('<div class="dashboard-tooltip-row">' +
-                    '<span class="dashboard-tooltip-dot" style="background:' + bar_colors[key] + '"></span>' +
-                    labels[key] + ': <b>' + kit.format_number_full(count) + '</b> ' + chart_run_word + '</div>');
+                    '<span class="dashboard-tooltip-dot" style="background:' + outcome.color + '"></span>' +
+                    outcome.label + ': <b>' + kit.format_number_full(outcome.count) + '</b> ' + chart_run_word + '</div>');
             }
             tooltip_html += '<div class="dashboard-tooltip-body">' + body_lines.join('') + '</div>';
 
