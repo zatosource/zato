@@ -598,7 +598,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         if (range_ms === 0)                            group_type = 'none';
         else if (range_ms >= dash.config.ms_per_year)  group_type = 'month';
         else if (range_ms >= dash.config.ms_per_week)  group_type = 'day';
-        else if (range_ms >= dash.config.ms_per_hour)  group_type = 'hour';
+        else if (range_ms > dash.config.ms_per_hour)   group_type = 'hour';
         else                                           group_type = 'minute';
         dash._chart_group_type = group_type;
         dash._chart_groups = [];
@@ -630,7 +630,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         // .. for the 5-min range, collapse raw 5-second buckets into per-minute plot_buckets ..
         // .. for all other ranges, plot_buckets is just a reference to the raw buckets ..
         var plot_buckets;
-        if (dash._time_range_minutes > 0 && dash._time_range_minutes <= 60) {
+        if (dash._time_range_minutes > 0 && dash._time_range_minutes <= 360) {
             var _seen_group_order = [];
             var _group_entries = {};
             for (var pb_idx = 0; pb_idx < buckets.length; pb_idx++) {
@@ -695,7 +695,9 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         svg += '</defs>';
 
         var _y_axis_values = [];
-        var _y_axis_suffix = (dash._time_range_minutes <= 60 && dash._time_range_minutes > 0) ? '/min' : '';
+        var _y_axis_suffix = '';
+        if (dash._time_range_minutes > 0 && dash._time_range_minutes <= 60) _y_axis_suffix = '/min';
+        else if (dash._time_range_minutes > 60 && dash._time_range_minutes <= 360) _y_axis_suffix = '/hr';
         var grid_line_count = Math.min(4, max_stack);
         var prev_grid_value = -1;
         for (var grid_index = 0; grid_index <= grid_line_count; grid_index++) {
@@ -994,6 +996,16 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
                 var lr = dash._chart_label_range;
                 hover_label = dash.formatTimeLabel(new Date(buckets[hover_first].start), lr);
             }
+
+            console.log('hover-group', JSON.stringify({
+                index: bucket_index,
+                group_key: hover_group_key,
+                group_type: dash._chart_group_type,
+                label: hover_label,
+                start: new Date(buckets[hover_first].start).toISOString(),
+                end: new Date(buckets[hover_last].end).toISOString(),
+                totals: hover_totals
+            }, null, 2));
 
             var hover_total = 0;
             for (var gt = 0; gt < visible_keys.length; gt++) {
