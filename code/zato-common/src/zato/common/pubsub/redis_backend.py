@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import json
 import logging as _depth_logging
 from logging import getLogger
+import os
 
 # redis
 from redis.exceptions import ResponseError
@@ -53,7 +54,10 @@ _default_expiration     = PubSub.Message.Default_Expiration
 _default_max_messages   = PubSub.Message.Default_Max_Messages
 _default_max_len        = PubSub.Message.Default_Max_Len
 _default_data_preview_len = PubSub.Message.Data_Preview_Len
-_default_stream_max_len = 1_000_000
+if _stream_max_len_env := os.environ.get('Zato_Stream_Max_Len'):
+    _default_stream_max_len = int(_stream_max_len_env)
+else:
+    _default_stream_max_len = 1_000_000
 _default_page_size      = 50
 
 _browse_state_handlers = {

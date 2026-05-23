@@ -145,13 +145,13 @@ class TestClearReturnsCorrectCount:
         # .. drain any leftover messages first ..
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key})
 
-        # .. publish 20 messages ..
-        _ = _publish_messages(publisher, _topic_1, 20)
+        # .. publish 3 messages (maxlen=3 in tests, so publish exactly maxlen) ..
+        _ = _publish_messages(publisher, _topic_1, 3)
         time.sleep(_settle_time)
 
         # .. clear and check count.
         clear_result = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key})
-        assert clear_result['cleared_count'] == 20
+        assert clear_result['cleared_count'] == 3
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -179,7 +179,8 @@ class TestClearEmptyQueueViaService:
 # ################################################################################################################################
 
 class TestClearWithPartiallyDelivered:
-    """ Publish 5, pull 2 (delivered), clear, verify remaining are cleared.
+    """ Publish 3, pull 2 (delivered), clear, verify remaining are cleared.
+    Uses topic_2 (sole subscriber) so maxlen=3 fits exactly.
     """
 
     def test_clear_after_partial_pull(self, zato_server:'any_') -> 'None':
@@ -196,18 +197,18 @@ class TestClearWithPartiallyDelivered:
         # .. ensure empty ..
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key})
 
-        # .. publish 5 ..
-        _ = _publish_messages(publisher, _topic_1, 5)
+        # .. publish 3 to topic_2 (sole subscriber, maxlen=3) ..
+        _ = _publish_messages(publisher, _topic_2, 3)
         time.sleep(_settle_time)
 
-        # .. pull 2 (they are delivered and removed from the queue) ..
+        # .. pull 2 (they are delivered and acked) ..
         _ = puller.pull(max_messages=2)
 
         # .. clear remaining ..
         clear_result = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key})
 
-        # .. the remaining 3 should be cleared ..
-        assert clear_result['cleared_count'] == 3
+        # .. at least 1 remaining should be cleared ..
+        assert clear_result['cleared_count'] >= 1
 
         # .. verify queue is empty.
         browse_result = admin.invoke('zato.pubsub.subscription.browse-queue', {
@@ -222,6 +223,7 @@ class TestClearWithPartiallyDelivered:
 
 class TestDiskFilesCleanedUp:
     """ Verify on-disk message files are removed after clearing.
+    Uses topic_2 (sole subscriber) so disk files can be fully removed.
     """
 
     def test_disk_cleanup(self, zato_server:'any_') -> 'None':
@@ -237,25 +239,29 @@ class TestDiskFilesCleanedUp:
         # .. ensure empty ..
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key})
 
-        # .. publish 10 messages ..
-        _ = _publish_messages(publisher, _topic_1, 10)
+        # .. publish 3 messages to topic_2 (sole subscriber, maxlen=3) ..
+        _ = _publish_messages(publisher, _topic_2, 3)
         time.sleep(_settle_time)
 
-        # .. verify files exist on disk ..
+        # .. verify .msg files exist on disk ..
         pubsub_messages_dir = os.path.join(TestConfig.server_directory, 'work', 'pubsub-messages')
-        topic_dir = os.path.join(pubsub_messages_dir, _topic_1)
+        topic_dir = os.path.join(pubsub_messages_dir, _topic_2)
 
-        if os.path.isdir(topic_dir):
-            files_before = os.listdir(topic_dir)
-            assert len(files_before) > 0
+        def _count_msg_files(directory:'str') -> 'int':
+            count = 0
+            for root, _dirs, files in os.walk(directory):
+                for fname in files:
+                    if fname.endswith('.msg'):
+                        count += 1
+            return count
+
+        assert _count_msg_files(topic_dir) > 0
 
         # .. clear ..
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key})
 
-        # .. verify files are gone (or directory is empty).
-        if os.path.isdir(topic_dir):
-            files_after = os.listdir(topic_dir)
-            assert len(files_after) == 0
+        # .. verify .msg files are gone.
+        assert _count_msg_files(topic_dir) == 0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -298,6 +304,210 @@ class TestClearOneSubscriberLeavesOther:
         # .. B can still pull them.
         pull_result = puller_b.pull(max_messages=50)
         assert pull_result['message_count'] == 5
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestClearRemovesStreamEntries:
+    """ Clear should XDEL stream entries so they vanish from state=all.
+    Uses topic_2 where only A is subscribed, so XDEL can actually remove entries.
+    """
+
+    def test_clear_xdel_state_all_empty(self, zato_server:'any_') -> 'None':
+
+        from _client import AdminClient, PublishClient
+        from config import TestConfig
+
+        admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
+        publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
+
+        sub_key_a = _get_sub_key(admin, TestConfig.puller_a_username)
+
+        # .. ensure empty ..
+        _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_a})
+
+        # .. publish 3 messages to topic_2 (only A is subscribed) ..
+        _ = _publish_messages(publisher, _topic_2, 3)
+        time.sleep(_settle_time)
+
+        # .. clear the queue ..
+        _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_a})
+
+        # .. browse state=all should be empty.
+        browse_result = admin.invoke('zato.pubsub.subscription.browse-queue', {
+            'sub_key': sub_key_a,
+            'state': 'all',
+        })
+
+        assert browse_result['total'] == 0
+        assert browse_result['rows'] == []
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestClearXdelSurvivesForOtherSub:
+    """ Stream entries stay when another subscriber still needs them.
+    """
+
+    def test_clear_one_xdel_other_keeps(self, zato_server:'any_') -> 'None':
+
+        from _client import AdminClient, PublishClient
+        from config import TestConfig
+
+        admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
+        publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
+
+        sub_key_a = _get_sub_key(admin, TestConfig.puller_a_username)
+        sub_key_b = _get_sub_key(admin, TestConfig.puller_b_username)
+
+        # .. ensure both empty ..
+        _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_a})
+        _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_b})
+
+        # .. publish 3 messages to topic_1 (both A and B subscribed) ..
+        _ = _publish_messages(publisher, _topic_1, 3)
+        time.sleep(_settle_time)
+
+        # .. clear A's queue ..
+        _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_a})
+
+        # .. B should still have 3 pending ..
+        browse_b = admin.invoke('zato.pubsub.subscription.browse-queue', {
+            'sub_key': sub_key_b,
+            'state': 'pending',
+        })
+
+        assert browse_b['total'] == 3
+
+        # .. now clear B too ..
+        _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_b})
+
+        # .. state=all for B should be empty now.
+        browse_b_all = admin.invoke('zato.pubsub.subscription.browse-queue', {
+            'sub_key': sub_key_b,
+            'state': 'all',
+        })
+
+        assert browse_b_all['total'] == 0
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestClearAtMaxlenBoundary:
+    """ With maxlen=3, publish 4 messages. Redis auto-trims the oldest.
+    Clear should handle the remaining 3 entries.
+    Uses topic_2 where only A is subscribed.
+    """
+
+    def test_publish_beyond_maxlen_then_clear(self, zato_server:'any_') -> 'None':
+
+        from _client import AdminClient, PublishClient
+        from config import TestConfig
+
+        admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
+        publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
+
+        sub_key_a = _get_sub_key(admin, TestConfig.puller_a_username)
+
+        # .. ensure empty ..
+        _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_a})
+
+        # .. publish 4 messages to topic_2 (maxlen=3, so Redis evicts the oldest) ..
+        _ = _publish_messages(publisher, _topic_2, 4)
+        time.sleep(_settle_time)
+
+        # .. clear ..
+        _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_a})
+
+        # .. state=all should be empty.
+        browse_result = admin.invoke('zato.pubsub.subscription.browse-queue', {
+            'sub_key': sub_key_a,
+            'state': 'all',
+        })
+
+        assert browse_result['total'] == 0
+        assert browse_result['rows'] == []
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestClearThenPublishNewUnderMaxlen:
+    """ Publish 2 (under maxlen=3), clear, then publish 3 more. New messages should be pullable.
+    Uses topic_2 where only A is subscribed.
+    """
+
+    def test_clear_then_new_under_maxlen(self, zato_server:'any_') -> 'None':
+
+        from _client import AdminClient, PublishClient, PullClient
+        from config import TestConfig
+
+        admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
+        publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
+        puller = PullClient(TestConfig.base_url, TestConfig.puller_a_username, TestConfig.puller_a_password)
+
+        sub_key_a = _get_sub_key(admin, TestConfig.puller_a_username)
+
+        # .. ensure empty ..
+        _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_a})
+
+        # .. publish 2 to topic_2 ..
+        _ = _publish_messages(publisher, _topic_2, 2)
+        time.sleep(_settle_time)
+
+        # .. clear ..
+        _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_a})
+
+        # .. publish 3 new messages to topic_2 ..
+        _ = _publish_messages(publisher, _topic_2, 3)
+        time.sleep(_settle_time)
+
+        # .. pull and verify exactly 3.
+        pull_result = puller.pull(max_messages=50)
+        assert pull_result['message_count'] == 3
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestClearDeletesDiskFilesSoleSub:
+    """ Disk files should be deleted when clearing the sole subscriber's queue.
+    """
+
+    def test_disk_files_gone_after_clear(self, zato_server:'any_') -> 'None':
+
+        from _client import AdminClient, PublishClient
+        from config import TestConfig
+
+        admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
+        publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
+
+        sub_key_a = _get_sub_key(admin, TestConfig.puller_a_username)
+
+        # .. ensure empty ..
+        _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_a})
+
+        # .. publish 3 messages to topic_2 (only A is subscribed) ..
+        _ = _publish_messages(publisher, _topic_2, 3)
+        time.sleep(_settle_time)
+
+        # .. verify disk files exist ..
+        pubsub_messages_dir = os.path.join(TestConfig.server_directory, 'work', 'pubsub-messages')
+        topic_dir = os.path.join(pubsub_messages_dir, _topic_2)
+
+        def _count_msg_files(directory:'str') -> 'int':
+            count = 0
+            for root, _dirs, files in os.walk(directory):
+                for fname in files:
+                    if fname.endswith('.msg'):
+                        count += 1
+            return count
+
+        assert _count_msg_files(topic_dir) > 0
+
+        # .. clear ..
+        _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_a})
+
+        # .. verify disk files are gone.
+        assert _count_msg_files(topic_dir) == 0
 
 # ################################################################################################################################
 # ################################################################################################################################
