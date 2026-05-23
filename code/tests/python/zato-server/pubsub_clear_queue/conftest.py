@@ -235,6 +235,7 @@ def zato_server() -> 'any_':
     server_env = os.environ.copy()
     server_env['Zato_Config_Bind_Port'] = str(server_port)
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
+    server_env['Zato_Stream_Max_Len'] = '3'
     _ = server_env.pop('COVERAGE_PROCESS_START', None)
 
     _state.server_process = subprocess.Popen(
