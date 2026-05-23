@@ -453,6 +453,13 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     var outcome_keys = ['ok', 'skipped_already_in_flight', 'timeout', 'error'];
     var hidden = detail._get_hidden_series();
 
+    var _dbg_minutes = detail._time_range_minutes;
+    var _dbg_cutoff = (_dbg_minutes && _dbg_minutes > 0) ? new Date(Date.now() - _dbg_minutes * 60000).toISOString() : '(none)';
+    console.log('[timeline-debug] render_timeline called, _time_range_minutes=' + _dbg_minutes +
+        ', history.length=' + (history ? history.length : 0) +
+        ', filtered.length=' + (filtered ? filtered.length : 0) +
+        ', cutoff=' + _dbg_cutoff);
+
     detail._build_legend();
 
     if (!filtered || filtered.length === 0) {
@@ -481,10 +488,18 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     var interval_ms = detail._job_data.interval_ms;
     var min_span = interval_ms ? interval_ms * 10 : 3600000;
     var time_span = max_time - min_time;
+    var _dbg_min_time_adjusted = time_span < min_span;
     if (time_span < min_span) {
         min_time = max_time - min_span;
         time_span = min_span;
     }
+
+    console.log('[timeline-debug] time window: min_time=' + new Date(min_time).toISOString() +
+        ', max_time=' + new Date(max_time).toISOString() +
+        ', time_span=' + time_span + 'ms (' + (time_span / 1000).toFixed(1) + 's)' +
+        ', interval_ms=' + interval_ms +
+        ', min_span=' + min_span +
+        ', min_time_was_adjusted=' + _dbg_min_time_adjusted);
 
     var visible_keys = [];
     for (var vk = 0; vk < outcome_keys.length; vk++) {
@@ -500,10 +515,20 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
         buckets.push(bk);
     }
 
+    console.log('[timeline-debug] bucket config: bucket_count=' + bucket_count +
+        ', bucket_ms=' + bucket_ms.toFixed(1) + ' (' + (bucket_ms / 1000).toFixed(2) + 's per bucket)' +
+        ', chart_width=' + chart_width + 'px, seg_w=' + (chart_width / bucket_count).toFixed(2) + 'px');
+
+    console.group('[timeline-debug] record assignment (' + filtered.length + ' records)');
     for (var r = 0; r < filtered.length; r++) {
         var row_t = new Date(filtered[r].actual_fire_time_iso).getTime();
         var bi = Math.min(bucket_count - 1, Math.max(0, Math.floor((row_t - min_time) / bucket_ms)));
         var outcome = filtered[r].outcome;
+        console.log('[timeline-debug]   r=' + r +
+            ' ts=' + filtered[r].actual_fire_time_iso +
+            ' ms=' + row_t +
+            ' bucket=' + bi +
+            ' outcome=' + outcome);
         if (buckets[bi].hasOwnProperty(outcome)) {
             buckets[bi][outcome]++;
         } else {
@@ -511,6 +536,22 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
         }
         buckets[bi].total++;
     }
+    console.groupEnd();
+
+    var _dbg_bucket_table = [];
+    for (var _dbt = 0; _dbt < buckets.length; _dbt++) {
+        _dbg_bucket_table.push({
+            bucket: _dbt,
+            start: new Date(buckets[_dbt].start).toISOString(),
+            end: new Date(buckets[_dbt].end).toISOString(),
+            total: buckets[_dbt].total,
+            ok: buckets[_dbt]['ok'],
+            error: buckets[_dbt]['error'],
+            timeout: buckets[_dbt]['timeout'],
+            skipped: buckets[_dbt]['skipped_already_in_flight']
+        });
+    }
+    console.log('[timeline-debug] bucket totals:\n' + JSON.stringify(_dbg_bucket_table));
 
     var max_stack = 0;
     for (var ms = 0; ms < buckets.length; ms++) {
@@ -524,6 +565,11 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
 
     var seg_w = chart_width / bucket_count;
     var baseline = chart_height - pad_bot;
+
+    console.log('[timeline-debug] scaling: max_stack=' + max_stack +
+        ', baseline=' + baseline + 'px, draw_h=' + draw_h + 'px' +
+        ', pad_top=' + pad_top + ', pad_bot=' + pad_bot +
+        ', seg_w=' + seg_w.toFixed(2) + 'px');
 
     var _bezier = function(pts) {
         if (pts.length < 2) return '';
@@ -568,6 +614,18 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
         }
         series_top[pre_key] = pre_tops;
         series_bot[pre_key] = pre_bots;
+    }
+
+    for (var _dbgv = 0; _dbgv < visible_keys.length; _dbgv++) {
+        var _dbgk = visible_keys[_dbgv];
+        var _dbg_pts = series_top[_dbgk];
+        if (_dbg_pts) {
+            var _dbg_pos = [];
+            for (var _dbgp = 0; _dbgp < _dbg_pts.length; _dbgp++) {
+                _dbg_pos.push({bucket: _dbgp, x: _dbg_pts[_dbgp].x.toFixed(1), y: _dbg_pts[_dbgp].y.toFixed(1)});
+            }
+            console.log('[timeline-debug] pixel positions ' + _dbgk + ':\n' + JSON.stringify(_dbg_pos));
+        }
     }
 
     var _sanitize = function(k) { return String(k).replace(/[^A-Za-z0-9_]/g, '_'); };
@@ -1158,7 +1216,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
         action: 'get-history',
         object_id: detail._object_id,
         page_size: 50,
-        filters: {outcomes: initial_visible},
+        filters: {outcomes: initial_visible, since_iso: detail._compute_since_iso()},
         ts_field: 'actual_fire_time_iso',
         get_active_items: function() {
             var runs = [];
@@ -1573,9 +1631,18 @@ $.fn.zato.scheduler.job_detail.poll = function() {
 // Redraw timeline + history (called when time range changes)
 // ////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.scheduler.job_detail._compute_since_iso = function() {
+    var minutes = $.fn.zato.scheduler.job_detail._time_range_minutes;
+    if (!minutes || minutes <= 0) {
+        return '';
+    }
+    return new Date(Date.now() - minutes * 60000).toISOString();
+};
+
 $.fn.zato.scheduler.job_detail._redraw = function() {
     var detail = $.fn.zato.scheduler.job_detail;
     if (detail._pagination) {
+        detail._pagination.set_filters({since_iso: detail._compute_since_iso()});
         detail._pagination.fetch_page(1);
     }
     if (detail._chart_history) {

@@ -190,6 +190,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
     // ////////////////////////////////////////////////////////////////////////
 
     dash._last_timeline = null;
+    dash._last_jobs = null;
     dash._time_range_minutes = 0;
 
     dash._filter_timeline_by_range = function(timeline) {
@@ -217,6 +218,8 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             dash._skip_legend_rebuild = true;
             dash.render_bar_chart(dash._last_timeline);
             dash._skip_legend_rebuild = false;
+            var filtered_recent = dash._filter_timeline_by_range(dash._last_timeline);
+            dash.render_recent(filtered_recent, dash._last_jobs);
         }
     };
 
@@ -300,6 +303,13 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         var container = $('#dashboard-bar-chart');
         var filtered = dash._filter_timeline_by_range(timeline);
 
+        var _dbg_minutes = dash._time_range_minutes;
+        var _dbg_cutoff = (_dbg_minutes && _dbg_minutes > 0) ? new Date(Date.now() - _dbg_minutes * 60000).toISOString() : '(none)';
+        console.log('[chart-debug] render_bar_chart called, _time_range_minutes=' + _dbg_minutes +
+            ', timeline.length=' + (timeline ? timeline.length : 0) +
+            ', filtered.length=' + (filtered ? filtered.length : 0) +
+            ', cutoff=' + _dbg_cutoff);
+
         if (!filtered || filtered.length === 0) {
             container.html('<div class="dashboard-no-data">No run history yet</div>');
             $('#dashboard-chart-legend').empty();
@@ -362,13 +372,19 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         }
 
         var min_time = Math.min.apply(null, timestamps);
-        var max_time = Date.now();
+        var max_time = Math.max.apply(null, timestamps);
         var time_range = max_time - min_time;
 
+        var _dbg_time_range_adjusted = time_range === 0;
         if (time_range === 0) {
             time_range = 3600000;
             min_time = max_time - time_range;
         }
+
+        console.log('[chart-debug] time window: min_time=' + new Date(min_time).toISOString() +
+            ', max_time=' + new Date(max_time).toISOString() +
+            ', time_range=' + time_range + 'ms (' + (time_range / 1000).toFixed(1) + 's)' +
+            ', was_zero_adjusted=' + _dbg_time_range_adjusted);
 
         var auto_bucket_count = Math.min(60, Math.max(12, Math.floor(chart_width / 16)));
         var bucket_count = dash._zoom_bucket_count > 0
@@ -386,6 +402,11 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             buckets.push(bucket);
         }
 
+        console.log('[chart-debug] bucket config: bucket_count=' + bucket_count +
+            ', bucket_size=' + bucket_size.toFixed(1) + 'ms (' + (bucket_size / 1000).toFixed(2) + 's)' +
+            ', chart_width=' + chart_width + 'px');
+
+        console.group('[chart-debug] record assignment (' + filtered.length + ' records)');
         for (var timeline_index = 0; timeline_index < filtered.length; timeline_index++) {
             var record = filtered[timeline_index];
             var time = new Date(record.actual_fire_time_iso).getTime();
@@ -393,10 +414,22 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             var target_bucket = Math.floor((time - min_time) / bucket_size);
             if (target_bucket >= bucket_count) target_bucket = bucket_count - 1;
             if (target_bucket < 0) target_bucket = 0;
+            console.log('[chart-debug]   i=' + timeline_index +
+                ' ts=' + record.actual_fire_time_iso +
+                ' ms=' + time +
+                ' bucket=' + target_bucket +
+                ' outcome=' + outcome);
             if (buckets[target_bucket][outcome] !== undefined) {
                 buckets[target_bucket][outcome]++;
             }
         }
+        console.groupEnd();
+
+        var _dbg_buckets = [];
+        for (var _dbi = 0; _dbi < buckets.length; _dbi++) {
+            _dbg_buckets.push({b:_dbi, s:new Date(buckets[_dbi].start).toISOString(), e:new Date(buckets[_dbi].end).toISOString(), ok:buckets[_dbi]['ok'], err:buckets[_dbi]['error'], to:buckets[_dbi]['timeout'], sk:buckets[_dbi]['skipped_already_in_flight']});
+        }
+        console.log('[chart-debug] bucket totals:\n' + JSON.stringify(_dbg_buckets));
 
         var visible_keys = [];
         for (var vk = 0; vk < outcome_keys.length; vk++) {
@@ -430,6 +463,12 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         var draw_width = chart_width - padding_left - padding_right;
         var draw_height = chart_height - padding_top - padding_bottom;
         var baseline_y = padding_top + draw_height;
+
+        console.log('[chart-debug] scaling: max_stack=' + max_stack +
+            ', draw_width=' + draw_width + 'px, draw_height=' + draw_height + 'px' +
+            ', baseline_y=' + baseline_y + 'px' +
+            ', padding_left=' + padding_left + ', padding_top=' + padding_top +
+            ', padding_right=' + padding_right + ', padding_bottom=' + padding_bottom);
 
         var svg = '<svg width="' + chart_width + '" height="' + chart_height + '" xmlns="http://www.w3.org/2000/svg">';
 
@@ -573,6 +612,18 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
                 svg += 'fill="none" stroke="' + tip_color + '" stroke-opacity="0.35" stroke-width="1"/>';
                 svg += '<circle cx="' + tip_cx.toFixed(2) + '" cy="' + tip_cy.toFixed(2) + '" r="3.5" ';
                 svg += 'fill="' + tip_color + '"/>';
+            }
+        }
+
+        for (var _dbglk = 0; _dbglk < visible_keys.length; _dbglk++) {
+            var _dbglkey = visible_keys[_dbglk];
+            if (layer_points[_dbglkey]) {
+                var _dbglp = [];
+                for (var _dbgli = 0; _dbgli < layer_points[_dbglkey].length; _dbgli++) {
+                    var _pt = layer_points[_dbglkey][_dbgli];
+                    _dbglp.push({b:_dbgli, x:parseFloat(_pt.x.toFixed(1)), y:parseFloat(_pt.y.toFixed(1)), v:_pt.val});
+                }
+                console.log('[chart-debug] pixel positions ' + _dbglkey + ':\n' + JSON.stringify(_dbglp));
             }
         }
 
@@ -1052,9 +1103,11 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             dash._stat_tile_handle.bind();
         }
 
+        dash._last_jobs = data.jobs;
         dash.render_bar_chart(data.history_timeline);
         dash.render_job_table(data.jobs);
-        dash.render_recent(data.history_timeline, data.jobs);
+        var filtered_for_recent = dash._filter_timeline_by_range(data.history_timeline);
+        dash.render_recent(filtered_for_recent, data.jobs);
         dash.render_upcoming_table(data.jobs);
 
         kit.lock_table_widths('#dashboard-job-table');
