@@ -75,8 +75,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             if (is_empty) {
                 html += '<span class="detail-pagination-info"><span class="detail-page-disabled">Page ' +
                     kit.format_number_full(current_page) + ' of ' +
-                    kit.format_number_full(tp) + '</span>' +
-                    ' \u00b7 ' + kit.format_number_full(total_count) + ' total</span>';
+                    kit.format_number_full(tp) +
+                    ' \u00b7 ' + kit.format_number_full(total_count) + ' total</span></span>';
             } else {
                 html += '<span class="detail-pagination-info">Page ' +
                     kit.format_number_full(current_page) + ' of ' +
