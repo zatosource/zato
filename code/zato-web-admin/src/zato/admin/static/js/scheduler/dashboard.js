@@ -625,8 +625,8 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             svg += 'stroke="rgba(0,0,0,0.05)" stroke-width="1" />';
             if (grid_value !== prev_grid_value) {
                 svg += '<text x="' + (padding_left - 6) + '" y="' + (grid_y + 3).toFixed(1) + '" ';
-                svg += 'text-anchor="end" font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">';
-                svg += grid_value + '</text>';
+                svg += 'text-anchor="end" font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace" data-grid-value="' + grid_value + '">';
+                svg += kit.format_number_compact(grid_value) + '</text>';
                 _y_axis_values.push(grid_value);
                 prev_grid_value = grid_value;
             }
@@ -793,6 +793,16 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
 
         svg += '</svg>';
         container.html(svg);
+
+        container.find('text[data-grid-value]').each(function() {
+            tippy(this, {
+                content: kit.format_number_full(parseInt(this.dataset.gridValue, 10)),
+                placement: 'left',
+                theme: 'dark',
+                arrow: true,
+                delay: [0, 0]
+            });
+        });
 
         dash._setup_chart_interactions(container, buckets, padding_left, draw_width, bucket_count, padding_top, draw_height, padding_bottom, chart_height, visible_keys, layer_points, bar_colors);
 
