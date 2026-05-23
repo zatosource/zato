@@ -5,6 +5,31 @@
 @import url("../zato_highlight_pane.css");
 @import url("../syntax_light.css");
 
+:root {
+    --queue-header-row-2-margin-bottom: 16px;
+    --queue-pagination-controls-padding-y: 8px;
+    --queue-pagination-controls-min-height: 31px;
+    --queue-progress-panel-padding-top: 20px;
+    --queue-section-title-padding-bottom: 11.2px;
+}
+
+#queue-header-row-2 {
+    margin-bottom: var(--queue-header-row-2-margin-bottom);
+}
+
+#queue-header-row-2.queue-hidden {
+    display: none;
+}
+
+.detail-inline-stats.queue-hidden {
+    display: none;
+}
+
+#queue-pagination-top.queue-hidden,
+#queue-pagination-bottom.queue-hidden {
+    display: none;
+}
+
 .data-preview {
     max-width: 300px;
     white-space: nowrap;
@@ -27,7 +52,21 @@ a.queue-preview-link:visited {
 
 #queue-pagination-top,
 #queue-pagination-bottom {
-    min-height: 31px;
+    padding-top: var(--queue-pagination-controls-padding-y);
+    padding-bottom: var(--queue-pagination-controls-padding-y);
+    min-height: var(--queue-pagination-controls-min-height);
+}
+
+h3.queue-section-heading {
+    padding-bottom: var(--queue-section-title-padding-bottom);
+}
+
+h3.queue-section-heading > img.help-icon {
+    display: none;
+}
+
+.queue-progress-panel {
+    padding-top: var(--queue-progress-panel-padding-top);
 }
 
 .detail-table td,

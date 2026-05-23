@@ -65,6 +65,18 @@ _default_time_iso      = ''
 _poll_url    = '/zato/dashboard/detail-poll/'
 _payload_url = '/zato/pubsub/subscription/queue/message/payload/'
 
+_layout_config = {
+    'show_header_controls':          True,
+    'show_inline_stats':             True,
+    'show_pagination_top':           True,
+    'show_pagination_bottom':        True,
+    'header_row_2_margin_bottom':    '4px',
+    'pagination_controls_padding_y': '2px',
+    'pagination_controls_min_height': '0px',
+    'progress_panel_padding_top':    '4px',
+    'section_title_padding_bottom':  '2px',
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -135,6 +147,7 @@ def index(request:'any_') -> 'TemplateResponse':
         'page_size':           _default_page_size,
         'poll_url':            _poll_url,
         'subscriptions_url':   subscriptions_url,
+        'layout_config':       _layout_config,
         'zato_clusters':       True,
         'zato_template_name':  'zato/pubsub/queue.html',
     })
