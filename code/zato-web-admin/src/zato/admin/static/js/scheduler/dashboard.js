@@ -342,6 +342,8 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             return hours + ':' + minutes;
         } else if (timeRangeMs < dash.config.ms_per_week) {
             return dayName + ' ' + hours + ':' + minutes;
+        } else if (timeRangeMs <= dash.config.ms_per_week) {
+            return dayName + ' ' + monthName + ' ' + date.getDate();
         } else if (timeRangeMs < dash.config.ms_per_month) {
             return monthName + ' ' + date.getDate();
         } else if (timeRangeMs < dash.config.ms_per_year) {
@@ -722,7 +724,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
 
         // .. always emit the final time label at the right edge ..
         var final_label_x = chart_width - padding_right;
-        var final_label_date = new Date(buckets[bucket_count - 1].end);
+        var final_label_date = new Date(buckets[bucket_count - 1].start);
         var final_label_text = dash.formatTimeLabel(final_label_date, label_range);
         svg += '<text x="' + final_label_x.toFixed(1) + '" y="' + (chart_height - 6) + '" text-anchor="end" ';
         svg += 'font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">' + final_label_text + '</text>';
@@ -1140,15 +1142,8 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         var chart_data = data.chart_buckets;
         var recent_events = data.recent_events;
 
-        var runs_last_hour = 0;
-        var recent_last_hour = 0;
-        if (chart_data && chart_data.buckets) {
-            for (var bi = 0; bi < chart_data.buckets.length; bi++) {
-                var bucket = chart_data.buckets[bi];
-                runs_last_hour += bucket.ok + bucket.error + bucket.timeout;
-                recent_last_hour += bucket.error + bucket.timeout;
-            }
-        }
+        var runs_last_hour = data.runs_last_hour;
+        var recent_last_hour = data.recent_last_hour;
 
         buffers.push('runs', runs_last_hour);
         buffers.push('recent', recent_last_hour);
