@@ -897,18 +897,6 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             var band_html = '<svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none" xmlns="http://www.w3.org/2000/svg">';
             band_html += '<rect x="' + band_left.toFixed(1) + '" y="' + padding_top + '" width="' + band_width.toFixed(1) + '" height="' + draw_height + '" fill="rgba(0,0,0,0.06)" rx="2" />';
 
-            for (var gi_b = group_first; gi_b <= group_last; gi_b++) {
-                for (var dk = 0; dk < visible_keys.length; dk++) {
-                    var dk_key = visible_keys[dk];
-                    var pts = layer_points[dk_key];
-                    if (pts && pts[gi_b] && pts[gi_b].val > 0) {
-                        var pt = pts[gi_b];
-                        var dot_color_main = bar_colors[dk_key];
-                        band_html += '<circle cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="5.5" fill="none" stroke="' + dot_color_main + '" stroke-opacity="0.35" stroke-width="1" />';
-                        band_html += '<circle cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="3.5" fill="' + dot_color_main + '" />';
-                    }
-                }
-            }
             band_html += '</svg>';
             overlay.html(band_html);
 
