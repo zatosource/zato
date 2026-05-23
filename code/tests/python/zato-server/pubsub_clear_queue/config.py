@@ -23,6 +23,9 @@ class TestConfig:
     puller_b_username:'str' = ''
     puller_b_password:'str' = ''
 
+    pusher_a_username:'str' = ''
+    pusher_a_password:'str' = ''
+
     server_directory:'str' = ''
 
 # ################################################################################################################################
