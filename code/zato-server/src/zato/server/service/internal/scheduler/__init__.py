@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-
+from datetime import datetime, timedelta, timezone
 from traceback import format_exc
 
 # ciso8601
@@ -750,6 +750,20 @@ class GetCurrentState(_SchedulerAdmin):
             # .. get recent events for the table ..
             recent_events = scheduler.get_timeline_events_since(recent_since_iso, recent_limit)
 
+            # .. compute header tile stats from a fixed 1-hour window,
+            # .. independent of whatever chart range the user picked ..
+            now = datetime.now(timezone.utc)
+            hour_ago = now - timedelta(hours=1)
+            hour_since_iso = hour_ago.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+            hour_until_iso = now.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+            hour_buckets = scheduler.get_chart_data(hour_since_iso, hour_until_iso)
+
+            runs_last_hour = 0
+            recent_last_hour = 0
+            for bucket in hour_buckets['buckets']:
+                runs_last_hour += bucket['ok'] + bucket['error'] + bucket['timeout']
+                recent_last_hour += bucket['error'] + bucket['timeout']
+
             self.response.payload = {
                 'total_jobs': total_jobs,
                 'active_jobs': active_jobs,
@@ -759,6 +773,8 @@ class GetCurrentState(_SchedulerAdmin):
                 'jobs': jobs,
                 'chart_buckets': chart_buckets,
                 'recent_events': recent_events,
+                'runs_last_hour': runs_last_hour,
+                'recent_last_hour': recent_last_hour,
             }
 
         except Exception:
