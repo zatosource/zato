@@ -37,7 +37,7 @@ class TestBrowsePending(BaseFetchTestCase):
     def test_pending_shows_only_undelivered(self) -> 'None':
 
         # Subscribe ..
-        sub_key = f'sub.browse.pending.undelivered.{self._run_id}'
+        sub_key = f'sk_browse_pending_undelivered_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish 3 messages ..
@@ -66,7 +66,7 @@ class TestBrowsePending(BaseFetchTestCase):
     def test_pending_empty_after_all_acked(self) -> 'None':
 
         # Subscribe ..
-        sub_key = f'sub.browse.pending.all_acked.{self._run_id}'
+        sub_key = f'sk_browse_pending_all_acked_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish 2 messages ..
@@ -95,7 +95,7 @@ class TestBrowsePending(BaseFetchTestCase):
     def test_pending_includes_unread_messages(self) -> 'None':
 
         # Subscribe ..
-        sub_key = f'sub.browse.pending.unread.{self._run_id}'
+        sub_key = f'sk_browse_pending_unread_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish 3 messages but do NOT fetch them -
@@ -115,7 +115,7 @@ class TestBrowsePending(BaseFetchTestCase):
     def test_pending_combines_unread_and_unacked(self) -> 'None':
 
         # Subscribe ..
-        sub_key = f'sub.browse.pending.combined.{self._run_id}'
+        sub_key = f'sk_browse_pending_combined_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish 2 messages and fetch them (into PEL) ..
@@ -142,7 +142,7 @@ class TestBrowsePending(BaseFetchTestCase):
     def test_pending_pagination(self) -> 'None':
 
         # Subscribe ..
-        sub_key = f'sub.browse.pending.pagination.{self._run_id}'
+        sub_key = f'sk_browse_pending_pagination_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish 5 messages ..
@@ -188,7 +188,7 @@ class TestBrowseAll(BaseFetchTestCase):
     def test_all_shows_everything(self) -> 'None':
 
         # Subscribe ..
-        sub_key = f'sub.browse.all.everything.{self._run_id}'
+        sub_key = f'sk_browse_all_everything_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish 3 messages ..
@@ -216,7 +216,7 @@ class TestBrowseAll(BaseFetchTestCase):
     def test_all_pagination(self) -> 'None':
 
         # Subscribe ..
-        sub_key = f'sub.browse.all.pagination.{self._run_id}'
+        sub_key = f'sk_browse_all_pagination_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish 5 messages ..
@@ -249,7 +249,7 @@ class TestBrowseDelivered(BaseFetchTestCase):
     def test_delivered_shows_only_acked(self) -> 'None':
 
         # Subscribe ..
-        sub_key = f'sub.browse.delivered.acked.{self._run_id}'
+        sub_key = f'sk_browse_delivered_acked_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish 3 messages ..
@@ -277,7 +277,7 @@ class TestBrowseDelivered(BaseFetchTestCase):
     def test_delivered_empty_when_nothing_acked(self) -> 'None':
 
         # Subscribe ..
-        sub_key = f'sub.browse.delivered.none_acked.{self._run_id}'
+        sub_key = f'sk_browse_delivered_none_acked_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish 3 messages ..
@@ -300,7 +300,7 @@ class TestBrowseDelivered(BaseFetchTestCase):
     def test_delivered_excludes_unread_messages(self) -> 'None':
 
         # Subscribe ..
-        sub_key = f'sub.browse.delivered.excludes_unread.{self._run_id}'
+        sub_key = f'sk_browse_delivered_excludes_unread_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish 3 messages, fetch and ack all ..
@@ -335,7 +335,7 @@ class TestBrowseStateDispatch(BaseFetchTestCase):
     def test_unknown_state_raises(self) -> 'None':
 
         # Subscribe ..
-        sub_key = f'sub.browse.dispatch.unknown.{self._run_id}'
+        sub_key = f'sk_browse_dispatch_unknown_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. browsing with an unknown state should raise KeyError.

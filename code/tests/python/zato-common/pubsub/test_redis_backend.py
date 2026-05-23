@@ -121,7 +121,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
     def test_subscribe_creates_consumer_group(self) -> 'None':
         """ Test that subscribing creates a consumer group.
         """
-        sub_key = 'sub.test123'
+        sub_key = 'sk_test123'
         topic_name = 'test.topic'
 
         self.backend.subscribe(sub_key, topic_name)
@@ -142,7 +142,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
     def test_unsubscribe_removes_from_sets(self) -> 'None':
         """ Test that unsubscribing removes entries from sets.
         """
-        sub_key = 'sub.test123'
+        sub_key = 'sk_test123'
         topic_name = 'test.topic'
 
         self.redis_mock.scard.return_value = 1
@@ -158,7 +158,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
     def test_unsubscribe_last_topic_destroys_consumer_group(self) -> 'None':
         """ Test that unsubscribing from last topic destroys the consumer group.
         """
-        sub_key = 'sub.test123'
+        sub_key = 'sk_test123'
         topic_name = 'test.topic'
 
         self.redis_mock.scard.return_value = 0
@@ -172,7 +172,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
     def test_fetch_returns_empty_when_no_subscriptions(self) -> 'None':
         """ Test that fetch returns empty list when user has no subscriptions.
         """
-        sub_key = 'sub.test123'
+        sub_key = 'sk_test123'
 
         self.redis_mock.smembers.return_value = set()
 
@@ -195,7 +195,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
         topic_dir = os.path.join(self.test_dir, topic_name)
         self.assertTrue(os.path.exists(topic_dir))
 
-        self.redis_mock.smembers.return_value = ['sub.user1', 'sub.user2']
+        self.redis_mock.smembers.return_value = ['sk_user1', 'sk_user2']
 
         self.backend.delete_topic(topic_name)
 
@@ -210,7 +210,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
     def test_get_subscribed_topics(self) -> 'None':
         """ Test getting list of subscribed topics for a user.
         """
-        sub_key = 'sub.test123'
+        sub_key = 'sk_test123'
 
         self.redis_mock.smembers.return_value = ['topic1', 'topic2']
 
@@ -225,11 +225,11 @@ class TestRedisPubSubBackend(unittest.TestCase):
         """
         topic_name = 'test.topic'
 
-        self.redis_mock.smembers.return_value = ['sub.user1', 'sub.user2']
+        self.redis_mock.smembers.return_value = ['sk_user1', 'sk_user2']
 
         subs = self.backend.get_topic_subscribers(topic_name)
 
-        self.assertEqual(set(subs), {'sub.user1', 'sub.user2'})
+        self.assertEqual(set(subs), {'sk_user1', 'sk_user2'})
 
 # ################################################################################################################################
 
@@ -243,7 +243,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
         message_id = 'zpsm.20260517-113200-1234-abcdef1234567890'
         data_ref = self.disk_store.store(message_id, old_name, 'test data', '')
 
-        self.redis_mock.smembers.return_value = ['sub.user1']
+        self.redis_mock.smembers.return_value = ['sk_user1']
 
         self.backend.rename_topic(old_name, new_name)
 
@@ -305,7 +305,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
             }),
         ]
 
-        messages, next_cursor = self.backend.browse_messages(topic_name, sub_key='test.sub', state='all')
+        messages, next_cursor = self.backend.browse_messages(topic_name, sub_key='sk_test_sub', state='all')
 
         self.assertEqual(len(messages), 1)
         self.assertEqual(messages[0]['msg_id'], 'msg1')
@@ -343,7 +343,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
             }),
         ]
 
-        messages, next_cursor = self.backend.browse_messages(topic_name, sub_key='test.sub', state='all', page_size=2)
+        messages, next_cursor = self.backend.browse_messages(topic_name, sub_key='sk_test_sub', state='all', page_size=2)
 
         self.assertEqual(len(messages), 2)
         self.assertEqual(next_cursor, '2000-4')

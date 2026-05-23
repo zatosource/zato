@@ -8,6 +8,7 @@
 // ////////////////////////////////////////////////////////////////////////
 
     $.fn.zato.pubsub.queue._subKey = '';
+    $.fn.zato.pubsub.queue._queueName = '';
     $.fn.zato.pubsub.queue._defaultErrorMessage = 'Unknown error';
     $.fn.zato.pubsub.queue._pagination = null;
     $.fn.zato.pubsub.queue._auto_refresh = null;
@@ -32,6 +33,7 @@
 
         var messageLink = '/zato/pubsub/subscription/queue/message/?cluster=1' +
             '&sub_key=' + encodeURIComponent(subKey) +
+            '&queue_name=' + encodeURIComponent(ns._queueName) +
             '&msg_id=' + encodeURIComponent(message.msg_id) +
             '&topic_name=' + encodeURIComponent(topicName) +
             '&redis_stream_id=' + encodeURIComponent(message.redis_stream_id);
@@ -183,13 +185,15 @@
 
         var kit = $.fn.zato.dashboard_kit;
 
-        // Store the sub_key for purge operations ..
+        // Store the sub_key and queue_name ..
         $.fn.zato.pubsub.queue._subKey = subKey;
+        $.fn.zato.pubsub.queue._queueName = config.queue_name;
 
         // .. apply detail layout toggles ..
         kit.detail_layout.apply({
             show_dashboard_tabs: false,
-            show_help_icon: false
+            show_help_icon: false,
+            show_table_header: true
         });
 
         // .. bind the purge button ..

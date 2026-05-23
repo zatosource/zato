@@ -121,7 +121,7 @@ def _get_dashboard_data(req:'any_') -> 'str':
 
     for subscription in subscriptions:
         queue_list.append({
-            'name': subscription['sub_key'],
+            'name': subscription['sec_name'],
             'depth': _No_Depth,
             'oldest_msg_age_seconds': _No_Age,
             'delivery_rate': _No_Rate,

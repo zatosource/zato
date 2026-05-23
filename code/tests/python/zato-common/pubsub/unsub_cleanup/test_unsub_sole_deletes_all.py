@@ -35,7 +35,7 @@ class TestUnsubSoleSubscriberDeletesAll(BaseUnsubCleanupTestCase):
     def test_unsub_sole_subscriber_deletes_everything(self) -> 'None':
 
         # Subscribe a single consumer ..
-        sub_key = f'sub.unsub_sole.{self._run_id}'
+        sub_key = f'sk_unsub_sole_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish 3 messages and collect their data_refs ..

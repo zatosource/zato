@@ -184,8 +184,8 @@ class TestAckFirstSubscriber(BasePendingSetTestCase):
         """
 
         # Subscribe two consumers to the topic ..
-        sub_key_a = f'sub.pending_a.{self._run_id}'
-        sub_key_b = f'sub.pending_b.{self._run_id}'
+        sub_key_a = f'sk_pending_a_{self._run_id}'
+        sub_key_b = f'sk_pending_b_{self._run_id}'
 
         self.subscribe(sub_key_a)
         self.subscribe(sub_key_b)
@@ -242,8 +242,8 @@ class TestAckSecondSubscriber(BasePendingSetTestCase):
         """
 
         # Subscribe two consumers to the topic ..
-        sub_key_a = f'sub.pending_a.{self._run_id}'
-        sub_key_b = f'sub.pending_b.{self._run_id}'
+        sub_key_a = f'sk_pending_a_{self._run_id}'
+        sub_key_b = f'sk_pending_b_{self._run_id}'
 
         self.subscribe(sub_key_a)
         self.subscribe(sub_key_b)
@@ -294,7 +294,7 @@ class TestAckOnlySubscriber(BasePendingSetTestCase):
         """
 
         # Subscribe one consumer to the topic ..
-        sub_key = f'sub.pending_sole.{self._run_id}'
+        sub_key = f'sk_pending_sole_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish a message ..
@@ -343,8 +343,8 @@ class TestAckAfterUnsubscribe(BasePendingSetTestCase):
         """
 
         # Subscribe two consumers to the topic ..
-        sub_key_a = f'sub.pending_a.{self._run_id}'
-        sub_key_b = f'sub.pending_b.{self._run_id}'
+        sub_key_a = f'sk_pending_a_{self._run_id}'
+        sub_key_b = f'sk_pending_b_{self._run_id}'
 
         self.subscribe(sub_key_a)
         self.subscribe(sub_key_b)
@@ -412,7 +412,7 @@ class TestAckAfterMultipleUnsubscribes(BasePendingSetTestCase):
         """
 
         # Subscribe five consumers to the topic ..
-        sub_keys = [f'sub.pending_{letter}.{self._run_id}' for letter in 'abcde']
+        sub_keys = [f'sk_pending_{letter}_{self._run_id}' for letter in 'abcde']
 
         for sub_key in sub_keys:
             self.subscribe(sub_key)
@@ -498,8 +498,8 @@ class TestBulkAckDeletesAll(BasePendingSetTestCase):
         """
 
         # Subscribe two consumers to the topic ..
-        sub_key_a = f'sub.pending_a.{self._run_id}'
-        sub_key_b = f'sub.pending_b.{self._run_id}'
+        sub_key_a = f'sk_pending_a_{self._run_id}'
+        sub_key_b = f'sk_pending_b_{self._run_id}'
 
         self.subscribe(sub_key_a)
         self.subscribe(sub_key_b)
@@ -567,7 +567,7 @@ class TestSecondPullReturnsZero(BasePendingSetTestCase):
         """
 
         # Subscribe one consumer ..
-        sub_key = f'sub.consume_once.{self._run_id}'
+        sub_key = f'sk_consume_once_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish a message ..

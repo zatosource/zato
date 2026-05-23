@@ -173,7 +173,7 @@ class TestCleanupSweepNoExpired(BaseCleanupTestCase):
         data_ref = self.store_message('test.cleanup.no_expired')
 
         self.add_expiry_entry(data_ref, 4_000_000_000.0)
-        self.add_pending_subscriber(data_ref, 'sub.test_subscriber')
+        self.add_pending_subscriber(data_ref, 'sk_test_subscriber')
 
         # .. run the sweep ..
         deleted_count = self.cleanup.sweep_once()
@@ -208,8 +208,8 @@ class TestCleanupSweepOneExpired(BaseCleanupTestCase):
         data_ref = self.store_message('test.cleanup.one_expired')
 
         self.add_expiry_entry(data_ref, 1.0)
-        self.add_pending_subscriber(data_ref, 'sub.subscriber_a')
-        self.add_pending_subscriber(data_ref, 'sub.subscriber_b')
+        self.add_pending_subscriber(data_ref, 'sk_subscriber_a')
+        self.add_pending_subscriber(data_ref, 'sk_subscriber_b')
 
         # .. run the sweep ..
         deleted_count = self.cleanup.sweep_once()
@@ -253,7 +253,7 @@ class TestCleanupSweepBatchDrain(BaseCleanupTestCase):
         for _ in range(20):
             data_ref = self.store_message('test.cleanup.batch_drain')
             self.add_expiry_entry(data_ref, 1.0)
-            self.add_pending_subscriber(data_ref, 'sub.batch_subscriber')
+            self.add_pending_subscriber(data_ref, 'sk_batch_subscriber')
             data_refs.append(data_ref)
 
         # .. keep sweeping until nothing is left ..
@@ -299,7 +299,7 @@ class TestCleanupSweepIdempotency(BaseCleanupTestCase):
         data_ref = self.store_message('test.cleanup.idempotency')
 
         self.add_expiry_entry(data_ref, 1.0)
-        self.add_pending_subscriber(data_ref, 'sub.idempotency_subscriber')
+        self.add_pending_subscriber(data_ref, 'sk_idempotency_subscriber')
 
         # .. first sweep should clean it up ..
         first_deleted = self.cleanup.sweep_once()
@@ -330,7 +330,7 @@ class TestCleanupSweepMixedExpiredAndUnexpired(BaseCleanupTestCase):
         for _ in range(5):
             data_ref = self.store_message('test.cleanup.mixed_expired')
             self.add_expiry_entry(data_ref, 1.0)
-            self.add_pending_subscriber(data_ref, 'sub.mixed_subscriber')
+            self.add_pending_subscriber(data_ref, 'sk_mixed_subscriber')
             expired_refs.append(data_ref)
 
         # .. create 5 unexpired messages with far-future expiry ..
@@ -339,7 +339,7 @@ class TestCleanupSweepMixedExpiredAndUnexpired(BaseCleanupTestCase):
         for _ in range(5):
             data_ref = self.store_message('test.cleanup.mixed_unexpired')
             self.add_expiry_entry(data_ref, 4_000_000_000.0)
-            self.add_pending_subscriber(data_ref, 'sub.mixed_subscriber')
+            self.add_pending_subscriber(data_ref, 'sk_mixed_subscriber')
             unexpired_refs.append(data_ref)
 
         # .. run the sweep ..

@@ -28,8 +28,8 @@ class TestPublishPopulatesIndexes(BaseUnsubCleanupTestCase):
     def test_publish_populates_all_indexes(self) -> 'None':
 
         # Subscribe two consumers ..
-        sub_key_a = f'sub.unsub_a.{self._run_id}'
-        sub_key_b = f'sub.unsub_b.{self._run_id}'
+        sub_key_a = f'sk_unsub_a_{self._run_id}'
+        sub_key_b = f'sk_unsub_b_{self._run_id}'
 
         self.subscribe(sub_key_a)
         self.subscribe(sub_key_b)
