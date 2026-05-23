@@ -3,6 +3,26 @@
 :root {
     --detail-badge-bg: var(--zato-seablue-light1, #063c65);
     --detail-link-color: #037ac7;
+    --detail-header-row-2-margin-bottom: 1rem;
+    --detail-header-row-2-border-bottom: none;
+    --detail-header-row-2-padding-bottom: 0;
+    --detail-pagination-controls-padding-top: 0.5rem;
+    --detail-pagination-controls-padding-bottom: 0.5rem;
+    --detail-pagination-controls-min-height: 0;
+    --detail-progress-panel-padding-top: 20px;
+    --detail-section-title-padding-bottom: 0.7rem;
+}
+
+.detail-hidden {
+    display: none;
+}
+
+.settings-main h3 {
+    padding-bottom: var(--detail-section-title-padding-bottom);
+}
+
+.settings-main .progress-panel {
+    padding-top: var(--detail-progress-panel-padding-top);
 }
 
 .settings-panel {
@@ -667,7 +687,9 @@ a {
     align-items: center;
     gap: 10px;
     flex-wrap: nowrap;
-    margin-bottom: 1rem;
+    margin-bottom: var(--detail-header-row-2-margin-bottom);
+    border-bottom: var(--detail-header-row-2-border-bottom);
+    padding-bottom: var(--detail-header-row-2-padding-bottom);
 }
 
 .detail-header-controls {
@@ -800,7 +822,9 @@ a.detail-component-pill:visited {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    padding: 0.5rem 0;
+    padding-top: var(--detail-pagination-controls-padding-top);
+    padding-bottom: var(--detail-pagination-controls-padding-bottom);
+    min-height: var(--detail-pagination-controls-min-height);
     font-size: 0.8125rem;
 }
 

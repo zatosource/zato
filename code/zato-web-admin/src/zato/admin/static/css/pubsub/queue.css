@@ -6,39 +6,13 @@
 @import url("../syntax_light.css");
 
 :root {
-    --queue-header-row-2-margin-bottom: 16px;
-    --queue-header-row-2-border-bottom: none;
-    --queue-pagination-controls-padding-bottom: 8px;
-    --queue-pagination-controls-min-height: 31px;
-    --queue-progress-panel-padding-top: 20px;
-    --queue-section-title-padding-bottom: 11.2px;
-}
-
-#queue-header-row-2 {
-    margin-bottom: var(--queue-header-row-2-margin-bottom);
-    border-bottom: var(--queue-header-row-2-border-bottom);
-    padding-bottom: 1.2rem;
-}
-
-#queue-header-row-2.queue-hidden {
-    display: none;
-}
-
-.detail-inline-stats.queue-hidden {
-    display: none;
-}
-
-#queue-pagination-top.queue-hidden,
-#queue-pagination-bottom.queue-hidden {
-    display: none;
-}
-
-.detail-table thead.queue-hidden {
-    display: none;
-}
-
-.dashboard-tabs.queue-hidden {
-    display: none;
+    --detail-header-row-2-border-bottom: 3px solid #012845;
+    --detail-header-row-2-padding-bottom: 1.2rem;
+    --detail-pagination-controls-padding-top: 0;
+    --detail-pagination-controls-padding-bottom: 8px;
+    --detail-pagination-controls-min-height: 31px;
+    --detail-progress-panel-padding-top: 4px;
+    --detail-section-title-padding-bottom: 2px;
 }
 
 .data-preview {
@@ -59,25 +33,6 @@ a.queue-preview-link:visited {
     cursor: pointer;
     text-decoration: none !important;
     color: inherit;
-}
-
-#queue-pagination-top,
-#queue-pagination-bottom {
-    padding-top: 0;
-    padding-bottom: var(--queue-pagination-controls-padding-bottom);
-    min-height: var(--queue-pagination-controls-min-height);
-}
-
-h3.queue-section-heading {
-    padding-bottom: var(--queue-section-title-padding-bottom);
-}
-
-h3.queue-section-heading > img.help-icon {
-    display: none;
-}
-
-.queue-progress-panel {
-    padding-top: var(--queue-progress-panel-padding-top);
 }
 
 .detail-table td,

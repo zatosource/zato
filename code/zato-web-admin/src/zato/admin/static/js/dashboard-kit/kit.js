@@ -1051,4 +1051,19 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         }
         return url;
     };
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    kit.detail_layout = {};
+
+    kit.detail_layout.apply = function(opts) {
+        if (!opts.show_header_controls)   $('.detail-header-row-2').addClass('detail-hidden');
+        if (!opts.show_inline_stats)      $('.detail-inline-stats').addClass('detail-hidden');
+        if (!opts.show_pagination_top)    $('[id$="-pagination-top"]').addClass('detail-hidden');
+        if (!opts.show_pagination_bottom) $('[id$="-pagination-bottom"]').addClass('detail-hidden');
+        if (!opts.show_table_header)      $('.detail-table thead').addClass('detail-hidden');
+        if (!opts.show_dashboard_tabs)    $('.dashboard-tabs').addClass('detail-hidden');
+        if (!opts.show_help_icon)         $('img.help-icon').addClass('detail-hidden');
+    };
+
 })();
