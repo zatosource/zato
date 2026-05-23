@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+import logging as _depth_logging
 from logging import getLogger
 from operator import itemgetter
 from traceback import format_exc
@@ -20,6 +21,12 @@ from zato.common.ext.bunch import Bunch, bunchify
 from zato.common.broker_message import PUBSUB
 
 logger = getLogger(__name__)
+
+_depth_debug_logger = _depth_logging.getLogger('zato.depth_debug')
+_depth_debug_logger.setLevel(_depth_logging.DEBUG)
+_depth_fh = _depth_logging.FileHandler('/tmp/zato-depth-debug.log')
+_depth_fh.setFormatter(_depth_logging.Formatter('%(asctime)s %(message)s'))
+_depth_debug_logger.addHandler(_depth_fh)
 from zato.common.api import PubSub, query_parameters
 from zato.common.odb.model import Cluster, HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 from zato.common.odb.query import pubsub_subscription_list
@@ -188,6 +195,8 @@ class GetList(AdminService):
 
         # .. get pending depths from Redis in a single Lua call ..
         pending_depths = self.server.pubsub_redis.get_pending_depths(sub_topic_pairs)
+
+        _depth_debug_logger.info('GetList.get_data pairs=%s depths=%s', sub_topic_pairs, pending_depths)
 
         # .. and process data for each subscription.
         data:'anylist' = []

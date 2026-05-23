@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import json
+import logging as _depth_logging
 from logging import getLogger
 
 # redis
@@ -37,6 +38,12 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+_depth_debug_logger = _depth_logging.getLogger('zato.depth_debug')
+_depth_debug_logger.setLevel(_depth_logging.DEBUG)
+_depth_fh = _depth_logging.FileHandler('/tmp/zato-depth-debug.log')
+_depth_fh.setFormatter(_depth_logging.Formatter('%(asctime)s %(message)s'))
+_depth_debug_logger.addHandler(_depth_fh)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -142,8 +149,10 @@ end
 local function get_pel_count(stream_key, group_name)
     local ok, pending = pcall(redis.call, 'XPENDING', stream_key, group_name)
     if not ok then
+        redis.log(redis.LOG_WARNING, 'depth_debug pel FAILED: stream=' .. stream_key .. ' group=' .. group_name)
         return 0
     end
+    redis.log(redis.LOG_WARNING, 'depth_debug pel: stream=' .. stream_key .. ' group=' .. group_name .. ' count=' .. tostring(pending[1]))
     return pending[1]
 end
 
@@ -159,6 +168,7 @@ local function get_lag_count(stream_key, group_name)
     end
 
     local lag = get_group_lag(groups, group_name)
+    redis.log(redis.LOG_WARNING, 'depth_debug lag: stream=' .. stream_key .. ' group=' .. group_name .. ' lag=' .. tostring(lag) .. ' groups_count=' .. #groups)
     if lag == false then
         return 0
     end
@@ -829,6 +839,8 @@ class RedisPubSubBackend:
         # .. find the group's last-delivered-id so we know where unread messages start ..
         last_delivered_id = self._get_last_delivered_id(stream_key, sub_key)
 
+        _depth_debug_logger.info('_browse_pending last_delivered_id=%s stream_key=%s sub_key=%s', last_delivered_id, stream_key, sub_key)
+
         if reverse:
             return self._browse_pending_reverse(
                 stream_key, sub_key, cursor, page_size, needs_data, last_delivered_id)
@@ -862,6 +874,8 @@ class RedisPubSubBackend:
 
         unread_ids:'anylist' = [entry[0] for entry in unread_entries]
 
+        _depth_debug_logger.info('_browse_pending PEL=%d unread=%d stream_key=%s sub_key=%s', len(pending_ids), len(unread_ids), stream_key, sub_key)
+
         # .. merge and deduplicate the two sets of IDs ..
         seen:'set' = set()
         all_ids:'anylist' = []
@@ -877,6 +891,8 @@ class RedisPubSubBackend:
                 seen.add(stream_id)
 
         all_ids.sort()
+
+        _depth_debug_logger.info('_browse_pending merged=%d stream_key=%s sub_key=%s', len(all_ids), stream_key, sub_key)
         all_ids = all_ids[:page_size]
 
         if not all_ids:
@@ -1183,8 +1199,12 @@ class RedisPubSubBackend:
             argv.append(stream_key)
             argv.append(sub_key)
 
+        _depth_debug_logger.info('get_pending_depths INPUT pairs=%s argv=%s', sub_topic_pairs, argv)
+
         # .. call the Lua script ..
         counts:'anylist' = cast_('anylist', self.redis.evalsha(self._lua_pending_depths_sha, 0, *argv))
+
+        _depth_debug_logger.info('get_pending_depths RAW counts=%s', counts)
 
         # .. and sum the per-pair results into per-subscriber totals.
         out:'anydict' = {}
@@ -1197,6 +1217,8 @@ class RedisPubSubBackend:
                 out[sub_key] = out[sub_key] + count
             else:
                 out[sub_key] = count
+
+        _depth_debug_logger.info('get_pending_depths OUTPUT=%s', out)
 
         return out
 
@@ -1211,6 +1233,7 @@ class RedisPubSubBackend:
             # Reuse the existing Lua script (PEL + lag) for pending depth ..
             depths = self.get_pending_depths([(sub_key, topic_name)])
             out = depths[sub_key]
+            _depth_debug_logger.info('get_total_count PENDING sub_key=%s topic=%s depth=%s', sub_key, topic_name, out)
             return out
 
         elif state == 'all':
