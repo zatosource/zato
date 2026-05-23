@@ -1535,7 +1535,7 @@ class RedisPubSubBackend:
 
                     # .. remove this subscriber from the message's pending set ..
                     pending_key = self._get_pending_key(data_ref)
-                    _ = self.redis.srem(pending_key, sub_key)
+                    was_removed = self.redis.srem(pending_key, sub_key)
 
                     sub_pending_key = self._get_sub_pending_key(sub_key)
                     _ = self.redis.srem(sub_pending_key, data_ref)
@@ -1550,7 +1550,8 @@ class RedisPubSubBackend:
                         self.disk_store.delete(data_ref)
                         ids_to_xdel.append(redis_stream_id)
 
-                    cleared_count += 1
+                    if was_removed:
+                        cleared_count += 1
 
                 # .. advance the scan cursor ..
                 last_scanned_id = delivered_entries[-1][0]

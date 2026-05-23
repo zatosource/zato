@@ -35,7 +35,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger('zato.test.pubsub_clear_queue.conftest')
+logger = logging.getLogger('zato.test.pubsub_clear_queue_push.conftest')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,7 +83,7 @@ class _SessionState:
         if self.quickstart_directory:
             server_log_path = os.path.join(self.quickstart_directory, 'server1', 'logs', 'server.log')
             if os.path.exists(server_log_path):
-                shutil.copy(server_log_path, '/tmp/server-logs-clear-queue.txt')
+                shutil.copy(server_log_path, '/tmp/server-logs-clear-queue-push.txt')
 
         self.kill_server()
 
@@ -158,7 +158,7 @@ def _render_template(placeholders:'anydict') -> 'str':
 
 @pytest.fixture(scope='session', autouse=True)
 def zato_server() -> 'any_':
-    """ Session-scoped fixture that spins up a Zato server with pub/sub topics and pull subscriptions.
+    """ Session-scoped fixture that spins up a Zato server with push subscriptions.
     """
     from config import TestConfig
 
@@ -170,18 +170,16 @@ def zato_server() -> 'any_':
 
     # Generate passwords ..
     publisher_password = 'test.pub.' + os.urandom(8).hex()
-    puller_a_password  = 'test.pull.a.' + os.urandom(8).hex()
-    puller_b_password  = 'test.pull.b.' + os.urandom(8).hex()
+    pusher_a_password  = 'test.push.a.' + os.urandom(8).hex()
     invoke_password    = 'test.invoke.' + os.urandom(8).hex()
 
     placeholders = {
         'publisher_password': publisher_password,
-        'puller_a_password': puller_a_password,
-        'puller_b_password': puller_b_password,
+        'pusher_a_password': pusher_a_password,
     }
 
     # Create quickstart ..
-    _state.quickstart_directory = tempfile.mkdtemp(prefix='zato_clear_queue_qs_')
+    _state.quickstart_directory = tempfile.mkdtemp(prefix='zato_clear_queue_push_qs_')
 
     quickstart_env = os.environ.copy()
     _ = quickstart_env.pop('COVERAGE_PROCESS_START', None)
@@ -277,10 +275,8 @@ def zato_server() -> 'any_':
     TestConfig.invoke_password    = invoke_password
     TestConfig.publisher_username = 'test.pubsub.publisher'
     TestConfig.publisher_password = publisher_password
-    TestConfig.puller_a_username  = 'test.pubsub.puller.a'
-    TestConfig.puller_a_password  = puller_a_password
-    TestConfig.puller_b_username  = 'test.pubsub.puller.b'
-    TestConfig.puller_b_password  = puller_b_password
+    TestConfig.pusher_a_username  = 'test.pubsub.pusher.a'
+    TestConfig.pusher_a_password  = pusher_a_password
     TestConfig.server_directory   = server_directory
 
     yield
