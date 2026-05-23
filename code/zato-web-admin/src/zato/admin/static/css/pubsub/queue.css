@@ -7,7 +7,8 @@
 
 :root {
     --queue-header-row-2-margin-bottom: 16px;
-    --queue-pagination-controls-padding-y: 8px;
+    --queue-header-row-2-border-bottom: none;
+    --queue-pagination-controls-padding-bottom: 8px;
     --queue-pagination-controls-min-height: 31px;
     --queue-progress-panel-padding-top: 20px;
     --queue-section-title-padding-bottom: 11.2px;
@@ -15,6 +16,8 @@
 
 #queue-header-row-2 {
     margin-bottom: var(--queue-header-row-2-margin-bottom);
+    border-bottom: var(--queue-header-row-2-border-bottom);
+    padding-bottom: 1.2rem;
 }
 
 #queue-header-row-2.queue-hidden {
@@ -27,6 +30,14 @@
 
 #queue-pagination-top.queue-hidden,
 #queue-pagination-bottom.queue-hidden {
+    display: none;
+}
+
+.detail-table thead.queue-hidden {
+    display: none;
+}
+
+.dashboard-tabs.queue-hidden {
     display: none;
 }
 
@@ -52,8 +63,8 @@ a.queue-preview-link:visited {
 
 #queue-pagination-top,
 #queue-pagination-bottom {
-    padding-top: var(--queue-pagination-controls-padding-y);
-    padding-bottom: var(--queue-pagination-controls-padding-y);
+    padding-top: 0;
+    padding-bottom: var(--queue-pagination-controls-padding-bottom);
     min-height: var(--queue-pagination-controls-min-height);
 }
 
