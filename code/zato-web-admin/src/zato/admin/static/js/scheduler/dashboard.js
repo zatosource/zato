@@ -594,6 +594,9 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         dash._chart_labels = labels;
 
         var range_ms = dash._time_range_minutes * dash.config.ms_per_minute;
+        if (range_ms === 0 && buckets.length > 0) {
+            range_ms = buckets[buckets.length - 1].end - buckets[0].start;
+        }
         var group_type;
         if (range_ms === 0)                            group_type = 'none';
         else if (range_ms >= dash.config.ms_per_year)  group_type = 'month';
@@ -630,7 +633,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         // .. for the 5-min range, collapse raw 5-second buckets into per-minute plot_buckets ..
         // .. for all other ranges, plot_buckets is just a reference to the raw buckets ..
         var plot_buckets;
-        if (dash._time_range_minutes > 0) {
+        if (group_type !== 'none') {
             var _seen_group_order = [];
             var _group_entries = {};
             for (var pb_idx = 0; pb_idx < buckets.length; pb_idx++) {
@@ -696,10 +699,10 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
 
         var _y_axis_values = [];
         var _y_axis_suffix = '';
-        if (dash._time_range_minutes > 0 && dash._time_range_minutes <= 60) _y_axis_suffix = '/min';
-        else if (dash._time_range_minutes > 60 && dash._time_range_minutes <= 2880) _y_axis_suffix = '/hr';
-        else if (dash._time_range_minutes > 2880 && dash._time_range_minutes < 525600) _y_axis_suffix = '/day';
-        else if (dash._time_range_minutes >= 525600) _y_axis_suffix = '/mo';
+        if (group_type === 'minute')      _y_axis_suffix = '/min';
+        else if (group_type === 'hour')   _y_axis_suffix = '/hr';
+        else if (group_type === 'day')    _y_axis_suffix = '/day';
+        else if (group_type === 'month')  _y_axis_suffix = '/mo';
         var grid_line_count = Math.min(4, max_stack);
         var prev_grid_value = -1;
         for (var grid_index = 0; grid_index <= grid_line_count; grid_index++) {
