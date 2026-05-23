@@ -1561,11 +1561,7 @@ class RedisPubSubBackend:
 
             # .. batch XDEL all collected stream entry IDs ..
             if ids_to_xdel:
-                xlen_before = self.redis.xlen(stream_key)
-                xdel_result = self.redis.xdel(stream_key, *ids_to_xdel)
-                xlen_after = self.redis.xlen(stream_key)
-                logger.info('clear_queue XDEL -> stream_key:%s, ids_count:%d, xdel_result:%s, xlen_before:%d, xlen_after:%d',
-                    stream_key, len(ids_to_xdel), xdel_result, xlen_before, xlen_after)
+                _ = self.redis.xdel(stream_key, *ids_to_xdel)
 
             # .. advance the consumer group cursor to the stream tip so new reads start fresh.
             try:
