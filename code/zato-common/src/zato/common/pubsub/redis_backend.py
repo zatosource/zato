@@ -1533,8 +1533,14 @@ class RedisPubSubBackend:
                 for redis_stream_id, message_data in delivered_entries:
                     data_ref = message_data['data_ref']
 
-                    # .. check if any subscriber still needs this message ..
+                    # .. remove this subscriber from the message's pending set ..
                     pending_key = self._get_pending_key(data_ref)
+                    _ = self.redis.srem(pending_key, sub_key)
+
+                    sub_pending_key = self._get_sub_pending_key(sub_key)
+                    _ = self.redis.srem(sub_pending_key, data_ref)
+
+                    # .. check if any other subscriber still needs this message ..
                     remaining = self.redis.scard(pending_key)
 
                     if remaining == 0:
@@ -1543,6 +1549,8 @@ class RedisPubSubBackend:
                         _ = self.redis.zrem(ModuleCtx.Pending_Expiry_Key, data_ref)
                         self.disk_store.delete(data_ref)
                         ids_to_xdel.append(redis_stream_id)
+
+                    cleared_count += 1
 
                 # .. advance the scan cursor ..
                 last_scanned_id = delivered_entries[-1][0]
@@ -1553,7 +1561,11 @@ class RedisPubSubBackend:
 
             # .. batch XDEL all collected stream entry IDs ..
             if ids_to_xdel:
-                _ = self.redis.xdel(stream_key, *ids_to_xdel)
+                xlen_before = self.redis.xlen(stream_key)
+                xdel_result = self.redis.xdel(stream_key, *ids_to_xdel)
+                xlen_after = self.redis.xlen(stream_key)
+                logger.info('clear_queue XDEL -> stream_key:%s, ids_count:%d, xdel_result:%s, xlen_before:%d, xlen_after:%d',
+                    stream_key, len(ids_to_xdel), xdel_result, xlen_before, xlen_after)
 
             # .. advance the consumer group cursor to the stream tip so new reads start fresh.
             try:
