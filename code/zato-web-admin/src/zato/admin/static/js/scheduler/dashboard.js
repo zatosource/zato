@@ -614,6 +614,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         }
         svg += '</defs>';
 
+        var _y_axis_values = [];
         var grid_line_count = Math.min(4, max_stack);
         var prev_grid_value = -1;
         for (var grid_index = 0; grid_index <= grid_line_count; grid_index++) {
@@ -626,6 +627,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
                 svg += '<text x="' + (padding_left - 6) + '" y="' + (grid_y + 3).toFixed(1) + '" ';
                 svg += 'text-anchor="end" font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">';
                 svg += grid_value + '</text>';
+                _y_axis_values.push(grid_value);
                 prev_grid_value = grid_value;
             }
         }
@@ -750,12 +752,14 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         var label_range = dash._time_range_minutes > 0
             ? dash._time_range_minutes * dash.config.ms_per_minute
             : time_range;
+        var _x_axis_labels = [];
         var label_count = Math.min(6, bucket_count);
         var label_step = Math.max(1, Math.floor(bucket_count / label_count));
         for (var label_index = 0; label_index < bucket_count; label_index += label_step) {
             var label_x = padding_left + (label_index + 0.5) * bucket_slot_width;
             var label_date = new Date(buckets[label_index].start);
             var label_text = dash.formatTimeLabel(label_date, label_range);
+            _x_axis_labels.push(label_text);
             svg += '<text x="' + label_x.toFixed(1) + '" y="' + (chart_height - 6) + '" text-anchor="middle" ';
             svg += 'font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">' + label_text + '</text>';
         }
@@ -764,8 +768,24 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         var final_label_x = chart_width - padding_right;
         var final_label_date = new Date(buckets[bucket_count - 1].start);
         var final_label_text = dash.formatTimeLabel(final_label_date, label_range);
+        _x_axis_labels.push(final_label_text);
         svg += '<text x="' + final_label_x.toFixed(1) + '" y="' + (chart_height - 6) + '" text-anchor="end" ';
         svg += 'font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">' + final_label_text + '</text>';
+
+        // .. store visible chart state for the copy button ..
+        dash._copy_data = {
+            y_axis: _y_axis_values,
+            x_axis: _x_axis_labels,
+            datapoints: []
+        };
+        for (var cp = 0; cp < buckets.length; cp++) {
+            dash._copy_data.datapoints.push({
+                ok: buckets[cp].ok,
+                error: buckets[cp].error,
+                timeout: buckets[cp].timeout,
+                skipped: buckets[cp].skipped_already_in_flight
+            });
+        }
 
         svg += '</svg>';
         container.html(svg);
@@ -1536,42 +1556,33 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
 
         // Copy chart data to clipboard
         $('#dashboard-chart-copy').on('click', function() {
-            var chart_data = dash._last_chart_buckets;
-            if (!chart_data || !chart_data.buckets) return;
+            if (!dash._copy_data) return;
 
             var range_minutes = dash._time_range_minutes;
             var range_names = {5: '5 min', 15: '15 min', 30: '30 min', 60: '1 hour', 360: '6 hours', 1440: 'Today', 2880: 'Yesterday', 10080: 'This week', 43200: 'This month', 525600: 'This year'};
             var range_label = (range_minutes > 0 && range_names[range_minutes]) ? range_names[range_minutes] : 'All';
-            var chart_type = dash.show_bars ? 'bar' : 'area';
 
-            var label_range = range_minutes > 0
-                ? range_minutes * dash.config.ms_per_minute
-                : 0;
+            var out = {
+                range: range_label,
+                chart_type: dash.show_bars ? 'bar' : 'area',
+                y_axis: dash._copy_data.y_axis,
+                x_axis: dash._copy_data.x_axis,
+                datapoints: dash._copy_data.datapoints
+            };
 
-            var lines = [];
-            lines.push('Chart: ' + range_label + ' (' + chart_type + ')');
-            lines.push('');
-
-            var server_buckets = chart_data.buckets;
-            for (var bi = 0; bi < server_buckets.length; bi++) {
-                var bucket = server_buckets[bi];
-                var start_date = new Date(bucket.start_iso);
-                var end_date = new Date(bucket.end_iso);
-                var label = dash.formatTimeLabel(start_date, label_range) + ' - ' + dash.formatTimeLabel(end_date, label_range);
-                var total = bucket.ok + bucket.error + bucket.timeout + bucket.skipped_already_in_flight;
-                var parts = [];
-                if (bucket.ok) parts.push('ok=' + bucket.ok);
-                if (bucket.error) parts.push('error=' + bucket.error);
-                if (bucket.timeout) parts.push('timeout=' + bucket.timeout);
-                if (bucket.skipped_already_in_flight) parts.push('skipped=' + bucket.skipped_already_in_flight);
-                lines.push(label + '  total=' + total + (parts.length ? '  ' + parts.join(', ') : ''));
-            }
-
-            var text = lines.join('\n');
+            var text = JSON.stringify(out, null, 2);
             navigator.clipboard.writeText(text);
 
             var btn = document.getElementById('dashboard-chart-copy');
-            $.fn.zato.show_left_tooltip(btn, 'Copied to clipboard');
+            if (btn._tippy) btn._tippy.destroy();
+            tippy(btn, {
+                content: 'Copied to clipboard',
+                placement: 'top',
+                trigger: 'manual',
+                theme: 'dark',
+                arrow: true
+            });
+            btn._tippy.show();
             setTimeout(function() {
                 if (btn._tippy) {
                     btn._tippy.hide();
