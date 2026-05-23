@@ -206,6 +206,8 @@ struct HistoryPageParams {
     limit: usize,
     /// Comma-separated list of outcome filters, or "all".
     outcomes: Option<String>,
+    /// ISO timestamp cutoff - only records at or after this time are included.
+    since_iso: Option<String>,
 }
 
 /// Response structure for paginated history.
@@ -220,6 +222,7 @@ struct HistoryPageResponse {
 /// Returns a page of execution-history records for a single job.
 async fn get_history_page(state: web::Data<AppState>, params: web::Query<HistoryPageParams>) -> HttpResponse {
     let filter = parse_outcome_filter(params.outcomes.as_deref());
+    let since_cutoff = params.since_iso.as_deref().unwrap_or("");
 
     let (records, total, job_name) = {
         let scheduler_state = state.shared.state.lock();
@@ -227,42 +230,34 @@ async fn get_history_page(state: web::Data<AppState>, params: web::Query<History
             || (Vec::new(), 0, String::new()),
             |running_job| {
                 let name = running_job.name.clone();
-                let (page, total) = filter.as_ref().map_or_else(
-                    || {
-                        let total = running_job.history.iter().filter(|rec| rec.outcome != outcome::RUNNING).count();
-                        let all_len = running_job.history.len();
-                        let start = if params.offset >= all_len {
-                            all_len
-                        } else {
-                            all_len - params.offset
-                        };
-                        let range_end = start.saturating_sub(params.limit);
-                        let page: Vec<job::ExecutionRecord> = running_job.history.range(range_end..start).rev().cloned().collect();
-                        (page, total)
-                    },
-                    |allowed| {
-                        let mut total: usize = 0;
-                        let mut page: Vec<job::ExecutionRecord> = Vec::with_capacity(params.limit);
-                        let mut skipped: usize = 0;
+                let mut total: usize = 0;
+                let mut page: Vec<job::ExecutionRecord> = Vec::with_capacity(params.limit);
+                let mut skipped: usize = 0;
 
-                        for rec in running_job.history.iter().rev() {
-                            if !allowed.iter().any(|allowed_val| allowed_val == &rec.outcome) {
-                                continue;
-                            }
-                            if rec.outcome != outcome::RUNNING {
-                                total += 1;
-                            }
-                            if page.len() < params.limit {
-                                if skipped < params.offset {
-                                    skipped += 1;
-                                } else {
-                                    page.push(rec.clone());
-                                }
-                            }
+                for rec in running_job.history.iter().rev() {
+                    if !since_cutoff.is_empty() && rec.actual_fire_time_iso.as_str() < since_cutoff {
+                        continue;
+                    }
+
+                    if let Some(allowed) = &filter {
+                        if !allowed.iter().any(|allowed_val| allowed_val == &rec.outcome) {
+                            continue;
                         }
-                        (page, total)
-                    },
-                );
+                    }
+
+                    if rec.outcome != outcome::RUNNING {
+                        total += 1;
+                    }
+
+                    if page.len() < params.limit {
+                        if skipped < params.offset {
+                            skipped += 1;
+                        } else {
+                            page.push(rec.clone());
+                        }
+                    }
+                }
+
                 (page, total, name)
             },
         )
@@ -287,6 +282,8 @@ struct HistorySinceParams {
     outcomes: Option<String>,
     /// Comma-separated list of run numbers to always include.
     running_runs: Option<String>,
+    /// Range cutoff - only count records at or after this time toward `total`.
+    range_since_iso: Option<String>,
 }
 
 /// Response structure for history-since queries.
@@ -308,6 +305,7 @@ async fn get_history_since(state: web::Data<AppState>, params: web::Query<Histor
         .split(',')
         .filter_map(|val| val.trim().parse::<u32>().ok())
         .collect();
+    let range_cutoff = params.range_since_iso.as_deref().unwrap_or("");
 
     let (records, total, job_name) = {
         let scheduler_state = state.shared.state.lock();
@@ -324,7 +322,9 @@ async fn get_history_since(state: web::Data<AppState>, params: web::Query<Histor
                         .is_none_or(|allowed| allowed.iter().any(|allowed_val| allowed_val == &rec.outcome));
 
                     if outcome_allowed && rec.outcome != outcome::RUNNING {
-                        total += 1;
+                        if range_cutoff.is_empty() || rec.actual_fire_time_iso.as_str() >= range_cutoff {
+                            total += 1;
+                        }
                     }
 
                     let run_override = running_runs.contains(&rec.current_run);

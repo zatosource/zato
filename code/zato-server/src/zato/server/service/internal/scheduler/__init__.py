@@ -482,12 +482,13 @@ class GetHistory(_SchedulerAdmin):
     """
     name = _service_name_prefix + 'get-history'
 
-    input = Int('id'), Int('-page'), Int('-page_size'), '-since_ts', List('-outcomes'), List('-running_runs')
+    input = Int('id'), Int('-page'), Int('-page_size'), '-since_ts', '-since_iso', List('-outcomes'), List('-running_runs')
 
     def handle(self) -> 'None':
         try:
             job_id = self.request.input.id
             since_ts = self.request.input.get('since_ts')
+            since_iso = self.request.input.get('since_iso') or ''
             outcomes = self.request.input.get('outcomes')
             if not outcomes:
                 outcomes = SCHEDULER.OUTCOME.All
@@ -496,7 +497,7 @@ class GetHistory(_SchedulerAdmin):
 
             if since_ts:
                 running_runs = self.request.input.get('running_runs') or []
-                result = scheduler.get_history_since(job_id, since_ts, outcomes, running_runs)
+                result = scheduler.get_history_since(job_id, since_ts, outcomes, running_runs, since_iso)
                 self.response.payload = {'rows': result['rows'], 'total': result['total']}
             else:
                 page = self.request.input.get('page')
@@ -509,7 +510,7 @@ class GetHistory(_SchedulerAdmin):
 
                 offset = (page - 1) * page_size
 
-                result = scheduler.get_history_page(job_id, offset, page_size, outcomes)
+                result = scheduler.get_history_page(job_id, offset, page_size, outcomes, since_iso)
 
                 self.response.payload = {
                     'rows': result['records'],
