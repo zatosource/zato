@@ -779,7 +779,9 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             datapoints: []
         };
         for (var cp = 0; cp < buckets.length; cp++) {
+            var cp_date = new Date(buckets[cp].start);
             dash._copy_data.datapoints.push({
+                label: dash.formatTimeLabel(cp_date, label_range),
                 ok: buckets[cp].ok,
                 error: buckets[cp].error,
                 timeout: buckets[cp].timeout,
