@@ -684,6 +684,16 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             svg += 'font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">' + label_text + '</text>';
         }
 
+        // .. always emit the final time label at the right edge ..
+        var final_label_x = chart_width - padding_right;
+        var final_label_date = new Date(buckets[bucket_count - 1].end);
+        var final_label_text = ('0' + final_label_date.getHours()).slice(-2) + ':' + ('0' + final_label_date.getMinutes()).slice(-2);
+        if (show_seconds) {
+            final_label_text += ':' + ('0' + final_label_date.getSeconds()).slice(-2);
+        }
+        svg += '<text x="' + final_label_x.toFixed(1) + '" y="' + (chart_height - 6) + '" text-anchor="end" ';
+        svg += 'font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">' + final_label_text + '</text>';
+
         svg += '</svg>';
         container.html(svg);
 

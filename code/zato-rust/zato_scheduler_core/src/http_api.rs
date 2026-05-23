@@ -277,8 +277,13 @@ async fn get_chart_data(state: web::Data<AppState>, params: web::Query<ChartData
                 if *ms < min_ms { min_ms = *ms; }
                 if *ms > max_ms { max_ms = *ms; }
             }
-            let effective_min = if max_ms == min_ms { max_ms - 3_600_000 } else { min_ms };
-            (effective_min, max_ms, collected)
+            let now_ms = Utc::now().timestamp_millis();
+            let data_span = max_ms - min_ms;
+            if data_span < 300_000 {
+                (now_ms - 300_000, now_ms, collected)
+            } else {
+                (min_ms, max_ms, collected)
+            }
         }
     };
 
