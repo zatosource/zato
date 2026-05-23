@@ -62,6 +62,8 @@
 
     $.fn.zato.pubsub.queue._render_page = function($body, rows, total) {
 
+        var kit = $.fn.zato.dashboard_kit;
+
         $body.empty();
         $.fn.zato.pubsub.queue._new_row_count = rows.length;
 
