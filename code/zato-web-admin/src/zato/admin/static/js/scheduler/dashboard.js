@@ -442,6 +442,9 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         }
 
         var server_buckets = chart_data.buckets;
+        console.log('[year-debug-6] server_buckets.length=' + server_buckets.length +
+            ', first.start_iso=' + server_buckets[0].start_iso +
+            ', last.end_iso=' + server_buckets[server_buckets.length - 1].end_iso);
         var chart_width = container.width();
         var chart_height = 200;
         var padding_left = 40;
@@ -454,25 +457,57 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         var labels = dash.outcome_labels;
         var hidden_outcomes = dash._get_hidden_outcomes();
 
-        var display_bucket_count = Math.min(60, Math.max(12, Math.floor(chart_width / 16)));
-        var merge_factor = Math.max(1, Math.floor(server_buckets.length / display_bucket_count));
+        var _year_range_ms = dash._time_range_minutes * dash.config.ms_per_minute;
+        var _is_year_range = _year_range_ms >= dash.config.ms_per_year;
+
         var buckets = [];
-        for (var merge_index = 0; merge_index < server_buckets.length; merge_index += merge_factor) {
-            var merged = {ok: 0, error: 0, timeout: 0, skipped_already_in_flight: 0, start: 0, end: 0};
-            var merge_end = Math.min(merge_index + merge_factor, server_buckets.length);
-            merged.start = new Date(server_buckets[merge_index].start_iso).getTime();
-            merged.end = new Date(server_buckets[merge_end - 1].end_iso).getTime();
-            for (var sub_index = merge_index; sub_index < merge_end; sub_index++) {
-                var source = server_buckets[sub_index];
-                merged.ok += source.ok;
-                merged.error += source.error;
-                merged.timeout += source.timeout;
-                merged.skipped_already_in_flight += source.skipped_already_in_flight;
+
+        if (_is_year_range) {
+            // .. merge server buckets into 12 calendar months ..
+            var _monthly = {};
+            for (var sb_idx = 0; sb_idx < server_buckets.length; sb_idx++) {
+                var sb_date = new Date(server_buckets[sb_idx].start_iso);
+                var sb_month = sb_date.getMonth();
+                if (!_monthly[sb_month]) {
+                    _monthly[sb_month] = {ok: 0, error: 0, timeout: 0, skipped_already_in_flight: 0,
+                        start: new Date(server_buckets[sb_idx].start_iso).getTime(), end: 0};
+                }
+                _monthly[sb_month].ok += server_buckets[sb_idx].ok;
+                _monthly[sb_month].error += server_buckets[sb_idx].error;
+                _monthly[sb_month].timeout += server_buckets[sb_idx].timeout;
+                _monthly[sb_month].skipped_already_in_flight += server_buckets[sb_idx].skipped_already_in_flight;
+                _monthly[sb_month].end = new Date(server_buckets[sb_idx].end_iso).getTime();
             }
-            buckets.push(merged);
+            for (var month_idx = 0; month_idx < 12; month_idx++) {
+                if (_monthly[month_idx]) {
+                    buckets.push(_monthly[month_idx]);
+                }
+            }
+        } else {
+            var display_bucket_count = Math.min(60, Math.max(12, Math.floor(chart_width / 16)));
+            var merge_factor = Math.max(1, Math.floor(server_buckets.length / display_bucket_count));
+            for (var merge_index = 0; merge_index < server_buckets.length; merge_index += merge_factor) {
+                var merged = {ok: 0, error: 0, timeout: 0, skipped_already_in_flight: 0, start: 0, end: 0};
+                var merge_end = Math.min(merge_index + merge_factor, server_buckets.length);
+                merged.start = new Date(server_buckets[merge_index].start_iso).getTime();
+                merged.end = new Date(server_buckets[merge_end - 1].end_iso).getTime();
+                for (var sub_index = merge_index; sub_index < merge_end; sub_index++) {
+                    var source = server_buckets[sub_index];
+                    merged.ok += source.ok;
+                    merged.error += source.error;
+                    merged.timeout += source.timeout;
+                    merged.skipped_already_in_flight += source.skipped_already_in_flight;
+                }
+                buckets.push(merged);
+            }
         }
 
         var bucket_count = buckets.length;
+
+        console.log('[year-debug-4] first_bucket start=' + new Date(buckets[0].start).toISOString() +
+            ', end=' + new Date(buckets[0].end).toISOString());
+        console.log('[year-debug-5] last_bucket start=' + new Date(buckets[bucket_count - 1].start).toISOString() +
+            ', end=' + new Date(buckets[bucket_count - 1].end).toISOString());
 
         console.log('[chart-debug] bucket config: server_buckets=' + server_buckets.length +
             ', merge_factor=' + merge_factor + ', display_bucket_count=' + display_bucket_count +
@@ -596,6 +631,9 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         }
 
         var bucket_slot_width = draw_width / bucket_count;
+        console.log('[year-debug-8] bucket_slot_width=' + bucket_slot_width.toFixed(2) +
+            ', draw_width=' + draw_width + ', chart_width=' + chart_width +
+            ', padding_left=' + padding_left + ', padding_right=' + padding_right);
         var group_padding = bucket_slot_width * 0.15;
         var group_width = bucket_slot_width - group_padding * 2;
         var num_visible = visible_keys.length;
@@ -1256,6 +1294,9 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         console.log('[poll] start, chart_since_iso=' + (post_data.chart_since_iso || '(all)') +
             ', chart_until_iso=' + (post_data.chart_until_iso || '(all)') +
             ', recent_since_iso=' + (post_data.recent_since_iso || '(none)'));
+        console.log('[year-debug-10] _time_range_minutes=' + dash._time_range_minutes +
+            ', chart_since_iso=' + JSON.stringify(post_data.chart_since_iso) +
+            ', chart_until_iso=' + JSON.stringify(post_data.chart_until_iso));
 
         $.ajax({
             url: dash.config.base_url + 'poll/',
