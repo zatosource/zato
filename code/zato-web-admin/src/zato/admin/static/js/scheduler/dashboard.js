@@ -1534,6 +1534,52 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             dash._redraw_chart_from_cache();
         });
 
+        // Copy chart data to clipboard
+        $('#dashboard-chart-copy').on('click', function() {
+            var chart_data = dash._last_chart_buckets;
+            if (!chart_data || !chart_data.buckets) return;
+
+            var range_minutes = dash._time_range_minutes;
+            var range_names = {5: '5 min', 15: '15 min', 30: '30 min', 60: '1 hour', 360: '6 hours', 1440: 'Today', 2880: 'Yesterday', 10080: 'This week', 43200: 'This month', 525600: 'This year'};
+            var range_label = (range_minutes > 0 && range_names[range_minutes]) ? range_names[range_minutes] : 'All';
+            var chart_type = dash.show_bars ? 'bar' : 'area';
+
+            var label_range = range_minutes > 0
+                ? range_minutes * dash.config.ms_per_minute
+                : 0;
+
+            var lines = [];
+            lines.push('Chart: ' + range_label + ' (' + chart_type + ')');
+            lines.push('');
+
+            var server_buckets = chart_data.buckets;
+            for (var bi = 0; bi < server_buckets.length; bi++) {
+                var bucket = server_buckets[bi];
+                var start_date = new Date(bucket.start_iso);
+                var end_date = new Date(bucket.end_iso);
+                var label = dash.formatTimeLabel(start_date, label_range) + ' - ' + dash.formatTimeLabel(end_date, label_range);
+                var total = bucket.ok + bucket.error + bucket.timeout + bucket.skipped_already_in_flight;
+                var parts = [];
+                if (bucket.ok) parts.push('ok=' + bucket.ok);
+                if (bucket.error) parts.push('error=' + bucket.error);
+                if (bucket.timeout) parts.push('timeout=' + bucket.timeout);
+                if (bucket.skipped_already_in_flight) parts.push('skipped=' + bucket.skipped_already_in_flight);
+                lines.push(label + '  total=' + total + (parts.length ? '  ' + parts.join(', ') : ''));
+            }
+
+            var text = lines.join('\n');
+            navigator.clipboard.writeText(text);
+
+            var btn = document.getElementById('dashboard-chart-copy');
+            $.fn.zato.show_left_tooltip(btn, 'Copied to clipboard');
+            setTimeout(function() {
+                if (btn._tippy) {
+                    btn._tippy.hide();
+                    setTimeout(function() { if (btn._tippy) btn._tippy.destroy(); }, 200);
+                }
+            }, 600);
+        });
+
         // Time range - from URL only (templates and redirects always supply range)
         dash._time_range_minutes = parseInt(new URLSearchParams(window.location.search).get('range'), 10);
         kit.urls.set_range_minutes(dash._time_range_minutes);
