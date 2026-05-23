@@ -53,7 +53,7 @@ _default_expiration     = PubSub.Message.Default_Expiration
 _default_max_messages   = PubSub.Message.Default_Max_Messages
 _default_max_len        = PubSub.Message.Default_Max_Len
 _default_data_preview_len = PubSub.Message.Data_Preview_Len
-_default_stream_max_len = 100_000
+_default_stream_max_len = 1_000_000
 _default_page_size      = 50
 
 _browse_state_handlers = {
@@ -1402,11 +1402,12 @@ class RedisPubSubBackend:
 # ################################################################################################################################
 
     def clear_queue(self, sub_key:'str') -> 'anydict':
-        """ Clears all pending messages for a subscriber across all subscribed topics.
+        """ Clears all messages for a subscriber across all subscribed topics.
         For each topic:
+        - Scans the entire stream and removes entries where this is the sole subscriber
         - Acks all PEL entries (read but unacked)
-        - Advances the consumer group cursor past unread entries
-        - Cleans up pending sets, sub_pending set, and disk files
+        - Cleans up pending sets, sub_pending set, disk files, and stream entries
+        - Advances the consumer group cursor past everything
         Returns a dict with 'cleared_count'.
         """
 
@@ -1417,6 +1418,9 @@ class RedisPubSubBackend:
         for topic_name in topic_names:
 
             stream_key = self._get_stream_key(topic_name)
+
+            # .. collect stream entry IDs to XDEL at the end of this topic ..
+            ids_to_xdel:'anylist' = []
 
             # Phase 1: ack all PEL entries (read but unacked) ..
             pel_batch_size = 1000
@@ -1445,21 +1449,26 @@ class RedisPubSubBackend:
 
                     # .. ack and clean up pending indexes and disk ..
                     self.ack_message(stream_key, sub_key, redis_stream_id, data_ref)
+
+                    # .. check if no other subscriber needs this entry ..
+                    pending_key = self._get_pending_key(data_ref)
+                    remaining = self.redis.scard(pending_key)
+                    if remaining == 0:
+                        ids_to_xdel.append(redis_stream_id)
+
                     cleared_count += 1
 
                 # .. if we got fewer than the batch size, we're done with PEL.
                 if len(pel_entries) < pel_batch_size:
                     break
 
-            # Phase 2: advance the consumer group cursor past all unread entries ..
-            # .. get the current stream tip ..
+            # Phase 2: handle unread entries beyond the consumer group cursor ..
             try:
                 stream_info = self.redis.xinfo_stream(stream_key)
                 last_entry_id = stream_info['last-generated-id']
             except ResponseError:
                 continue
 
-            # .. count unread entries beyond the current cursor ..
             last_delivered_id = self._get_last_delivered_id(stream_key, sub_key)
 
             if last_delivered_id and last_delivered_id < last_entry_id:
@@ -1467,7 +1476,6 @@ class RedisPubSubBackend:
                 # .. scan unread entries to clean up their pending sets and disk files ..
                 after_delivered = self._increment_stream_id(last_delivered_id)
                 scan_batch_size = 1000
-
                 scan_cursor = after_delivered
 
                 while True:
@@ -1487,12 +1495,13 @@ class RedisPubSubBackend:
                         sub_pending_key = self._get_sub_pending_key(sub_key)
                         _ = self.redis.srem(sub_pending_key, data_ref)
 
-                        # .. if no subscribers remain, delete the pending key, expiry entry, and disk file ..
+                        # .. if no subscribers remain, delete everything ..
                         remaining = self.redis.scard(pending_key)
                         if remaining == 0:
                             _ = self.redis.delete(pending_key)
                             _ = self.redis.zrem(ModuleCtx.Pending_Expiry_Key, data_ref)
                             self.disk_store.delete(data_ref)
+                            ids_to_xdel.append(redis_stream_id)
 
                         cleared_count += 1
 
@@ -1502,6 +1511,45 @@ class RedisPubSubBackend:
 
                     if len(unread_entries) < scan_batch_size:
                         break
+
+            # Phase 3: scan delivered entries (behind last-delivered-id) and XDEL those with no pending subs ..
+            scan_batch_size = 1000
+            scan_cursor = '-'
+
+            # .. determine the upper bound for delivered entries ..
+            delivered_max = last_delivered_id if last_delivered_id else '+'
+
+            while True:
+                delivered_entries:'anylist' = cast_('anylist', self.redis.xrange(
+                    stream_key, min=scan_cursor, max=delivered_max, count=scan_batch_size))
+
+                if not delivered_entries:
+                    break
+
+                for redis_stream_id, message_data in delivered_entries:
+                    data_ref = message_data['data_ref']
+
+                    # .. check if any subscriber still needs this message ..
+                    pending_key = self._get_pending_key(data_ref)
+                    remaining = self.redis.scard(pending_key)
+
+                    if remaining == 0:
+                        # .. no one needs it, remove the stream entry and disk file ..
+                        _ = self.redis.delete(pending_key)
+                        _ = self.redis.zrem(ModuleCtx.Pending_Expiry_Key, data_ref)
+                        self.disk_store.delete(data_ref)
+                        ids_to_xdel.append(redis_stream_id)
+
+                # .. advance the scan cursor ..
+                last_scanned_id = delivered_entries[-1][0]
+                scan_cursor = self._increment_stream_id(last_scanned_id)
+
+                if len(delivered_entries) < scan_batch_size:
+                    break
+
+            # .. batch XDEL all collected stream entry IDs ..
+            if ids_to_xdel:
+                _ = self.redis.xdel(stream_key, *ids_to_xdel)
 
             # .. advance the consumer group cursor to the stream tip so new reads start fresh.
             try:
