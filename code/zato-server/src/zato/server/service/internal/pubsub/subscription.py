@@ -1302,3 +1302,24 @@ class UpdateMessage(AdminService):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class ClearQueue(AdminService):
+    """ Clears all pending messages from a subscriber's queue.
+    """
+
+    name  = 'zato.pubsub.subscription.clear-queue'
+    input = 'sub_key'
+
+    def handle(self) -> 'None':
+
+        # Extract the sub_key ..
+        sub_key = self.request.input.sub_key
+
+        # .. delegate to the Redis backend ..
+        result = self.server.pubsub_redis.clear_queue(sub_key)
+
+        # .. and return the result.
+        self.response.payload = result
+
+# ################################################################################################################################
+# ################################################################################################################################

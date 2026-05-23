@@ -145,18 +145,18 @@ def index(request:'any_') -> 'TemplateResponse':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def purge(request:'any_') -> 'HttpResponse':
-    """ Purges all pending messages from a subscription queue.
+def clear_queue(request:'any_') -> 'HttpResponse':
+    """ Clears all pending messages from a subscription queue.
     """
 
     # Our response to produce
     out = None
 
-    # Invoke the purge service ..
+    # Invoke the clear queue service ..
     sub_key = request.POST['sub_key']
 
     try:
-        response = request.zato.client.invoke('zato.pubsub.subscription.purge-queue', {
+        response = request.zato.client.invoke('zato.pubsub.subscription.clear-queue', {
             'sub_key': sub_key,
         })
 
@@ -178,7 +178,7 @@ def purge(request:'any_') -> 'HttpResponse':
 
     # .. handle any unexpected transport or connection errors.
     except Exception: # noqa: BLE001
-        logger.error('Pub/sub queue purge error: %s', format_exc())
+        logger.error('Pub/sub queue clear error: %s', format_exc())
 
         error_json = json.dumps({'error': _default_error_message})
 

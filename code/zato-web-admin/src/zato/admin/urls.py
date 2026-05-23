@@ -990,8 +990,8 @@ urlpatterns += [
 
     url(r'^zato/pubsub/subscription/queue/$',
         login_required(pubsub_queue.index), name='pubsub-subscription-queue'),
-    url(r'^zato/pubsub/subscription/queue/purge/$',
-        login_required(pubsub_queue.purge), name='pubsub-subscription-queue-purge'),
+    url(r'^zato/pubsub/subscription/queue/clear/$',
+        login_required(pubsub_queue.clear_queue), name='pubsub-subscription-queue-clear'),
     url(r'^zato/pubsub/subscription/queue/message/$',
         login_required(pubsub_queue.message_detail), name='pubsub-subscription-queue-message'),
     url(r'^zato/pubsub/subscription/queue/message/payload/$',
