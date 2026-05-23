@@ -15,10 +15,16 @@ security:
     username: test.pubsub.puller.b
     password: "{{puller_b_password}}"
 
+  - name: test.pubsub.pusher.a
+    type: basic_auth
+    username: test.pubsub.pusher.a
+    password: "{{pusher_a_password}}"
+
 pubsub_topic:
 
   - name: clear.test.topic.1
   - name: clear.test.topic.2
+  - name: clear.test.topic.3
 
 pubsub_permission:
 
@@ -34,6 +40,10 @@ pubsub_permission:
     sub:
       - clear.**
 
+  - security: test.pubsub.pusher.a
+    sub:
+      - clear.**
+
 pubsub_subscription:
 
   - security: test.pubsub.puller.a
@@ -46,3 +56,11 @@ pubsub_subscription:
     delivery_type: pull
     topic_list:
       - clear.test.topic.1
+
+  - security: test.pubsub.pusher.a
+    delivery_type: push
+    push_type: service
+    push_service_name: demo.echo
+    topic_list:
+      - clear.test.topic.2
+      - clear.test.topic.3

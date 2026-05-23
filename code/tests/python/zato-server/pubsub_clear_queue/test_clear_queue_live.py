@@ -21,6 +21,7 @@ logger = logging.getLogger('zato.test.pubsub_clear_queue.live')
 
 _topic_1 = 'clear.test.topic.1'
 _topic_2 = 'clear.test.topic.2'
+_topic_3 = 'clear.test.topic.3'
 
 _settle_time = 2.0
 

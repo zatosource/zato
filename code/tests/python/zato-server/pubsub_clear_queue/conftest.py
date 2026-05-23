@@ -172,12 +172,14 @@ def zato_server() -> 'any_':
     publisher_password = 'test.pub.' + os.urandom(8).hex()
     puller_a_password  = 'test.pull.a.' + os.urandom(8).hex()
     puller_b_password  = 'test.pull.b.' + os.urandom(8).hex()
+    pusher_a_password  = 'test.push.a.' + os.urandom(8).hex()
     invoke_password    = 'test.invoke.' + os.urandom(8).hex()
 
     placeholders = {
         'publisher_password': publisher_password,
         'puller_a_password': puller_a_password,
         'puller_b_password': puller_b_password,
+        'pusher_a_password': pusher_a_password,
     }
 
     # Create quickstart ..
@@ -281,6 +283,8 @@ def zato_server() -> 'any_':
     TestConfig.puller_a_password  = puller_a_password
     TestConfig.puller_b_username  = 'test.pubsub.puller.b'
     TestConfig.puller_b_password  = puller_b_password
+    TestConfig.pusher_a_username  = 'test.pubsub.pusher.a'
+    TestConfig.pusher_a_password  = pusher_a_password
     TestConfig.server_directory   = server_directory
 
     yield
