@@ -88,8 +88,13 @@ class TestSchedulerClassExports(TestCase):
 
 # ################################################################################################################################
 
-    def test_get_timeline_events_is_callable(self):
-        assert callable(getattr(zato_scheduler_core.Scheduler, 'get_timeline_events'))
+    def test_get_chart_data_is_callable(self) -> 'None':
+        assert callable(getattr(zato_scheduler_core.Scheduler, 'get_chart_data'))
+
+# ################################################################################################################################
+
+    def test_get_timeline_events_since_is_callable(self) -> 'None':
+        assert callable(getattr(zato_scheduler_core.Scheduler, 'get_timeline_events_since'))
 
 # ################################################################################################################################
 

@@ -645,11 +645,17 @@ class GetCurrentState(_SchedulerAdmin):
     """
     name = _service_name_prefix + 'get-current-state'
 
+    input = '-chart_since_iso', '-recent_since_iso', Int('-recent_limit')
+
     def handle(self) -> 'None':
         try:
             from contextlib import closing
 
             scheduler = self.server._scheduler
+
+            chart_since_iso = self.request.input.chart_since_iso or ''
+            recent_since_iso = self.request.input.recent_since_iso or ''
+            recent_limit = self.request.input.recent_limit or 100
 
             with closing(self.odb.session()) as session:
                 job_rows = session.query(Job).filter_by(cluster_id=default_cluster_id).all()
@@ -737,8 +743,11 @@ class GetCurrentState(_SchedulerAdmin):
                 for outcome_key in execution_outcomes:
                     total_executions += per_job[outcome_key]
 
-            # .. get_timeline_events returns dicts pre-sorted by timestamp descending in Rust ..
-            history_timeline = scheduler.get_timeline_events()
+            # .. get chart_buckets from Rust (pre-aggregated) ..
+            chart_buckets = scheduler.get_chart_data(chart_since_iso)
+
+            # .. get recent events for the table ..
+            recent_events = scheduler.get_timeline_events_since(recent_since_iso, recent_limit)
 
             self.response.payload = {
                 'total_jobs': total_jobs,
@@ -747,7 +756,8 @@ class GetCurrentState(_SchedulerAdmin):
                 'total_executions': total_executions,
                 'outcome_counts': outcome_counts,
                 'jobs': jobs,
-                'history_timeline': history_timeline,
+                'chart_buckets': chart_buckets,
+                'recent_events': recent_events,
             }
 
         except Exception:

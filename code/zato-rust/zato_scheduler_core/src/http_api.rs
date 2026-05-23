@@ -10,6 +10,7 @@
 use std::sync::Arc;
 
 use actix_web::{App, HttpResponse, HttpServer, web};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::history;
@@ -36,7 +37,8 @@ pub async fn start_http_server(shared: Arc<SchedulerShared>) -> std::io::Result<
             .app_data(state.clone())
             .route("/metrics", web::get().to(get_metrics))
             .route("/api/get_job_summaries", web::get().to(get_job_summaries))
-            .route("/api/get_timeline_events", web::get().to(get_timeline_events))
+            .route("/api/get_chart_data", web::get().to(get_chart_data))
+            .route("/api/get_timeline_events_since", web::get().to(get_timeline_events_since))
             .route("/api/get_history_page", web::get().to(get_history_page))
             .route("/api/get_history_since", web::get().to(get_history_since))
             .route("/api/get_run_detail", web::get().to(get_run_detail))
@@ -122,15 +124,164 @@ struct JobSummaryResponse {
     outcome_counts: serde_json::Map<String, serde_json::Value>,
 }
 
-/// Query parameters for get_timeline_events.
+/// Query parameters for get_chart_data.
 #[derive(Deserialize)]
-struct TimelineParams {
-    /// Maximum number of events to return (default 1000).
-    max_events: Option<usize>,
+struct ChartDataParams {
+    /// ISO timestamp cutoff - only aggregate events at or after this time. If absent, aggregate all.
+    since_iso: Option<String>,
+}
+
+/// A single time bucket with per-outcome counts.
+#[derive(Serialize, Deserialize)]
+struct ChartBucket {
+    /// ISO timestamp of the bucket start.
+    start_iso: String,
+    /// ISO timestamp of the bucket end.
+    end_iso: String,
+    /// Count of successful executions in this bucket.
+    ok: u64,
+    /// Count of failed executions in this bucket.
+    error: u64,
+    /// Count of timed-out executions in this bucket.
+    timeout: u64,
+    /// Count of skipped (already in flight) executions in this bucket.
+    skipped_already_in_flight: u64,
+}
+
+/// Response structure for chart data.
+#[derive(Serialize, Deserialize)]
+struct ChartDataResponse {
+    /// Pre-aggregated time buckets.
+    buckets: Vec<ChartBucket>,
+    /// ISO timestamp of the earliest event in the window.
+    min_time_iso: String,
+    /// ISO timestamp of the latest event in the window.
+    max_time_iso: String,
+}
+
+/// Number of fixed buckets returned by the chart data endpoint.
+const CHART_BUCKET_COUNT: usize = 120;
+
+/// Returns pre-aggregated chart data as 120 time buckets with per-outcome counts.
+async fn get_chart_data(state: web::Data<AppState>, params: web::Query<ChartDataParams>) -> HttpResponse {
+    let since_cutoff = params.since_iso.as_deref().unwrap_or("");
+
+    let (min_ms, max_ms, bucket_counts) = {
+        let scheduler_state = state.shared.state.lock();
+
+        let mut min_ms: i64 = i64::MAX;
+        let mut max_ms: i64 = i64::MIN;
+        let mut timestamps_and_outcomes: Vec<(i64, &str)> = Vec::new();
+
+        for running_job in scheduler_state.jobs.values() {
+            for rec in &running_job.history {
+                if !since_cutoff.is_empty() {
+                    if rec.actual_fire_time_iso.as_str() < since_cutoff {
+                        continue;
+                    }
+                }
+
+                if rec.outcome == outcome::RUNNING {
+                    continue;
+                }
+
+                if let Ok(parsed) = DateTime::parse_from_rfc3339(&rec.actual_fire_time_iso) {
+                    let ms = parsed.timestamp_millis();
+                    if ms < min_ms {
+                        min_ms = ms;
+                    }
+                    if ms > max_ms {
+                        max_ms = ms;
+                    }
+                    timestamps_and_outcomes.push((ms, &rec.outcome));
+                }
+            }
+        }
+
+        if timestamps_and_outcomes.is_empty() {
+            let now = Utc::now();
+            let now_ms = now.timestamp_millis();
+            (now_ms, now_ms, vec![[0u64; 4]; CHART_BUCKET_COUNT])
+        } else {
+            let time_range = max_ms - min_ms;
+            let effective_range = if time_range == 0 { 3_600_000 } else { time_range };
+            let effective_min = if time_range == 0 { max_ms - effective_range } else { min_ms };
+
+            let mut bucket_counts = vec![[0u64; 4]; CHART_BUCKET_COUNT];
+
+            for (ms, outcome_label) in &timestamps_and_outcomes {
+                let bucket_index = ((*ms - effective_min) * CHART_BUCKET_COUNT as i64 / effective_range)
+                    .clamp(0, (CHART_BUCKET_COUNT - 1) as i64) as usize;
+
+                let outcome_index = match *outcome_label {
+                    outcome::EXECUTED => 0,
+                    outcome::ERROR => 1,
+                    outcome::TIMEOUT => 2,
+                    outcome::SKIPPED_ALREADY_IN_FLIGHT => 3,
+                    _ => continue,
+                };
+
+                bucket_counts[bucket_index][outcome_index] += 1;
+            }
+
+            (effective_min, max_ms, bucket_counts)
+        }
+    };
+
+    let time_range = max_ms - min_ms;
+    let effective_range = if time_range == 0 { 3_600_000 } else { time_range };
+    let bucket_size_ms = effective_range as f64 / CHART_BUCKET_COUNT as f64;
+
+    let mut buckets: Vec<ChartBucket> = Vec::with_capacity(CHART_BUCKET_COUNT);
+    for bucket_index in 0..CHART_BUCKET_COUNT {
+        let start_ms = min_ms + (bucket_index as f64 * bucket_size_ms) as i64;
+        let end_ms = min_ms + ((bucket_index + 1) as f64 * bucket_size_ms) as i64;
+
+        let start_iso = DateTime::from_timestamp_millis(start_ms)
+            .unwrap_or_else(|| Utc::now())
+            .to_rfc3339();
+        let end_iso = DateTime::from_timestamp_millis(end_ms)
+            .unwrap_or_else(|| Utc::now())
+            .to_rfc3339();
+
+        let counts = &bucket_counts[bucket_index];
+        buckets.push(ChartBucket {
+            start_iso,
+            end_iso,
+            ok: counts[0],
+            error: counts[1],
+            timeout: counts[2],
+            skipped_already_in_flight: counts[3],
+        });
+    }
+
+    let min_time_iso = DateTime::from_timestamp_millis(min_ms)
+        .unwrap_or_else(|| Utc::now())
+        .to_rfc3339();
+    let max_time_iso = DateTime::from_timestamp_millis(max_ms)
+        .unwrap_or_else(|| Utc::now())
+        .to_rfc3339();
+
+    let response = ChartDataResponse {
+        buckets,
+        min_time_iso,
+        max_time_iso,
+    };
+
+    HttpResponse::Ok().json(response)
+}
+
+/// Query parameters for get_timeline_events_since.
+#[derive(Deserialize)]
+struct TimelineEventsSinceParams {
+    /// ISO timestamp cutoff - only return events strictly after this time.
+    since_iso: Option<String>,
+    /// Maximum number of events to return (for initial load of the recent table).
+    limit: Option<usize>,
 }
 
 /// Response structure for timeline events.
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 struct TimelineEventResponse {
     /// Execution outcome label.
     outcome: String,
@@ -152,15 +303,21 @@ struct TimelineEventResponse {
     planned_fire_time_iso: String,
 }
 
-/// Returns a lightweight timeline of execution events for the dashboard chart.
-async fn get_timeline_events(state: web::Data<AppState>, params: web::Query<TimelineParams>) -> HttpResponse {
-    let max_events = params.max_events.unwrap_or(1000);
+/// Returns timeline events, optionally filtered by since_iso and capped by limit.
+async fn get_timeline_events_since(state: web::Data<AppState>, params: web::Query<TimelineEventsSinceParams>) -> HttpResponse {
+    let since_cutoff = params.since_iso.as_deref().unwrap_or("");
 
     let events: Vec<job::TimelineEvent> = {
         let scheduler_state = state.shared.state.lock();
         let mut events: Vec<job::TimelineEvent> = Vec::new();
+
         for (job_id, running_job) in &scheduler_state.jobs {
             for rec in &running_job.history {
+                if !since_cutoff.is_empty() {
+                    if rec.actual_fire_time_iso.as_str() <= since_cutoff {
+                        continue;
+                    }
+                }
                 events.push(job::TimelineEvent {
                     job_id: *job_id,
                     job_name: running_job.name.clone(),
@@ -168,9 +325,14 @@ async fn get_timeline_events(state: web::Data<AppState>, params: web::Query<Time
                 });
             }
         }
+
         drop(scheduler_state);
         events.sort_unstable_by(|lhs, rhs| rhs.record.actual_fire_time_iso.cmp(&lhs.record.actual_fire_time_iso));
-        events.truncate(max_events);
+
+        if let Some(limit) = params.limit {
+            events.truncate(limit);
+        }
+
         events
     };
 
@@ -451,4 +613,211 @@ fn parse_outcome_filter(outcomes: Option<&str>) -> Option<Vec<String>> {
         items.push(outcome::RUNNING.to_string());
     }
     Some(items)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    use actix_web::web;
+
+    use crate::job::{ExecutionRecord, RunningJob};
+    use crate::model::SchedulerJob;
+    use crate::scheduler::SchedulerShared;
+
+    fn make_shared(jobs: HashMap<i64, RunningJob>) -> Arc<SchedulerShared> {
+        let shared = Arc::new(SchedulerShared::new());
+        {
+            let mut state = shared.state.lock();
+            state.jobs = jobs;
+        }
+        shared
+    }
+
+    fn make_scheduler_job(id: i64, name: &str) -> SchedulerJob {
+        SchedulerJob {
+            id,
+            name: name.to_string(),
+            is_active: true,
+            service: "test_service".into(),
+            job_type: "interval_based".into(),
+            start_date: "2025-01-01T00:00:00".into(),
+            extra: None,
+            weeks: None,
+            days: None,
+            hours: None,
+            minutes: Some(5),
+            seconds: None,
+            repeats: None,
+            jitter_ms: None,
+            timezone: None,
+            calendar: None,
+            max_execution_time_ms: None,
+            on_success_service: None,
+            on_success_job: None,
+            on_error_service: None,
+            on_error_job: None,
+        }
+    }
+
+    fn make_record(actual_iso: &str, outcome_label: &str, run: u32) -> ExecutionRecord {
+        ExecutionRecord::new("2026-01-01T00:00:00+00:00", actual_iso, outcome_label, run)
+    }
+
+    fn make_job_with_records(id: i64, name: &str, records: Vec<ExecutionRecord>) -> RunningJob {
+        let scheduler_job = make_scheduler_job(id, name);
+        let mut job = RunningJob::from_scheduler_job(&scheduler_job);
+        for rec in records {
+            job.history.push_back(rec);
+        }
+        job
+    }
+
+    #[actix_web::test]
+    async fn test_get_chart_data_empty() {
+        let shared = make_shared(HashMap::new());
+        let state = web::Data::new(AppState { shared });
+        let params = web::Query(ChartDataParams { since_iso: None });
+
+        let response = get_chart_data(state, params).await;
+        assert_eq!(response.status(), 200);
+    }
+
+    #[actix_web::test]
+    async fn test_get_chart_data_bucketing() {
+        let mut jobs = HashMap::new();
+        let records = vec![
+            make_record("2026-01-01T10:00:00+00:00", outcome::EXECUTED, 1),
+            make_record("2026-01-01T10:30:00+00:00", outcome::EXECUTED, 2),
+            make_record("2026-01-01T10:30:01+00:00", outcome::ERROR, 3),
+            make_record("2026-01-01T11:00:00+00:00", outcome::TIMEOUT, 4),
+        ];
+        jobs.insert(1, make_job_with_records(1, "test_job", records));
+
+        let shared = make_shared(jobs);
+        let state = web::Data::new(AppState { shared });
+        let params = web::Query(ChartDataParams { since_iso: None });
+
+        let response = get_chart_data(state, params).await;
+        assert_eq!(response.status(), 200);
+
+        let body = response.into_body();
+        let bytes = actix_web::body::to_bytes(body).await.unwrap();
+        let data: ChartDataResponse = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(data.buckets.len(), CHART_BUCKET_COUNT);
+
+        let mut total_ok: u64 = 0;
+        let mut total_error: u64 = 0;
+        let mut total_timeout: u64 = 0;
+        for bucket in &data.buckets {
+            total_ok += bucket.ok;
+            total_error += bucket.error;
+            total_timeout += bucket.timeout;
+        }
+        assert_eq!(total_ok, 2);
+        assert_eq!(total_error, 1);
+        assert_eq!(total_timeout, 1);
+    }
+
+    #[actix_web::test]
+    async fn test_get_chart_data_since_iso_filters() {
+        let mut jobs = HashMap::new();
+        let records = vec![
+            make_record("2026-01-01T08:00:00+00:00", outcome::EXECUTED, 1),
+            make_record("2026-01-01T12:00:00+00:00", outcome::EXECUTED, 2),
+        ];
+        jobs.insert(1, make_job_with_records(1, "test_job", records));
+
+        let shared = make_shared(jobs);
+        let state = web::Data::new(AppState { shared });
+        let params = web::Query(ChartDataParams {
+            since_iso: Some("2026-01-01T10:00:00+00:00".to_string()),
+        });
+
+        let response = get_chart_data(state, params).await;
+        let body = response.into_body();
+        let bytes = actix_web::body::to_bytes(body).await.unwrap();
+        let data: ChartDataResponse = serde_json::from_slice(&bytes).unwrap();
+
+        let mut total_ok: u64 = 0;
+        for bucket in &data.buckets {
+            total_ok += bucket.ok;
+        }
+        assert_eq!(total_ok, 1);
+    }
+
+    #[actix_web::test]
+    async fn test_get_timeline_events_since_no_filter() {
+        let mut jobs = HashMap::new();
+        let records = vec![
+            make_record("2026-01-01T10:00:00+00:00", outcome::EXECUTED, 1),
+            make_record("2026-01-01T10:01:00+00:00", outcome::ERROR, 2),
+            make_record("2026-01-01T10:02:00+00:00", outcome::EXECUTED, 3),
+        ];
+        jobs.insert(1, make_job_with_records(1, "test_job", records));
+
+        let shared = make_shared(jobs);
+        let state = web::Data::new(AppState { shared });
+        let params = web::Query(TimelineEventsSinceParams { since_iso: None, limit: None });
+
+        let response = get_timeline_events_since(state, params).await;
+        let body = response.into_body();
+        let bytes = actix_web::body::to_bytes(body).await.unwrap();
+        let events: Vec<TimelineEventResponse> = serde_json::from_slice(&bytes).unwrap();
+
+        assert_eq!(events.len(), 3);
+        assert_eq!(events[0].actual_fire_time_iso, "2026-01-01T10:02:00+00:00");
+    }
+
+    #[actix_web::test]
+    async fn test_get_timeline_events_since_with_cutoff() {
+        let mut jobs = HashMap::new();
+        let records = vec![
+            make_record("2026-01-01T10:00:00+00:00", outcome::EXECUTED, 1),
+            make_record("2026-01-01T10:01:00+00:00", outcome::ERROR, 2),
+            make_record("2026-01-01T10:02:00+00:00", outcome::EXECUTED, 3),
+        ];
+        jobs.insert(1, make_job_with_records(1, "test_job", records));
+
+        let shared = make_shared(jobs);
+        let state = web::Data::new(AppState { shared });
+        let params = web::Query(TimelineEventsSinceParams {
+            since_iso: Some("2026-01-01T10:01:00+00:00".to_string()),
+            limit: None,
+        });
+
+        let response = get_timeline_events_since(state, params).await;
+        let body = response.into_body();
+        let bytes = actix_web::body::to_bytes(body).await.unwrap();
+        let events: Vec<TimelineEventResponse> = serde_json::from_slice(&bytes).unwrap();
+
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].actual_fire_time_iso, "2026-01-01T10:02:00+00:00");
+    }
+
+    #[actix_web::test]
+    async fn test_get_timeline_events_since_with_limit() {
+        let mut jobs = HashMap::new();
+        let records = vec![
+            make_record("2026-01-01T10:00:00+00:00", outcome::EXECUTED, 1),
+            make_record("2026-01-01T10:01:00+00:00", outcome::ERROR, 2),
+            make_record("2026-01-01T10:02:00+00:00", outcome::EXECUTED, 3),
+        ];
+        jobs.insert(1, make_job_with_records(1, "test_job", records));
+
+        let shared = make_shared(jobs);
+        let state = web::Data::new(AppState { shared });
+        let params = web::Query(TimelineEventsSinceParams {
+            since_iso: None,
+            limit: Some(2),
+        });
+
+        let response = get_timeline_events_since(state, params).await;
+        let body = response.into_body();
+        let bytes = actix_web::body::to_bytes(body).await.unwrap();
+        let events: Vec<TimelineEventResponse> = serde_json::from_slice(&bytes).unwrap();
+
+        assert_eq!(events.len(), 2);
+    }
 }

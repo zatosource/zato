@@ -221,8 +221,21 @@ class SchedulerClient:
 
 # ################################################################################################################################
 
-    def get_timeline_events(self, max_events:'int'=1000) -> 'anylist':
-        return self._http_get('/api/get_timeline_events', {'max_events': max_events})
+    def get_chart_data(self, since_iso:'str'='') -> 'anydict':
+        params = {}
+        if since_iso:
+            params['since_iso'] = since_iso
+        return self._http_get('/api/get_chart_data', params)
+
+# ################################################################################################################################
+
+    def get_timeline_events_since(self, since_iso:'str'='', limit:'int'=0) -> 'anylist':
+        params = {}
+        if since_iso:
+            params['since_iso'] = since_iso
+        if limit:
+            params['limit'] = limit
+        return self._http_get('/api/get_timeline_events_since', params)
 
 # ################################################################################################################################
 
