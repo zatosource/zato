@@ -539,16 +539,20 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         }
         svg += '</defs>';
 
-        var grid_line_count = 4;
+        var grid_line_count = Math.min(4, max_stack);
+        var prev_grid_value = -1;
         for (var grid_index = 0; grid_index <= grid_line_count; grid_index++) {
             var grid_y = padding_top + draw_height - (grid_index / grid_line_count) * draw_height;
             var grid_value = Math.round((grid_index / grid_line_count) * max_stack);
             svg += '<line x1="' + padding_left + '" y1="' + grid_y.toFixed(1) + '" ';
             svg += 'x2="' + (chart_width - padding_right) + '" y2="' + grid_y.toFixed(1) + '" ';
             svg += 'stroke="rgba(0,0,0,0.05)" stroke-width="1" />';
-            svg += '<text x="' + (padding_left - 6) + '" y="' + (grid_y + 3).toFixed(1) + '" ';
-            svg += 'text-anchor="end" font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">';
-            svg += grid_value + '</text>';
+            if (grid_value !== prev_grid_value) {
+                svg += '<text x="' + (padding_left - 6) + '" y="' + (grid_y + 3).toFixed(1) + '" ';
+                svg += 'text-anchor="end" font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">';
+                svg += grid_value + '</text>';
+                prev_grid_value = grid_value;
+            }
         }
 
         var bucket_slot_width = draw_width / bucket_count;
