@@ -753,7 +753,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             ? dash._time_range_minutes * dash.config.ms_per_minute
             : time_range;
         var _x_axis_labels = [];
-        var label_count = Math.min(6, bucket_count);
+        var label_count = _is_year_range ? bucket_count : Math.min(6, bucket_count);
         var label_step = Math.max(1, Math.floor(bucket_count / label_count));
         for (var label_index = 0; label_index < bucket_count; label_index += label_step) {
             var label_x = padding_left + (label_index + 0.5) * bucket_slot_width;
@@ -764,13 +764,15 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             svg += 'font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">' + label_text + '</text>';
         }
 
-        // .. always emit the final time label at the right edge ..
-        var final_label_x = chart_width - padding_right;
+        // .. emit the final time label at the right edge if it differs from the last loop label ..
         var final_label_date = new Date(buckets[bucket_count - 1].start);
         var final_label_text = dash.formatTimeLabel(final_label_date, label_range);
-        _x_axis_labels.push(final_label_text);
-        svg += '<text x="' + final_label_x.toFixed(1) + '" y="' + (chart_height - 6) + '" text-anchor="end" ';
-        svg += 'font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">' + final_label_text + '</text>';
+        if (final_label_text !== _x_axis_labels[_x_axis_labels.length - 1]) {
+            var final_label_x = chart_width - padding_right;
+            _x_axis_labels.push(final_label_text);
+            svg += '<text x="' + final_label_x.toFixed(1) + '" y="' + (chart_height - 6) + '" text-anchor="end" ';
+            svg += 'font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">' + final_label_text + '</text>';
+        }
 
         // .. store visible chart state for the copy button ..
         dash._copy_data = {
