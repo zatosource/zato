@@ -307,8 +307,3 @@ a.dashboard-hero-pill-link:not(.menu-link):not(.chosen-single):hover {
     50% { opacity: 1; }
     100% { opacity: 1; }
 }
-
-#dashboard-bar-chart svg text {
-    user-select: text;
-    -webkit-user-select: text;
-}
