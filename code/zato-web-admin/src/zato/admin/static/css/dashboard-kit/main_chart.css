@@ -90,7 +90,8 @@
     box-sizing: border-box;
 }
 
-.dashboard-chart-type-toggle::after {
+.dashboard-chart-type-toggle::after,
+#dashboard-chart-copy::after {
     content: none;
 }
 
