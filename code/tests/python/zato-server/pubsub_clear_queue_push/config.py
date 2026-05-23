@@ -17,11 +17,8 @@ class TestConfig:
     publisher_username:'str' = ''
     publisher_password:'str' = ''
 
-    puller_a_username:'str' = ''
-    puller_a_password:'str' = ''
-
-    puller_b_username:'str' = ''
-    puller_b_password:'str' = ''
+    pusher_a_username:'str' = ''
+    pusher_a_password:'str' = ''
 
     server_directory:'str' = ''
 
