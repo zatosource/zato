@@ -6,7 +6,7 @@
 @import url("../syntax_light.css");
 
 :root {
-    --detail-header-row-2-border-bottom: 3px solid #012845;
+    --detail-header-row-2-border-bottom: 3px solid var(--primary-dark);
     --detail-header-row-2-padding-bottom: 1.2rem;
     --detail-pagination-controls-padding-top: 0;
     --detail-pagination-controls-padding-bottom: 8px;
