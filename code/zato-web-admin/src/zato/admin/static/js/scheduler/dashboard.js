@@ -594,19 +594,34 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         dash._chart_labels = labels;
 
         var range_ms = dash._time_range_minutes * dash.config.ms_per_minute;
+        var group_type;
+        if (range_ms === 0)                            group_type = 'none';
+        else if (range_ms >= dash.config.ms_per_year)  group_type = 'month';
+        else if (range_ms >= dash.config.ms_per_week)  group_type = 'day';
+        else if (range_ms >= dash.config.ms_per_hour)  group_type = 'hour';
+        else                                           group_type = 'minute';
+        dash._chart_group_type = group_type;
         dash._chart_groups = [];
         dash._chart_group_ranges = {};
+        dash._chart_group_labels = {};
         for (var gi = 0; gi < buckets.length; gi++) {
             var gd = new Date(buckets[gi].start);
             var group_key;
-            if (range_ms === 0)                           group_key = gi;
-            else if (range_ms >= dash.config.ms_per_year) group_key = gd.getMonth();
-            else if (range_ms >= dash.config.ms_per_day)  group_key = gd.getDate();
-            else if (range_ms >= dash.config.ms_per_hour) group_key = gd.getHours();
-            else                                          group_key = gd.getMinutes();
+            if (group_type === 'none')        group_key = gi;
+            else if (group_type === 'month')  group_key = gd.getMonth();
+            else if (group_type === 'day')    group_key = gd.getDate();
+            else if (group_type === 'hour')   group_key = gd.getHours();
+            else                              group_key = gd.getMinutes();
             dash._chart_groups.push(group_key);
             if (dash._chart_group_ranges[group_key] === undefined) {
                 dash._chart_group_ranges[group_key] = {first: gi, last: gi};
+                var gl;
+                if (group_type === 'month')       gl = dash.config.month_names[gd.getMonth()] + ' ' + String(gd.getFullYear()).slice(-2);
+                else if (group_type === 'day')    gl = dash.config.day_names[gd.getDay()] + ' ' + dash.config.month_names[gd.getMonth()] + ' ' + gd.getDate();
+                else if (group_type === 'hour')   gl = dash.config.day_names[gd.getDay()] + ' ' + ('0' + gd.getHours()).slice(-2) + ':00 \u2192 ' + ('0' + ((gd.getHours() + 1) % 24)).slice(-2) + ':00';
+                else if (group_type === 'minute') gl = ('0' + gd.getHours()).slice(-2) + ':' + ('0' + gd.getMinutes()).slice(-2);
+                else                              gl = null;
+                dash._chart_group_labels[group_key] = gl;
             } else {
                 dash._chart_group_ranges[group_key].last = gi;
             }
@@ -799,16 +814,32 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             svg += 'font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">' + final_label_text + '</text>';
         }
 
-        // .. store visible chart state for the copy button ..
-        var _all_bucket_infos = [];
+        // .. store visible chart state for the copy button, grouped ..
+        var _all_group_infos = [];
+        var _seen_groups = {};
         for (var cp = 0; cp < buckets.length; cp++) {
-            _all_bucket_infos.push(dash.get_bucket_info(cp));
+            var cp_gk = dash._chart_groups[cp];
+            if (_seen_groups[cp_gk] !== undefined) {
+                var existing = _all_group_infos[_seen_groups[cp_gk]];
+                for (var cp_vk = 0; cp_vk < visible_keys.length; cp_vk++) {
+                    var cp_key = visible_keys[cp_vk];
+                    existing.outcomes[cp_vk].count += buckets[cp][cp_key];
+                    existing.total_runs += buckets[cp][cp_key];
+                }
+                existing.runs_label = existing.total_runs === 1 ? '1 run' : kit.format_number_full(existing.total_runs) + ' runs';
+                existing.end = buckets[cp].end;
+                continue;
+            }
+            _seen_groups[cp_gk] = _all_group_infos.length;
+            var cp_info = dash.get_bucket_info(cp);
+            cp_info.time_label = dash._chart_group_labels[cp_gk] || cp_info.time_label;
+            _all_group_infos.push(cp_info);
         }
 
         dash._copy_data = {
             y_axis: _y_axis_values,
             x_axis: _x_axis_labels,
-            buckets: _all_bucket_infos
+            buckets: _all_group_infos
         };
 
         svg += '</svg>';
@@ -910,12 +941,35 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
                 }
             }
 
-            var lr = dash._chart_label_range;
-            var group_start = new Date(buckets[group_first].start);
-            var group_end = new Date(buckets[group_last].end);
-            var group_time_label = (group_first === group_last)
-                ? dash.formatTimeLabel(group_start, lr)
-                : dash.formatTimeLabel(group_start, lr) + ' \u2192 ' + dash.formatTimeLabel(group_end, lr);
+            var _hover_buckets = [];
+            for (var hb = group_first; hb <= group_last; hb++) {
+                _hover_buckets.push({
+                    index: hb,
+                    start: new Date(buckets[hb].start).toISOString(),
+                    end: new Date(buckets[hb].end).toISOString(),
+                    data: agg_totals
+                });
+            }
+            console.log('hover-group', JSON.stringify({
+                group_key: group_key,
+                group_type: dash._chart_group_type,
+                label: dash._chart_group_labels[group_key],
+                bucket_range: [group_first, group_last],
+                start: new Date(buckets[group_first].start).toISOString(),
+                end: new Date(buckets[group_last].end).toISOString(),
+                agg_totals: agg_totals,
+                buckets: _hover_buckets
+            }, null, 2));
+
+            var group_time_label = dash._chart_group_labels[group_key];
+            if (!group_time_label) {
+                var lr = dash._chart_label_range;
+                var group_start = new Date(buckets[group_first].start);
+                var group_end = new Date(buckets[group_last].end);
+                group_time_label = (group_first === group_last)
+                    ? dash.formatTimeLabel(group_start, lr)
+                    : dash.formatTimeLabel(group_start, lr) + ' \u2192 ' + dash.formatTimeLabel(group_end, lr);
+            }
 
             var group_total = 0;
             for (var gt = 0; gt < visible_keys.length; gt++) {
