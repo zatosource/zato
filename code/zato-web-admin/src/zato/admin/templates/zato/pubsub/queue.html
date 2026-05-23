@@ -66,6 +66,7 @@ $(document).ready(function() {
     $.fn.zato.pubsub.queue.init('{{ sub_key|escapejs }}', {
         poll_url: '{{ poll_url }}',
         state: '{{ state }}',
+        queue_name: '{{ queue_name|escapejs }}',
         initial_data: JSON.parse(document.getElementById('queue-data-json').textContent)
     });
 });

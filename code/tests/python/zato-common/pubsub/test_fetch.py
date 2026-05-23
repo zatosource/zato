@@ -122,7 +122,7 @@ class TestMetadataEnvelope(BaseFetchTestCase):
     def test_fetched_message_has_full_metadata(self) -> 'None':
 
         # Subscribe ..
-        sub_key = f'sub.meta.{self._run_id}'
+        sub_key = f'sk_meta_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish with all optional fields ..
@@ -169,7 +169,7 @@ class TestExpiredMessageNotAvailable(BaseFetchTestCase):
     def test_expired_message_not_fetched(self) -> 'None':
 
         # Subscribe ..
-        sub_key = f'sub.ttl.{self._run_id}'
+        sub_key = f'sk_ttl_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish with 1-second TTL ..
@@ -194,7 +194,7 @@ class TestPriorityRoundTrip(BaseFetchTestCase):
     def test_priority_nine_round_trips(self) -> 'None':
 
         # Subscribe ..
-        sub_key = f'sub.pri.{self._run_id}'
+        sub_key = f'sk_pri_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish with priority 9 ..
@@ -219,7 +219,7 @@ class TestPriorityOrdering(BaseFetchTestCase):
     def test_messages_ordered_by_priority_desc(self) -> 'None':
 
         # Subscribe ..
-        sub_key = f'sub.priord.{self._run_id}'
+        sub_key = f'sk_priord_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish 3 messages with different priorities (in ascending order) ..
@@ -260,7 +260,7 @@ class TestCorrelIdRoundTrip(BaseFetchTestCase):
     def test_optional_fields_round_trip(self) -> 'None':
 
         # Subscribe ..
-        sub_key = f'sub.corr.{self._run_id}'
+        sub_key = f'sk_corr_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish with all optional fields ..
@@ -295,7 +295,7 @@ class TestMaxMessagesLimit(BaseFetchTestCase):
     def test_max_messages_caps_result(self) -> 'None':
 
         # Subscribe ..
-        sub_key = f'sub.maxmsg.{self._run_id}'
+        sub_key = f'sk_maxmsg_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish 5 messages ..
@@ -318,7 +318,7 @@ class TestMaxLenReturnsZero(BaseFetchTestCase):
     def test_small_max_len_returns_zero(self) -> 'None':
 
         # Subscribe ..
-        sub_key = f'sub.maxlen.{self._run_id}'
+        sub_key = f'sk_maxlen_{self._run_id}'
         self.subscribe(sub_key)
 
         # .. publish a message with a payload larger than max_len ..

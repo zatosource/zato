@@ -511,7 +511,7 @@
                             {% endif %}
                         </div></td>
                         <td>{{ item.topic_link_list|safe }}</td>
-                        <td><a href="/zato/pubsub/subscription/queue/?cluster={{ cluster_id }}&sub_key={{ item.sub_key }}&state=pending">{{ item.pending_depth|intcomma }}</a></td>
+                        <td><a href="/zato/pubsub/subscription/queue/?cluster={{ cluster_id }}&sub_key={{ item.sub_key }}&queue_name={{ item.sec_name|urlencode }}&state=pending">{{ item.pending_depth|intcomma }}</a></td>
                         <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
 
                         <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>

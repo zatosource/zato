@@ -116,11 +116,10 @@ def index(request:'any_') -> 'TemplateResponse':
     else:
         data = {'rows': [], 'total': 0, 'page': _default_page, 'sub_key': sub_key}
 
-    # .. extract the queue name from the sub_key ..
+    # .. read the queue name and depth from the response ..
     depth = data['total']
     page  = data['page']
-    sub_key_parts = sub_key.split('.', 1)
-    queue_name = sub_key_parts[1]
+    queue_name = request.GET['queue_name']
 
     subscriptions_url = f'/zato/pubsub/subscription/?cluster={default_cluster_id}'
 
@@ -250,13 +249,13 @@ def message_detail(request:'any_') -> 'TemplateResponse':
     else:
         active_tab = _default_active_tab
 
-    # .. extract the queue name from the sub_key ..
-    sub_key_parts = sub_key.split('.', 1)
-    queue_name = sub_key_parts[1]
+    # .. read the queue name from the request ..
+    queue_name = request.GET['queue_name']
 
     # .. and render the template.
     sub_key_encoded = quote(sub_key, safe='')
-    queue_url = f'/zato/pubsub/subscription/queue/?cluster={default_cluster_id}&sub_key={sub_key_encoded}&state=pending'
+    queue_name_encoded = quote(queue_name, safe='')
+    queue_url = f'/zato/pubsub/subscription/queue/?cluster={default_cluster_id}&sub_key={sub_key_encoded}&queue_name={queue_name_encoded}&state=pending'
     topic_url = f'/zato/pubsub/topic/?cluster={default_cluster_id}'
 
     out = TemplateResponse(request, 'zato/pubsub/queue_message.html', {
