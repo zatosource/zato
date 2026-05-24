@@ -126,6 +126,8 @@ $.fn.zato.security.posture._fieldDescriptions = {
                 'A channel without credentials means anyone who knows the URL can call it freely.' +
                 '<br><br>' +
                 'Often fine during development, but in production it can be a serious exposure.' +
+                '<br><br>' +
+                'The check helps you spot these channels so you can secure them or mark them as intentionally public.' +
             '</div>' +
             '<div class="how-it-works-posture-toggle">' +
                 '<span class="how-it-works-posture-toggle-label">Toggle</span>' +
