@@ -1,29 +1,30 @@
+(function($) {
 
 if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
 if (typeof $.fn.zato.security === 'undefined') { $.fn.zato.security = {}; }
 $.fn.zato.security.posture = {};
 
 $.fn.zato.security.posture.config = {
-    cluster_id: '1',
-    poll_url: '/zato/security/posture/poll/',
-    scan_url: '/zato/security/posture/scan/',
-    save_url: '/zato/security/posture/save/',
-    show_hero: false,
-    show_chart: false,
-    show_chart_controls: false
+    clusterId: '1',
+    pollUrl: '/zato/security/posture/poll/',
+    scanUrl: '/zato/security/posture/scan/',
+    saveUrl: '/zato/security/posture/save/',
+    showHero: false,
+    showChart: false,
+    showChartControls: false
 };
 
-// ////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////
 // State
-// ////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.security.posture._tab_handle = null;
+$.fn.zato.security.posture._tabHandle = null;
 
-// ////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////
 // Check state management
-// ////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.security.posture._get_check_states = function() {
+$.fn.zato.security.posture._getCheckStates = function() {
     var out = {};
     $('.posture-check-item input[type="checkbox"]').each(function() {
         var key = $(this).data('check');
@@ -32,7 +33,9 @@ $.fn.zato.security.posture._get_check_states = function() {
     return out;
 };
 
-$.fn.zato.security.posture._set_check_states = function(states) {
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.security.posture._setCheckStates = function(states) {
     for (var key in states) {
         var $input = $('.posture-check-item input[data-check="' + key + '"]');
         if ($input.length) {
@@ -41,160 +44,202 @@ $.fn.zato.security.posture._set_check_states = function(states) {
     }
 };
 
-// ////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////
 // Actions
-// ////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.security.posture._save = function() {
-    var ns = $.fn.zato.security.posture;
-    var $btn = $('#posture-save');
-    var $status = $('#posture-status');
-    var states = ns._get_check_states();
+    var posture = $.fn.zato.security.posture;
+    var $button = $('#posture-save');
+    var $statusMessage = $('#posture-status');
+    var states = posture._getCheckStates();
 
-    $btn.prop('disabled', true);
-    $status.text('Saving...').removeClass('posture-status-saved posture-status-error');
+    $button.prop('disabled', true);
+    $statusMessage.text('Saving...').removeClass('posture-status-saved posture-status-error');
 
     $.ajax({
         type: 'POST',
-        url: ns.config.save_url,
+        url: posture.config.saveUrl,
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
         data: JSON.stringify(states),
         contentType: 'application/json',
         dataType: 'json',
         success: function() {
-            $status.text('Saved').addClass('posture-status-saved');
-            setTimeout(function() { $status.text(''); }, 2000);
+            $statusMessage.text('Saved').addClass('posture-status-saved');
+            setTimeout(function() { $statusMessage.text(''); }, 2000);
         },
         error: function() {
-            $status.text('Error saving').addClass('posture-status-error');
+            $statusMessage.text('Error saving').addClass('posture-status-error');
         },
         complete: function() {
-            $btn.prop('disabled', false);
+            $button.prop('disabled', false);
         }
     });
 };
 
-$.fn.zato.security.posture._run_scan = function() {
-    var ns = $.fn.zato.security.posture;
-    var $btn = $('#posture-run-scan');
-    var $status = $('#posture-status');
+// ////////////////////////////////////////////////////////////////////////
 
-    $btn.prop('disabled', true);
-    $status.text('Scanning...').removeClass('posture-status-saved posture-status-error');
+$.fn.zato.security.posture._runScan = function() {
+    var posture = $.fn.zato.security.posture;
+    var $button = $('#posture-run-scan');
+    var $statusMessage = $('#posture-status');
+
+    $button.prop('disabled', true);
+    $statusMessage.text('Scanning...').removeClass('posture-status-saved posture-status-error');
 
     $.ajax({
         type: 'POST',
-        url: ns.config.scan_url,
+        url: posture.config.scanUrl,
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
-        data: JSON.stringify(ns._get_check_states()),
+        data: JSON.stringify(posture._getCheckStates()),
         contentType: 'application/json',
         dataType: 'json',
         success: function(response) {
-            var total = response.total_findings;
-            $status.text('Scan complete - ' + total + ' finding' + (total === 1 ? '' : 's'));
-            setTimeout(function() { $status.text(''); }, 4000);
+            var totalFindings = response.total_findings;
+            $statusMessage.text('Scan complete - ' + totalFindings + ' finding' + (totalFindings === 1 ? '' : 's'));
+            setTimeout(function() { $statusMessage.text(''); }, 4000);
         },
         error: function() {
-            $status.text('Scan failed').addClass('posture-status-error');
+            $statusMessage.text('Scan failed').addClass('posture-status-error');
         },
         complete: function() {
-            $btn.prop('disabled', false);
+            $button.prop('disabled', false);
         }
     });
 };
 
-// ////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////
 // Field descriptions for "How does it work?"
-// ////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.security.posture._field_descriptions = {
+$.fn.zato.security.posture._fieldDescriptions = {
 
     'posture-toggle-auth-no-credentials':
-        '<div class="hiw-posture-explanation">' +
-            '<div class="hiw-posture-title">Channels without credentials</div>' +
-            '<div class="hiw-posture-body">' +
-                'Every REST channel in Zato can be protected by assigning a security definition to it, ' +
-                'such as Basic Auth or API keys.' +
+        '<div class="how-it-works-posture-explanation">' +
+            '<div class="how-it-works-posture-title">Channels without credentials</div>' +
+            '<div class="how-it-works-posture-body">' +
+                'Every REST channel can be protected by assigning a security definition, such as Basic Auth or API keys.' +
                 '<br><br>' +
-                'When this check is enabled, the scanner looks at each REST channel and ' +
-                '<span class="hiw-posture-highlight">flags any REST channels that do not have a security definition assigned</span>. ' +
-                'A channel without credentials means that anyone who knows the URL can call it freely ' +
-                'without any authentication.' +
+                'This check ' +
+                '<span class="how-it-works-posture-highlight">flags any REST channels that do not have a security definition assigned</span>.' +
                 '<br><br>' +
-                'This is often fine during development, but in production it can be a serious exposure. ' +
-                'The check helps you spot these channels so you can decide whether to secure them or ' +
-                'mark them as intentionally public.' +
+                'A channel without credentials means anyone who knows the URL can call it freely.' +
+                '<br><br>' +
+                'Often fine during development, but in production it can be a serious exposure.' +
             '</div>' +
-            '<div class="hiw-posture-toggle">' +
-                '<span class="hiw-posture-toggle-label">Toggle</span>' +
-                '<label class="toggle-switch hiw-toggle-switch">' +
-                    '<input type="checkbox" class="hiw-posture-toggle-input">' +
+            '<div class="how-it-works-posture-toggle">' +
+                '<span class="how-it-works-posture-toggle-label">Toggle</span>' +
+                '<label class="toggle-switch how-it-works-toggle-switch">' +
+                    '<input type="checkbox" class="how-it-works-posture-toggle-input">' +
                     '<span class="toggle-slider"></span>' +
                 '</label>' +
             '</div>' +
         '</div>',
 
     'posture-toggle-auth-weak-credentials':
-        '<div class="hiw-posture-explanation">' +
-            '<div class="hiw-posture-title">Weak passwords</div>' +
-            '<div class="hiw-posture-body">' +
+        '<div class="how-it-works-posture-explanation">' +
+            '<div class="how-it-works-posture-title">Weak passwords</div>' +
+            '<div class="how-it-works-posture-body">' +
                 'Security definitions in Zato store the credentials that clients use to authenticate. ' +
                 'A password that is too short or too common can be guessed easily.' +
                 '<br><br>' +
                 'This check ' +
-                '<span class="hiw-posture-highlight">measures the strength of every password in your security definitions and flags any that score below the acceptable threshold</span>. ' +
+                '<span class="how-it-works-posture-highlight">measures the strength of every password in your security definitions</span>.' +
                 '<br><br>' +
-                'Strength is scored on a scale from 0 (extremely weak) to 4 (very strong). ' +
-                'A score of 0 or 1 means the password can be cracked almost instantly, ' +
-                '2 is guessable with some effort, 3 is reasonably safe, and 4 is very hard to crack. ' +
-                'Passwords scoring below 3 are flagged. ' +
-                'The scoring considers length, character variety, common patterns, and whether the password appears in known breach lists.' +
+                'Strength is scored from 0 to 4:' +
+                '<br>' +
+                '0 or 1 - cracked almost instantly' +
+                '<br>' +
+                '2 - guessable with some effort' +
+                '<br>' +
+                '3 - safe' +
+                '<br>' +
+                '4 - very hard to crack' +
                 '<br><br>' +
-                'Replacing weak passwords before they are exploited is one of the simplest ways to harden your environment.' +
+                'The scoring considers length, character variety, common patterns, and known breach lists.' +
             '</div>' +
-            '<div class="hiw-posture-toggle">' +
-                '<span class="hiw-posture-toggle-label">Toggle</span>' +
-                '<label class="toggle-switch hiw-toggle-switch">' +
-                    '<input type="checkbox" class="hiw-posture-toggle-input">' +
+            '<div class="how-it-works-posture-toggle">' +
+                '<span class="how-it-works-posture-toggle-label">Toggle</span>' +
+                '<label class="toggle-switch how-it-works-toggle-switch">' +
+                    '<input type="checkbox" class="how-it-works-posture-toggle-input">' +
                     '<span class="toggle-slider"></span>' +
                 '</label>' +
             '</div>' +
         '</div>',
 
     'posture-toggle-rate-limiting':
-        '<div class="hiw-posture-explanation">' +
-            '<div class="hiw-posture-title">Missing rate limiting</div>' +
-            '<div class="hiw-posture-body">' +
-                'Rate limiting controls how many requests a client can make in a given time window. ' +
-                'Without it, a single client can flood your server with requests, whether by accident or on purpose.' +
+        '<div class="how-it-works-posture-explanation">' +
+            '<div class="how-it-works-posture-title">Missing rate limiting</div>' +
+            '<div class="how-it-works-posture-body">' +
+                'Rate limiting controls how many requests a client can make in a given time window.' +
                 '<br><br>' +
                 'This check ' +
-                '<span class="hiw-posture-highlight">finds REST channels and services that do not have any rate limiting configured</span>.' +
+                '<span class="how-it-works-posture-highlight">finds REST channels and services that do not have any rate limiting configured</span>.' +
                 '<br><br>' +
-                'Even a simple limit like 1,000 requests per minute can protect against runaway loops, ' +
-                'misbehaving integrations, and basic denial-of-service attempts. ' +
-                'Channels without rate limits are open to unlimited traffic from any authenticated client.' +
+                'Without it, a single client can flood your server with requests.' +
+                '<br><br>' +
+                'Even a simple limit like 1,000 requests per minute protects against runaway loops and denial-of-service attempts.' +
             '</div>' +
-            '<div class="hiw-posture-toggle">' +
-                '<span class="hiw-posture-toggle-label">Toggle</span>' +
-                '<label class="toggle-switch hiw-toggle-switch">' +
-                    '<input type="checkbox" class="hiw-posture-toggle-input">' +
+            '<div class="how-it-works-posture-toggle">' +
+                '<span class="how-it-works-posture-toggle-label">Toggle</span>' +
+                '<label class="toggle-switch how-it-works-toggle-switch">' +
+                    '<input type="checkbox" class="how-it-works-posture-toggle-input">' +
+                    '<span class="toggle-slider"></span>' +
+                '</label>' +
+            '</div>' +
+        '</div>',
+
+    'posture-toggle-admin-services-exposed':
+        '<div class="how-it-works-posture-explanation">' +
+            '<div class="how-it-works-posture-title">Admin services exposed</div>' +
+            '<div class="how-it-works-posture-body">' +
+                'Zato has built-in admin services used by the dashboard and CLI.' +
+                '<br><br>' +
+                'They can create users, change passwords, deploy code, and read configuration.' +
+                '<br><br>' +
+                'This check ' +
+                '<span class="how-it-works-posture-highlight">finds admin services mounted on channels reachable from outside the cluster</span>.' +
+            '</div>' +
+            '<div class="how-it-works-posture-toggle">' +
+                '<span class="how-it-works-posture-toggle-label">Toggle</span>' +
+                '<label class="toggle-switch how-it-works-toggle-switch">' +
+                    '<input type="checkbox" class="how-it-works-posture-toggle-input">' +
+                    '<span class="toggle-slider"></span>' +
+                '</label>' +
+            '</div>' +
+        '</div>',
+
+    'posture-toggle-internal-no-auth':
+        '<div class="how-it-works-posture-explanation">' +
+            '<div class="how-it-works-posture-title">Internal services without auth</div>' +
+            '<div class="how-it-works-posture-body">' +
+                'Some services are meant only for internal use - called by other services, scheduled jobs, or internal tooling.' +
+                '<br><br>' +
+                'This check ' +
+                '<span class="how-it-works-posture-highlight">flags internal services that have a channel but no security definition protecting it</span>.' +
+                '<br><br>' +
+                'Without authentication, any process that can reach the channel URL can invoke the service.' +
+            '</div>' +
+            '<div class="how-it-works-posture-toggle">' +
+                '<span class="how-it-works-posture-toggle-label">Toggle</span>' +
+                '<label class="toggle-switch how-it-works-toggle-switch">' +
+                    '<input type="checkbox" class="how-it-works-posture-toggle-input">' +
                     '<span class="toggle-slider"></span>' +
                 '</label>' +
             '</div>' +
         '</div>'
 };
 
-// ////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////
 // Initialization
-// ////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.security.posture.init = function(initial_data) {
-    var ns = $.fn.zato.security.posture;
+$.fn.zato.security.posture.init = function(initialData) {
+    var posture = $.fn.zato.security.posture;
     var kit = $.fn.zato.dashboard_kit;
 
     // .. tabs
-    ns._tab_handle = kit.tabs.init({
+    posture._tabHandle = kit.tabs.init({
         tab_selector: '.posture-card .dashboard-tab',
         panel_prefix: 'posture-tab-panel-',
         storage_key: 'zato-posture-tab',
@@ -202,8 +247,8 @@ $.fn.zato.security.posture.init = function(initial_data) {
     });
 
     // .. restore check states from server data
-    if (initial_data.check_states) {
-        ns._set_check_states(initial_data.check_states);
+    if (initialData.checkStates) {
+        posture._setCheckStates(initialData.checkStates);
     }
 
     // .. clicking the text area toggles the slider
@@ -215,25 +260,30 @@ $.fn.zato.security.posture.init = function(initial_data) {
 
     // .. save button
     $('#posture-save').on('click', function() {
-        ns._save();
+        posture._save();
     });
 
     // .. scan button
     $('#posture-run-scan').on('click', function() {
-        ns._run_scan();
+        posture._runScan();
     });
 
     // .. "How does it work?" badge
     $.fn.zato.how_it_works.init({
-        badge_id: 'posture-how-it-works-badge',
-        div_id: 'posture-card-container',
-        container_selector: '.posture-card',
-        field_selector: '.posture-check-item',
-        target_selector: '.posture-check-desc',
+        badgeId: 'posture-how-it-works-badge',
+        divId: 'posture-card-container',
+        containerSelector: '.posture-card',
+        fieldSelector: '.posture-check-item',
+        targetSelector: '.posture-check-description',
         placement: 'right',
-        descriptions: ns._field_descriptions
+        descriptions: posture._fieldDescriptions,
+        inlineBadge: true,
+        inlineBadgeRowSelector: '.posture-check-item',
+        inlineBadgeAnchorSelector: '.posture-check-name-text'
     });
 
     // .. fade in
     kit.reveal();
 };
+
+})(jQuery);
