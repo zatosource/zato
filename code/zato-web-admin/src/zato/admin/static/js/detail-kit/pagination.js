@@ -268,6 +268,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             poll_new: poll_new,
             set_filters: set_filters,
             current_page: function() { return current_page; },
+            total: function() { return total_count; },
+            set_total: function(n) { total_count = n; update_controls(); },
             total_pages: total_pages,
             get_last_ts: function() { return last_ts; },
             destroy: function() {}
