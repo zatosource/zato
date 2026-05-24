@@ -1168,6 +1168,9 @@ class GetMessageDetail(AdminService):
 
         if has_data:
             load_result = self.server.pubsub_redis.disk_store.load(data_reference)
+        else:
+            logger.warning('GetMessageDetail -> payload not on disk, msg_id:%s, topic:%s, ref:%s, path:%s',
+                msg_id, topic_name, data_reference, self.server.pubsub_redis.disk_store._ref_to_path(data_reference))
 
         # .. fetch the stream entry metadata ..
         stream_key = self.server.pubsub_redis.get_stream_key(topic_name)

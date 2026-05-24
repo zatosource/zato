@@ -45,7 +45,8 @@ a.queue-preview-link:visited {
     width: auto;
 }
 
-.detail-table .queue-msg-id a {
+.detail-table .queue-msg-id a,
+.detail-table .queue-msg-id span {
     font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
     font-size: 12px;
 }

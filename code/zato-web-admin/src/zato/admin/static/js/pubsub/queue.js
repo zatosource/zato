@@ -44,7 +44,12 @@
         row += '<td class="queue-row-num"></td>';
         var deliveredLabel = message.is_delivered ? 'Yes' : 'No';
 
-        row += '<td class="queue-msg-id"><span class="dashboard-outcome-badge dashboard-outcome-' + badgeKey + '"><a href="' + messageLink + '">' + message.msg_id + '</a></span></td>';
+        if (message.is_delivered) {
+            row += '<td class="queue-msg-id"><span class="dashboard-outcome-badge dashboard-outcome-' + badgeKey + '">' + message.msg_id + '</span></td>';
+        } else {
+            row += '<td class="queue-msg-id"><span class="dashboard-outcome-badge dashboard-outcome-' + badgeKey + '"><a href="' + messageLink + '">' + message.msg_id + '</a></span></td>';
+        }
+
         row += '<td><a href="' + topicLink + '">' + topicName + '</a></td>';
         row += '<td>' + deliveredLabel + '</td>';
         row += '<td class="data-preview"><a href="#" class="queue-preview-link"' +
@@ -55,11 +60,17 @@
             '><span class="syntax-light">' + message.data_preview_highlighted + '</span></a></td>';
         row += '<td>' + message.data_size + ' B</td>';
         row += '<td class="queue-time" data-ts="' + message.pub_time_iso + '" title="' + localTime + '">' + relativeTime + '</td>';
-        row += '<td><a href="#" class="queue-delete-link"' +
-            ' data-msg-id="' + message.msg_id + '"' +
-            ' data-topic-name="' + topicName + '"' +
-            ' data-redis-stream-id="' + message.redis_stream_id + '"' +
-            '>Delete</a></td>';
+
+        if (message.is_delivered) {
+            row += '<td><span class="form_hint">Delete</span></td>';
+        } else {
+            row += '<td><a href="#" class="queue-delete-link"' +
+                ' data-msg-id="' + message.msg_id + '"' +
+                ' data-topic-name="' + topicName + '"' +
+                ' data-redis-stream-id="' + message.redis_stream_id + '"' +
+                '>Delete</a></td>';
+        }
+
         row += '</tr>';
 
         return row;
@@ -444,22 +455,24 @@
             var msgId = $link.data('msg-id');
             var topicName = $link.data('topic-name');
             var streamId = $link.data('redis-stream-id');
+            var previewText = $row.find('.data-preview').text();
 
             $.ajax({
                 type: 'POST',
-                url: config.poll_url,
+                url: '/zato/pubsub/subscription/queue/message/payload/',
                 data: JSON.stringify({
-                    action: 'get-message-detail',
                     msg_id: msgId,
-                    topic_name: topicName,
-                    redis_stream_id: streamId
+                    topic_name: topicName
                 }),
                 contentType: 'application/json',
                 headers: {'X-CSRFToken': $.cookie('csrftoken')},
                 dataType: 'json',
                 success: function(resp) {
-                    var data = resp.has_data ? resp.data : '';
+                    var data = resp.data ? resp.data : previewText;
                     _open_delete_overlay(msgId, data, $row, topicName, streamId);
+                },
+                error: function() {
+                    _open_delete_overlay(msgId, previewText, $row, topicName, streamId);
                 }
             });
         });
