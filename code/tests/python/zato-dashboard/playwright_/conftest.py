@@ -326,11 +326,9 @@ def playwright_browser() -> 'any_':
     """ Launches a Playwright Chromium browser for the entire test session.
     """
 
-    # Show the browser window when a display is available ..
-    has_display = bool(os.environ.get('DISPLAY'))
-    use_headless = not has_display
+    # Start playwright, headed mode if ZATO_PLAYWRIGHT_HEADED is set ..
+    use_headless = 'ZATO_PLAYWRIGHT_HEADED' not in os.environ
 
-    # .. start playwright ..
     playwright = sync_playwright().start()
     browser = playwright.chromium.launch(headless=use_headless)
 
