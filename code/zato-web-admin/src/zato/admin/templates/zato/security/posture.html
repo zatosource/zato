@@ -1,0 +1,480 @@
+{% extends "zato/dashboard_base.html" %}
+{% load extras %}
+
+{% block html_title %}Security posture{% endblock %}
+
+{% block dashboard_extra_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+<link rel="stylesheet" type="text/css" href="/static/css/security/posture.css">
+{% endblock %}
+
+{% block dashboard_domain_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/security/posture.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.security.posture.init({{ scan_data|safe }});
+});
+</script>
+{% endblock %}
+
+{% block dashboard_tiles %}{% endblock %}
+{% block dashboard_header_pill %}{% endblock %}
+{% block dashboard_chart_header_content %}{% endblock %}
+{% block dashboard_time_range_options %}{% endblock %}
+{% block dashboard_refresh_options %}{% endblock %}
+
+{% block dashboard_grid %}
+
+        <div class="dashboard-card posture-card" id="posture-card-container">
+            <div class="dashboard-card-header dashboard-card-header-tabs">
+                <div class="dashboard-tabs" role="tablist" aria-label="Check categories">
+
+                    <button type="button"
+                            class="dashboard-tab dashboard-tab-active"
+                            data-tab="authentication"
+                            role="tab"
+                            aria-selected="true">
+                        <span class="dashboard-tab-label">Authentication</span>
+                    </button>
+
+                    <button type="button"
+                            class="dashboard-tab"
+                            data-tab="access-control"
+                            role="tab"
+                            aria-selected="false">
+                        <span class="dashboard-tab-label">Access control</span>
+                    </button>
+
+                    <button type="button"
+                            class="dashboard-tab"
+                            data-tab="incoming-channels"
+                            role="tab"
+                            aria-selected="false">
+                        <span class="dashboard-tab-label">Incoming channels</span>
+                    </button>
+
+                    <button type="button"
+                            class="dashboard-tab"
+                            data-tab="configuration"
+                            role="tab"
+                            aria-selected="false">
+                        <span class="dashboard-tab-label">Configuration</span>
+                    </button>
+
+                    <button type="button"
+                            class="dashboard-tab"
+                            data-tab="outgoing-connections"
+                            role="tab"
+                            aria-selected="false">
+                        <span class="dashboard-tab-label">Outgoing connections</span>
+                    </button>
+
+                    <button type="button"
+                            class="dashboard-tab"
+                            data-tab="runtime-monitoring"
+                            role="tab"
+                            aria-selected="false">
+                        <span class="dashboard-tab-label">Runtime monitoring</span>
+                    </button>
+
+                    <button type="button"
+                            class="dashboard-tab"
+                            data-tab="data-protection"
+                            role="tab"
+                            aria-selected="false">
+                        <span class="dashboard-tab-label">Data protection</span>
+                    </button>
+
+                </div>
+            </div>
+
+            <!-- Authentication -->
+            <div class="dashboard-tab-panel"
+                 id="posture-tab-panel-authentication"
+                 role="tabpanel">
+                <div class="posture-check-list" id="posture-list-authentication">
+
+                    <div class="posture-check-item" id="posture-item-auth-no-credentials" data-check="auth_no_credentials">
+                        <div class="posture-check-text" id="posture-text-auth-no-credentials">
+                            <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-auth-no-credentials">Channels without credentials</span></div>
+                            <div class="posture-check-desc" id="posture-desc-auth-no-credentials">Flag REST channels that have no security definition assigned</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-auth-no-credentials">
+                            <input type="checkbox" id="posture-toggle-auth-no-credentials" data-check="auth_no_credentials" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-auth-weak-credentials" data-check="auth_weak_credentials">
+                        <div class="posture-check-text" id="posture-text-auth-weak-credentials">
+                            <div class="posture-check-name" id="posture-name-auth-weak-credentials">Weak passwords</div>
+                            <div class="posture-check-desc" id="posture-desc-auth-weak-credentials">Detect credentials with low password strength scores</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-auth-weak-credentials">
+                            <input type="checkbox" id="posture-toggle-auth-weak-credentials" data-check="auth_weak_credentials" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-auth-shared-credentials" data-check="auth_shared_credentials">
+                        <div class="posture-check-text" id="posture-text-auth-shared-credentials">
+                            <div class="posture-check-name" id="posture-name-auth-shared-credentials">Shared credentials</div>
+                            <div class="posture-check-desc" id="posture-desc-auth-shared-credentials">Find security definitions reused across multiple channels</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-auth-shared-credentials">
+                            <input type="checkbox" id="posture-toggle-auth-shared-credentials" data-check="auth_shared_credentials" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-rate-limiting" data-check="rate_limiting">
+                        <div class="posture-check-text" id="posture-text-rate-limiting">
+                            <div class="posture-check-name" id="posture-name-rate-limiting">Missing rate limiting</div>
+                            <div class="posture-check-desc" id="posture-desc-rate-limiting">Detect channels and services without rate limiting configured</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-rate-limiting">
+                            <input type="checkbox" id="posture-toggle-rate-limiting" data-check="rate_limiting" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Access control -->
+            <div class="dashboard-tab-panel"
+                 id="posture-tab-panel-access-control"
+                 role="tabpanel"
+                 hidden>
+                <div class="posture-check-list" id="posture-list-access-control">
+
+                    <div class="posture-check-item" id="posture-item-admin-services-exposed" data-check="admin_services_exposed">
+                        <div class="posture-check-text" id="posture-text-admin-services-exposed">
+                            <div class="posture-check-name" id="posture-name-admin-services-exposed">Admin services exposed</div>
+                            <div class="posture-check-desc" id="posture-desc-admin-services-exposed">Check if internal admin services are reachable from public channels</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-admin-services-exposed">
+                            <input type="checkbox" id="posture-toggle-admin-services-exposed" data-check="admin_services_exposed" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-internal-no-auth" data-check="internal_no_auth">
+                        <div class="posture-check-text" id="posture-text-internal-no-auth">
+                            <div class="posture-check-name" id="posture-name-internal-no-auth">Internal services without auth</div>
+                            <div class="posture-check-desc" id="posture-desc-internal-no-auth">Find internal services accessible without authentication</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-internal-no-auth">
+                            <input type="checkbox" id="posture-toggle-internal-no-auth" data-check="internal_no_auth" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Incoming channels -->
+            <div class="dashboard-tab-panel"
+                 id="posture-tab-panel-incoming-channels"
+                 role="tabpanel"
+                 hidden>
+                <div class="posture-check-list" id="posture-list-incoming-channels">
+
+                    <div class="posture-check-item" id="posture-item-request-forgery" data-check="request_forgery">
+                        <div class="posture-check-text" id="posture-text-request-forgery">
+                            <div class="posture-check-name" id="posture-name-request-forgery">Request forgery risks</div>
+                            <div class="posture-check-desc" id="posture-desc-request-forgery">Scan service code for server-side request forgery patterns</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-request-forgery">
+                            <input type="checkbox" id="posture-toggle-request-forgery" data-check="request_forgery" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-unused-channels" data-check="unused_channels">
+                        <div class="posture-check-text" id="posture-text-unused-channels">
+                            <div class="posture-check-name" id="posture-name-unused-channels">Unused channels</div>
+                            <div class="posture-check-desc" id="posture-desc-unused-channels">Find channels with no traffic in the configured time window</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-unused-channels">
+                            <input type="checkbox" id="posture-toggle-unused-channels" data-check="unused_channels" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-orphaned-services" data-check="orphaned_services">
+                        <div class="posture-check-text" id="posture-text-orphaned-services">
+                            <div class="posture-check-name" id="posture-name-orphaned-services">Orphaned services</div>
+                            <div class="posture-check-desc" id="posture-desc-orphaned-services">Detect services with no channel or scheduled job attached</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-orphaned-services">
+                            <input type="checkbox" id="posture-toggle-orphaned-services" data-check="orphaned_services" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Configuration -->
+            <div class="dashboard-tab-panel"
+                 id="posture-tab-panel-configuration"
+                 role="tabpanel"
+                 hidden>
+                <div class="posture-check-list" id="posture-list-configuration">
+
+                    <div class="posture-check-item" id="posture-item-debug-mode" data-check="debug_mode">
+                        <div class="posture-check-text" id="posture-text-debug-mode">
+                            <div class="posture-check-name" id="posture-name-debug-mode">Debug mode enabled</div>
+                            <div class="posture-check-desc" id="posture-desc-debug-mode">Warn if the server is running with debug or development settings</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-debug-mode">
+                            <input type="checkbox" id="posture-toggle-debug-mode" data-check="debug_mode" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-plaintext-secrets" data-check="plaintext_secrets">
+                        <div class="posture-check-text" id="posture-text-plaintext-secrets">
+                            <div class="posture-check-name" id="posture-name-plaintext-secrets">Plaintext secrets in config</div>
+                            <div class="posture-check-desc" id="posture-desc-plaintext-secrets">Scan configuration files for passwords and tokens stored in clear text</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-plaintext-secrets">
+                            <input type="checkbox" id="posture-toggle-plaintext-secrets" data-check="plaintext_secrets" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-known-vulnerabilities" data-check="known_vulnerabilities">
+                        <div class="posture-check-text" id="posture-text-known-vulnerabilities">
+                            <div class="posture-check-name" id="posture-name-known-vulnerabilities">Known vulnerabilities</div>
+                            <div class="posture-check-desc" id="posture-desc-known-vulnerabilities">Check installed Python packages against known CVE databases</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-known-vulnerabilities">
+                            <input type="checkbox" id="posture-toggle-known-vulnerabilities" data-check="known_vulnerabilities" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-tls-certificates" data-check="tls_certificates">
+                        <div class="posture-check-text" id="posture-text-tls-certificates">
+                            <div class="posture-check-name" id="posture-name-tls-certificates">TLS certificates</div>
+                            <div class="posture-check-desc" id="posture-desc-tls-certificates">Validate certificate chains and warn about upcoming expirations</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-tls-certificates">
+                            <input type="checkbox" id="posture-toggle-tls-certificates" data-check="tls_certificates" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Outgoing connections -->
+            <div class="dashboard-tab-panel"
+                 id="posture-tab-panel-outgoing-connections"
+                 role="tabpanel"
+                 hidden>
+                <div class="posture-check-list" id="posture-list-outgoing-connections">
+
+                    <div class="posture-check-item" id="posture-item-unencrypted-traffic" data-check="unencrypted_traffic">
+                        <div class="posture-check-text" id="posture-text-unencrypted-traffic">
+                            <div class="posture-check-name" id="posture-name-unencrypted-traffic">Unencrypted traffic</div>
+                            <div class="posture-check-desc" id="posture-desc-unencrypted-traffic">Find outgoing connections using plain HTTP instead of HTTPS</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-unencrypted-traffic">
+                            <input type="checkbox" id="posture-toggle-unencrypted-traffic" data-check="unencrypted_traffic" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-missing-timeouts" data-check="missing_timeouts">
+                        <div class="posture-check-text" id="posture-text-missing-timeouts">
+                            <div class="posture-check-name" id="posture-name-missing-timeouts">Missing timeouts</div>
+                            <div class="posture-check-desc" id="posture-desc-missing-timeouts">Detect outgoing connections without timeout values set</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-missing-timeouts">
+                            <input type="checkbox" id="posture-toggle-missing-timeouts" data-check="missing_timeouts" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-outgoing-cert-issues" data-check="outgoing_cert_issues">
+                        <div class="posture-check-text" id="posture-text-outgoing-cert-issues">
+                            <div class="posture-check-name" id="posture-name-outgoing-cert-issues">Certificate issues</div>
+                            <div class="posture-check-desc" id="posture-desc-outgoing-cert-issues">Check outgoing TLS connections for expired or weak certificates</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-outgoing-cert-issues">
+                            <input type="checkbox" id="posture-toggle-outgoing-cert-issues" data-check="outgoing_cert_issues" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-backend-no-auth" data-check="backend_no_auth">
+                        <div class="posture-check-text" id="posture-text-backend-no-auth">
+                            <div class="posture-check-name" id="posture-name-backend-no-auth">Backend connections without auth</div>
+                            <div class="posture-check-desc" id="posture-desc-backend-no-auth">Find outgoing connections with no authentication configured</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-backend-no-auth">
+                            <input type="checkbox" id="posture-toggle-backend-no-auth" data-check="backend_no_auth" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-backend-tls-version" data-check="backend_tls_version">
+                        <div class="posture-check-text" id="posture-text-backend-tls-version">
+                            <div class="posture-check-name" id="posture-name-backend-tls-version">Outdated TLS versions</div>
+                            <div class="posture-check-desc" id="posture-desc-backend-tls-version">Flag outgoing connections that allow TLS 1.0 or 1.1</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-backend-tls-version">
+                            <input type="checkbox" id="posture-toggle-backend-tls-version" data-check="backend_tls_version" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-backend-tls-ciphers" data-check="backend_tls_ciphers">
+                        <div class="posture-check-text" id="posture-text-backend-tls-ciphers">
+                            <div class="posture-check-name" id="posture-name-backend-tls-ciphers">Weak TLS ciphers</div>
+                            <div class="posture-check-desc" id="posture-desc-backend-tls-ciphers">Detect outgoing connections using deprecated cipher suites</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-backend-tls-ciphers">
+                            <input type="checkbox" id="posture-toggle-backend-tls-ciphers" data-check="backend_tls_ciphers" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Runtime monitoring -->
+            <div class="dashboard-tab-panel"
+                 id="posture-tab-panel-runtime-monitoring"
+                 role="tabpanel"
+                 hidden>
+                <div class="posture-check-list" id="posture-list-runtime-monitoring">
+
+                    <div class="posture-check-item" id="posture-item-bulk-extraction" data-check="bulk_extraction">
+                        <div class="posture-check-text" id="posture-text-bulk-extraction">
+                            <div class="posture-check-name" id="posture-name-bulk-extraction">Bulk data extraction</div>
+                            <div class="posture-check-desc" id="posture-desc-bulk-extraction">Detect unusually large response payloads that may indicate data scraping</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-bulk-extraction">
+                            <input type="checkbox" id="posture-toggle-bulk-extraction" data-check="bulk_extraction" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-enumeration" data-check="enumeration">
+                        <div class="posture-check-text" id="posture-text-enumeration">
+                            <div class="posture-check-name" id="posture-name-enumeration">Enumeration attempts</div>
+                            <div class="posture-check-desc" id="posture-desc-enumeration">Watch for sequential ID probing and resource enumeration patterns</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-enumeration">
+                            <input type="checkbox" id="posture-toggle-enumeration" data-check="enumeration" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-credential-anomaly" data-check="credential_anomaly">
+                        <div class="posture-check-text" id="posture-text-credential-anomaly">
+                            <div class="posture-check-name" id="posture-name-credential-anomaly">Credential anomalies</div>
+                            <div class="posture-check-desc" id="posture-desc-credential-anomaly">Track per-IP authentication failure rates for brute-force detection</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-credential-anomaly">
+                            <input type="checkbox" id="posture-toggle-credential-anomaly" data-check="credential_anomaly" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-pagination-abuse" data-check="pagination_abuse">
+                        <div class="posture-check-text" id="posture-text-pagination-abuse">
+                            <div class="posture-check-name" id="posture-name-pagination-abuse">Pagination abuse</div>
+                            <div class="posture-check-desc" id="posture-desc-pagination-abuse">Detect requests with extreme offset or page-size values</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-pagination-abuse">
+                            <input type="checkbox" id="posture-toggle-pagination-abuse" data-check="pagination_abuse" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-request-rate-anomaly" data-check="request_rate_anomaly">
+                        <div class="posture-check-text" id="posture-text-request-rate-anomaly">
+                            <div class="posture-check-name" id="posture-name-request-rate-anomaly">Request rate anomalies</div>
+                            <div class="posture-check-desc" id="posture-desc-request-rate-anomaly">Use sliding window counters to flag unusual traffic spikes per endpoint</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-request-rate-anomaly">
+                            <input type="checkbox" id="posture-toggle-request-rate-anomaly" data-check="request_rate_anomaly" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-call-pattern-anomaly" data-check="call_pattern_anomaly">
+                        <div class="posture-check-text" id="posture-text-call-pattern-anomaly">
+                            <div class="posture-check-name" id="posture-name-call-pattern-anomaly">Call pattern anomalies</div>
+                            <div class="posture-check-desc" id="posture-desc-call-pattern-anomaly">ML-based detection of abnormal API call sequences and timing</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-call-pattern-anomaly">
+                            <input type="checkbox" id="posture-toggle-call-pattern-anomaly" data-check="call_pattern_anomaly" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Data protection -->
+            <div class="dashboard-tab-panel"
+                 id="posture-tab-panel-data-protection"
+                 role="tabpanel"
+                 hidden>
+                <div class="posture-check-list" id="posture-list-data-protection">
+
+                    <div class="posture-check-item" id="posture-item-pii-detection" data-check="pii_detection">
+                        <div class="posture-check-text" id="posture-text-pii-detection">
+                            <div class="posture-check-name" id="posture-name-pii-detection">Personal data in responses</div>
+                            <div class="posture-check-desc" id="posture-desc-pii-detection">Scan outgoing payloads for credit card numbers, national IDs and other PII</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-pii-detection">
+                            <input type="checkbox" id="posture-toggle-pii-detection" data-check="pii_detection" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-connection-string-leaks" data-check="connection_string_leaks">
+                        <div class="posture-check-text" id="posture-text-connection-string-leaks">
+                            <div class="posture-check-name" id="posture-name-connection-string-leaks">Connection string leaks</div>
+                            <div class="posture-check-desc" id="posture-desc-connection-string-leaks">Detect database or broker connection strings appearing in API responses</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-connection-string-leaks">
+                            <input type="checkbox" id="posture-toggle-connection-string-leaks" data-check="connection_string_leaks" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-cumulative-data" data-check="cumulative_data">
+                        <div class="posture-check-text" id="posture-text-cumulative-data">
+                            <div class="posture-check-name" id="posture-name-cumulative-data">Cumulative data exposure</div>
+                            <div class="posture-check-desc" id="posture-desc-cumulative-data">Track total volume of sensitive fields returned per consumer over time</div>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-cumulative-data">
+                            <input type="checkbox" id="posture-toggle-cumulative-data" data-check="cumulative_data" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="posture-actions">
+                <span class="how-it-works-badge" id="posture-how-it-works-badge">How does it work?</span>
+                <span class="posture-status" id="posture-status"></span>
+                <button type="button" class="secondary-button" id="posture-run-scan">Run scan</button>
+                <button type="button" class="action-button" id="posture-save">Save</button>
+            </div>
+
+        </div>
+
+{% endblock %}
