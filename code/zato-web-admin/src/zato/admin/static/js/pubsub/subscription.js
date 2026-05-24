@@ -742,24 +742,22 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
     }
 
-    var is_delivery_active = item.is_delivery_active == true
-    var is_pub_active = item.is_pub_active == true
+    var is_delivery_active = item.is_delivery_active == true;
+    var is_pub_active = item.is_pub_active == true;
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td><a href="/zato/security/basic-auth/?cluster=1&query={0}">{1}</a></td>', encodeURIComponent(item.security), item.security);
 
-    row += String.format('<td>{0}</td>', item.sub_key);
+    row += String.format('<td><span class="ps-sub-key" data-sub-key="{0}">{0}</span></td>', item.sub_key);
 
     var delivery_css_class = is_delivery_active ? 'ps-badge-deliv-enabled' : 'ps-badge-deliv-disabled';
     var pub_css_class = is_pub_active ? 'ps-badge-pub-enabled' : 'ps-badge-pub-disabled';
-    row += '<td><div class="ps-status-cell"><span class="ps-badge ' + delivery_css_class + '">Delivery</span><span class="ps-badge ' + pub_css_class + '">Pub</span></div></td>';
+    row += '<td style="text-align:center"><div class="enabled-for-inner"><div class="ps-status-cell"><span class="ps-badge ' + delivery_css_class + '">Delivery</span><span class="ps-badge ' + pub_css_class + '">Pub</span></div></div></td>';
 
-    // For Push delivery type, display information based on push_type
     if(item.delivery_type === 'pull') {
-        row += String.format('<td style="text-align:center">{0}</td>', 'Pull');
+        row += '<td style="text-align:center"><div class="col-center-left">Pull</div></td>';
     } else {
-        // Push delivery type - check push_type to determine what to show
         if(item.push_type === 'rest' && item.rest_push_endpoint_id) {
             var endpointName = item.rest_push_endpoint_name;
             if (endpointName === null) {
@@ -767,8 +765,6 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
             }
             if(!endpointName) {
                 var selectIds = ['#id_edit-rest_push_endpoint_id', '#id_rest_push_endpoint_id'];
-
-                // Check both selects for the endpoint name
                 for(var i=0; i<selectIds.length; i++) {
                     $(selectIds[i] + ' option').each(function() {
                         if($(this).val() == item.rest_push_endpoint_id) {
@@ -776,24 +772,28 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
                             return false;
                         }
                     });
-
                     if(endpointName) break;
                 }
             }
-
-            // Add the endpoint link to the row
-            row += String.format('<td style="text-align:center">Push <a href="/zato/http-soap/?cluster=1&query={0}&connection=outgoing&transport=plain_http">{1}</a></td>',
+            row += String.format('<td style="text-align:center"><div class="col-center-left">Push <a href="/zato/http-soap/?cluster=1&query={0}&connection=outgoing&transport=plain_http">{1}</a></div></td>',
                 encodeURIComponent(endpointName), endpointName);
         } else if(item.push_type === 'service' && item.push_service_name) {
-            row += String.format('<td style="text-align:center">Push <a href="/zato/service/?cluster=1&query={0}">{1}</a></td>',
+            row += String.format('<td style="text-align:center"><div class="col-center-left">Push <a href="/zato/service/?cluster=1&query={0}">{1}</a></div></td>',
                 encodeURIComponent(item.push_service_name), item.push_service_name);
         } else {
-            row += '<td style="text-align:center">Push</td>';
+            row += '<td style="text-align:center"><div class="col-center-left">Push</div></td>';
         }
     }
 
     row += String.format('<td>{0}</td>', item.topic_link_list);
-    row += String.format('<td style="text-align:center"><a href="/zato/pubsub/subscription/queue/?cluster=1&sub_key={0}&queue_name={1}&state=pending">{2}</a></td>', encodeURIComponent(item.sub_key), encodeURIComponent(item.sec_name), item.pending_depth);
+
+    var pendingDepth = item.pending_depth;
+    if (pendingDepth === undefined || pendingDepth === null) {
+        pendingDepth = 0;
+    }
+    row += String.format('<td><a href="/zato/pubsub/subscription/queue/?cluster=1&sub_key={0}&queue_name={1}&state=pending">{2}</a></td>',
+        encodeURIComponent(item.sub_key), encodeURIComponent(item.security), pendingDepth);
+
     row += String.format('<td style="text-align:center">{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.edit('{0}');\">Edit</a>", item.id));
     row += String.format('<td style="text-align:center">{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.delete_('{0}');\">Delete</a>", item.id));
 
@@ -809,7 +809,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += String.format("<td class='ignore'>{0}</td>", item.rest_push_endpoint_name);
     row += String.format("<td class='ignore'>{0}</td>", item.push_service_name);
     row += String.format("<td class='ignore'>{0}</td>", item.topic_name_list || '');
-    row += String.format("<td class='ignore'>{0}</td>", item.pending_depth);
+    row += String.format("<td class='ignore'>{0}</td>", pendingDepth);
 
     if(include_tr) {
         row += '</tr>';
