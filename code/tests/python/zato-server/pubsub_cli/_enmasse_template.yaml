@@ -1,0 +1,32 @@
+security:
+
+  - name: test.pubsub.cli.publisher
+    type: basic_auth
+    username: test.pubsub.cli.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.pubsub.cli.puller
+    type: basic_auth
+    username: test.pubsub.cli.puller
+    password: "{{puller_password}}"
+
+pubsub_topic:
+
+  - name: cli.test.topic.1
+
+pubsub_permission:
+
+  - security: test.pubsub.cli.publisher
+    pub:
+      - cli.**
+
+  - security: test.pubsub.cli.puller
+    sub:
+      - cli.**
+
+pubsub_subscription:
+
+  - security: test.pubsub.cli.puller
+    delivery_type: pull
+    topic_list:
+      - cli.test.topic.1

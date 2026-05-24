@@ -306,3 +306,55 @@ def message_payload(request:'any_') -> 'HttpResponse':
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+@method_allowed('POST')
+def delete_message(request:'any_') -> 'HttpResponse':
+    """ Deletes a single message from a subscription queue.
+    """
+
+    # Our response to produce
+    out = None
+
+    # Parse the request body ..
+    body = json.loads(request.body)
+    msg_id          = body['msg_id']
+    topic_name      = body['topic_name']
+    sub_key         = body['sub_key']
+    redis_stream_id = body['redis_stream_id']
+
+    try:
+        response = request.zato.client.invoke('zato.pubsub.subscription.delete-message', {
+            'msg_id': msg_id,
+            'topic_name': topic_name,
+            'sub_key': sub_key,
+            'redis_stream_id': redis_stream_id,
+        })
+
+        if response.ok:
+            response_data = _parse_response_data(response)
+            response_json = json.dumps(response_data)
+
+            out = HttpResponse(response_json, content_type='application/json')
+
+        # .. the service returned an error ..
+        else:
+            error_message = response.details
+            if not error_message:
+                error_message = _default_error_message
+
+            error_json = json.dumps({'error': error_message})
+
+            out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
+
+    # .. handle any unexpected transport or connection errors.
+    except Exception: # noqa: BLE001
+        logger.error('Pub/sub message delete error: %s', format_exc())
+
+        error_json = json.dumps({'error': _default_error_message})
+
+        out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
