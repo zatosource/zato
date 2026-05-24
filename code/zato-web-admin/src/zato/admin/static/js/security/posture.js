@@ -132,6 +132,56 @@ $.fn.zato.security.posture._field_descriptions = {
                     '<span class="toggle-slider"></span>' +
                 '</label>' +
             '</div>' +
+        '</div>',
+
+    'posture-toggle-auth-weak-credentials':
+        '<div class="hiw-posture-explanation">' +
+            '<div class="hiw-posture-title">Weak passwords</div>' +
+            '<div class="hiw-posture-body">' +
+                'Security definitions in Zato store the credentials that clients use to authenticate. ' +
+                'A password that is too short or too common can be guessed easily.' +
+                '<br><br>' +
+                'This check ' +
+                '<span class="hiw-posture-highlight">measures the strength of every password in your security definitions and flags any that score below the acceptable threshold</span>. ' +
+                '<br><br>' +
+                'Strength is scored on a scale from 0 (extremely weak) to 4 (very strong). ' +
+                'A score of 0 or 1 means the password can be cracked almost instantly, ' +
+                '2 is guessable with some effort, 3 is reasonably safe, and 4 is very hard to crack. ' +
+                'Passwords scoring below 3 are flagged. ' +
+                'The scoring considers length, character variety, common patterns, and whether the password appears in known breach lists.' +
+                '<br><br>' +
+                'Replacing weak passwords before they are exploited is one of the simplest ways to harden your environment.' +
+            '</div>' +
+            '<div class="hiw-posture-toggle">' +
+                '<span class="hiw-posture-toggle-label">Toggle</span>' +
+                '<label class="toggle-switch hiw-toggle-switch">' +
+                    '<input type="checkbox" class="hiw-posture-toggle-input">' +
+                    '<span class="toggle-slider"></span>' +
+                '</label>' +
+            '</div>' +
+        '</div>',
+
+    'posture-toggle-auth-shared-credentials':
+        '<div class="hiw-posture-explanation">' +
+            '<div class="hiw-posture-title">Shared credentials</div>' +
+            '<div class="hiw-posture-body">' +
+                'Each REST channel can have its own security definition, giving every consumer a unique set of credentials. ' +
+                'When multiple channels share the same definition, revoking access for one consumer means revoking it for all of them.' +
+                '<br><br>' +
+                'This check ' +
+                '<span class="hiw-posture-highlight">finds security definitions that are assigned to more than one channel at the same time</span>. ' +
+                'Sharing credentials makes it impossible to trace which consumer made a particular request ' +
+                'and prevents you from cutting off a single misbehaving client without affecting others.' +
+                '<br><br>' +
+                'Ideally, every channel should have its own dedicated security definition so access can be managed individually.' +
+            '</div>' +
+            '<div class="hiw-posture-toggle">' +
+                '<span class="hiw-posture-toggle-label">Toggle</span>' +
+                '<label class="toggle-switch hiw-toggle-switch">' +
+                    '<input type="checkbox" class="hiw-posture-toggle-input">' +
+                    '<span class="toggle-slider"></span>' +
+                '</label>' +
+            '</div>' +
         '</div>'
 };
 
