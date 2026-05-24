@@ -119,21 +119,25 @@ def _fetch_list(client, cluster_id, object_type):
     """ Fetches the current list of objects for a given type by invoking the appropriate Zato service.
     Returns a list of dicts, each containing at minimum the id_field and label_fields.
     """
+    _fl_logger = getLogger('zato.live_form_updates')
+
     config = OBJECT_TYPE_CONFIG.get(object_type)
     if not config:
-        logger.warning('live_form_updates._fetch_list: unknown object_type=%s', object_type)
+        _fl_logger.info('live_form_updates._fetch_list: unknown object_type=%s', object_type)
         return []
 
     params = {'cluster_id': cluster_id}
     params.update(config.get('extra_params') or {})
 
-    logger.debug('live_form_updates._fetch_list: invoking %s with params=%s for object_type=%s',
+    _fl_logger.info('live_form_updates._fetch_list: about to invoke %s with params=%s for object_type=%s',
         config['service_name'], params, object_type)
 
     try:
+        _fl_logger.info('live_form_updates._fetch_list: calling client.invoke now, client type=%s', type(client).__name__)
         response = client.invoke(config['service_name'], params)
+        _fl_logger.info('live_form_updates._fetch_list: client.invoke returned for %s', config['service_name'])
     except Exception:
-        logger.error('live_form_updates._fetch_list: error invoking %s: %s', config['service_name'], format_exc())
+        _fl_logger.info('live_form_updates._fetch_list: EXCEPTION invoking %s: %s', config['service_name'], format_exc())
         return []
 
     filter_func = config.get('filter_func')
@@ -306,13 +310,22 @@ def stream(req):
 
     def event_stream():
 
+        import sys as _sys
+        def _flush_log(msg):
+            stream_logger.info(msg)
+            for _handler in stream_logger.handlers:
+                _handler.flush()
+            _sys.stdout.flush()
+            _sys.stderr.flush()
+
         snapshots = {}
         for object_type, client_items in initial_object_types:
             snapshots[object_type] = client_items
 
         try:
+            _flush_log('live_form_updates.stream: about to yield connected comment')
             yield ': connected\n\n'
-            stream_logger.info('live_form_updates.stream: sent connected comment, entering loop')
+            _flush_log('live_form_updates.stream: yielded connected comment, returned from yield')
 
             iteration = 0
 
@@ -320,11 +333,15 @@ def stream(req):
                 iteration += 1
                 all_diffs = {}
 
+                _flush_log('live_form_updates.stream: LOOP TOP iter=%d' % iteration)
+
                 for object_type, _ in initial_object_types:
                     config = OBJECT_TYPE_CONFIG[object_type]
                     label_fields = config['label_fields']
 
+                    _flush_log('live_form_updates.stream: iter=%d, about to fetch %s' % (iteration, object_type))
                     current_list = _fetch_list(zato_client, cluster_id, object_type)
+                    _flush_log('live_form_updates.stream: iter=%d, fetched %s, got %d items' % (iteration, object_type, len(current_list)))
 
                     if iteration <= 3:
                         stream_logger.info('live_form_updates.stream: iter=%d, object_type=%s, server_items=%d, snapshot_items=%d',
@@ -346,12 +363,17 @@ def stream(req):
 
                 if all_diffs:
                     msg = dumps(all_diffs)
-                    stream_logger.info('live_form_updates.stream: iter=%d, sending diff, length=%d', iteration, len(msg))
+                    _flush_log('live_form_updates.stream: iter=%d, about to yield diff, length=%d' % (iteration, len(msg)))
                     yield 'data: {}\n\n'.format(msg)
+                    _flush_log('live_form_updates.stream: iter=%d, yielded diff, returned from yield' % iteration)
                 else:
+                    _flush_log('live_form_updates.stream: iter=%d, about to yield ping' % iteration)
                     yield ': ping\n\n'
+                    _flush_log('live_form_updates.stream: iter=%d, yielded ping, returned from yield' % iteration)
 
+                _flush_log('live_form_updates.stream: iter=%d, about to sleep 1s' % iteration)
                 time.sleep(1)
+                _flush_log('live_form_updates.stream: iter=%d, woke from sleep' % iteration)
 
         except GeneratorExit:
             stream_logger.info('live_form_updates.stream: client disconnected (GeneratorExit)')
