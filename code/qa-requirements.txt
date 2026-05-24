@@ -23,3 +23,4 @@ unify==0.5
 yapf
 yappi==1.7.6
 aiohttp==3.13.5
+playwright
