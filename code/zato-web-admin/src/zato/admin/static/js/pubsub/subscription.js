@@ -84,10 +84,7 @@ var Multi_Select_Empty_Message = '<table id="multi-select-table" class="multi-se
 $.fn.zato.data_table.PubSubSubscription = new Class({
     toString: function() {
         var s = '<PubSubSubscription id:{0} topic_link_list:{1} security:{2} pattern_matched:{3}>';
-        return String.format(s, this.id ? this.id : '(none)',
-                                this.topic_link_list ? this.topic_link_list : '(none)',
-                                this.security ? this.security : '(none)',
-                                this.pattern_matched ? this.pattern_matched : '(none)');
+        return String.format(s, this.id, this.topic_link_list, this.security, this.pattern_matched);
     }
 });
 
@@ -459,10 +456,12 @@ $(document).ready(function() {
 
         console.log('DEBUG on_submit: deliveryType=' + JSON.stringify(deliveryType) + ', pushType=' + JSON.stringify(pushType));
 
-        if (deliveryType === 'push' && !pushType) {
-            console.log('DEBUG on_submit: validation failed - push type required');
-            $.fn.zato.user_message(true, 'Push type is required when delivery type is push');
-            return false;
+        if (deliveryType === 'push') {
+            if (!pushType) {
+                console.log('DEBUG on_submit: validation failed - push type required');
+                $.fn.zato.user_message(true, 'Push type is required when delivery type is push');
+                return false;
+            }
         }
 
         // Clear conflicting fields based on push type
@@ -528,10 +527,6 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
     console.log('DEBUG populateRestEndpoints: Looking for element with ID: ' + endpointSelectId);
     console.log('DEBUG populateRestEndpoints: Element found: ' + ($endpointSelect.length > 0));
     console.log('DEBUG populateRestEndpoints: All elements with similar IDs: ' + $('[id*="rest_push_endpoint_id"]').map(function() { return this.id; }).get().join(', '));
-    if ($endpointSelect.length === 0) {
-        console.log('DEBUG populateRestEndpoints: Endpoint select not found: ' + endpointSelectId);
-        return;
-    }
 
     // Clear existing options
     $endpointSelect.empty();
@@ -546,7 +541,7 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
         url: '/zato/pubsub/subscription/get-rest-endpoints/',
         type: 'GET',
         data: {
-            cluster_id: $('#cluster_id').val() || $('#id_edit-cluster_id').val()
+            cluster_id: '1'
         },
         success: function(response) {
             var responseJson = JSON.stringify(response);
@@ -562,13 +557,15 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
 
             $endpointSelect.append('<option value="">Select an endpoint ...</option>');
 
-            if (response.rest_endpoints && response.rest_endpoints.length > 0) {
+            if (response.rest_endpoints.length > 0) {
                 $.each(response.rest_endpoints, function(index, endpoint) {
                     var option = $('<option></option>')
                         .attr('value', endpoint.id)
                         .text(endpoint.name);
-                    if (selectedId && endpoint.id == selectedId) {
-                        option.prop('selected', true);
+                    if (selectedId) {
+                        if (endpoint.id == selectedId) {
+                            option.prop('selected', true);
+                        }
                     }
                     $endpointSelect.append(option);
                 });
@@ -617,7 +614,7 @@ $.fn.zato.pubsub.subscription.loadRestChannels = function() {
             cluster_id: cluster_id
         },
         success: function(response) {
-            if (response.rest_channels && response.rest_channels.length > 0) {
+            if (response.rest_channels.length > 0) {
                 var items = [];
                 for (var i = 0; i < response.rest_channels.length; i++) {
                     var channel = response.rest_channels[i];
@@ -657,13 +654,11 @@ $.fn.zato.pubsub.subscription.loadRestChannels = function() {
 
 // Function to populate Services
 $.fn.zato.pubsub.subscription.populateServices = function(form_type, selectedId, showSpan) {
-    // Default showSpan to true if not specified
-    showSpan = (showSpan !== false);
-
-    var cluster_id = $('#cluster_id').val() || $('#id_edit-cluster_id').val();
-    if (!cluster_id) {
-        return;
+    if (showSpan === undefined) {
+        showSpan = true;
     }
+
+    var cluster_id = '1';
 
     var serviceSelectId = form_type === 'create' ? '#id_push_service_name' : '#id_edit-push_service_name';
     var $serviceSelect = $(serviceSelectId);
@@ -671,10 +666,6 @@ $.fn.zato.pubsub.subscription.populateServices = function(form_type, selectedId,
     var $serviceSpan = $(serviceSpanId);
     var pushTypeId = form_type === 'create' ? '#id_push_type' : '#id_edit-push_type';
     var currentPushType = $(pushTypeId).val();
-
-    if ($serviceSelect.length === 0) {
-        return;
-    }
 
     // Clear existing options
     $serviceSelect.empty();
@@ -691,16 +682,18 @@ $.fn.zato.pubsub.subscription.populateServices = function(form_type, selectedId,
         // Clear existing options except the first one
         $serviceSelect.find('option:not(:first)').remove();
 
-        if (response.services && response.services.length > 0) {
+        if (response.services.length > 0) {
             response.services.forEach(function(service) {
                 var option = $('<option></option>')
                     .attr('value', service.service_name)
                     .text(service.service_name);
-                if (selectedId && service.service_name === selectedId) {
-                    option.attr('selected', 'selected');
-                    console.log('DEBUG Service Selection: MATCH! service.service_name=', JSON.stringify(service.service_name), 'selectedId=', JSON.stringify(selectedId));
-                } else if (selectedId) {
-                    console.log('DEBUG Service Selection: NO MATCH! service.service_name=', JSON.stringify(service.service_name), 'selectedId=', JSON.stringify(selectedId));
+                if (selectedId) {
+                    if (service.service_name === selectedId) {
+                        option.attr('selected', 'selected');
+                        console.log('DEBUG Service Selection: MATCH! service.service_name=', JSON.stringify(service.service_name), 'selectedId=', JSON.stringify(selectedId));
+                    } else {
+                        console.log('DEBUG Service Selection: NO MATCH! service.service_name=', JSON.stringify(service.service_name), 'selectedId=', JSON.stringify(selectedId));
+                    }
                 }
                 $serviceSelect.append(option);
             });
@@ -768,7 +761,10 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     } else {
         // Push delivery type - check push_type to determine what to show
         if(item.push_type === 'rest' && item.rest_push_endpoint_id) {
-            var endpointName = item.rest_push_endpoint_name || '';
+            var endpointName = item.rest_push_endpoint_name;
+            if (endpointName === null) {
+                endpointName = '';
+            }
             if(!endpointName) {
                 var selectIds = ['#id_edit-rest_push_endpoint_id', '#id_rest_push_endpoint_id'];
 
@@ -797,8 +793,8 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     }
 
     row += String.format('<td>{0}</td>', item.topic_link_list);
+    row += String.format('<td style="text-align:center"><a href="/zato/pubsub/subscription/queue/?cluster=1&sub_key={0}&queue_name={1}&state=pending">{2}</a></td>', encodeURIComponent(item.sub_key), encodeURIComponent(item.sec_name), item.pending_depth);
     row += String.format('<td style="text-align:center">{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.edit('{0}');\">Edit</a>", item.id));
-    /* row += '<td style="text-align:center"><a href="/zato/pubsub/dashboard/?cluster=1">Queue</a></td>'; */
     row += String.format('<td style="text-align:center">{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.delete_('{0}');\">Delete</a>", item.id));
 
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
@@ -813,6 +809,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += String.format("<td class='ignore'>{0}</td>", item.rest_push_endpoint_name);
     row += String.format("<td class='ignore'>{0}</td>", item.push_service_name);
     row += String.format("<td class='ignore'>{0}</td>", item.topic_name_list || '');
+    row += String.format("<td class='ignore'>{0}</td>", item.pending_depth);
 
     if(include_tr) {
         row += '</tr>';
@@ -998,7 +995,10 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type, 
     $restEndpointSpan.hide();
     $serviceSpan.hide();
 
-    if ($deliveryType.length === 0 || $pushTypeSpan.length === 0) {
+    if ($deliveryType.length === 0) {
+        return;
+    }
+    if ($pushTypeSpan.length === 0) {
         return;
     }
 
@@ -1030,7 +1030,12 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type, 
 
         // Load REST endpoints if not already loaded
         if (!window.restEndpointsLoaded) {
-            var selectedEndpointId = form_type === 'create' ? null : (instance_id ? $.fn.zato.data_table.data[instance_id].rest_push_endpoint_id : null);
+            var selectedEndpointId = null;
+            if (form_type !== 'create') {
+                if (instance_id) {
+                    selectedEndpointId = $.fn.zato.data_table.data[instance_id].rest_push_endpoint_id;
+                }
+            }
             console.log('DEBUG toggleEndpointTypeVisibility: loading REST endpoints for selectedEndpointId=' + JSON.stringify(selectedEndpointId));
             $.fn.zato.pubsub.subscription.populateRestEndpoints(form_type, selectedEndpointId, false);
             window.restEndpointsLoaded = true;
@@ -1039,7 +1044,12 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type, 
 
         // Load services if not already loaded
         if (!window.servicesLoaded) {
-            var selectedServiceId = form_type === 'create' ? null : (instance_id ? $.fn.zato.data_table.data[instance_id].push_service_name : null);
+            var selectedServiceId = null;
+            if (form_type !== 'create') {
+                if (instance_id) {
+                    selectedServiceId = $.fn.zato.data_table.data[instance_id].push_service_name;
+                }
+            }
             console.log('DEBUG toggleEndpointTypeVisibility: loading services for selectedServiceId=' + JSON.stringify(selectedServiceId));
             $.fn.zato.pubsub.subscription.populateServices(form_type, selectedServiceId, false);
             window.servicesLoaded = true;

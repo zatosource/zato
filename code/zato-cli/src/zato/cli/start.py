@@ -118,14 +118,10 @@ Examples:
 
         pidfile = pidfile or os.path.join(self.config_dir, MISC.PIDFILE)
 
-        # If we have a pidfile of that name then we already have a running
-        # server, in which case we refrain from starting new processes now.
         if os.path.exists(pidfile):
-            msg = 'Error - found pidfile `{}`'.format(pidfile)
-            self.logger.info(msg)
-            return self.SYS_ERROR.COMPONENT_ALREADY_RUNNING
+            self.logger.info('Removing pidfile `%s`', pidfile)
+            os.remove(pidfile)
 
-        # Returning None would have sufficed but let's be explicit.
         return 0
 
 # ################################################################################################################################
@@ -528,7 +524,7 @@ Examples:
             try:
                 process.wait()
             except KeyboardInterrupt:
-                process.terminate()
+                process.kill()
             finally:
                 try:
                     os.remove(pidfile)

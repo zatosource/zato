@@ -27,6 +27,7 @@ from django.http.response import HttpResponseServerError
 
 # Zato
 from zato.admin.web.views import method_allowed
+from zato.common.defaults import default_server_base_dir
 from zato.common.json_internal import dumps, loads
 from zato.common.util import openapi_ as openapi_module
 
@@ -141,7 +142,7 @@ def import_objects(req):
 
         logger.info('import_objects: enmasse YAML:\n%s', enmasse_yaml)
 
-        server_path = os.path.expanduser('~/env/qs-1/server1')
+        server_path = default_server_base_dir
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False, encoding='utf-8') as f:
             _ = f.write(enmasse_yaml)

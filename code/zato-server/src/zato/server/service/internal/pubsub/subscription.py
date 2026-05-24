@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+import logging as _depth_logging
 from logging import getLogger
 from operator import itemgetter
 from traceback import format_exc
@@ -20,13 +21,19 @@ from zato.common.ext.bunch import Bunch, bunchify
 from zato.common.broker_message import PUBSUB
 
 logger = getLogger(__name__)
+
+_depth_debug_logger = _depth_logging.getLogger('zato.depth_debug')
+_depth_debug_logger.setLevel(_depth_logging.DEBUG)
+_depth_fh = _depth_logging.FileHandler('/tmp/zato-depth-debug.log')
+_depth_fh.setFormatter(_depth_logging.Formatter('%(asctime)s %(message)s'))
+_depth_debug_logger.addHandler(_depth_fh)
 from zato.common.api import PubSub, query_parameters
 from zato.common.odb.model import Cluster, HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 from zato.common.odb.query import pubsub_subscription_list
 from zato.common.pubsub.util import evaluate_pattern_match, get_security_definition, set_time_since
 from zato.common.util.api import as_bool, new_sub_key, utcnow
 from zato.common.util.sql import elems_with_opaque
-from zato.server.service import AsIs, PubSubMessage, Service
+from zato.server.service import AsIs, Int, PubSubMessage, Service
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -84,7 +91,7 @@ def _build_topic_objects_list(topic_data_list=None, topics=None, topic_data_by_n
 
 if 0:
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import strdict, strlist
+    from zato.common.typing_ import anydict, anylist, strdict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -121,7 +128,7 @@ class GetList(AdminService):
     input = 'cluster_id', '-needs_password', *query_parameters
     output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', AsIs('topic_link_list'), 'sec_base_id', \
         'sec_name', 'security', 'username', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name', \
-        '-rest_push_endpoint_name', AsIs('-topic_name_list'), '-password'
+        '-rest_push_endpoint_name', AsIs('-topic_name_list'), '-password', Int('-pending_depth')
 
     def get_data(self, session):
 
@@ -177,19 +184,43 @@ class GetList(AdminService):
             if not topic_exists:
                 topics_by_id[sub_id].append(topic_dict)
 
-        # Process data for each subscription
-        data = []
+        # Build (sub_key, topic_name) pairs for the pending depth lookup ..
+        sub_topic_pairs:'anylist' = []
+
+        for sub_id in subscriptions_by_id:
+            sub_key = subscriptions_by_id[sub_id]['sub_key']
+            for topic_dict in topics_by_id[sub_id]:
+                topic_name = topic_dict['topic_name']
+                sub_topic_pairs.append((sub_key, topic_name))
+
+        # .. get pending depths from Redis in a single Lua call ..
+        pending_depths = self.server.pubsub_redis.get_pending_depths(sub_topic_pairs)
+
+        _depth_debug_logger.info('GetList.get_data pairs=%s depths=%s', sub_topic_pairs, pending_depths)
+
+        # .. and process data for each subscription.
+        data:'anylist' = []
+
         for sub_id, sub_dict in subscriptions_by_id.items():
 
-            # Sort topics by name
+            # Sort topics by name ..
             sorted_topics = sorted(topics_by_id[sub_id], key=lambda x: x['topic_name'])
 
-            # Create topic links from sorted topics
-            topic_link_list = [get_topic_link(topic['topic_name'], topic['is_pub_enabled'], topic['is_delivery_enabled']) for topic in sorted_topics]
+            # .. create topic links from sorted topics ..
+            topic_link_list:'anylist' = []
 
-            # Store both fields
+            for topic in sorted_topics:
+                topic_link = get_topic_link(topic['topic_name'], topic['is_pub_enabled'], topic['is_delivery_enabled'])
+                topic_link_list.append(topic_link)
+
+            # .. store fields including the pending depth.
+            sub_key = sub_dict['sub_key']
             sub_dict['topic_link_list'] = ', '.join(topic_link_list)
             sub_dict['topic_name_list'] = sorted_topics
+            if sub_key in pending_depths:
+                sub_dict['pending_depth'] = pending_depths[sub_key]
+            else:
+                sub_dict['pending_depth'] = 0
 
             data.append(sub_dict)
 
@@ -250,7 +281,7 @@ class Create(AdminService):
                 sec_base = session.query(SecurityBase).filter_by(id=input.sec_base_id).first()
 
                 # Generate a new subscription key
-                sub_key = input.sub_key or new_sub_key(sec_base.name)
+                sub_key = input.sub_key or new_sub_key()
 
                 # Get topics
                 topics = []
@@ -990,6 +1021,314 @@ class HandleDelivery(Service):
         else:
             msg = f'Unrecognized push_type: {repr(input.get("push_type"))} ({input.get("msg_id")} - {input.get("correl_id")})'
             raise Exception(msg)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_browse_cursor_start = '-'
+_browse_default_page_size = 50
+_browse_default_page_number = 1
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _since_ts_to_cursor(stream_id:'str') -> 'str':
+    """ Increments the sequence part of a Redis stream ID by 1
+    so that the cursor excludes the last-seen entry.
+    """
+    parts = stream_id.split('-')
+    timestamp_part = parts[0]
+    next_sequence = int(parts[1]) + 1
+    out = f'{timestamp_part}-{next_sequence}'
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class BrowseQueue(AdminService):
+    """ Browses messages in a subscription's queue filtered by delivery state.
+    Compatible with the dashboard kit pagination contract (accepts page/page_size, returns rows/total/page).
+    Uses Redis-side pagination - only the requested page is fetched from Redis.
+    """
+
+    name  = 'zato.pubsub.subscription.browse-queue'
+    input = '-sub_key', '-id', Int('-page'), Int('-page_size'), '-state', '-since_ts'
+
+    def handle(self) -> 'None':
+
+        # Extract request parameters ..
+        # .. the kit sends 'id', direct callers send 'sub_key' ..
+        sub_key     = self.request.input.sub_key or self.request.input.id
+        page_size   = self.request.input.page_size or _browse_default_page_size
+        page_number = self.request.input.page or _browse_default_page_number
+        state       = self.request.input.state or 'pending'
+
+        if since_ts := self.request.input.get('since_ts'):
+            cursor = _since_ts_to_cursor(since_ts)
+        else:
+            cursor = _browse_cursor_start
+
+        logger.info('BrowseQueue -> sub_key:%s, state:%s, page:%s, page_size:%s, since_ts:%s, cursor:%s',
+            sub_key, state, page_number, page_size, since_ts, cursor)
+
+        # .. get all topics this subscriber is subscribed to ..
+        topic_names = self.server.pubsub_redis.get_subscribed_topics(sub_key)
+
+        # .. get the real total from O(1) Redis commands ..
+        total = 0
+        for topic_name in topic_names:
+            count = self.server.pubsub_redis.get_total_count(sub_key, topic_name, state)
+            logger.info('BrowseQueue total_count -> topic:%s, state:%s, count:%s', topic_name, state, count)
+            total += count
+
+        if since_ts:
+
+            # Incremental poll - fetch only new rows since the given timestamp ..
+            new_rows:'anylist' = []
+
+            for topic_name in topic_names:
+                messages, next_cursor = self.server.pubsub_redis.browse_messages(
+                    topic_name, sub_key=sub_key, state=state,
+                    cursor=cursor, page_size=page_size, needs_data=False)
+                logger.info('BrowseQueue since_ts browse -> topic:%s, cursor:%s, got:%d, next_cursor:%s',
+                    topic_name, cursor, len(messages), next_cursor)
+                new_rows.extend(messages)
+
+            new_rows.sort(key=itemgetter('pub_time_iso'))
+
+            if new_rows:
+                logger.info('BrowseQueue since_ts result -> rows:%d, first_id:%s, last_id:%s',
+                    len(new_rows), new_rows[0]['redis_stream_id'], new_rows[-1]['redis_stream_id'])
+
+            out = {
+                'rows': new_rows,
+                'total': total,
+                'page': 1,
+                'sub_key': sub_key,
+            }
+
+        else:
+
+            # Full page fetch - newest first via reverse browse ..
+            page_rows:'anylist' = []
+
+            for topic_name in topic_names:
+                messages, next_cursor = self.server.pubsub_redis.browse_messages(
+                    topic_name, sub_key=sub_key, state=state,
+                    cursor=cursor, page_size=page_size, needs_data=False,
+                    reverse=True)
+                logger.info('BrowseQueue reverse browse -> topic:%s, cursor:%s, got:%d, next_cursor:%s',
+                    topic_name, cursor, len(messages), next_cursor)
+                if messages:
+                    logger.info('BrowseQueue reverse browse first/last -> first_id:%s, first_pub:%s, last_id:%s, last_pub:%s',
+                        messages[0]['redis_stream_id'], messages[0]['pub_time_iso'],
+                        messages[-1]['redis_stream_id'], messages[-1]['pub_time_iso'])
+                page_rows.extend(messages)
+
+            page_rows.sort(key=itemgetter('pub_time_iso'), reverse=True)
+            page_rows = page_rows[:page_size]
+
+            if page_rows:
+                logger.info('BrowseQueue final page -> rows:%d, first_pub:%s, last_pub:%s',
+                    len(page_rows), page_rows[0]['pub_time_iso'], page_rows[-1]['pub_time_iso'])
+
+            out = {
+                'rows': page_rows,
+                'total': total,
+                'page': page_number,
+                'sub_key': sub_key,
+            }
+
+        # .. and return the response in the kit pagination contract.
+        self.response.payload = out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetMessageDetail(AdminService):
+    """ Returns the full detail of a single message for the edit form.
+    """
+
+    name  = 'zato.pubsub.subscription.get-message-detail'
+    input = 'msg_id', 'topic_name', 'redis_stream_id'
+
+    def handle(self) -> 'None':
+
+        # Our response to produce
+        out:'anydict' = {}
+
+        # Extract request parameters ..
+        msg_id          = self.request.input.msg_id
+        topic_name      = self.request.input.topic_name
+        redis_stream_id = self.request.input.redis_stream_id
+
+        # .. check if the full payload still exists on disk ..
+        data_reference = self.server.pubsub_redis.disk_store.make_ref(msg_id, topic_name)
+        has_data = self.server.pubsub_redis.disk_store.exists(data_reference)
+
+        if has_data:
+            load_result = self.server.pubsub_redis.disk_store.load(data_reference)
+
+        # .. fetch the stream entry metadata ..
+        stream_key = self.server.pubsub_redis.get_stream_key(topic_name)
+        raw_entries = self.server.pubsub_redis.redis.xrange(stream_key, min=redis_stream_id, max=redis_stream_id)
+
+        if not raw_entries:
+            out = {'error': f'Stream entry not found: {redis_stream_id}'}
+
+            self.response.payload = out
+            return
+
+        # .. build the response with metadata from the stream entry ..
+        first_entry = raw_entries[0]
+        entry_data = first_entry[1]
+
+        out = {
+            'msg_id': msg_id,
+            'topic_name': topic_name,
+            'redis_stream_id': redis_stream_id,
+            'has_data': has_data,
+            'data': load_result.data if has_data else '',
+            'data_class': load_result.data_class if has_data else '',
+            'priority': int(entry_data['priority']),
+            'expiration': int(entry_data['expiration']),
+            'pub_time_iso': entry_data['pub_time_iso'],
+            'recv_time_iso': entry_data['recv_time_iso'],
+            'expiration_time_iso': entry_data['expiration_time_iso'],
+            'data_size': int(entry_data['data_size']),
+        }
+
+        # .. include optional metadata fields ..
+        if correl_id := entry_data.get('correl_id'):
+            out['correl_id'] = correl_id
+
+        if in_reply_to := entry_data.get('in_reply_to'):
+            out['in_reply_to'] = in_reply_to
+
+        if ext_client_id := entry_data.get('ext_client_id'):
+            out['ext_client_id'] = ext_client_id
+
+        if publisher := entry_data.get('publisher'):
+            out['publisher'] = publisher
+
+        # .. and return the response.
+        self.response.payload = out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetMessageMetadata(AdminService):
+    """ Returns only the Redis stream metadata for a single message (no disk read).
+    """
+
+    name  = 'zato.pubsub.subscription.get-message-metadata'
+    input = 'msg_id', 'topic_name', 'redis_stream_id'
+
+    def handle(self) -> 'None':
+
+        # Our response to produce
+        out:'anydict' = {}
+
+        # Extract request parameters ..
+        msg_id          = self.request.input.msg_id
+        topic_name      = self.request.input.topic_name
+        redis_stream_id = self.request.input.redis_stream_id
+
+        # .. fetch the stream entry metadata ..
+        stream_key = self.server.pubsub_redis.get_stream_key(topic_name)
+        raw_entries = self.server.pubsub_redis.redis.xrange(stream_key, min=redis_stream_id, max=redis_stream_id)
+
+        if not raw_entries:
+            out = {'error': f'Stream entry not found: {redis_stream_id}'}
+
+            self.response.payload = out
+            return
+
+        # .. build the response with metadata from the stream entry ..
+        first_entry = raw_entries[0]
+        entry_data = first_entry[1]
+
+        out = {
+            'msg_id': msg_id,
+            'topic_name': topic_name,
+            'redis_stream_id': redis_stream_id,
+            'priority': int(entry_data['priority']),
+            'expiration': int(entry_data['expiration']),
+            'pub_time_iso': entry_data['pub_time_iso'],
+            'recv_time_iso': entry_data['recv_time_iso'],
+            'expiration_time_iso': entry_data['expiration_time_iso'],
+            'data_size': int(entry_data['data_size']),
+        }
+
+        # .. include optional metadata fields ..
+        if correl_id := entry_data.get('correl_id'):
+            out['correl_id'] = correl_id
+
+        if in_reply_to := entry_data.get('in_reply_to'):
+            out['in_reply_to'] = in_reply_to
+
+        if ext_client_id := entry_data.get('ext_client_id'):
+            out['ext_client_id'] = ext_client_id
+
+        if publisher := entry_data.get('publisher'):
+            out['publisher'] = publisher
+
+        # .. and return the response.
+        self.response.payload = out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_default_data_class = ''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class UpdateMessage(AdminService):
+    """ Updates a message's payload on disk.
+    """
+
+    name  = 'zato.pubsub.subscription.update-message'
+    input = 'msg_id', 'topic_name', 'data'
+
+    def handle(self) -> 'None':
+
+        # Extract request parameters ..
+        msg_id     = self.request.input.msg_id
+        topic_name = self.request.input.topic_name
+        data       = self.request.input.data
+
+        # .. overwrite the payload file on disk ..
+        _ = self.server.pubsub_redis.disk_store.store(msg_id, topic_name, data, _default_data_class)
+
+        # .. and return success.
+        out = {
+            'msg_id': msg_id,
+            'status': 'ok',
+        }
+
+        self.response.payload = out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ClearQueue(AdminService):
+    """ Clears all pending messages from a subscriber's queue.
+    """
+
+    name  = 'zato.pubsub.subscription.clear-queue'
+    input = 'sub_key'
+
+    def handle(self) -> 'None':
+
+        # Extract the sub_key ..
+        sub_key = self.request.input.sub_key
+
+        # .. delegate to the Redis backend ..
+        result = self.server.pubsub_redis.clear_queue(sub_key)
+
+        # .. and return the result.
+        self.response.payload = result
 
 # ################################################################################################################################
 # ################################################################################################################################

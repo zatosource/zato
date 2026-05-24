@@ -1,0 +1,74 @@
+{% extends "zato/detail_base.html" %}
+
+{% block page_title %}Queue: {{ queue_name }}{% endblock %}
+
+{% block detail_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/pubsub/queue.css">
+{% endblock %}
+
+{% block progress_panel_class %}progress-panel-borderless progress-panel-no-margin{% endblock %}
+
+{% block section_title %}
+<div class="detail-header-row-1">
+    <span>
+        <a href="{{ subscriptions_url }}" class="detail-component-pill menu-link">Subscriptions</a>
+        {{ queue_name }}
+    </span>
+    <span class="detail-header-right">
+        <span class="detail-inline-stats">
+            <span class="detail-inline-stat"><span class="detail-inline-stat-label">Depth</span> <span id="stat-depth">{{ depth }}</span></span>
+        </span>
+        <button class="action-button" id="clear-queue-button" type="button">Clear queue</button>
+    </span>
+</div>
+<div class="detail-header-row-2" id="queue-header-row-2">
+    <div class="detail-header-controls">
+        <span class="dashboard-time-range-wrapper">
+            <span class="dashboard-pill dashboard-pill-clickable dashboard-refresh-badge" id="queue-refresh-pill">Paused</span>
+            <div class="dashboard-time-range-menu" id="queue-refresh-menu"></div>
+        </span>
+        <span class="dashboard-time-range-wrapper">
+            <span class="dashboard-pill dashboard-pill-clickable" id="queue-state-pill">{{ state|title }}</span>
+            <div class="dashboard-time-range-menu" id="queue-state-menu">
+                <div class="dashboard-time-range-option{% if state == 'pending' %} dashboard-time-range-active{% endif %}" data-state="pending">Pending</div>
+                <div class="dashboard-time-range-option{% if state == 'all' %} dashboard-time-range-active{% endif %}" data-state="all">All</div>
+                <div class="dashboard-time-range-option{% if state == 'delivered' %} dashboard-time-range-active{% endif %}" data-state="delivered">Delivered</div>
+            </div>
+        </span>
+    </div>
+</div>
+{% endblock %}
+{% block help_icon_id %}{% endblock %}
+
+{% block stat_cards %}{% endblock %}
+{% block actions %}{% endblock %}
+
+{% block tabs %}{% endblock %}
+
+{% block tab_panels %}
+
+<div class="detail-pagination-controls" id="queue-pagination-top"></div>
+<table class="detail-table">
+    <thead><tr><th>#</th><th>Message ID</th><th>Topic</th><th>Delivered</th><th>Data preview</th><th>Size</th><th>Published</th></tr></thead>
+    <tbody id="messages-body"></tbody>
+</table>
+<div class="detail-pagination-controls" id="queue-pagination-bottom"></div>
+
+{% endblock %}
+
+{% block detail_js %}
+{{ queue_data|json_script:"queue-data-json" }}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ace.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_highlight_pane.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/queue.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.pubsub.queue.init('{{ sub_key|escapejs }}', {
+        poll_url: '{{ poll_url }}',
+        state: '{{ state }}',
+        queue_name: '{{ queue_name|escapejs }}',
+        initial_data: JSON.parse(document.getElementById('queue-data-json').textContent)
+    });
+});
+</script>
+{% endblock %}

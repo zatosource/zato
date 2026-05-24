@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
+from http import HTTPStatus
 from operator import itemgetter
 from traceback import format_exc
 
@@ -24,6 +25,7 @@ from zato.admin.web.views import get_group_list as common_get_group_list, get_ht
 from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      generic_attrs, Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
      SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
+from zato.common.content_type import format_content, get_content_type
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
 # Bunch
@@ -384,15 +386,21 @@ def _extract_invoke_params(req):
 def _build_invoke_response(service_response):
     if service_response.ok:
         data = service_response.data
+        response_body = data.response_body
+        content_type = get_content_type(response_body)
+        formatted_body = format_content(response_body, content_type)
+
         return JsonResponse({
-            'data': getattr(data, 'response_body', ''),
-            'response_time_human': getattr(data, 'response_time', ''),
+            'data': formatted_body,
+            'response_time_human': data.response_time,
+            'content_type': content_type,
         })
 
     return JsonResponse({
         'data': str(service_response.details),
         'response_time_human': '',
-    }, status=500)
+        'content_type': 'text/plain',
+    }, status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -406,7 +414,7 @@ def invoke_channel(req, id):
         return _build_invoke_response(response)
     except Exception as e:
         logger.error('invoke_channel error: %s', format_exc())
-        return JsonResponse({'data': str(e), 'response_time_human': ''}, status=500)
+        return JsonResponse({'data': str(e), 'response_time_human': '', 'content_type': 'text/plain'}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -420,7 +428,7 @@ def invoke_outconn(req, id):
         return _build_invoke_response(response)
     except Exception as e:
         logger.error('invoke_outconn error: %s', format_exc())
-        return JsonResponse({'data': str(e), 'response_time_human': ''}, status=500)
+        return JsonResponse({'data': str(e), 'response_time_human': '', 'content_type': 'text/plain'}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -463,7 +471,7 @@ def rate_limiting_save(req, id): # type: ignore
         if response.ok:
             return JsonResponse({'status': 'ok'})
         else:
-            return JsonResponse({'status': 'error', 'message': response.details}, status=400)
+            return JsonResponse({'status': 'error', 'message': response.details}, status=HTTPStatus.BAD_REQUEST)
     except Exception:
         msg = 'Rate limiting rules could not be saved, e:`{}`'.format(format_exc())
         logger.error(msg)
@@ -482,7 +490,7 @@ def rate_limiting_clear_counters(req, id): # type: ignore
         if response.ok:
             return JsonResponse({'status': 'ok'})
         else:
-            return JsonResponse({'status': 'error', 'message': response.details}, status=400)
+            return JsonResponse({'status': 'error', 'message': response.details}, status=HTTPStatus.BAD_REQUEST)
     except Exception:
         msg = 'Rate limiting counters could not be cleared, e:`{}`'.format(format_exc())
         logger.error(msg)

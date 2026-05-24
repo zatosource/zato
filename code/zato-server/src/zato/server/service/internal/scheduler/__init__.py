@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-
+from datetime import datetime, timedelta, timezone
 from traceback import format_exc
 
 # ciso8601
@@ -482,12 +482,13 @@ class GetHistory(_SchedulerAdmin):
     """
     name = _service_name_prefix + 'get-history'
 
-    input = Int('id'), Int('-page'), Int('-page_size'), '-since_ts', List('-outcomes'), List('-running_runs')
+    input = Int('id'), Int('-page'), Int('-page_size'), '-since_ts', '-since_iso', List('-outcomes'), List('-running_runs')
 
     def handle(self) -> 'None':
         try:
             job_id = self.request.input.id
             since_ts = self.request.input.get('since_ts')
+            since_iso = self.request.input.get('since_iso') or ''
             outcomes = self.request.input.get('outcomes')
             if not outcomes:
                 outcomes = SCHEDULER.OUTCOME.All
@@ -496,7 +497,7 @@ class GetHistory(_SchedulerAdmin):
 
             if since_ts:
                 running_runs = self.request.input.get('running_runs') or []
-                result = scheduler.get_history_since(job_id, since_ts, outcomes, running_runs)
+                result = scheduler.get_history_since(job_id, since_ts, outcomes, running_runs, since_iso)
                 self.response.payload = {'rows': result['rows'], 'total': result['total']}
             else:
                 page = self.request.input.get('page')
@@ -509,7 +510,7 @@ class GetHistory(_SchedulerAdmin):
 
                 offset = (page - 1) * page_size
 
-                result = scheduler.get_history_page(job_id, offset, page_size, outcomes)
+                result = scheduler.get_history_page(job_id, offset, page_size, outcomes, since_iso)
 
                 self.response.payload = {
                     'rows': result['records'],
@@ -644,11 +645,18 @@ class GetCurrentState(_SchedulerAdmin):
     """
     name = _service_name_prefix + 'get-current-state'
 
+    input = '-chart_since_iso', '-chart_until_iso', '-recent_since_iso', Int('-recent_limit')
+
     def handle(self) -> 'None':
         try:
             from contextlib import closing
 
             scheduler = self.server._scheduler
+
+            chart_since_iso = self.request.input.chart_since_iso or ''
+            chart_until_iso = self.request.input.chart_until_iso or ''
+            recent_since_iso = self.request.input.recent_since_iso or ''
+            recent_limit = self.request.input.recent_limit or 100
 
             with closing(self.odb.session()) as session:
                 job_rows = session.query(Job).filter_by(cluster_id=default_cluster_id).all()
@@ -736,8 +744,25 @@ class GetCurrentState(_SchedulerAdmin):
                 for outcome_key in execution_outcomes:
                     total_executions += per_job[outcome_key]
 
-            # .. get_timeline_events returns dicts pre-sorted by timestamp descending in Rust ..
-            history_timeline = scheduler.get_timeline_events()
+            # .. get chart_buckets from Rust (pre-aggregated) ..
+            chart_buckets = scheduler.get_chart_data(chart_since_iso, chart_until_iso)
+
+            # .. get recent events for the table ..
+            recent_events = scheduler.get_timeline_events_since(recent_since_iso, recent_limit)
+
+            # .. compute header tile stats from a fixed 1-hour window,
+            # .. independent of whatever chart range the user picked ..
+            now = datetime.now(timezone.utc)
+            hour_ago = now - timedelta(hours=1)
+            hour_since_iso = hour_ago.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+            hour_until_iso = now.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+            hour_buckets = scheduler.get_chart_data(hour_since_iso, hour_until_iso)
+
+            runs_last_hour = 0
+            recent_last_hour = 0
+            for bucket in hour_buckets['buckets']:
+                runs_last_hour += bucket['ok'] + bucket['error'] + bucket['timeout']
+                recent_last_hour += bucket['error'] + bucket['timeout']
 
             self.response.payload = {
                 'total_jobs': total_jobs,
@@ -746,7 +771,10 @@ class GetCurrentState(_SchedulerAdmin):
                 'total_executions': total_executions,
                 'outcome_counts': outcome_counts,
                 'jobs': jobs,
-                'history_timeline': history_timeline,
+                'chart_buckets': chart_buckets,
+                'recent_events': recent_events,
+                'runs_last_hour': runs_last_hour,
+                'recent_last_hour': recent_last_hour,
             }
 
         except Exception:

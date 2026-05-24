@@ -18,16 +18,20 @@ from zato.common.util.platform_ import is_posix
 # ################################################################################################################################
 # ################################################################################################################################
 
-current_cid: ContextVar[str] = ContextVar('current_cid', default='None')
-current_service_name: ContextVar[str] = ContextVar('current_service_name', default='None')
+current_cid: ContextVar[str] = ContextVar('current_cid', default='')
+current_service_name: ContextVar[str] = ContextVar('current_service_name', default='')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ServiceContextFilter(logging.Filter):
     def filter(self, record):
-        record.cid = current_cid.get()
-        record.service_name = current_service_name.get()
+        _cid = current_cid.get()
+        _service_name = current_service_name.get()
+        if _cid:
+            record.zato_ctx = ' ' + _service_name + ' - ' + _cid + ' -'
+        else:
+            record.zato_ctx = ''
         return True
 
 # ################################################################################################################################
@@ -137,11 +141,11 @@ formatters:
     audit_pii:
         format: '%(message)s'
     default:
-        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(service_name)s - %(cid)s - %(name)s:%(lineno)d - %(message)s'
+        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s -%(zato_ctx)s %(name)s:%(lineno)d - %(message)s'
     http_access_log:
         format: '%(remote_ip)s %(cid_resp_time)s "%(channel_name)s" [%(req_timestamp)s] "%(method)s %(path)s %(http_version)s" %(status_code)s %(response_size)s "-" "%(user_agent)s"'
     colour:
-        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(service_name)s - %(cid)s - %(name)s:%(lineno)d - %(message)s'
+        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s -%(zato_ctx)s %(name)s:%(lineno)d - %(message)s'
         (): zato.common.util.api.ColorFormatter
 
 version: 1
@@ -190,18 +194,6 @@ class ColorFormatter(Formatter):
             record.levelname = levelname_color
 
         return Formatter.format(self, record)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def attach_service_context_filter() -> 'None':
-    _ctx_filter = ServiceContextFilter()
-    for handler in logging.root.handlers:
-        handler.addFilter(_ctx_filter)
-    for logger_obj in logging.Logger.manager.loggerDict.values():
-        if hasattr(logger_obj, 'handlers'):
-            for handler in logger_obj.handlers:
-                handler.addFilter(_ctx_filter)
 
 # ################################################################################################################################
 # ################################################################################################################################

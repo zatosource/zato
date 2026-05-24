@@ -76,28 +76,6 @@ class _CreateEdit(CreateEdit):
 
         return {'sec_base_choices': choices}
 
-    def _parse_pattern_to_topics(self, pattern):
-        """ Parse 'pub=X\nsub=Y' pattern string into pub_topics and sub_topics lists.
-        """
-        pub_topics = []
-        sub_topics = []
-        for line in (pattern or '').splitlines():
-            line = line.strip()
-            if line.startswith('pub='):
-                pub_topics.append(line[4:])
-            elif line.startswith('sub='):
-                sub_topics.append(line[4:])
-        return pub_topics, sub_topics
-
-    def _get_input_dict(self):
-        input_dict = super()._get_input_dict()
-        pattern = input_dict.pop('pattern', '')
-        input_dict.pop('access_type', None)
-        pub_topics, sub_topics = self._parse_pattern_to_topics(pattern)
-        input_dict['pub_topics'] = pub_topics
-        input_dict['sub_topics'] = sub_topics
-        return input_dict
-
 # ################################################################################################################################
 
 class Create(_CreateEdit):
@@ -107,8 +85,8 @@ class Create(_CreateEdit):
     service_name = 'zato.pubsub.permission.create'
     form_class = CreateForm
 
-    input_required = 'sec_base_id',
-    input_optional = 'cluster_id', 'pub_topics', 'sub_topics'
+    input_required = 'sec_base_id', 'pattern', 'access_type'
+    input_optional = 'cluster_id',
     output_required = 'id', 'security'
 
     def success_message(self, item):
@@ -124,8 +102,8 @@ class Edit(_CreateEdit):
     form_class = EditForm
     form_prefix = 'edit-'
 
-    input_required = 'id', 'sec_base_id'
-    input_optional = 'cluster_id', 'pub_topics', 'sub_topics'
+    input_required = 'id', 'sec_base_id', 'pattern', 'access_type'
+    input_optional = 'cluster_id',
     output_required = 'id', 'security'
 
     def success_message(self, item):

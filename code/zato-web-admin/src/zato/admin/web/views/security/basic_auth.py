@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from http import HTTPStatus
 from json import loads
 from traceback import format_exc
 
@@ -65,7 +66,7 @@ class Create(_CreateEdit):
 
     def __call__(self, req, *args, **kwargs):
         response = super().__call__(req, *args, **kwargs)
-        if response.status_code == 200:
+        if response.status_code == HTTPStatus.OK:
             data = loads(response.content)
             password = req.POST.get('password', '')
             if password:
@@ -124,7 +125,7 @@ def rate_limiting_save(req, id): # type: ignore
         if response.ok:
             return JsonResponse({'status': 'ok'})
         else:
-            return JsonResponse({'status': 'error', 'message': response.details}, status=400)
+            return JsonResponse({'status': 'error', 'message': response.details}, status=HTTPStatus.BAD_REQUEST)
     except Exception:
         msg = 'Rate limiting rules could not be saved, e:`{}`'.format(format_exc())
         logger.error(msg)
@@ -144,7 +145,7 @@ def rate_limiting_clear_counters(req, id): # type: ignore
         if response.ok:
             return JsonResponse({'status': 'ok'})
         else:
-            return JsonResponse({'status': 'error', 'message': response.details}, status=400)
+            return JsonResponse({'status': 'error', 'message': response.details}, status=HTTPStatus.BAD_REQUEST)
     except Exception:
         msg = 'Rate limiting counters could not be cleared, e:`{}`'.format(format_exc())
         logger.error(msg)

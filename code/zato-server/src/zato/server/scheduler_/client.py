@@ -221,12 +221,28 @@ class SchedulerClient:
 
 # ################################################################################################################################
 
-    def get_timeline_events(self, max_events:'int'=1000) -> 'anylist':
-        return self._http_get('/api/get_timeline_events', {'max_events': max_events})
+    def get_chart_data(self, since_iso:'str'='', until_iso:'str'='') -> 'anydict':
+        params = {}
+        if since_iso:
+            params['since_iso'] = since_iso
+        if until_iso:
+            params['until_iso'] = until_iso
+        return self._http_get('/api/get_chart_data', params)
 
 # ################################################################################################################################
 
-    def get_history_page(self, job_id:'int', offset:'int', limit:'int', outcomes:'any_') -> 'anydict':
+    def get_timeline_events_since(self, since_iso:'str'='', limit:'int'=0) -> 'anylist':
+        params = {}
+        if since_iso:
+            params['since_iso'] = since_iso
+        if limit:
+            params['limit'] = limit
+        return self._http_get('/api/get_timeline_events_since', params)
+
+# ################################################################################################################################
+
+    def get_history_page(self, job_id:'int', offset:'int', limit:'int', outcomes:'any_',
+            since_iso:'str'='') -> 'anydict':
         params = {
             'job_id': job_id,
             'offset': offset,
@@ -237,11 +253,15 @@ class SchedulerClient:
         elif isinstance(outcomes, str):
             params['outcomes'] = outcomes
 
+        if since_iso:
+            params['since_iso'] = since_iso
+
         return self._http_get('/api/get_history_page', params)
 
 # ################################################################################################################################
 
-    def get_history_since(self, job_id:'int', since_iso:'str', outcomes:'any_', running_runs:'list | None'=None) -> 'anydict':
+    def get_history_since(self, job_id:'int', since_iso:'str', outcomes:'any_',
+            running_runs:'list | None'=None, range_since_iso:'str'='') -> 'anydict':
         params = {
             'job_id': job_id,
             'since_iso': since_iso,
@@ -253,6 +273,9 @@ class SchedulerClient:
 
         if running_runs:
             params['running_runs'] = ','.join(str(run) for run in running_runs)
+
+        if range_since_iso:
+            params['range_since_iso'] = range_since_iso
 
         return self._http_get('/api/get_history_since', params)
 

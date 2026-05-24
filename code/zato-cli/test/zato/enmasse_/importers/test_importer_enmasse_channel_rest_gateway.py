@@ -18,6 +18,7 @@ from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.channel_rest import ChannelImporter
 from zato.common.test.enmasse_._template_rest_gateway import template_rest_gateway
 from zato.common.typing_ import cast_
+from zato.common.defaults import default_server_base_dir
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,7 +36,7 @@ class TestEnmasseChannelRESTGatewayImporter(TestCase):
     """
 
     def setUp(self) -> 'None':
-        self.server_path = os.path.expanduser('~/env/qs-1/server1')
+        self.server_path = default_server_base_dir
 
         self.temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.yaml')
         _ = self.temp_file.write(template_rest_gateway.encode('utf-8'))

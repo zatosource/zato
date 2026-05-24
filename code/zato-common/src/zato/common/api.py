@@ -9,6 +9,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from collections import OrderedDict
 from dataclasses import dataclass
+from http.client import BAD_REQUEST, OK, UNAUTHORIZED
+from http.client import responses as http_responses
 from numbers import Number
 
 # Bunch
@@ -1234,6 +1236,8 @@ class HL7:
 
 class PubSub:
 
+    Test_Redis_DB = 1
+
     class Topic:
         Name_Max_Len = 200
 
@@ -1306,9 +1310,9 @@ class PubSub:
         Max = 500
 
     class Status:
-        OK = '200 OK'
-        Bad_Request = '400 Bad Request'
-        Unauthorized = '401 Unauthorized'
+        OK           = f'{OK} {http_responses[OK]}'
+        Bad_Request  = f'{BAD_REQUEST} {http_responses[BAD_REQUEST]}'
+        Unauthorized = f'{UNAUTHORIZED} {http_responses[UNAUTHORIZED]}'
 
     class Exchange_Name:
         Pubsub_Push = 'pubsub.push.1'

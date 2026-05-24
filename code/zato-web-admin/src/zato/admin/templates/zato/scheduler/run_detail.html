@@ -10,14 +10,16 @@
 {% block section_title %}
 <div class="detail-header-row-1">
     <span id="detail-section-title">
-        <a href="{{ dashboard_base_url }}?cluster={{ cluster_id }}" class="detail-component-pill menu-link">Scheduler</a>
-        <a href="{{ dashboard_base_url }}job/{{ job_id }}/?cluster={{ cluster_id }}&amp;outcomes=all" class="detail-component-pill menu-link" id="run-detail-job-link"></a>
+        <a href="{{ dashboard_base_url }}?cluster={{ cluster_id }}&range={{ range_minutes }}" class="detail-component-pill menu-link">Scheduler</a>
+        <a href="{{ dashboard_base_url }}job/{{ job_id }}/?cluster={{ cluster_id }}&amp;outcomes=all&amp;range={{ range_minutes }}" class="detail-component-pill menu-link" id="run-detail-job-link"></a>
         <span id="record-detail-title"></span>
     </span>
 </div>
 {% endblock %}
 {% block help_icon_id %}{% endblock %}
 
+{% block section_heading_class %}section-heading-flush{% endblock %}
+{% block progress_panel_class %}progress-panel-flush{% endblock %}
 {% block detail_page_class %}detail-page-scheduler detail-page-run{% endblock %}
 
 {% block detail_js %}
@@ -36,7 +38,8 @@ $(document).ready(function() {
         base_url: dash.config.base_url,
         cluster_id: '{{ cluster_id }}',
         object_path: 'job/{id}/',
-        run_path: 'job/{id}/run/{run_id}/'
+        run_path: 'job/{id}/run/{run_id}/',
+        range_minutes: {{ range_minutes }}
     });
     var panel_cfg = detail.config.detail_panel;
     var tag_defs = detail.config.detail_tags;

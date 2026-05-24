@@ -6,70 +6,87 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import logging
+import unittest
+
 # local
-from base import BasePushTestCase
-from config import _active_endpoints
+from _client import PublishClient
+from config import TestConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestPublishRejection(BasePushTestCase):
-    """ Negative tests - verify the server rejects invalid publish requests.
+logger = logging.getLogger('zato.test.pubsub_push.publish_rejection')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestPublishRejection(unittest.TestCase):
+    """ Tests for publish rejection scenarios - wrong credentials, nonexistent topic, empty data.
     """
 
-    def test_publish_bad_credentials(self) -> 'None':
-        """ Publishing with invalid credentials must be rejected by the server.
-        """
-        topic_name = _active_endpoints[0]
-
-        base_url = self.config.base_url
-        url = f'{base_url}/pubsub/topic/{topic_name}'
-        credentials = ('wrong_user', 'wrong_password')
-        data = {'rejection_test': 'bad_credentials'}
-
-        response = self.publish_raw(url, data, credentials)
-
-        # The server must reject the request with 403 ..
-        self.assertEqual(response.status_code, 403)
+    @classmethod
+    def setUpClass(class_) -> 'None': # pyright: ignore[reportSelfClsParameterName]
+        class_.publisher = PublishClient(
+            TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
 
 # ################################################################################################################################
 
-    def test_publish_nonexistent_topic(self) -> 'None':
-        """ Publishing to a topic that does not exist must be rejected.
+    def test_wrong_credentials_returns_401(self) -> 'None':
+        """ Publishing with wrong credentials must return 401.
         """
-        base_url = self.config.base_url
-        url = f'{base_url}/pubsub/topic/nonexistent.topic.xyz'
 
-        username = self.config.publisher_username
-        password = self.config.publisher_password
-        credentials = (username, password)
-        data = {'rejection_test': 'nonexistent_topic'}
+        topic_name = 'iam.user.created'
 
-        response = self.publish_raw(url, data, credentials)
+        # Publish with wrong credentials ..
+        result = self.publisher.publish_raw(topic_name, 'rejected payload', username='wrong_user', password='wrong_pass')
+        logger.info('Wrong credentials -> status_code:%d, body:%s', result.status_code, result.body)
 
-        # The server must reject with a non-2xx status ..
-        self.assertGreaterEqual(response.status_code, 400)
+        # .. must be rejected with 401.
+        self.assertEqual(result.status_code, 401)
 
 # ################################################################################################################################
 
-    def test_publish_empty_payload(self) -> 'None':
-        """ Publishing with an empty data dict must still be accepted by the
-        server - this verifies the publish path does not crash on empty payloads.
+    def test_nonexistent_topic_returns_error(self) -> 'None':
+        """ Publishing to a nonexistent topic must return >= 400.
         """
-        topic_name = _active_endpoints[0]
-        data = {}
 
-        base_url = self.config.base_url
-        url = f'{base_url}/pubsub/topic/{topic_name}'
+        topic_name = 'nonexistent.topic.that.does.not.exist'
 
-        username = self.config.publisher_username
-        password = self.config.publisher_password
-        credentials = (username, password)
+        # Publish to a topic that does not exist ..
+        result = self.publisher.publish_raw(
+            topic_name, 'rejected payload',
+            username=TestConfig.publisher_username, password=TestConfig.publisher_password)
 
-        response = self.publish_raw(url, data, credentials)
+        logger.info('Nonexistent topic -> status_code:%d, body:%s', result.status_code, result.body)
 
-        # The server should handle an empty payload without a 500 ..
-        self.assertNotEqual(response.status_code, 500)
+        # .. must return an error status code.
+        self.assertGreaterEqual(result.status_code, 400)
+
+# ################################################################################################################################
+
+    def test_empty_data_accepted(self) -> 'None':
+        """ Publishing with empty data dict is valid and returns 200.
+        """
+
+        topic_name = 'iam.user.created'
+
+        # Publish with empty data ..
+        result = self.publisher.publish_raw(
+            topic_name, {},
+            username=TestConfig.publisher_username, password=TestConfig.publisher_password)
+
+        logger.info('Empty data -> status_code:%d, body:%s', result.status_code, result.body)
+
+        # .. the server accepts it as valid publish payload.
+        self.assertEqual(result.status_code, 200)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if __name__ == '__main__':
+    _ = unittest.main()
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -1,0 +1,73 @@
+/* Pygments token colors for light backgrounds.
+   Apply class "syntax-light" to any container with highlighted markup. */
+
+.syntax-light .hll { background-color: #ffffcc }
+.syntax-light .c   { color: #60a0b0; font-style: italic }
+.syntax-light .err { border: 1px solid #ff0000 }
+.syntax-light .k   { color: #007020; font-weight: bold }
+.syntax-light .o   { color: #666666 }
+.syntax-light .ch  { color: #60a0b0; font-style: italic }
+.syntax-light .cm  { color: #60a0b0; font-style: italic }
+.syntax-light .cp  { color: #007020 }
+.syntax-light .cpf { color: #60a0b0; font-style: italic }
+.syntax-light .c1  { color: #60a0b0; font-style: italic }
+.syntax-light .cs  { color: #60a0b0; background-color: #fff0f0 }
+.syntax-light .gd  { color: #a00000 }
+.syntax-light .ge  { font-style: italic }
+.syntax-light .ges { font-weight: bold; font-style: italic }
+.syntax-light .gr  { color: #ff0000 }
+.syntax-light .gh  { color: #000080; font-weight: bold }
+.syntax-light .gi  { color: #00a000 }
+.syntax-light .go  { color: #888888 }
+.syntax-light .gp  { color: #c65d09; font-weight: bold }
+.syntax-light .gs  { font-weight: bold }
+.syntax-light .gu  { color: #800080; font-weight: bold }
+.syntax-light .gt  { color: #0044dd }
+.syntax-light .kc  { color: #007020; font-weight: bold }
+.syntax-light .kd  { color: #007020; font-weight: bold }
+.syntax-light .kn  { color: #007020; font-weight: bold }
+.syntax-light .kp  { color: #007020 }
+.syntax-light .kr  { color: #007020; font-weight: bold }
+.syntax-light .kt  { color: #902000 }
+.syntax-light .m   { color: #40a070 }
+.syntax-light .s   { color: #4070a0 }
+.syntax-light .na  { color: #4070a0 }
+.syntax-light .nb  { color: #007020 }
+.syntax-light .nc  { color: #0e84b5; font-weight: bold }
+.syntax-light .no  { color: #60add5 }
+.syntax-light .nd  { color: #555555; font-weight: bold }
+.syntax-light .ni  { color: #d55537; font-weight: bold }
+.syntax-light .ne  { color: #007020 }
+.syntax-light .nf  { color: #06287e }
+.syntax-light .nl  { color: #002070; font-weight: bold }
+.syntax-light .nn  { color: #0e84b5; font-weight: bold }
+.syntax-light .nt  { color: #062873; font-weight: bold }
+.syntax-light .nv  { color: #bb60d5 }
+.syntax-light .ow  { color: #007020; font-weight: bold }
+.syntax-light .w   { color: #bbbbbb }
+.syntax-light .mb  { color: #40a070 }
+.syntax-light .mf  { color: #40a070 }
+.syntax-light .mh  { color: #40a070 }
+.syntax-light .mi  { color: #40a070 }
+.syntax-light .mo  { color: #40a070 }
+.syntax-light .sa  { color: #4070a0 }
+.syntax-light .sb  { color: #4070a0 }
+.syntax-light .sc  { color: #4070a0 }
+.syntax-light .dl  { color: #4070a0 }
+.syntax-light .sd  { color: #4070a0; font-style: italic }
+.syntax-light .s2  { color: #4070a0 }
+.syntax-light .se  { color: #4070a0; font-weight: bold }
+.syntax-light .sh  { color: #4070a0 }
+.syntax-light .si  { color: #70a0d0; font-style: italic }
+.syntax-light .sx  { color: #c65d09 }
+.syntax-light .sr  { color: #235388 }
+.syntax-light .s1  { color: #4070a0 }
+.syntax-light .ss  { color: #517918 }
+.syntax-light .bp  { color: #007020 }
+.syntax-light .fm  { color: #06287e }
+.syntax-light .vc  { color: #bb60d5 }
+.syntax-light .vg  { color: #bb60d5 }
+.syntax-light .vi  { color: #bb60d5 }
+.syntax-light .vm  { color: #bb60d5 }
+.syntax-light .il  { color: #40a070 }
+.syntax-light .p   { color: #333333 }

@@ -53,7 +53,7 @@ $.fn.zato.security.oauth.create = function() {
         independent_tabs: true,
         on_change: $.fn.zato.security.oauth._on_tab_change('#create-div')
     });
-    $.fn.zato.data_table._create_edit('create', 'Create Bearer token definition', null);
+    $.fn.zato.data_table._create_edit('create', 'Create a Bearer token definition', null);
 }
 
 $.fn.zato.security.oauth.edit = function(id) {

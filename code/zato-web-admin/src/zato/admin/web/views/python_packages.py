@@ -11,6 +11,7 @@ import os
 import re
 import subprocess
 import threading
+from http import HTTPStatus
 from logging import getLogger
 from traceback import format_exc
 
@@ -267,7 +268,7 @@ def test_packages(req):
                 pypi_url = 'https://pypi.org/pypi/{}/json'.format(package_name)
                 resp = requests.get(pypi_url, timeout=10)
 
-                if resp.status_code == 200:
+                if resp.status_code == HTTPStatus.OK:
                     results.append({
                         'package': package_name,
                         'status': 'ok',

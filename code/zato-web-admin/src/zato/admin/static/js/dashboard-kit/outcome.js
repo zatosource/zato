@@ -11,13 +11,21 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     var ns = $.fn.zato.dashboard_kit;
     ns.outcome = {};
 
+    ns.outcome.css_classes = {
+        'ok': 'dashboard-outcome-ok',
+        'error': 'dashboard-outcome-error',
+        'timeout': 'dashboard-outcome-timeout',
+        'running': 'dashboard-outcome-running',
+        'skipped_already_in_flight': 'dashboard-outcome-skipped'
+    };
+
     /* Build an outcome palette object. `palette.bar_colors`, `.colors`,
-       `.bg_colors`, `.labels` are plain maps keyed by outcome key, and
+       `.backgrounds`, `.labels` are plain maps keyed by outcome key, and
        every helper below closes over the palette passed in. */
     ns.outcome.make_palette = function(palette) {
         return {
             colors:       palette.colors,
-            bg_colors:    palette.bg_colors,
+            backgrounds:    palette.backgrounds,
             bar_colors:   palette.bar_colors,
             labels:       palette.labels,
             short_labels: palette.short_labels,
@@ -46,10 +54,9 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     /* Render a pill-shaped badge with a tinted background.
        Optional record param enables short_labels and tooltips from the palette. */
     ns.outcome.badge = function(outcome, palette, record) {
-        var color = palette.colors[outcome];
-        var bg = palette.bg_colors[outcome];
         var label = palette.labels[outcome];
         var tooltip_attr = '';
+        var css_class = ns.outcome.css_classes[outcome];
 
         if (record) {
             if (palette.short_labels[outcome]) {
@@ -64,7 +71,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         }
 
         var prefix = outcome === 'running' ? '<span class="badge-running-spinner"></span>' : '';
-        return '<span class="dashboard-outcome-badge"' + tooltip_attr + ' style="color:' + color + ';background:' + bg + '">' + prefix + label + '</span>';
+        return '<span class="dashboard-outcome-badge ' + css_class + '"' + tooltip_attr + '>' + prefix + label + '</span>';
     };
 
     /* Render a small status dot. `state` is one of 'running', 'paused',

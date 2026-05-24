@@ -7,16 +7,22 @@ var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 var GraphQLSchemaHighlightRules = function() {
 
     var keywords = (
-      "type|interface|union|enum|schema|input|implements|extends|scalar"
+      "type|interface|union|enum|schema|input|implements|extends|scalar" +
+      "|query|mutation|subscription|fragment|on|directive|repeatable"
     );
 
     var dataTypes = (
       "Int|Float|String|ID|Boolean"
     );
 
+    var constants = (
+      "true|false|null"
+    );
+
     var keywordMapper = this.createKeywordMapper({
         "keyword": keywords,
-        "storage.type": dataTypes
+        "storage.type": dataTypes,
+        "constant.language": constants
     }, "identifier");
 
     this.$rules = {
@@ -24,15 +30,48 @@ var GraphQLSchemaHighlightRules = function() {
         token : "comment",
         regex : "#.*$"
       }, {
+        token : "string",
+        regex : '"',
+        next : [
+          {token: "constant.language.escape", regex: /\\(?:u[\da-fA-F]{4}|.)/},
+          {token: "string", regex: '"', next: "start"},
+          {defaultToken: "string"}
+        ]
+      }, {
+        token : "constant.numeric",
+        regex : /\d+\.?\d*[eE]?[+\-]?\d*/
+      }, {
+        token : "variable",
+        regex : /\$[_A-Za-z][_0-9A-Za-z]*/
+      }, {
+        token : "support.function",
+        regex : /@[_A-Za-z][_0-9A-Za-z]*/
+      }, {
+        token : "keyword",
+        regex : /(?:query|mutation|subscription|fragment)\b/,
+        next  : "operationName"
+      }, {
+        token : keywordMapper,
+        regex : "[a-zA-Z_$][a-zA-Z0-9_$]*\\b"
+      }, {
         token : "paren.lparen",
         regex : /[\[({]/,
         next  : "start"
       }, {
         token : "paren.rparen",
         regex : /[\])}]/
+      } ],
+      "operationName" : [ {
+        token : "entity.name.function",
+        regex : "[a-zA-Z_][a-zA-Z0-9_]*\\b",
+        next  : "start"
       }, {
-        token : keywordMapper,
-        regex : "[a-zA-Z_$][a-zA-Z0-9_$]*\\b"
+        token : "text",
+        regex : /\s+/
+      }, {
+        token : "text",
+        regex : "",
+        next  : "start"
       } ]
     };
     this.normalizeRules();

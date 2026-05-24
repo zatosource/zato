@@ -4,7 +4,7 @@
 	scheduler-build server-build io-build health-build build \
 	scheduler-rust-unit-tests scheduler-shim-tests scheduler-integration-tests scheduler-fuzzy \
 	server-io-tests server-marshall-tests server-config-store-tests server-commands-tests \
-	server-connection-tests server-pattern-tests server-pubsub-unit-tests server-pubsub-tests server-mcp-live-tests server-fuzzy server-tests \
+	server-connection-tests server-pattern-tests server-pubsub-unit-tests server-pubsub-tests server-pubsub-push-tests server-pubsub-cleanup-tests server-mcp-live-tests server-fuzzy server-tests \
 	rate-limiting-rust-unit-tests rate-limiting-python-unit-tests test-rate-limiting \
 	enmasse-tests cli-odb-default-tests cli-tests \
 	common-tests distlock-tests web-admin-tests \
@@ -168,9 +168,15 @@ server-pubsub-unit-tests: ## PubSub unit tests (private src, no server needed).
 	$(ZATO_PY) -m unittest discover -s tests/python/zato-common/pubsub -p 'test_*.py' -v
 
 server-pubsub-tests: ## PubSub REST integration tests (private src, starts a temp server via conftest.py).
-	$(ZATO_PY) -m pytest tests/python/zato-server/pubsub_rest -v -s -o cache_dir=tests/.pytest_cache_pubsub $(FAIL_FAST) $(SKIP_PASSED) $(FROM_LAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(Zato_Base) $(ZATO_PY) -m pytest tests/python/zato-server/pubsub_service -v -s -o cache_dir=tests/.pytest_cache_pubsub $(FAIL_FAST) $(SKIP_PASSED) $(FROM_LAST) $(PYTEST_ARGS)
 
-test-pubsub: server-pubsub-unit-tests server-pubsub-tests ## All PubSub tests: unit first, then REST integration.
+server-pubsub-push-tests: ## PubSub push delivery live tests (private src, starts a temp server via conftest.py).
+	ZATO_TEST_BASE_DIR=$(Zato_Base) $(ZATO_PY) -m pytest tests/python/zato-server/pubsub_push -v -s -o cache_dir=tests/.pytest_cache_pubsub_push $(FAIL_FAST) $(SKIP_PASSED) $(FROM_LAST) $(PYTEST_ARGS)
+
+server-pubsub-cleanup-tests: ## PubSub cleanup live tests (own server instance to avoid polluting push tests).
+	ZATO_TEST_BASE_DIR=$(Zato_Base) $(ZATO_PY) -m pytest tests/python/zato-server/pubsub_cleanup -v -s -o cache_dir=tests/.pytest_cache_pubsub_cleanup $(FAIL_FAST) $(SKIP_PASSED) $(FROM_LAST) $(PYTEST_ARGS)
+
+test-pubsub: server-pubsub-unit-tests server-pubsub-tests server-pubsub-push-tests server-pubsub-cleanup-tests ## All PubSub tests: unit first, then REST integration, then push delivery, then cleanup.
 
 server-mcp-live-tests: ## MCP live API integration tests (spins up a temp server).
 	$(ZATO_PY) -m pytest tests/python/zato-server/mcp_live/ -v -s -o cache_dir=tests/.pytest_cache_mcp_live -W ignore::DeprecationWarning $(FAIL_FAST) $(SKIP_PASSED) $(FROM_LAST_CS) $(WITH_COVERAGE) $(PYTEST_ARGS)

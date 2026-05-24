@@ -3,10 +3,13 @@ markers = [
     "perftest: long-running performance tests, skipped by default",
 ]
 addopts = "-m 'not perftest'"
+log_cli = true
+log_cli_level = "DEBUG"
 
 [tool.pyright]
 extraPaths = [
     "./lib/python3.8/site-packages",
+    "./lib/python3.12/site-packages",
     "./src",
     "./zato-agent/src",
     "./zato-cli/src",

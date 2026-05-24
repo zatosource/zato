@@ -11,7 +11,16 @@ $.fn.zato.scheduler.dashboard.config = {
     error_message: 'Error executing job',
     show_live_status: false,
     show_tab_counts: false,
-    max_upcoming_rows: 100
+    max_upcoming_rows: 100,
+    ms_per_minute: 60000,
+    ms_per_hour:   3600000,
+    ms_per_day:    86400000,
+    ms_per_week:   604800000,
+    ms_per_month:  2764800000,
+    ms_per_year:   31536000000,
+    day_names:   ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    month_names: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 };
 
 $.fn.zato.scheduler.dashboard.Outcome_All = 'all';
@@ -52,7 +61,7 @@ $.fn.zato.scheduler.dashboard.outcome_colors = {
     'skipped_already_in_flight': '#7b5ea7'
 };
 
-$.fn.zato.scheduler.dashboard.outcome_bg_colors = {
+$.fn.zato.scheduler.dashboard.outcome_backgrounds = {
     'ok': 'rgba(42, 127, 191, 0.12)',
     'running': 'rgba(136, 136, 136, 0.12)',
     'error': 'rgba(224, 34, 110, 0.12)',
@@ -95,7 +104,7 @@ $.fn.zato.scheduler.dashboard.outcome_tooltips = {
 
 $.fn.zato.scheduler.dashboard.outcome_palette = {
     colors: $.fn.zato.scheduler.dashboard.outcome_colors,
-    bg_colors: $.fn.zato.scheduler.dashboard.outcome_bg_colors,
+    backgrounds: $.fn.zato.scheduler.dashboard.outcome_backgrounds,
     bar_colors: $.fn.zato.scheduler.dashboard.outcome_bar_colors,
     labels: $.fn.zato.scheduler.dashboard.outcome_labels,
     short_labels: $.fn.zato.scheduler.dashboard.outcome_short_labels,
@@ -111,6 +120,197 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
     var dash = $.fn.zato.scheduler.dashboard;
 
     dash._recent_runs_ts = [];
+    dash._chart_buckets = null;
+    dash._chart_visible_keys = [];
+    dash._chart_bar_colors = {};
+    dash._chart_labels = {};
+
+    // ////////////////////////////////////////////////////////////////////////
+    // Grouping configuration - maps each group type to its key extractor,
+    // label formatter, and y-axis suffix.
+    // ////////////////////////////////////////////////////////////////////////
+
+    dash.groupConfig = {
+
+        minute: {
+            suffix: '/min',
+            extractKey: function(date) {
+                return date.getMinutes();
+            },
+            formatLabel: function(date) {
+                var paddedHours = ('0' + date.getHours()).slice(-2);
+                var paddedMinutes = ('0' + date.getMinutes()).slice(-2);
+
+                return paddedHours + ':' + paddedMinutes;
+            }
+        },
+
+        hour: {
+            suffix: '/hr',
+            extractKey: function(date) {
+                return date.getHours();
+            },
+            formatLabel: function(date) {
+
+                // Build a label like "Sat 15:00 -> 16:00"
+                var dayName = dash.config.day_names[date.getDay()];
+
+                // .. format the current hour with zero-padding ..
+                var currentHour = date.getHours();
+                var paddedCurrentHour = ('0' + currentHour).slice(-2);
+
+                // .. compute and format the next hour, wrapping at midnight.
+                var nextHour = (currentHour + 1) % 24;
+                var paddedNextHour = ('0' + nextHour).slice(-2);
+
+                return dayName + ' ' + paddedCurrentHour + ':00 \u2192 ' + paddedNextHour + ':00';
+            }
+        },
+
+        day: {
+            suffix: '/day',
+            extractKey: function(date) {
+                return date.getDate();
+            },
+            formatLabel: function(date) {
+                var dayName = dash.config.day_names[date.getDay()];
+                var monthName = dash.config.month_names[date.getMonth()];
+                var dayOfMonth = date.getDate();
+
+                return dayName + ' ' + monthName + ' ' + dayOfMonth;
+            }
+        },
+
+        month: {
+            suffix: '/mo',
+            extractKey: function(date) {
+                return date.getMonth();
+            },
+            formatLabel: function(date) {
+                var monthName = dash.config.month_names[date.getMonth()];
+                var shortYear = String(date.getFullYear()).slice(-2);
+
+                return monthName + ' ' + shortYear;
+            }
+        }
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+    // formatRunsLabel - produces "1 run" or "N runs" with formatted count.
+    // ////////////////////////////////////////////////////////////////////////
+
+    dash.formatRunsLabel = function(count) {
+        var formattedCount = kit.format_number_full(count);
+        var suffix = count === 1 ? 'run' : 'runs';
+
+        return formattedCount + ' ' + suffix;
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+    // summarizeBucket - sums outcome counts from a bucket and returns
+    // a structured summary with totals, label, and per-outcome breakdown.
+    // ////////////////////////////////////////////////////////////////////////
+
+    dash.summarizeBucket = function(bucket, visibleKeys, barColors, outcomeLabels) {
+
+        var totalRuns = 0;
+        var outcomes = [];
+
+        for (var keyIndex = 0; keyIndex < visibleKeys.length; keyIndex++) {
+            var outcomeKey = visibleKeys[keyIndex];
+            var runCount = bucket[outcomeKey];
+            totalRuns += runCount;
+
+            outcomes.push({
+                key: outcomeKey,
+                label: outcomeLabels[outcomeKey],
+                count: runCount,
+                color: barColors[outcomeKey]
+            });
+        }
+
+        return {
+            totalRuns: totalRuns,
+            runsLabel: dash.formatRunsLabel(totalRuns),
+            outcomes: outcomes
+        };
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+    // buildTooltipHtml - assembles the tooltip HTML from a time label
+    // and a bucket summary returned by summarizeBucket.
+    // ////////////////////////////////////////////////////////////////////////
+
+    dash.buildTooltipHtml = function(timeLabel, summary) {
+
+        // Build the header with the time label and total runs ..
+        var headerHtml = '<div class="dashboard-tooltip-header">' +
+            '<div class="dashboard-tooltip-title">' + timeLabel + '</div>' +
+            '<div class="dashboard-tooltip-subtitle">' + summary.runsLabel + '</div>' +
+            '</div>';
+
+        // .. then build one row per outcome.
+        var bodyLines = [];
+
+        for (var outcomeIndex = 0; outcomeIndex < summary.outcomes.length; outcomeIndex++) {
+            var outcome = summary.outcomes[outcomeIndex];
+            var outcomeRunsLabel = dash.formatRunsLabel(outcome.count);
+
+            bodyLines.push('<div class="dashboard-tooltip-row">' +
+                '<span class="dashboard-tooltip-dot" style="background:' + outcome.color + '"></span>' +
+                outcome.label + ': <b>' + outcomeRunsLabel + '</b></div>');
+        }
+
+        var bodyHtml = '<div class="dashboard-tooltip-body">' + bodyLines.join('') + '</div>';
+
+        return headerHtml + bodyHtml;
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+    // get_bucket_info - returns info about a single chart bucket by index,
+    // or null if the index is out of range.
+    // ////////////////////////////////////////////////////////////////////////
+
+    dash.get_bucket_info = function(bucketIndex) {
+
+        var buckets = dash._chart_buckets;
+
+        if (!buckets || bucketIndex < 0 || bucketIndex >= buckets.length) {
+            return null;
+        }
+
+        var bucket = buckets[bucketIndex];
+        var labelRange = dash._chart_label_range;
+
+        // Build the time label from start and end dates ..
+        var timeStart = new Date(bucket.start);
+        var timeEnd = new Date(bucket.end);
+        var bucketSpanSeconds = Math.round((bucket.end - bucket.start) / 1000);
+
+        var timeLabel;
+
+        if (bucketSpanSeconds >= 1) {
+            var startLabel = dash.formatTimeLabel(timeStart, labelRange);
+            var endLabel = dash.formatTimeLabel(timeEnd, labelRange);
+            timeLabel = startLabel + ' \u2192 ' + endLabel;
+        }
+        else {
+            timeLabel = dash.formatTimeLabel(timeStart, labelRange);
+        }
+
+        // .. then summarize the outcome counts.
+        var summary = dash.summarizeBucket(bucket, dash._chart_visible_keys, dash._chart_bar_colors, dash._chart_labels);
+
+        return {
+            index: bucketIndex,
+            time_label: timeLabel,
+            total_runs: summary.totalRuns,
+            runs_label: summary.runsLabel,
+            outcomes: summary.outcomes,
+            start: bucket.start,
+            end: bucket.end
+        };
+    };
 
     // Thin aliases so job_detail.js (and any future callers that used
     // the old scheduler-level API) keep working without changes.
@@ -126,41 +326,8 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
     });
 
     // ////////////////////////////////////////////////////////////////////////
-    // Predicates for timeline filtering
+    // Chart data cache state
     // ////////////////////////////////////////////////////////////////////////
-
-    dash._is_failure = function(record) {
-        return record.outcome === 'error' || record.outcome === 'timeout';
-    };
-
-    dash._is_execution = function(record) {
-        var outcome = record.outcome;
-        return outcome === 'ok' || outcome === 'error' || outcome === 'timeout';
-    };
-
-    var _ts_accessor = function(record) {
-        var iso = record.actual_fire_time_iso;
-        if (!iso) return NaN;
-        return new Date(iso).getTime();
-    };
-
-    dash._rebuild_recent_series = function(timeline) {
-        var result = kit.bucket_events_per_minute(
-            timeline, dash._is_failure, _ts_accessor,
-            dash._spark_buffers.window_ms(), 60
-        );
-        dash._spark_buffers.set_buffer('recent', result.series);
-        return result.total;
-    };
-
-    dash._rebuild_runs_series = function(timeline) {
-        var result = kit.bucket_events_per_minute(
-            timeline, dash._is_execution, _ts_accessor,
-            dash._spark_buffers.window_ms(), 60
-        );
-        dash._spark_buffers.set_buffer('runs', result.series);
-        return result.total;
-    };
 
     // ////////////////////////////////////////////////////////////////////////
     // Legend toggle persistence
@@ -189,20 +356,72 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
     // Time range (uses kit for persistence, keeps scheduler-specific filter)
     // ////////////////////////////////////////////////////////////////////////
 
-    dash._last_timeline = null;
+    dash._last_chart_buckets = null;
+    dash._last_recent_events = [];
+    dash._last_event_ts = '';
+    dash._last_jobs = null;
     dash._time_range_minutes = 0;
 
-    dash._filter_timeline_by_range = function(timeline) {
+    var _BUCKET_COUNT = 120;
+
+    var _calendar_ranges = {
+        1440: 'today',
+        2880: 'yesterday',
+        10080: 'this_week',
+        43200: 'this_month',
+        525600: 'this_year'
+    };
+
+    dash._get_chart_window = function() {
         var minutes = dash._time_range_minutes;
-        if (!minutes || minutes <= 0 || !timeline) {
-            return timeline;
+        if (!minutes || minutes <= 0) {
+            return {since_iso: '', until_iso: ''};
+        }
+
+        var cal = _calendar_ranges[minutes];
+        if (cal) {
+            var now = new Date();
+            var since, until;
+            if (cal === 'today') {
+                since = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                until = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+            } else if (cal === 'yesterday') {
+                until = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                since = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+            } else if (cal === 'this_week') {
+                var day = now.getDay();
+                var diff = (day === 0) ? 6 : day - 1;
+                since = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff);
+                until = new Date(since.getFullYear(), since.getMonth(), since.getDate() + 7);
+            } else if (cal === 'this_month') {
+                since = new Date(now.getFullYear(), now.getMonth(), 1);
+                until = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+            } else {
+                since = new Date(now.getFullYear(), 0, 1);
+                until = new Date(now.getFullYear() + 1, 0, 1);
+            }
+            return {since_iso: since.toISOString(), until_iso: until.toISOString()};
+        }
+
+        var range_ms = minutes * 60000;
+        var bucket_size_ms = range_ms / _BUCKET_COUNT;
+        var now_ms = Date.now();
+        var until_ms = Math.ceil(now_ms / bucket_size_ms) * bucket_size_ms;
+        var since_ms = until_ms - range_ms;
+        return {since_iso: new Date(since_ms).toISOString(), until_iso: new Date(until_ms).toISOString()};
+    };
+
+    dash._filter_recent_by_range = function(events) {
+        var minutes = dash._time_range_minutes;
+        if (!minutes || minutes <= 0 || !events) {
+            return events;
         }
         var cutoff = Date.now() - (minutes * 60 * 1000);
         var filtered = [];
-        for (var i = 0; i < timeline.length; i++) {
-            var ts = timeline[i].actual_fire_time_iso;
+        for (var i = 0; i < events.length; i++) {
+            var ts = events[i].actual_fire_time_iso;
             if (ts && new Date(ts).getTime() >= cutoff) {
-                filtered.push(timeline[i]);
+                filtered.push(events[i]);
             }
         }
         return filtered;
@@ -210,13 +429,13 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
 
     dash._skip_legend_rebuild = false;
 
-    dash._zoom_bucket_count = 0;
-
     dash._redraw_chart_from_cache = function() {
-        if (dash._last_timeline) {
+        if (dash._last_chart_buckets) {
             dash._skip_legend_rebuild = true;
-            dash.render_bar_chart(dash._last_timeline);
+            dash.render_bar_chart(dash._last_chart_buckets);
             dash._skip_legend_rebuild = false;
+            var filtered_recent = dash._filter_recent_by_range(dash._last_recent_events);
+            dash.render_recent(filtered_recent, dash._last_jobs);
         }
     };
 
@@ -257,10 +476,10 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         var tip_lines = [];
         for (var key in counts) {
             if (counts.hasOwnProperty(key)) {
-                var run_word = counts[key] === 1 ? 'run' : 'runs';
+                var outcomeRunsLabel = dash.formatRunsLabel(counts[key]);
                 tip_lines.push('<div class="dashboard-tooltip-row">' +
                     '<span class="dashboard-tooltip-dot" style="background:' + bar_colors[key] + '"></span>' +
-                    labels[key] + ': <b>' + counts[key] + '</b> ' + run_word + '</div>');
+                    labels[key] + ': <b>' + outcomeRunsLabel + '</b></div>');
             }
         }
         var tip_html = '<div class="dashboard-tooltip-body">' + tip_lines.join('') + '</div>';
@@ -292,36 +511,187 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
     };
 
     // ////////////////////////////////////////////////////////////////////////
+    // Time label formatting
+    // ////////////////////////////////////////////////////////////////////////
+
+    dash.formatTimeLabel = function(date, timeRangeMs) {
+
+        var hours   = ('0' + date.getHours()).slice(-2);
+        var minutes = ('0' + date.getMinutes()).slice(-2);
+        var seconds = ('0' + date.getSeconds()).slice(-2);
+
+        var dayName   = dash.config.day_names[date.getDay()];
+        var monthName = dash.config.month_names[date.getMonth()];
+        var shortYear = String(date.getFullYear()).slice(-2);
+
+        if (timeRangeMs < 10 * dash.config.ms_per_minute) {
+            return hours + ':' + minutes + ':' + seconds;
+        } else if (timeRangeMs < dash.config.ms_per_day) {
+            return hours + ':' + minutes;
+        } else if (timeRangeMs < dash.config.ms_per_week) {
+            return dayName + ' ' + hours + ':' + minutes;
+        } else if (timeRangeMs <= dash.config.ms_per_week) {
+            return dayName + ' ' + monthName + ' ' + date.getDate();
+        } else if (timeRangeMs < dash.config.ms_per_month) {
+            return monthName + ' ' + date.getDate();
+        } else if (timeRangeMs < dash.config.ms_per_year) {
+            return monthName;
+        } else {
+            return monthName + ' ' + shortYear;
+        }
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+    // Monotone cubic Hermite spline (Fritsch-Carlson)
+    // ////////////////////////////////////////////////////////////////////////
+
+    // Builds an SVG path string using monotone cubic Hermite interpolation
+    // (Fritsch-Carlson method, same algorithm as Grafana/uPlot).
+    // Guarantees the curve never overshoots between adjacent knots,
+    // so it cannot dip below zero when all input values are >= 0.
+    dash.buildMonotoneCubicPath = function(points) {
+        var pointCount = points.length;
+        var path = 'M' + points[0].x.toFixed(1) + ',' + points[0].y.toFixed(1);
+
+        if (pointCount === 2) {
+            path += ' L' + points[1].x.toFixed(1) + ',' + points[1].y.toFixed(1);
+            return path;
+        }
+
+        // .. compute segment deltas and slopes ..
+        var segmentDeltaX = [];
+        var segmentDeltaY = [];
+        var segmentSlopes = [];
+
+        for (var segmentIdx = 0; segmentIdx < pointCount - 1; segmentIdx++) {
+            segmentDeltaX[segmentIdx] = points[segmentIdx + 1].x - points[segmentIdx].x;
+            segmentDeltaY[segmentIdx] = points[segmentIdx + 1].y - points[segmentIdx].y;
+            segmentSlopes[segmentIdx] = segmentDeltaX[segmentIdx] !== 0
+                ? segmentDeltaY[segmentIdx] / segmentDeltaX[segmentIdx]
+                : 0;
+        }
+
+        // .. compute tangent slopes using Fritsch-Carlson monotonicity constraint ..
+        var tangentSlopes = [];
+        tangentSlopes[0] = segmentSlopes[0];
+
+        for (var knotIdx = 1; knotIdx < pointCount - 1; knotIdx++) {
+            var slopeBefore = segmentSlopes[knotIdx - 1];
+            var slopeAfter  = segmentSlopes[knotIdx];
+
+            if (slopeAfter === 0 || slopeBefore === 0 || (slopeBefore > 0) !== (slopeAfter > 0)) {
+                tangentSlopes[knotIdx] = 0;
+            } else {
+                var weightedHarmonicMean = 3 * (segmentDeltaX[knotIdx - 1] + segmentDeltaX[knotIdx]) / (
+                    (2 * segmentDeltaX[knotIdx] + segmentDeltaX[knotIdx - 1]) / slopeBefore +
+                    (segmentDeltaX[knotIdx] + 2 * segmentDeltaX[knotIdx - 1]) / slopeAfter
+                );
+                tangentSlopes[knotIdx] = isFinite(weightedHarmonicMean) ? weightedHarmonicMean : 0;
+            }
+        }
+
+        tangentSlopes[pointCount - 1] = segmentSlopes[pointCount - 2];
+
+        // .. emit cubic Bezier segments with control points at 1/3 of segment width ..
+        for (var curveIdx = 0; curveIdx < pointCount - 1; curveIdx++) {
+            var deltaX = segmentDeltaX[curveIdx];
+            var controlPoint1X = points[curveIdx].x + deltaX / 3;
+            var controlPoint1Y = points[curveIdx].y + tangentSlopes[curveIdx] * deltaX / 3;
+            var controlPoint2X = points[curveIdx + 1].x - deltaX / 3;
+            var controlPoint2Y = points[curveIdx + 1].y - tangentSlopes[curveIdx + 1] * deltaX / 3;
+            path += ' C' + controlPoint1X.toFixed(1) + ',' + controlPoint1Y.toFixed(1) +
+                    ' ' + controlPoint2X.toFixed(1) + ',' + controlPoint2Y.toFixed(1) +
+                    ' ' + points[curveIdx + 1].x.toFixed(1) + ',' + points[curveIdx + 1].y.toFixed(1);
+        }
+
+        return path;
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
     // Bar chart
     // ////////////////////////////////////////////////////////////////////////
 
-    dash.render_bar_chart = function(timeline) {
-        dash._last_timeline = timeline;
+    dash.render_bar_chart = function(chart_data) {
+        dash._last_chart_buckets = chart_data;
         var container = $('#dashboard-bar-chart');
-        var filtered = dash._filter_timeline_by_range(timeline);
 
-        if (!filtered || filtered.length === 0) {
+        if (!chart_data || !chart_data.buckets || chart_data.buckets.length === 0) {
             container.html('<div class="dashboard-no-data">No run history yet</div>');
             $('#dashboard-chart-legend').empty();
             $('#dashboard-data-count').text('');
             return;
         }
 
-        var range_minutes = dash._time_range_minutes;
-        var range_names = {5: '5 min', 15: '15 min', 30: '30 min', 60: '1 hour', 360: '6 hours', 1440: 'Today', 2880: 'Yesterday', 10080: 'This week', 43200: 'This month', 525600: 'This year'};
-        var filtered_exec_count = 0;
-        for (var fe = 0; fe < filtered.length; fe++) {
-            var foc = filtered[fe].outcome;
-            if (foc === 'ok' || foc === 'error' || foc === 'timeout') {
-                filtered_exec_count++;
+        var server_buckets = chart_data.buckets;
+        var chart_width = container.width();
+        var chart_height = 200;
+        var padding_left = 62;
+        var padding_bottom = 28;
+        var padding_top = 12;
+        var padding_right = 8;
+
+        var outcome_keys = ['ok', 'error', 'timeout', 'skipped_already_in_flight'];
+        var bar_colors = dash.outcome_bar_colors;
+        var labels = dash.outcome_labels;
+        var hidden_outcomes = dash._get_hidden_outcomes();
+
+        var _year_range_ms = dash._time_range_minutes * dash.config.ms_per_minute;
+        var _is_year_range = _year_range_ms >= dash.config.ms_per_year;
+
+        var buckets = [];
+
+        if (_is_year_range) {
+            // .. merge server buckets into 12 calendar months ..
+            var _monthly = {};
+            for (var sb_idx = 0; sb_idx < server_buckets.length; sb_idx++) {
+                var sb_date = new Date(server_buckets[sb_idx].start_iso);
+                var sb_month = sb_date.getMonth();
+                if (!_monthly[sb_month]) {
+                    _monthly[sb_month] = {ok: 0, error: 0, timeout: 0, skipped_already_in_flight: 0,
+                        start: new Date(server_buckets[sb_idx].start_iso).getTime(), end: 0};
+                }
+                _monthly[sb_month].ok += server_buckets[sb_idx].ok;
+                _monthly[sb_month].error += server_buckets[sb_idx].error;
+                _monthly[sb_month].timeout += server_buckets[sb_idx].timeout;
+                _monthly[sb_month].skipped_already_in_flight += server_buckets[sb_idx].skipped_already_in_flight;
+                _monthly[sb_month].end = new Date(server_buckets[sb_idx].end_iso).getTime();
+            }
+            for (var month_idx = 0; month_idx < 12; month_idx++) {
+                if (_monthly[month_idx]) {
+                    buckets.push(_monthly[month_idx]);
+                }
+            }
+        } else {
+            var display_bucket_count = Math.min(60, Math.max(12, Math.floor(chart_width / 16)));
+            var merge_factor = Math.max(1, Math.floor(server_buckets.length / display_bucket_count));
+            for (var merge_index = 0; merge_index < server_buckets.length; merge_index += merge_factor) {
+                var merged = {ok: 0, error: 0, timeout: 0, skipped_already_in_flight: 0, start: 0, end: 0};
+                var merge_end = Math.min(merge_index + merge_factor, server_buckets.length);
+                merged.start = new Date(server_buckets[merge_index].start_iso).getTime();
+                merged.end = new Date(server_buckets[merge_end - 1].end_iso).getTime();
+                for (var sub_index = merge_index; sub_index < merge_end; sub_index++) {
+                    var source = server_buckets[sub_index];
+                    merged.ok += source.ok;
+                    merged.error += source.error;
+                    merged.timeout += source.timeout;
+                    merged.skipped_already_in_flight += source.skipped_already_in_flight;
+                }
+                buckets.push(merged);
             }
         }
-        var filtered_count_label = filtered_exec_count === 1
-            ? '1 run'
-            : kit.format_number_compact(filtered_exec_count) + ' runs';
-        var filtered_count_full = filtered_exec_count === 1
-            ? '1 run'
-            : kit.format_number_full(filtered_exec_count) + ' runs';
+
+        var bucket_count = buckets.length;
+
+        var total_exec_count = 0;
+        for (var tc = 0; tc < buckets.length; tc++) {
+            total_exec_count += buckets[tc].ok + buckets[tc].error + buckets[tc].timeout;
+        }
+
+        var range_minutes = dash._time_range_minutes;
+        var range_names = {5: '5 min', 15: '15 min', 30: '30 min', 60: '1 hour', 360: '6 hours', 1440: 'Today', 2880: 'Yesterday', 10080: 'This week', 43200: 'This month', 525600: 'This year'};
+        var filteredCountSuffix = total_exec_count === 1 ? 'run' : 'runs';
+        var filtered_count_label = kit.format_number_compact(total_exec_count) + ' ' + filteredCountSuffix;
+        var filtered_count_full = dash.formatRunsLabel(total_exec_count);
         var range_label;
         if (range_minutes > 0 && range_names[range_minutes]) {
             range_label = range_names[range_minutes] + ' \u00b7 ' + filtered_count_label;
@@ -334,68 +704,18 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             ' \u00b7 ' + filtered_count_full
         );
 
-        var chart_width = container.width();
-        var chart_height = 200;
-        var padding_left = 40;
-        var padding_bottom = 28;
-        var padding_top = 12;
-        var padding_right = 8;
-
-        var outcome_keys = ['ok', 'error', 'timeout', 'skipped_already_in_flight'];
-        var bar_colors = dash.outcome_bar_colors;
-        var labels = dash.outcome_labels;
-        var hidden_outcomes = dash._get_hidden_outcomes();
-
-        var timestamps = [];
-        for (var record_index = 0; record_index < filtered.length; record_index++) {
-            var timestamp_string = filtered[record_index].actual_fire_time_iso;
-            if (timestamp_string) {
-                timestamps.push(new Date(timestamp_string).getTime());
-            }
-        }
-
-        if (timestamps.length === 0) {
+        if (total_exec_count === 0) {
             container.html('<div class="dashboard-no-data">No run history yet</div>');
             $('#dashboard-chart-legend').empty();
-            $('#dashboard-data-count').text('');
             return;
         }
 
-        var min_time = Math.min.apply(null, timestamps);
-        var max_time = Date.now();
+        var min_time = buckets[0].start;
+        var max_time = buckets[bucket_count - 1].end;
         var time_range = max_time - min_time;
-
         if (time_range === 0) {
             time_range = 3600000;
             min_time = max_time - time_range;
-        }
-
-        var auto_bucket_count = Math.min(60, Math.max(12, Math.floor(chart_width / 16)));
-        var bucket_count = dash._zoom_bucket_count > 0
-            ? Math.min(120, Math.max(4, dash._zoom_bucket_count))
-            : auto_bucket_count;
-        var bucket_size = time_range / bucket_count;
-        var buckets = [];
-        for (var bucket_index = 0; bucket_index < bucket_count; bucket_index++) {
-            var bucket = {};
-            for (var key_index = 0; key_index < outcome_keys.length; key_index++) {
-                bucket[outcome_keys[key_index]] = 0;
-            }
-            bucket.start = min_time + bucket_index * bucket_size;
-            bucket.end = min_time + (bucket_index + 1) * bucket_size;
-            buckets.push(bucket);
-        }
-
-        for (var timeline_index = 0; timeline_index < filtered.length; timeline_index++) {
-            var record = filtered[timeline_index];
-            var time = new Date(record.actual_fire_time_iso).getTime();
-            var outcome = record.outcome;
-            var target_bucket = Math.floor((time - min_time) / bucket_size);
-            if (target_bucket >= bucket_count) target_bucket = bucket_count - 1;
-            if (target_bucket < 0) target_bucket = 0;
-            if (buckets[target_bucket][outcome] !== undefined) {
-                buckets[target_bucket][outcome]++;
-            }
         }
 
         var visible_keys = [];
@@ -408,24 +728,145 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             if (has_data) visible_keys.push(outcome_keys[vk]);
         }
 
-        var max_stack = 0;
-        if (dash.show_bars) {
-            for (var ms_index = 0; ms_index < buckets.length; ms_index++) {
-                var ms_sum = 0;
-                for (var ms_key = 0; ms_key < visible_keys.length; ms_key++) {
-                    ms_sum += buckets[ms_index][visible_keys[ms_key]];
-                }
-                if (ms_sum > max_stack) max_stack = ms_sum;
+        dash._chart_buckets = buckets;
+        dash._chart_visible_keys = visible_keys;
+        dash._chart_bar_colors = bar_colors;
+        dash._chart_labels = labels;
+
+        // Determine the effective range in milliseconds ..
+        var rangeMilliseconds = dash._time_range_minutes * dash.config.ms_per_minute;
+
+        if (rangeMilliseconds === 0 && buckets.length > 0) {
+            rangeMilliseconds = buckets[buckets.length - 1].end - buckets[0].start;
+        }
+
+        // .. derive the group type from the range ..
+        var groupType;
+
+        if (rangeMilliseconds === 0)                            groupType = 'none';
+        else if (rangeMilliseconds >= dash.config.ms_per_year)  groupType = 'month';
+        else if (rangeMilliseconds >= dash.config.ms_per_week)  groupType = 'day';
+        else if (rangeMilliseconds > dash.config.ms_per_hour)   groupType = 'hour';
+        else                                                    groupType = 'minute';
+
+        dash._chart_group_type = groupType;
+
+        // .. look up the grouping configuration for this group type ..
+        var groupConfig = dash.groupConfig[groupType];
+
+        // .. build the group map, assigning each raw bucket to a group.
+        dash._chart_groups = [];
+        dash._chart_group_ranges = {};
+        dash._chart_group_labels = {};
+
+        for (var bucketIndex = 0; bucketIndex < buckets.length; bucketIndex++) {
+
+            var bucketDate = new Date(buckets[bucketIndex].start);
+            var groupKey;
+            var groupLabel;
+
+            // .. when we have a known group type, derive the key and label from the config ..
+            if (groupConfig) {
+                groupKey = groupConfig.extractKey(bucketDate);
+                groupLabel = groupConfig.formatLabel(bucketDate);
             }
-        } else {
-            for (var ms_index2 = 0; ms_index2 < buckets.length; ms_index2++) {
-                for (var ms_key2 = 0; ms_key2 < visible_keys.length; ms_key2++) {
-                    var ms_val = buckets[ms_index2][visible_keys[ms_key2]];
-                    if (ms_val > max_stack) max_stack = ms_val;
+
+            // .. otherwise use the raw bucket index with no label.
+            else {
+                groupKey = bucketIndex;
+                groupLabel = null;
+            }
+
+            dash._chart_groups.push(groupKey);
+
+            if (dash._chart_group_ranges[groupKey] === undefined) {
+                dash._chart_group_ranges[groupKey] = {first: bucketIndex, last: bucketIndex};
+                dash._chart_group_labels[groupKey] = groupLabel;
+            }
+            else {
+                dash._chart_group_ranges[groupKey].last = bucketIndex;
+            }
+        }
+
+        // .. collapse raw buckets into per-group plot buckets when grouping is active ..
+        // .. otherwise plot buckets is just a reference to the raw buckets.
+        var plotBuckets;
+
+        if (groupType !== 'none') {
+
+            var seenGroupOrder = [];
+            var groupEntries = {};
+
+            for (var rawIndex = 0; rawIndex < buckets.length; rawIndex++) {
+
+                var rawGroupKey = dash._chart_groups[rawIndex];
+
+                // .. create a new entry when we encounter a group key for the first time ..
+                if (groupEntries[rawGroupKey] === undefined) {
+                    seenGroupOrder.push(rawGroupKey);
+
+                    var newEntry = {start: buckets[rawIndex].start, end: buckets[rawIndex].end, group_key: rawGroupKey};
+
+                    for (var initKeyIndex = 0; initKeyIndex < visible_keys.length; initKeyIndex++) {
+                        newEntry[visible_keys[initKeyIndex]] = 0;
+                    }
+
+                    groupEntries[rawGroupKey] = newEntry;
+                }
+
+                // .. accumulate the raw bucket's outcome counts into the group entry.
+                var targetEntry = groupEntries[rawGroupKey];
+                targetEntry.end = buckets[rawIndex].end;
+
+                for (var accumulateIndex = 0; accumulateIndex < visible_keys.length; accumulateIndex++) {
+                    targetEntry[visible_keys[accumulateIndex]] += buckets[rawIndex][visible_keys[accumulateIndex]];
+                }
+            }
+
+            // .. build the final array in insertion order.
+            plotBuckets = [];
+
+            for (var orderIndex = 0; orderIndex < seenGroupOrder.length; orderIndex++) {
+                plotBuckets.push(groupEntries[seenGroupOrder[orderIndex]]);
+            }
+        }
+        else {
+            plotBuckets = buckets;
+        }
+
+        bucket_count = plotBuckets.length;
+
+        // .. compute the maximum stacked value across all plot buckets for y-axis scaling.
+        var maxStack = 0;
+
+        if (dash.show_bars) {
+            for (var stackIndex = 0; stackIndex < plotBuckets.length; stackIndex++) {
+                var stackSum = 0;
+
+                for (var stackKeyIndex = 0; stackKeyIndex < visible_keys.length; stackKeyIndex++) {
+                    stackSum += plotBuckets[stackIndex][visible_keys[stackKeyIndex]];
+                }
+
+                if (stackSum > maxStack) {
+                    maxStack = stackSum;
                 }
             }
         }
-        if (max_stack === 0) max_stack = 1;
+        else {
+            for (var lineIndex = 0; lineIndex < plotBuckets.length; lineIndex++) {
+                for (var lineKeyIndex = 0; lineKeyIndex < visible_keys.length; lineKeyIndex++) {
+                    var lineValue = plotBuckets[lineIndex][visible_keys[lineKeyIndex]];
+
+                    if (lineValue > maxStack) {
+                        maxStack = lineValue;
+                    }
+                }
+            }
+        }
+
+        if (maxStack === 0) {
+            maxStack = 1;
+        }
 
         var draw_width = chart_width - padding_left - padding_right;
         var draw_height = chart_height - padding_top - padding_bottom;
@@ -434,31 +875,40 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         var svg = '<svg width="' + chart_width + '" height="' + chart_height + '" xmlns="http://www.w3.org/2000/svg">';
 
         svg += '<defs>';
-        for (var gd = 0; gd < visible_keys.length; gd++) {
-            var gd_key = visible_keys[gd];
-            svg += '<linearGradient id="areaGrad_' + gd_key + '" x1="0" y1="0" x2="0" y2="1">';
-            svg += '<stop offset="0" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.10"/>';
-            svg += '<stop offset="0.5" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.03"/>';
-            svg += '<stop offset="1" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.0"/>';
+        for (var gradientIndex = 0; gradientIndex < visible_keys.length; gradientIndex++) {
+            var gradientKey = visible_keys[gradientIndex];
+            svg += '<linearGradient id="areaGrad_' + gradientKey + '" x1="0" y1="0" x2="0" y2="1">';
+            svg += '<stop offset="0" stop-color="' + bar_colors[gradientKey] + '" stop-opacity="0.10"/>';
+            svg += '<stop offset="0.5" stop-color="' + bar_colors[gradientKey] + '" stop-opacity="0.03"/>';
+            svg += '<stop offset="1" stop-color="' + bar_colors[gradientKey] + '" stop-opacity="0.0"/>';
             svg += '</linearGradient>';
         }
-        svg += '<linearGradient id="lollipopGrad" x1="0" y1="0" x2="0" y2="1">';
-        svg += '<stop offset="0" stop-color="#9ca3af" stop-opacity="0.06"/>';
-        svg += '<stop offset="0.5" stop-color="#9ca3af" stop-opacity="0.02"/>';
-        svg += '<stop offset="1" stop-color="#9ca3af" stop-opacity="0.0"/>';
-        svg += '</linearGradient>';
         svg += '</defs>';
 
-        var grid_line_count = 4;
-        for (var grid_index = 0; grid_index <= grid_line_count; grid_index++) {
-            var grid_y = padding_top + draw_height - (grid_index / grid_line_count) * draw_height;
-            var grid_value = Math.round((grid_index / grid_line_count) * max_stack);
-            svg += '<line x1="' + padding_left + '" y1="' + grid_y.toFixed(1) + '" ';
-            svg += 'x2="' + (chart_width - padding_right) + '" y2="' + grid_y.toFixed(1) + '" ';
+        // .. determine the y-axis suffix from the group config.
+        var yAxisValues = [];
+        var yAxisSuffix = groupConfig ? groupConfig.suffix : '';
+
+        var gridLineCount = Math.min(4, maxStack);
+        var previousGridValue = -1;
+
+        for (var gridIndex = 0; gridIndex <= gridLineCount; gridIndex++) {
+
+            var gridY = padding_top + draw_height - (gridIndex / gridLineCount) * draw_height;
+            var gridValue = Math.round((gridIndex / gridLineCount) * maxStack);
+
+            svg += '<line x1="' + padding_left + '" y1="' + gridY.toFixed(1) + '" ';
+            svg += 'x2="' + (chart_width - padding_right) + '" y2="' + gridY.toFixed(1) + '" ';
             svg += 'stroke="rgba(0,0,0,0.05)" stroke-width="1" />';
-            svg += '<text x="' + (padding_left - 6) + '" y="' + (grid_y + 3).toFixed(1) + '" ';
-            svg += 'text-anchor="end" font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">';
-            svg += grid_value + '</text>';
+
+            if (gridValue !== previousGridValue) {
+                svg += '<text x="' + (padding_left - 6) + '" y="' + (gridY + 3).toFixed(1) + '" ';
+                svg += 'text-anchor="end" font-size="10" fill="rgba(0,0,0,0.6)" font-family="Menlo, Consolas, Monaco, monospace" data-grid-value="' + gridValue + '">';
+                svg += kit.format_number_compact(gridValue) + yAxisSuffix + '</text>';
+
+                yAxisValues.push(gridValue);
+                previousGridValue = gridValue;
+            }
         }
 
         var bucket_slot_width = draw_width / bucket_count;
@@ -474,49 +924,50 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             var layer_key = visible_keys[layer];
             layer_points[layer_key] = [];
 
-            for (var bi = 0; bi < bucket_count; bi++) {
-                var val = buckets[bi][layer_key];
-                var bar_h = val > 0 ? Math.max(2, (val / max_stack) * draw_height) : 0;
-                var bar_x = padding_left + bi * bucket_slot_width + group_padding + layer * (bar_width + bar_gap);
-                var bar_y = baseline_y - bar_h;
+            for (var pointIndex = 0; pointIndex < bucket_count; pointIndex++) {
+                var pointValue = plotBuckets[pointIndex][layer_key];
+                var pointHeight = pointValue > 0 ? Math.max(2, (pointValue / maxStack) * draw_height) : 0;
+                var pointX = padding_left + pointIndex * bucket_slot_width + group_padding + layer * (bar_width + bar_gap);
+                var pointY = baseline_y - pointHeight;
+
                 layer_points[layer_key].push({
-                    x: bar_x + bar_width / 2,
-                    y: val > 0 ? bar_y : baseline_y,
-                    val: val
+                    x: pointX + bar_width / 2,
+                    y: pointValue > 0 ? pointY : baseline_y,
+                    val: pointValue
                 });
             }
         }
 
         if (dash.show_bars) {
-            var sb_inset = Math.max(1, bucket_slot_width * 0.1);
-            var sb_w = bucket_slot_width - sb_inset * 2;
-            var sb_sep = 1.5;
+            var barInset = Math.max(1, bucket_slot_width * 0.1);
+            var barSlotWidth = bucket_slot_width - barInset * 2;
+            var barSeparation = 1.5;
 
-            for (var sk = 0; sk < visible_keys.length; sk++) {
-                layer_points[visible_keys[sk]] = [];
+            for (var resetIndex = 0; resetIndex < visible_keys.length; resetIndex++) {
+                layer_points[visible_keys[resetIndex]] = [];
             }
 
-            for (var sbi = 0; sbi < bucket_count; sbi++) {
-                var sb_x = padding_left + sbi * bucket_slot_width + sb_inset;
-                var sb_cursor_y = baseline_y;
+            for (var barBucketIndex = 0; barBucketIndex < bucket_count; barBucketIndex++) {
+                var barX = padding_left + barBucketIndex * bucket_slot_width + barInset;
+                var barCursorY = baseline_y;
 
-                for (var sk2 = 0; sk2 < visible_keys.length; sk2++) {
-                    var sk_key = visible_keys[sk2];
-                    var sk_val = buckets[sbi][sk_key];
-                    var sk_h = sk_val > 0 ? Math.max(2, (sk_val / max_stack) * draw_height) : 0;
+                for (var barKeyIndex = 0; barKeyIndex < visible_keys.length; barKeyIndex++) {
+                    var barOutcomeKey = visible_keys[barKeyIndex];
+                    var barValue = plotBuckets[barBucketIndex][barOutcomeKey];
+                    var barHeight = barValue > 0 ? Math.max(2, (barValue / maxStack) * draw_height) : 0;
 
-                    if (sk_val > 0) {
-                        var seg_y = sb_cursor_y - sk_h;
-                        svg += '<rect x="' + sb_x.toFixed(1) + '" y="' + seg_y.toFixed(1) + '" ';
-                        svg += 'width="' + sb_w.toFixed(1) + '" height="' + sk_h.toFixed(1) + '" ';
-                        svg += 'fill="' + bar_colors[sk_key] + '" />';
-                        sb_cursor_y = seg_y - sb_sep;
+                    if (barValue > 0) {
+                        var segmentY = barCursorY - barHeight;
+                        svg += '<rect x="' + barX.toFixed(1) + '" y="' + segmentY.toFixed(1) + '" ';
+                        svg += 'width="' + barSlotWidth.toFixed(1) + '" height="' + barHeight.toFixed(1) + '" ';
+                        svg += 'fill="' + bar_colors[barOutcomeKey] + '" />';
+                        barCursorY = segmentY - barSeparation;
                     }
 
-                    layer_points[sk_key].push({
-                        x: sb_x + sb_w / 2,
-                        y: sk_val > 0 ? sb_cursor_y + sb_sep : baseline_y,
-                        val: sk_val
+                    layer_points[barOutcomeKey].push({
+                        x: barX + barSlotWidth / 2,
+                        y: barValue > 0 ? barCursorY + barSeparation : baseline_y,
+                        val: barValue
                     });
                 }
             }
@@ -528,72 +979,141 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
 
             for (var spline_layer = 0; spline_layer < visible_keys.length; spline_layer++) {
                 var spline_key = visible_keys[spline_layer];
-                var data_pts = [];
-                for (var si = 0; si < bucket_count; si++) {
-                    var sx = padding_left + (si + 0.5) * bucket_slot_width;
-                    var sv = buckets[si][spline_key];
-                    var sy = sv > 0 ? baseline_y - Math.max(2, (sv / max_stack) * draw_height) : baseline_y;
-                    data_pts.push({x: sx, y: sy, bucket_index: si});
+                var dataPoints = [];
+
+                for (var splineIndex = 0; splineIndex < bucket_count; splineIndex++) {
+                    var splineX = padding_left + (splineIndex + 0.5) * bucket_slot_width;
+                    var splineValue = plotBuckets[splineIndex][spline_key];
+                    var splineY = splineValue > 0 ? baseline_y - Math.max(2, (splineValue / maxStack) * draw_height) : baseline_y;
+                    dataPoints.push({x: splineX, y: splineY, bucket_index: splineIndex});
                 }
 
-                var spline_pts = [];
-                spline_pts.push({x: edge_left, y: data_pts[0].y});
-                for (var dp = 0; dp < data_pts.length; dp++) {
-                    spline_pts.push(data_pts[dp]);
+                var curvePoints = [];
+                curvePoints.push({x: edge_left, y: dataPoints[0].y});
+
+                for (var curveIndex = 0; curveIndex < dataPoints.length; curveIndex++) {
+                    curvePoints.push(dataPoints[curveIndex]);
                 }
-                spline_pts.push({x: edge_right, y: data_pts[data_pts.length - 1].y});
+
+                var lastDataPoint = dataPoints[dataPoints.length - 1];
+                curvePoints.push({x: edge_right, y: lastDataPoint.y});
 
                 layer_points[spline_key] = [];
-                for (var spi = 0; spi < bucket_count; spi++) {
-                    var hover_val = buckets[spi][spline_key];
-                    var hover_y = hover_val > 0 ? baseline_y - (hover_val / max_stack) * draw_height : baseline_y;
-                    layer_points[spline_key].push({x: data_pts[spi].x, y: hover_y, val: hover_val});
+
+                for (var hoverPointIndex = 0; hoverPointIndex < bucket_count; hoverPointIndex++) {
+                    var hoverPointValue = plotBuckets[hoverPointIndex][spline_key];
+                    var hoverPointY = hoverPointValue > 0 ? baseline_y - (hoverPointValue / maxStack) * draw_height : baseline_y;
+                    layer_points[spline_key].push({x: dataPoints[hoverPointIndex].x, y: hoverPointY, val: hoverPointValue});
                 }
 
-                var area_path = 'M' + spline_pts[0].x.toFixed(1) + ',' + spline_pts[0].y.toFixed(1);
-                for (var sp = 1; sp < spline_pts.length; sp++) {
-                    var sp_prev = spline_pts[sp - 1];
-                    var sp_curr = spline_pts[sp];
-                    var sp_cpx = (sp_prev.x + sp_curr.x) / 2;
-                    area_path += ' C' + sp_cpx.toFixed(1) + ',' + sp_prev.y.toFixed(1) +
-                                 ' ' + sp_cpx.toFixed(1) + ',' + sp_curr.y.toFixed(1) +
-                                 ' ' + sp_curr.x.toFixed(1) + ',' + sp_curr.y.toFixed(1);
-                }
-                var area_fill = area_path +
+                var areaPath = dash.buildMonotoneCubicPath(curvePoints);
+                var areaFill = areaPath +
                     ' L' + edge_right.toFixed(1) + ',' + baseline_y.toFixed(1) +
                     ' L' + edge_left.toFixed(1) + ',' + baseline_y.toFixed(1) + ' Z';
 
-                svg += '<path d="' + area_fill + '" fill="url(#areaGrad_' + spline_key + ')" />';
-                svg += '<path d="' + area_path + '" fill="none" stroke="' + bar_colors[spline_key] + '" stroke-width="1.5" stroke-opacity="0.6" stroke-linecap="round" stroke-linejoin="round" />';
+                svg += '<path d="' + areaFill + '" fill="url(#areaGrad_' + spline_key + ')" />';
+                svg += '<path d="' + areaPath + '" fill="none" stroke="' + bar_colors[spline_key] + '" stroke-width="1.5" stroke-opacity="0.6" stroke-linecap="round" stroke-linejoin="round" />';
 
-                var tip_cx = edge_right;
-                var tip_cy = data_pts[data_pts.length - 1].y;
-                var tip_color = bar_colors[spline_key];
-                svg += '<circle cx="' + tip_cx.toFixed(2) + '" cy="' + tip_cy.toFixed(2) + '" r="5.5" ';
-                svg += 'fill="none" stroke="' + tip_color + '" stroke-opacity="0.35" stroke-width="1"/>';
-                svg += '<circle cx="' + tip_cx.toFixed(2) + '" cy="' + tip_cy.toFixed(2) + '" r="3.5" ';
-                svg += 'fill="' + tip_color + '"/>';
+                var tipCenterX = edge_right;
+                var tipCenterY = lastDataPoint.y;
+                var tipColor = bar_colors[spline_key];
+                svg += '<circle cx="' + tipCenterX.toFixed(2) + '" cy="' + tipCenterY.toFixed(2) + '" r="5.5" ';
+                svg += 'fill="none" stroke="' + tipColor + '" stroke-opacity="0.35" stroke-width="1"/>';
+                svg += '<circle cx="' + tipCenterX.toFixed(2) + '" cy="' + tipCenterY.toFixed(2) + '" r="3.5" ';
+                svg += 'fill="' + tipColor + '"/>';
             }
         }
 
-        var show_seconds = bucket_size < 120000;
-        var label_count = Math.min(6, bucket_count);
+        var label_range = dash._time_range_minutes > 0
+            ? dash._time_range_minutes * dash.config.ms_per_minute
+            : time_range;
+        dash._chart_label_range = label_range;
+        var xAxisLabels = [];
+        var label_count = _is_year_range ? bucket_count : Math.min(6, bucket_count);
         var label_step = Math.max(1, Math.floor(bucket_count / label_count));
         for (var label_index = 0; label_index < bucket_count; label_index += label_step) {
             var label_x = padding_left + (label_index + 0.5) * bucket_slot_width;
-            var label_date = new Date(buckets[label_index].start);
-            var label_text = ('0' + label_date.getHours()).slice(-2) + ':' + ('0' + label_date.getMinutes()).slice(-2);
-            if (show_seconds) {
-                label_text += ':' + ('0' + label_date.getSeconds()).slice(-2);
-            }
+            var label_date = new Date(plotBuckets[label_index].start);
+            var label_text = dash.formatTimeLabel(label_date, label_range);
+            xAxisLabels.push(label_text);
             svg += '<text x="' + label_x.toFixed(1) + '" y="' + (chart_height - 6) + '" text-anchor="middle" ';
-            svg += 'font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">' + label_text + '</text>';
+            svg += 'font-size="10" fill="rgba(0,0,0,0.6)" font-family="Menlo, Consolas, Monaco, monospace">' + label_text + '</text>';
         }
+
+        // .. emit the final time label at the right edge if it differs from the last loop label ..
+        var final_label_date = new Date(plotBuckets[bucket_count - 1].start);
+        var final_label_text = dash.formatTimeLabel(final_label_date, label_range);
+        if (final_label_text !== xAxisLabels[xAxisLabels.length - 1]) {
+            var final_label_x = chart_width - padding_right;
+            xAxisLabels.push(final_label_text);
+            svg += '<text x="' + final_label_x.toFixed(1) + '" y="' + (chart_height - 6) + '" text-anchor="end" ';
+            svg += 'font-size="10" fill="rgba(0,0,0,0.6)" font-family="Menlo, Consolas, Monaco, monospace">' + final_label_text + '</text>';
+        }
+
+        // .. build the copy-data array from plot buckets using summarizeBucket.
+        var copyBuckets = [];
+
+        for (var copyIndex = 0; copyIndex < plotBuckets.length; copyIndex++) {
+
+            var copyBucket = plotBuckets[copyIndex];
+
+            // .. resolve the group label, using the config label if available ..
+            var copyGroupKey;
+            var copyLabel;
+
+            if (copyBucket.group_key !== undefined) {
+                copyGroupKey = copyBucket.group_key;
+                copyLabel = dash._chart_group_labels[copyGroupKey];
+            }
+            else {
+                copyGroupKey = dash._chart_groups[copyIndex];
+                copyLabel = dash._chart_group_labels[copyGroupKey];
+            }
+
+            // .. if no group label was found, format it from the bucket start date.
+            if (!copyLabel) {
+                var copyDate = new Date(copyBucket.start);
+                copyLabel = dash.formatTimeLabel(copyDate, label_range);
+            }
+
+            var copySummary = dash.summarizeBucket(copyBucket, visible_keys, bar_colors, labels);
+
+            copyBuckets.push({
+                index: copyIndex,
+                time_label: copyLabel,
+                total_runs: copySummary.totalRuns,
+                runs_label: copySummary.runsLabel,
+                outcomes: copySummary.outcomes,
+                start: copyBucket.start,
+                end: copyBucket.end
+            });
+        }
+
+        dash._copy_data = {
+            y_axis: yAxisValues,
+            x_axis: xAxisLabels,
+            buckets: copyBuckets
+        };
 
         svg += '</svg>';
         container.html(svg);
 
-        dash._setup_chart_interactions(container, buckets, padding_left, draw_width, bucket_count, padding_top, draw_height, padding_bottom, chart_height, visible_keys, layer_points, bar_colors);
+        container.find('text[data-grid-value]').each(function() {
+            var raw = parseInt(this.dataset.gridValue, 10);
+            var compact = kit.format_number_compact(raw);
+            var full = kit.format_number_full(raw);
+            if (compact !== full) {
+                tippy(this, {
+                    content: full,
+                    placement: 'left',
+                    theme: 'dark',
+                    arrow: true,
+                    delay: [0, 0]
+                });
+            }
+        });
+
+        dash._setup_chart_interactions(container, plotBuckets, padding_left, draw_width, bucket_count, padding_top, draw_height, padding_bottom, chart_height, visible_keys, layer_points, bar_colors);
 
         kit.build_legend({
             container: '#dashboard-chart-legend',
@@ -601,7 +1121,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             palette: bar_colors,
             labels: labels,
             text_colors: dash.outcome_colors,
-            bg_colors: dash.outcome_bg_colors,
+            backgrounds: dash.outcome_backgrounds,
             hidden: hidden_outcomes,
             on_toggle: function(_key, h) {
                 dash._set_hidden_outcomes(h);
@@ -647,80 +1167,114 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
                 return;
             }
 
-            var bucket_index = Math.floor((relative_x / draw_width) * bucket_count);
-            if (bucket_index >= bucket_count) bucket_index = bucket_count - 1;
-            if (bucket_index < 0) bucket_index = 0;
+            var hoverIndex = Math.floor((relative_x / draw_width) * bucket_count);
 
-            var band_left = padding_left + bucket_index * bucket_width_px;
-            var band_html = '<svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none" xmlns="http://www.w3.org/2000/svg">';
-            band_html += '<rect x="' + band_left.toFixed(1) + '" y="' + padding_top + '" width="' + bucket_width_px.toFixed(1) + '" height="' + draw_height + '" fill="rgba(0,0,0,0.06)" rx="2" />';
+            if (hoverIndex >= bucket_count) {
+                hoverIndex = bucket_count - 1;
+            }
 
-            for (var dk = 0; dk < visible_keys.length; dk++) {
-                var dk_key = visible_keys[dk];
-                var pts = layer_points[dk_key];
-                if (pts && pts[bucket_index] && pts[bucket_index].val > 0) {
-                    var pt = pts[bucket_index];
-                    var dot_color_main = bar_colors[dk_key];
-                    band_html += '<circle cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="5.5" fill="none" stroke="' + dot_color_main + '" stroke-opacity="0.35" stroke-width="1" />';
-                    band_html += '<circle cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="3.5" fill="' + dot_color_main + '" />';
+            if (hoverIndex < 0) {
+                hoverIndex = 0;
+            }
+
+            // Determine the group range and aggregate totals for this hover position ..
+            var hoverBucket = buckets[hoverIndex];
+            var hoverGroupKey;
+            var hoverFirst;
+            var hoverLast;
+            var hoverTotals;
+
+            // .. when the bucket is pre-grouped (from plotBuckets), read directly ..
+            if (hoverBucket.group_key !== undefined) {
+                hoverFirst = hoverIndex;
+                hoverLast = hoverIndex;
+                hoverGroupKey = hoverBucket.group_key;
+                hoverTotals = {};
+
+                for (var directKeyIndex = 0; directKeyIndex < visible_keys.length; directKeyIndex++) {
+                    var directKey = visible_keys[directKeyIndex];
+                    hoverTotals[directKey] = hoverBucket[directKey];
                 }
             }
-            band_html += '</svg>';
-            overlay.html(band_html);
 
-            var bucket = buckets[bucket_index];
-            var time_start = new Date(bucket.start);
-            var time_end = new Date(bucket.end);
-            var fmt_time = function(d) {
-                return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ':' + ('0' + d.getSeconds()).slice(-2);
-            };
-            var bucket_span_s = Math.round((bucket.end - bucket.start) / 1000);
-            var time_label = bucket_span_s >= 1
-                ? fmt_time(time_start) + ' \u2192 ' + fmt_time(time_end)
-                : fmt_time(time_start);
+            // .. otherwise aggregate across the raw bucket range for this group.
+            else {
+                hoverGroupKey = dash._chart_groups[hoverIndex];
+                var hoverRange = dash._chart_group_ranges[hoverGroupKey];
+                hoverFirst = hoverRange.first;
+                hoverLast = hoverRange.last;
+                hoverTotals = {};
 
-            var total_runs = 0;
-            for (var tk = 0; tk < visible_keys.length; tk++) {
-                total_runs += bucket[visible_keys[tk]];
+                for (var initIndex = 0; initIndex < visible_keys.length; initIndex++) {
+                    hoverTotals[visible_keys[initIndex]] = 0;
+                }
+
+                for (var aggregateIndex = hoverFirst; aggregateIndex <= hoverLast; aggregateIndex++) {
+                    for (var outcomeIndex = 0; outcomeIndex < visible_keys.length; outcomeIndex++) {
+                        var outcomeKey = visible_keys[outcomeIndex];
+                        hoverTotals[outcomeKey] += buckets[aggregateIndex][outcomeKey];
+                    }
+                }
             }
-            var runs_label = total_runs === 1
-                ? '1 run'
-                : kit.format_number_full(total_runs) + ' runs';
 
-            var tooltip_html = '<div class="dashboard-tooltip-header">' +
-                '<div class="dashboard-tooltip-title">' + time_label + '</div>' +
-                '<div class="dashboard-tooltip-subtitle">' + runs_label + '</div>' +
-                '</div>';
+            // .. draw the highlight band over the hovered group ..
+            var bandLeft = padding_left + hoverFirst * bucket_width_px;
+            var bandWidth = (hoverLast - hoverFirst + 1) * bucket_width_px;
+            var bandHtml = '<svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none" xmlns="http://www.w3.org/2000/svg">';
+            bandHtml += '<rect x="' + bandLeft.toFixed(1) + '" y="' + padding_top + '" width="' + bandWidth.toFixed(1) + '" height="' + draw_height + '" fill="rgba(0,0,0,0.06)" rx="2" />';
+            bandHtml += '</svg>';
+            overlay.html(bandHtml);
 
-            var body_lines = [];
-            for (var key_index = 0; key_index < visible_keys.length; key_index++) {
-                var key = visible_keys[key_index];
-                var count = bucket[key];
-                var chart_run_word = count === 1 ? 'run' : 'runs';
-                body_lines.push('<div class="dashboard-tooltip-row">' +
-                    '<span class="dashboard-tooltip-dot" style="background:' + bar_colors[key] + '"></span>' +
-                    labels[key] + ': <b>' + kit.format_number_full(count) + '</b> ' + chart_run_word + '</div>');
+            // .. resolve the group label for this hover ..
+            var hoverLabel = dash._chart_group_labels[hoverGroupKey];
+
+            if (!hoverLabel) {
+                var hoverDate = new Date(buckets[hoverFirst].start);
+                hoverLabel = dash.formatTimeLabel(hoverDate, dash._chart_label_range);
             }
-            tooltip_html += '<div class="dashboard-tooltip-body">' + body_lines.join('') + '</div>';
 
-            tooltip.html(tooltip_html);
+            console.log('hover-group', JSON.stringify({
+                index: hoverIndex,
+                group_key: hoverGroupKey,
+                group_type: dash._chart_group_type,
+                label: hoverLabel,
+                start: new Date(buckets[hoverFirst].start).toISOString(),
+                end: new Date(buckets[hoverLast].end).toISOString(),
+                totals: hoverTotals
+            }, null, 2));
+
+            // .. summarize the hover totals and build the tooltip.
+            var hoverSummary = dash.summarizeBucket(hoverTotals, visible_keys, bar_colors, dash.outcome_labels);
+            var tooltipHtml = dash.buildTooltipHtml(hoverLabel, hoverSummary);
+
+            tooltip.html(tooltipHtml);
             tooltip.css({display: 'block', left: '0px', top: '0px'});
-            var mc_tt_w = tooltip.outerWidth();
-            var mc_tt_h = tooltip.outerHeight();
-            var mc_margin = 8;
-            var mc_viewport_w = $(window).width();
-            var mc_viewport_h = $(window).height();
-            var mc_left = event.clientX + 14;
-            var mc_top = event.clientY - 14;
-            if (mc_left + mc_tt_w + mc_margin > mc_viewport_w) {
-                mc_left = event.clientX - mc_tt_w - 14;
+            var tooltipWidth = tooltip.outerWidth();
+            var tooltipHeight = tooltip.outerHeight();
+            var tooltipMargin = 8;
+            var viewportWidth = $(window).width();
+            var viewportHeight = $(window).height();
+
+            var tooltipLeft = event.clientX + 14;
+            var tooltipTop = event.clientY - 14;
+
+            if (tooltipLeft + tooltipWidth + tooltipMargin > viewportWidth) {
+                tooltipLeft = event.clientX - tooltipWidth - 14;
             }
-            if (mc_left < mc_margin) mc_left = mc_margin;
-            if (mc_top + mc_tt_h + mc_margin > mc_viewport_h) {
-                mc_top = mc_viewport_h - mc_tt_h - mc_margin;
+
+            if (tooltipLeft < tooltipMargin) {
+                tooltipLeft = tooltipMargin;
             }
-            if (mc_top < mc_margin) mc_top = mc_margin;
-            tooltip.css({left: mc_left + 'px', top: mc_top + 'px'});
+
+            if (tooltipTop + tooltipHeight + tooltipMargin > viewportHeight) {
+                tooltipTop = viewportHeight - tooltipHeight - tooltipMargin;
+            }
+
+            if (tooltipTop < tooltipMargin) {
+                tooltipTop = tooltipMargin;
+            }
+
+            tooltip.css({left: tooltipLeft + 'px', top: tooltipTop + 'px'});
         });
 
         chart_svg.on('mouseleave.chart', function() {
@@ -841,7 +1395,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             var entry = timeline[row_index];
             var time_text = kit.relative_time_past(entry.actual_fire_time_iso);
             var time_tooltip = kit.format_local_time(entry.actual_fire_time_iso);
-            var run_number = entry.current_run !== undefined ? entry.current_run : '';
+            var run_number = entry.current_run !== undefined ? kit.format_number_full(entry.current_run) : '';
 
             var row_ts = entry.actual_fire_time_iso;
             html += '<tr data-ts="' + row_ts + '">';
@@ -863,7 +1417,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         kit.stabilize_badge_column({
             palette: {
                 colors: dash.outcome_colors,
-                bg_colors: dash.outcome_bg_colors,
+                backgrounds: dash.outcome_backgrounds,
                 labels: dash.outcome_labels,
                 short_labels: dash.outcome_short_labels
             },
@@ -997,8 +1551,14 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         buffers.push('active', active_jobs);
         buffers.push('paused', paused_jobs);
 
-        var runs_last_hour = dash._rebuild_runs_series(data.history_timeline);
-        var recent_last_hour = dash._rebuild_recent_series(data.history_timeline);
+        var chart_data = data.chart_buckets;
+        var recent_events = data.recent_events;
+
+        var runs_last_hour = data.runs_last_hour;
+        var recent_last_hour = data.recent_last_hour;
+
+        buffers.push('runs', runs_last_hour);
+        buffers.push('recent', recent_last_hour);
 
         kit.set_number($('#stat-total-jobs'), total_jobs);
         kit.set_number($('#stat-active'), active_jobs);
@@ -1012,18 +1572,10 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             $('#stat-recent').css('color', '#fff');
         }
 
-        var timeline = data.history_timeline;
-        var timeline_total = 0;
-        for (var ti = 0; ti < timeline.length; ti++) {
-            var toc = timeline[ti].outcome;
-            if (toc === 'ok' || toc === 'error' || toc === 'timeout') {
-                timeline_total++;
-            }
-        }
-        var runs_sub = kit.format_number_compact(timeline_total) + ' total';
+        var runs_sub = kit.format_number_compact(data.total_executions) + ' total';
         $('#stat-runs-sublabel')
             .text(runs_sub)
-            .attr('title', kit.format_number_full(timeline_total) + ' total');
+            .attr('title', kit.format_number_full(data.total_executions) + ' total');
         var recent_sub = kit.format_number_compact(recent_lifetime) + ' total';
         $('#stat-recent-sublabel')
             .text(recent_sub)
@@ -1052,9 +1604,32 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             dash._stat_tile_handle.bind();
         }
 
-        dash.render_bar_chart(data.history_timeline);
+        dash._last_jobs = data.jobs;
+
+        if (recent_events && recent_events.length > 0) {
+            if (dash._last_event_ts) {
+                var new_events = [];
+                for (var ne = 0; ne < recent_events.length; ne++) {
+                    if (recent_events[ne].actual_fire_time_iso > dash._last_event_ts) {
+                        new_events.push(recent_events[ne]);
+                    }
+                }
+                if (new_events.length > 0) {
+                    dash._last_recent_events = new_events.concat(dash._last_recent_events);
+                    if (dash._last_recent_events.length > 200) {
+                        dash._last_recent_events.length = 200;
+                    }
+                }
+            } else {
+                dash._last_recent_events = recent_events;
+            }
+            dash._last_event_ts = dash._last_recent_events[0].actual_fire_time_iso;
+        }
+
+        dash.render_bar_chart(chart_data);
         dash.render_job_table(data.jobs);
-        dash.render_recent(data.history_timeline, data.jobs);
+        var filtered_recent = dash._filter_recent_by_range(dash._last_recent_events);
+        dash.render_recent(filtered_recent, data.jobs);
         dash.render_upcoming_table(data.jobs);
 
         kit.lock_table_widths('#dashboard-job-table');
@@ -1082,10 +1657,17 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         });
         var had_runs = Object.keys(old_run_ts).length > 0;
 
+        var _chart_window = dash._get_chart_window();
+        var post_data = {
+            chart_since_iso: _chart_window.since_iso,
+            chart_until_iso: _chart_window.until_iso,
+            recent_since_iso: dash._last_event_ts
+        };
+
         $.ajax({
             url: dash.config.base_url + 'poll/',
             type: 'POST',
-            data: {},
+            data: post_data,
             headers: {'X-CSRFToken': $.cookie('csrftoken')},
             success: function(data) {
                 if (typeof data === 'string') {
@@ -1225,7 +1807,29 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         for (var c = 0; c < timeline.length; c++) {
             if (oc_counts[timeline[c].outcome] !== undefined) oc_counts[timeline[c].outcome]++;
         }
-        return {total_jobs: 79, active_jobs: 75, paused_jobs: 4, outcome_counts: oc_counts, jobs: jobs, history_timeline: timeline};
+
+        var fake_buckets = [];
+        var bucket_duration = 3600000 / 120;
+        for (var fb = 0; fb < 120; fb++) {
+            fake_buckets.push({
+                start_iso: new Date(now - 3600000 + fb * bucket_duration).toISOString(),
+                end_iso: new Date(now - 3600000 + (fb + 1) * bucket_duration).toISOString(),
+                ok: Math.floor(Math.random() * 10),
+                error: Math.random() < 0.1 ? Math.floor(Math.random() * 3) : 0,
+                timeout: Math.random() < 0.05 ? 1 : 0,
+                skipped_already_in_flight: Math.random() < 0.03 ? 1 : 0
+            });
+        }
+
+        var recent_events = timeline.slice(0, 100);
+
+        return {
+            total_jobs: 79, active_jobs: 75, paused_jobs: 4,
+            total_executions: 3700,
+            outcome_counts: oc_counts, jobs: jobs,
+            chart_buckets: {buckets: fake_buckets, min_time_iso: new Date(now - 3600000).toISOString(), max_time_iso: new Date(now).toISOString()},
+            recent_events: recent_events
+        };
     };
 
     dash.init = function(initial_data) {
@@ -1246,7 +1850,8 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             base_url: dash.config.base_url,
             cluster_id: dash.config.cluster_id,
             object_path: 'job/{id}/',
-            run_path: 'job/{id}/run/{run_id}/'
+            run_path: 'job/{id}/run/{run_id}/',
+            range_minutes: parseInt(new URLSearchParams(window.location.search).get('range'), 10)
         });
 
         $('#dashboard-hero-pill-group').hide();
@@ -1291,9 +1896,46 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             dash._redraw_chart_from_cache();
         });
 
-        // Time range
-        var _stored_range = parseInt(kit.storage_get('zato_scheduler_time_range'), 10);
-        dash._time_range_minutes = isNaN(_stored_range) ? dash.config.default_time_range : _stored_range;
+        // Copy chart data to clipboard
+        $('#dashboard-chart-copy').on('click', function() {
+            if (!dash._copy_data) return;
+
+            var range_minutes = dash._time_range_minutes;
+            var range_names = {5: '5 min', 15: '15 min', 30: '30 min', 60: '1 hour', 360: '6 hours', 1440: 'Today', 2880: 'Yesterday', 10080: 'This week', 43200: 'This month', 525600: 'This year'};
+            var range_label = (range_minutes > 0 && range_names[range_minutes]) ? range_names[range_minutes] : 'All';
+
+            var out = {
+                range: range_label,
+                chart_type: dash.show_bars ? 'bar' : 'area',
+                y_axis: dash._copy_data.y_axis,
+                x_axis: dash._copy_data.x_axis,
+                buckets: dash._copy_data.buckets
+            };
+
+            var text = JSON.stringify(out, null, 2);
+            navigator.clipboard.writeText(text);
+
+            var btn = document.getElementById('dashboard-chart-copy');
+            if (btn._tippy) btn._tippy.destroy();
+            tippy(btn, {
+                content: 'Copied to clipboard',
+                placement: 'top',
+                trigger: 'manual',
+                theme: 'dark',
+                arrow: true
+            });
+            btn._tippy.show();
+            setTimeout(function() {
+                if (btn._tippy) {
+                    btn._tippy.hide();
+                    setTimeout(function() { if (btn._tippy) btn._tippy.destroy(); }, 200);
+                }
+            }, 600);
+        });
+
+        // Time range - from URL only (templates and redirects always supply range)
+        dash._time_range_minutes = parseInt(new URLSearchParams(window.location.search).get('range'), 10);
+        kit.urls.set_range_minutes(dash._time_range_minutes);
 
         var menu = $('#dashboard-time-range-menu');
         var pill = $('#dashboard-data-count');
@@ -1309,11 +1951,15 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
             event.stopPropagation();
             var minutes = parseInt($(this).data('minutes'), 10);
             dash._time_range_minutes = minutes;
-            kit.storage_set('zato_scheduler_time_range', String(minutes));
+            kit.urls.set_range_minutes(minutes);
+            var url = new URL(window.location.href);
+            url.searchParams.set('range', minutes);
+            window.history.replaceState(null, '', url.toString());
             menu.find('.dashboard-time-range-option').removeClass('dashboard-time-range-active');
             $(this).addClass('dashboard-time-range-active');
             menu.removeClass('dashboard-time-range-menu-open');
             dash._redraw_chart_from_cache();
+            dash.poll();
         });
 
         $(document).on('click', function() {
@@ -1321,27 +1967,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = {
         });
 
         // Wheel zoom
-        var chart_container = document.getElementById('dashboard-bar-chart');
-        if (chart_container && !chart_container._zato_wheel_bound) {
-            chart_container._zato_wheel_bound = true;
-            chart_container.addEventListener('wheel', function(event) {
-                event.preventDefault();
-                var current = dash._zoom_bucket_count;
-                if (!current) {
-                    var w = chart_container.offsetWidth;
-                    current = Math.min(60, Math.max(12, Math.floor(w / 16)));
-                }
-                if (event.deltaY < 0) {
-                    current = Math.max(4, Math.round(current * 0.8));
-                } else {
-                    current = Math.min(120, Math.round(current * 1.25));
-                }
-                dash._zoom_bucket_count = current;
-                dash._skip_legend_rebuild = true;
-                dash.render_bar_chart(dash._last_timeline);
-                dash._skip_legend_rebuild = false;
-            }, {passive: false});
-        }
+        
 
         // Stat tile hover — delegated to kit
         dash._stat_tile_handle = kit.stat_tile.init({

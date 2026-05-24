@@ -44,10 +44,33 @@
 .progress-panel {
     background: var(--white);
     border: 3px solid var(--primary-dark);
-    padding: 24px;
+    padding: 20px;
     margin-bottom: 32px;
     padding-bottom: 3px;
 }
+
+.progress-panel-flush {
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+}
+
+.progress-panel-borderless {
+    border: none;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.progress-panel-no-margin {
+    margin-bottom: 0;
+}
+
+.settings-main h3.section-heading-flush {
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+
 
 .info-container {
     display: flex;

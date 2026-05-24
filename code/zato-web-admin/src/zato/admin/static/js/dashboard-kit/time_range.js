@@ -27,8 +27,13 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var open_cls = 'dashboard-time-range-menu-open';
         var option_sel = '.' + (config.option_cls || 'dashboard-time-range-option');
 
-        var stored_minutes = parseInt(ns.storage_get(config.storage_key) || '0', 10);
-        if (isNaN(stored_minutes)) stored_minutes = 0;
+        var stored_minutes;
+        if (config.initial_minutes !== undefined && config.initial_minutes !== null) {
+            stored_minutes = config.initial_minutes;
+        } else {
+            stored_minutes = parseInt(ns.storage_get(config.storage_key) || '0', 10);
+            if (isNaN(stored_minutes)) stored_minutes = 0;
+        }
 
         $menu.find(option_sel).removeClass(active_cls);
         $menu.find(option_sel + '[data-minutes="' + stored_minutes + '"]').addClass(active_cls);
@@ -43,7 +48,9 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             var minutes = parseInt($(this).data('minutes'), 10);
             if (isNaN(minutes)) minutes = 0;
             stored_minutes = minutes;
-            ns.storage_set(config.storage_key, String(minutes));
+            if (config.storage_key) {
+                ns.storage_set(config.storage_key, String(minutes));
+            }
             $menu.find(option_sel).removeClass(active_cls);
             $(this).addClass(active_cls);
             $menu.removeClass(open_cls);
@@ -60,7 +67,9 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             get_minutes: function() { return stored_minutes; },
             set_minutes: function(minutes) {
                 stored_minutes = minutes;
-                ns.storage_set(config.storage_key, String(minutes));
+                if (config.storage_key) {
+                    ns.storage_set(config.storage_key, String(minutes));
+                }
                 $menu.find(option_sel).removeClass(active_cls);
                 $menu.find(option_sel + '[data-minutes="' + minutes + '"]').addClass(active_cls);
             }

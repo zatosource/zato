@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 
+# Zato
+from zato.common.defaults import default_env_base_dir, default_server_base_dir
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -38,13 +41,13 @@ class TestConfig:
     random_prefix = 'rand.{}+{}'
 
     server_address  = 'http://localhost:17010{}'
-    server_location = os.path.expanduser('~/env/qs-1/server1')
+    server_location = default_server_base_dir
 
     scheduler_host = 'localhost'
     scheduler_port = 31530
 
     scheduler_address  = 'http://{}:{}{{}}'.format(scheduler_host, scheduler_port)
-    scheduler_location = os.path.expanduser('~/env/qs-1/scheduler')
+    scheduler_location = os.path.join(default_env_base_dir, 'scheduler')
 
     invalid_base_address = '<invalid-base-address>'
 

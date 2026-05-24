@@ -59,7 +59,7 @@ class Create(AdminService):
     """ Creates a new pub/sub permission.
     """
     input = 'sec_base_id', 'pattern', 'access_type', '-cluster_id'
-    output = 'id', 'name'
+    output = 'id', 'security'
 
     def handle(self):
         input = self.request.input
@@ -112,7 +112,7 @@ class Create(AdminService):
                 input.cid = self.cid
 
                 self.response.payload.id = permission.id
-                self.response.payload.name = sec_base.name
+                self.response.payload.security = sec_base.name
 
                 self.config_dispatcher.publish(input)
 
@@ -123,7 +123,7 @@ class Edit(AdminService):
     """ Updates an existing pub/sub permission.
     """
     input = 'id', 'sec_base_id', 'pattern', 'access_type', '-cluster_id'
-    output = 'id', 'name'
+    output = 'id', 'security'
 
     def handle(self):
         input = self.request.input
@@ -162,7 +162,7 @@ class Edit(AdminService):
                 input.cid = self.cid
 
                 self.response.payload.id = permission.id
-                self.response.payload.name = permission.sec_base.name
+                self.response.payload.security = permission.sec_base.name
 
                 self.config_dispatcher.publish(input)
 

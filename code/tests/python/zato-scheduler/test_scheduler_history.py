@@ -116,6 +116,43 @@ class TestSchedulerHistory:
 
     # ##############################################################################################################################
 
+    def test_09_history_filtered_by_since_iso(self, client):
+        item_id = self.__class__.created_ids[0]
+
+        # Get all history without since_iso
+        resp_all = client.invoke(f'{JOB_SERVICE}.get-history', {
+            'id': item_id,
+            'page': 1,
+            'page_size': 100,
+        })
+
+        all_total = resp_all['total'] if isinstance(resp_all, dict) else len(resp_all)
+        assert all_total >= 2, f'Expected >= 2 total records, got {all_total}'
+
+        # Use a since_iso far in the future to get zero results
+        resp_future = client.invoke(f'{JOB_SERVICE}.get-history', {
+            'id': item_id,
+            'page': 1,
+            'page_size': 100,
+            'since_iso': '2099-01-01T00:00:00Z',
+        })
+
+        future_total = resp_future['total'] if isinstance(resp_future, dict) else len(resp_future)
+        assert future_total == 0, f'Expected 0 records with future since_iso, got {future_total}'
+
+        # Use a since_iso far in the past to get all results
+        resp_past = client.invoke(f'{JOB_SERVICE}.get-history', {
+            'id': item_id,
+            'page': 1,
+            'page_size': 100,
+            'since_iso': '2000-01-01T00:00:00Z',
+        })
+
+        past_total = resp_past['total'] if isinstance(resp_past, dict) else len(resp_past)
+        assert past_total == all_total, f'Expected {all_total} with past since_iso, got {past_total}'
+
+    # ##############################################################################################################################
+
     def test_99_cleanup(self, client):
         for item_id in self.__class__.created_ids[:]:
             client.delete(f'{JOB_SERVICE}.delete', id=item_id)

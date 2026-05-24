@@ -55,6 +55,7 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     /* row += String.format('<td><a href="/zato/pubsub/topic/{0}/?cluster=1">View</a></td>', encodeURIComponent(item.name)); */
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.topic.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.topic.delete_('{0}');\">Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.topic.publishMessage('{0}')\">Publish a message</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", item.description || "");
@@ -73,4 +74,40 @@ $.fn.zato.pubsub.topic.delete_ = function(id) {
         'Pub/sub topic `{0}` deleted',
         'Are you sure you want to delete pub/sub topic `{0}`?',
         true);
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.pubsub.topic.getPublishUrl = function(id) {
+    return '/zato/pubsub/topic/publish/' + id + '/';
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.pubsub.topic.publishMessage = function(id) {
+
+    // Get the item from the data table ..
+    var item = $.fn.zato.data_table.data[id];
+
+    // .. and open the invoker overlay.
+    $.fn.zato.invoker.open_overlay({
+        id: id,
+        name: item.name,
+        title_prefix: 'Publish a message',
+        action_label: 'Publish',
+        show_more_options: false,
+        history_key: 'zato.pubsub.topic.publish.' + id,
+        get_invoke_url_func: $.fn.zato.pubsub.topic.getPublishUrl,
+        collect_form_data_func: $.fn.zato.pubsub.topic.collectPublishFormData(item),
+    });
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.pubsub.topic.collectPublishFormData = function(item) {
+    return function() {
+        var formData = $.fn.zato.invoker.collect_form_data();
+        formData['topic_name'] = item.name;
+        return formData;
+    };
 }

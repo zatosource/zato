@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import OK
+from http import HTTPStatus
 from logging import getLogger
 
 # Bunch
@@ -107,7 +107,7 @@ class Client(ZatoClient):
             response.ok, response.inner.status_code, type(response.data).__name__,
             str(response.data)[:500] if response.data else '(None)')
 
-        if response.inner.status_code != OK:
+        if response.inner.status_code != HTTPStatus.OK:
 
             json_data = loads(response.inner.text)
             cid = json_data.get('cid')

@@ -232,7 +232,6 @@ $.fn.zato.form_tabs.reset = function(config) {
         // .. and suppress right away for the initial state.
         var form = $(div_id).find('form');
         $.fn.zato.form_tabs._suppress_hidden_validation(form);
-        $.fn.zato.form_tabs._clear_hidden_panels(form);
     }
     else if (caller_on_change) {
         on_change = caller_on_change;

@@ -1,0 +1,56 @@
+/* ------------------------------------------------------------ */
+/* Shared dark action button - used by highlight pane,          */
+/* meta cards, preview overlay, and record edit                 */
+/* ------------------------------------------------------------ */
+
+:root {
+    --zato-action-button-text: #f8f8f2;
+    --zato-action-button-gradient-start: #4e4d40;
+    --zato-action-button-gradient-end: #3e3d32;
+    --zato-action-button-border: #2e2d24;
+    --zato-action-button-border-bottom: #1a1a14;
+    --zato-action-button-disabled-text: #aaa;
+    --zato-action-button-disabled-background: rgba(0, 0, 0, 0.06);
+}
+
+.zato-action-button,
+.zato-action-button:hover,
+.zato-action-button:active,
+.zato-action-button:focus,
+.zato-action-button:focus-visible,
+.record-edit-action-button,
+.record-edit-action-button:hover,
+.record-edit-action-button:active,
+.record-edit-action-button:focus,
+.record-edit-action-button:focus-visible,
+div.page_prompt a:not(.common),
+div.page_prompt a:not(.common):hover,
+div.page_prompt a:not(.common):active {
+    display: inline-block;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--zato-action-button-text);
+    background: linear-gradient(to bottom, var(--zato-action-button-gradient-start), var(--zato-action-button-gradient-end)) !important;
+    border: 1px solid var(--zato-action-button-border);
+    border-radius: 3px;
+    min-width: 42px;
+    text-align: center;
+    cursor: pointer;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+    text-shadow: none;
+    outline: none !important;
+    transition: box-shadow 0.15s, background 0.15s;
+}
+
+.zato-action-button:disabled,
+.zato-action-button:disabled:hover,
+.record-edit-action-button:disabled,
+.record-edit-action-button:disabled:hover {
+    color: var(--zato-action-button-disabled-text);
+    background: var(--zato-action-button-disabled-background) !important;
+    cursor: not-allowed;
+}

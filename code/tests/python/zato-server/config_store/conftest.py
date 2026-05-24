@@ -28,7 +28,7 @@ def pytest_addoption(parser):
     parser.addoption('--with-coverage', action='store_true', default=False,
                      help='Enable coverage collection on the Zato server subprocess')
 
-_ZATO_BASE = '/home/dsuch/projects/zatosource-zato/4.1'
+_ZATO_BASE = os.environ['ZATO_TEST_BASE_DIR']
 _ZATO_BIN = os.path.join(_ZATO_BASE, 'code', 'bin', 'zato')
 _ZATO_PY = os.path.join(_ZATO_BASE, 'code', 'bin', 'python')
 
