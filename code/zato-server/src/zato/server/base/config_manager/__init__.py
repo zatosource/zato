@@ -1097,12 +1097,11 @@ class ConfigManager(_ConfigManagerBase):
 
         # .. extract the newest information  ..
         if msg.id:
-            msg_id = int(msg.id)
-            sec_def = self.basic_auth_get_by_id(msg_id)
+            sec_def = self.basic_auth_get_by_id(msg.id)
 
             # .. and update security groups.
             for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
-                security_groups_ctx.set_current_basic_auth(msg_id, sec_def['username'], sec_def['password'])
+                security_groups_ctx.set_current_basic_auth(msg.id, sec_def['username'], sec_def['password'])
 
 # ################################################################################################################################
 

@@ -620,7 +620,7 @@ $.fn.zato.data_table.on_change_password_submit = function() {
                     allowHTML: false,
                     theme: 'dark',
                     trigger: 'manual',
-                    placement: 'right',
+                    placement: 'top',
                     arrow: true,
                     interactive: false,
                     inertia: true,
