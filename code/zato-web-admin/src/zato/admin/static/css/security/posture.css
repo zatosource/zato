@@ -1,0 +1,193 @@
+/* Security posture - settings dashboard */
+
+/* Hide the hero strip and chart section inherited from dashboard_base.html */
+
+.dashboard-hero,
+.dashboard-chart-section {
+    display: none;
+}
+
+/* Pull the grid section up since hero and chart are gone,
+   and override the two-column grid to a single column
+   so the posture card takes the full width. */
+
+.dashboard-grid-section {
+    margin-top: 20px;
+    grid-template-columns: 1fr;
+}
+
+.dashboard-grid-section .dashboard-card {
+    max-height: none;
+}
+
+/* Card */
+
+.posture-card {
+    display: flex;
+    flex-direction: column;
+}
+
+/* The card header from the kit is flex-nowrap by default,
+   which squeezes the tabs container. Force it to wrap
+   so tabs take the full width on their own line. */
+
+.posture-card .dashboard-card-header {
+    flex-wrap: wrap;
+}
+
+.posture-card .dashboard-tabs {
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+/* Check list inside each tab panel */
+
+.posture-check-list {
+    padding: 8px 0;
+}
+
+.posture-check-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--separator, rgba(0, 0, 0, 0.06));
+    transition: background 120ms ease;
+}
+
+.posture-check-item:last-child {
+    border-bottom: none;
+}
+
+.posture-check-item:hover {
+    background: rgba(0, 0, 0, 0.015);
+}
+
+.posture-check-text {
+    flex: 1;
+    min-width: 0;
+    padding-right: 24px;
+    cursor: pointer;
+}
+
+.posture-check-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary, #1a1a2e);
+    margin-bottom: 3px;
+}
+
+.posture-check-desc {
+    font-size: 12px;
+    color: var(--text-muted, #71717a);
+    line-height: 1.4;
+}
+
+/* Action bar */
+
+.posture-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--separator, rgba(0, 0, 0, 0.06));
+    justify-content: flex-end;
+}
+
+/* Run scan button - no background, no shadows */
+
+.posture-actions .secondary-button {
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+/* "How does it work?" badge in posture page (non-dialog context) */
+
+.posture-actions .how-it-works-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 9px;
+    font-weight: 400;
+    color: #101010;
+    background: linear-gradient(to bottom, rgba(255, 220, 90, 0.35), rgba(255, 206, 59, 0.3));
+    border-radius: 3px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    transition: box-shadow 0.15s, transform 0.15s, background 0.15s;
+    margin-right: auto;
+}
+
+.posture-actions .how-it-works-badge:hover {
+    background: linear-gradient(to bottom, rgba(255, 230, 110, 0.5), rgba(255, 210, 70, 0.4));
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.posture-actions .how-it-works-badge.how-it-works-active {
+    background: linear-gradient(to bottom, rgba(210, 170, 30, 0.35), rgba(240, 200, 60, 0.25));
+    box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+/* Status message */
+
+.posture-status {
+    font-size: 12px;
+    color: var(--text-muted, #71717a);
+    transition: opacity 300ms ease;
+}
+
+.posture-status-saved {
+    color: #28a745;
+}
+
+.posture-status-error {
+    color: #dc3545;
+}
+
+/* How-it-works tooltip explanation styles */
+
+.hiw-posture-explanation {
+    max-width: 340px;
+    font-size: 12px;
+    line-height: 1.55;
+    color: #e8e8e8;
+}
+
+.hiw-posture-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffd54f;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hiw-posture-body {
+    color: #d0d0d0;
+}
+
+.hiw-posture-highlight {
+    color: #ff7043;
+    font-weight: 600;
+}
+
+/* Inline toggle inside the tooltip */
+
+.hiw-posture-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hiw-posture-toggle-label {
+    font-size: 11px;
+    color: #aaa;
+}
+
+.hiw-toggle-switch {
+    transform: scale(0.85);
+}

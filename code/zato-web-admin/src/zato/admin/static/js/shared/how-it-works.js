@@ -52,6 +52,12 @@ $.fn.zato.how_it_works._activate = function(badge) {
 
     var config = badge._how_it_works_config;
     var dialog = badge.closest('.ui-dialog');
+    if (!dialog && config.container_selector) {
+        dialog = badge.closest(config.container_selector);
+    }
+    if (!dialog) {
+        dialog = document.body;
+    }
     var div = document.getElementById(config.div_id.replace('#', ''));
 
     // .. collect visible fields from the active tab ..
@@ -88,14 +94,18 @@ $.fn.zato.how_it_works._activate = function(badge) {
     $.fn.zato.how_it_works._show_field_tooltip(state, 0);
 
     // .. suppress dialog closeOnEscape while help mode is active ..
-    $(config.div_id).dialog('option', 'closeOnEscape', false);
+    if (dialog.classList && dialog.classList.contains('ui-dialog')) {
+        $(config.div_id).dialog('option', 'closeOnEscape', false);
+    }
 
-    // .. bind keyboard on the dialog element in capture phase
-    // .. so it fires before jQuery UI's own handler ..
+    // .. bind keyboard - on the dialog element when inside jQuery UI,
+    // .. on document otherwise so Esc works without focused elements ..
     state._keydown_handler = function(event) {
         $.fn.zato.how_it_works._on_keydown(event);
     };
-    dialog.addEventListener('keydown', state._keydown_handler, true);
+    var is_jquery_dialog = dialog.classList && dialog.classList.contains('ui-dialog');
+    state._keydown_target = is_jquery_dialog ? dialog : document;
+    state._keydown_target.addEventListener('keydown', state._keydown_handler, true);
 
     // .. bind click on labels to switch field ..
     $(div).on('click.how_it_works_label', 'label[for]', function(event) {
@@ -117,8 +127,9 @@ $.fn.zato.how_it_works._activate = function(badge) {
     });
 
     // .. follow focus to switch tooltip ..
+    var focusin_row_selector = config.field_selector || 'tr';
     state._focusin_handler = function(event) {
-        var row = event.target.closest('tr');
+        var row = event.target.closest(focusin_row_selector);
         if (!row) {
             return;
         }
@@ -159,6 +170,9 @@ $.fn.zato.how_it_works._activate = function(badge) {
             return;
         }
         if ($(target).closest('.how-it-works-badge').length) {
+            return;
+        }
+        if ($(target).closest('.tippy-box').length) {
             return;
         }
         $.fn.zato.how_it_works._deactivate();
@@ -247,10 +261,12 @@ $.fn.zato.how_it_works._deactivate = function() {
     state.badge.classList.remove('how-it-works-active');
 
     // .. restore dialog closeOnEscape ..
-    $(state.config.div_id).dialog('option', 'closeOnEscape', true);
+    if (state.dialog.classList && state.dialog.classList.contains('ui-dialog')) {
+        $(state.config.div_id).dialog('option', 'closeOnEscape', true);
+    }
 
     // .. unbind ..
-    state.dialog.removeEventListener('keydown', state._keydown_handler, true);
+    state._keydown_target.removeEventListener('keydown', state._keydown_handler, true);
     state.div.removeEventListener('focusin', state._focusin_handler, true);
     $(document).off('mousedown.how_it_works_outside');
     $(state.div).off('click.how_it_works_label');
@@ -324,10 +340,10 @@ $.fn.zato.how_it_works._show_field_tooltip = function(state, index) {
     var result = tippy(target, {
         content: tooltip_content,
         allowHTML: true,
-        placement: 'left',
+        placement: state.config.placement || 'left',
         theme: 'dark',
         arrow: true,
-        interactive: false,
+        interactive: true,
         inertia: true,
         trigger: 'manual',
         hideOnClick: false,
@@ -336,6 +352,19 @@ $.fn.zato.how_it_works._show_field_tooltip = function(state, index) {
 
     state.field_tippy = Array.isArray(result) ? result[0] : result;
     state.field_tippy.show();
+
+    // .. sync inline toggle inside the tooltip with the real checkbox ..
+    var tippy_box = state.field_tippy.popper;
+    var inline_toggle = tippy_box.querySelector('.hiw-posture-toggle-input');
+    if (inline_toggle) {
+        var real_checkbox = document.getElementById(field.field_id);
+        if (real_checkbox) {
+            inline_toggle.checked = real_checkbox.checked;
+            $(inline_toggle).off('change.hiw_sync').on('change.hiw_sync', function() {
+                real_checkbox.checked = this.checked;
+            });
+        }
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -343,7 +372,7 @@ $.fn.zato.how_it_works._show_field_tooltip = function(state, index) {
 $.fn.zato.how_it_works._find_field_index = function(state, field_id) {
 
     for (var index = 0; index < state.fields.length; index++) {
-        if (state.fields[index].element.getAttribute('for') === field_id) {
+        if (state.fields[index].field_id === field_id) {
             return index;
         }
     }
@@ -355,10 +384,8 @@ $.fn.zato.how_it_works._find_field_index = function(state, field_id) {
 
 $.fn.zato.how_it_works._find_field_index_by_input = function(state, input_id) {
 
-    // .. find which label points to this input ..
     for (var index = 0; index < state.fields.length; index++) {
-        var label_for = state.fields[index].element.getAttribute('for');
-        if (label_for === input_id) {
+        if (state.fields[index].field_id === input_id) {
             return index;
         }
     }
@@ -388,8 +415,9 @@ $.fn.zato.how_it_works._collect_fields = function(div, config) {
         active_panel = div;
     }
 
-    // .. walk each row in the form table ..
-    var rows = active_panel.querySelectorAll('table.form-data tr');
+    // .. walk each row in the form table or custom container ..
+    var row_selector = config.field_selector || 'table.form-data tr';
+    var rows = active_panel.querySelectorAll(row_selector);
 
     for (var row_index = 0; row_index < rows.length; row_index++) {
         var label = rows[row_index].querySelector('label[for]');
@@ -404,8 +432,18 @@ $.fn.zato.how_it_works._collect_fields = function(div, config) {
             continue;
         }
 
+        // .. use a custom target element if configured, otherwise the label ..
+        var target_element = label;
+        if (config.target_selector) {
+            var custom_target = rows[row_index].querySelector(config.target_selector);
+            if (custom_target) {
+                target_element = custom_target;
+            }
+        }
+
         fields.push({
-            element: label,
+            element: target_element,
+            field_id: field_id,
             description: description,
         });
     }
