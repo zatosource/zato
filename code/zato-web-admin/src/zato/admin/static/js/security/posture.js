@@ -253,8 +253,19 @@ $.fn.zato.security.posture.init = function(initialData) {
         posture._setCheckStates(initialData.checkStates);
     }
 
-    // .. clicking the text area toggles the slider
+    // .. clicking the text area toggles the slider, or jumps to the tooltip when help mode is active
     $(document).on('click', '.posture-check-text', function() {
+        var howItWorks = $.fn.zato.how_it_works;
+        var state = howItWorks._state;
+        if (state) {
+            var $item = $(this).closest('.posture-check-item');
+            var fieldId = $item.find('label[for]').attr('for');
+            var fieldIndex = howItWorks._findFieldIndex(state, fieldId);
+            if (fieldIndex >= 0) {
+                howItWorks._showFieldTooltip(state, fieldIndex);
+            }
+            return;
+        }
         var $item = $(this).closest('.posture-check-item');
         var $checkbox = $item.find('input[type="checkbox"]');
         $checkbox.prop('checked', !$checkbox.prop('checked'));
