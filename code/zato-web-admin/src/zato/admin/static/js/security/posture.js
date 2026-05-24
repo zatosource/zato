@@ -114,10 +114,10 @@ $.fn.zato.security.posture._field_descriptions = {
             '<div class="hiw-posture-title">Channels without credentials</div>' +
             '<div class="hiw-posture-body">' +
                 'Every REST channel in Zato can be protected by assigning a security definition to it, ' +
-                'such as Basic Auth, API keys, or OAuth tokens.' +
+                'such as Basic Auth or API keys.' +
                 '<br><br>' +
-                'When this check is enabled, the scanner looks at each REST channel and flags any that ' +
-                '<span class="hiw-posture-highlight">do not have a security definition assigned</span>. ' +
+                'When this check is enabled, the scanner looks at each REST channel and ' +
+                '<span class="hiw-posture-highlight">flags any REST channels that do not have a security definition assigned</span>. ' +
                 'A channel without credentials means that anyone who knows the URL can call it freely ' +
                 'without any authentication.' +
                 '<br><br>' +
@@ -179,7 +179,7 @@ $.fn.zato.security.posture.init = function(initial_data) {
         div_id: 'posture-card-container',
         container_selector: '.posture-card',
         field_selector: '.posture-check-item',
-        target_selector: '.posture-check-name',
+        target_selector: '.posture-check-desc',
         placement: 'right',
         descriptions: ns._field_descriptions
     });
