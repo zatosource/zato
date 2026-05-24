@@ -18,6 +18,7 @@ import unittest
 from redis import Redis
 
 # Zato
+from zato.common.api import PubSub
 from zato.common.pubsub.cleanup import PubSubCleanup, _Pending_Expiry_Key, _Pending_Prefix
 from zato.common.pubsub.disk_store import DiskMessageStore
 
@@ -32,7 +33,6 @@ if 0:
 
 _test_redis_host = 'localhost'
 _test_redis_port = 6379
-_test_redis_db   = 0
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ class BaseCleanupTestCase(unittest.TestCase):
     def setUp(self) -> 'None':
 
         # Set up a real Redis connection ..
-        self.redis = Redis(host=_test_redis_host, port=_test_redis_port, db=_test_redis_db, decode_responses=True)
+        self.redis = Redis(host=_test_redis_host, port=_test_redis_port, db=PubSub.Test_Redis_DB, decode_responses=True)
 
         # .. flush any stale expiry entries left by previous tests ..
         _ = self.redis.delete(_Pending_Expiry_Key)

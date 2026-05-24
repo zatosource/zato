@@ -1236,6 +1236,8 @@ class HL7:
 
 class PubSub:
 
+    Test_Redis_DB = 1
+
     class Topic:
         Name_Max_Len = 200
 
