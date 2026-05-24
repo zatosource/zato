@@ -167,14 +167,12 @@ $.fn.zato.scheduler.data_table.on_submit_complete = function(data, status, actio
 
             $('#data-table').data('is_empty', false);
             $('#data-table > tbody:last').prepend(row);
-            var tr = $('#tr_' + json.id);
-            $.fn.zato.data_table._bounce_row(tr);
         }
         else {
             var tr = $.fn.zato.data_table.row_updated(json.id);
             tr.html(row);
             tr.addClass('updated');
-            $.fn.zato.data_table._bounce_row(tr);
+            $.fn.zato.data_table._bounce_row(tr, 'edit');
         }
     }
 
