@@ -33,42 +33,42 @@ $(document).ready(function() {
                 <div class="dashboard-tabs" role="tablist" aria-label="Check categories">
 
                     <button type="button"
-                            class="dashboard-tab dashboard-tab-active"
+                            class="dashboard-tab{% if active_tab == 'authentication' %} dashboard-tab-active{% endif %}"
                             data-tab="authentication"
                             role="tab"
-                            aria-selected="true">
+                            aria-selected="{% if active_tab == 'authentication' %}true{% else %}false{% endif %}">
                         <span class="dashboard-tab-label">Authentication</span>
                     </button>
 
                     <button type="button"
-                            class="dashboard-tab"
+                            class="dashboard-tab{% if active_tab == 'incoming-channels' %} dashboard-tab-active{% endif %}"
                             data-tab="incoming-channels"
                             role="tab"
-                            aria-selected="false">
+                            aria-selected="{% if active_tab == 'incoming-channels' %}true{% else %}false{% endif %}">
                         <span class="dashboard-tab-label">Incoming channels</span>
                     </button>
 
                     <button type="button"
-                            class="dashboard-tab"
+                            class="dashboard-tab{% if active_tab == 'configuration' %} dashboard-tab-active{% endif %}"
                             data-tab="configuration"
                             role="tab"
-                            aria-selected="false">
+                            aria-selected="{% if active_tab == 'configuration' %}true{% else %}false{% endif %}">
                         <span class="dashboard-tab-label">Configuration</span>
                     </button>
 
                     <button type="button"
-                            class="dashboard-tab"
+                            class="dashboard-tab{% if active_tab == 'outgoing-connections' %} dashboard-tab-active{% endif %}"
                             data-tab="outgoing-connections"
                             role="tab"
-                            aria-selected="false">
+                            aria-selected="{% if active_tab == 'outgoing-connections' %}true{% else %}false{% endif %}">
                         <span class="dashboard-tab-label">Outgoing connections</span>
                     </button>
 
                     <button type="button"
-                            class="dashboard-tab"
+                            class="dashboard-tab{% if active_tab == 'runtime-monitoring' %} dashboard-tab-active{% endif %}"
                             data-tab="runtime-monitoring"
                             role="tab"
-                            aria-selected="false">
+                            aria-selected="{% if active_tab == 'runtime-monitoring' %}true{% else %}false{% endif %}">
                         <span class="dashboard-tab-label">Runtime and data</span>
                     </button>
 
@@ -78,7 +78,8 @@ $(document).ready(function() {
             <!-- Authentication -->
             <div class="dashboard-tab-panel"
                  id="posture-tab-panel-authentication"
-                 role="tabpanel">
+                 role="tabpanel"
+                 {% if active_tab != 'authentication' %}hidden{% endif %}>
                 <div class="posture-check-list" id="posture-list-authentication">
 
                     <div class="posture-check-item" id="posture-item-auth-no-credentials" data-check="auth_no_credentials">
@@ -143,7 +144,7 @@ $(document).ready(function() {
             <div class="dashboard-tab-panel"
                  id="posture-tab-panel-incoming-channels"
                  role="tabpanel"
-                 hidden>
+                 {% if active_tab != 'incoming-channels' %}hidden{% endif %}>
                 <div class="posture-check-list" id="posture-list-incoming-channels">
 
                     <div class="posture-check-item" id="posture-item-request-forgery" data-check="request_forgery">
@@ -219,7 +220,7 @@ $(document).ready(function() {
             <div class="dashboard-tab-panel"
                  id="posture-tab-panel-configuration"
                  role="tabpanel"
-                 hidden>
+                 {% if active_tab != 'configuration' %}hidden{% endif %}>
                 <div class="posture-check-list" id="posture-list-configuration">
 
                     <div class="posture-check-item" id="posture-item-debug-mode" data-check="debug_mode">
@@ -273,7 +274,7 @@ $(document).ready(function() {
             <div class="dashboard-tab-panel"
                  id="posture-tab-panel-outgoing-connections"
                  role="tabpanel"
-                 hidden>
+                 {% if active_tab != 'outgoing-connections' %}hidden{% endif %}>
                 <div class="posture-check-list" id="posture-list-outgoing-connections">
 
                     <div class="posture-check-item" id="posture-item-unencrypted-traffic" data-check="unencrypted_traffic">
@@ -349,7 +350,7 @@ $(document).ready(function() {
             <div class="dashboard-tab-panel"
                  id="posture-tab-panel-runtime-monitoring"
                  role="tabpanel"
-                 hidden>
+                 {% if active_tab != 'runtime-monitoring' %}hidden{% endif %}>
                 <div class="posture-check-list" id="posture-list-runtime-monitoring">
 
                     <div class="posture-check-item" id="posture-item-bulk-extraction" data-check="bulk_extraction">
@@ -429,5 +430,7 @@ $(document).ready(function() {
             </div>
 
         </div>
+
+<script id="posture-field-descriptions" type="application/json">{{ field_descriptions|safe }}</script>
 
 {% endblock %}

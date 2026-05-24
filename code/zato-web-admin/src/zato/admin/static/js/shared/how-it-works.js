@@ -9,8 +9,7 @@
 
 (function($) {
 
-if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
-if (typeof $.fn.zato.how_it_works === 'undefined') { $.fn.zato.how_it_works = {}; }
+
 
 // ////////////////////////////////////////////////////////////////////////
 

@@ -1,6 +1,5 @@
 
-if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
-if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = {}; }
+
 
 (function() {
     var kit = $.fn.zato.dashboard_kit;

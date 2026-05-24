@@ -4,8 +4,7 @@
    per-run outcome squares, and tinted outcome badges. Each dashboard
    plugs its own palette (colors, labels, short_labels, tooltips). */
 
-if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
-if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = {}; }
+
 
 (function() {
     var ns = $.fn.zato.dashboard_kit;

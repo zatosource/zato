@@ -11,8 +11,7 @@
    drives scheduler outcomes, pub/sub per-topic counts, and whatever else
    a future dashboard needs. */
 
-if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
-if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = {}; }
+
 
 (function() {
     var ns = $.fn.zato.dashboard_kit;

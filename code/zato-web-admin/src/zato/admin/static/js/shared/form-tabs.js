@@ -54,8 +54,8 @@
  *      that suppresses validation on hidden tab panels
  */
 
-if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
-if (typeof $.fn.zato.form_tabs === 'undefined') { $.fn.zato.form_tabs = {}; }
+
+
 
 // ////////////////////////////////////////////////////////////////////////
 

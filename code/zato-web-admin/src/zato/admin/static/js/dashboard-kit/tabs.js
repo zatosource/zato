@@ -5,8 +5,7 @@
    switch. This defeats Firefox's scroll-anchoring / focus-scroll-into-
    view behaviour that would otherwise jump the page on tab changes. */
 
-if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
-if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = {}; }
+
 
 (function() {
     var ns = $.fn.zato.dashboard_kit;
