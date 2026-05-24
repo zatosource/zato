@@ -111,7 +111,6 @@ from zato.common.util.python_ import get_current_stack
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
 from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name, fs_safe_now
-from zato.common.util.logging_ import ColorFormatter
 from zato.common.util.open_ import open_r, open_w
 from zato.common.util.snowflake import new_snowflake
 from zato.common.util.time_ import utcnow
@@ -147,7 +146,6 @@ cid_base = len(cid_symbols)
 # ################################################################################################################################
 
 # For pyflakes
-ColorFormatter = ColorFormatter
 fs_safe_now = fs_safe_now
 
 # ################################################################################################################################

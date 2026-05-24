@@ -44,7 +44,12 @@
         row += '<td class="queue-row-num"></td>';
         var deliveredLabel = message.is_delivered ? 'Yes' : 'No';
 
-        row += '<td class="queue-msg-id"><span class="dashboard-outcome-badge dashboard-outcome-' + badgeKey + '"><a href="' + messageLink + '">' + message.msg_id + '</a></span></td>';
+        if (message.is_delivered) {
+            row += '<td class="queue-msg-id"><span class="dashboard-outcome-badge dashboard-outcome-' + badgeKey + '">' + message.msg_id + '</span></td>';
+        } else {
+            row += '<td class="queue-msg-id"><span class="dashboard-outcome-badge dashboard-outcome-' + badgeKey + '"><a href="' + messageLink + '">' + message.msg_id + '</a></span></td>';
+        }
+
         row += '<td><a href="' + topicLink + '">' + topicName + '</a></td>';
         row += '<td>' + deliveredLabel + '</td>';
         row += '<td class="data-preview"><a href="#" class="queue-preview-link"' +
@@ -55,6 +60,17 @@
             '><span class="syntax-light">' + message.data_preview_highlighted + '</span></a></td>';
         row += '<td>' + message.data_size + ' B</td>';
         row += '<td class="queue-time" data-ts="' + message.pub_time_iso + '" title="' + localTime + '">' + relativeTime + '</td>';
+
+        if (message.is_delivered) {
+            row += '<td><span class="form_hint">Delete</span></td>';
+        } else {
+            row += '<td><a href="#" class="queue-delete-link"' +
+                ' data-msg-id="' + message.msg_id + '"' +
+                ' data-topic-name="' + topicName + '"' +
+                ' data-redis-stream-id="' + message.redis_stream_id + '"' +
+                '>Delete</a></td>';
+        }
+
         row += '</tr>';
 
         return row;
@@ -76,7 +92,7 @@
         }
 
         if (rows.length === 0) {
-            $body.append('<tr><td colspan="7">No messages</td></tr>');
+            $body.append('<tr><td colspan="8">No messages</td></tr>');
             return;
         }
 
@@ -317,6 +333,146 @@
                             ]
                         });
                     }
+                }
+            });
+        });
+
+        // .. build the delete confirmation overlay (once) ..
+        var $deleteOverlay = null;
+        var _deleteAceEditor = null;
+        var _deleteContext = null;
+
+        function _build_delete_overlay() {
+            var html = '' +
+                '<div class="queue-delete-overlay hidden" id="queue-delete-overlay">' +
+                    '<div class="queue-delete-overlay-backdrop"></div>' +
+                    '<div class="queue-delete-overlay-content">' +
+                        '<div class="queue-delete-overlay-header">' +
+                            '<h2 class="queue-delete-overlay-title">Delete message</h2>' +
+                            '<button class="queue-delete-overlay-close-btn" type="button">\u00d7</button>' +
+                        '</div>' +
+                        '<div class="queue-delete-overlay-body">' +
+                            '<p class="queue-delete-overlay-msg-id"></p>' +
+                            '<div class="queue-delete-overlay-editor" id="queue-delete-editor"></div>' +
+                        '</div>' +
+                        '<div class="queue-delete-overlay-footer">' +
+                            '<button class="zato-action-button queue-delete-overlay-cancel" type="button">Cancel</button>' +
+                            '<button class="zato-action-button queue-delete-overlay-confirm" type="button">Delete</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+
+            $('body').append(html);
+            $deleteOverlay = $('#queue-delete-overlay');
+
+            _deleteAceEditor = ace.edit('queue-delete-editor');
+            _deleteAceEditor.setTheme('ace/theme/monokai');
+            _deleteAceEditor.session.setMode('ace/mode/json');
+            _deleteAceEditor.setShowPrintMargin(false);
+            _deleteAceEditor.setFontSize(13);
+
+            $deleteOverlay.find('.queue-delete-overlay-backdrop').on('click', _close_delete_overlay);
+            $deleteOverlay.find('.queue-delete-overlay-close-btn').on('click', _close_delete_overlay);
+            $deleteOverlay.find('.queue-delete-overlay-cancel').on('click', _close_delete_overlay);
+
+            $deleteOverlay.find('.queue-delete-overlay-confirm').on('click', function() {
+                _perform_delete();
+            });
+
+            $(document).on('keydown.queue_delete_overlay', function(e) {
+                if (e.key === 'Escape' && $deleteOverlay && !$deleteOverlay.hasClass('hidden')) {
+                    _close_delete_overlay();
+                }
+            });
+        }
+
+        function _open_delete_overlay(msgId, data, $row, topicName, streamId) {
+            if (!$deleteOverlay) {
+                _build_delete_overlay();
+            }
+
+            _deleteContext = {
+                msgId: msgId,
+                topicName: topicName,
+                streamId: streamId,
+                $row: $row
+            };
+
+            $deleteOverlay.find('.queue-delete-overlay-msg-id').text(msgId);
+            _deleteAceEditor.setValue(data, -1);
+            $deleteOverlay.removeClass('hidden');
+        }
+
+        function _close_delete_overlay() {
+            if ($deleteOverlay) {
+                $deleteOverlay.addClass('hidden');
+            }
+            _deleteContext = null;
+        }
+
+        function _perform_delete() {
+            var ctx = _deleteContext;
+
+            $.ajax({
+                type: 'POST',
+                url: '/zato/pubsub/subscription/queue/message/delete/',
+                data: JSON.stringify({
+                    msg_id: ctx.msgId,
+                    topic_name: ctx.topicName,
+                    sub_key: subKey,
+                    redis_stream_id: ctx.streamId
+                }),
+                contentType: 'application/json',
+                headers: {'X-CSRFToken': $.cookie('csrftoken')},
+                dataType: 'json',
+                success: function() {
+                    ctx.$row.remove();
+
+                    var ns = $.fn.zato.pubsub.queue;
+                    var pag = ns._pagination;
+                    var newTotal = pag.total() - 1;
+                    pag.set_total(newTotal);
+                    $('#stat-depth').text(newTotal.toLocaleString());
+
+                    _close_delete_overlay();
+                },
+                error: function(xhr) {
+                    var errorMessage = $.fn.zato.pubsub.queue._defaultErrorMessage;
+                    if (xhr.responseJSON) {
+                        errorMessage = xhr.responseJSON.error;
+                    }
+                    alert('Error: ' + errorMessage);
+                }
+            });
+        }
+
+        // .. wire delete link clicks ..
+        $(document).on('click', '.queue-delete-link', function(e) {
+            e.preventDefault();
+
+            var $link = $(this);
+            var $row = $link.closest('tr');
+            var msgId = $link.data('msg-id');
+            var topicName = $link.data('topic-name');
+            var streamId = $link.data('redis-stream-id');
+            var previewText = $row.find('.data-preview').text();
+
+            $.ajax({
+                type: 'POST',
+                url: '/zato/pubsub/subscription/queue/message/payload/',
+                data: JSON.stringify({
+                    msg_id: msgId,
+                    topic_name: topicName
+                }),
+                contentType: 'application/json',
+                headers: {'X-CSRFToken': $.cookie('csrftoken')},
+                dataType: 'json',
+                success: function(resp) {
+                    var data = resp.data ? resp.data : previewText;
+                    _open_delete_overlay(msgId, data, $row, topicName, streamId);
+                },
+                error: function() {
+                    _open_delete_overlay(msgId, previewText, $row, topicName, streamId);
                 }
             });
         });
