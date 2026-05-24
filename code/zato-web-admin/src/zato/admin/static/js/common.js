@@ -503,26 +503,26 @@ $.fn.zato.data_table.remove_row = function(td_prefix, instance_id) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.data_table._bounce_row = function(tr) {
-    tr.find('td').each(function() {
-        var td = $(this);
-        if(!td.find('.zato-bounce-wrap').length) {
-            td.wrapInner('<span class="zato-bounce-wrap"></span>');
-        }
-    });
-    tr.removeClass('zato-row-bounce');
-    requestAnimationFrame(function() {
-        requestAnimationFrame(function() {
-            tr.addClass('zato-row-bounce');
-            tr.find('.zato-bounce-wrap:first').one('animationend', function() {
-                tr.removeClass('zato-row-bounce');
-                tr.find('.zato-bounce-wrap').each(function() {
-                    var wrap = $(this);
-                    wrap.replaceWith(wrap.contents());
-                });
-            });
+$.fn.zato.data_table._bounce_row = function(tr, action) {
+    if(action === 'edit') {
+        var edit_link = tr.find('a[href*="edit"]')[0];
+        var target = edit_link ? edit_link : tr.find('td:visible').last()[0];
+        var instance = tippy(target, {
+            content: 'OK, saved',
+            placement: 'top',
+            trigger: 'manual',
+            hideOnClick: false,
+            theme: 'dark',
+            allowHTML: false
         });
-    });
+        instance.show();
+        setTimeout(function() {
+            instance.hide();
+            setTimeout(function() {
+                instance.destroy();
+            }, 200);
+        }, 600);
+    }
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1176,14 +1176,12 @@ $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
         if(needs_create) {
             $('#data-table').data('is_empty', false);
             $('#data-table > tbody:last').prepend(row);
-            var new_tr = $('#data-table > tbody:last > tr:first');
-            $.fn.zato.data_table._bounce_row(new_tr);
         }
         else {
             var tr = $(document.getElementById('tr_'+ json.id));
             tr.html(row);
             tr.addClass('updated');
-            $.fn.zato.data_table._bounce_row(tr);
+            $.fn.zato.data_table._bounce_row(tr, 'edit');
         }
     }
 

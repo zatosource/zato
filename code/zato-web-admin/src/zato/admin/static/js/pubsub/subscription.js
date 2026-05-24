@@ -747,9 +747,9 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
-    row += String.format('<td><a href="/zato/security/basic-auth/?cluster=1&query={0}">{1}</a></td>', encodeURIComponent(item.security), item.security);
+    row += String.format('<td style="white-space:nowrap"><a href="/zato/security/basic-auth/?cluster=1&query={0}">{1}</a></td>', encodeURIComponent(item.security), item.security);
 
-    row += String.format('<td><span class="ps-sub-key" data-sub-key="{0}">{0}</span></td>', item.sub_key);
+    row += String.format('<td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><span class="ps-sub-key" data-sub-key="{0}">{0}</span></td>', item.sub_key);
 
     var delivery_css_class = is_delivery_active ? 'ps-badge-deliv-enabled' : 'ps-badge-deliv-disabled';
     var pub_css_class = is_pub_active ? 'ps-badge-pub-enabled' : 'ps-badge-pub-disabled';
