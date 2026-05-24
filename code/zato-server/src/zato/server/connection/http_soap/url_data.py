@@ -248,16 +248,40 @@ class URLData(PyURLData):
 
     def _get_sec_def_by_id(self, def_type, def_id):
         def_id = int(def_id)
+        item_names = list(def_type.keys())
+        logger.info('_get_sec_def_by_id: looking for def_id=%s, item count=%d, names=%s', def_id, len(item_names), item_names)
         with self.url_sec_lock:
-            for item in def_type.values():
-                if int(item.config['id']) == def_id:
+            for item_name in item_names:
+                item = def_type[item_name]
+                item_keys = list(item.keys()) if hasattr(item, 'keys') else 'N/A'
+                has_config = hasattr(item, 'config')
+                logger.info('_get_sec_def_by_id: item_name=%s, type=%s, keys=%s, has .config=%s',
+                    item_name, type(item).__name__, item_keys, has_config)
+                if not has_config:
+                    logger.warning('_get_sec_def_by_id: item_name=%s has NO .config, full item=%s', item_name, dict(item) if hasattr(item, 'keys') else item)
+                    continue
+                config_keys = list(item.config.keys()) if hasattr(item.config, 'keys') else 'N/A'
+                has_id = 'id' in item.config if hasattr(item.config, '__contains__') else False
+                logger.info('_get_sec_def_by_id: item_name=%s, config keys=%s, has id=%s', item_name, config_keys, has_id)
+                if not has_id:
+                    logger.warning('_get_sec_def_by_id: item_name=%s config has NO id key, config=%s', item_name, dict(item.config) if hasattr(item.config, 'keys') else item.config)
+                    continue
+                item_id = int(item.config['id'])
+                logger.info('_get_sec_def_by_id: item_name=%s, item_id=%s, match=%s', item_name, item_id, item_id == def_id)
+                if item_id == def_id:
                     return item.config
+        logger.warning('_get_sec_def_by_id: def_id=%s NOT FOUND among %d items', def_id, len(item_names))
 
 # ################################################################################################################################
 
     def _update_basic_auth(self, name, config):
+        logger.info('_update_basic_auth: name=%s, config type=%s, config keys=%s',
+            name, type(config).__name__, list(config.keys()) if hasattr(config, 'keys') else 'N/A')
         self.basic_auth_config[name] = Bunch()
         self.basic_auth_config[name].config = config
+        logger.info('_update_basic_auth: stored name=%s, has .config=%s, config.id=%s',
+            name, hasattr(self.basic_auth_config[name], 'config'),
+            self.basic_auth_config[name].config.get('id', 'MISSING') if hasattr(self.basic_auth_config[name].config, 'get') else 'N/A')
 
     def basic_auth_get(self, name):
         """ Returns the configuration of the HTTP Basic Auth security definition of the given name.
@@ -275,34 +299,63 @@ class URLData(PyURLData):
     def on_config_event_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition.
         """
+        logger.info('on_config_event_SECURITY_BASIC_AUTH_CREATE: msg.name=%s, msg.id=%s, msg keys=%s',
+            msg.get('name'), msg.get('id'), list(msg.keys()) if hasattr(msg, 'keys') else 'N/A')
         with self.url_sec_lock:
             self._update_basic_auth(msg.name, msg)
+        config_names = list(self.basic_auth_config.keys())
+        logger.info('on_config_event_SECURITY_BASIC_AUTH_CREATE: done, basic_auth_config now has %d items, names=%s',
+            len(config_names), config_names)
 
     def on_config_event_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
         """ Updates an existing HTTP Basic Auth security definition.
         """
+        logger.info('on_config_event_SECURITY_BASIC_AUTH_EDIT: msg.name=%s, msg.old_name=%s, msg.id=%s',
+            msg.get('name'), msg.get('old_name'), msg.get('id'))
         with self.url_sec_lock:
             current_config = self.basic_auth_config[msg.old_name]
+            logger.info('on_config_event_SECURITY_BASIC_AUTH_EDIT: current_config has .config=%s',
+                hasattr(current_config, 'config'))
             msg.password = current_config.config.password
             del self.basic_auth_config[msg.old_name]
             self._update_basic_auth(msg.name, msg)
             self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH)
+        logger.info('on_config_event_SECURITY_BASIC_AUTH_EDIT: done, basic_auth_config now has %d items', len(list(self.basic_auth_config.keys())))
 
     def on_config_event_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
         """ Deletes an HTTP Basic Auth security definition.
         """
+        logger.info('on_config_event_SECURITY_BASIC_AUTH_DELETE: msg.name=%s, msg.id=%s', msg.get('name'), msg.get('id'))
         with self.url_sec_lock:
             self._delete_channel_data('basic_auth', msg.name)
             del self.basic_auth_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH, True)
+        logger.info('on_config_event_SECURITY_BASIC_AUTH_DELETE: done, basic_auth_config now has %d items', len(list(self.basic_auth_config.keys())))
 
     def on_config_event_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
         """
+        logger.info('on_config_event_SECURITY_BASIC_AUTH_CHANGE_PASSWORD: msg.name=%s, msg.id=%s, msg keys=%s',
+            msg.get('name'), msg.get('id'), list(msg.keys()) if hasattr(msg, 'keys') else 'N/A')
+        config_names = list(self.basic_auth_config.keys())
+        logger.info('on_config_event_SECURITY_BASIC_AUTH_CHANGE_PASSWORD: basic_auth_config has %d items, names=%s',
+            len(config_names), config_names)
+
+        # Log every item in basic_auth_config to see which ones have .config and which don't ..
+        for item_name, item in self.basic_auth_config.items():
+            logger.info('on_config_event_SECURITY_BASIC_AUTH_CHANGE_PASSWORD: item_name=%s, type=%s, has .config=%s, keys=%s',
+                item_name, type(item).__name__, hasattr(item, 'config'),
+                list(item.keys()) if hasattr(item, 'keys') else 'N/A')
+
         wait_for_dict_key(self.basic_auth_config, msg.name)
+
+        logger.info('on_config_event_SECURITY_BASIC_AUTH_CHANGE_PASSWORD: found msg.name=%s in basic_auth_config, has .config=%s',
+            msg.name, hasattr(self.basic_auth_config[msg.name], 'config'))
+
         with self.url_sec_lock:
             self.basic_auth_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH)
+        logger.info('on_config_event_SECURITY_BASIC_AUTH_CHANGE_PASSWORD: done for msg.name=%s', msg.name)
 
 # ################################################################################################################################
 

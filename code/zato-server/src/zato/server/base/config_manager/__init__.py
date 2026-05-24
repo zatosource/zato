@@ -1092,12 +1092,19 @@ class ConfigManager(_ConfigManagerBase):
     def on_config_event_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Changes password of an HTTP Basic Auth security definition.
         """
+        logger.info('ConfigManager.on_config_event_SECURITY_BASIC_AUTH_CHANGE_PASSWORD: msg.id=%s, msg.name=%s, msg keys=%s',
+            msg.get('id'), msg.get('name'), list(msg.keys()) if hasattr(msg, 'keys') else 'N/A')
+
         # Update channels and outgoing connections ..
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH, self._visit_wrapper_change_password)
+
+        logger.info('ConfigManager.on_config_event_SECURITY_BASIC_AUTH_CHANGE_PASSWORD: _update_auth done, now calling basic_auth_get_by_id for msg.id=%s', msg.id)
 
         # .. extract the newest information  ..
         if msg.id:
             sec_def = self.basic_auth_get_by_id(msg.id)
+            logger.info('ConfigManager.on_config_event_SECURITY_BASIC_AUTH_CHANGE_PASSWORD: basic_auth_get_by_id returned sec_def=%s',
+                sec_def)
 
             # .. and update security groups.
             for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore

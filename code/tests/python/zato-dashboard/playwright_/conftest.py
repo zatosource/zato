@@ -393,7 +393,6 @@ _Log_Noise_Patterns = [
     "KeyError: ''",
     'CreateEdit EXCEPTION',
     'HeadersEnrichedException',
-    'Could not handle config event',
     'nDetails:',
     'Could not create an HTTP Basic Auth definition',
 ]
