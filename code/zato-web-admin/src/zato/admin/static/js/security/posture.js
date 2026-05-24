@@ -161,20 +161,19 @@ $.fn.zato.security.posture._field_descriptions = {
             '</div>' +
         '</div>',
 
-    'posture-toggle-auth-shared-credentials':
+    'posture-toggle-rate-limiting':
         '<div class="hiw-posture-explanation">' +
-            '<div class="hiw-posture-title">Shared credentials</div>' +
+            '<div class="hiw-posture-title">Missing rate limiting</div>' +
             '<div class="hiw-posture-body">' +
-                'Each REST channel can have its own security definition - a unique username and password pair. ' +
-                'It is perfectly fine for one client to access multiple channels, but each channel should use a separate credential record.' +
-                '<br><br>' +
+                'Rate limiting controls how many requests a client can make in a given time window. ' +
+                'Without it, a single client can flood your server with requests, whether by accident or on purpose.' +
                 '<br><br>' +
                 'This check ' +
-                '<span class="hiw-posture-highlight">finds security definitions that are reused across multiple channels instead of being dedicated to one</span>. ' +
+                '<span class="hiw-posture-highlight">finds REST channels and services that do not have any rate limiting configured</span>.' +
                 '<br><br>' +
-                'When channels share the same credential record, you cannot revoke access to one channel without affecting the others, ' +
-                'you cannot rotate the password for one channel independently, ' +
-                'and you lose the ability to tell from logs which channel a given request was meant for.' +
+                'Even a simple limit like 1,000 requests per minute can protect against runaway loops, ' +
+                'misbehaving integrations, and basic denial-of-service attempts. ' +
+                'Channels without rate limits are open to unlimited traffic from any authenticated client.' +
             '</div>' +
             '<div class="hiw-posture-toggle">' +
                 '<span class="hiw-posture-toggle-label">Toggle</span>' +
