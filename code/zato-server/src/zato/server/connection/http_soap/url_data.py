@@ -247,9 +247,10 @@ class URLData(PyURLData):
 # ################################################################################################################################
 
     def _get_sec_def_by_id(self, def_type, def_id):
+        def_id = int(def_id)
         with self.url_sec_lock:
             for item in def_type.values():
-                if item.config['id'] == def_id:
+                if int(item.config['id']) == def_id:
                     return item.config
 
 # ################################################################################################################################
