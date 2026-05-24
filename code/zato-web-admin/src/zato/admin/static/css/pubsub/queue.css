@@ -1,0 +1,56 @@
+@import url("../dashboard-kit/kit.css");
+@import url("../dashboard-kit/time_range.css");
+@import url("../dashboard-kit/main_chart.css");
+@import url("../dashboard-kit/outcome.css");
+@import url("../zato_highlight_pane.css");
+@import url("../syntax_light.css");
+
+:root {
+    --detail-header-row-2-border-bottom: 3px solid var(--primary-dark);
+    --detail-header-row-2-padding-bottom: 1.2rem;
+    --detail-pagination-controls-padding-top: 0;
+    --detail-pagination-controls-padding-bottom: 8px;
+    --detail-pagination-controls-min-height: 31px;
+    --detail-progress-panel-padding-top: 4px;
+    --detail-section-title-padding-bottom: 2px;
+}
+
+.data-preview {
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.data-preview .syntax-light {
+    font-family: Menlo, Consolas, Monaco, monospace;
+    font-size: 12px;
+}
+
+a.queue-preview-link,
+a.queue-preview-link:hover,
+a.queue-preview-link:visited {
+    cursor: pointer;
+    text-decoration: none !important;
+    color: inherit;
+}
+
+.detail-table td,
+.detail-table th {
+    white-space: nowrap;
+    width: 1%;
+}
+
+.detail-table .data-preview {
+    width: auto;
+}
+
+.detail-table .queue-msg-id a {
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+}
+
+#messages-body tr td.queue-row-num {
+    width: 1%;
+    white-space: nowrap;
+}

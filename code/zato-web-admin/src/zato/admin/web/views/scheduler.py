@@ -413,7 +413,7 @@ def index(req):
 
         template_name = 'zato/scheduler.html'
 
-        from zato.admin.web.views.scheduler_dashboard import dashboard_base_url
+        from zato.admin.web.views.scheduler_dashboard import dashboard_base_url, default_time_range_minutes
 
         return_data = {'zato_clusters':req.zato.clusters,
             'cluster_id':req.zato.cluster_id,
@@ -425,6 +425,7 @@ def index(req):
             'edit_one_time_form':OneTimeSchedulerJobForm(edit_one_time_prefix, req),
             'edit_interval_based_form':IntervalBasedSchedulerJobForm(edit_interval_based_prefix, req),
             'dashboard_base_url': dashboard_base_url,
+            'default_time_range_minutes': default_time_range_minutes,
             'paginate':True,
             'show_search_form':True,
             'meta': meta,

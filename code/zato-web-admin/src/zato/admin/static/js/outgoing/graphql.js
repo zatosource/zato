@@ -30,7 +30,7 @@ $(document).ready(function() {
     var uniqueConstraints = [
         {field: 'name', entity_type: 'generic_connection', attr_name: 'name'}
     ];
-    $.each(uniqueConstraints, function(constraintIdx, constraint) {
+    $.each(uniqueConstraints, function(constraintIndex, constraint) {
         $.fn.zato.validate_unique('#id_' + constraint.field, constraint.entity_type, constraint.attr_name);
         $.fn.zato.validate_unique('#id_edit-' + constraint.field, constraint.entity_type, constraint.attr_name);
     });
@@ -81,25 +81,41 @@ $.fn.zato.outgoing.graphql.data_table.new_row = function(item, data, includeTR) 
     let isActive = item.is_active == true;
 
     var securityCell = '<span class="form_hint">---</span>';
-    var secType = '';
-    var selectedValue = $('#id_security_id').val() || $('#id_edit-security_id').val() || '';
+    var securityType = '';
 
-    if(item.security_id && selectedValue && selectedValue.indexOf('/') > -1) {
-        secType = selectedValue.split('/')[0];
-        var secName = item.security_id_select ? item.security_id_select.split('/').slice(1).join('/') : '';
+    var selectedValue = $('#id_security_id').val();
+    if (!selectedValue) {
+        selectedValue = $('#id_edit-security_id').val();
+    }
 
-        var secHref = '/zato/security/';
-        if(secType === 'oauth') {
-            secHref += 'oauth/outconn/client-credentials/';
+    if(item.security_id) {
+        if (selectedValue) {
+            if (selectedValue.indexOf('/') > -1) {
+
+                var selectedParts = selectedValue.split('/');
+                securityType = selectedParts[0];
+
+                var securityName = '';
+                if (item.security_id_select) {
+                    var selectParts = item.security_id_select.split('/');
+                    var nameParts = selectParts.slice(1);
+                    securityName = nameParts.join('/');
+                }
+
+                var securityHref = '/zato/security/';
+                if(securityType === 'oauth') {
+                    securityHref += 'oauth/outconn/client-credentials/';
+                }
+                else if(securityType === 'basic_auth') {
+                    securityHref += 'basic-auth/';
+                }
+                else if(securityType === 'apikey') {
+                    securityHref += 'apikey/';
+                }
+                securityHref += '?cluster=1&query=' + encodeURIComponent(securityName);
+                securityCell = String.format('<a href=\'{0}\'>{1}</a>', securityHref, securityName);
+            }
         }
-        else if(secType === 'basic_auth') {
-            secHref += 'basic-auth/';
-        }
-        else if(secType === 'apikey') {
-            secHref += 'apikey/';
-        }
-        secHref += '?cluster=1&query=' + encodeURIComponent(secName);
-        securityCell = String.format('<a href=\'{0}\'>{1}</a>', secHref, secName);
     }
 
     row += '<td class=\'numbering\'>&nbsp;</td>';
@@ -114,17 +130,10 @@ $.fn.zato.outgoing.graphql.data_table.new_row = function(item, data, includeTR) 
     row += String.format('<td>{0}</td>', securityCell);
 
     // 3
-    var editLink = String.format('<a href=\'javascript:$.fn.zato.outgoing.graphql.edit(\x27{0}\x27)\'>Edit</a>', item.id);
-    row += String.format('<td>{0}</td>', editLink);
-
-    var deleteLink = String.format('<a href=\'javascript:$.fn.zato.outgoing.graphql.delete_(\x27{0}\x27);\'>Delete</a>', item.id);
-    row += String.format('<td>{0}</td>', deleteLink);
-
-    var pingLink = String.format('<a href=\'javascript:void(0)\' onclick=\'$.fn.zato.data_table.ping(\x27{0}\x27, this)\'>Ping</a>', item.id);
-    row += String.format('<td>{0}</td>', pingLink);
-
-    var invokeLink = String.format('<a href=\'javascript:$.fn.zato.outgoing.graphql.invoke(\x27{0}\x27)\'>Invoke</a>', item.id);
-    row += String.format('<td>{0}</td>', invokeLink);
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.graphql.edit('{0}')\">Edit</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.graphql.delete_('{0}');\">Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.data_table.ping('{0}', this)\">Ping</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.graphql.invoke('{0}')\">Invoke</a>", item.id));
 
     // 4
     row += String.format('<td class=\'ignore item_id_{0}\'>{0}</td>', item.id);
@@ -132,7 +141,7 @@ $.fn.zato.outgoing.graphql.data_table.new_row = function(item, data, includeTR) 
     row += String.format('<td class=\'ignore\'>{0}</td>', item.extra);
     row += String.format('<td class=\'ignore\'>{0}</td>', item.default_query_timeout);
     row += String.format('<td class=\'ignore\'>{0}</td>', item.security_id);
-    row += String.format('<td class=\'ignore\'>{0}</td>', secType);
+    row += String.format('<td class=\'ignore\'>{0}</td>', securityType);
 
     if(includeTR) {
         row += '</tr>';
@@ -180,16 +189,17 @@ $.fn.zato.outgoing.graphql.invoke = function(id) {
 
     var defaultQuery = 'query IntrospectionQuery {\n  __schema {\n    types {\n      name\n      kind\n      description\n    }\n  }\n}';
 
-    var currentValue = $('#invoker-modal-request').val();
-    if (!currentValue) {
-        $('#invoker-modal-request').val(defaultQuery);
+    $.fn.zato.invoker._request_ace_mode = 'ace/mode/graphqlschema';
+
+    var pane = $.fn.zato.invoker._request_pane;
+    if (pane) {
+        if (!pane.getValue()) {
+            $.fn.zato.invoker._set_request_value(defaultQuery);
+        }
+        else {
+            pane.getEditor().session.setMode('ace/mode/graphqlschema');
+        }
     }
-
-    $('#invoker-modal-request').attr('placeholder',
-        'Enter a GraphQL query\n\nCtrl+Enter to invoke, Ctrl+K for history');
-
-    // Set up the transparent-textarea + highlight-layer overlay
-    $.fn.zato.outgoing.graphql._setupRequestHighlight();
 
     $('#invoker-more-options').html(
         '<div class="invoker-more-options-row invoker-more-options-row-compact">'
@@ -206,79 +216,14 @@ $.fn.zato.outgoing.graphql.invoke = function(id) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.outgoing.graphql._debounceTimer = null;
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.outgoing.graphql._setupRequestHighlight = function() {
-
-    var textarea = $('#invoker-modal-request');
-
-    // Wrap the textarea in a container if not already wrapped ..
-    if (!textarea.parent().hasClass('invoker-request-highlight-container')) {
-
-        textarea.wrap('<div class="invoker-request-highlight-container"></div>');
-        textarea.after('<pre class="invoker-request-highlight-layer syntax-monokai" id="invoker-request-highlight-pre"></pre>');
-    }
-
-    // .. run the initial highlight ..
-    $.fn.zato.outgoing.graphql._syncRequestHighlight();
-
-    // .. bind input events: immediate plain-text echo + debounced Pygments call ..
-    textarea.off('input.graphql_highlight');
-
-    textarea.on('input.graphql_highlight', function() {
-        var text = textarea.val();
-        var highlightPre = $('#invoker-request-highlight-pre');
-
-        // Show escaped plain text immediately so keystrokes are always visible
-        if (text) {
-            highlightPre.text(text + '\n');
-        }
-        else {
-            highlightPre.html('\n');
-        }
-
-        clearTimeout($.fn.zato.outgoing.graphql._debounceTimer);
-        $.fn.zato.outgoing.graphql._debounceTimer = setTimeout(
-            $.fn.zato.outgoing.graphql._syncRequestHighlight, 300
-        );
-    });
-
-    // .. and sync scroll between textarea and pre.
-    textarea.off('scroll.graphql_highlight');
-
-    textarea.on('scroll.graphql_highlight', function() {
-        var highlightPre = document.getElementById('invoker-request-highlight-pre');
-        highlightPre.scrollTop = this.scrollTop;
-        highlightPre.scrollLeft = this.scrollLeft;
-    });
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.outgoing.graphql._syncRequestHighlight = function() {
-    var textarea = $('#invoker-modal-request');
-    var text = textarea.val();
-    var highlightPre = $('#invoker-request-highlight-pre');
-
-    if (!text) {
-        highlightPre.html('\n');
-        return;
-    }
-
-    // Show plain text immediately so the content is always visible
-    highlightPre.text(text + '\n');
-
-    // .. then replace with server-side highlighted HTML.
-    $.fn.zato.highlightElement(highlightPre, text, 'graphql');
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 $.fn.zato.outgoing.graphql.collect_form_data = function() {
+    var requestValue = '';
+    if ($.fn.zato.invoker._request_pane) {
+        requestValue = $.fn.zato.invoker._request_pane.getValue();
+    }
+
     return {
-        'data-request': $('#invoker-modal-request').val(),
+        'data-request': requestValue,
         'variables': $('#invoker-modal-variables').val(),
     };
 }

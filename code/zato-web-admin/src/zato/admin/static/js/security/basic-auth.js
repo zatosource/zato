@@ -31,7 +31,7 @@ $(document).ready(function() {
 
 
 $.fn.zato.security.basic_auth.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create Basic Auth definition', null);
+    $.fn.zato.data_table._create_edit('create', 'Create a Basic Auth definition', null);
 }
 
 $.fn.zato.security.basic_auth.edit = function(id) {

@@ -22,6 +22,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
     <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/zato_highlight_pane.css">
     {% if connection == 'channel' and transport == 'plain_http' %}
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/channel.css">
     {% endif %}
@@ -43,6 +44,9 @@
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ace.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_ui_helpers.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_highlight_pane.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/invoker.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/index.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/data-table-widget.js"></script>
@@ -188,7 +192,7 @@
             <a href="javascript:$.fn.zato.http_soap.create('{{ transport_label }} {{ connection_label }}')">Create a new {{ transport_label }} {{ connection_label }}</a>
             {% if connection == 'outgoing' and transport == 'plain_http' %}
             |
-            <a href="javascript:void(0)" id="openapi-import-link">Import OpenAPI</a>
+            <a href="javascript:void(0)" id="openapi-import-link" class="common">Import OpenAPI</a>
             {% endif %}
         </div>
 

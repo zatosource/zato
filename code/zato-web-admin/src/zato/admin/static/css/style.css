@@ -1,3 +1,5 @@
+@import url("zato_action_button.css");
+
 :root {
     --zato-seablue: #012845;
     --zato-seablue-light1: #063c65;
@@ -598,6 +600,10 @@ a:not(.menu-link):not(.chosen-single):not(.status-badge):is(.top):hover {
     vertical-align: baseline;
 }
 
+a.top.header-link-styled {
+    padding-bottom: 3px;
+}
+
 a.hint {
     color: #333;
     font-size: 10px
@@ -808,25 +814,21 @@ div.page_prompt {
     padding-left: 2%;
     font-size: 12px;
     margin-bottom: 16px;
+    --zato-action-button-text: #000;
+    --zato-action-button-gradient-start: #ffd84a;
+    --zato-action-button-gradient-end: #ffc311;
+    --zato-action-button-border: #d4a00a;
+    --zato-action-button-border-bottom: #b8860b;
 }
 
-div.page_prompt a:not(.common) {
-    background-color: #ffc311;
-    background-image: none;
-    color: #000;
-    text-decoration: none;
-    font-weight: 400;
-    padding-left: 4px !important;
-    padding-right: 4px !important;
-    padding-top: 6px !important;
-    padding-bottom: 6px !important;
-    border-radius: 5px;
-    box-shadow: 2px 2px 2px #d3d3d3;
-}
-
-div.page_prompt a:not(.common):not(.menu-link):not(.chosen-single):not(.status-badge):hover {
-    background-color: #ffc311;
+div.page_prompt a:not(.common):not(.common):not(.common),
+div.page_prompt a:not(.common):not(.common):not(.common):hover,
+div.page_prompt a:not(.common):not(.common):not(.common):active {
+    text-transform: none !important;
+    font-size: 12px !important;
+    letter-spacing: normal !important;
     color: #000 !important;
+    text-decoration: none;
 }
 
 div.page_prompt a.common:hover {
@@ -834,7 +836,7 @@ div.page_prompt a.common:hover {
 }
 
 div.page_prompt a.current {
-    font-weight: bolder
+    font-weight: bolder;
 }
 
 #id_file {

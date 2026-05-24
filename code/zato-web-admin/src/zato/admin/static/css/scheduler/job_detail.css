@@ -9,11 +9,6 @@
     --detail-search-icon-color: #8a8a8a;
 }
 
-.detail-component-pill {
-    background: #e0f0ff;
-    color: #012845;
-}
-
 #btn-execute-now {
     cursor: pointer;
 }
@@ -285,14 +280,16 @@ tbody.detail-dimmed > tr.detail-panel-row.expanded {
     flex-shrink: 0;
 }
 
-.detail-page-run img.help-icon[id=""] {
+.section-heading-flush img.help-icon {
     display: none;
 }
 
 .detail-page-run .dashboard-tabs {
     display: none;
+    margin: 0;
 }
 
-.progress-panel:has(.detail-page-run) {
-    padding-bottom: 24px;
+.detail-page-run #run-nav-top {
+    padding-top: 0;
 }
+

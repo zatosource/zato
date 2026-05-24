@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from http import HTTPStatus
 from traceback import format_exc
 
 # Django
@@ -18,6 +19,7 @@ from zato.admin.web.forms.outgoing.graphql import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
     method_allowed, ping_connection, SecurityList
 from zato.common.api import GENERIC, generic_attrs, SEC_DEF_TYPE
+from zato.common.content_type import format_content, get_content_type
 from zato.common.model.graphql_ import GraphQLConfigObject
 
 logger = logging.getLogger(__name__)
@@ -136,13 +138,18 @@ def invoke(req, id):
         }
         response = req.zato.client.invoke('zato.generic.connection.invoke-graphql', params)
         if response.ok:
+            response_data = response.data.response_data
+            content_type = get_content_type(response_data)
+            formatted_data = format_content(response_data, content_type)
+
             return JsonResponse({
-                'data': response.data.response_data,
+                'data': formatted_data,
                 'response_time_human': response.data.response_time,
+                'content_type': content_type,
             })
-        return JsonResponse({'data': str(response.details), 'response_time_human': ''}, status=500)
+        return JsonResponse({'data': str(response.details), 'response_time_human': '', 'content_type': 'text/plain'}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
     except Exception as e:
         logger.error('invoke error: %s', format_exc())
-        return JsonResponse({'data': str(e), 'response_time_human': ''}, status=500)
+        return JsonResponse({'data': str(e), 'response_time_human': '', 'content_type': 'text/plain'}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
 # ################################################################################################################################

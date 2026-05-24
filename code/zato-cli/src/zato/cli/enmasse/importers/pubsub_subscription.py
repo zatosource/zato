@@ -135,7 +135,7 @@ class PubSubSubscriptionImporter:
 
         instance = PubSubSubscription()
         instance.cluster_id = self.importer.cluster_id
-        instance.sub_key = new_sub_key(definition['name'])
+        instance.sub_key = new_sub_key()
         instance.sec_base_id = definition['sec_base_id']
         instance.delivery_type = definition['delivery_type']
         instance.push_type = definition.get('push_type')

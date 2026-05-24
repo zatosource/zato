@@ -41,6 +41,7 @@ Poll JSON contract returned by _get_dashboard_data:
 # stdlib
 import json
 import logging
+from http import HTTPStatus
 
 # Django
 from django.http import HttpResponse
@@ -120,7 +121,7 @@ def _get_dashboard_data(req:'any_') -> 'str':
 
     for subscription in subscriptions:
         queue_list.append({
-            'name': subscription['sub_key'],
+            'name': subscription['sec_name'],
             'depth': _No_Depth,
             'oldest_msg_age_seconds': _No_Age,
             'delivery_rate': _No_Rate,
@@ -217,7 +218,7 @@ def poll(req:'any_') -> 'HttpResponse':
         return HttpResponse(
             error_json.encode('utf-8'),
             content_type='application/json',
-            status=500,
+            status=HTTPStatus.INTERNAL_SERVER_ERROR,
         )
 
 # ################################################################################################################################
@@ -244,7 +245,7 @@ def import_demo_config(req:'any_') -> 'HttpResponse':
         return HttpResponse(
             error_message.encode('utf-8'),
             content_type='text/plain',
-            status=500,
+            status=HTTPStatus.INTERNAL_SERVER_ERROR,
         )
 
 # ################################################################################################################################

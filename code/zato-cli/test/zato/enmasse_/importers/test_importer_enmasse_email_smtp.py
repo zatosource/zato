@@ -18,6 +18,7 @@ from zato.cli.enmasse.importers.email_smtp import SMTPImporter
 from zato.common.odb.model import SMTP
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
+from zato.common.defaults import default_server_base_dir
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,7 +36,7 @@ class TestEnmasseSMTPFromYAML(TestCase):
 
     def setUp(self) -> 'None':
         # Server path for database connection
-        self.server_path = os.path.expanduser('~/env/qs-1/server1')
+        self.server_path = default_server_base_dir
 
         # Create a temporary file using the existing template which already contains SMTP definitions
         self.temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.yaml')

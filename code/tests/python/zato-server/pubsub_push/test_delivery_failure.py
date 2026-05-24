@@ -7,306 +7,307 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import json
-import os
+import logging
 import time
-
-# PyPI
-import pytest # type: ignore[reportMissingImports]
+import unittest
 
 # local
-from base import BasePushTestCase
-from config import _active_endpoints
+from _client import PublishClient
+from config import TestConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_active_endpoint_count = len(_active_endpoints)
-
-_skip_fewer_than_two = pytest.mark.skipif( # type: ignore[reportUntypedFunctionDecorator]
-    _active_endpoint_count < 2,
-    reason='Delivery failure tests require at least 2 active endpoints',
-)
+if 0:
+    from zato.common.typing_ import anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestDeliveryFailure(BasePushTestCase):
-    """ Rainy-day tests for push delivery under failure conditions.
+logger = logging.getLogger('zato.test.pubsub_push.delivery_failure')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestDeliveryFailure(unittest.TestCase):
+    """ Tests for delivery failure scenarios - retries, recovery, and isolation.
     """
 
-    def setUp(self) -> 'None':
-        """ Reset all receivers to accept mode BEFORE clearing output
-        directories, so retrying messages from a prior test do not
-        land on disk after the parent setUp clears them.
-        """
-
-        for behavior in self.config.receiver_controls.values():
-            behavior.set_accept() # type: ignore[union-attr]
-
-        super().setUp()
+    @classmethod
+    def setUpClass(class_) -> 'None': # pyright: ignore[reportSelfClsParameterName]
+        class_.publisher = PublishClient(
+            TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
 
 # ################################################################################################################################
 
-    def _poll_for_marker(self, topic_name:'str', marker:'str', timeout:'int'=30) -> 'bool':
-        """ Poll the output directory until a message whose data field
-        contains the given marker value appears. Parses JSON and checks
-        the marker key specifically to avoid false positives from
-        substring matching on raw file content.
-        """
-
-        # Set up the polling parameters ..
-        output_directory = self.config.endpoint_output_dirs[topic_name]
-        deadline = time.monotonic() + timeout
-
-        # .. and keep scanning until the marker is found or the deadline passes.
-        while time.monotonic() < deadline:
-
-            for entry in os.listdir(output_directory):
-                if entry.endswith('.json'):
-                    file_path = os.path.join(output_directory, entry)
-
-                    with open(file_path, 'r') as message_file:
-                        message = json.load(message_file)
-
-                    # The push payload is a raw Redis stream entry
-                    # where the data field is a JSON string ..
-                    data_json = message.get('data', '')
-
-                    try:
-                        data = json.loads(data_json)
-                    except (json.JSONDecodeError, TypeError):
-                        continue
-
-                    if data.get('marker') == marker:
-                        return True
-
-            time.sleep(0.5)
-
-        return False
-
-# ################################################################################################################################
-
-    def _count_files_with_marker(self, topic_name:'str', marker:'str') -> 'int':
-        """ Count JSON files in the output directory whose parsed data
-        field contains the given marker value.
-        """
-
-        # Look up the output directory ..
-        output_directory = self.config.endpoint_output_dirs[topic_name]
-        count = 0
-
-        # .. scan each file and parse the data field ..
-        for entry in os.listdir(output_directory):
-            if entry.endswith('.json'):
-                file_path = os.path.join(output_directory, entry)
-
-                with open(file_path, 'r') as message_file:
-                    message = json.load(message_file)
-
-                data_json = message.get('data', '')
-
-                try:
-                    data = json.loads(data_json)
-                except (json.JSONDecodeError, TypeError):
-                    continue
-
-                if data.get('marker') == marker:
-                    count += 1
-
-        # .. and return the total.
-        out = count
-        return out
-
-# ################################################################################################################################
-
-    @_skip_fewer_than_two # type: ignore[reportUntypedFunctionDecorator]
     def test_transient_503_then_recovery(self) -> 'None':
-        """ A receiver that returns 503 three times then recovers must
-        eventually receive the pushed message.
+        """ Configure receiver to reject 3 times with HTTP 503, then auto-recover.
+        Publish a message, wait for delivery to succeed after retries,
+        verify the message arrives intact and 3 rejections were recorded.
         """
-        topic_name = _active_endpoints[0]
-        behavior = self.config.receiver_controls[topic_name]
 
-        behavior.set_reject_503(reject_count=3) # type: ignore[union-attr]
+        topic_name = 'customer.registered'
+        receiver = TestConfig.endpoints[topic_name].receiver
 
-        data = {'failure_test': 'transient_503', 'marker': 'recover-after-3'}
+        # Configure the receiver to reject 3 times then auto-recover ..
+        reject_count = 3
+        receiver.behavior.set_reject_503(auto_recover_after=reject_count)
+        self.addCleanup(receiver.behavior.reset)
 
-        result = self.publish(topic_name, data)
-        self.assertTrue(result['is_ok'])
+        # Publish a message ..
+        publish_data:'anydict' = {'customer_id': 'retry_test', 'source': 'test_transient_503'}
+        _ = self.publisher.publish(topic_name, publish_data)
+        logger.info('Published message to %s with %d rejections configured', topic_name, reject_count)
 
-        found = self._poll_for_marker(topic_name, 'recover-after-3', timeout=30)
-        self.assertTrue(found, 'Message with marker recover-after-3 was not delivered')
+        # .. wait for delivery to eventually succeed after retries ..
+        delivery_timeout = 60.0
+        messages = receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
+        delivered_count = len(messages)
+        logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
 
-        # Verify Zato sent a real payload during the rejected attempts ..
-        rejected_count = behavior.rejected_count # type: ignore[union-attr]
-        self.assertGreaterEqual(rejected_count, 1)
+        # .. verify exactly 1 message arrived ..
+        self.assertEqual(delivered_count, 1)
 
-        last_body = behavior.last_rejected_body # type: ignore[union-attr]
-        self.assertIn('recover-after-3', last_body)
+        # .. verify the rejection count matches what we configured.
+        actual_reject_count = receiver.behavior.reject_count
+        logger.info('Rejection count -> %d', actual_reject_count)
+        self.assertEqual(actual_reject_count, reject_count)
 
 # ################################################################################################################################
 
-    @_skip_fewer_than_two # type: ignore[reportUntypedFunctionDecorator]
     def test_receiver_down_then_back_up(self) -> 'None':
-        """ A message published while the receiver is down must be delivered
-        after the receiver is restarted.
+        """ Stop the receiver, publish a message, restart the receiver on the same port,
+        wait for the delivery task to retry and succeed.
         """
-        topic_name = _active_endpoints[0]
-        receiver = self.config.receiver_servers[topic_name]
 
-        # Shut down the receiver so the server gets connection refused
-        receiver.shutdown() # type: ignore[union-attr]
+        topic_name = 'customer.updated'
+        receiver = TestConfig.endpoints[topic_name].receiver
 
-        data = {'failure_test': 'down_then_up', 'marker': 'survived-outage'}
+        # Stop the receiver so the port becomes unreachable ..
+        receiver.stop()
+        logger.info('Stopped receiver for %s on port %d', topic_name, receiver.port)
 
-        result = self.publish(topic_name, data)
-        self.assertTrue(result['is_ok'])
+        # .. publish a message while the receiver is down ..
+        publish_data:'anydict' = {'customer_id': 'down_test', 'source': 'test_receiver_down'}
+        _ = self.publisher.publish(topic_name, publish_data)
+        logger.info('Published message to %s while receiver is down', topic_name)
 
-        # Let the server accumulate a few failed delivery attempts
-        time.sleep(5)
+        # .. wait a few seconds for at least one failed delivery attempt ..
+        down_duration = 5.0
+        time.sleep(down_duration)
 
-        # Bring the receiver back up on the same port
-        receiver.restart() # type: ignore[union-attr]
+        # .. restart the receiver on the same port ..
+        receiver.start()
+        logger.info('Restarted receiver for %s on port %d', topic_name, receiver.port)
 
-        found = self._poll_for_marker(topic_name, 'survived-outage', timeout=30)
-        self.assertTrue(found, 'Message with marker survived-outage was not delivered')
+        # .. wait for delivery to succeed after restart ..
+        delivery_timeout = 60.0
+        messages = receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
+        delivered_count = len(messages)
+        logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
+
+        # .. verify exactly 1 message arrived (no duplicates).
+        self.assertEqual(delivered_count, 1)
 
 # ################################################################################################################################
 
-    @_skip_fewer_than_two # type: ignore[reportUntypedFunctionDecorator]
-    def test_slow_receiver_still_delivers(self) -> 'None':
-        """ A receiver that takes 5 seconds to respond must still receive
-        the pushed message.
+    def test_slow_receiver(self) -> 'None':
+        """ Configure receiver to delay 5 seconds before responding.
+        Publish a message, wait for delivery, verify it arrives intact
+        and no premature retry caused a duplicate.
         """
-        topic_name = _active_endpoints[0]
-        behavior = self.config.receiver_controls[topic_name]
 
-        behavior.set_hang(hang_seconds=5) # type: ignore[union-attr]
+        topic_name = 'customer.deactivated'
+        receiver = TestConfig.endpoints[topic_name].receiver
 
-        data = {'failure_test': 'slow_receiver', 'marker': 'waited-for-slow'}
+        # Configure the receiver to hang for 5 seconds before responding ..
+        hang_duration = 5.0
+        receiver.behavior.set_hang(hang_duration)
+        self.addCleanup(receiver.behavior.reset)
 
-        result = self.publish(topic_name, data)
-        self.assertTrue(result['is_ok'])
+        # Publish a message ..
+        publish_data:'anydict' = {'customer_id': 'slow_test', 'source': 'test_slow_receiver'}
+        _ = self.publisher.publish(topic_name, publish_data)
+        logger.info('Published message to %s with %s second hang configured', topic_name, hang_duration)
 
-        found = self._poll_for_marker(topic_name, 'waited-for-slow', timeout=10)
-        self.assertTrue(found, 'Message with marker waited-for-slow was not delivered')
+        # .. wait for delivery (longer than the hang duration) ..
+        delivery_timeout = 60.0
+        messages = receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
+        delivered_count = len(messages)
+        logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
+
+        # .. verify exactly 1 message arrived (no duplicate from premature retry).
+        self.assertEqual(delivered_count, 1)
 
 # ################################################################################################################################
 
-    @_skip_fewer_than_two # type: ignore[reportUntypedFunctionDecorator]
     def test_expired_message_not_pushed(self) -> 'None':
-        """ A message published with a 1-second TTL must not be pushed
-        to the receiver if delivery is delayed past the TTL.
+        """ Publish a message with 1-second TTL while the receiver is rejecting.
+        The delivery task retries, but the TTL expires before a successful push.
+        Verify the receiver got zero deliveries.
         """
-        topic_name = _active_endpoints[0]
-        behavior = self.config.receiver_controls[topic_name]
 
-        # Make the receiver hang long enough for the message to expire
-        # before the push delivery completes ..
-        behavior.set_hang(hang_seconds=5) # type: ignore[union-attr]
+        topic_name = 'order.placed'
+        receiver = TestConfig.endpoints[topic_name].receiver
 
-        data = {'failure_test': 'push_ttl', 'marker': 'should-expire-push'}
+        # Configure the receiver to reject indefinitely (no auto-recover) ..
+        receiver.behavior.set_reject_503(auto_recover_after=0)
+        self.addCleanup(receiver.behavior.reset)
 
-        result = self.publish(topic_name, data, expiration=1)
-        self.assertTrue(result['is_ok'])
+        # Publish a message with a very short TTL ..
+        ttl_seconds = 1
+        publish_data:'anydict' = {'order_id': 'expired_test', 'source': 'test_expired_not_pushed'}
+        _ = self.publisher.publish(topic_name, publish_data, expiration=ttl_seconds)
+        logger.info('Published message to %s with TTL=%d second(s), receiver rejecting', topic_name, ttl_seconds)
 
-        # Wait for the TTL to expire and delivery attempts to settle ..
-        time.sleep(10)
+        # .. wait for the message to expire and the delivery task to give up ..
+        expiry_wait = 10.0
+        time.sleep(expiry_wait)
 
-        # Reset the receiver to accept mode ..
-        behavior.set_accept() # type: ignore[union-attr]
+        # .. now switch receiver to accept and clear output ..
+        receiver.behavior.reset()
+        receiver.clear_output()
+        logger.info('Receiver switched to accept after expiry wait of %s seconds', expiry_wait)
 
-        # Wait a bit more for any late delivery ..
-        time.sleep(5)
+        # .. wait generously to confirm no late delivery arrives ..
+        post_recovery_wait = 10.0
+        time.sleep(post_recovery_wait)
 
-        # The expired message must not have been written to disk ..
-        count = self._count_files_with_marker(topic_name, 'should-expire-push')
-        self.assertEqual(count, 0, 'Expired message was delivered to the push endpoint')
+        # .. check what arrived ..
+        messages = receiver.get_delivered_messages()
+        delivered_count = len(messages)
+        logger.info('Delivered %d message(s) after expiry -> %s', delivered_count, messages)
+
+        # .. verify nothing was delivered (message expired before successful push).
+        self.assertEqual(delivered_count, 0)
 
 # ################################################################################################################################
 
-    @_skip_fewer_than_two # type: ignore[reportUntypedFunctionDecorator]
-    def test_failure_on_one_endpoint_does_not_block_another(self) -> 'None':
-        """ When one receiver is rejecting, messages to a different topic
-        must still be delivered to its healthy receiver.
+    def test_failure_isolation_between_endpoints(self) -> 'None':
+        """ One receiver rejects all requests while another is healthy.
+        Publish one message to each topic, verify the healthy endpoint
+        gets its message regardless of the failing one.
         """
-        failing_topic = _active_endpoints[0]
-        healthy_topic = _active_endpoints[1]
 
-        failing_behavior = self.config.receiver_controls[failing_topic]
-        failing_behavior.set_reject_503() # type: ignore[union-attr]
+        failing_topic = 'order.placed'
+        healthy_topic = 'order.shipped'
 
-        data_failing = {'failure_test': 'isolation', 'target': 'failing'}
-        data_healthy = {'failure_test': 'isolation', 'target': 'healthy', 'marker': 'delivered-despite-other-failure'}
+        failing_receiver = TestConfig.endpoints[failing_topic].receiver
+        healthy_receiver = TestConfig.endpoints[healthy_topic].receiver
 
-        result_failing = self.publish(failing_topic, data_failing)
-        self.assertTrue(result_failing['is_ok'])
+        # Configure the failing receiver to reject indefinitely ..
+        failing_receiver.behavior.set_reject_503(auto_recover_after=0)
+        self.addCleanup(failing_receiver.behavior.reset)
 
-        result_healthy = self.publish(healthy_topic, data_healthy)
-        self.assertTrue(result_healthy['is_ok'])
+        # Publish one message to each topic ..
+        failing_data:'anydict' = {'order_id': 'fail_iso', 'source': 'failing_endpoint'}
+        healthy_data:'anydict' = {'order_id': 'healthy_iso', 'source': 'healthy_endpoint'}
 
-        found = self._poll_for_marker(healthy_topic, 'delivered-despite-other-failure', timeout=10)
-        self.assertTrue(found, 'Healthy endpoint did not receive its message')
+        _ = self.publisher.publish(failing_topic, failing_data)
+        _ = self.publisher.publish(healthy_topic, healthy_data)
+        logger.info('Published to %s (rejecting) and %s (healthy)', failing_topic, healthy_topic)
+
+        # .. wait for the healthy receiver to get its message ..
+        delivery_timeout = 30.0
+        messages = healthy_receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
+        delivered_count = len(messages)
+        logger.info('Healthy receiver delivered %d message(s) -> %s', delivered_count, messages)
+
+        # .. verify the healthy endpoint got exactly 1 message ..
+        self.assertEqual(delivered_count, 1)
+
+        # .. verify the failing receiver got nothing.
+        failing_messages = failing_receiver.get_delivered_messages()
+        failing_count = len(failing_messages)
+        logger.info('Failing receiver delivered %d message(s) -> %s', failing_count, failing_messages)
+        self.assertEqual(failing_count, 0)
 
 # ################################################################################################################################
 
-    @_skip_fewer_than_two # type: ignore[reportUntypedFunctionDecorator]
-    def test_no_duplicate_on_retry(self) -> 'None':
-        """ A message retried after two 503 rejections must be delivered
-        exactly once, not duplicated.
+    def test_no_duplicates_on_retry(self) -> 'None':
+        """ Configure receiver to reject 2 times then recover. Publish a single message,
+        wait generously after delivery, verify exactly 1 copy arrived.
         """
-        topic_name = _active_endpoints[0]
-        behavior = self.config.receiver_controls[topic_name]
 
-        behavior.set_reject_503(reject_count=2) # type: ignore[union-attr]
+        topic_name = 'order.shipped'
+        receiver = TestConfig.endpoints[topic_name].receiver
 
-        data = {'failure_test': 'no_duplicate', 'marker': 'exactly-once'}
+        # Configure the receiver to reject 2 times then auto-recover ..
+        reject_count = 2
+        receiver.behavior.set_reject_503(auto_recover_after=reject_count)
+        self.addCleanup(receiver.behavior.reset)
 
-        result = self.publish(topic_name, data)
-        self.assertTrue(result['is_ok'])
+        # Publish a single message ..
+        publish_data:'anydict' = {'order_id': 'dup_test', 'source': 'test_no_duplicates'}
+        _ = self.publisher.publish(topic_name, publish_data)
+        logger.info('Published message to %s with %d rejections configured', topic_name, reject_count)
 
-        # Wait for delivery after retries ..
-        found = self._poll_for_marker(topic_name, 'exactly-once', timeout=30)
-        self.assertTrue(found, 'Message with marker exactly-once was not delivered')
+        # .. wait for delivery to succeed ..
+        delivery_timeout = 60.0
+        messages = receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
+        delivered_count = len(messages)
+        logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
 
-        # Wait 15 seconds (1.5x Zato's max retry interval of 10s)
-        # for any delayed duplicate to arrive ..
-        time.sleep(15)
+        self.assertEqual(delivered_count, 1)
 
-        duplicate_count = self._count_files_with_marker(topic_name, 'exactly-once')
-        self.assertEqual(duplicate_count, 1)
+        # .. now wait generously to confirm no second delivery arrives ..
+        generous_wait = 15.0
+        time.sleep(generous_wait)
+
+        # .. re-check the total count ..
+        all_messages = receiver.get_delivered_messages()
+        final_count = len(all_messages)
+        logger.info('Final count after %s second wait -> %d message(s) -> %s', generous_wait, final_count, all_messages)
+
+        # .. verify still exactly 1 (no duplicates).
+        self.assertEqual(final_count, 1)
 
 # ################################################################################################################################
 
-    @_skip_fewer_than_two # type: ignore[reportUntypedFunctionDecorator]
     def test_burst_with_intermittent_failure(self) -> 'None':
-        """ Publishing 10 messages while the receiver rejects the first 3
-        must still result in all 10 messages being delivered.
+        """ Configure receiver to reject 3 requests then accept all subsequent ones.
+        Publish 10 messages in rapid succession, wait for all to be delivered,
+        verify all 10 arrived with no duplicates.
         """
-        topic_name = _active_endpoints[0]
-        behavior = self.config.receiver_controls[topic_name]
 
-        behavior.set_reject_503(reject_count=3) # type: ignore[union-attr]
+        topic_name = 'customer.registered'
+        receiver = TestConfig.endpoints[topic_name].receiver
 
-        for message_index in range(10):
+        # Configure the receiver to reject the first 3 requests then accept ..
+        initial_reject_count = 3
+        receiver.behavior.set_reject_503(auto_recover_after=initial_reject_count)
+        self.addCleanup(receiver.behavior.reset)
 
-            data = {'failure_test': 'burst_intermittent', 'index': message_index, 'marker': 'burst-item'}
+        # Publish messages in rapid succession ..
+        burst_count = 10
 
-            result = self.publish(topic_name, data)
-            self.assertTrue(result['is_ok'])
+        for idx in range(burst_count):
+            publish_data:'anydict' = {'customer_id': f'burst_{idx}', 'source': 'test_burst_intermittent'}
+            _ = self.publisher.publish(topic_name, publish_data)
 
-        # Wait until all 10 messages with our marker arrive ..
-        deadline = time.monotonic() + 30
+        logger.info('Published %d messages to %s with %d initial rejections configured',
+            burst_count, topic_name, initial_reject_count)
 
-        while time.monotonic() < deadline:
-            count = self._count_files_with_marker(topic_name, 'burst-item')
-            if count >= 10:
-                break
-            time.sleep(0.5)
+        # .. wait for all messages to be delivered ..
+        delivery_timeout = 120.0
+        messages = receiver.wait_for_delivery(expected_count=burst_count, timeout=delivery_timeout)
+        delivered_count = len(messages)
+        logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
 
-        final_count = self._count_files_with_marker(topic_name, 'burst-item')
-        self.assertEqual(final_count, 10)
+        # .. verify all messages arrived ..
+        self.assertEqual(delivered_count, burst_count)
+
+        # .. verify no duplicates by checking unique msg_ids ..
+        msg_ids = [message['msg_id'] for message in messages]
+        unique_count = len(set(msg_ids))
+        logger.info('Unique msg_ids -> %d out of %d', unique_count, delivered_count)
+        self.assertEqual(unique_count, delivered_count)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if __name__ == '__main__':
+    _ = unittest.main()
 
 # ################################################################################################################################
 # ################################################################################################################################

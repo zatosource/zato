@@ -18,6 +18,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 # Zato
 from zato.common.crypto.api import ServerCryptoManager
+from zato.common.defaults import default_server_base_dir
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.odb.model import to_json
 from zato.common.odb.query import service_list
@@ -272,7 +273,7 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
 def cleanup_enmasse() -> 'None':
     """ Cleans up all database objects with the 'enmasse' prefix using the default server path.
     """
-    server_path = os.path.expanduser('~/env/qs-1/server1')
+    server_path = default_server_base_dir
     cleanup(['enmasse', 'test_sync_group'], server_path)
     logger.info('Enmasse cleanup completed for prefixes: enmasse, test_sync_group')
 
@@ -385,7 +386,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     # Create a session using the example server path
-    server_path = os.path.expanduser('~/env/qs-1/server1')
+    server_path = default_server_base_dir
     session = get_session_from_server_dir(server_path)
 
     # Execute a simple query

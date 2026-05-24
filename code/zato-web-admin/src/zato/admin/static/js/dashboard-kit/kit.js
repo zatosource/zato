@@ -257,7 +257,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
          palette:         { key: dot_colour }
          labels:          { key: display_label }
          text_colors:     { key: text_colour }   (optional, falls back to palette)
-         bg_colors:       { key: bg_colour }      (optional, falls back to muted grey)
+         backgrounds:       { key: bg_colour }      (optional, falls back to muted grey)
          hidden:          { key: true } map of currently hidden keys
          on_toggle(key, hidden_map):  called after a badge is clicked
        Skips rebuild if skip===true. */
@@ -270,14 +270,14 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var labels = config.labels || {};
         var hidden = config.hidden || {};
         var text_colors = config.text_colors || {};
-        var bg_colors = config.bg_colors || {};
+        var backgrounds = config.backgrounds || {};
 
         for (var i = 0; i < keys.length; i++) {
             var k = keys[i];
             var is_off = !!hidden[k];
             var dot = palette[k] || '#888';
             var tc = text_colors[k] || dot;
-            var bg = bg_colors[k] || 'rgba(110,110,115,0.12)';
+            var bg = backgrounds[k] || 'rgba(110,110,115,0.12)';
             var badge = $('<span class="dashboard-legend-badge' +
                 (is_off ? ' dashboard-legend-badge-off' : '') +
                 '" data-key="' + k + '"></span>');
@@ -676,25 +676,56 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     // Clipboard copy with tippy tooltip
     // ////////////////////////////////////////////////////////////////////////
 
-    kit.copy_to_clipboard = function(elem, text) {
-        navigator.clipboard.writeText(text).then(function() {
-            var tip = tippy(elem, {
-                content: 'Copied to clipboard',
-                trigger: 'manual',
-                placement: 'right',
-                duration: [100, 100]
-            });
-            tip.show();
-            setTimeout(function() { tip.hide(); tip.destroy(); }, 600);
-        });
+    kit.copy_to_clipboard = function(element, text) {
+        $.fn.zato.ui_helpers.copy_to_clipboard(element, text);
+    };
+
+    kit.flash_tooltip = function(element, message) {
+        $.fn.zato.ui_helpers.flash_tooltip(element, message);
     };
 
     // ////////////////////////////////////////////////////////////////////////
     // Syntax highlighting (pure JS, no deps)
     // ////////////////////////////////////////////////////////////////////////
 
-    kit._esc_html = function(s) {
-        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    kit._esc_html = function(text) {
+        return $.fn.zato.ui_helpers.esc_html(text);
+    };
+
+    kit._json_token_classes_monokai = {
+        key: 'na',
+        str: 's',
+        num: 'm',
+        bool: 'kc',
+        punct: 'p'
+    };
+
+    // Debounce timer for Pygments requests
+    kit._highlight_light_timer = null;
+    kit._highlight_light_first = true;
+
+    kit._color_json_tokens = function(out, token_classes) {
+        out = out.replace(
+            /(&quot;)((?:[^&]|&(?!quot;))*)(&quot;)\s*:/g,
+            '<span class="' + token_classes.key + '">$1$2$3</span>:'
+        );
+        out = out.replace(
+            /:\s*(&quot;)((?:[^&]|&(?!quot;))*)(&quot;)/g,
+            ': <span class="' + token_classes.str + '">$1$2$3</span>'
+        );
+        out = out.replace(
+            /:\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
+            ': <span class="' + token_classes.num + '">$1</span>'
+        );
+        out = out.replace(
+            /:\s*(true|false|null)/g,
+            ': <span class="' + token_classes.bool + '">$1</span>'
+        );
+        out = out.replace(
+            /([{}\[\],])/g,
+            '<span class="' + token_classes.punct + '">$1</span>'
+        );
+        return out;
     };
 
     kit._highlight_json = function(text) {
@@ -706,28 +737,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             return null;
         }
         var out = kit._esc_html(pretty);
-
-        // .. color JSON tokens: keys, strings, numbers, booleans, null, punctuation
-        out = out.replace(
-            /(&quot;)((?:[^&]|&(?!quot;))*)(&quot;)\s*:/g,
-            '<span class="na">$1$2$3</span>:'
-        );
-        out = out.replace(
-            /:\s*(&quot;)((?:[^&]|&(?!quot;))*)(&quot;)/g,
-            ': <span class="s">$1$2$3</span>'
-        );
-        out = out.replace(
-            /:\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
-            ': <span class="m">$1</span>'
-        );
-        out = out.replace(
-            /:\s*(true|false|null)/g,
-            ': <span class="kc">$1</span>'
-        );
-        out = out.replace(
-            /([{}\[\],])/g,
-            '<span class="p">$1</span>'
-        );
+        out = kit._color_json_tokens(out, kit._json_token_classes_monokai);
         return out;
     };
 
@@ -882,11 +892,55 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         return '<span class="syntax-monokai">' + html + '</span>';
     };
 
+    kit.syntax_highlight_light = function(text, callback) {
+
+        // Show escaped plain text immediately ..
+        var escaped = kit._esc_html(text);
+
+        if (!text.trim()) {
+            callback(escaped);
+            return;
+        }
+
+        // .. cancel any pending request ..
+        if (kit._highlight_light_timer) {
+            clearTimeout(kit._highlight_light_timer);
+        }
+
+        // .. fire immediately on the first call, debounce subsequent ones ..
+        var doRequest = function() {
+            $.ajax({
+                type: 'POST',
+                url: '/zato/highlight/',
+                data: {text: text},
+                headers: {'X-CSRFToken': $.cookie('csrftoken')},
+                dataType: 'json',
+                success: function(response) {
+                    callback(response.html);
+                },
+                error: function() {
+                    callback(escaped);
+                }
+            });
+        };
+
+        if (kit._highlight_light_first) {
+            kit._highlight_light_first = false;
+            doRequest();
+        }
+        else {
+            kit._highlight_light_timer = setTimeout(doRequest, 50);
+        }
+
+        // .. and return escaped text for immediate rendering.
+        return escaped;
+    };
+
     /* Pre-measure every outcome badge from a palette and set min-width
        on a table header cell so the column never resizes when transient
        outcomes (e.g. "Running" with spinner) appear and disappear.
        config:
-         palette:        outcome palette with .colors, .bg_colors, .labels
+         palette:        outcome palette with .colors, .backgrounds, .labels
          spinner_key:    outcome key that gets a spinner prefix (e.g. 'running')
          th_selector:    jQuery selector for the <th> to stabilize */
     kit.stabilize_badge_column = function(config) {
@@ -912,8 +966,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             if (!labels.hasOwnProperty(key)) continue;
             var label = (short_labels && short_labels[key]) ? short_labels[key] : labels[key];
             var prefix = (key === spinner_key) ? '<span class="badge-running-spinner"></span>' : '';
-            var badge = $('<span class="dashboard-outcome-badge" style="color:' +
-                palette.colors[key] + ';background:' + palette.bg_colors[key] + '">' +
+            var css_class = kit.outcome.css_classes[key];
+            var badge = $('<span class="dashboard-outcome-badge ' + css_class + '">' +
                 prefix + label + '</span>');
             probe.empty().append(badge);
             var w = badge.outerWidth();
@@ -963,15 +1017,20 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         kit.urls._cluster_id = config.cluster_id;
         kit.urls._object_path = config.object_path || '';
         kit.urls._run_path = config.run_path || '';
+        kit.urls._range_minutes = config.range_minutes;
+    };
+
+    kit.urls.set_range_minutes = function(minutes) {
+        kit.urls._range_minutes = minutes;
     };
 
     kit.urls.dashboard = function() {
-        return kit.urls._base + '?cluster=' + kit.urls._cluster_id;
+        return kit.urls._base + '?cluster=' + kit.urls._cluster_id + '&range=' + kit.urls._range_minutes;
     };
 
     kit.urls.object_detail = function(object_id, params) {
         var path = kit.urls._object_path.replace('{id}', encodeURIComponent(object_id));
-        var url = kit.urls._base + path + '?cluster=' + kit.urls._cluster_id;
+        var url = kit.urls._base + path + '?cluster=' + kit.urls._cluster_id + '&range=' + kit.urls._range_minutes;
         if (params) {
             for (var key in params) {
                 url += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
@@ -984,7 +1043,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var path = kit.urls._run_path
             .replace('{id}', encodeURIComponent(object_id))
             .replace('{run_id}', encodeURIComponent(run_id));
-        var url = kit.urls._base + path + '?cluster=' + kit.urls._cluster_id;
+        var url = kit.urls._base + path + '?cluster=' + kit.urls._cluster_id + '&range=' + kit.urls._range_minutes;
         if (params) {
             for (var key in params) {
                 url += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
@@ -992,4 +1051,19 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         }
         return url;
     };
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    kit.detail_layout = {};
+
+    kit.detail_layout.apply = function(opts) {
+        if (!opts.show_header_controls)   $('.detail-header-row-2').addClass('detail-hidden');
+        if (!opts.show_inline_stats)      $('.detail-inline-stats').addClass('detail-hidden');
+        if (!opts.show_pagination_top)    $('[id$="-pagination-top"]').addClass('detail-hidden');
+        if (!opts.show_pagination_bottom) $('[id$="-pagination-bottom"]').addClass('detail-hidden');
+        if (!opts.show_table_header)      $('.detail-table thead').addClass('detail-hidden');
+        if (!opts.show_dashboard_tabs)    $('.dashboard-tabs').addClass('detail-hidden');
+        if (!opts.show_help_icon)         $('img.help-icon').addClass('detail-hidden');
+    };
+
 })();

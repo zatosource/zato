@@ -6,6 +6,7 @@
 {% endblock %}
 
 {% block extra_page_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_ui_helpers.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/kit.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/sparkline.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/detail-kit/tooltip.js"></script>
@@ -17,8 +18,8 @@
 
 {% block left_content %}
 {% block stat_cards %}{% endblock %}
-<h3>{% block section_title %}{% endblock %} <img src="/static/gfx/info.svg" class="help-icon" id="{% block help_icon_id %}{% endblock %}" alt="info" /></h3>
-<div class="progress-panel">
+<h3 class="{% block section_heading_class %}{% endblock %}">{% block section_title %}{% endblock %} <img src="/static/gfx/info.svg" class="help-icon" id="{% block help_icon_id %}{% endblock %}" alt="info" /></h3>
+<div class="progress-panel {% block progress_panel_class %}{% endblock %}">
 {% block content_rows %}
 <div class="{% block detail_page_class %}{% endblock %}">
 {% block actions %}{% endblock %}

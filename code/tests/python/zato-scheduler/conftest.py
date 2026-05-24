@@ -174,6 +174,7 @@ def zato_server(request):
 
     qs_cmd = [
         _ZATO_BIN, 'quickstart', 'create', _tmpdir,
+        '--force',
         '--servers', '1',
         '--server-api-client-for-scheduler-password', _PASSWORD,
     ]
@@ -185,7 +186,7 @@ def zato_server(request):
     repo_location = os.path.join(server_dir, 'config', 'repo')
 
     config = get_config_object(repo_location, 'server.conf')
-    config['main']['port'] = str(port)
+    config['main']['bind'] = f'0.0.0.0:{port}'
     update_config_file(config, repo_location, 'server.conf')
 
     if _pre_start_service_files:

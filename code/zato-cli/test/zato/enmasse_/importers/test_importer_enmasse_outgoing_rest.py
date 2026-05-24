@@ -20,6 +20,7 @@ from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.odb.model import HTTPSOAP
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
+from zato.common.defaults import default_server_base_dir
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,7 +38,7 @@ class TestEnmasseOutgoingRESTFromYAML(TestCase):
 
     def setUp(self) -> 'None':
         # Server path for database connection
-        self.server_path = os.path.expanduser('~/env/qs-1/server1')
+        self.server_path = default_server_base_dir
 
         # Create a temporary file using the existing template which already contains outgoing REST connections
         self.temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.yaml')

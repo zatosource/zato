@@ -30,7 +30,7 @@ $(document).ready(function() {
 
 
 $.fn.zato.security.apikey.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create API key', null);
+    $.fn.zato.data_table._create_edit('create', 'Create an API key', null);
 }
 
 $.fn.zato.security.apikey.edit = function(id) {

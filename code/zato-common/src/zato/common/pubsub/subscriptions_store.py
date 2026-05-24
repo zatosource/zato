@@ -121,7 +121,7 @@ class SubscriptionsStore:
                 raise ValueError(f'No security definition found for username: {username}')
 
             # Create new sub_key
-            sub_key = new_sub_key(sec_name)
+            sub_key = new_sub_key()
 
             # Store mappings
             self._username_to_sub_key[username] = sub_key

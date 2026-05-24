@@ -30,7 +30,7 @@ $(document).ready(function() {
 
 
 $.fn.zato.security.ntlm.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create NTLM definition', null);
+    $.fn.zato.data_table._create_edit('create', 'Create an NTLM definition', null);
 }
 
 $.fn.zato.security.ntlm.edit = function(id) {

@@ -1,3 +1,4 @@
+
 /* ***************************** */
 /*   Blinking / draw-attention   */
 /* ***************************** */
@@ -87,27 +88,6 @@
     font-weight: 600;
     color: #ffffff;
     letter-spacing: 0.3px;
-}
-
-.invoker-history-close-btn {
-    background: transparent;
-    border: none;
-    color: #999;
-    font-size: 24px;
-    cursor: pointer;
-    padding: 0;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-}
-
-.invoker-history-close-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
 }
 
 .invoker-history-overlay-search {
@@ -397,11 +377,10 @@
 .invoker-modal-content {
     position: relative;
     width: 900px;
-    height: 620px;
     min-width: 500px;
-    min-height: 350px;
+    max-height: 90vh;
     background: linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 100%);
-    border-radius: 12px;
+    border-radius: 4px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.1) inset;
     display: flex;
     flex-direction: column;
@@ -433,118 +412,71 @@
     letter-spacing: 0.3px;
 }
 
-.invoker-modal-close-btn {
-    background: transparent;
-    border: none;
-    color: #999;
-    font-size: 24px;
+.invoker-modal-close-button,
+.invoker-history-close-button {
+    background: rgba(78, 77, 64, 0.25);
+    border: 1px solid rgba(46, 45, 36, 0.4);
     cursor: pointer;
     padding: 0;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
-    transition: all 0.2s ease;
+    border-radius: 3px;
+    transition: all 0.15s ease;
 }
 
-.invoker-modal-close-btn:hover {
+.invoker-modal-close-button::before,
+.invoker-history-close-button::before {
+    content: '';
+    display: block;
+    width: 10px;
+    height: 10px;
+    background-color: #aaa;
+    -webkit-mask-image: url('/static/gfx/close.svg');
+    mask-image: url('/static/gfx/close.svg');
+    -webkit-mask-size: 10px 10px;
+    mask-size: 10px 10px;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+}
+
+.invoker-modal-close-button:hover,
+.invoker-history-close-button:hover {
     background: rgba(255, 255, 255, 0.1);
-    color: #fff;
+}
+
+.invoker-modal-close-button:hover::before,
+.invoker-history-close-button:hover::before {
+    background-color: #fff;
+}
+
+.invoker-modal-close-button:active,
+.invoker-history-close-button:active {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.invoker-modal-close-button:active::before,
+.invoker-history-close-button:active::before {
+    background-color: #fff;
 }
 
 .invoker-modal-body {
-    padding: 16px 24px;
-    overflow-y: auto;
+    padding: 16px 24px 12px;
+    overflow-y: scroll;
     flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
 }
 
-.invoker-modal-request-textarea {
-    width: 100%;
-    min-height: 150px;
-    background: #2a2a2a;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 8px;
-    color: #e0e0e0;
-    font-family: 'Zato_IDE_Font', monospace;
-    font-size: 14px;
-    line-height: 1.4;
-    padding: 12px 16px;
-    box-sizing: border-box;
-}
-
-.invoker-modal-request-textarea:focus {
-    outline: none;
-    border-color: #4a9eff;
-    background: #333;
-    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
-}
-
-.invoker-modal-request-textarea::placeholder {
-    color: #666;
-}
-
-/* Request highlight overlay (transparent textarea over highlighted pre) */
-
-.invoker-request-highlight-container {
-    position: relative;
-    width: 100%;
-    min-height: 150px;
-}
-
-.invoker-request-highlight-container .invoker-modal-request-textarea,
-.invoker-request-highlight-layer {
-    padding: 12px 16px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 8px;
-    font-family: 'Zato_IDE_Font', monospace;
-    font-size: 14px;
-    line-height: 1.4;
-    box-sizing: border-box;
-}
-
-.invoker-request-highlight-container .invoker-modal-request-textarea {
-    position: relative;
-    z-index: 1;
-    background: transparent;
-    color: transparent;
-    caret-color: #e0e0e0;
-    resize: none;
-}
-
-.invoker-request-highlight-container .invoker-modal-request-textarea:focus {
-    background: transparent;
-    border-color: transparent;
-    box-shadow: none;
-}
-
-.invoker-request-highlight-container .invoker-modal-request-textarea::selection {
-    background: rgba(74, 158, 255, 0.3);
-}
-
-.invoker-request-highlight-layer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    margin: 0;
-    background: #2a2a2a;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    overflow: auto;
-    pointer-events: none;
-    color: #e0e0e0;
-}
-
-.invoker-request-highlight-container .invoker-modal-request-textarea:focus ~ .invoker-request-highlight-layer {
-    border-color: #4a9eff;
-    background: #333;
-    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+.invoker-modal-body .zato-action-button,
+.invoker-modal-body .zato-action-button:hover,
+.invoker-modal-body .zato-action-button:active {
+    border-bottom-width: 1px;
+    border-color: var(--zato-action-button-border);
+    border-bottom-color: var(--zato-action-button-border-bottom);
 }
 
 .invoker-modal-buttons {
@@ -552,34 +484,7 @@
     gap: 8px;
     margin-top: 12px;
     align-items: center;
-}
-
-.invoker-modal-buttons input[type="button"],
-.invoker-modal-buttons button {
-    padding: 8px 18px;
-    background: #333;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 6px;
-    color: #e0e0e0;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    text-shadow: none;
-}
-
-.invoker-modal-buttons input[type="button"]:hover,
-.invoker-modal-buttons button:hover {
-    background: #444;
-    border-color: rgba(255, 255, 255, 0.25);
-}
-
-.invoker-modal-buttons .invoker-btn-primary {
-    background: #2a5a8a;
-    border-color: #3a7abf;
-}
-
-.invoker-modal-buttons .invoker-btn-primary:hover {
-    background: #3a6a9a;
+    justify-content: flex-end;
 }
 
 .invoker-modal-status {
@@ -590,6 +495,8 @@
     color: #aaa;
     min-height: 20px;
 }
+
+/* Response overlay used by the action runner */
 
 .invoker-modal-response-header {
     margin-top: 12px;
@@ -615,19 +522,6 @@
     position: relative;
     display: inline-block;
     font-family: 'Zato_IDE_Font', monospace;
-}
-
-.invoker-copied-tooltip {
-    background: #333;
-    color: #e0e0e0;
-    font-family: 'Zato_IDE_Font', monospace;
-    font-size: 12px;
-    padding: 4px 10px;
-    border-radius: 4px;
-    white-space: nowrap;
-    pointer-events: none;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-    z-index: 10001;
 }
 
 .invoker-modal-response-wrap {
@@ -671,22 +565,6 @@
     tab-size: 2;
     overflow: visible;
     outline: none;
-}
-
-/* "More options" toggle block inside the invoker modal */
-
-.invoker-more-options-toggle {
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-}
-
-.invoker-more-options-toggle a {
-    color: #7ab3ef !important;
-    text-decoration: none !important;
-    background-image: none;
-    padding-bottom: 0;
-    cursor: pointer;
 }
 
 .invoker-more-options-block {
@@ -747,4 +625,23 @@
 .invoker-more-options-row textarea:focus {
     outline: none;
     border-color: #4a9eff;
+}
+
+/* ***************************** */
+/*   Modal invoking spinner      */
+/* ***************************** */
+
+.invoker-modal-spinner {
+    width: 19px;
+    height: 19px;
+    vertical-align: middle;
+    margin-right: 3px;
+    position: relative;
+    top: -1px;
+    animation: invoker-spin 0.5s linear infinite;
+}
+
+@keyframes invoker-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }

@@ -8,6 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from http.client import INTERNAL_SERVER_ERROR, OK, SERVICE_UNAVAILABLE
+from http.client import responses as http_responses
 from json import dumps
 from logging import getLogger
 from traceback import format_exc
@@ -47,9 +49,9 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class StatusCode:
-    OK                 = '200 OK'
-    InternalError      = '500 Internal Server error'
-    ServiceUnavailable = '503 Service Unavailable'
+    OK                 = f'{OK} {http_responses[OK]}'
+    InternalError      = f'{INTERNAL_SERVER_ERROR} {http_responses[INTERNAL_SERVER_ERROR]}'
+    ServiceUnavailable = f'{SERVICE_UNAVAILABLE} {http_responses[SERVICE_UNAVAILABLE]}'
 
 headers = [('Content-Type', 'application/json')]
 

@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from http import HTTPStatus
 from json import dumps, loads
 from traceback import format_exc
 
@@ -41,7 +42,7 @@ class Index(_Index):
     input_required = 'cluster_id',
     output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_base_id', 'security', 'delivery_type', \
         'push_type', 'rest_push_endpoint_id', 'rest_push_endpoint_name', 'push_service_name', 'topic_name_list', \
-        'topic_link_list'
+        'topic_link_list', 'pending_depth'
     output_repeated = True
 
     def on_before_append_item(self, item):
@@ -216,7 +217,7 @@ def get_security_definitions(req):
                 'error': str(e) or 'Error retrieving security definitions'
             }),
             content_type='application/json',
-            status=500
+            status=HTTPStatus.INTERNAL_SERVER_ERROR
         )
 
 # ################################################################################################################################
@@ -260,7 +261,7 @@ def get_topics(req):
                 'error': str(e) or 'Error retrieving topics'
             }),
             content_type='application/json',
-            status=500
+            status=HTTPStatus.INTERNAL_SERVER_ERROR
         )
 
 # ################################################################################################################################
@@ -441,7 +442,7 @@ def get_rest_endpoints(req):
                 'error': str(e) or 'Error retrieving REST endpoints'
             }),
             content_type='application/json',
-            status=500
+            status=HTTPStatus.INTERNAL_SERVER_ERROR
         )
 
 # ################################################################################################################################
@@ -475,7 +476,7 @@ def get_service_list(req):
                 'error': str(e) or 'Error retrieving services'
             }),
             content_type='application/json',
-            status=500
+            status=HTTPStatus.INTERNAL_SERVER_ERROR
         )
 
 # ################################################################################################################################
@@ -496,7 +497,7 @@ def get_topics_by_security(req):
                 'error': 'Security definition ID is required'
             }),
             content_type='application/json',
-            status=400
+            status=HTTPStatus.BAD_REQUEST
         )
 
     try:
@@ -595,6 +596,6 @@ def get_topics_by_security(req):
                 'error': str(e) or 'Error retrieving topics for security definition'
             }),
             content_type='application/json',
-            status=500
+            status=HTTPStatus.INTERNAL_SERVER_ERROR
         )
 

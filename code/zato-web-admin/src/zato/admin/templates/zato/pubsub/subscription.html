@@ -1,30 +1,29 @@
 {% extends "zato/index.html" %}
 {% load extras %}
+{% load humanize %}
 
 {% block html_title %}Pub/sub subscriptions{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/pubsub/common.css">
     <style>
 
-        /* Pub/sub reusable design tokens */
         :root {
-            --pubsub-badge-radius: 4px;
+            --pubsub-badge-radius: 3px;
             --pubsub-badge-font-size: 11px;
             --pubsub-badge-font-weight: 700;
-            --pubsub-badge-padding: 2px 8px;
-            --pubsub-badge-letter-spacing: 0.3px;
+            --pubsub-badge-padding: 2px 10px;
+            --pubsub-badge-letter-spacing: 0.5px;
 
-            --pubsub-deliv-enabled-color: #8a7fa6;
-            --pubsub-deliv-enabled-bg: rgba(138, 127, 166, 0.09);
-            --pubsub-deliv-disabled-color: #9e9e9e;
-            --pubsub-deliv-disabled-bg: rgba(158, 158, 158, 0.10);
+            --pubsub-deliv-enabled-color: #012845;
+            --pubsub-deliv-disabled-color: #999;
+            --pubsub-deliv-disabled-bg: #eee;
 
-            --pubsub-pub-enabled-color: #7e96a8;
-            --pubsub-pub-enabled-bg: rgba(126, 150, 168, 0.09);
-            --pubsub-pub-disabled-color: #bbb;
-            --pubsub-pub-disabled-bg: rgba(187, 187, 187, 0.08);
+            --pubsub-pub-enabled-color: #101010;
+            --pubsub-pub-disabled-color: #999;
+            --pubsub-pub-disabled-bg: #eee;
         }
 
         .ps-badge {
@@ -34,12 +33,13 @@
             font-size: var(--pubsub-badge-font-size);
             font-weight: var(--pubsub-badge-font-weight);
             letter-spacing: var(--pubsub-badge-letter-spacing);
+            text-transform: uppercase;
             line-height: 1.15;
         }
 
         .ps-badge-deliv-enabled {
             color: var(--pubsub-deliv-enabled-color);
-            background: var(--pubsub-deliv-enabled-bg);
+            background: var(--pubsub-sub-bg);
         }
 
         .ps-badge-deliv-disabled {
@@ -49,7 +49,7 @@
 
         .ps-badge-pub-enabled {
             color: var(--pubsub-pub-enabled-color);
-            background: var(--pubsub-pub-enabled-bg);
+            background: var(--pubsub-pub-bg);
         }
 
         .ps-badge-pub-disabled {
@@ -60,8 +60,20 @@
         .ps-status-cell {
             display: flex;
             gap: 4px;
-            justify-content: center;
+            justify-content: flex-start;
             flex-wrap: nowrap;
+        }
+
+        .enabled-for-inner {
+            display: block;
+            text-align: left;
+            padding-left: 25%;
+        }
+
+        .col-center-left {
+            display: block;
+            text-align: left;
+            padding-left: 8%;
         }
 
         .ps-sub-key {
@@ -351,9 +363,9 @@
 
             '_delivery_type',
             'topic_link_list',
-            '_edit',
+            '_pending_depth',
 
-            /* '_queue', */
+            '_edit',
             '_delete',
             'id',
             'is_delivery_active',
@@ -368,6 +380,7 @@
 
             'push_service_name',
             'topic_name_list',
+            'pending_depth',
         ]
     }
     </script>
@@ -449,18 +462,14 @@
                         <th style="width:1%; white-space:nowrap">Security definition</th>
 
                         <th style="max-width:220px; white-space:nowrap;">Sub key</th>
-                        <th style="text-align:center">Enabled for</th>
+                        <th style="text-align:center"><span class="enabled-for-inner">Enabled for</span></th>
 
-                        <th style="text-align:center">Delivery type</th>
+                        <th style="text-align:center"><span class="col-center-left">Delivery type</span></th>
                         <th>Topics</th>
-                        <th style="text-align:center">Edit</th>
-                        <!-- <th style="text-align:center">Queue</th> -->
+                        <th>Pending messages</th>
+                        <th style="text-align:center"></th>
 
-                        <th style="text-align:center">Delete</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        <th class='ignore'>&nbsp;</th>
+                        <th style="text-align:center"></th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -468,6 +477,11 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -483,9 +497,9 @@
                         <td style="white-space:nowrap"><a href="/zato/security/basic-auth/?cluster={{ cluster_id }}&amp;query={{ item.security|urlencode }}">{{ item.security }}</a></td>
 
                         <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><span class="ps-sub-key" data-sub-key="{{ item.sub_key }}">{{ item.sub_key }}</span></td>
-                        <td><div class="ps-status-cell"><span class="ps-badge {{ item.is_delivery_active|yesno:'ps-badge-deliv-enabled,ps-badge-deliv-disabled' }}">Delivery</span><span class="ps-badge {{ item.is_pub_active|yesno:'ps-badge-pub-enabled,ps-badge-pub-disabled' }}">Pub</span></div></td>
+                        <td style="text-align:center"><div class="enabled-for-inner"><div class="ps-status-cell"><span class="ps-badge {{ item.is_delivery_active|yesno:'ps-badge-deliv-enabled,ps-badge-deliv-disabled' }}">Delivery</span><span class="ps-badge {{ item.is_pub_active|yesno:'ps-badge-pub-enabled,ps-badge-pub-disabled' }}">Pub</span></div></div></td>
 
-                        <td style="text-align:center">
+                        <td style="text-align:center"><div class="col-center-left">
                             {% if item.delivery_type == 'pull' %}
                                 Pull
                             {% elif item.delivery_type == 'push' and item.push_type == 'rest' %}
@@ -495,10 +509,10 @@
                             {% else %}
                                 Push
                             {% endif %}
-                        </td>
+                        </div></td>
                         <td>{{ item.topic_link_list|safe }}</td>
+                        <td><a href="/zato/pubsub/subscription/queue/?cluster={{ cluster_id }}&sub_key={{ item.sub_key }}&queue_name={{ item.sec_name|urlencode }}&state=pending">{{ item.pending_depth|intcomma }}</a></td>
                         <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
-                        {% comment %}<td style="text-align:center"><a href="{% url 'pubsub-dashboard' %}">Queue</a></td>{% endcomment %}
 
                         <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -514,6 +528,7 @@
 
                         <td class='ignore'>{{ item.push_service_name }}</td>
                         <td class='ignore'>{{ item.topic_name_list }}</td>
+                        <td class='ignore'>{{ item.pending_depth }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}

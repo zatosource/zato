@@ -1,7 +1,5 @@
 /* Dashboard kit - outcome helpers.
-   Small coloured squares, tinted pill badges, pulsing status dots.
-   Colours themselves are applied inline by the renderer so the palette
-   can be injected per dashboard. */
+   Small coloured squares, tinted pill badges, pulsing status dots. */
 
 /* Status dots */
 
@@ -90,3 +88,67 @@
     font-size: 11px;
     letter-spacing: 0.3px;
 }
+
+/* Outcome column in dashboard tables */
+.dashboard-card-scroll > table thead th:last-child,
+.dashboard-card-scroll > table tbody td:last-child {
+    text-align: center;
+}
+
+.dashboard-outcome-ok      { color: #2a7fbf; background: rgba(42, 127, 191, 0.12); }
+.dashboard-outcome-error   { color: #e0226e; background: rgba(224, 34, 110, 0.12); }
+.dashboard-outcome-timeout { color: #b35e00; background: rgba(179, 94, 0, 0.12); }
+.dashboard-outcome-running { color: #888;    background: rgba(136, 136, 136, 0.12); }
+.dashboard-outcome-skipped { color: #7b5ea7; background: rgba(123, 94, 167, 0.12); }
+
+/* Test palette - remove after picking a winner */
+.dashboard-outcome-t1  { color: #2a7fbf; background: rgba(42, 127, 191, 0.12); }
+.dashboard-outcome-t2  { color: #e0226e; background: rgba(224, 34, 110, 0.12); }
+.dashboard-outcome-t3  { color: #b35e00; background: rgba(179, 94, 0, 0.12); }
+.dashboard-outcome-t4  { color: #888;    background: rgba(136, 136, 136, 0.12); }
+.dashboard-outcome-t5  { color: #7b5ea7; background: rgba(123, 94, 167, 0.12); }
+.dashboard-outcome-t6  { color: #1b813e; background: rgba(27, 129, 62, 0.12); }
+.dashboard-outcome-t7  { color: #0077b6; background: rgba(0, 119, 182, 0.12); }
+.dashboard-outcome-t8  { color: #d4380d; background: rgba(212, 56, 13, 0.12); }
+.dashboard-outcome-t9  { color: #531dab; background: rgba(83, 29, 171, 0.12); }
+.dashboard-outcome-t10 { color: #08979c; background: rgba(8, 151, 156, 0.12); }
+.dashboard-outcome-t11 { color: #c41d7f; background: rgba(196, 29, 127, 0.12); }
+.dashboard-outcome-t12 { color: #d48806; background: rgba(212, 136, 6, 0.12); }
+.dashboard-outcome-t13 { color: #389e0d; background: rgba(56, 158, 13, 0.12); }
+.dashboard-outcome-t14 { color: #1d39c4; background: rgba(29, 57, 196, 0.12); }
+.dashboard-outcome-t15 { color: #cf1322; background: rgba(207, 19, 34, 0.12); }
+.dashboard-outcome-t16 { color: #5b8c00; background: rgba(91, 140, 0, 0.12); }
+.dashboard-outcome-t17 { color: #003a8c; background: rgba(0, 58, 140, 0.12); }
+.dashboard-outcome-t18 { color: #9e1068; background: rgba(158, 16, 104, 0.12); }
+.dashboard-outcome-t19 { color: #ad6800; background: rgba(173, 104, 0, 0.12); }
+.dashboard-outcome-t20 { color: #006d75; background: rgba(0, 109, 117, 0.12); }
+.dashboard-outcome-t21 { color: #722ed1; background: rgba(114, 46, 209, 0.12); }
+.dashboard-outcome-t22 { color: #eb2f96; background: rgba(235, 47, 150, 0.12); }
+.dashboard-outcome-t23 { color: #52c41a; background: rgba(82, 196, 26, 0.12); }
+.dashboard-outcome-t24 { color: #fa8c16; background: rgba(250, 140, 22, 0.12); }
+.dashboard-outcome-t25 { color: #13c2c2; background: rgba(19, 194, 194, 0.12); }
+.dashboard-outcome-t26 { color: #2f54eb; background: rgba(47, 84, 235, 0.12); }
+.dashboard-outcome-t27 { color: #a0d911; background: rgba(160, 217, 17, 0.15); }
+.dashboard-outcome-t28 { color: #f5222d; background: rgba(245, 34, 45, 0.12); }
+.dashboard-outcome-t29 { color: #1890ff; background: rgba(24, 144, 255, 0.12); }
+.dashboard-outcome-t30 { color: #faad14; background: rgba(250, 173, 20, 0.12); }
+.dashboard-outcome-t31 { color: #8c4d2a; background: rgba(140, 77, 42, 0.12); }
+.dashboard-outcome-t32 { color: #237804; background: rgba(35, 120, 4, 0.12); }
+.dashboard-outcome-t33 { color: #780650; background: rgba(120, 6, 80, 0.12); }
+.dashboard-outcome-t34 { color: #0050b3; background: rgba(0, 80, 179, 0.12); }
+.dashboard-outcome-t35 { color: #ad2102; background: rgba(173, 33, 2, 0.12); }
+.dashboard-outcome-t36 { color: #36cfc9; background: rgba(54, 207, 201, 0.15); }
+.dashboard-outcome-t37 { color: #9254de; background: rgba(146, 84, 222, 0.12); }
+.dashboard-outcome-t38 { color: #ff4d4f; background: rgba(255, 77, 79, 0.12); }
+.dashboard-outcome-t39 { color: #597ef7; background: rgba(89, 126, 247, 0.12); }
+.dashboard-outcome-t40 { color: #73d13d; background: rgba(115, 209, 61, 0.15); }
+.dashboard-outcome-t41 { color: #c77dba; background: rgba(199, 125, 186, 0.15); }
+.dashboard-outcome-t42 { color: #096dd9; background: rgba(9, 109, 217, 0.12); }
+.dashboard-outcome-t43 { color: #d46b08; background: rgba(212, 107, 8, 0.12); }
+.dashboard-outcome-t44 { color: #10239e; background: rgba(16, 35, 158, 0.12); }
+.dashboard-outcome-t45 { color: #7cb305; background: rgba(124, 179, 5, 0.12); }
+.dashboard-outcome-t46 { color: #c41d7f; background: rgba(196, 29, 127, 0.12); }
+.dashboard-outcome-t47 { color: #08979c; background: rgba(8, 151, 156, 0.12); }
+.dashboard-outcome-t48 { color: #d4380d; background: rgba(212, 56, 13, 0.12); }
+.dashboard-outcome-t49 { color: #391085; background: rgba(57, 16, 133, 0.12); }
+.dashboard-outcome-t50 { color: #5cdbd3; background: rgba(92, 219, 211, 0.18); }

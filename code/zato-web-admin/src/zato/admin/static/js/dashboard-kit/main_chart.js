@@ -442,7 +442,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 palette: palette,
                 labels: labels,
                 text_colors: config.legend_text_colors,
-                bg_colors: config.legend_bg_colors,
+                backgrounds: config.legend_backgrounds,
                 hidden: hidden,
                 on_toggle: function(_key, h) {
                     set_hidden(h);

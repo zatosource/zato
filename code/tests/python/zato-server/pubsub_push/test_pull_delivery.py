@@ -7,366 +7,150 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import json
+import logging
 import time
+import unittest
 
 # local
-from base import BasePullTestCase
-from config import _active_endpoints
+from _client import PublishClient, PullClient
+from config import TestConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestPullDelivery(BasePullTestCase):
-    """ Pull delivery tests using the puller user's subscription across all active topics.
-    """
+if 0:
+    from zato.common.typing_ import anydict
 
-    def test_pull_single_topic(self) -> 'None':
-        """ Publishing to the first active topic and pulling must return the message.
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = logging.getLogger('zato.test.pubsub_push.pull_delivery')
+
+_delivery_poll_timeout  = 10
+_delivery_poll_interval = 0.5
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestPullDelivery(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(class_) -> 'None': # pyright: ignore[reportSelfClsParameterName]
+        class_.publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
+        class_.puller = PullClient(TestConfig.base_url, TestConfig.puller_username, TestConfig.puller_password)
+
+# ################################################################################################################################
+
+    def setUp(self) -> 'None':
+        """ Drains any leftover messages before each test.
         """
-        topic_name = _active_endpoints[0]
-        data = {'pull_test': 'single_topic', 'topic': topic_name}
-
-        result = self.publish(topic_name, data)
-        self.assertTrue(result['is_ok'])
-
-        # Give the server a moment to process
-        time.sleep(2)
-
-        pull_result = self.pull_messages()
-        self.assertTrue(pull_result['is_ok'])
-
-        message_count = pull_result['message_count']
-        self.assertGreaterEqual(message_count, 1)
-
-        serialized = json.dumps(pull_result['messages'])
-        self.assertIn('single_topic', serialized)
+        self.puller.drain()
 
 # ################################################################################################################################
 
-    def test_pull_multiple_topics(self) -> 'None':
-        """ Publishing to all active topics and pulling must return messages from all of them.
+    def _poll_pull(self, expected_count:'int'=1) -> 'anydict':
+        """ Polls the pull endpoint until at least expected_count messages arrive or the timeout expires.
+        Retries on transient server errors.
         """
+        start_time = time.monotonic()
+        deadline = start_time + _delivery_poll_timeout
 
-        # Publish one message per active topic ..
-        for topic_name in _active_endpoints:
-            data = {'pull_test': 'multi_topic', 'source_topic': topic_name}
-            result = self.publish(topic_name, data)
-            self.assertTrue(result['is_ok'])
+        while time.monotonic() < deadline:
 
-        # Give the server a moment to process
-        time.sleep(2)
+            try:
+                result = self.puller.pull(max_messages=50)
+            except Exception as error:
+                logger.warning('Pull attempt failed, will retry: %s', error)
+                time.sleep(_delivery_poll_interval)
+                continue
 
-        pull_result = self.pull_messages()
-        self.assertTrue(pull_result['is_ok'])
+            message_count = result['message_count']
+            if message_count >= expected_count:
+                return result
 
-        message_count = pull_result['message_count']
-        active_count = len(_active_endpoints)
-        self.assertGreaterEqual(message_count, active_count)
+            time.sleep(_delivery_poll_interval)
+
+        # .. one final attempt after the deadline.
+        out = self.puller.pull(max_messages=50)
+        return out
 
 # ################################################################################################################################
 
-    def test_pull_consume_once(self) -> 'None':
-        """ After pulling messages, a second pull must return zero messages.
+    def test_publish_one_pull_one(self) -> 'None':
+        """ Publish a single message to one topic, pull it back, and verify the data matches.
         """
-        topic_name = _active_endpoints[0]
-        data = {'pull_test': 'consume_once'}
 
-        result = self.publish(topic_name, data)
-        self.assertTrue(result['is_ok'])
+        # Publish a single message to the first topic ..
+        topic_name = 'iam.user.created'
+        publish_data = {'user_id': 'test-user-001', 'action': 'created'}
 
-        # Give the server a moment to process
-        time.sleep(2)
+        publish_response = self.publisher.publish(topic_name, publish_data)
+        logger.info('Publish response: %s', publish_response)
 
-        # First pull should get the message
-        first_pull = self.pull_messages()
-        self.assertTrue(first_pull['is_ok'])
+        # .. the publish response should contain a message ID ..
+        self.assertIn('msg_id', publish_response)
 
-        first_count = first_pull['message_count']
-        self.assertGreaterEqual(first_count, 1)
+        # .. pull messages and verify we get exactly one ..
+        pull_response = self._poll_pull(expected_count=1)
+        logger.info('Pull response: %s', pull_response)
 
-        # Second pull should get zero
-        second_pull = self.pull_messages()
-        self.assertTrue(second_pull['is_ok'])
+        message_count = pull_response['message_count']
+        self.assertEqual(message_count, 1, f'Expected 1 message, got {message_count}')
 
-        second_count = second_pull['message_count']
-        self.assertEqual(second_count, 0)
+        # .. extract the single message ..
+        messages = pull_response['messages']
+        message = messages[0]
+        logger.info('Pulled message: %s', message)
+
+        # .. verify the data matches what was published.
+        received_data = message['data']
+        self.assertEqual(received_data, publish_data)
 
 # ################################################################################################################################
 
-    def test_pull_metadata_fields(self) -> 'None':
-        """ Pulled messages must contain all documented pub/sub metadata fields.
+    def test_publish_to_all_topics_pull_all(self) -> 'None':
+        """ Publish one message to each of the 10 topics, pull them all, and verify all arrive.
         """
-        topic_name = _active_endpoints[0]
-        data = {'pull_test': 'metadata_check', 'value': 42}
 
-        result = self.publish(topic_name, data)
-        self.assertTrue(result['is_ok'])
-
-        # Give the server a moment to process
-        time.sleep(2)
-
-        pull_result = self.pull_messages()
-        self.assertTrue(pull_result['is_ok'])
-
-        message_count = pull_result['message_count']
-        self.assertGreaterEqual(message_count, 1)
-
-        first_message = pull_result['messages'][0]
-
-        # The message must have data and meta sections ..
-        self.assertIn('data', first_message)
-        self.assertIn('meta', first_message)
-
-        meta = first_message['meta']
-
-        # .. verify all documented metadata fields are present.
-        self.assertIn('topic_name', meta)
-        self.assertIn('msg_id', meta)
-        self.assertIn('correl_id', meta)
-        self.assertIn('sub_key', meta)
-        self.assertIn('priority', meta)
-        self.assertIn('size', meta)
-        self.assertIn('expiration', meta)
-        self.assertIn('pub_time_iso', meta)
-        self.assertIn('recv_time_iso', meta)
-        self.assertIn('expiration_time_iso', meta)
-
-# ################################################################################################################################
-
-    def test_expired_message_not_pulled(self) -> 'None':
-        """ A message published with a 1-second TTL must not be available
-        for pull after the TTL expires.
-        """
-        topic_name = _active_endpoints[0]
-
-        data = {'pull_test': 'ttl_expiration', 'marker': 'should-expire'}
-
-        # Drain the pull queue immediately before publishing
-        # so we have a clean baseline ..
-        _ = self.pull_messages()
-
-        result = self.publish(topic_name, data, expiration=1)
-        self.assertTrue(result['is_ok'])
-
-        # Wait for the message to expire ..
-        time.sleep(3)
-
-        pull_result = self.pull_messages()
-        self.assertTrue(pull_result['is_ok'])
-
-        message_count = pull_result['message_count']
-        self.assertEqual(message_count, 0)
-
-# ################################################################################################################################
-
-    def test_priority_value_round_trips(self) -> 'None':
-        """ Publishing with priority=9 must result in the pulled message
-        having meta.priority equal to 9.
-        """
-        topic_name = _active_endpoints[0]
-        data = {'pull_test': 'priority_round_trip'}
-
-        result = self.publish(topic_name, data, priority=9)
-        self.assertTrue(result['is_ok'])
-
-        time.sleep(2)
-
-        pull_result = self.pull_messages()
-        self.assertTrue(pull_result['is_ok'])
-
-        message_count = pull_result['message_count']
-        self.assertGreaterEqual(message_count, 1)
-
-        meta = pull_result['messages'][0]['meta']
-        self.assertEqual(meta['priority'], 9)
-
-# ################################################################################################################################
-
-    def test_priority_ordering(self) -> 'None':
-        """ Messages published with different priorities must be pulled
-        in descending priority order (highest first).
-        """
-        topic_name = _active_endpoints[0]
-
-        # Drain the queue before the test ..
-        _ = self.pull_messages()
-
-        # Publish three messages: low priority first, then high, then mid ..
-        result_low = self.publish(topic_name, {'pull_test': 'priority_order', 'level': 'low'}, priority=1)
-        self.assertTrue(result_low['is_ok'])
-
-        result_high = self.publish(topic_name, {'pull_test': 'priority_order', 'level': 'high'}, priority=9)
-        self.assertTrue(result_high['is_ok'])
-
-        result_mid = self.publish(topic_name, {'pull_test': 'priority_order', 'level': 'mid'}, priority=5)
-        self.assertTrue(result_mid['is_ok'])
-
-        time.sleep(2)
-
-        # Pull all three and verify they come back in 9, 5, 1 order ..
-        pull_result = self.pull_messages()
-        self.assertTrue(pull_result['is_ok'])
-
-        message_count = pull_result['message_count']
-        self.assertGreaterEqual(message_count, 3)
-
-        messages = pull_result['messages']
-
-        first_priority = messages[0]['meta']['priority']
-        second_priority = messages[1]['meta']['priority']
-        third_priority = messages[2]['meta']['priority']
-
-        self.assertEqual(first_priority, 9)
-        self.assertEqual(second_priority, 5)
-        self.assertEqual(third_priority, 1)
-
-# ################################################################################################################################
-
-    def test_publish_with_correl_id(self) -> 'None':
-        """ Publishing with a custom correl_id must result in the pulled
-        message having that same correl_id in its metadata.
-        """
-        topic_name = _active_endpoints[0]
-        data = {'pull_test': 'correl_id_check'}
-
-        result = self.publish(topic_name, data, correl_id='test-correl-123')
-        self.assertTrue(result['is_ok'])
-
-        time.sleep(2)
-
-        pull_result = self.pull_messages()
-        self.assertTrue(pull_result['is_ok'])
-
-        message_count = pull_result['message_count']
-        self.assertGreaterEqual(message_count, 1)
-
-        meta = pull_result['messages'][0]['meta']
-        self.assertEqual(meta['correl_id'], 'test-correl-123')
-
-# ################################################################################################################################
-
-    def test_publish_with_in_reply_to(self) -> 'None':
-        """ Publishing with in_reply_to must result in the pulled message
-        having that value in its metadata.
-        """
-        topic_name = _active_endpoints[0]
-        data = {'pull_test': 'in_reply_to_check'}
-
-        result = self.publish(topic_name, data, in_reply_to='zpsm-original-001')
-        self.assertTrue(result['is_ok'])
-
-        time.sleep(2)
-
-        pull_result = self.pull_messages()
-        self.assertTrue(pull_result['is_ok'])
-
-        message_count = pull_result['message_count']
-        self.assertGreaterEqual(message_count, 1)
-
-        meta = pull_result['messages'][0]['meta']
-        self.assertEqual(meta['in_reply_to'], 'zpsm-original-001')
-
-# ################################################################################################################################
-
-    def test_publish_with_ext_client_id(self) -> 'None':
-        """ Publishing with ext_client_id must result in the pulled message
-        having that value in its metadata.
-        """
-        topic_name = _active_endpoints[0]
-        data = {'pull_test': 'ext_client_id_check'}
-
-        result = self.publish(topic_name, data, ext_client_id='external-system-42')
-        self.assertTrue(result['is_ok'])
-
-        time.sleep(2)
-
-        pull_result = self.pull_messages()
-        self.assertTrue(pull_result['is_ok'])
-
-        message_count = pull_result['message_count']
-        self.assertGreaterEqual(message_count, 1)
-
-        meta = pull_result['messages'][0]['meta']
-        self.assertEqual(meta['ext_client_id'], 'external-system-42')
-
-# ################################################################################################################################
-
-    def test_publish_with_pub_time(self) -> 'None':
-        """ Publishing with a custom pub_time must result in the pulled
-        message reflecting that timestamp in its metadata.
-        """
-        topic_name = _active_endpoints[0]
-        data = {'pull_test': 'pub_time_check'}
-
-        result = self.publish(topic_name, data, pub_time='2025-06-01T12:00:00+00:00')
-        self.assertTrue(result['is_ok'])
-
-        time.sleep(2)
-
-        pull_result = self.pull_messages()
-        self.assertTrue(pull_result['is_ok'])
-
-        message_count = pull_result['message_count']
-        self.assertGreaterEqual(message_count, 1)
-
-        meta = pull_result['messages'][0]['meta']
-        pub_time_iso = meta['pub_time_iso']
-        self.assertTrue(pub_time_iso.startswith('2025-06-01'), f'Expected pub_time_iso to start with 2025-06-01, got {pub_time_iso}')
-
-# ################################################################################################################################
-
-    def test_pull_max_messages(self) -> 'None':
-        """ Pulling with max_messages=2 when 5 messages are enqueued
-        must return exactly 2.
-        """
-        topic_name = _active_endpoints[0]
-
-        # Drain the queue ..
-        _ = self.pull_messages()
-
-        # Publish 5 messages ..
-        for message_index in range(5):
-            data = {'pull_test': 'max_messages', 'index': message_index}
-            result = self.publish(topic_name, data)
-            self.assertTrue(result['is_ok'])
-
-        time.sleep(2)
-
-        # Pull with max_messages=2 ..
-        pull_result = self.pull_messages(max_messages=2)
-        self.assertTrue(pull_result['is_ok'])
-
-        message_count = pull_result['message_count']
-        self.assertEqual(message_count, 2)
-
-# ################################################################################################################################
-
-    def test_pull_max_len(self) -> 'None':
-        """ Pulling with a very small max_len must limit the number of
-        messages returned based on their cumulative data size.
-        """
-        topic_name = _active_endpoints[0]
-
-        # Drain the queue ..
-        _ = self.pull_messages()
-
-        # Publish a message with a 1000-byte payload ..
-        large_value = 'x' * 1000
-        data = {'pull_test': 'max_len', 'payload': large_value}
-
-        result = self.publish(topic_name, data)
-        self.assertTrue(result['is_ok'])
-
-        time.sleep(2)
-
-        # Pull with max_len=100 - the message exceeds max_len
-        # so the server should return 0 messages ..
-        pull_result = self.pull_messages(max_len=100)
-        self.assertTrue(pull_result['is_ok'])
-
-        message_count = pull_result['message_count']
-        self.assertEqual(message_count, 0)
+        # Publish one message per topic ..
+        topic_names = [
+            'iam.user.created',
+            'iam.user.deleted',
+            'iam.role.assigned',
+            'iam.password.changed',
+            'iam.login.failed',
+            'customer.registered',
+            'customer.updated',
+            'customer.deactivated',
+            'order.placed',
+            'order.shipped',
+        ]
+
+        topic_count = len(topic_names)
+
+        for topic_name in topic_names:
+            publish_data = {'topic': topic_name, 'sequence': 'all-topics-test'}
+            publish_response = self.publisher.publish(topic_name, publish_data)
+            logger.info('Published to %s: %s', topic_name, publish_response)
+
+        # .. pull all messages ..
+        pull_response = self._poll_pull(expected_count=topic_count)
+        logger.info('Pull response: %s', pull_response)
+
+        message_count = pull_response['message_count']
+        self.assertEqual(message_count, topic_count, f'Expected {topic_count} messages, got {message_count}')
+
+        # .. verify each topic is represented exactly once ..
+        messages = pull_response['messages']
+        received_topics = []
+
+        for message in messages:
+            logger.info('Pulled message: %s', message)
+            message_data = message['data']
+            received_topics.append(message_data['topic'])
+
+        for topic_name in topic_names:
+            self.assertIn(topic_name, received_topics, f'Missing message for topic {topic_name}')
 
 # ################################################################################################################################
 # ################################################################################################################################

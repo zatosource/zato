@@ -15,6 +15,7 @@ from zato.common.ext.bunch import Bunch
 
 # Zato
 from zato.common.api import query_parameters
+from zato.common.json_internal import dumps
 from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import Cluster, PubSubTopic
 from zato.common.odb.query import pubsub_topic_list
@@ -320,6 +321,33 @@ class GetPublisherCount(AdminService):
 
         # .. and return the count.
         self.response.payload = {'publisher_count': publisher_count}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Publish(AdminService):
+    """ Publishes a message to a pub/sub topic.
+    """
+
+    name = 'zato.pubsub.topic.publish'
+
+    def handle(self) -> 'None':
+
+        # Get the topic name and message data from the request ..
+        topic_name = self.request.raw_request['topic_name']
+        data = self.request.raw_request['data']
+
+        # .. publish the message ..
+        result = self.publish(topic_name, data)
+
+        # .. serialize the result ..
+        response_body = dumps({'msg_id': result.msg_id})
+
+        # .. and return it.
+        self.response.payload = {
+            'response_body': response_body,
+            'response_time': '',
+        }
 
 # ################################################################################################################################
 # ################################################################################################################################

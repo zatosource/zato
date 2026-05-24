@@ -1,0 +1,49 @@
+security:
+
+  - name: test.pubsub.publisher
+    type: basic_auth
+    username: test.pubsub.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.pubsub.puller.a
+    type: basic_auth
+    username: test.pubsub.puller.a
+    password: "{{puller_a_password}}"
+
+  - name: test.pubsub.pusher.a
+    type: basic_auth
+    username: test.pubsub.pusher.a
+    password: "{{pusher_a_password}}"
+
+pubsub_topic:
+
+  - name: clear.combined.topic.1
+  - name: clear.combined.topic.2
+
+pubsub_permission:
+
+  - security: test.pubsub.publisher
+    pub:
+      - clear.**
+
+  - security: test.pubsub.puller.a
+    sub:
+      - clear.**
+
+  - security: test.pubsub.pusher.a
+    sub:
+      - clear.**
+
+pubsub_subscription:
+
+  - security: test.pubsub.puller.a
+    delivery_type: pull
+    topic_list:
+      - clear.combined.topic.1
+
+  - security: test.pubsub.pusher.a
+    delivery_type: push
+    push_type: service
+    push_service_name: demo.echo
+    topic_list:
+      - clear.combined.topic.1

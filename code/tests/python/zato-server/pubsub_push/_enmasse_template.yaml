@@ -1,0 +1,266 @@
+security:
+
+  - name: test.pubsub.publisher
+    type: basic_auth
+    username: test.pubsub.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.pubsub.puller
+    type: basic_auth
+    username: test.pubsub.puller
+    password: "{{puller_password}}"
+
+  - name: test.pubsub.sub.iam.user.created
+    type: basic_auth
+    username: test.pubsub.sub.iam.user.created
+    password: "{{sub_iam_user_created_password}}"
+
+  - name: test.pubsub.sub.iam.user.deleted
+    type: basic_auth
+    username: test.pubsub.sub.iam.user.deleted
+    password: "{{sub_iam_user_deleted_password}}"
+
+  - name: test.pubsub.sub.iam.role.assigned
+    type: basic_auth
+    username: test.pubsub.sub.iam.role.assigned
+    password: "{{sub_iam_role_assigned_password}}"
+
+  - name: test.pubsub.sub.iam.password.changed
+    type: basic_auth
+    username: test.pubsub.sub.iam.password.changed
+    password: "{{sub_iam_password_changed_password}}"
+
+  - name: test.pubsub.sub.iam.login.failed
+    type: basic_auth
+    username: test.pubsub.sub.iam.login.failed
+    password: "{{sub_iam_login_failed_password}}"
+
+  - name: test.pubsub.sub.customer.registered
+    type: basic_auth
+    username: test.pubsub.sub.customer.registered
+    password: "{{sub_customer_registered_password}}"
+
+  - name: test.pubsub.sub.customer.updated
+    type: basic_auth
+    username: test.pubsub.sub.customer.updated
+    password: "{{sub_customer_updated_password}}"
+
+  - name: test.pubsub.sub.customer.deactivated
+    type: basic_auth
+    username: test.pubsub.sub.customer.deactivated
+    password: "{{sub_customer_deactivated_password}}"
+
+  - name: test.pubsub.sub.order.placed
+    type: basic_auth
+    username: test.pubsub.sub.order.placed
+    password: "{{sub_order_placed_password}}"
+
+  - name: test.pubsub.sub.order.shipped
+    type: basic_auth
+    username: test.pubsub.sub.order.shipped
+    password: "{{sub_order_shipped_password}}"
+
+outgoing_rest:
+
+  - name: test.pubsub.out.iam.user.created
+    host: "http://127.0.0.1:{{port_iam_user_created}}"
+    url_path: /webhook/iam/user-created
+    data_format: json
+    timeout: 30
+
+  - name: test.pubsub.out.iam.user.deleted
+    host: "http://127.0.0.1:{{port_iam_user_deleted}}"
+    url_path: /webhook/iam/user-deleted
+    data_format: json
+    timeout: 30
+
+  - name: test.pubsub.out.iam.role.assigned
+    host: "http://127.0.0.1:{{port_iam_role_assigned}}"
+    url_path: /webhook/iam/role-assigned
+    data_format: json
+    timeout: 30
+
+  - name: test.pubsub.out.iam.password.changed
+    host: "http://127.0.0.1:{{port_iam_password_changed}}"
+    url_path: /webhook/iam/password-changed
+    data_format: json
+    timeout: 30
+
+  - name: test.pubsub.out.iam.login.failed
+    host: "http://127.0.0.1:{{port_iam_login_failed}}"
+    url_path: /webhook/iam/login-failed
+    data_format: json
+    timeout: 30
+
+  - name: test.pubsub.out.customer.registered
+    host: "http://127.0.0.1:{{port_customer_registered}}"
+    url_path: /webhook/customer/registered
+    data_format: json
+    timeout: 30
+
+  - name: test.pubsub.out.customer.updated
+    host: "http://127.0.0.1:{{port_customer_updated}}"
+    url_path: /webhook/customer/updated
+    data_format: json
+    timeout: 30
+
+  - name: test.pubsub.out.customer.deactivated
+    host: "http://127.0.0.1:{{port_customer_deactivated}}"
+    url_path: /webhook/customer/deactivated
+    data_format: json
+    timeout: 30
+
+  - name: test.pubsub.out.order.placed
+    host: "http://127.0.0.1:{{port_order_placed}}"
+    url_path: /webhook/order/placed
+    data_format: json
+    timeout: 30
+
+  - name: test.pubsub.out.order.shipped
+    host: "http://127.0.0.1:{{port_order_shipped}}"
+    url_path: /webhook/order/shipped
+    data_format: json
+    timeout: 30
+
+pubsub_topic:
+
+  - name: iam.user.created
+  - name: iam.user.deleted
+  - name: iam.role.assigned
+  - name: iam.password.changed
+  - name: iam.login.failed
+  - name: customer.registered
+  - name: customer.updated
+  - name: customer.deactivated
+  - name: order.placed
+  - name: order.shipped
+
+pubsub_permission:
+
+  - security: test.pubsub.publisher
+    pub:
+      - iam.**
+      - customer.**
+      - order.**
+
+  - security: test.pubsub.puller
+    sub:
+      - iam.**
+      - customer.**
+      - order.**
+
+  - security: test.pubsub.sub.iam.user.created
+    sub:
+      - iam.user.created
+
+  - security: test.pubsub.sub.iam.user.deleted
+    sub:
+      - iam.user.deleted
+
+  - security: test.pubsub.sub.iam.role.assigned
+    sub:
+      - iam.role.assigned
+
+  - security: test.pubsub.sub.iam.password.changed
+    sub:
+      - iam.password.changed
+
+  - security: test.pubsub.sub.iam.login.failed
+    sub:
+      - iam.login.failed
+
+  - security: test.pubsub.sub.customer.registered
+    sub:
+      - customer.registered
+
+  - security: test.pubsub.sub.customer.updated
+    sub:
+      - customer.updated
+
+  - security: test.pubsub.sub.customer.deactivated
+    sub:
+      - customer.deactivated
+
+  - security: test.pubsub.sub.order.placed
+    sub:
+      - order.placed
+
+  - security: test.pubsub.sub.order.shipped
+    sub:
+      - order.shipped
+
+pubsub_subscription:
+
+  - security: test.pubsub.sub.iam.user.created
+    delivery_type: push
+    push_rest_endpoint: test.pubsub.out.iam.user.created
+    topic_list:
+      - iam.user.created
+
+  - security: test.pubsub.sub.iam.user.deleted
+    delivery_type: push
+    push_rest_endpoint: test.pubsub.out.iam.user.deleted
+    topic_list:
+      - iam.user.deleted
+
+  - security: test.pubsub.sub.iam.role.assigned
+    delivery_type: push
+    push_rest_endpoint: test.pubsub.out.iam.role.assigned
+    topic_list:
+      - iam.role.assigned
+
+  - security: test.pubsub.sub.iam.password.changed
+    delivery_type: push
+    push_rest_endpoint: test.pubsub.out.iam.password.changed
+    topic_list:
+      - iam.password.changed
+
+  - security: test.pubsub.sub.iam.login.failed
+    delivery_type: push
+    push_rest_endpoint: test.pubsub.out.iam.login.failed
+    topic_list:
+      - iam.login.failed
+
+  - security: test.pubsub.sub.customer.registered
+    delivery_type: push
+    push_rest_endpoint: test.pubsub.out.customer.registered
+    topic_list:
+      - customer.registered
+
+  - security: test.pubsub.sub.customer.updated
+    delivery_type: push
+    push_rest_endpoint: test.pubsub.out.customer.updated
+    topic_list:
+      - customer.updated
+
+  - security: test.pubsub.sub.customer.deactivated
+    delivery_type: push
+    push_rest_endpoint: test.pubsub.out.customer.deactivated
+    topic_list:
+      - customer.deactivated
+
+  - security: test.pubsub.sub.order.placed
+    delivery_type: push
+    push_rest_endpoint: test.pubsub.out.order.placed
+    topic_list:
+      - order.placed
+
+  - security: test.pubsub.sub.order.shipped
+    delivery_type: push
+    push_rest_endpoint: test.pubsub.out.order.shipped
+    topic_list:
+      - order.shipped
+
+  - security: test.pubsub.puller
+    delivery_type: pull
+    topic_list:
+      - iam.user.created
+      - iam.user.deleted
+      - iam.role.assigned
+      - iam.password.changed
+      - iam.login.failed
+      - customer.registered
+      - customer.updated
+      - customer.deactivated
+      - order.placed
+      - order.shipped

@@ -1,216 +1,254 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2025, Zato Source s.r.o. https://zato.io
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 import argparse
+import logging
 import os
+import signal
 import sys
 import time
-from datetime import datetime
-from logging import basicConfig, getLogger, INFO
 
 # redis
 from redis import Redis
 
 # Zato
 from zato.common.pubsub.disk_store import DiskMessageStore
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = getLogger(__name__)
+if 0:
+    from zato.common.typing_ import strlist, strset
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ModuleCtx:
-    Stream_Prefix = 'zato:pubsub:stream:'
-    Expiration_Key = 'zato:pubsub:expiration:'
-    Default_Batch_Size = 100
-    Default_Sleep_Seconds = 60
+logger = logging.getLogger('zato.pubsub.cleanup')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MessageExpirationCleanup:
-    """ Standalone process that cleans up expired messages from Redis pub/sub streams.
+_Default_Interval_Seconds = 60
+_Default_Batch_Size       = 1000
+_Default_Redis_Host       = 'localhost'
+_Default_Redis_Port       = 6379
+_Default_Redis_DB         = 0
+
+_Pending_Prefix      = 'zato:pubsub:pending:'
+_Pending_Expiry_Key  = 'zato:pubsub:pending_expiry'
+_Sub_Pending_Prefix  = 'zato:pubsub:sub_pending:'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PubSubCleanup:
+    """ Periodically scans the Redis expiry index for messages whose TTL has passed
+    and deletes the corresponding disk files, pending sets, and expiry entries.
     """
 
     def __init__(
         self,
-        redis_host:'str'='localhost',
-        redis_port:'int'=6379,
-        redis_db:'int'=0,
-        redis_password:'str | None'=None,
-        batch_size:'int'=ModuleCtx.Default_Batch_Size,
-        sleep_seconds:'int'=ModuleCtx.Default_Sleep_Seconds,
-        disk_store_base_dir:'str'='/var/lib/zato/pubsub/messages',
+        redis_client:'Redis', # type: ignore[type-arg]
+        disk_store:'DiskMessageStore',
+        interval_seconds:'int'=_Default_Interval_Seconds,
+        batch_size:'int'=_Default_Batch_Size,
     ) -> 'None':
-
-        self.redis = Redis(
-            host=redis_host,
-            port=redis_port,
-            db=redis_db,
-            password=redis_password,
-            decode_responses=True
-        )
-        self.disk_store = DiskMessageStore(disk_store_base_dir)
+        self.redis = redis_client
+        self.disk_store = disk_store
+        self.interval_seconds = interval_seconds
         self.batch_size = batch_size
-        self.sleep_seconds = sleep_seconds
-        self._running = False
+        self._should_stop = False
 
 # ################################################################################################################################
 
-    def _get_all_streams(self) -> 'list[str]':
-        """ Get all pub/sub stream keys.
+    def _get_pending_key(self, data_ref:'str') -> 'str':
+        """ Returns the Redis key for the pending subscriber set of a given message.
         """
-        pattern = f'{ModuleCtx.Stream_Prefix}*'
-        keys = self.redis.keys(pattern)
-        return keys
+        out = f'{_Pending_Prefix}{data_ref}'
+        return out
 
 # ################################################################################################################################
 
-    def _cleanup_stream(self, stream_key:'str') -> 'int':
-        """ Clean up expired messages from a single stream.
-        Returns the number of messages deleted.
+    def sweep_once(self) -> 'int':
+        """ Runs a single cleanup sweep. Returns the number of expired entries removed.
         """
+
+        # Get current time as a Unix timestamp ..
+        now = time.time()
+
+        # .. find all expired entries, capped by batch size ..
+        expired_refs:'strlist' = cast_('strlist', self.redis.zrangebyscore(
+            _Pending_Expiry_Key, 0, now,
+            start=0, num=self.batch_size))
+
+        if not expired_refs:
+            return 0
+
         deleted_count = 0
-        now = datetime.utcnow()
 
-        # Read messages from the stream
-        messages = self.redis.xrange(stream_key, count=self.batch_size)
+        for data_ref in expired_refs:
 
-        for msg_id, msg_data in messages:
-            expiration_time_iso = msg_data.get('expiration_time_iso')
+            # Build the pending key for this message ..
+            pending_key = self._get_pending_key(data_ref)
 
-            if expiration_time_iso:
-                try:
-                    expiration_time = datetime.fromisoformat(expiration_time_iso)
-                    if now > expiration_time:
+            # .. remove this data_ref from the reverse index of each remaining subscriber ..
+            remaining_subs:'strset' = cast_('strset', self.redis.smembers(pending_key))
 
-                        # .. delete the payload file from disk ..
-                        if data_ref := msg_data.get('data_ref'):
-                            self.disk_store.delete(data_ref)
+            for sub_key in remaining_subs:
+                sub_pending_key = f'{_Sub_Pending_Prefix}{sub_key}'
+                _ = self.redis.srem(sub_pending_key, data_ref)
 
-                        # .. then remove the stream entry ..
-                        self.redis.xdel(stream_key, msg_id)
-                        deleted_count += 1
-                except ValueError:
-                    pass
+            # .. delete the pending set ..
+            _ = self.redis.delete(pending_key)
+
+            # .. remove from the expiry index ..
+            _ = self.redis.zrem(_Pending_Expiry_Key, data_ref)
+
+            # .. and delete the disk file.
+            self.disk_store.delete(data_ref)
+
+            deleted_count += 1
+            logger.info('Cleaned up expired message -> data_ref:%s', data_ref)
 
         return deleted_count
 
 # ################################################################################################################################
 
-    def run_once(self) -> 'dict':
-        """ Run a single cleanup pass over all streams.
-        Returns statistics about the cleanup.
-        """
-        stats = {
-            'streams_processed': 0,
-            'messages_deleted': 0,
-            'errors': []
-        }
-
-        streams = self._get_all_streams()
-        stats['streams_processed'] = len(streams)
-
-        for stream_key in streams:
-            try:
-                deleted = self._cleanup_stream(stream_key)
-                stats['messages_deleted'] += deleted
-            except Exception as e:
-                stats['errors'].append(f'{stream_key}: {e}')
-
-        return stats
-
-# ################################################################################################################################
-
     def run(self) -> 'None':
-        """ Run the cleanup process continuously.
+        """ Runs the cleanup loop until stopped.
         """
-        self._running = True
-        logger.info(f'Starting message expiration cleanup (batch_size={self.batch_size}, sleep={self.sleep_seconds}s)')
+        logger.info('Cleanup started -> interval:%ds, batch_size:%d', self.interval_seconds, self.batch_size)
 
-        while self._running:
-            try:
-                stats = self.run_once()
+        while not self._should_stop:
+            time.sleep(self.interval_seconds)
 
-                if stats['messages_deleted'] > 0:
-                    logger.info(f"Cleanup pass: deleted {stats['messages_deleted']} messages from {stats['streams_processed']} streams")
+            deleted_count = self.sweep_once()
+            logger.info('Sweep completed -> deleted:%d', deleted_count)
 
-                if stats['errors']:
-                    for error in stats['errors']:
-                        logger.warning(f'Cleanup error: {error}')
-
-            except Exception as e:
-                logger.error(f'Error in cleanup loop: {e}')
-
-            time.sleep(self.sleep_seconds)
+        logger.info('Cleanup stopped')
 
 # ################################################################################################################################
 
     def stop(self) -> 'None':
-        """ Stop the cleanup process.
+        """ Signals the cleanup loop to stop.
         """
-        self._running = False
-        logger.info('Stopping message expiration cleanup')
+        self._should_stop = True
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def main() -> 'int':
-    """ Main entry point for the cleanup process.
+    """ Entry point for the cleanup process.
     """
-    parser = argparse.ArgumentParser(description='Zato PubSub Message Expiration Cleanup')
-    _ = parser.add_argument('--redis-host', default=os.environ.get('Zato_Redis_Host', 'localhost'), help='Redis host')
-    _ = parser.add_argument('--redis-port', type=int, default=int(os.environ.get('Zato_Redis_Port', '6379')), help='Redis port')
-    _ = parser.add_argument('--redis-db', type=int, default=int(os.environ.get('Zato_Redis_DB', '0')), help='Redis database')
-    _ = parser.add_argument('--redis-password', default=os.environ.get('Zato_Redis_Password'), help='Redis password')
-    _ = parser.add_argument('--batch-size', type=int, default=ModuleCtx.Default_Batch_Size, help='Messages to process per stream per pass')
-    _ = parser.add_argument('--sleep', type=int, default=ModuleCtx.Default_Sleep_Seconds, help='Seconds to sleep between passes')
-    _ = parser.add_argument('--once', action='store_true', help='Run once and exit')
-    _ = parser.add_argument('--disk-store-dir', default=os.environ.get('Zato_PubSub_Disk_Store_Dir', '/var/lib/zato/pubsub/messages'), help='Base directory for message payload files')
 
+    # Set up the argument parser ..
+    parser = argparse.ArgumentParser(description='Zato pub/sub expired message cleanup')
+
+    _ = parser.add_argument('server_directory', help='Path to the Zato server directory')
+
+    _ = parser.add_argument(
+        '--interval', type=int, default=_Default_Interval_Seconds,
+        help=f'Seconds between cleanup sweeps (default: {_Default_Interval_Seconds})')
+
+    _ = parser.add_argument(
+        '--batch-size', type=int, default=_Default_Batch_Size,
+        help=f'Maximum expired entries per sweep (default: {_Default_Batch_Size})')
+
+    _ = parser.add_argument(
+        '--redis-host', default=_Default_Redis_Host,
+        help=f'Redis host (default: {_Default_Redis_Host})')
+
+    _ = parser.add_argument(
+        '--redis-port', type=int, default=_Default_Redis_Port,
+        help=f'Redis port (default: {_Default_Redis_Port})')
+
+    _ = parser.add_argument(
+        '--redis-db', type=int, default=_Default_Redis_DB,
+        help=f'Redis database (default: {_Default_Redis_DB})')
+
+    _ = parser.add_argument(
+        '--redis-password', default=None,
+        help='Redis password')
+
+    _ = parser.add_argument(
+        '--log-level', default='INFO',
+        help='Logging level (default: INFO)')
+
+    _ = parser.add_argument(
+        '--once', action='store_true',
+        help='Run a single sweep and exit')
+
+    # .. parse arguments ..
     args = parser.parse_args()
 
-    basicConfig(
-        level=INFO,
-        format='%(asctime)s - %(levelname)s - %(name)s - %(message)s'
-    )
+    # .. set up logging ..
+    log_level_name = args.log_level.upper()
+    log_level = getattr(logging, log_level_name, logging.INFO)
+    log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
+    logging.basicConfig(level=log_level, format=log_format)
 
-    cleanup = MessageExpirationCleanup(
-        redis_host=args.redis_host,
-        redis_port=args.redis_port,
-        redis_db=args.redis_db,
-        redis_password=args.redis_password,
-        batch_size=args.batch_size,
-        sleep_seconds=args.sleep,
-        disk_store_base_dir=args.disk_store_dir,
-    )
+    # .. resolve the server directory ..
+    server_directory = os.path.abspath(args.server_directory)
 
-    try:
-        if args.once:
-            stats = cleanup.run_once()
-            logger.info(f"Cleanup complete: {stats}")
-            return 0
-        else:
-            cleanup.run()
-            return 0
-    except KeyboardInterrupt:
-        cleanup.stop()
-        return 0
-    except Exception as e:
-        logger.error(f'Fatal error: {e}')
+    if not os.path.isdir(server_directory):
+        logger.error('Server directory does not exist -> %s', server_directory)
         return 1
+
+    # .. connect to Redis ..
+    redis_client:'Redis' = Redis( # type: ignore[type-arg]
+        host=args.redis_host,
+        port=args.redis_port,
+        db=args.redis_db,
+        password=args.redis_password,
+        decode_responses=True,
+    )
+
+    # .. set up the disk store ..
+    disk_store_base_dir = os.path.join(server_directory, 'work', 'pubsub-messages')
+    disk_store = DiskMessageStore(disk_store_base_dir)
+
+    # .. create the cleanup instance ..
+    cleanup = PubSubCleanup(
+        redis_client=redis_client,
+        disk_store=disk_store,
+        interval_seconds=args.interval,
+        batch_size=args.batch_size,
+    )
+
+    # .. handle signals for graceful shutdown ..
+    def _handle_signal(signal_number:'int', frame:'object') -> 'None':
+        logger.info('Received signal %d, stopping', signal_number)
+        cleanup.stop()
+
+    _ = signal.signal(signal.SIGINT, _handle_signal)
+    _ = signal.signal(signal.SIGTERM, _handle_signal)
+
+    logger.info(
+        'Cleanup process starting -> server_directory:%s, redis:%s:%d, interval:%ds, batch_size:%d',
+        server_directory, args.redis_host, args.redis_port, args.interval, args.batch_size)
+
+    # .. run.
+    if args.once:
+        deleted_count = cleanup.sweep_once()
+        logger.info('Single sweep completed -> deleted:%d', deleted_count)
+        return 0
+
+    cleanup.run()
+    return 0
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    sys.exit(main())
+    exit_code = main()
+    sys.exit(exit_code)
+
+# ################################################################################################################################
+# ################################################################################################################################

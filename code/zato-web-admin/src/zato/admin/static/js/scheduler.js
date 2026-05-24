@@ -153,13 +153,6 @@ $(document).ready(function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.scheduler.titles = {
-    'one_time': 'a one-time',
-    'interval_based': 'an interval-based',
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-
 $.fn.zato.scheduler.data_table.on_submit_complete = function(data, status, action, job_type) {
 
     if(status == 'success') {
@@ -214,8 +207,7 @@ $.fn.zato.scheduler._create_edit = function(action, job_type, id) {
     $.fn.zato.cleanup_chosen("");
     $.fn.zato.cleanup_form_css_attention(".data-popup");
 
-    var title = String.format('{0} {1} job',
-        action.capitalize(), $.fn.zato.scheduler.titles[job_type]);
+    var title = action == 'create' ? 'Create a new job' : 'Edit the job';
 
     if(action == 'edit') {
 
@@ -266,7 +258,7 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     row += String.format('<td style="text-align:center">{0}</td>', job.is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', data.definition_text);
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(job.service, cluster_id));
-    row += String.format('<td><a href="' + $.fn.zato.scheduler.dashboard_base_url + 'job/{0}/?cluster={1}&outcomes=all">Statistics</a></td>', job.id, cluster_id);
+    row += String.format('<td><a href="' + $.fn.zato.scheduler.dashboard_base_url + 'job/{0}/?cluster={1}&outcomes=all&range={2}">Statistics</a></td>', job.id, cluster_id, $.fn.zato.scheduler.default_time_range_minutes);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.scheduler.execute('{0}', this)\">Execute</a>", job.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.edit('{0}', {1})\">Edit</a>", job.job_type, job.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.delete_('{0}');\">Delete</a>", job.id));

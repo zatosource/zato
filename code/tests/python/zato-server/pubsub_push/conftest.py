@@ -7,234 +7,313 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import atexit
+import logging
 import os
+import shutil
 import socket
 import subprocess
 import sys
 import tempfile
 import threading
 import time
-from collections.abc import Generator
-from datetime import datetime
+from http.client import OK
+from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-# PyPI
-import pytest # type: ignore[reportMissingImports]
-
-# local
-from config import PubSubPushTestConfig, _active_endpoints
-from receivers import ReceiverServer
+# pytest
+import pytest
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strlist
+    from _receiver import WebhookReceiver
+    from config import endpoint_config_dict as endpoint_config_dict
+    from zato.common.typing_ import any_, anydict, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-str_int_dict = dict[str, int]
+webhook_receiver_list = list['WebhookReceiver']
+str_strint_dict       = dict[str, 'str | int']
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_zato_base = '/home/dsuch/projects/zatosource-zato/4.1'
-_zato_bin = os.path.join(_zato_base, 'code', 'bin', 'zato')
+logger = logging.getLogger('zato.test.pubsub_push.conftest')
 
-_template_path = os.path.join(os.path.dirname(__file__), 'enmasse_pubsub_push.yaml.template')
+# ################################################################################################################################
+# ################################################################################################################################
 
-_server_process = None
+_zato_base = os.environ['ZATO_TEST_BASE_DIR']
+_zato_bin  = os.path.join(_zato_base, 'code', 'bin', 'zato')
+
+_template_path = os.path.join(os.path.dirname(__file__), '_enmasse_template.yaml')
+
+_process_kill_timeout = 5
+_server_wait_timeout  = 120
+_quickstart_timeout   = 180
+_ping_poll_interval   = 0.5
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_topic_names = [
+    'iam.user.created',
+    'iam.user.deleted',
+    'iam.role.assigned',
+    'iam.password.changed',
+    'iam.login.failed',
+    'customer.registered',
+    'customer.updated',
+    'customer.deactivated',
+    'order.placed',
+    'order.shipped',
+]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _SessionState:
+    """ Holds all mutable session state so there are no module-level global variables.
+    """
+
+    def __init__(self) -> 'None':
+        self.server_process:'subprocess.Popen[bytes] | None' = None
+        self.quickstart_directory:'str | None' = None
+        self.test_data_directory:'str | None' = None
+        self.receivers:'webhook_receiver_list' = []
+
+# ################################################################################################################################
+
+    def kill_server(self) -> 'None':
+        """ Terminates the server subprocess if it is still running.
+        """
+        if self.server_process:
+            if self.server_process.poll() is None:
+                self.server_process.kill()
+                _ = self.server_process.wait(timeout=_process_kill_timeout)
+                logger.info('Killed server process')
+
+        self.server_process = None
+
+        # .. also kill any orphaned Zato server processes that may have forked ..
+        _ = subprocess.run(['pkill', '-f', 'zato.server.main'], capture_output=True)
+
+# ################################################################################################################################
+
+    def stop_all_receivers(self) -> 'None':
+        """ Stops every running receiver.
+        """
+        for receiver in self.receivers:
+            receiver.stop()
+
+        receiver_count = len(self.receivers)
+        self.receivers.clear()
+        logger.info('Stopped %d receiver(s)', receiver_count)
+
+# ################################################################################################################################
+
+    def cleanup(self) -> 'None':
+        """ Full teardown - server, receivers, temp directory.
+        """
+        # Copy server logs before killing anything ..
+        if self.quickstart_directory:
+            server_log_path = os.path.join(self.quickstart_directory, 'server1', 'logs', 'server.log')
+            if os.path.exists(server_log_path):
+                shutil.copy(server_log_path, '/tmp/server-logs.txt')
+                logger.info('Copied server logs to /tmp/server-logs.txt')
+
+        # Stop the server process ..
+        self.kill_server()
+
+        # .. then stop all receivers ..
+        self.stop_all_receivers()
+
+        # .. then clean up the temporary directories.
+        if self.quickstart_directory:
+            shutil.rmtree(self.quickstart_directory, ignore_errors=True)
+            logger.info('Removed quickstart directory %s', self.quickstart_directory)
+
+        if self.test_data_directory:
+            shutil.rmtree(self.test_data_directory, ignore_errors=True)
+            logger.info('Removed test data directory %s', self.test_data_directory)
+
+        self.quickstart_directory = None
+        self.test_data_directory = None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_state = _SessionState()
+_ = atexit.register(_state.cleanup)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _topic_to_key(topic_name:'str') -> 'str':
+    """ Converts a topic name like 'iam.user.created' to a placeholder key like 'iam_user_created'.
+    """
+    out = topic_name.replace('.', '_')
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def _find_free_port() -> 'int':
-    """ Bind to port 0 and return the OS-assigned port number.
+    """ Returns a free TCP port on localhost.
     """
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.bind(('127.0.0.1', 0))
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as tcp_socket:
+        tcp_socket.bind(('127.0.0.1', 0))
+        socket_name = tcp_socket.getsockname()
 
-        address = sock.getsockname()
-        out = address[1]
+        out = socket_name[1]
         return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_tmpdir_name(purpose:'str') -> 'str':
-    """ Build a descriptive temp directory name with local time and a random suffix.
+def _wait_for_server(host:'str', port:'int', timeout:'int'=_server_wait_timeout) -> 'None':
+    """ Polls the server's /zato/ping endpoint until it returns 200 or the timeout expires.
     """
 
-    # Get the current timestamp ..
-    now = datetime.now()
-    timestamp = now.strftime('%Y_%m_%dT%H_%M_%S')
+    ping_url = f'http://{host}:{port}/zato/ping'
+    start_time = time.monotonic()
+    deadline = start_time + timeout
+    attempt_number = 0
 
-    # .. generate a random suffix ..
-    random_suffix = os.urandom(3).hex()
-
-    # .. and build the full path.
-    dir_name = f'zato_pubsub_test_{purpose}_{timestamp}_{random_suffix}'
-
-    out = os.path.join(tempfile.gettempdir(), dir_name)
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _render_enmasse_template(
-    publisher_password:'str',
-    puller_password:'str',
-    subscriber_password:'str',
-    port_map:'str_int_dict',
-    ) -> 'str':
-    """ Read the static enmasse YAML template and replace all placeholders
-    with the actual passwords and port numbers.
-    """
-
-    # Read the template file ..
-    with open(_template_path, 'r') as template_file:
-        content = template_file.read()
-
-    # .. replace password placeholders ..
-    content = content.replace('{{publisher_password}}', publisher_password)
-    content = content.replace('{{puller_password}}', puller_password)
-    content = content.replace('{{subscriber_password}}', subscriber_password)
-
-    # .. and replace port placeholders for each endpoint.
-    for topic_name, port in port_map.items():
-        placeholder_key = topic_name.replace('.', '_')
-        placeholder = '{{port_' + placeholder_key + '}}'
-        content = content.replace(placeholder, str(port))
-
-    out = content
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _wait_for_server(host:'str', port:'int', timeout:'int'=90) -> 'None':
-    """ Poll the server's ping endpoint until it responds or the timeout expires.
-    """
-
-    # Build the URL and deadline ..
-    url = f'http://{host}:{port}/zato/ping'
-    deadline = time.monotonic() + timeout
-
-    # .. and keep polling until the server responds.
     while time.monotonic() < deadline:
+
+        attempt_number += 1
+        current_time = time.monotonic()
+        elapsed = current_time - start_time
+
         try:
-            request = Request(url, method='GET')
-            with urlopen(request, timeout=5) as response:
-                if response.status == 200:
+            request = Request(ping_url, method='GET')
+
+            with urlopen(request, timeout=_process_kill_timeout) as response:
+                if response.status == OK:
+                    logger.info('Ping OK after %.1fs (attempt %d)', elapsed, attempt_number)
                     return
-        except Exception:
-            pass
-        time.sleep(0.5)
+
+        except (ConnectionRefusedError, OSError, URLError):
+            logger.debug('Ping attempt %d at %.1fs: not ready', attempt_number, elapsed)
+
+        time.sleep(_ping_poll_interval)
 
     raise RuntimeError(f'Server at {host}:{port} did not respond within {timeout}s')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.fixture(scope='session', autouse=True) # type: ignore[reportUntypedFunctionDecorator]
-def pubsub_push_server() -> 'Generator[None, None, None]': # type: ignore[misc]
-    """ Start HTTP receivers and a Zato server for the pub/sub push test suite.
+def _render_template(placeholders:'anydict') -> 'str':
+    """ Reads the enmasse YAML template and replaces all {{placeholder}} tokens.
     """
-    global _server_process
+    with open(_template_path, 'r') as template_file:
+        out = template_file.read()
 
-    # Kill any lingering Zato server processes from previous runs.
-    # We use pkill here because at this point we have no PID to target -
-    # these are orphans from previous test runs.
-    _ = subprocess.run(['pkill', '-9', '-f', 'zato.server.main'], capture_output=True)
-    time.sleep(1)
+    for key, value in placeholders.items():
+        token = '{{' + key + '}}'
+        string_value = str(value)
+        out = out.replace(token, string_value)
 
-    # .. generate random passwords for this test run ..
-    publisher_password  = 'test.pub.' + os.urandom(8).hex()
-    puller_password     = 'test.pull.' + os.urandom(8).hex()
-    subscriber_password = 'test.sub.' + os.urandom(8).hex()
-    invoke_password     = 'test.invoke.' + os.urandom(8).hex()
+    return out
 
-    # .. store passwords in config so tests can use them ..
-    PubSubPushTestConfig.publisher_password  = publisher_password
-    PubSubPushTestConfig.puller_password     = puller_password
-    PubSubPushTestConfig.subscriber_password = subscriber_password
+# ################################################################################################################################
+# ################################################################################################################################
 
-    # .. start an HTTP receiver for each active endpoint ..
-    receiver_servers = []
+@pytest.fixture(scope='session', autouse=True)
+def zato_server() -> 'any_':
+    """ Session-scoped fixture that spins up a Zato quickstart environment,
+    imports the enmasse YAML, starts per-topic receivers, starts the server,
+    and yields connection details for the pub/sub push tests.
+    """
 
-    for topic_name in _active_endpoints:
+    from _receiver import WebhookReceiver
+    from config import EndpointConfig, TestConfig
 
-        # Allocate a port and a named output directory
+    # Kill any leftover Zato servers from interrupted previous runs ..
+    _ = subprocess.run(['pkill', '-f', 'zato.server.main'], capture_output=True)
+    time.sleep(2)
+
+    start_time = time.monotonic()
+
+    # Generate random passwords ..
+    random_bytes = os.urandom(8)
+    random_suffix = random_bytes.hex()
+    publisher_password = 'test.pub.' + random_suffix
+
+    random_bytes = os.urandom(8)
+    random_suffix = random_bytes.hex()
+    puller_password = 'test.pull.' + random_suffix
+
+    random_bytes = os.urandom(8)
+    random_suffix = random_bytes.hex()
+    invoke_password = 'test.invoke.' + random_suffix
+
+    subscriber_passwords:'strstrdict' = {}
+
+    for topic_name in _topic_names:
+        key = _topic_to_key(topic_name)
+        random_bytes = os.urandom(8)
+        random_suffix = random_bytes.hex()
+        subscriber_passwords[key] = 'test.sub.' + random_suffix
+
+    # Allocate ports and start receivers ..
+    _state.quickstart_directory = tempfile.mkdtemp(prefix='zato_pubsub_push_qs_')
+    _state.test_data_directory = tempfile.mkdtemp(prefix='zato_pubsub_push_data_')
+    endpoints:'endpoint_config_dict' = {}
+    placeholders:'str_strint_dict' = {}
+
+    placeholders['publisher_password'] = publisher_password
+    placeholders['puller_password'] = puller_password
+
+    for topic_name in _topic_names:
+        key = _topic_to_key(topic_name)
+
+        # .. password placeholder ..
+        placeholders[f'sub_{key}_password'] = subscriber_passwords[key]
+
+        # .. port placeholder ..
         port = _find_free_port()
-        purpose = topic_name.replace('.', '_')
-        output_directory = _make_tmpdir_name(purpose)
+        placeholders[f'port_{key}'] = port
+
+        # .. output directory ..
+        output_directory = os.path.join(_state.test_data_directory, 'receivers', key)
         os.makedirs(output_directory, exist_ok=True)
 
-        # Record in config
-        PubSubPushTestConfig.endpoint_ports[topic_name] = port
-        PubSubPushTestConfig.endpoint_output_dirs[topic_name] = output_directory
-
-        # Build the expected path that matches the enmasse template's url_path
-        expected_path = '/webhook/' + topic_name.replace('.', '/')
-
-        # Start the receiver and record its control handles
-        receiver = ReceiverServer(port, output_directory, expected_path)
+        # .. start the receiver ..
+        receiver = WebhookReceiver(port, output_directory)
         receiver.start()
-        receiver_servers.append(receiver)
+        _state.receivers.append(receiver)
 
-        PubSubPushTestConfig.receiver_controls[topic_name] = receiver.behavior
-        PubSubPushTestConfig.receiver_servers[topic_name] = receiver
+        endpoint_config = EndpointConfig(
+            port=port,
+            output_directory=output_directory,
+            receiver=receiver,
+        )
+        endpoints[topic_name] = endpoint_config
 
-    # .. build a port map for all 10 endpoints in the template.
-    # Inactive endpoints get a dummy port that will never be connected to ..
-    all_topics = [
-        'iam.user.created',
-        'iam.user.deleted',
-        'iam.role.assigned',
-        'iam.password.changed',
-        'iam.login.failed',
-        'customer.registered',
-        'customer.updated',
-        'customer.deactivated',
-        'order.placed',
-        'order.shipped',
-    ]
+    receiver_time = time.monotonic()
+    receiver_elapsed = receiver_time - start_time
+    logger.info('Receivers started: %.1fs', receiver_elapsed)
 
-    port_map = {}
+    # Render the enmasse template ..
+    rendered_yaml = _render_template(placeholders)
+    rendered_path = os.path.join(_state.test_data_directory, 'enmasse.yaml')
 
-    for topic_name in all_topics:
-        if topic_name in PubSubPushTestConfig.endpoint_ports:
-            port_map[topic_name] = PubSubPushTestConfig.endpoint_ports[topic_name]
-        else:
-            port_map[topic_name] = 99999
+    with open(rendered_path, 'w') as rendered_file:
+        _ = rendered_file.write(rendered_yaml)
 
-    # .. render the enmasse YAML template with actual values ..
-    rendered_yaml = _render_enmasse_template(
-        publisher_password,
-        puller_password,
-        subscriber_password,
-        port_map,
-    )
-
-    # .. write the rendered YAML to a temp file ..
-    enmasse_directory = _make_tmpdir_name('enmasse')
-    os.makedirs(enmasse_directory, exist_ok=True)
-    enmasse_path = os.path.join(enmasse_directory, 'enmasse_pubsub_push.yaml')
-
-    with open(enmasse_path, 'w') as enmasse_file:
-        _ = enmasse_file.write(rendered_yaml)
-
-    # .. create the Zato quickstart environment ..
-    server_directory = _make_tmpdir_name('server')
-
+    # Create a quickstart environment ..
     quickstart_environment = os.environ.copy()
     _ = quickstart_environment.pop('COVERAGE_PROCESS_START', None)
 
     quickstart_command = [
-        _zato_bin, 'quickstart', 'create', server_directory,
+        _zato_bin, 'quickstart', 'create', _state.quickstart_directory,
         '--force',
         '--password', invoke_password,
         '--servers', '1',
@@ -243,41 +322,38 @@ def pubsub_push_server() -> 'Generator[None, None, None]': # type: ignore[misc]
     ]
 
     result = subprocess.run(
-        quickstart_command,
-        capture_output=True,
-        text=True,
-        timeout=180,
-        env=quickstart_environment,
-    )
+        quickstart_command, capture_output=True, text=True, check=False,
+        timeout=_quickstart_timeout, env=quickstart_environment)
 
     if result.returncode != 0:
-        raise RuntimeError(
-            f'quickstart create failed:\nstdout: {result.stdout}\nstderr: {result.stderr}'
-        )
+        raise RuntimeError(f'quickstart create failed:\nstdout: {result.stdout}\nstderr: {result.stderr}')
 
-    server_path = os.path.join(server_directory, 'server1')
+    quickstart_time = time.monotonic()
+    quickstart_elapsed = quickstart_time - receiver_time
+    logger.info('Quickstart create: %.1fs', quickstart_elapsed)
 
-    # .. import enmasse YAML into the ODB before starting the server.
-    # The server is not running yet, so enmasse will fail to reload config
-    # after a successful ODB import. We set Zato_Needs_Config_Reload=False
-    # so enmasse skips the reload step entirely and exits cleanly ..
-    enmasse_environment = quickstart_environment.copy()
+    server_directory = os.path.join(_state.quickstart_directory, 'server1')
+
+    # Import the enmasse YAML into the ODB before starting the server ..
+    enmasse_environment = os.environ.copy()
     enmasse_environment['Zato_Needs_Config_Reload'] = 'False'
 
+    enmasse_command = [
+        _zato_bin, 'enmasse', '--import', '--input', rendered_path, server_directory,
+    ]
+
     enmasse_result = subprocess.run(
-        [_zato_bin, 'enmasse', server_path, '--import', '--input', enmasse_path],
-        capture_output=True,
-        text=True,
-        timeout=60,
-        env=enmasse_environment,
-    )
+        enmasse_command, capture_output=True, text=True, check=False,
+        timeout=_quickstart_timeout, env=enmasse_environment)
 
     if enmasse_result.returncode != 0:
-        raise RuntimeError(
-            f'enmasse import failed:\nstdout: {enmasse_result.stdout}\nstderr: {enmasse_result.stderr}'
-        )
+        raise RuntimeError(f'enmasse import failed:\nstdout: {enmasse_result.stdout}\nstderr: {enmasse_result.stderr}')
 
-    # .. allocate dynamic ports for this test run ..
+    enmasse_time = time.monotonic()
+    enmasse_elapsed = enmasse_time - quickstart_time
+    logger.info('Enmasse import: %.1fs', enmasse_elapsed)
+
+    # Start the server in foreground mode ..
     server_port = _find_free_port()
     broker_port = _find_free_port()
 
@@ -286,57 +362,107 @@ def pubsub_push_server() -> 'Generator[None, None, None]': # type: ignore[misc]
     server_environment['Zato_Broker_HTTP_Port'] = str(broker_port)
     _ = server_environment.pop('COVERAGE_PROCESS_START', None)
 
-    # .. start the server in the foreground ..
-    _server_process = subprocess.Popen(
-        [_zato_bin, 'start', server_path, '--fg'],
+    _state.server_process = subprocess.Popen(
+        [_zato_bin, 'start', server_directory, '--fg'],
         env=server_environment,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
 
-    start_time = time.monotonic()
-    server_output_lines:'strlist' = []
+    popen_time = time.monotonic()
+    popen_elapsed = popen_time - enmasse_time
+    logger.info('Popen started: %.1fs', popen_elapsed)
 
-    def _capture_server_output() -> 'None':
-        for line in iter(_server_process.stdout.readline, b''): # type: ignore[union-attr]
-            text = line.decode('utf-8', errors='replace').rstrip()
-            elapsed = time.monotonic() - start_time
-            server_output_lines.append(f'[SERVER {elapsed:6.1f}s] {text}')
+    # .. stream server stdout in a background thread ..
+    def _stream_server_output() -> 'None':
+        stdout = _state.server_process.stdout # type: ignore[union-attr]
+        readline = stdout.readline # pyright: ignore[reportOptionalMemberAccess]
 
-    stdout_thread = threading.Thread(target=_capture_server_output, daemon=True)
+        for line in iter(readline, b''):
+            decoded = line.decode('utf-8', errors='replace')
+            text = decoded.rstrip()
+            current_time = time.monotonic()
+            elapsed = current_time - popen_time
+            logger.debug('[SERVER %6.1fs] %s', elapsed, text)
+
+    stdout_thread = threading.Thread(target=_stream_server_output, daemon=True)
     stdout_thread.start()
 
+    # .. wait for the server to come up ..
     host = '127.0.0.1'
 
-    # .. wait for the server to become ready ..
     try:
         _wait_for_server(host, server_port)
-    except Exception:
-        print('\n--- Server did not become ready, captured output: ---')
+        ready_time = time.monotonic()
+        ready_elapsed = ready_time - popen_time
+        logger.info('Server ready: %.1fs', ready_elapsed)
 
-        for line in server_output_lines:
-            print(line)
-
-        print('--- End of server output ---\n')
-
-        _ = _server_process.terminate()
-        _ = _server_process.wait(timeout=10)
+    except (ConnectionRefusedError, OSError, RuntimeError):
+        logger.error('Server did not become ready')
+        _state.kill_server()
         raise
 
-    # .. update the config so tests use the dynamically allocated port ..
-    PubSubPushTestConfig.base_url = f'http://{host}:{server_port}'
+    setup_time = time.monotonic()
+    total_elapsed = setup_time - start_time
+    logger.info('Total setup: %.1fs', total_elapsed)
+
+    # .. populate TestConfig ..
+    TestConfig.base_url             = f'http://{host}:{server_port}'
+    TestConfig.password             = invoke_password
+    TestConfig.publisher_username   = 'test.pubsub.publisher'
+    TestConfig.publisher_password   = publisher_password
+    TestConfig.puller_username      = 'test.pubsub.puller'
+    TestConfig.puller_password      = puller_password
+    TestConfig.server_directory     = server_directory
+    TestConfig.endpoints            = endpoints
 
     yield
 
-    # .. teardown - terminate the server process we started ..
-    if _server_process:
-        if _server_process.poll() is None:
-            _ = _server_process.terminate()
-            _ = _server_process.wait(timeout=10)
+    _state.cleanup()
 
-    # .. and shut down all HTTP receivers.
-    for receiver in receiver_servers:
-        receiver.shutdown()
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(autouse=True)
+def clear_all_outputs() -> 'any_':
+    """ Clears all delivered message files from every receiver's output directory before each test.
+    """
+    from config import TestConfig
+
+    for endpoint_config in TestConfig.endpoints.values():
+        endpoint_config.receiver.clear_output()
+
+    yield
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture()
+def reset_receivers() -> 'any_':
+    """ Resets all receivers to accept mode before the test, then clears output.
+    """
+    from config import TestConfig
+
+    for endpoint_config in TestConfig.endpoints.values():
+        endpoint_config.receiver.behavior.reset()
+        endpoint_config.receiver.clear_output()
+
+    yield
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture()
+def drain_pull_queue() -> 'any_':
+    """ Drains the pull queue so the test starts with zero pending messages.
+    """
+    from _client import PullClient
+    from config import TestConfig
+
+    client = PullClient(TestConfig.base_url, TestConfig.puller_username, TestConfig.puller_password)
+    client.drain()
+
+    yield
 
 # ################################################################################################################################
 # ################################################################################################################################

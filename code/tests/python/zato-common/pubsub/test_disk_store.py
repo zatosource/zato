@@ -143,7 +143,7 @@ class TestDiskMessageStore(unittest.TestCase):
         message_id = 'zpsm.20260517-113200-1234-abcdef1234567890'
         topic_name = 'test.topic'
 
-        data_ref = self.store._make_ref(message_id, topic_name)
+        data_ref = self.store.make_ref(message_id, topic_name)
 
         # .. the hex part is 'abcdef1234567890', so shard dirs should be 'ab' and 'cd' ..
         self.assertIn('ab', data_ref)
@@ -160,8 +160,8 @@ class TestDiskMessageStore(unittest.TestCase):
         message_id_2 = 'zpsm.20260517-113200-1234-xyzcde1234567890'
         topic_name = 'test.topic'
 
-        ref_1 = self.store._make_ref(message_id_1, topic_name)
-        ref_2 = self.store._make_ref(message_id_2, topic_name)
+        ref_1 = self.store.make_ref(message_id_1, topic_name)
+        ref_2 = self.store.make_ref(message_id_2, topic_name)
 
         self.assertNotEqual(ref_1, ref_2)
 

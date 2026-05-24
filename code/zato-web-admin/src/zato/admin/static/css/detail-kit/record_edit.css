@@ -1,0 +1,163 @@
+@import url("../zato_action_button.css");
+
+/* ------------------------------------------------------------ */
+/* Record edit - form layout                                     */
+/* ------------------------------------------------------------ */
+
+.record-edit-readonly-section {
+    margin-bottom: 24px;
+    padding: 16px;
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    background: var(--background-light);
+}
+
+.record-edit-field-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.record-edit-field-readonly {
+    margin-bottom: 8px;
+}
+
+.record-edit-label {
+    display: inline-block;
+    width: 140px;
+    min-width: 140px;
+    padding-top: 6px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.record-edit-value {
+    padding-top: 6px;
+    font-size: 13px;
+    color: var(--primary-dark);
+}
+
+/* ------------------------------------------------------------ */
+/* Record edit - input fields                                    */
+/* ------------------------------------------------------------ */
+
+.record-edit-input {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--primary-dark);
+    background: var(--background-light);
+}
+
+.record-edit-input:focus {
+    outline: none;
+    border-color: var(--component-accent);
+}
+
+.record-edit-textarea {
+    min-height: 200px;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.record-edit-monospace {
+    font-family: monospace;
+    font-size: 12px;
+}
+
+/* ------------------------------------------------------------ */
+/* Record edit - syntax highlight overlay                        */
+/* ------------------------------------------------------------ */
+
+.record-edit-highlight-container {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+}
+
+.record-edit-highlight-container .record-edit-textarea,
+.record-edit-highlight-layer {
+    padding: 6px 10px;
+    border: 1px solid #3e3d32;
+    border-radius: 4px;
+    font-family: Menlo, Consolas, Monaco, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.record-edit-highlight-container .record-edit-textarea {
+    position: relative;
+    z-index: 1;
+    display: block;
+    min-height: 200px;
+    margin: 0;
+    background: transparent;
+    color: transparent;
+    caret-color: #f8f8f2;
+    resize: vertical;
+    overflow: auto;
+}
+
+.record-edit-highlight-container .record-edit-textarea:focus {
+    outline: none;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.record-edit-highlight-container .record-edit-textarea::selection {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.record-edit-highlight-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    overflow: hidden;
+    pointer-events: none;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: #f8f8f2;
+    background: #272822;
+}
+
+.record-edit-highlight-container .record-edit-textarea:focus ~ .record-edit-highlight-layer {
+    border-color: var(--component-accent);
+}
+
+/* ------------------------------------------------------------ */
+/* Record edit - Ace editor                                      */
+/* ------------------------------------------------------------ */
+
+.record-edit-ace-editor {
+    flex: 1;
+    width: 100%;
+    min-height: 200px;
+    height: 340px;
+    border: 1px solid #3e3d32;
+    border-radius: 4px;
+}
+
+/* ------------------------------------------------------------ */
+/* Record edit - footer                                          */
+/* ------------------------------------------------------------ */
+
+.record-edit-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 6px 10px;
+}
+
+.record-edit-footer-dark {
+    margin-top: 6px;
+}

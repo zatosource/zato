@@ -19,6 +19,7 @@ from zato.common.api import SCHEDULER
 from zato.common.odb.model import IntervalBasedJob, Job
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
+from zato.common.defaults import default_server_base_dir
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,7 +38,7 @@ class TestEnmasseSchedulerFromYAML(TestCase):
     def setUp(self) -> 'None':
 
         # Server path for database connection
-        self.server_path = os.path.expanduser('~/env/qs-1/server1')
+        self.server_path = default_server_base_dir
 
         # Create a temporary file using the existing template which already contains scheduler job definitions
         self.temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.yaml')
