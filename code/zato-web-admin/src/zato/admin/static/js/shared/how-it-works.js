@@ -85,7 +85,7 @@ $.fn.zato.how_it_works._setupInlineBadges = function(config, mainBadge) {
     var anchorSelector = config.inlineBadgeAnchorSelector;
     var descriptions = config.descriptions;
 
-    // .. show badge on row hover, hide immediately when entering a row without a description ..
+    // .. show badge on row hover ..
     $(container).off('mouseenter.how_it_works_inline').on('mouseenter.how_it_works_inline', rowSelector, function() {
         clearTimeout(howItWorks._inlineHideTimer);
 
@@ -110,8 +110,10 @@ $.fn.zato.how_it_works._setupInlineBadges = function(config, mainBadge) {
         }
 
         // .. position the badge right after the anchor text, vertically centered ..
+        // .. make it visible first so offsetHeight is accurate ..
+        floatingBadge.classList.add('how-it-works-badge-visible');
         var boundingRectangle = anchor.getBoundingClientRect();
-        var badgeHeight = floatingBadge.offsetHeight || 14;
+        var badgeHeight = floatingBadge.offsetHeight;
         var centeredTop = boundingRectangle.top + (boundingRectangle.height - badgeHeight) / 2;
         floatingBadge.style.top = (centeredTop + window.scrollY) + 'px';
         floatingBadge.style.left = (boundingRectangle.right + window.scrollX + 6) + 'px';
@@ -131,8 +133,6 @@ $.fn.zato.how_it_works._setupInlineBadges = function(config, mainBadge) {
     // .. clicking the inline badge activates help mode at that specific field ..
     $(floatingBadge).off('click.how_it_works_inline').on('click.how_it_works_inline', function(event) {
         event.stopPropagation();
-
-        floatingBadge.classList.remove('how-it-works-badge-visible');
 
         var fieldId = floatingBadge._howItWorksFieldId;
         var badge = floatingBadge._howItWorksMainBadge;
@@ -378,6 +378,12 @@ $.fn.zato.how_it_works._deactivate = function() {
 
     // .. remove depressed look ..
     state.badge.classList.remove('how-it-works-active');
+
+    // .. hide the inline badge when leaving help mode ..
+    var inlineBadge = $.fn.zato.how_it_works._inlineBadge;
+    if (inlineBadge) {
+        inlineBadge.classList.remove('how-it-works-badge-visible');
+    }
 
     // .. restore dialog closeOnEscape ..
     if (state.dialog.classList) {
