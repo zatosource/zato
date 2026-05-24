@@ -326,13 +326,118 @@
             });
         });
 
+        // .. build the delete confirmation overlay (once) ..
+        var $deleteOverlay = null;
+        var _deleteAceEditor = null;
+        var _deleteContext = null;
+
+        function _build_delete_overlay() {
+            var html = '' +
+                '<div class="queue-delete-overlay hidden" id="queue-delete-overlay">' +
+                    '<div class="queue-delete-overlay-backdrop"></div>' +
+                    '<div class="queue-delete-overlay-content">' +
+                        '<div class="queue-delete-overlay-header">' +
+                            '<h2 class="queue-delete-overlay-title">Delete message</h2>' +
+                            '<button class="queue-delete-overlay-close-btn" type="button">\u00d7</button>' +
+                        '</div>' +
+                        '<div class="queue-delete-overlay-body">' +
+                            '<p class="queue-delete-overlay-msg-id"></p>' +
+                            '<div class="queue-delete-overlay-editor" id="queue-delete-editor"></div>' +
+                        '</div>' +
+                        '<div class="queue-delete-overlay-footer">' +
+                            '<button class="zato-action-button queue-delete-overlay-cancel" type="button">Cancel</button>' +
+                            '<button class="zato-action-button queue-delete-overlay-confirm" type="button">Delete</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+
+            $('body').append(html);
+            $deleteOverlay = $('#queue-delete-overlay');
+
+            _deleteAceEditor = ace.edit('queue-delete-editor');
+            _deleteAceEditor.setTheme('ace/theme/monokai');
+            _deleteAceEditor.session.setMode('ace/mode/json');
+            _deleteAceEditor.setShowPrintMargin(false);
+            _deleteAceEditor.setFontSize(13);
+
+            $deleteOverlay.find('.queue-delete-overlay-backdrop').on('click', _close_delete_overlay);
+            $deleteOverlay.find('.queue-delete-overlay-close-btn').on('click', _close_delete_overlay);
+            $deleteOverlay.find('.queue-delete-overlay-cancel').on('click', _close_delete_overlay);
+
+            $deleteOverlay.find('.queue-delete-overlay-confirm').on('click', function() {
+                _perform_delete();
+            });
+
+            $(document).on('keydown.queue_delete_overlay', function(e) {
+                if (e.key === 'Escape' && $deleteOverlay && !$deleteOverlay.hasClass('hidden')) {
+                    _close_delete_overlay();
+                }
+            });
+        }
+
+        function _open_delete_overlay(msgId, data, $row, topicName, streamId) {
+            if (!$deleteOverlay) {
+                _build_delete_overlay();
+            }
+
+            _deleteContext = {
+                msgId: msgId,
+                topicName: topicName,
+                streamId: streamId,
+                $row: $row
+            };
+
+            $deleteOverlay.find('.queue-delete-overlay-msg-id').text(msgId);
+            _deleteAceEditor.setValue(data, -1);
+            $deleteOverlay.removeClass('hidden');
+        }
+
+        function _close_delete_overlay() {
+            if ($deleteOverlay) {
+                $deleteOverlay.addClass('hidden');
+            }
+            _deleteContext = null;
+        }
+
+        function _perform_delete() {
+            var ctx = _deleteContext;
+
+            $.ajax({
+                type: 'POST',
+                url: '/zato/pubsub/subscription/queue/message/delete/',
+                data: JSON.stringify({
+                    msg_id: ctx.msgId,
+                    topic_name: ctx.topicName,
+                    sub_key: subKey,
+                    redis_stream_id: ctx.streamId
+                }),
+                contentType: 'application/json',
+                headers: {'X-CSRFToken': $.cookie('csrftoken')},
+                dataType: 'json',
+                success: function() {
+                    ctx.$row.remove();
+
+                    var ns = $.fn.zato.pubsub.queue;
+                    var pag = ns._pagination;
+                    var newTotal = pag.total() - 1;
+                    pag.set_total(newTotal);
+                    $('#stat-depth').text(newTotal.toLocaleString());
+
+                    _close_delete_overlay();
+                },
+                error: function(xhr) {
+                    var errorMessage = $.fn.zato.pubsub.queue._defaultErrorMessage;
+                    if (xhr.responseJSON) {
+                        errorMessage = xhr.responseJSON.error;
+                    }
+                    alert('Error: ' + errorMessage);
+                }
+            });
+        }
+
         // .. wire delete link clicks ..
         $(document).on('click', '.queue-delete-link', function(e) {
             e.preventDefault();
-
-            if (!confirm('Delete this message?')) {
-                return;
-            }
 
             var $link = $(this);
             var $row = $link.closest('tr');
@@ -342,31 +447,19 @@
 
             $.ajax({
                 type: 'POST',
-                url: '/zato/pubsub/subscription/queue/message/delete/',
+                url: config.poll_url,
                 data: JSON.stringify({
+                    action: 'get-message-detail',
                     msg_id: msgId,
                     topic_name: topicName,
-                    sub_key: subKey,
                     redis_stream_id: streamId
                 }),
                 contentType: 'application/json',
                 headers: {'X-CSRFToken': $.cookie('csrftoken')},
                 dataType: 'json',
-                success: function() {
-                    $row.remove();
-
-                    var ns = $.fn.zato.pubsub.queue;
-                    var pag = ns._pagination;
-
-                    // .. re-fetch the current page to update total and pagination ..
-                    pag.fetch_page(pag.current_page());
-                },
-                error: function(xhr) {
-                    var errorMessage = $.fn.zato.pubsub.queue._defaultErrorMessage;
-                    if (xhr.responseJSON) {
-                        errorMessage = xhr.responseJSON.error;
-                    }
-                    alert('Error: ' + errorMessage);
+                success: function(resp) {
+                    var data = resp.has_data ? resp.data : '';
+                    _open_delete_overlay(msgId, data, $row, topicName, streamId);
                 }
             });
         });
