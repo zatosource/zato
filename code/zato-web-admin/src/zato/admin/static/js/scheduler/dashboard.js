@@ -1,6 +1,5 @@
 
-if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
-if (typeof $.fn.zato.scheduler === 'undefined') { $.fn.zato.scheduler = {}; }
+
 $.fn.zato.scheduler.dashboard = {};
 
 // Dashboard configuration. Each key can be overridden by per-page dashboards.

@@ -295,7 +295,7 @@
                                     <li class="child"><a class="menu-link" href="{% url "groups" "zato-api-creds" %}?cluster={{ cluster_id|default:"1" }}">Groups</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "security-ntlm" %}?cluster={{ cluster_id|default:"1" }}">NTLM</a></li>
                                     {% if security_posture_enabled %}
-                                    <li class="child"><a class="menu-link" href="{% url "security-posture" %}?cluster={{ cluster_id|default:"1" }}">Security posture</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "security-posture" %}?cluster={{ cluster_id|default:"1" }}&tab=authentication">Security posture</a></li>
                                     {% endif %}
                                 </ul>
                             </li>
