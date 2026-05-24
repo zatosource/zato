@@ -232,7 +232,6 @@ class GetMatches(AdminService):
             # Get all topics for this cluster
             topics = session.query(PubSubTopic).filter(
                 PubSubTopic.cluster_id == cluster_id,
-                PubSubTopic.is_active == True
             ).all()
 
             # Create temporary matcher with the pattern
