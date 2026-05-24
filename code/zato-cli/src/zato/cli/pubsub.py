@@ -218,10 +218,7 @@ Examples:
                 if isinstance(data, str):
                     data = json.loads(data)
 
-                if sub_key in sec_names:
-                    self._print_header(f'Queue: {sub_key} ({sec_names[sub_key]})')
-                else:
-                    self._print_header(f'Queue: {sub_key}')
+                self._print_header(f'Queue: {sub_key} ({sec_names[sub_key]})')
                 self._print_count('total', data['total'])
                 self._print_field('page', data['page'])
                 print()
