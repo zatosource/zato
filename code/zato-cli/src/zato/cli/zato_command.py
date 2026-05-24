@@ -117,6 +117,7 @@ class CommandStore:
              FromConfig,                                     \
              ide                 as ide_mod,                 \
              info                as info_mod,                \
+             pubsub              as pubsub_mod,              \
              quickstart          as quickstart_mod,          \
              service             as service_mod,             \
              stop                as stop_mod,                \
@@ -349,6 +350,69 @@ class CommandStore:
         service_invoke = service_subs.add_parser('invoke', description=service_mod.Invoke.__doc__, parents=[base_parser])
         service_invoke.set_defaults(command='service_invoke')
         self.add_opts(service_invoke, service_mod.Invoke.opts)
+
+        #
+        # pubsub
+        #
+        _pubsub_description = """\
+Pub/sub message queue management.
+
+Subcommands:
+  publish   Publish a message to a topic
+  browse    Browse messages in a subscription queue
+  get       Get a single message by its ID
+  update    Update the payload of a message
+  delete    Delete a single message from a queue
+  clear     Clear all messages from a subscription queue
+
+Examples:
+  zato pubsub publish /path/to/server --topic /my/topic --data '{"key": "value"}'
+  zato pubsub browse /path/to/server --sub-key zato.sub.abc123 --state pending
+  zato pubsub get /path/to/server --msg-id zpsm1234 --topic-name /my/topic --redis-stream-id 1716000000000-0
+  zato pubsub update /path/to/server --msg-id zpsm1234 --topic-name /my/topic --data '{"updated": true}'
+  zato pubsub delete /path/to/server --msg-id zpsm1234 --topic-name /my/topic --sub-key zato.sub.abc123 --redis-stream-id 1716000000000-0
+  zato pubsub clear /path/to/server --sub-key zato.sub.abc123
+"""
+
+        pubsub = subs.add_parser('pubsub', description=_pubsub_description,
+            parents=[base_parser], formatter_class=formatter_class)
+        pubsub_subs = pubsub.add_subparsers()
+
+        pubsub_publish = pubsub_subs.add_parser('publish',
+            description=pubsub_mod.Publish.__doc__, parents=[base_parser], formatter_class=formatter_class)
+        pubsub_publish.add_argument('path', help='Path to a running Zato server')
+        pubsub_publish.set_defaults(command='pubsub_publish')
+        self.add_opts(pubsub_publish, pubsub_mod.Publish.opts)
+
+        pubsub_browse = pubsub_subs.add_parser('browse',
+            description=pubsub_mod.Browse.__doc__, parents=[base_parser], formatter_class=formatter_class)
+        pubsub_browse.add_argument('path', help='Path to a running Zato server')
+        pubsub_browse.set_defaults(command='pubsub_browse')
+        self.add_opts(pubsub_browse, pubsub_mod.Browse.opts)
+
+        pubsub_get = pubsub_subs.add_parser('get',
+            description=pubsub_mod.Get.__doc__, parents=[base_parser], formatter_class=formatter_class)
+        pubsub_get.add_argument('path', help='Path to a running Zato server')
+        pubsub_get.set_defaults(command='pubsub_get')
+        self.add_opts(pubsub_get, pubsub_mod.Get.opts)
+
+        pubsub_update = pubsub_subs.add_parser('update',
+            description=pubsub_mod.Update.__doc__, parents=[base_parser], formatter_class=formatter_class)
+        pubsub_update.add_argument('path', help='Path to a running Zato server')
+        pubsub_update.set_defaults(command='pubsub_update')
+        self.add_opts(pubsub_update, pubsub_mod.Update.opts)
+
+        pubsub_delete = pubsub_subs.add_parser('delete',
+            description=pubsub_mod.Delete.__doc__, parents=[base_parser], formatter_class=formatter_class)
+        pubsub_delete.add_argument('path', help='Path to a running Zato server')
+        pubsub_delete.set_defaults(command='pubsub_delete')
+        self.add_opts(pubsub_delete, pubsub_mod.Delete.opts)
+
+        pubsub_clear = pubsub_subs.add_parser('clear',
+            description=pubsub_mod.Clear.__doc__, parents=[base_parser], formatter_class=formatter_class)
+        pubsub_clear.add_argument('path', help='Path to a running Zato server')
+        pubsub_clear.set_defaults(command='pubsub_clear')
+        self.add_opts(pubsub_clear, pubsub_mod.Clear.opts)
 
         #
         # start

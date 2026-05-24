@@ -1332,3 +1332,47 @@ class ClearQueue(AdminService):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class DeleteMessage(AdminService):
+    """ Deletes a single message from a subscriber's queue.
+    """
+
+    name  = 'zato.pubsub.subscription.delete-message'
+    input = 'msg_id', 'topic_name', 'sub_key', 'redis_stream_id'
+
+    def handle(self) -> 'None':
+
+        # Extract request parameters ..
+        msg_id          = self.request.input.msg_id
+        topic_name      = self.request.input.topic_name
+        sub_key         = self.request.input.sub_key
+        redis_stream_id = self.request.input.redis_stream_id
+
+        # .. resolve stream key and fetch the entry to get data_ref ..
+        stream_key = self.server.pubsub_redis.get_stream_key(topic_name)
+        raw_entries = self.server.pubsub_redis.redis.xrange(stream_key, min=redis_stream_id, max=redis_stream_id)
+
+        if not raw_entries:
+            self.response.payload = {'error': f'Message not found: {redis_stream_id}'}
+            return
+
+        # .. extract data_ref from the entry ..
+        entry_data = raw_entries[0][1]
+        data_ref = entry_data['data_ref']
+
+        # .. ack the message (cleans up pending sets and disk if last subscriber) ..
+        self.server.pubsub_redis.ack_message(stream_key, sub_key, redis_stream_id, data_ref)
+
+        # .. check if no other subscriber needs this entry ..
+        pending_key = self.server.pubsub_redis._get_pending_key(data_ref)
+        remaining = self.server.pubsub_redis.redis.scard(pending_key)
+
+        # .. if no one else needs it, remove the entry from the queue entirely ..
+        if remaining == 0:
+            _ = self.server.pubsub_redis.redis.xdel(stream_key, redis_stream_id)
+
+        # .. and return success.
+        self.response.payload = {'msg_id': msg_id, 'status': 'ok'}
+
+# ################################################################################################################################
+# ################################################################################################################################
