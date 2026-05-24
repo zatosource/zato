@@ -280,20 +280,6 @@ span.like-a {
     border-bottom: 1px solid rgba(169, 162, 68, 0.5);
 }
 
-@keyframes zatoBounce {
-    0%, 100% { transform: scale(1); }
-    50%      { transform: scale(1.02); }
-}
-
-tr.zato-row-bounce .zato-bounce-wrap {
-    display: inline-block;
-    animation: zatoBounce 0.4s ease-in-out 2;
-}
-
-tr.zato-row-bounce {
-    animation: zatoBounce 0.4s ease-in-out 2;
-    transform-origin: center center;
-}
 
 #data-table th {
     white-space: nowrap;
