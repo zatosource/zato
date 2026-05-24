@@ -170,11 +170,44 @@ $(document).ready(function() {
 
                     <div class="posture-check-item" id="posture-item-orphaned-services" data-check="orphaned_services">
                         <div class="posture-check-text" id="posture-text-orphaned-services">
-                            <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-orphaned-services">Orphaned services</span></div>
+                            <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-orphaned-services">Unattached services</span></div>
                             <span class="posture-check-description" id="posture-description-orphaned-services">Detect services with no channel or scheduled job attached</span>
                         </div>
                         <label class="toggle-switch" for="posture-toggle-orphaned-services">
                             <input type="checkbox" id="posture-toggle-orphaned-services" data-check="orphaned_services" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-pii-detection" data-check="pii_detection">
+                        <div class="posture-check-text" id="posture-text-pii-detection">
+                            <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-pii-detection">Personal data in responses</span></div>
+                            <span class="posture-check-description" id="posture-description-pii-detection">Scan outgoing payloads for credit card numbers, national IDs and other PII</span>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-pii-detection">
+                            <input type="checkbox" id="posture-toggle-pii-detection" data-check="pii_detection" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-connection-string-leaks" data-check="connection_string_leaks">
+                        <div class="posture-check-text" id="posture-text-connection-string-leaks">
+                            <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-connection-string-leaks">Connection string leaks</span></div>
+                            <span class="posture-check-description" id="posture-description-connection-string-leaks">Detect database or broker connection strings appearing in API responses</span>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-connection-string-leaks">
+                            <input type="checkbox" id="posture-toggle-connection-string-leaks" data-check="connection_string_leaks" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="posture-check-item" id="posture-item-cumulative-data" data-check="cumulative_data">
+                        <div class="posture-check-text" id="posture-text-cumulative-data">
+                            <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-cumulative-data">Cumulative data exposure</span></div>
+                            <span class="posture-check-description" id="posture-description-cumulative-data">Track total volume of sensitive fields returned per consumer over time</span>
+                        </div>
+                        <label class="toggle-switch" for="posture-toggle-cumulative-data">
+                            <input type="checkbox" id="posture-toggle-cumulative-data" data-check="cumulative_data" checked>
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
@@ -381,39 +414,6 @@ $(document).ready(function() {
                         </div>
                         <label class="toggle-switch" for="posture-toggle-call-pattern-anomaly">
                             <input type="checkbox" id="posture-toggle-call-pattern-anomaly" data-check="call_pattern_anomaly" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-
-                    <div class="posture-check-item" id="posture-item-pii-detection" data-check="pii_detection">
-                        <div class="posture-check-text" id="posture-text-pii-detection">
-                            <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-pii-detection">Personal data in responses</span></div>
-                            <span class="posture-check-description" id="posture-description-pii-detection">Scan outgoing payloads for credit card numbers, national IDs and other PII</span>
-                        </div>
-                        <label class="toggle-switch" for="posture-toggle-pii-detection">
-                            <input type="checkbox" id="posture-toggle-pii-detection" data-check="pii_detection" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-
-                    <div class="posture-check-item" id="posture-item-connection-string-leaks" data-check="connection_string_leaks">
-                        <div class="posture-check-text" id="posture-text-connection-string-leaks">
-                            <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-connection-string-leaks">Connection string leaks</span></div>
-                            <span class="posture-check-description" id="posture-description-connection-string-leaks">Detect database or broker connection strings appearing in API responses</span>
-                        </div>
-                        <label class="toggle-switch" for="posture-toggle-connection-string-leaks">
-                            <input type="checkbox" id="posture-toggle-connection-string-leaks" data-check="connection_string_leaks" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-
-                    <div class="posture-check-item" id="posture-item-cumulative-data" data-check="cumulative_data">
-                        <div class="posture-check-text" id="posture-text-cumulative-data">
-                            <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-cumulative-data">Cumulative data exposure</span></div>
-                            <span class="posture-check-description" id="posture-description-cumulative-data">Track total volume of sensitive fields returned per consumer over time</span>
-                        </div>
-                        <label class="toggle-switch" for="posture-toggle-cumulative-data">
-                            <input type="checkbox" id="posture-toggle-cumulative-data" data-check="cumulative_data" checked>
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
