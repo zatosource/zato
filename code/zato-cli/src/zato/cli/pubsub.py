@@ -134,12 +134,15 @@ Examples:
 class Browse(_PubSubCommand):
     """ Browses messages in a subscription queue.
 
+If --sub-key is omitted, all subscriptions are browsed.
+
 The --state flag filters by delivery state:
   pending   - messages waiting to be delivered (default)
   delivered - messages already delivered to the subscriber
   all       - all messages in the queue regardless of delivery state
 
 Examples:
+  zato pubsub browse /path/to/server --state all
   zato pubsub browse /path/to/server --sub-key zato.sub.abc123
   zato pubsub browse /path/to/server --sub-key zato.sub.abc123 --state pending --page 2 --page-size 25
   zato pubsub browse /path/to/server --sub-key zato.sub.abc123 --state delivered
@@ -147,7 +150,7 @@ Examples:
     """
 
     opts = [
-        {'name':'--sub-key', 'help':'Subscription key'},
+        {'name':'--sub-key', 'help':'Subscription key (if omitted, browses all subscriptions)'},
         {'name':'--page', 'help':'Page number (default 1)'},
         {'name':'--page-size', 'help':'Messages per page (default 50)'},
         {'name':'--state', 'help':'Delivery state filter: pending (default), delivered, all'},
@@ -163,43 +166,79 @@ Examples:
 
         client = self._get_client(args)
 
-        payload:'anydict' = {
-            'sub_key': args.sub_key,
-        }
-
-        if args.page:
-            payload['page'] = args.page
-
-        if args.page_size:
-            payload['page_size'] = args.page_size
-
-        if args.state:
-            payload['state'] = args.state
-
-        response = client.invoke('zato.pubsub.subscription.browse-queue', payload)
-
-        if response.ok:
-            data = response.data
-            if isinstance(data, str):
-                data = json.loads(data)
-
-            self._print_header('Queue messages')
-            self._print_count('total', data['total'])
-            self._print_field('page', data['page'])
-            print()
-
-            for row in data['rows']:
-                self._print_msg_id(row['msg_id'])
-                self._print_field('topic', row['topic_name'])
-                self._print_field('published', row['pub_time_iso'])
-                self._print_field('size', row['data_size'])
-
-                if preview := row.get('data_preview'):
-                    print(f'  {Fore.CYAN}preview:{Style.RESET_ALL} {Fore.WHITE}{preview}{Style.RESET_ALL}')
-
-                print()
+        # .. if no sub_key given, iterate over all subscriptions ..
+        if args.sub_key:
+            sub_keys = [args.sub_key]
         else:
-            self._print_error(f'Browse failed: {response.details}')
+            sub_keys = []
+
+        # .. always fetch subscription list to get security names ..
+        response = client.invoke('zato.pubsub.subscription.get-list', {'cluster_id': 1})
+        if not response.ok:
+            self._print_error(f'Failed to list subscriptions: {response.details}')
+            return
+
+        data = response.data
+        if isinstance(data, str):
+            data = json.loads(data)
+
+        if isinstance(data, list):
+            items = data
+        else:
+            items = data['zato_pubsub_subscription_get_list_response']
+
+        # .. build a sub_key -> sec_name mapping ..
+        sec_names:'anydict' = {}
+        for item in items:
+            sec_names[item['sub_key']] = item['sec_name']
+
+        # .. if no sub_key was given, use all of them ..
+        if not sub_keys:
+            sub_keys = [item['sub_key'] for item in items]
+
+        for sub_key in sub_keys:
+
+            payload:'anydict' = {
+                'sub_key': sub_key,
+            }
+
+            if args.page:
+                payload['page'] = args.page
+
+            if args.page_size:
+                payload['page_size'] = args.page_size
+
+            if args.state:
+                payload['state'] = args.state
+
+            response = client.invoke('zato.pubsub.subscription.browse-queue', payload)
+
+            if response.ok:
+                data = response.data
+                if isinstance(data, str):
+                    data = json.loads(data)
+
+                if sub_key in sec_names:
+                    self._print_header(f'Queue: {sub_key} ({sec_names[sub_key]})')
+                else:
+                    self._print_header(f'Queue: {sub_key}')
+                self._print_count('total', data['total'])
+                self._print_field('page', data['page'])
+                print()
+
+                for row in data['rows']:
+                    self._print_msg_id(row['msg_id'])
+                    self._print_field('topic', row['topic_name'])
+                    self._print_field('published', row['pub_time_iso'])
+                    self._print_field('is_delivered', row['is_delivered'])
+                    self._print_field('size', row['data_size'])
+
+                    if preview := row.get('data_preview'):
+                        print(f'  {Fore.CYAN}preview:{Style.RESET_ALL} {Fore.WHITE}{preview}{Style.RESET_ALL}')
+
+                    print()
+            else:
+                self._print_error(f'Browse failed: {response.details}')
 
 # ################################################################################################################################
 # ################################################################################################################################
