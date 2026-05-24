@@ -291,14 +291,20 @@ def message_payload(request:'any_') -> 'HttpResponse':
 
     # .. read directly from disk ..
     data_reference = _disk_store.make_ref(msg_id, topic_name)
-    load_result = _disk_store.load(data_reference)
+
+    if _disk_store.exists(data_reference):
+        load_result = _disk_store.load(data_reference)
+        response_data = {
+            'data': load_result.data,
+            'data_class': load_result.data_class,
+        }
+    else:
+        response_data = {
+            'data': '',
+            'data_class': '',
+        }
 
     # .. and return the payload as JSON.
-    response_data = {
-        'data': load_result.data,
-        'data_class': load_result.data_class,
-    }
-
     response_json = json.dumps(response_data)
 
     out = HttpResponse(response_json, content_type='application/json')
