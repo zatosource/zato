@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import atexit
+import glob
 import os
 import re
 import shutil
@@ -380,6 +381,79 @@ def api_client(zato_dashboard:'anydict') -> 'ZatoClient':
 
     out = ZatoClient(host, server_port, password)
     return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Patterns that are known noise and should not cause test failures.
+_Log_Noise_Patterns = [
+    'check_latest_version',
+    'favicon.ico',
+    'Could not determine version',
+]
+
+@pytest.fixture(autouse=True)
+def check_no_log_errors(zato_dashboard:'anydict', request:'any_') -> 'any_':
+    """ Checks server and dashboard log files for ERROR or WARNING lines after each test.
+    """
+
+    server_dir = zato_dashboard['server_dir']
+    dashboard_dir = zato_dashboard['dashboard_dir']
+
+    # Collect all log files from both server and dashboard ..
+    log_dirs = [
+        ('server', os.path.join(server_dir, 'logs')),
+        ('dashboard', os.path.join(dashboard_dir, 'logs')),
+    ]
+
+    # .. record the current size of each log file before the test runs ..
+    offsets = {} # type: dict
+
+    for label, log_dir in log_dirs:
+        log_files = glob.glob(os.path.join(log_dir, '*.log'))
+        for log_file in log_files:
+            if os.path.isfile(log_file):
+                offsets[(label, log_file)] = os.path.getsize(log_file)
+
+    yield
+
+    # .. after the test, scan for new ERROR or WARNING lines ..
+    problems = [] # type: list
+
+    for (label, log_file), offset in offsets.items():
+
+        current_size = os.path.getsize(log_file)
+
+        # .. skip if no new content ..
+        if current_size <= offset:
+            continue
+
+        with open(log_file, 'r', encoding='utf-8', errors='replace') as log_handle:
+            _ = log_handle.seek(offset)
+            new_content = log_handle.read()
+
+        for line in new_content.splitlines():
+
+            # .. only care about ERROR and WARNING ..
+            if ' - ERROR - ' not in line and ' - WARNING - ' not in line:
+                continue
+
+            # .. skip known noise ..
+            is_noise = False
+            for noise_pattern in _Log_Noise_Patterns:
+                if noise_pattern in line:
+                    is_noise = True
+                    break
+
+            if is_noise:
+                continue
+
+            problems.append(f'[{label}] {line.strip()}')
+
+    if problems:
+        test_name = request.node.name
+        joined = '\n'.join(problems)
+        pytest.fail(f'Log errors/warnings during {test_name}:\n{joined}')
 
 # ################################################################################################################################
 # ################################################################################################################################
