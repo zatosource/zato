@@ -194,7 +194,10 @@ class ZatoMiddleware:
                     filter_by(id=req.zato.cluster_id).\
                     one()
 
-                url = 'http://127.0.0.1:17010'
+                if url := os.environ.get('Zato_Server_Address'):
+                    pass
+                else:
+                    url = 'http://127.0.0.1:17010'
 
                 auth = (ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD)
                 req.zato.client = Client(req, url, ServiceConst.API_Invoke_Url_Path, auth, to_bunch=True)

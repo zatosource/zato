@@ -83,5 +83,8 @@ vscode
 **/artifacts/
 **/coverage/
 
+# Playwright
+.pytest_cache_playwright/
+
 # Cosmic-ray mutation testing
 *.py.meta

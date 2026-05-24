@@ -4,7 +4,7 @@
 	ruff pyright qa-reqs-install unify \
 	update cron-update stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener \
-	server-django-plugin-tests
+	server-django-plugin-tests playwright
 
 MAKEFLAGS += --silent
 
@@ -151,6 +151,11 @@ restart-dashboard:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-dashboard
 
 ZATO_PY := $(CURDIR)/code/bin/python
+
+playwright:
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright
 
 server-django-plugin-tests:
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/django_plugin -v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_django_plugin
