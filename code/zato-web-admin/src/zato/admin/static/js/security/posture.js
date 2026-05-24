@@ -165,15 +165,16 @@ $.fn.zato.security.posture._field_descriptions = {
         '<div class="hiw-posture-explanation">' +
             '<div class="hiw-posture-title">Shared credentials</div>' +
             '<div class="hiw-posture-body">' +
-                'Each REST channel can have its own security definition, giving every consumer a unique set of credentials. ' +
-                'When multiple channels share the same definition, revoking access for one consumer means revoking it for all of them.' +
+                'Each REST channel can have its own security definition - a unique username and password pair. ' +
+                'It is perfectly fine for one client to access multiple channels, but each channel should use a separate credential record.' +
+                '<br><br>' +
                 '<br><br>' +
                 'This check ' +
-                '<span class="hiw-posture-highlight">finds security definitions that are assigned to more than one channel at the same time</span>. ' +
-                'Sharing credentials makes it impossible to trace which consumer made a particular request ' +
-                'and prevents you from cutting off a single misbehaving client without affecting others.' +
+                '<span class="hiw-posture-highlight">finds security definitions that are reused across multiple channels instead of being dedicated to one</span>. ' +
                 '<br><br>' +
-                'Ideally, every channel should have its own dedicated security definition so access can be managed individually.' +
+                'When channels share the same credential record, you cannot revoke access to one channel without affecting the others, ' +
+                'you cannot rotate the password for one channel independently, ' +
+                'and you lose the ability to tell from logs which channel a given request was meant for.' +
             '</div>' +
             '<div class="hiw-posture-toggle">' +
                 '<span class="hiw-posture-toggle-label">Toggle</span>' +
