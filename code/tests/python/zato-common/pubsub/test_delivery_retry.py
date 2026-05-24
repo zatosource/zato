@@ -32,6 +32,7 @@ if 0:
 
 _test_topic = 'test.delivery.topic'
 _test_sub_key = 'sk_test_delivery'
+_test_redis_conn_params = {'host': 'localhost', 'port': 6379, 'db': PubSub.Test_Redis_DB, 'decode_responses': True}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,7 +59,7 @@ class TestDeliveryRetry(unittest.TestCase):
     """
 
     def setUp(self) -> 'None':
-        self.redis = Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        self.redis = Redis(host='localhost', port=6379, db=PubSub.Test_Redis_DB, decode_responses=True)
         _ = self.redis.flushall()
         self.test_dir = tempfile.mkdtemp()
         self.disk_store = DiskMessageStore(self.test_dir)
@@ -150,7 +151,7 @@ class TestDeliveryRetry(unittest.TestCase):
 
         self.server._push_subs[_test_sub_key] = [{'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'}]
 
-        redis_conn_params = {'host': 'localhost', 'port': 6379, 'db': 0, 'decode_responses': True}
+        redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
 
         with patch.object(delivery, '_deliver_message', side_effect=_deliver):
@@ -172,7 +173,7 @@ class TestDeliveryRetry(unittest.TestCase):
 
         self.server._push_subs[_test_sub_key] = [{'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'}]
 
-        redis_conn_params = {'host': 'localhost', 'port': 6379, 'db': 0, 'decode_responses': True}
+        redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
 
         call_idx = 0
@@ -242,7 +243,7 @@ class TestDeliveryRetry(unittest.TestCase):
 
         self.server._push_subs[_test_sub_key] = [{'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'}]
 
-        redis_conn_params = {'host': 'localhost', 'port': 6379, 'db': 0, 'decode_responses': True}
+        redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
 
         with patch.object(delivery, '_deliver_message', side_effect=_deliver), \
@@ -268,7 +269,7 @@ class TestDeliveryRetry(unittest.TestCase):
         sub_config = {'topic_name': _test_topic, 'push_type': PubSub.Push_Type.REST, 'rest_push_url': 'http://localhost:19999/test'}
         self.server._push_subs[_test_sub_key] = [sub_config]
 
-        redis_conn_params = {'host': 'localhost', 'port': 6379, 'db': 0, 'decode_responses': True}
+        redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
 
         post_call_count = 0
@@ -302,7 +303,7 @@ class TestDeliveryRetry(unittest.TestCase):
         sub_config = {'topic_name': _test_topic, 'push_type': PubSub.Push_Type.REST, 'rest_push_url': 'http://localhost:19999/test'}
         self.server._push_subs[_test_sub_key] = [sub_config]
 
-        redis_conn_params = {'host': 'localhost', 'port': 6379, 'db': 0, 'decode_responses': True}
+        redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
 
         post_call_count = 0
@@ -336,7 +337,7 @@ class TestDeliveryRetry(unittest.TestCase):
 
         sub_config = {'topic_name': _test_topic, 'push_type': PubSub.Push_Type.REST, 'rest_push_url': 'http://localhost:19999/test'}
 
-        redis_conn_params = {'host': 'localhost', 'port': 6379, 'db': 0, 'decode_responses': True}
+        redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
 
         post_call_count = 0
@@ -368,7 +369,7 @@ class TestDeliveryRetry(unittest.TestCase):
 
         sub_config = {'topic_name': _test_topic, 'push_type': PubSub.Push_Type.REST, 'rest_push_url': 'http://localhost:19999/test'}
 
-        redis_conn_params = {'host': 'localhost', 'port': 6379, 'db': 0, 'decode_responses': True}
+        redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
 
         call_idx = 0
@@ -401,7 +402,7 @@ class TestDeliveryRetry(unittest.TestCase):
 
         sub_config = {'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'}
 
-        redis_conn_params = {'host': 'localhost', 'port': 6379, 'db': 0, 'decode_responses': True}
+        redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
 
         sleep_values:'list' = []
@@ -441,7 +442,7 @@ class TestDeliveryRetry(unittest.TestCase):
 
         sub_config = {'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'}
 
-        redis_conn_params = {'host': 'localhost', 'port': 6379, 'db': 0, 'decode_responses': True}
+        redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
 
         sleep_values:'list' = []
@@ -478,7 +479,7 @@ class TestDeliveryRetry(unittest.TestCase):
 
         sub_config = {'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'}
 
-        redis_conn_params = {'host': 'localhost', 'port': 6379, 'db': 0, 'decode_responses': True}
+        redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
 
         sleep_values:'list' = []
