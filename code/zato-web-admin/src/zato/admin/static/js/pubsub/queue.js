@@ -55,6 +55,11 @@
             '><span class="syntax-light">' + message.data_preview_highlighted + '</span></a></td>';
         row += '<td>' + message.data_size + ' B</td>';
         row += '<td class="queue-time" data-ts="' + message.pub_time_iso + '" title="' + localTime + '">' + relativeTime + '</td>';
+        row += '<td><a href="#" class="queue-delete-link"' +
+            ' data-msg-id="' + message.msg_id + '"' +
+            ' data-topic-name="' + topicName + '"' +
+            ' data-redis-stream-id="' + message.redis_stream_id + '"' +
+            '>Delete</a></td>';
         row += '</tr>';
 
         return row;
@@ -76,7 +81,7 @@
         }
 
         if (rows.length === 0) {
-            $body.append('<tr><td colspan="7">No messages</td></tr>');
+            $body.append('<tr><td colspan="8">No messages</td></tr>');
             return;
         }
 
@@ -317,6 +322,51 @@
                             ]
                         });
                     }
+                }
+            });
+        });
+
+        // .. wire delete link clicks ..
+        $(document).on('click', '.queue-delete-link', function(e) {
+            e.preventDefault();
+
+            if (!confirm('Delete this message?')) {
+                return;
+            }
+
+            var $link = $(this);
+            var $row = $link.closest('tr');
+            var msgId = $link.data('msg-id');
+            var topicName = $link.data('topic-name');
+            var streamId = $link.data('redis-stream-id');
+
+            $.ajax({
+                type: 'POST',
+                url: '/zato/pubsub/subscription/queue/message/delete/',
+                data: JSON.stringify({
+                    msg_id: msgId,
+                    topic_name: topicName,
+                    sub_key: subKey,
+                    redis_stream_id: streamId
+                }),
+                contentType: 'application/json',
+                headers: {'X-CSRFToken': $.cookie('csrftoken')},
+                dataType: 'json',
+                success: function() {
+                    $row.remove();
+
+                    var ns = $.fn.zato.pubsub.queue;
+                    var pag = ns._pagination;
+
+                    // .. re-fetch the current page to update total and pagination ..
+                    pag.fetch_page(pag.current_page());
+                },
+                error: function(xhr) {
+                    var errorMessage = $.fn.zato.pubsub.queue._defaultErrorMessage;
+                    if (xhr.responseJSON) {
+                        errorMessage = xhr.responseJSON.error;
+                    }
+                    alert('Error: ' + errorMessage);
                 }
             });
         });
