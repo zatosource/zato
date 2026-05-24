@@ -108,7 +108,7 @@
                     try {
                         var log_entry = JSON.parse(event.data);
                         console.debug('onmessage: parsed log_entry, level:', log_entry.level, 'message preview:', log_entry.message.substring(0, 50));
-                        var level = log_entry.level.replace(/\u001b\[[0-9;]*m/g, '').trim();
+                        var level = log_entry.level.trim();
                         var message = log_entry.message;
 
                         var timestamp = isFirefox ? '' : getTimestamp() + ' ';
