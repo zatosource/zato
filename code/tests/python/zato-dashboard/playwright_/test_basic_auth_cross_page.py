@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import glob
 import os
 import time
 
@@ -71,47 +70,60 @@ def _create_definition_via_ui(page:'Page', base_url:'str', suffix:'str') -> 'dic
 
 # ################################################################################################################################
 
-def _create_definition_via_api(api_client:'object', suffix:'str') -> 'dict':
-    """ Creates a basic auth definition via the Zato API and returns its details.
+def _get_item_id(page:'Page', name:'str') -> 'str':
+    """ Returns the item ID of the row with the given name.
     """
+    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
+    row = page.query_selector(row_selector)
+    id_cell = row.query_selector('td[class*="item_id_"]')
 
-    name = _Test_Name_Prefix + suffix
-    username = 'user.' + name
-    password = 'password.' + os.urandom(8).hex()
-
-    response = api_client.invoke('zato.security.basic-auth.create', {
-        'cluster_id': 1,
-        'name': name,
-        'username': username,
-        'realm': 'realm.' + name,
-        'is_active': True,
-    })
-
-    item_id = response['id']
-
-    # .. also set the password.
-    api_client.invoke('zato.security.basic-auth.change-password', {
-        'id': item_id,
-        'password': password,
-    })
-
-    out = {
-        'id': item_id,
-        'name': name,
-        'username': username,
-    }
-
+    out = id_cell.inner_text().strip()
     return out
 
 # ################################################################################################################################
 
-def _delete_definition_via_api(api_client:'object', item_id:'int') -> 'None':
-    """ Deletes a basic auth definition via the Zato API.
+def _delete_definition_via_ui(page:'Page', base_url:'str', name:'str') -> 'None':
+    """ Deletes a basic auth definition via the dashboard UI.
     """
-    api_client.invoke('zato.security.basic-auth.delete', {
-        'id': item_id,
-        'cluster_id': 1,
-    })
+
+    # Navigate to basic auth page ..
+    _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
+    page.wait_for_selector('#data-table', state='visible')
+
+    # .. trigger delete ..
+    item_id = _get_item_id(page, name)
+    page.evaluate(f'$.fn.zato.security.basic_auth.delete_("{item_id}")')
+
+    # .. wait for the jConfirm popup and click OK ..
+    page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+    page.click('#popup_ok')
+
+    # .. wait for the row to disappear.
+    time.sleep(0.5)
+
+# ################################################################################################################################
+
+def _edit_definition_name_via_ui(page:'Page', base_url:'str', old_name:'str', new_name:'str') -> 'None':
+    """ Edits a basic auth definition's name via the dashboard UI.
+    """
+
+    # Navigate to basic auth page ..
+    _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
+    page.wait_for_selector('#data-table', state='visible')
+
+    # .. open edit for the row ..
+    item_id = _get_item_id(page, old_name)
+    page.evaluate(f'$.fn.zato.security.basic_auth.edit("{item_id}")')
+    page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+
+    # .. clear and fill the new name ..
+    name_field = page.locator('#id_edit-name')
+    name_field.fill('')
+    name_field.fill(new_name)
+
+    # .. submit and wait for the dialog to close.
+    page.click('#edit-div input[type="submit"]')
+    page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
 
 # ################################################################################################################################
 
@@ -196,131 +208,29 @@ class TestBasicAuthCrossPage:
 
 # ################################################################################################################################
 
-    def test_59_sse_live_updates_channel_dropdown(
-        self,
-        logged_in_page:'Page',
-        zato_dashboard:'anydict',
-        api_client:'object',
-    ) -> 'None':
+    def test_59_sse_live_updates_channel_dropdown(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Navigates to REST channels, opens the create dialog (starts SSE).
-        Then creates a new basic auth def via the API.
+        Then creates a new basic auth def via the UI in a second tab.
         Verifies the new def appears in the security dropdown without closing the dialog.
         """
 
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
-        # Inject console log capture so we can see what SSE is doing ..
-        page.evaluate("""
-        (() => {
-            window._sse_logs = [];
-            var orig = console.log;
-            console.log = function() {
-                var msg = Array.prototype.join.call(arguments, ' ');
-                if (msg.indexOf('live_form_updates') !== -1) {
-                    window._sse_logs.push(msg);
-                }
-                orig.apply(console, arguments);
-            };
-            var origErr = console.error;
-            console.error = function() {
-                var msg = Array.prototype.join.call(arguments, ' ');
-                if (msg.indexOf('live_form_updates') !== -1) {
-                    window._sse_logs.push('ERROR: ' + msg);
-                }
-                origErr.apply(console, arguments);
-            };
-        })()
-        """)
-
         # Navigate to REST channels and open the create dialog ..
         _ = page.goto(f'{base_url}{_Channel_Url_Pattern}', timeout=60000)
         page.wait_for_selector('#data-table', state='visible', timeout=15000)
 
-        # Re-inject console capture after navigation ..
-        page.evaluate("""
-        (() => {
-            window._sse_logs = [];
-            var orig = console.log;
-            console.log = function() {
-                var msg = Array.prototype.join.call(arguments, ' ');
-                if (msg.indexOf('live_form_updates') !== -1) {
-                    window._sse_logs.push(msg);
-                }
-                orig.apply(console, arguments);
-            };
-            var origErr = console.error;
-            console.error = function() {
-                var msg = Array.prototype.join.call(arguments, ' ');
-                if (msg.indexOf('live_form_updates') !== -1) {
-                    window._sse_logs.push('ERROR: ' + msg);
-                }
-                origErr.apply(console, arguments);
-            };
-        })()
-        """)
-
-        # Log 1: Check what live_form_updates configs are registered ..
-        has_create_config = page.evaluate('$.fn.zato.live_form_updates.has_config("create")')
-        create_configs = page.evaluate("""
-        (() => {
-            var cfgs = $.fn.zato.live_form_updates._get_configs('create');
-            return JSON.stringify(cfgs.map(function(c) { return {object_type: c.object_type, handler: c.handler || 'select'}; }));
-        })()
-        """)
-        print(f'[SSE-DEBUG-1] has_config(create)={has_create_config}, configs={create_configs}')
-
         page.click('#markup .page_prompt a')
         page.wait_for_selector('#create-div', state='visible')
-
-        # Log 2: Check if dialog opened and SSE was started (look at captured logs) ..
-        time.sleep(0.5)
-        sse_logs_after_open = page.evaluate('JSON.stringify(window._sse_logs || [])')
-        print(f'[SSE-DEBUG-2] SSE logs after dialog open: {sse_logs_after_open}')
-
-        # Log 3: Check the security select state right after dialog open ..
-        select_state = page.evaluate("""
-        (() => {
-            var sel = document.querySelector('#id_security');
-            if (!sel) return 'SELECT_NOT_FOUND';
-            return JSON.stringify({
-                optionCount: sel.options.length,
-                id: sel.id,
-                name: sel.name,
-                disabled: sel.disabled
-            });
-        })()
-        """)
-        print(f'[SSE-DEBUG-3] Security select state: {select_state}')
 
         # .. wait for SSE to connect ..
         time.sleep(2)
 
-        # Log 4: Check connection state via captured logs after 2s ..
-        sse_logs_after_wait = page.evaluate('JSON.stringify(window._sse_logs || [])')
-        print(f'[SSE-DEBUG-4] SSE logs after 2s wait: {sse_logs_after_wait}')
-
-        # Log 5: Captured SSE console logs so far ..
-        sse_logs = page.evaluate('JSON.stringify(window._sse_logs || [])')
-        print(f'[SSE-DEBUG-5] SSE console logs before API create: {sse_logs}')
-
-        # Log 6: Current dropdown options before API create ..
-        options_before = page.evaluate("""
-        (() => {
-            var sel = document.querySelector('#id_security');
-            if (!sel) return 'SELECT NOT FOUND';
-            var opts = [];
-            for (var idx = 0; idx < sel.options.length; idx++) {
-                opts.push(sel.options[idx].textContent);
-            }
-            return JSON.stringify(opts);
-        })()
-        """)
-        print(f'[SSE-DEBUG-6] Dropdown options before API create: {options_before}')
-
-        # .. create a new basic auth definition via the API ..
-        defn = _create_definition_via_api(api_client, 'sse-create')
-        print(f'[SSE-DEBUG-7] Created def via API: id={defn["id"]}, name={defn["name"]}')
+        # .. create a new basic auth definition in a second tab ..
+        second_tab = page.context.new_page()
+        defn = _create_definition_via_ui(second_tab, base_url, 'sse-create')
+        second_tab.close()
 
         # .. wait for the SSE update to arrive (up to 15s) ..
         found = False
@@ -328,87 +238,13 @@ class TestBasicAuthCrossPage:
         for attempt in range(30):
             time.sleep(0.5)
             found = _find_security_option(page, '#id_security', defn['name'])
-
-            # Log 8: Periodic check ..
-            if attempt in (1, 3, 5, 9, 14, 19, 29):
-                sse_logs_now = page.evaluate('JSON.stringify((window._sse_logs || []).slice(-5))')
-                option_count = page.evaluate('document.querySelector("#id_security") ? document.querySelector("#id_security").options.length : -1')
-                print(f'[SSE-DEBUG-8] Attempt {attempt}: found={found}, options={option_count}, recent_logs={sse_logs_now}')
+            print(f'[test_59] Attempt {attempt}: found={found}')
 
             if found:
                 break
 
-        # Log 9: Final state ..
-        sse_logs_final = page.evaluate('JSON.stringify(window._sse_logs || [])')
-        print(f'[SSE-DEBUG-9] All SSE console logs: {sse_logs_final}')
-
-        options_after = page.evaluate("""
-        (() => {
-            var sel = document.querySelector('#id_security');
-            if (!sel) return 'SELECT NOT FOUND';
-            var opts = [];
-            for (var idx = 0; idx < sel.options.length; idx++) {
-                opts.push(sel.options[idx].textContent);
-            }
-            return JSON.stringify(opts);
-        })()
-        """)
-        print(f'[SSE-DEBUG-10] Dropdown options after polling: {options_after}')
-
-        # Log 11: Check if the select was modified at all during the test ..
-        has_config_final = page.evaluate('$.fn.zato.live_form_updates.has_config("create")')
-        print(f'[SSE-DEBUG-11] has_config(create) at end: {has_config_final}')
-
-        # Log 12-15: Read dashboard server.log, filter to SSE generator PID only ..
-        dashboard_dir = zato_dashboard['dashboard_dir']
-        log_dir = os.path.join(dashboard_dir, 'logs')
-        server_log_path = os.path.join(log_dir, 'server.log')
-
-        if os.path.isfile(server_log_path):
-            with open(server_log_path, 'r', encoding='utf-8', errors='replace') as fh:
-                all_lines = fh.read().splitlines()
-
-            # Find the PID of the SSE generator worker - it's the one that logged "VIEW CALLED" ..
-            sse_pid = None
-            for line in all_lines:
-                if 'VIEW CALLED' in line:
-                    # Format: "... - INFO - 12345:MainThread - ..."
-                    parts = line.split(' - ')
-                    for part in parts:
-                        if ':MainThread' in part:
-                            sse_pid = part.split(':')[0].strip()
-                            break
-
-            if sse_pid:
-                print(f'[SSE-DEBUG-12] SSE generator PID: {sse_pid}')
-                pid_lines = [line for line in all_lines if sse_pid in line]
-                print(f'[SSE-DEBUG-12] Total lines from SSE PID: {len(pid_lines)}')
-                for pid_line in pid_lines:
-                    print(f'[SSE-DEBUG-13]   {pid_line}')
-            else:
-                print('[SSE-DEBUG-12] Could not find SSE PID')
-
-        # Log 14: Also check server logs for the SSE-related service invocations ..
-        server_dir = zato_dashboard['server_dir']
-        server_log_dir = os.path.join(server_dir, 'logs')
-        server_log_files = glob.glob(os.path.join(server_log_dir, '*.log'))
-        for log_file in server_log_files:
-            if not os.path.isfile(log_file):
-                continue
-            with open(log_file, 'r', encoding='utf-8', errors='replace') as fh:
-                content = fh.read()
-            relevant_lines = [line for line in content.splitlines() if 'security.get-list' in line or 'live_form' in line.lower()]
-            log_basename = os.path.basename(log_file)
-            if relevant_lines:
-                print(f'[SSE-DEBUG-14] Server log {log_basename}: {len(relevant_lines)} relevant lines')
-                for line in relevant_lines:
-                    print(f'[SSE-DEBUG-15]   {line}')
-
         # .. verify the new def appeared in the dropdown without dialog close.
         assert found, f'Expected "{defn["name"]}" to appear in security dropdown via SSE'
-
-        # .. clean up.
-        _delete_definition_via_api(api_client, defn['id'])
 
 # ################################################################################################################################
 
@@ -450,21 +286,16 @@ class TestBasicAuthCrossPage:
 
 # ################################################################################################################################
 
-    def test_61_deleted_def_removed_from_channel_dropdown(
-        self,
-        logged_in_page:'Page',
-        zato_dashboard:'anydict',
-        api_client:'object',
-    ) -> 'None':
-        """ Creates a def, verifies it appears in the channel security dropdown,
-        deletes it, and verifies it is gone from the dropdown after reload.
+    def test_61_deleted_def_removed_from_channel_dropdown(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates a def via UI, verifies it appears in the channel security dropdown,
+        deletes it via UI, and verifies it is gone from the dropdown after reload.
         """
 
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
-        # Create a definition via the API ..
-        defn = _create_definition_via_api(api_client, 'del-drop')
+        # Create a definition via the UI ..
+        defn = _create_definition_via_ui(page, base_url, 'del-drop')
 
         # .. navigate to REST channels and open create dialog ..
         _ = page.goto(f'{base_url}{_Channel_Url_Pattern}')
@@ -482,8 +313,8 @@ class TestBasicAuthCrossPage:
         page.evaluate('$("#create-div").dialog("close")')
         page.wait_for_function('!document.querySelector("#create-div").offsetParent')
 
-        # .. delete the definition via API ..
-        _delete_definition_via_api(api_client, defn['id'])
+        # .. delete the definition via UI ..
+        _delete_definition_via_ui(page, base_url, defn['name'])
 
         # .. reload the channels page and open the dialog again ..
         _ = page.goto(f'{base_url}{_Channel_Url_Pattern}')
@@ -499,22 +330,17 @@ class TestBasicAuthCrossPage:
 
 # ################################################################################################################################
 
-    def test_62_sse_live_removes_deleted_def(
-        self,
-        logged_in_page:'Page',
-        zato_dashboard:'anydict',
-        api_client:'object',
-    ) -> 'None':
-        """ Opens the REST channel create dialog (starts SSE).
-        Creates a def via API, waits for it to appear, then deletes it via API.
-        Verifies the def disappears from the dropdown without closing the dialog.
+    def test_62_sse_live_removes_deleted_def(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates a def via UI, opens the REST channel create dialog (starts SSE),
+        verifies the def is present, deletes it via UI in a second tab,
+        and verifies the def disappears from the dropdown without closing the dialog.
         """
 
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
-        # Create a definition via API first ..
-        defn = _create_definition_via_api(api_client, 'sse-del')
+        # Create a definition via UI ..
+        defn = _create_definition_via_ui(page, base_url, 'sse-del')
 
         # .. navigate to REST channels and open create dialog ..
         _ = page.goto(f'{base_url}{_Channel_Url_Pattern}')
@@ -528,15 +354,19 @@ class TestBasicAuthCrossPage:
         found_before = _find_security_option(page, '#id_security', defn['name'])
         assert found_before, f'Expected "{defn["name"]}" in dropdown before SSE delete'
 
-        # .. delete via API ..
-        _delete_definition_via_api(api_client, defn['id'])
+        # .. delete via UI in a second tab ..
+        second_tab = page.context.new_page()
+        _delete_definition_via_ui(second_tab, base_url, defn['name'])
+        second_tab.close()
 
-        # .. wait for SSE to remove it (up to 5s) ..
+        # .. wait for SSE to remove it (up to 10s) ..
         removed = False
 
-        for _ in range(10):
+        for attempt in range(20):
             time.sleep(0.5)
             still_there = _find_security_option(page, '#id_security', defn['name'])
+            print(f'[test_62] Attempt {attempt}: still_there={still_there}')
+
             if not still_there:
                 removed = True
                 break
@@ -545,22 +375,17 @@ class TestBasicAuthCrossPage:
 
 # ################################################################################################################################
 
-    def test_63_sse_live_renames_def_in_dropdown(
-        self,
-        logged_in_page:'Page',
-        zato_dashboard:'anydict',
-        api_client:'object',
-    ) -> 'None':
-        """ Opens the REST channel create dialog (starts SSE).
-        Edits a basic auth def's name via API.
-        Verifies the option text in the dropdown changes to reflect the new name.
+    def test_63_sse_live_renames_def_in_dropdown(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates a def via UI, opens the REST channel create dialog (starts SSE),
+        edits the def's name via UI in a second tab,
+        and verifies the option text in the dropdown changes to reflect the new name.
         """
 
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
-        # Create a definition via API ..
-        defn = _create_definition_via_api(api_client, 'sse-rename')
+        # Create a definition via UI ..
+        defn = _create_definition_via_ui(page, base_url, 'sse-rename')
         old_name = defn['name']
         new_name = _Test_Name_Prefix + 'sse-renamed'
 
@@ -576,29 +401,23 @@ class TestBasicAuthCrossPage:
         found_old = _find_security_option(page, '#id_security', old_name)
         assert found_old, f'Expected "{old_name}" in dropdown before rename'
 
-        # .. edit the name via API ..
-        api_client.invoke('zato.security.basic-auth.edit', {
-            'id': defn['id'],
-            'cluster_id': 1,
-            'name': new_name,
-            'username': defn['username'],
-            'realm': f'realm.{defn["name"]}',
-            'is_active': True,
-        })
+        # .. edit the name via UI in a second tab ..
+        second_tab = page.context.new_page()
+        _edit_definition_name_via_ui(second_tab, base_url, old_name, new_name)
+        second_tab.close()
 
-        # .. wait for SSE to update (up to 5s) ..
+        # .. wait for SSE to update (up to 10s) ..
         found_new = False
 
-        for _ in range(10):
+        for attempt in range(20):
             time.sleep(0.5)
             found_new = _find_security_option(page, '#id_security', new_name)
+            print(f'[test_63] Attempt {attempt}: found_new={found_new}')
+
             if found_new:
                 break
 
         assert found_new, f'Expected "{new_name}" to appear in dropdown via SSE after rename'
-
-        # .. clean up.
-        _delete_definition_via_api(api_client, defn['id'])
 
 # ################################################################################################################################
 # ################################################################################################################################
