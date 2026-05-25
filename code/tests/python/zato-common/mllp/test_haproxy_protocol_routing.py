@@ -17,12 +17,14 @@ import tempfile
 import threading
 import time
 from pathlib import Path
+from typing import Generator
 
 # pytest
 import pytest
 
 # Zato
 from conftest import start_sequence, end_sequence
+from rest_echo_server import HTTPEchoHandler
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,6 +34,8 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+routing_env_gen = Generator['RoutingEnv', None, None]
 
 _haproxy_cfg_source = Path(__file__).resolve().parents[4] / 'zato-common' / 'src' / 'zato' / 'common' / 'pubsub' / 'server' / 'haproxy.cfg'
 
@@ -76,62 +80,6 @@ def _build_ack(control_id:'str') -> 'bytes':
         f'MSA|AA|{control_id}'
     )
     return ack.encode('utf-8')
-
-# ################################################################################################################################
-# ################################################################################################################################
-# HTTP echo backend
-# ################################################################################################################################
-# ################################################################################################################################
-
-class _HttpEchoHandler(socketserver.BaseRequestHandler):
-    """ Reads a full HTTP request and echoes the body back with 200 OK.
-    """
-
-    def handle(self) -> 'None':
-
-        data = b''
-
-        while True:
-            chunk = self.request.recv(_recv_buffer_size)
-            if not chunk:
-                break
-            data += chunk
-
-            # .. once we have the full headers, check Content-Length ..
-            if b'\r\n\r\n' in data:
-                header_end = data.index(b'\r\n\r\n') + 4
-                headers_text = data[:header_end].decode('utf-8', errors='replace')
-
-                content_length = 0
-                for header_line in headers_text.split('\r\n'):
-                    if header_line.lower().startswith('content-length:'):
-                        content_length = int(header_line.split(':', 1)[1].strip())
-                        break
-
-                body = data[header_end:]
-
-                # .. read remaining body bytes if needed ..
-                while len(body) < content_length:
-                    chunk = self.request.recv(_recv_buffer_size)
-                    if not chunk:
-                        break
-                    body += chunk
-
-                # .. record the request ..
-                self.server.request_count += 1  # type: ignore[attr-defined]
-                self.server.last_body = body    # type: ignore[attr-defined]
-
-                # .. send the echo response ..
-                response = (
-                    f'HTTP/1.1 200 OK\r\n'
-                    f'Content-Length: {len(body)}\r\n'
-                    f'Content-Type: application/octet-stream\r\n'
-                    f'Connection: close\r\n'
-                    f'\r\n'
-                ).encode('utf-8') + body
-
-                self.request.sendall(response)
-                break
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -252,7 +200,7 @@ def _build_test_haproxy_cfg(
     config_path = os.path.join(tmp_dir, 'haproxy.cfg')
 
     with open(config_path, 'w') as config_file:
-        config_file.write(config_text)
+        _ = config_file.write(config_text)
 
     return config_path
 
@@ -265,16 +213,15 @@ def _build_test_haproxy_cfg(
 class RoutingEnv:
     """ Holds all the ports and server references for a test run.
     """
-    def __init__(self) -> 'None':
-        self.frontend_port = 0
-        self.http_backend:'_TrackingTCPServer | None' = None
-        self.mllp_backend:'_TrackingTCPServer | None' = None
-        self.haproxy_process:'subprocess.Popen | None' = None
+    frontend_port:'int'
+    http_backend:'_TrackingTCPServer'
+    mllp_backend:'_TrackingTCPServer'
+    haproxy_process:'subprocess.Popen[bytes]'
 
 # ################################################################################################################################
 
 @pytest.fixture(scope='module')
-def haproxy_routing_env() -> 'RoutingEnv':
+def haproxy_routing_env() -> 'routing_env_gen':
     """ Spins up HTTP and MLLP backends, writes a test haproxy.cfg, starts HAProxy,
     and yields a RoutingEnv with all ports. Tears everything down afterward.
     """
@@ -291,7 +238,7 @@ def haproxy_routing_env() -> 'RoutingEnv':
     env.frontend_port = frontend_port
 
     # .. start the HTTP echo backend ..
-    http_server = _TrackingTCPServer(('127.0.0.1', http_backend_port), _HttpEchoHandler)
+    http_server = _TrackingTCPServer(('127.0.0.1', http_backend_port), HTTPEchoHandler)
     http_thread = threading.Thread(target=http_server.serve_forever, daemon=True)
     http_thread.start()
     env.http_backend = http_server
@@ -336,10 +283,10 @@ def haproxy_routing_env() -> 'RoutingEnv':
     # .. tear down ..
     haproxy_process.terminate()
     try:
-        haproxy_process.wait(timeout=_haproxy_shutdown_timeout_seconds)
+        _ = haproxy_process.wait(timeout=_haproxy_shutdown_timeout_seconds)
     except subprocess.TimeoutExpired:
         haproxy_process.kill()
-        haproxy_process.wait()
+        _ = haproxy_process.wait()
 
     http_server.shutdown()
     mllp_server.shutdown()

@@ -27,7 +27,8 @@
 	deny deny-zato \
 	vet vet-zato \
 	geiger geiger-zato \
-	rust-lint lint
+	rust-lint lint \
+	hl7-haproxy hl7-backend-mllp hl7-backend-rest
 
 MAKEFLAGS += --silent --no-print-directory
 
@@ -545,3 +546,24 @@ lint: rust-lint ## Full static analysis pipeline.
 health-clippy: ## Run clippy inside the health repo.
 	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Projects_Root is not set"; exit 1; fi
 	$(MAKE) -C $(Zato_Health) clippy
+
+# ############################################################################
+# HL7 dev targets - launch HAProxy and test backends for manual testing
+# ############################################################################
+
+HAPROXY_CFG := $(CURDIR)/code/zato-common/src/zato/common/pubsub/server/haproxy.cfg
+MLLP_TESTS  := $(CURDIR)/code/tests/python/zato-common/mllp
+
+hl7-haproxy: ## Start HAProxy in full debug mode with the production config.
+	@echo ">>> Starting HAProxy in debug mode"
+	Zato_Load_Balancer_Stats_Password=dev \
+	Zato_Load_Balancer_Metrics_Password=dev \
+	haproxy -d -f $(HAPROXY_CFG)
+
+hl7-backend-mllp: ## Start the MLLP echo backend on port 31312.
+	@echo ">>> Starting MLLP echo backend on port 31312"
+	$(ZATO_PY) $(MLLP_TESTS)/mllp_test_server.py --callback-mode echo --log-messages --port 31312
+
+hl7-backend-rest: ## Start the HTTP echo backend on port 17010.
+	@echo ">>> Starting HTTP echo backend on port 17010"
+	$(ZATO_PY) $(MLLP_TESTS)/rest_echo_server.py --port 17010 --log
