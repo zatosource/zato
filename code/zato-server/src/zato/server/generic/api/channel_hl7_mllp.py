@@ -16,7 +16,7 @@ from zato.common.hl7.mllp.haproxy import find_haproxy_config, reload_haproxy, re
     update_mllp_backend_port
 from zato.common.hl7.mllp.router import HL7MessageRouter
 from zato.common.hl7.mllp.server import HL7MLLPServer
-from zato.common.util.api import hex_sequence_to_bytes, spawn_greenlet
+from zato.common.util.api import asbool, hex_sequence_to_bytes, spawn_greenlet
 from zato.server.connection.wrapper import Wrapper
 
 # ################################################################################################################################
@@ -129,23 +129,23 @@ class ChannelHL7MLLPWrapper(Wrapper):
             end_sequence,
             receive_timeout=recv_timeout_seconds,
             max_message_size=max_msg_size_bytes,
-            should_log_messages=self.config.should_log_messages,
-            should_return_errors=self.config.should_return_errors,
+            should_log_messages=asbool(self.config.should_log_messages),
+            should_return_errors=asbool(self.config.should_return_errors),
             default_character_encoding=self.config.default_character_encoding,
-            should_normalize_line_endings=self.config.normalize_line_endings,
-            should_repair_truncated_msh=self.config.repair_truncated_msh,
-            should_split_concatenated_messages=self.config.split_concatenated_messages,
-            should_force_standard_delimiters=self.config.force_standard_delimiters,
-            should_use_msh18_encoding=self.config.use_msh18_encoding,
+            should_normalize_line_endings=asbool(self.config.normalize_line_endings),
+            should_repair_truncated_msh=asbool(self.config.repair_truncated_msh),
+            should_split_concatenated_messages=asbool(self.config.split_concatenated_messages),
+            should_force_standard_delimiters=asbool(self.config.force_standard_delimiters),
+            should_use_msh18_encoding=asbool(self.config.use_msh18_encoding),
             dedup_ttl_value=dedup_ttl_value,
             dedup_ttl_unit=dedup_ttl_unit,
-            normalize_obx2_value_type=self.config.get('normalize_obx2_value_type', True),
-            replace_invalid_obx2_value_type=self.config.get('replace_invalid_obx2_value_type', True),
-            normalize_invalid_escape_sequences=self.config.get('normalize_invalid_escape_sequences', True),
-            normalize_obx8_abnormal_flags=self.config.get('normalize_obx8_abnormal_flags', True),
-            normalize_quadruple_quoted_empty=self.config.get('normalize_quadruple_quoted_empty', True),
-            allow_short_encoding_characters=self.config.get('allow_short_encoding_characters', True),
-            fix_off_by_one_field_index=self.config.get('fix_off_by_one_field_index', False),
+            normalize_obx2_value_type=asbool(self.config.get('normalize_obx2_value_type', True)),
+            replace_invalid_obx2_value_type=asbool(self.config.get('replace_invalid_obx2_value_type', True)),
+            normalize_invalid_escape_sequences=asbool(self.config.get('normalize_invalid_escape_sequences', True)),
+            normalize_obx8_abnormal_flags=asbool(self.config.get('normalize_obx8_abnormal_flags', True)),
+            normalize_quadruple_quoted_empty=asbool(self.config.get('normalize_quadruple_quoted_empty', True)),
+            allow_short_encoding_characters=asbool(self.config.get('allow_short_encoding_characters', True)),
+            fix_off_by_one_field_index=asbool(self.config.get('fix_off_by_one_field_index', False)),
         )
 
         spawn_greenlet(_shared_state.server.start)
