@@ -86,8 +86,8 @@ def _delete_definition_via_ui(page:'Page', base_url:'str', name:'str') -> 'None'
     """ Deletes a basic auth definition via the dashboard UI.
     """
 
-    # Navigate to basic auth page ..
-    _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
+    # Navigate to basic auth page with query filter so the row is visible ..
+    _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={name}')
     page.wait_for_selector('#data-table', state='visible')
 
     # .. trigger delete ..
@@ -107,8 +107,8 @@ def _edit_definition_name_via_ui(page:'Page', base_url:'str', old_name:'str', ne
     """ Edits a basic auth definition's name via the dashboard UI.
     """
 
-    # Navigate to basic auth page ..
-    _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
+    # Navigate to basic auth page with query filter so the row is visible ..
+    _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={old_name}')
     page.wait_for_selector('#data-table', state='visible')
 
     # .. open edit for the row ..

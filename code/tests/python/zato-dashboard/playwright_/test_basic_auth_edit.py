@@ -446,8 +446,8 @@ class TestBasicAuthEdit:
         defn_a = _create_definition(page, base_url, 'indicator-a')
         defn_b = _create_definition(page, base_url, 'indicator-b')
 
-        # .. reload so the server knows about both for uniqueness checks ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
+        # .. reload with query filter so both test rows are visible ..
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={_Test_Name_Prefix}indicator')
         page.wait_for_selector('#data-table', state='visible')
 
         # .. open edit for A and type B's name to trigger the taken indicator ..

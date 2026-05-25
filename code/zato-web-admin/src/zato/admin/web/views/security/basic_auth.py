@@ -70,10 +70,12 @@ class Create(_CreateEdit):
             data = loads(response.content)
             password = req.POST.get('password', '')
             if password:
-                req.zato.client.invoke('zato.security.basic-auth.change-password', {
+                logger.info('Create.__call__: invoking change-password for id=%s, name=%s', data['id'], data['name'])
+                password_response = req.zato.client.invoke('zato.security.basic-auth.change-password', {
                     'id': data['id'],
                     'password': password,
                 })
+                logger.info('Create.__call__: change-password response ok=%s for id=%s', password_response.ok, data['id'])
         return response
 
 class Edit(_CreateEdit):

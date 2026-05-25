@@ -240,10 +240,16 @@ class TestBasicAuthInteraction:
         page.fill('#id_realm', 'realm.' + name)
         page.fill('#id_password', 'pwd.' + os.urandom(4).hex())
 
-        # .. click submit twice rapidly ..
+        # .. click submit - the overlay should disable the button immediately ..
         submit_button = page.query_selector('#create-div input[type="submit"]')
         submit_button.click()
-        submit_button.click()
+
+        # .. verify the button is disabled after the first click ..
+        is_disabled = page.evaluate('document.querySelector("#create-div input[type=submit]").disabled')
+        assert is_disabled, 'Submit button should be disabled after first click'
+
+        # .. attempt the second click with force=True to bypass Playwright's actionability checks ..
+        submit_button.click(force=True)
 
         # .. wait for the dialog to close ..
         page.wait_for_selector('#create-div', state='hidden', timeout=10000)
@@ -270,8 +276,8 @@ class TestBasicAuthInteraction:
 
         defn = _create_definition(page, 'refresh')
 
-        # .. reload the page ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
+        # .. reload with query filter so the row is visible ..
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={defn["name"]}')
         page.wait_for_selector('#data-table', state='visible')
 
         # .. verify the row is still present.
