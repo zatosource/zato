@@ -190,8 +190,8 @@ $.fn.zato.channel.hl7.mllp.create = function() {
     $.fn.zato.channel.hl7.mllp._bind_default_toggle('id_');
     $.fn.zato.channel.hl7.mllp._bind_rest_toggle('#create-form');
     $.fn.zato.how_it_works.init({
-        badge_id: 'create-how-it-works',
-        div_id: '#create-div',
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
         descriptions: $.fn.zato.channel.hl7.mllp.field_descriptions
     });
 }
@@ -264,8 +264,8 @@ $.fn.zato.channel.hl7.mllp.edit = function(id) {
     $.fn.zato.channel.hl7.mllp._bind_default_toggle('id_edit-');
     $.fn.zato.channel.hl7.mllp._bind_rest_toggle('#edit-form');
     $.fn.zato.how_it_works.init({
-        badge_id: 'edit-how-it-works',
-        div_id: '#edit-div',
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
         descriptions: $.fn.zato.channel.hl7.mllp.field_descriptions
     });
 }
