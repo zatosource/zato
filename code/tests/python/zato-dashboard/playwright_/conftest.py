@@ -390,11 +390,6 @@ _Log_Noise_Patterns = [
     'check_latest_version',
     'favicon.ico',
     'Could not determine version',
-    "KeyError: ''",
-    'CreateEdit EXCEPTION',
-    'HeadersEnrichedException',
-    'nDetails:',
-    'Could not create an HTTP Basic Auth definition',
 ]
 
 @pytest.fixture(autouse=True)

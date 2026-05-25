@@ -225,6 +225,9 @@ class ChangePasswordBase(AdminService):
         instance_id = instance_id or self.request.input.get('id')
         instance_name = self.request.input.name
 
+        logger.info('ChangePasswordBase._handle: action=%s, class=%s, id=%s, name=%s',
+            action, class_.__name__, instance_id, instance_name)
+
         with closing(self.odb.session()) as session:
             password = self.request.input.get('password', '')
 

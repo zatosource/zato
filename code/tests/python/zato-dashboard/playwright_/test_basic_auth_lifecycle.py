@@ -307,8 +307,8 @@ class TestBasicAuthLifecycle:
         heading_text = heading.inner_text()
         assert defn['name'] in heading_text, f'Expected name in heading, got: "{heading_text}"'
 
-        # .. navigate back ..
-        page.go_back()
+        # .. navigate back with query filter so the row is visible ..
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={defn["name"]}')
         page.wait_for_selector('#data-table', state='visible', timeout=10000)
 
         # .. verify the row is still present.
@@ -336,8 +336,8 @@ class TestBasicAuthLifecycle:
         sorted_asc = [name_a, name_b, name_c]
         sorted_desc = [name_c, name_b, name_a]
 
-        # .. reload so tablesorter picks up the new rows ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
+        # .. reload with query filter so all three test rows are visible ..
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={_Test_Name_Prefix}sort')
         page.wait_for_selector('#data-table', state='visible')
 
         # .. click the Name column header to trigger a sort ..

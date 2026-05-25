@@ -85,7 +85,10 @@ class URLData(PyURLData):
 # ################################################################################################################################
 
     def dispatcher_callback(self, event, ctx, **opaque):
-        getattr(self, 'on_config_event_{}'.format(code_to_name[event]))(ctx)
+        handler_name = 'on_config_event_{}'.format(code_to_name[event])
+        logger.info('URLData.dispatcher_callback: event=%s, handler=%s, ctx.name=%s',
+            event, handler_name, ctx.get('name') if hasattr(ctx, 'get') else 'N/A')
+        getattr(self, handler_name)(ctx)
 
 # ################################################################################################################################
 
@@ -165,6 +168,8 @@ class URLData(PyURLData):
         altogether if 'delete' is True.
         """
         items = list(iteritems(self.url_sec))
+        logger.info('_update_url_sec: msg.name=%s, sec_def_type=%s, delete=%s, url_sec count=%d',
+            msg.get('name'), sec_def_type, delete, len(items))
         for target_match, url_info in items:
             sec_def = url_info.get('sec_def')
             if not sec_def:
@@ -174,6 +179,8 @@ class URLData(PyURLData):
             if sec_def != ZATO_NONE and sec_def.sec_type == sec_def_type:
                 name = msg.get('old_name') if msg.get('old_name') else msg.get('name')
                 if sec_def.name == name:
+                    logger.info('_update_url_sec: match found, target=%s, sec_def.name=%s, delete=%s',
+                        target_match, sec_def.name, delete)
                     if delete:
                         del self.url_sec[target_match]
                     else:
@@ -184,6 +191,8 @@ class URLData(PyURLData):
 # ################################################################################################################################
 
     def _delete_channel_data(self, sec_type, sec_name):
+        logger.info('_delete_channel_data: sec_type=%s, sec_name=%s, channel_data count=%d',
+            sec_type, sec_name, len(self.channel_data))
         match_idx = ZATO_NONE
         for item in self.channel_data:
             if item.get('sec_type') == sec_type and item['security_name'] == sec_name:
@@ -191,7 +200,10 @@ class URLData(PyURLData):
 
         # No error, let's delete channel info
         if match_idx != ZATO_NONE:
+            logger.info('_delete_channel_data: found match at idx=%s for sec_name=%s', match_idx, sec_name)
             self.channel_data.pop(match_idx)
+        else:
+            logger.info('_delete_channel_data: no match found for sec_type=%s, sec_name=%s', sec_type, sec_name)
 
 # ################################################################################################################################
 

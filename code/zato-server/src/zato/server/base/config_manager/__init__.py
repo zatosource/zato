@@ -678,6 +678,8 @@ class ConfigManager(_ConfigManagerBase):
     ) -> 'None':
         """ A common method for updating auth-related configuration.
         """
+        logger.info('ConfigManager._update_auth: action_name=%s, sec_type=%s, msg.name=%s, msg.id=%s',
+            action_name, sec_type, msg.get('name'), msg.get('id'))
         with self.update_lock:
 
             handler = getattr(self.request_dispatcher.url_data, 'on_config_event_' + action_name)
@@ -1057,13 +1059,18 @@ class ConfigManager(_ConfigManagerBase):
     def on_config_event_SECURITY_BASIC_AUTH_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates a new HTTP Basic Auth security definition
         """
+        logger.info('ConfigManager.on_config_event_SECURITY_BASIC_AUTH_CREATE: msg.name=%s, msg.id=%s, msg keys=%s',
+            msg.get('name'), msg.get('id'), list(msg.keys()) if hasattr(msg, 'keys') else 'N/A')
         dispatcher.notify(broker_message.SECURITY.BASIC_AUTH_CREATE.value, msg)
+        logger.info('ConfigManager.on_config_event_SECURITY_BASIC_AUTH_CREATE: dispatcher.notify done for name=%s', msg.get('name'))
 
 # ################################################################################################################################
 
     def on_config_event_SECURITY_BASIC_AUTH_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Updates an existing HTTP Basic Auth security definition.
         """
+        logger.info('ConfigManager.on_config_event_SECURITY_BASIC_AUTH_EDIT: msg.name=%s, msg.old_name=%s, msg.id=%s',
+            msg.get('name'), msg.get('old_name'), msg.get('id'))
         # Update channels and outgoing connections ..
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH,
             self._visit_wrapper_edit, keys=('username', 'name'))
@@ -1080,6 +1087,8 @@ class ConfigManager(_ConfigManagerBase):
     def on_config_event_SECURITY_BASIC_AUTH_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an HTTP Basic Auth security definition.
         """
+        logger.info('ConfigManager.on_config_event_SECURITY_BASIC_AUTH_DELETE: msg.name=%s, msg.id=%s',
+            msg.get('name'), msg.get('id'))
         # Update channels and outgoing connections ..
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH, self._visit_wrapper_delete)
 

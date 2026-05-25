@@ -170,10 +170,18 @@ $.fn.zato.post = function(url, callback, data, data_type, context) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.data_table._submitting = false;
+
 $.fn.zato.show_action_overlay = function(label) {
+    console.log('[DEBUG] show_action_overlay: label=' + label + ', _submitting was=' + $.fn.zato.data_table._submitting);
+    $.fn.zato.data_table._submitting = true;
+    $('#create-form input[type="submit"], #edit-form input[type="submit"]').prop('disabled', true);
 }
 
 $.fn.zato.hide_action_overlay = function() {
+    console.log('[DEBUG] hide_action_overlay: _submitting was=' + $.fn.zato.data_table._submitting);
+    $.fn.zato.data_table._submitting = false;
+    $('#create-form input[type="submit"], #edit-form input[type="submit"]').prop('disabled', false);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -459,6 +467,11 @@ $.fn.zato.data_table._on_submit = function(form, callback) {
             }
         }
     }
+
+    // Trim all text inputs before serialization
+    form.find('input[type="text"], textarea').each(function() {
+        $(this).val($(this).val().trim());
+    });
 
     // Log all form inputs before serialization
     form.find(':input').each(function() {
@@ -1127,6 +1140,13 @@ $.fn.zato.data_table.multirow.populate_field = function(field_name, source) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.data_table.on_submit = function(action) {
+    console.log('[DEBUG] on_submit: action=' + action + ', _submitting=' + $.fn.zato.data_table._submitting);
+
+    if($.fn.zato.data_table._submitting) {
+        console.log('[DEBUG] on_submit: blocked duplicate submission for action=' + action);
+        return false;
+    }
+
     var form = $('#' + action +'-form');
     var callback = function(data, status) {
             return $.fn.zato.data_table.on_submit_complete(data, status, action);
@@ -1140,6 +1160,7 @@ $.fn.zato.data_table.on_submit = function(action) {
 
     if($.fn.zato.is_form_valid(form)) {
         var label = action === 'create' ? 'Creating ...' : 'Saving ...';
+        console.log('[DEBUG] on_submit: form valid, calling show_action_overlay for action=' + action);
         $.fn.zato.show_action_overlay(label);
         return $.fn.zato.data_table._on_submit(form, callback);
     }
@@ -1198,6 +1219,8 @@ $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
         $.fn.zato.data_table.on_submit_complete_callback = null;
         $.fn.zato.data_table.on_submit_complete_callback_args = null;
     }
+
+    $.fn.zato.hide_action_overlay();
 
 }
 
@@ -1548,7 +1571,7 @@ $.fn.zato.is_form_valid = function(form) {
         var elem = $(elem)
         let elem_value = elem.val()
 
-        if(!elem_value) {
+        if(!elem_value || !elem_value.trim()) {
 
             let msg = elem.attr($.fn.zato.validate_required_msg_attr);
             let chosen_elems = $.fn.zato.get_chosen_elems_by_elem(elem);

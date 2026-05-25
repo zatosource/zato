@@ -1712,6 +1712,9 @@ def wait_for_predicate(
             loop_idx += 1
 
     # .. at this point, the predicate is fulfilled or we have run out of time ..
+    if not is_fulfilled and needs_log:
+        logger.warning('wait_for_predicate: timed out after %ss, details=%s', timeout, log_msg_details)
+
     # .. but, in either case, we can return the result to our caller.
     return is_fulfilled
 
@@ -1732,6 +1735,7 @@ def wait_for_dict_key_by_get_func(
             value = get_key_func(key)
             return value
         except KeyError:
+            logger.info('wait_for_dict_key_by_get_func: KeyError for key=%r', key)
             return False
 
     return wait_for_predicate(_predicate_dict_key, timeout, interval, log_msg_details=f'dict key -> `{key}`')

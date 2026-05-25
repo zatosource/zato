@@ -326,10 +326,10 @@ class TestBasicAuthBoundary:
 # ################################################################################################################################
 
     def test_37_create_with_whitespace_name(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Submits create form with name that is only spaces.
-        In JS, val() of '   ' is truthy, so the form passes client-side validation
-        and submits. The server returns a 500 because the stripped name is empty.
-        We verify the dialog shows an error message to the user.
+        """ Fills the create form with a whitespace-only name and clicks submit.
+        The client-side validation should reject it with a "This field is required"
+        indicator on the name field, and the form should remain open without
+        making a server round-trip.
         """
 
         page = logged_in_page
@@ -349,28 +349,20 @@ class TestBasicAuthBoundary:
         page.fill('#id_password', 'pwd123')
 
         page.click('#create-div input[type="submit"]')
-        time.sleep(1.5)
+        time.sleep(0.5)
 
-        # .. the server should have returned an error - verify via the user message div
-        # .. or by the fact that the dialog shows error feedback.
-        # .. The key thing is that the form was submitted (JS validation passed)
-        # .. but the server rejected it. We check that an error indicator is visible.
-        error_visible = page.evaluate("""
-        (() => {
-            const msg = document.querySelector('#user-message-div');
-            if (msg && msg.offsetParent) return 'user-message';
-            const dialog = document.querySelector('#create-div');
-            if (dialog && dialog.offsetParent) return 'dialog-open';
-            return 'closed';
-        })()
+        # .. the dialog must still be open because client-side validation rejected the form ..
+        dialog_visible = page.evaluate('document.querySelector("#create-div").offsetParent !== null')
+        assert dialog_visible, 'Create dialog should remain open after whitespace-only name submission'
+
+        # .. the name field should have the attention CSS class ..
+        has_attention = page.evaluate("""
+            document.querySelector('#id_name').classList.contains('zato-validator-attention')
         """)
+        assert has_attention, 'Name field should have zato-validator-attention class'
 
-        # .. the form either shows an error message or the dialog closes with a server error ..
-        assert error_visible in ('user-message', 'dialog-open', 'closed'), \
-            f'Unexpected state: {error_visible}'
-
-        # .. close dialog if still open.
-        page.evaluate('if(document.querySelector("#create-div").offsetParent) { $("#create-div").dialog("close"); }')
+        # .. close dialog.
+        page.evaluate('$("#create-div").dialog("close")')
 
 # ################################################################################################################################
 

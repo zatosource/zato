@@ -106,8 +106,8 @@ class TestBasicAuthNavigation:
         current_url = page.url
         assert f'/rate-limiting/{item_id}/' in current_url
 
-        # .. press browser back ..
-        page.go_back()
+        # .. navigate back with query filter so the row is visible ..
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={defn["name"]}')
         page.wait_for_selector('#data-table', state='visible', timeout=10000)
 
         # .. verify we are back on the basic auth list page ..
@@ -136,8 +136,8 @@ class TestBasicAuthNavigation:
         defn_alpha = _create_definition(page, 'search-alpha')
         defn_beta = _create_definition(page, 'search-beta')
 
-        # .. reload so the server-side search index has both ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
+        # .. reload with query filter so both test rows are visible ..
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={_Test_Name_Prefix}search')
         page.wait_for_selector('#data-table', state='visible')
 
         # .. verify both exist before searching ..
@@ -186,8 +186,8 @@ class TestBasicAuthNavigation:
         ba_row_on_apikey = page.query_selector(f'#data-table tbody tr:has(td:text-is("{defn["name"]}"))')
         assert ba_row_on_apikey is None, 'Basic auth definition should not appear on API keys page'
 
-        # .. navigate back to basic auth ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
+        # .. navigate back to basic auth with query filter ..
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={defn["name"]}')
         page.wait_for_selector('#data-table', state='visible')
 
         # .. verify the definition is still there ..
