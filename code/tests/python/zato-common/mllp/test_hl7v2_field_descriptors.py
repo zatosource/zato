@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import unittest
 
 # Zato
-from zato.hl7v2 import parse_message
+from zato.hl7v2 import parse_hl7
 from zato.hl7v2.base import HL7Field
 from zato.hl7v2.v2_9.segments import EVN, PID
 
@@ -69,7 +69,7 @@ class TestEVNFieldDescriptors(unittest.TestCase):
     def test_evn_event_type_code_parsed_value(self) -> 'None':
         """ Parsing a message with EVN-1 populated must return the correct value.
         """
-        message = parse_message(_Message_With_EVN1)
+        message = parse_hl7(_Message_With_EVN1)
 
         out = message.evn.event_type_code
         self.assertEqual(out, 'A01')
@@ -132,7 +132,7 @@ class TestPIDFieldDescriptors(unittest.TestCase):
     def test_pid_patient_id_parsed_value(self) -> 'None':
         """ Parsing a message with PID-2 populated must return the value.
         """
-        message = parse_message(_Message_With_PID2_PID4)
+        message = parse_hl7(_Message_With_PID2_PID4)
 
         out = message.pid.patient_id
         self.assertEqual(out, '56789')
@@ -140,7 +140,7 @@ class TestPIDFieldDescriptors(unittest.TestCase):
     def test_pid_ssn_number_parsed_value(self) -> 'None':
         """ Parsing a message with PID-19 populated must return the value.
         """
-        message = parse_message(_Message_With_PID19)
+        message = parse_hl7(_Message_With_PID19)
 
         out = message.pid.ssn_number
         self.assertEqual(out, '2847')

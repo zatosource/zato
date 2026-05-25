@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from zato.hl7v2.parser import parse_message
+from zato.hl7v2.parser import parse_hl7
 
 def main() -> None:
     raw_message = (
@@ -11,7 +11,7 @@ def main() -> None:
         "PV1|1|I|ICU^101^A\r"
     )
 
-    msg = parse_message(raw_message)
+    msg = parse_hl7(raw_message)
 
     print("Structure ID:", msg._structure_id)
 

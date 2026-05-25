@@ -23,7 +23,7 @@ from typing import Generator
 import pytest
 
 # Zato
-from conftest import start_sequence, end_sequence
+from conftest import start_sequence, end_sequence, sample_wellness_oru
 from rest_echo_server import HTTPEchoHandler
 
 # ################################################################################################################################
@@ -48,14 +48,7 @@ _recv_buffer_size                 = 8192
 # ################################################################################################################################
 # ################################################################################################################################
 
-_wellness_message = (
-    'MSH|^~\\&|VitalMon|ICU|EHR|Hospital|20260525100000||ORU^R01^ORU_R01|WLN001|P|2.9\r'
-    'PID|1||PAT001^^^Hosp^MR||Garcia^Maria||19750812|F\r'
-    'OBR|1||VIT001|VS^Vital Signs\r'
-    'OBX|1|NM|8310-5^Body temperature^LN||36.8|Cel|36.1-37.2|N|||F'
-)
-
-_wellness_message_bytes = _wellness_message.encode('utf-8')
+_wellness_message_bytes = sample_wellness_oru()
 
 # ################################################################################################################################
 # ################################################################################################################################

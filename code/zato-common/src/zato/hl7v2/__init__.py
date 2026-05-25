@@ -16,9 +16,9 @@ from zato.hl7v2.batch import HL7Batch, HL7File, parse_batch, parse_file, parse_b
 from zato.hl7v2_rs import ToleranceConfig  # pyright: ignore[reportAttributeAccessIssue]
 
 
-def parse_message(raw:'str', validate:'bool'=True, tolerance:'ToleranceConfig'=None) -> 'HL7Message':
-    from zato.hl7v2.v2_9 import parse_message as parse_v2_9
-    return parse_v2_9(raw, validate=validate, tolerance=tolerance or ToleranceConfig())
+def parse_hl7(raw:'str', validate:'bool'=True, tolerance:'ToleranceConfig'=None) -> 'HL7Message':
+    from zato.hl7v2.v2_9 import parse_hl7 as _parse_v2_9
+    return _parse_v2_9(raw, validate=validate, tolerance=tolerance or ToleranceConfig())
 
 
 __all__ = [
@@ -31,7 +31,7 @@ __all__ = [
     "HL7Segment",
     "HL7SegmentAttr",
     "Usage",
-    "parse_message",
+    "parse_hl7",
     "validate_message",
     "ValidationResult",
     "ValidationError",

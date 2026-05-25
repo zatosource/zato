@@ -7,19 +7,19 @@ from zato.hl7v2.v2_9.groups import *
 from zato.hl7v2.v2_9.messages import *
 
 from zato.hl7v2.base import HL7Message
-from zato.hl7v2_rs import parse as _rust_parse, validate as _rust_validate, serialize as _rust_serialize, ValidationResult, ValidationError  # noqa: F401  # pyright: ignore[reportAttributeAccessIssue, reportUnusedImport]
-from zato.hl7v2_rs import apply_tolerance as _apply_tolerance, ToleranceConfig  # pyright: ignore[reportAttributeAccessIssue]
-from zato.hl7v2.batch import parse_batch, parse_file, parse_batch_or_file  # noqa: F401  # pyright: ignore[reportUnusedImport]
+from zato.hl7v2_rs import parse_hl7 as _rust_parse, validate as _rust_validate, serialize as _rust_serialize, ValidationResult, ValidationError
+from zato.hl7v2_rs import apply_tolerance as _apply_tolerance, ToleranceConfig
+from zato.hl7v2.batch import parse_batch, parse_file, parse_batch_or_file
 
 
-def parse_message(raw: str, validate: bool = True, tolerance: 'ToleranceConfig | None' = None) -> HL7Message:
+def parse_hl7(raw: str, validate: bool = True, tolerance: 'ToleranceConfig | None' = None) -> HL7Message:
     if tolerance is not None:
         raw = _apply_tolerance(raw, tolerance)
     raw_msg = _rust_parse(raw)
     msg_class = HL7Message._registry.get(raw_msg.structure_id)
     if msg_class is None:
         raise ValueError(f"Unknown structure: {raw_msg.structure_id}")
-    msg = msg_class.__new__(msg_class)  # pyright: ignore[reportCallIssue]
+    msg = msg_class.__new__(msg_class)
     msg._raw_message = raw_msg
     return msg
 

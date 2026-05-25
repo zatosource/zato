@@ -136,7 +136,7 @@ def parse_batch(raw: str, validate: bool = True) -> HL7Batch:
     Raises:
         ValueError: If batch structure is invalid
     """
-    from zato.hl7v2.v2_9 import parse_message
+    from zato.hl7v2.v2_9 import parse_hl7
 
     segments = _split_segments(raw)
     if not segments:
@@ -162,13 +162,13 @@ def parse_batch(raw: str, validate: bool = True) -> HL7Batch:
         if seg_id == "BTS":
             if in_message and current_message_segments:
                 msg_raw = "\r".join(current_message_segments)
-                batch.messages.append(parse_message(msg_raw, validate=validate))
+                batch.messages.append(parse_hl7(msg_raw, validate=validate))
             batch.bts_raw = segment
             break
         elif seg_id == "MSH":
             if in_message and current_message_segments:
                 msg_raw = "\r".join(current_message_segments)
-                batch.messages.append(parse_message(msg_raw, validate=validate))
+                batch.messages.append(parse_hl7(msg_raw, validate=validate))
             current_message_segments = [segment]
             in_message = True
         else:
@@ -195,7 +195,7 @@ def parse_file(raw: str, validate: bool = True) -> HL7File:
     Raises:
         ValueError: If file structure is invalid
     """
-    from zato.hl7v2.v2_9 import parse_message
+    from zato.hl7v2.v2_9 import parse_hl7
 
     segments = _split_segments(raw)
     if not segments:
@@ -223,7 +223,7 @@ def parse_file(raw: str, validate: bool = True) -> HL7File:
             if current_batch is not None:
                 if in_message and current_message_segments:
                     msg_raw = "\r".join(current_message_segments)
-                    current_batch.messages.append(parse_message(msg_raw, validate=validate))
+                    current_batch.messages.append(parse_hl7(msg_raw, validate=validate))
                 hl7_file.batches.append(current_batch)
             hl7_file.fts_raw = segment
             break
@@ -231,7 +231,7 @@ def parse_file(raw: str, validate: bool = True) -> HL7File:
             if current_batch is not None:
                 if in_message and current_message_segments:
                     msg_raw = "\r".join(current_message_segments)
-                    current_batch.messages.append(parse_message(msg_raw, validate=validate))
+                    current_batch.messages.append(parse_hl7(msg_raw, validate=validate))
                 hl7_file.batches.append(current_batch)
             current_batch = HL7Batch()
             current_batch.bhs_raw = segment
@@ -241,7 +241,7 @@ def parse_file(raw: str, validate: bool = True) -> HL7File:
             if current_batch is not None:
                 if in_message and current_message_segments:
                     msg_raw = "\r".join(current_message_segments)
-                    current_batch.messages.append(parse_message(msg_raw, validate=validate))
+                    current_batch.messages.append(parse_hl7(msg_raw, validate=validate))
                 current_batch.bts_raw = segment
                 hl7_file.batches.append(current_batch)
                 current_batch = None
@@ -250,7 +250,7 @@ def parse_file(raw: str, validate: bool = True) -> HL7File:
         elif seg_id == "MSH":
             if in_message and current_message_segments and current_batch is not None:
                 msg_raw = "\r".join(current_message_segments)
-                current_batch.messages.append(parse_message(msg_raw, validate=validate))
+                current_batch.messages.append(parse_hl7(msg_raw, validate=validate))
             current_message_segments = [segment]
             in_message = True
         else:
