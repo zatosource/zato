@@ -28,7 +28,8 @@
 	vet vet-zato \
 	geiger geiger-zato \
 	rust-lint lint \
-	hl7-haproxy hl7-backend-mllp hl7-backend-rest hl7-send-message
+	hl7-haproxy hl7-backend-mllp hl7-backend-rest hl7-send-message \
+	quickstart dashboard server listener haproxy
 
 MAKEFLAGS += --silent --no-print-directory
 
@@ -93,9 +94,6 @@ scheduler-build:
 	rm -f $(CURDIR)/code/bin/_zato_scheduler && \
 	cp $(ZATO_RUST)/zato_scheduler_core/target/release/_zato_scheduler $(CURDIR)/code/bin/_zato_scheduler
 
-scheduler:
-	$(CURDIR)/code/bin/_zato_scheduler
-
 io-build:
 	@echo ">>> Building I/O"
 	$(LOAD_CARGO_ENV) && \
@@ -147,6 +145,38 @@ queue-bridge:
 
 file-listener:
 	$(CURDIR)/code/bin/py $(CURDIR)/code/zato-common/src/zato/common/file_transfer/listener.py
+
+# ############################################################################
+# Quickstart dev targets
+# ############################################################################
+
+quickstart:
+	Zato_Metrics_Password=$(Zato_Metrics_Password) zato quickstart ~/env/qs-1 --force --password=$(Zato_Password) --verbose
+
+dashboard:
+	clear
+	cd ~/env/qs-1/ && zato start web-admin/ --fg --verbose
+
+server:
+	clear
+	cd ~/env/qs-1/ && zato start server1/ --fg --verbose
+
+scheduler:
+	clear
+	cd ~/env/qs-1/ && zato start scheduler/ --fg --verbose
+
+listener:
+	py $(CURDIR)/code/zato-common/src/zato/common/file_transfer/listener.py ~/env/qs-1/server1/pickup/incoming/services/
+
+haproxy:
+	@mkdir -p $(HAPROXY_DEV_DIR)
+	@touch $(HOME)/env/qs-1/blocked-paths.txt
+	@sed \
+		-e 's|/opt/zato/env/qs-1/blocked-paths.txt|$(HOME)/env/qs-1/blocked-paths.txt|g' \
+		$(HAPROXY_CFG) > $(HAPROXY_DEV_DIR)/haproxy.cfg
+	Zato_Load_Balancer_Stats_Password=dev \
+	Zato_Load_Balancer_Metrics_Password=dev \
+	haproxy -d -f $(HAPROXY_DEV_DIR)/haproxy.cfg
 
 # ############################################################################
 # Install targets
@@ -551,7 +581,8 @@ health-clippy: ## Run clippy inside the health repo.
 # HL7 dev targets - launch HAProxy and test backends for manual testing
 # ############################################################################
 
-HAPROXY_CFG           := $(CURDIR)/code/zato-common/src/zato/common/pubsub/server/haproxy.cfg
+HAPROXY_CFG     := $(CURDIR)/code/zato-common/src/zato/common/pubsub/server/haproxy.cfg
+HAPROXY_DEV_DIR := /tmp/zato-haproxy-dev
 MLLP_TESTS            := $(CURDIR)/code/tests/python/zato-common/mllp
 HL7_DEV_DIR           := /tmp/zato-hl7-dev
 HL7_DEV_FRONTEND_PORT := 21223
