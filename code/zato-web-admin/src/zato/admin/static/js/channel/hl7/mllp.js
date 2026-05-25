@@ -296,6 +296,7 @@ $.fn.zato.channel.hl7.mllp.data_table.new_row = function(item, data, include_tr)
 
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.hl7.mllp.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.hl7.mllp.delete_('{0}');\">Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.hl7.mllp.invoke('{0}')\">Invoke</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
 
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
@@ -364,6 +365,36 @@ $.fn.zato.channel.hl7.mllp.delete_ = function(id) {
         'HL7 MLLP channel `{0}` deleted',
         'Are you sure you want to delete HL7 MLLP channel `{0}`?',
         true);
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.hl7.mllp._default_hl7_message = ''
+    + 'MSH|^~\\&|WELLNESS_APP|MAIN_FAC|SCHEDULING|MAIN_FAC|20240315120000||ADT^A04^ADT_A01|MSG00001|P|2.9\r'
+    + 'EVN|A04|20240315120000\r'
+    + 'PID|1||12345^^^FAC^MR||SMITH^JOHN^A||19800115|M\r'
+    + 'PV1|1|O\r';
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.hl7.mllp.get_invoke_url = function(id) {
+    return '/zato/channel/hl7/mllp/invoke/' + id + '/';
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.hl7.mllp.invoke = function(id) {
+    var item = $.fn.zato.data_table.data[id];
+
+    $.fn.zato.invoker.open_overlay({
+        id: id,
+        name: item.name,
+        history_key: 'zato.invoke-history.channel-hl7-mllp.' + id,
+        get_invoke_url_func: $.fn.zato.channel.hl7.mllp.get_invoke_url,
+        show_more_options: false,
+        title_prefix: 'Invoke HL7 MLLP channel',
+        default_request: $.fn.zato.channel.hl7.mllp._default_hl7_message,
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
