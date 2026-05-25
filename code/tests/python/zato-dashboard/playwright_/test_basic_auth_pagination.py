@@ -84,20 +84,28 @@ class TestBasicAuthPagination:
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
         page.wait_for_selector('#data-table', state='visible')
 
-        # .. create 21 definitions to exceed the page size ..
-        for idx in range(_Page_Size + 1):
+        # .. count existing rows to determine how many more we need ..
+        existing_rows = page.query_selector_all('#data-table tbody tr:not(.ignore)')
+        existing_count = len(existing_rows)
+        needed = max(0, _Page_Size + 1 - existing_count)
+        print(f'[test_70] existing_count={existing_count}, needed={needed}')
+
+        # .. create enough definitions to exceed the page size ..
+        for idx in range(needed):
             _ = _create_definition(page, f'ctrl-{idx:02d}')
 
-        # .. reload with query filter for our prefix ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={_Test_Name_Prefix}ctrl')
+        # .. reload without query filter so pagination kicks in ..
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
         page.wait_for_selector('#data-table', state='visible')
 
         # .. verify pagination controls exist ..
         action_panel = page.query_selector('.action-panel')
+        print(f'[test_70] action_panel={action_panel}')
         assert action_panel is not None, 'Pagination action-panel should be visible with 21+ items'
 
         # .. verify the "Next" link is present (we are on page 1 and there are more pages).
         next_link = page.query_selector('.action-panel a:has-text("Next")')
+        print(f'[test_70] next_link={next_link}')
         assert next_link is not None, 'Next page link should be present'
 
 # ################################################################################################################################
@@ -114,12 +122,18 @@ class TestBasicAuthPagination:
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
         page.wait_for_selector('#data-table', state='visible')
 
-        # .. create 21 definitions ..
-        for idx in range(_Page_Size + 1):
+        # .. count existing rows to determine how many more we need ..
+        existing_rows = page.query_selector_all('#data-table tbody tr:not(.ignore)')
+        existing_count = len(existing_rows)
+        needed = max(0, _Page_Size + 1 - existing_count)
+        print(f'[test_71] existing_count={existing_count}, needed={needed}')
+
+        # .. create enough definitions ..
+        for idx in range(needed):
             _ = _create_definition(page, f'nav-{idx:02d}')
 
-        # .. reload with query filter for our prefix to see page 1 ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={_Test_Name_Prefix}nav')
+        # .. reload without query filter so pagination kicks in ..
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
         page.wait_for_selector('#data-table', state='visible')
 
         # .. collect page 1 names ..
@@ -129,6 +143,8 @@ class TestBasicAuthPagination:
             text = cell.inner_text().strip()
             if text:
                 names_page1.append(text)
+
+        print(f'[test_71] page 1 names count={len(names_page1)}')
 
         # .. click Next ..
         page.click('.action-panel a:has-text("Next")')
@@ -142,6 +158,8 @@ class TestBasicAuthPagination:
             text = cell.inner_text().strip()
             if text:
                 names_page2.append(text)
+
+        print(f'[test_71] page 2 names count={len(names_page2)}')
 
         # .. page 2 should have at least 1 row ..
         assert len(names_page2) >= 1, f'Page 2 should have at least 1 row, got {len(names_page2)}'
@@ -227,12 +245,18 @@ class TestBasicAuthPagination:
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
         page.wait_for_selector('#data-table', state='visible')
 
-        # .. create 21 definitions ..
-        for idx in range(_Page_Size + 1):
+        # .. count existing rows to determine how many more we need ..
+        existing_rows = page.query_selector_all('#data-table tbody tr:not(.ignore)')
+        existing_count = len(existing_rows)
+        needed = max(0, _Page_Size + 1 - existing_count)
+        print(f'[test_74] existing_count={existing_count}, needed={needed}')
+
+        # .. create enough definitions ..
+        for idx in range(needed):
             _ = _create_definition(page, f'sort-{idx:02d}')
 
-        # .. reload with query filter ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={_Test_Name_Prefix}sort')
+        # .. reload without query filter so pagination kicks in ..
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
         page.wait_for_selector('#data-table', state='visible')
 
         # .. click Next to go to page 2 ..
@@ -252,6 +276,8 @@ class TestBasicAuthPagination:
             if text:
                 names_first.append(text)
 
+        print(f'[test_74] names after first sort click: {names_first}')
+
         # .. click again to reverse ..
         page.click('#data-table thead th:nth-child(3)')
         time.sleep(0.3)
@@ -262,6 +288,8 @@ class TestBasicAuthPagination:
             text = cell.inner_text().strip()
             if text:
                 names_second.append(text)
+
+        print(f'[test_74] names after second sort click: {names_second}')
 
         # .. the two clicks must produce different orders.
         assert names_first != names_second, \
