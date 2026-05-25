@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from hypothesis import given, strategies as st, settings, HealthCheck
 
-from zato.hl7v2.v2_9 import parse_message
+from zato.hl7v2.v2_9 import parse_hl7
 from zato.hl7v2.tests.fakers import fake_msh, fake_pid, fake_evn, fake_pv1
 
 
@@ -17,7 +17,7 @@ class TestFuzzPathAccess:
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
     def test_fuzz_get_segment_field(self, seg, field):
         raw = fake_msh("ADT", "A01", "ADT_A01") + fake_evn("A01") + fake_pid() + fake_pv1()
-        msg = parse_message(raw)
+        msg = parse_hl7(raw)
         try:
             msg.get(f"{seg}.{field}")
         except (ValueError, KeyError, AttributeError):
@@ -27,7 +27,7 @@ class TestFuzzPathAccess:
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
     def test_fuzz_get_segment_field_component(self, seg, field, comp):
         raw = fake_msh("ADT", "A01", "ADT_A01") + fake_evn("A01") + fake_pid() + fake_pv1()
-        msg = parse_message(raw)
+        msg = parse_hl7(raw)
         try:
             msg.get(f"{seg}.{field}.{comp}")
         except (ValueError, KeyError, AttributeError):
@@ -37,7 +37,7 @@ class TestFuzzPathAccess:
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
     def test_fuzz_get_random_path(self, path):
         raw = fake_msh("ADT", "A01", "ADT_A01") + fake_evn("A01") + fake_pid() + fake_pv1()
-        msg = parse_message(raw)
+        msg = parse_hl7(raw)
         try:
             msg.get(path)
         except (ValueError, KeyError, AttributeError, IndexError):
@@ -47,7 +47,7 @@ class TestFuzzPathAccess:
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
     def test_fuzz_set_random_path(self, path, value):
         raw = fake_msh("ADT", "A01", "ADT_A01") + fake_evn("A01") + fake_pid() + fake_pv1()
-        msg = parse_message(raw)
+        msg = parse_hl7(raw)
         try:
             msg.set(path, value)
         except (ValueError, KeyError, AttributeError, IndexError):

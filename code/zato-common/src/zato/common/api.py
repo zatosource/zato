@@ -1211,7 +1211,6 @@ class HL7:
                 return iter((self.v2,))
 
         class ImplClass:
-            hl7apy = 'hl7apy'
             zato = 'zato'
 
         class LoggingLevel:

@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import unittest
 
 # Zato
-from zato.hl7v2 import parse_message
+from zato.hl7v2 import parse_hl7
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,7 +33,7 @@ class TestDirectUTF8Roundtrip(unittest.TestCase):
     def test_umlaut_in_sending_facility(self) -> 'None':
         """ MSH-4 with 'STÄDTISCH_KH' must preserve the umlaut.
         """
-        message = parse_message(_Message_With_Direct_UTF8)
+        message = parse_hl7(_Message_With_Direct_UTF8)
 
         out = message.get('MSH.4')
         self.assertEqual(out, 'STÄDTISCH_KH')
@@ -41,7 +41,7 @@ class TestDirectUTF8Roundtrip(unittest.TestCase):
     def test_umlaut_in_receiving_facility(self) -> 'None':
         """ MSH-6 with 'RÖNTGEN_KH' must preserve the umlaut.
         """
-        message = parse_message(_Message_With_Direct_UTF8)
+        message = parse_hl7(_Message_With_Direct_UTF8)
 
         out = message.get('MSH.6')
         self.assertEqual(out, 'RÖNTGEN_KH')
@@ -49,7 +49,7 @@ class TestDirectUTF8Roundtrip(unittest.TestCase):
     def test_eszett_in_patient_address(self) -> 'None':
         """ PID-11 with 'Böttcherstraße' must preserve the eszett.
         """
-        message = parse_message(_Message_With_Direct_UTF8)
+        message = parse_hl7(_Message_With_Direct_UTF8)
 
         out = message.get('PID.11')
         self.assertIsNotNone(out)
@@ -58,7 +58,7 @@ class TestDirectUTF8Roundtrip(unittest.TestCase):
     def test_umlaut_in_patient_name(self) -> 'None':
         """ PID-5 first component 'Grünwald' must preserve the umlaut.
         """
-        message = parse_message(_Message_With_Direct_UTF8)
+        message = parse_hl7(_Message_With_Direct_UTF8)
 
         out = message.get('PID.5')
         self.assertEqual(out, 'Grünwald')
@@ -66,7 +66,7 @@ class TestDirectUTF8Roundtrip(unittest.TestCase):
     def test_serialize_roundtrip_preserves_utf8(self) -> 'None':
         """ Parse then serialize must preserve UTF-8 characters.
         """
-        message = parse_message(_Message_With_Direct_UTF8)
+        message = parse_hl7(_Message_With_Direct_UTF8)
 
         serialized = message.serialize()
         self.assertIn('STÄDTISCH_KH', serialized)

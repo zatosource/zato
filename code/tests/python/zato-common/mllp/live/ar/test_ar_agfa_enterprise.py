@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from zato.hl7v2 import parse_message
+from zato.hl7v2 import parse_hl7
 from zato.hl7v2.v2_9.groups import OrmO01Order, OrmO01Patient
 from zato.hl7v2.v2_9.messages import ORM_O01
 from zato.hl7v2.v2_9.segments import DG1, MSH, OBR, ORC, PID, PV1
@@ -186,11 +186,11 @@ class TestMsg01(unittest.TestCase):
         raw = load_message(_md_path, 1)
 
         # Parse ..
-        parsed = parse_message(raw, validate=False)
+        parsed = parse_hl7(raw, validate=False)
 
         # .. serialize and reparse ..
         serialized = parsed.to_hl7v2()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
 
         # .. and assert roundtrip fidelity.
         reparsed_er7 = reparsed.to_hl7v2()

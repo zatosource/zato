@@ -28,7 +28,7 @@
 	vet vet-zato \
 	geiger geiger-zato \
 	rust-lint lint \
-	hl7-haproxy hl7-backend-mllp hl7-backend-rest
+	hl7-haproxy hl7-backend-mllp hl7-backend-rest hl7-send-message
 
 MAKEFLAGS += --silent --no-print-directory
 
@@ -551,22 +551,42 @@ health-clippy: ## Run clippy inside the health repo.
 # HL7 dev targets - launch HAProxy and test backends for manual testing
 # ############################################################################
 
-HAPROXY_CFG := $(CURDIR)/code/zato-common/src/zato/common/pubsub/server/haproxy.cfg
-MLLP_TESTS  := $(CURDIR)/code/tests/python/zato-common/mllp
+HAPROXY_CFG           := $(CURDIR)/code/zato-common/src/zato/common/pubsub/server/haproxy.cfg
+MLLP_TESTS            := $(CURDIR)/code/tests/python/zato-common/mllp
+HL7_DEV_DIR           := /tmp/zato-hl7-dev
+HL7_DEV_FRONTEND_PORT := 21223
+HL7_DEV_HTTP_LB_PORT  := 21225
+HL7_DEV_REST_PORT     := 27010
+HL7_DEV_MLLP_PORT     := 21312
+HL7_DEV_DASH_PORT     := 28183
+HL7_DEV_STATS_PORT    := 28404
 
-hl7-haproxy: ## Start HAProxy in full debug mode with the production config.
-	@echo ">>> Starting HAProxy in debug mode"
-	@mkdir -p /tmp/zato-hl7-dev
-	@touch /tmp/zato-hl7-dev/blocked-paths.txt
-	@sed 's|/opt/zato/env/qs-1/blocked-paths.txt|/tmp/zato-hl7-dev/blocked-paths.txt|g' $(HAPROXY_CFG) > /tmp/zato-hl7-dev/haproxy.cfg
+hl7-haproxy: ## Start HAProxy in full debug mode on dev ports.
+	@echo ">>> Starting HAProxy in debug mode (frontend=$(HL7_DEV_FRONTEND_PORT), REST=$(HL7_DEV_REST_PORT), MLLP=$(HL7_DEV_MLLP_PORT))"
+	@mkdir -p $(HL7_DEV_DIR)
+	@touch $(HL7_DEV_DIR)/blocked-paths.txt
+	@sed \
+		-e 's|/opt/zato/env/qs-1/blocked-paths.txt|$(HL7_DEV_DIR)/blocked-paths.txt|g' \
+		-e 's|0.0.0.0:11223|127.0.0.1:$(HL7_DEV_FRONTEND_PORT)|g' \
+		-e 's|127.0.0.1:11225|127.0.0.1:$(HL7_DEV_HTTP_LB_PORT)|g' \
+		-e 's|127.0.0.1:17010|127.0.0.1:$(HL7_DEV_REST_PORT)|g' \
+		-e 's|127.0.0.1:31312|127.0.0.1:$(HL7_DEV_MLLP_PORT)|g' \
+		-e 's|0.0.0.0:8183|127.0.0.1:$(HL7_DEV_DASH_PORT)|g' \
+		-e 's|127.0.0.1:8182|127.0.0.1:$(HL7_DEV_DASH_PORT)|g' \
+		-e 's|\*:8404|127.0.0.1:$(HL7_DEV_STATS_PORT)|g' \
+		$(HAPROXY_CFG) > $(HL7_DEV_DIR)/haproxy.cfg
 	Zato_Load_Balancer_Stats_Password=dev \
 	Zato_Load_Balancer_Metrics_Password=dev \
-	haproxy -d -f /tmp/zato-hl7-dev/haproxy.cfg
+	haproxy -d -f $(HL7_DEV_DIR)/haproxy.cfg
 
-hl7-backend-mllp: ## Start the MLLP echo backend on port 31312.
-	@echo ">>> Starting MLLP echo backend on port 31312"
-	$(ZATO_PY) $(MLLP_TESTS)/mllp_test_server.py --callback-mode echo --log-messages --port 31312
+hl7-backend-mllp: ## Start the MLLP echo backend on dev port.
+	@echo ">>> Starting MLLP echo backend on port $(HL7_DEV_MLLP_PORT)"
+	$(ZATO_PY) $(MLLP_TESTS)/mllp_test_server.py --callback-mode echo --log-messages --port $(HL7_DEV_MLLP_PORT)
 
-hl7-backend-rest: ## Start the HTTP echo backend on port 17010.
-	@echo ">>> Starting HTTP echo backend on port 17010"
-	$(ZATO_PY) $(MLLP_TESTS)/rest_echo_server.py --port 17010 --log
+hl7-backend-rest: ## Start the HTTP echo backend on dev port.
+	@echo ">>> Starting HTTP echo backend on port $(HL7_DEV_REST_PORT)"
+	$(ZATO_PY) $(MLLP_TESTS)/rest_echo_server.py --port $(HL7_DEV_REST_PORT) --log
+
+hl7-send-message: ## Send the wellness HL7v2 message to the dev HAProxy frontend via MLLP.
+	@echo ">>> Sending wellness HL7v2 message to 127.0.0.1:$(HL7_DEV_FRONTEND_PORT)"
+	cd $(MLLP_TESTS) && $(ZATO_PY) mllp_send_message.py --port $(HL7_DEV_FRONTEND_PORT)

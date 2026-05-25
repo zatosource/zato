@@ -12,7 +12,7 @@ import json
 import unittest
 
 # Zato
-from zato.hl7v2.v2_9 import parse_message
+from zato.hl7v2.v2_9 import parse_hl7
 from zato.hl7v2.v2_9.segments import *  # noqa: F403
 from zato.hl7v2.v2_9.datatypes import *  # noqa: F403
 from zato.hl7v2.v2_9.messages import *  # noqa: F403
@@ -29,22 +29,22 @@ class Test_de_cgm_medico_01_1_ADT_A01_Aufnahme_admission_standard_profile(unitte
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         self.assertIsInstance(message, ADT_A01)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A01')
@@ -52,7 +52,7 @@ class Test_de_cgm_medico_01_1_ADT_A01_Aufnahme_admission_standard_profile(unitte
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -61,686 +61,686 @@ class Test_de_cgm_medico_01_1_ADT_A01_Aufnahme_admission_standard_profile(unitte
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202603151705')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT001')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/15')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.19.2')
         self.assertEqual(result, 'German')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.19.5')
         self.assertEqual(result, 'deutsch')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.38')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202603151705')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '202603151645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '5678901')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.5[0]')
         self.assertEqual(result, 'Krämer')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.5[0].2')
         self.assertEqual(result, 'Änne')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.5[0].7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.5[0].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.5[0].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.5[1]')
         self.assertEqual(result, 'Böhm')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.5[1].7')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.5[1].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.5[1].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.5[2]')
         self.assertEqual(result, 'Krämer')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.5[2].5')
         self.assertEqual(result, 'Frau')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.5[2].7')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.5[2].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19850713')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Römerstraße 28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Römerstraße')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.11[0].5')
         self.assertEqual(result, '80331')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.11[1]')
         self.assertEqual(result, 'Bäckerweg 9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.11[1].1.2')
         self.assertEqual(result, 'Bäckerweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.11[1].1.3')
         self.assertEqual(result, '9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.11[1].5')
         self.assertEqual(result, '80331')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'BDL')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.15.2')
         self.assertEqual(result, 'German')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.15.5')
         self.assertEqual(result, 'deutsch')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'married')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.16.5')
         self.assertEqual(result, 'verheiratet')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.17.2')
         self.assertEqual(result, 'catholic')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.17.5')
         self.assertEqual(result, 'katholisch')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Sankt-Ägidius-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.26.2')
         self.assertEqual(result, 'German')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PID.26.5')
         self.assertEqual(result, 'deutsch')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'CHI')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '302')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '2')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'IN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.7')
         self.assertEqual(result, '710201')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.7.2')
         self.assertEqual(result, 'Schütz')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.7.3')
         self.assertEqual(result, 'Wölfgang')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.7.6')
         self.assertEqual(result, 'Dr.')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.7.9')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.7.10')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_13(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.7.13')
         self.assertEqual(result, 'DN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.7.16')
         self.assertEqual(result, 'DN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.7.18')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '4711')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202603151645')
 
 # ################################################################################################################
 
     def test_navigate_PV2_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV2.9')
         self.assertEqual(result, '20250405')
 
 # ################################################################################################################
 
     def test_navigate_PV2_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_01, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_01, validate=False)
         result = message.get('PV2.10')
         self.assertEqual(result, '4')
 
@@ -892,22 +892,22 @@ class Test_de_cgm_medico_02_2_ADT_A01_Aufnahme_admission_DRG_profile(unittest.Te
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         self.assertIsInstance(message, ADT_A01)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A01')
@@ -915,7 +915,7 @@ class Test_de_cgm_medico_02_2_ADT_A01_Aufnahme_admission_DRG_profile(unittest.Te
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -924,700 +924,700 @@ class Test_de_cgm_medico_02_2_ADT_A01_Aufnahme_admission_DRG_profile(unittest.Te
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202604011705')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT001')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.39')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('SFT.1')
         self.assertEqual(result, 'KIS System GmbH')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('SFT.1.2')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_SFT_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('SFT.2')
         self.assertEqual(result, '5.0')
 
 # ################################################################################################################
 
     def test_navigate_SFT_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('SFT.3')
         self.assertEqual(result, 'A1')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202604011705')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '022604011645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '67890')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.5[0]')
         self.assertEqual(result, 'Stürmer')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.5[0].2')
         self.assertEqual(result, 'Bärbel')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.5[0].7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.5[0].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.5[0].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.5[1]')
         self.assertEqual(result, 'Rößler')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.5[1].7')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.5[1].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.5[1].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19840908')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Römerstraße 28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Römerstraße')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.11[1]')
         self.assertEqual(result, 'Bäckerweg 9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.11[1].1.2')
         self.assertEqual(result, 'Bäckerweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.11[1].1.3')
         self.assertEqual(result, '9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'BDL')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'married')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Sankt-Ägidius-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'URO')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '301')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'IN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.7')
         self.assertEqual(result, '710203')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.7.2')
         self.assertEqual(result, 'Köhler')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.7.3')
         self.assertEqual(result, 'Hëinrich')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.7.6')
         self.assertEqual(result, 'Dr.')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.7.9')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.7.10')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_13(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.7.13')
         self.assertEqual(result, 'DN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.8')
         self.assertEqual(result, '710211')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.8.2')
         self.assertEqual(result, 'Pförtner')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.8.3')
         self.assertEqual(result, 'Kläus')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.8.6')
         self.assertEqual(result, 'Dr.')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.8.10')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8_13(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.8.13')
         self.assertEqual(result, 'DN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.8.15')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.8.18')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PV1_13(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.13')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.18')
         self.assertEqual(result, 'E')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '4711')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PV2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV2.3')
         self.assertEqual(result, '0101')
 
 # ################################################################################################################
 
     def test_navigate_PV2_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV2.3.2')
         self.assertEqual(result, 'vollstationär, Normalfall')
 
 # ################################################################################################################
 
     def test_navigate_PV2_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV2.3.3')
         self.assertEqual(result, 'GSG0001')
 
 # ################################################################################################################
 
     def test_navigate_PV2_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV2.9')
         self.assertEqual(result, '20260405')
 
 # ################################################################################################################
 
     def test_navigate_PV2_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV2.10')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV2_36(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV2.36')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV2_37(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_02, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_02, validate=False)
         result = message.get('PV2.37')
         self.assertEqual(result, 'N')
 
@@ -1798,22 +1798,22 @@ class Test_de_cgm_medico_03_3_ACK_A01_transport_acknowledgment_for_admission(uni
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         self.assertIsInstance(message, ACK)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ACK')
@@ -1821,7 +1821,7 @@ class Test_de_cgm_medico_03_3_ACK_A01_transport_acknowledgment_for_admission(uni
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -1830,182 +1830,182 @@ class Test_de_cgm_medico_03_3_ACK_A01_transport_acknowledgment_for_admission(uni
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202604011706')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ACK')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ACK')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'RIS002')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.9')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('SFT.1')
         self.assertEqual(result, 'RIS System GmbH')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('SFT.1.2')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_SFT_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('SFT.2')
         self.assertEqual(result, '3.4')
 
 # ################################################################################################################
 
     def test_navigate_SFT_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('SFT.3')
         self.assertEqual(result, 'superRIS')
 
 # ################################################################################################################
 
     def test_navigate_MSA_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSA.1')
         self.assertEqual(result, 'CA')
 
 # ################################################################################################################
 
     def test_navigate_MSA_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_03, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_03, validate=False)
         result = message.get('MSA.2')
         self.assertEqual(result, 'ADT001')
 
@@ -2099,22 +2099,22 @@ class Test_de_cgm_medico_04_4_ADT_A01_Aufnahme_admission_billing_profile(unittes
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         self.assertIsInstance(message, ADT_A01)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A01')
@@ -2122,7 +2122,7 @@ class Test_de_cgm_medico_04_4_ADT_A01_Aufnahme_admission_billing_profile(unittes
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -2131,581 +2131,581 @@ class Test_de_cgm_medico_04_4_ADT_A01_Aufnahme_admission_billing_profile(unittes
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202606051705')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT001')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.40')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202606051705')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '022606051645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '67890')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Lärchen-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.5[0]')
         self.assertEqual(result, 'Dörfler')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.5[0].2')
         self.assertEqual(result, 'Günther')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.5[0].5')
         self.assertEqual(result, 'Dr.')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.5[0].7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.5[0].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.5[0].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.5[1]')
         self.assertEqual(result, 'Dörfler')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.5[1].2')
         self.assertEqual(result, 'Günther')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.5[1].5')
         self.assertEqual(result, 'Herr Dr.')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.5[1].7')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.5[1].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.5[1].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19720116')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.11')
         self.assertEqual(result, 'Dürener Str. 33')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.11.1.2')
         self.assertEqual(result, 'Dürener Str.')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.11.1.3')
         self.assertEqual(result, '33')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.11.3')
         self.assertEqual(result, 'Würzburg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.11.5')
         self.assertEqual(result, '97070')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.11.7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'married')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Sankt-Ägidius-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'HNO')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '201')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '2')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'IN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.7')
         self.assertEqual(result, '710203')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.7.2')
         self.assertEqual(result, 'Köhler')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.7.3')
         self.assertEqual(result, 'Hëinrich')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.7.6')
         self.assertEqual(result, 'Dr.')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.7.9')
         self.assertEqual(result, 'Lärchen-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.7.10')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.7.16')
         self.assertEqual(result, 'DN ')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '831642')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Lärchen-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_20(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.20')
         self.assertEqual(result, '01100000')
 
 # ################################################################################################################
 
     def test_navigate_PV1_24(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.24')
         self.assertEqual(result, 'C')
 
 # ################################################################################################################
 
     def test_navigate_PV1_25(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.25')
         self.assertEqual(result, '202401')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202606051645')
 
 # ################################################################################################################
 
     def test_navigate_PV2_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV2.9')
         self.assertEqual(result, '20260615')
 
 # ################################################################################################################
 
     def test_navigate_PV2_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_04, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_04, validate=False)
         result = message.get('PV2.10')
         self.assertEqual(result, '10')
 
@@ -2863,22 +2863,22 @@ class Test_de_cgm_medico_05_5_ADT_A08_nderung_Patientendaten_update_patient_stan
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         self.assertIsInstance(message, ADT_A01)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A01')
@@ -2886,7 +2886,7 @@ class Test_de_cgm_medico_05_5_ADT_A08_nderung_Patientendaten_update_patient_stan
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -2895,567 +2895,567 @@ class Test_de_cgm_medico_05_5_ADT_A08_nderung_Patientendaten_update_patient_stan
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202604011705')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A08')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT001')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.20')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202604011705')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '67890')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.5[0]')
         self.assertEqual(result, 'Stürmer')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.5[0].2')
         self.assertEqual(result, 'Bärbel')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.5[0].7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.5[0].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.5[0].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.5[1]')
         self.assertEqual(result, 'Rößler')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.5[1].7')
         self.assertEqual(result, 'B')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.5[1].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.5[1].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19840908')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Römerstraße 28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Römerstraße')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.11[1]')
         self.assertEqual(result, 'Bäckerweg 9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.11[1].1.2')
         self.assertEqual(result, 'Bäckerweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.11[1].1.3')
         self.assertEqual(result, '9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'BDL')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'married')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Sankt-Ägidius- Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'CHI')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '202')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'CH')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'C')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.7')
         self.assertEqual(result, '710207')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.7.2')
         self.assertEqual(result, 'Köhler')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.7.3')
         self.assertEqual(result, 'Hëinrich')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.7.6')
         self.assertEqual(result, 'Dr.')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.7.9')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.7.10')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_13(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.7.13')
         self.assertEqual(result, 'DN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '4711')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PV2_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV2.9')
         self.assertEqual(result, '20260405')
 
 # ################################################################################################################
 
     def test_navigate_PV2_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_05, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_05, validate=False)
         result = message.get('PV2.10')
         self.assertEqual(result, '4')
 
@@ -3607,22 +3607,22 @@ class Test_de_cgm_medico_06_6_ACK_A08_transport_acknowledgment_for_update(unitte
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         self.assertIsInstance(message, ACK)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ACK')
@@ -3630,7 +3630,7 @@ class Test_de_cgm_medico_06_6_ACK_A08_transport_acknowledgment_for_update(unitte
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -3639,189 +3639,189 @@ class Test_de_cgm_medico_06_6_ACK_A08_transport_acknowledgment_for_update(unitte
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202504011706')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ACK')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A08')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ACK')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'RIS002')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('SFT.1')
         self.assertEqual(result, 'KIS System GmbH')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('SFT.1.2')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_SFT_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('SFT.2')
         self.assertEqual(result, '5.0')
 
 # ################################################################################################################
 
     def test_navigate_SFT_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('SFT.3')
         self.assertEqual(result, 'A1')
 
 # ################################################################################################################
 
     def test_navigate_MSA_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSA.1')
         self.assertEqual(result, 'CA')
 
 # ################################################################################################################
 
     def test_navigate_MSA_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_06, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_06, validate=False)
         result = message.get('MSA.2')
         self.assertEqual(result, 'ADT001')
 
@@ -3919,22 +3919,22 @@ class Test_de_cgm_medico_07_7_ADT_A08_nderung_Patientendaten_update_patient_DRG_
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         self.assertIsInstance(message, ADT_A01)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A01')
@@ -3942,7 +3942,7 @@ class Test_de_cgm_medico_07_7_ADT_A08_nderung_Patientendaten_update_patient_DRG_
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -3951,728 +3951,728 @@ class Test_de_cgm_medico_07_7_ADT_A08_nderung_Patientendaten_update_patient_DRG_
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202604011705')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A08')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT001')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.21')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202604011705')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '202504011645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '67890')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[0]')
         self.assertEqual(result, 'aus dem Brück')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[0].1.2')
         self.assertEqual(result, 'aus dem')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[0].1.3')
         self.assertEqual(result, 'Brück')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[0].2')
         self.assertEqual(result, 'Rüdiger')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[0].7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[0].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[0].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[1]')
         self.assertEqual(result, 'aus dem Brück')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[1].1.2')
         self.assertEqual(result, 'aus dem')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[1].1.3')
         self.assertEqual(result, 'Brück')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[1].2')
         self.assertEqual(result, 'Rüdger')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[1].7')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[1].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[1].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[2]')
         self.assertEqual(result, 'aus dem Brück')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[2].1.2')
         self.assertEqual(result, 'aus dem')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[2].1.3')
         self.assertEqual(result, 'Brück')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[2].2')
         self.assertEqual(result, 'Rüdiger')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[2].5')
         self.assertEqual(result, 'Herr')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[2].7')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[2].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.5[2].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19840908')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Höhenweg 7')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Höhenweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '7')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'Nürnberg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.11[0].4')
         self.assertEqual(result, 'XA-DE-BY')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.11[0].5')
         self.assertEqual(result, '90402')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.11[0].6')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.11[1]')
         self.assertEqual(result, 'Grünauer Str. 18')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.11[1].1.2')
         self.assertEqual(result, 'Grünauer Str.')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.11[1].1.3')
         self.assertEqual(result, '18')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'Fürth')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.11[1].5')
         self.assertEqual(result, '90762')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.11[1].6')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'BDL')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'married')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Sankt-Ägidius-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'IN2')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '202')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'IN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'C')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.7')
         self.assertEqual(result, '710207')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.7.2')
         self.assertEqual(result, 'Köhler')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.7.3')
         self.assertEqual(result, 'Hëinrich')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.7.6')
         self.assertEqual(result, 'Dr.')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.7.9')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.7.10')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_13(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.7.13')
         self.assertEqual(result, 'DN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.8')
         self.assertEqual(result, '710213')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.8.9')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8_13(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.8.13')
         self.assertEqual(result, 'DN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_13(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.13')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '9281537')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PV2_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV2.9')
         self.assertEqual(result, '20260405')
 
 # ################################################################################################################
 
     def test_navigate_PV2_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV2.10')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV2_37(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_07, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_07, validate=False)
         result = message.get('PV2.37')
         self.assertEqual(result, 'N')
 
@@ -4830,22 +4830,22 @@ class Test_de_cgm_medico_08_8_ADT_A08_nderung_Patientendaten_update_patient_bill
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         self.assertIsInstance(message, ADT_A01)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A01')
@@ -4853,7 +4853,7 @@ class Test_de_cgm_medico_08_8_ADT_A08_nderung_Patientendaten_update_patient_bill
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -4862,686 +4862,686 @@ class Test_de_cgm_medico_08_8_ADT_A08_nderung_Patientendaten_update_patient_bill
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202604011705')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A08')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT001')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.22')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202604011705')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '202504011645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '67890')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[0]')
         self.assertEqual(result, 'aus dem Brück')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[0].1.2')
         self.assertEqual(result, 'aus dem')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[0].1.3')
         self.assertEqual(result, 'Brück')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[0].2')
         self.assertEqual(result, 'Rüdiger')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[0].7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[0].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[0].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[1]')
         self.assertEqual(result, 'aus dem Brück')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[1].1.2')
         self.assertEqual(result, 'aus dem')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[1].1.3')
         self.assertEqual(result, 'Brück')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[1].2')
         self.assertEqual(result, 'Rüdger')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[1].7')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[1].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[1].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[2]')
         self.assertEqual(result, 'aus dem Brück')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[2].1.2')
         self.assertEqual(result, 'aus dem')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[2].1.3')
         self.assertEqual(result, 'Brück')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[2].2')
         self.assertEqual(result, 'Rüdiger')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[2].5')
         self.assertEqual(result, 'Herr')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[2].7')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[2].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.5[2].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19840908')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Römerstraße 28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Römerstraße')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.11[1]')
         self.assertEqual(result, 'Bäckerweg 9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.11[1].1.2')
         self.assertEqual(result, 'Bäckerweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.11[1].1.3')
         self.assertEqual(result, '9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'BDL')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'married')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Sankt-Ägidius-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'IN2')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '202')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'IN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'C')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.7')
         self.assertEqual(result, '710207')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.7.2')
         self.assertEqual(result, 'Köhler')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.7.3')
         self.assertEqual(result, 'Hëinrich')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.7.6')
         self.assertEqual(result, 'Dr.')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.7.9')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.7.10')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_13(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.7.13')
         self.assertEqual(result, 'DN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '4711')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_20(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.20')
         self.assertEqual(result, '01100001')
 
 # ################################################################################################################
 
     def test_navigate_PV1_24(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.24')
         self.assertEqual(result, 'C')
 
 # ################################################################################################################
 
     def test_navigate_PV1_25(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.25')
         self.assertEqual(result, '20260101')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PV2_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV2.9')
         self.assertEqual(result, '20260405')
 
 # ################################################################################################################
 
     def test_navigate_PV2_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV2.10')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV2_37(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_08, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_08, validate=False)
         result = message.get('PV2.37')
         self.assertEqual(result, 'N')
 
@@ -5701,22 +5701,22 @@ class Test_de_cgm_medico_09_9_ADT_A03_Entlassung_discharge_standard_profile(unit
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         self.assertIsInstance(message, ADT_A03)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A03')
@@ -5724,7 +5724,7 @@ class Test_de_cgm_medico_09_9_ADT_A03_Entlassung_discharge_standard_profile(unit
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -5733,602 +5733,602 @@ class Test_de_cgm_medico_09_9_ADT_A03_Entlassung_discharge_standard_profile(unit
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202504011705')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A03')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A03')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT001')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.47')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('SFT.1')
         self.assertEqual(result, 'KIS System GmbH')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('SFT.1.2')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_SFT_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('SFT.2')
         self.assertEqual(result, '5.0')
 
 # ################################################################################################################
 
     def test_navigate_SFT_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('SFT.3')
         self.assertEqual(result, 'A1')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202504011705')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '202504011645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '67890')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.5[0]')
         self.assertEqual(result, 'Stürmer')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.5[0].2')
         self.assertEqual(result, 'Bärbel')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.5[0].7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.5[0].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.5[0].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.5[1]')
         self.assertEqual(result, 'Rößler')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.5[1].7')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.5[1].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.5[1].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19840908')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Römerstraße 28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Römerstraße')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.11[1]')
         self.assertEqual(result, 'Bäckerweg 9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.11[1].1.2')
         self.assertEqual(result, 'Bäckerweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.11[1].1.3')
         self.assertEqual(result, '9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'BDL')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'married')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Sankt-Ägidius-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'HNO')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '311')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '3')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'IN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'B')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.7')
         self.assertEqual(result, '710209')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.7.2')
         self.assertEqual(result, 'Köhler')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.7.3')
         self.assertEqual(result, 'Hëinrich')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.7.6')
         self.assertEqual(result, 'Dr.')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.7.9')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.7.10')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_13(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.7.13')
         self.assertEqual(result, 'DN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.7.16')
         self.assertEqual(result, 'DN ')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '4711')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_36(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.36')
         self.assertEqual(result, '011')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202504011645')
 
 # ################################################################################################################
 
     def test_navigate_PV1_45(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_09, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_09, validate=False)
         result = message.get('PV1.45')
         self.assertEqual(result, '202504061100')
 
@@ -6486,22 +6486,22 @@ class Test_de_cgm_medico_10_10_ADT_A03_Entlassung_discharge_DRG_profile(unittest
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         self.assertIsInstance(message, ADT_A03)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A03')
@@ -6509,7 +6509,7 @@ class Test_de_cgm_medico_10_10_ADT_A03_Entlassung_discharge_DRG_profile(unittest
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -6518,560 +6518,560 @@ class Test_de_cgm_medico_10_10_ADT_A03_Entlassung_discharge_DRG_profile(unittest
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202504011705')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A03')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A03')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT001')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.48')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202504011705')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '202504011645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '67890')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.5')
         self.assertEqual(result, 'von der Lühe')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.5.1.2')
         self.assertEqual(result, 'von der')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.5.1.3')
         self.assertEqual(result, 'Lühe')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.5.2')
         self.assertEqual(result, 'Jörg')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.5.7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.5.8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.5.11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19740205')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Römerstraße 28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Römerstraße')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.11[1]')
         self.assertEqual(result, 'Bäckerweg  9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.11[1].1.2')
         self.assertEqual(result, 'Bäckerweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.11[1].1.3')
         self.assertEqual(result, '9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'BDL')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'W')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'widowed')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.16.5')
         self.assertEqual(result, 'verwitwet')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Sankt-Ägidius-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'HNO')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '311')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '3')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'IN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'B')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '4711')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_36(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV1.36')
         self.assertEqual(result, '011')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202504011645')
 
 # ################################################################################################################
 
     def test_navigate_PV1_45(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV1.45')
         self.assertEqual(result, '202504061100')
 
 # ################################################################################################################
 
     def test_navigate_PV2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV2.3')
         self.assertEqual(result, '0102')
 
 # ################################################################################################################
 
     def test_navigate_PV2_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV2.3.2')
         self.assertEqual(result, 'vollstationär, Arbeitsunfall')
 
 # ################################################################################################################
 
     def test_navigate_PV2_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV2.3.3')
         self.assertEqual(result, 'GSG0001')
 
 # ################################################################################################################
 
     def test_navigate_PV2_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV2.10')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV2_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV2.11')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV2_36(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV2.36')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV2_37(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_10, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_10, validate=False)
         result = message.get('PV2.37')
         self.assertEqual(result, 'N')
 
@@ -7231,22 +7231,22 @@ class Test_de_cgm_medico_11_11_ADT_A03_Entlassung_discharge_billing_profile(unit
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         self.assertIsInstance(message, ADT_A03)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A03')
@@ -7254,7 +7254,7 @@ class Test_de_cgm_medico_11_11_ADT_A03_Entlassung_discharge_billing_profile(unit
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -7263,525 +7263,525 @@ class Test_de_cgm_medico_11_11_ADT_A03_Entlassung_discharge_billing_profile(unit
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202504011705')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A03')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A03')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT001')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.49')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202504011705')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '202504011645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '67890')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.5')
         self.assertEqual(result, 'von der Lühe')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.5.1.2')
         self.assertEqual(result, 'von der')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.5.1.3')
         self.assertEqual(result, 'Lühe')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.5.2')
         self.assertEqual(result, 'Jörg')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.5.7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.5.8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.5.11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19740205')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Römerstraße 28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Römerstraße')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.11[1]')
         self.assertEqual(result, 'Bäckerweg 9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.11[1].1.2')
         self.assertEqual(result, 'Bäckerweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.11[1].1.3')
         self.assertEqual(result, '9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'BDL')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'W')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'widowed')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.16.5')
         self.assertEqual(result, 'verwitwet')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Sankt-Ägidius-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'HNO')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '311')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '3')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'IN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'B')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '4711')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_36(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PV1.36')
         self.assertEqual(result, '011')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202504011645')
 
 # ################################################################################################################
 
     def test_navigate_PV1_45(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PV1.45')
         self.assertEqual(result, '202504061100')
 
 # ################################################################################################################
 
     def test_navigate_PV2_36(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PV2.36')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV2_37(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_11, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_11, validate=False)
         result = message.get('PV2.37')
         self.assertEqual(result, 'N')
 
@@ -7935,22 +7935,22 @@ class Test_de_cgm_medico_12_12_ACK_A03_transport_acknowledgment_for_discharge(un
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         self.assertIsInstance(message, ACK)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ACK')
@@ -7958,7 +7958,7 @@ class Test_de_cgm_medico_12_12_ACK_A03_transport_acknowledgment_for_discharge(un
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -7967,196 +7967,196 @@ class Test_de_cgm_medico_12_12_ACK_A03_transport_acknowledgment_for_discharge(un
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202504011706')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ACK')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A03')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ACK')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'RIS002')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.15')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('SFT.1')
         self.assertEqual(result, 'KIS System GmbH')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('SFT.1.2')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_SFT_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('SFT.2')
         self.assertEqual(result, '5.0')
 
 # ################################################################################################################
 
     def test_navigate_SFT_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('SFT.3')
         self.assertEqual(result, 'A1')
 
 # ################################################################################################################
 
     def test_navigate_MSA_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSA.1')
         self.assertEqual(result, 'CA')
 
 # ################################################################################################################
 
     def test_navigate_MSA_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_12, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_12, validate=False)
         result = message.get('MSA.2')
         self.assertEqual(result, 'ADT001')
 
@@ -8254,22 +8254,22 @@ class Test_de_cgm_medico_13_13_ADT_A02_Verlegung_transfer_standard_profile(unitt
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         self.assertIsInstance(message, ADT_A02)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A02')
@@ -8277,7 +8277,7 @@ class Test_de_cgm_medico_13_13_ADT_A02_Verlegung_transfer_standard_profile(unitt
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -8286,644 +8286,644 @@ class Test_de_cgm_medico_13_13_ADT_A02_Verlegung_transfer_standard_profile(unitt
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202604011935')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A02')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A02')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT002')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.44')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('SFT.1')
         self.assertEqual(result, 'KIS System GmbH')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('SFT.1.2')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_SFT_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('SFT.2')
         self.assertEqual(result, '5.0')
 
 # ################################################################################################################
 
     def test_navigate_SFT_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('SFT.3')
         self.assertEqual(result, 'A1')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202604011935')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '67890')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.5[0]')
         self.assertEqual(result, 'Stürmer')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.5[0].2')
         self.assertEqual(result, 'Bärbel')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.5[0].7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.5[0].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.5[0].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.5[1]')
         self.assertEqual(result, 'Rößler')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.5[1].7')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.5[1].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.5[1].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19840908')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Römerstraße 28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Römerstraße')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.11[1]')
         self.assertEqual(result, 'Bäckerweg 9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.11[1].1.2')
         self.assertEqual(result, 'Bäckerweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.11[1].1.3')
         self.assertEqual(result, '9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'BDL')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'married')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Sankt-Ägidius-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'CHI')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '303')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '3')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'CH')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.6')
         self.assertEqual(result, 'IN1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.6.2')
         self.assertEqual(result, '202')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.6.3')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.6.4')
         self.assertEqual(result, 'IN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.6.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.6.7')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.6.8')
         self.assertEqual(result, '2')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.7')
         self.assertEqual(result, '710213')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.7.2')
         self.assertEqual(result, 'Köhler')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.7.3')
         self.assertEqual(result, 'Hëinrich')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.7.6')
         self.assertEqual(result, 'Dr.')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.7.9')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.7.10')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_13(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.7.13')
         self.assertEqual(result, 'DN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '4711')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PV2_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV2.9')
         self.assertEqual(result, '20260405')
 
 # ################################################################################################################
 
     def test_navigate_PV2_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_13, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_13, validate=False)
         result = message.get('PV2.10')
         self.assertEqual(result, '4')
 
@@ -9094,22 +9094,22 @@ class Test_de_cgm_medico_14_14_ADT_A02_Verlegung_transfer_DRG_profile(unittest.T
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         self.assertIsInstance(message, ADT_A02)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A02')
@@ -9117,7 +9117,7 @@ class Test_de_cgm_medico_14_14_ADT_A02_Verlegung_transfer_DRG_profile(unittest.T
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -9126,609 +9126,609 @@ class Test_de_cgm_medico_14_14_ADT_A02_Verlegung_transfer_DRG_profile(unittest.T
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202604011935')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A02')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A02')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT002')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.45')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('SFT.1')
         self.assertEqual(result, 'KIS System GmbH')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('SFT.1.2')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_SFT_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('SFT.2')
         self.assertEqual(result, '5.0')
 
 # ################################################################################################################
 
     def test_navigate_SFT_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('SFT.3')
         self.assertEqual(result, 'A1')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202604011935')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '67890')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.5[0]')
         self.assertEqual(result, 'Stürmer')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.5[0].2')
         self.assertEqual(result, 'Bärbel')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.5[0].7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.5[0].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.5[0].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.5[1]')
         self.assertEqual(result, 'Rößler')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.5[1].7')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.5[1].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.5[1].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19840908')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Römerstraße 28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Römerstraße')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.11[1]')
         self.assertEqual(result, 'Bäckerweg 9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.11[1].1.2')
         self.assertEqual(result, 'Bäckerweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.11[1].1.3')
         self.assertEqual(result, '9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'BDL')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'married')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Sankt-Ägidius-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'CHI')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '303')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '3')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'CH')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.6')
         self.assertEqual(result, 'IN1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.6.2')
         self.assertEqual(result, '202')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.6.3')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.6.4')
         self.assertEqual(result, 'IN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.6.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.6.7')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.6.8')
         self.assertEqual(result, '2')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '4711')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PV2_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV2.9')
         self.assertEqual(result, '20260406')
 
 # ################################################################################################################
 
     def test_navigate_PV2_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV2.10')
         self.assertEqual(result, '5')
 
 # ################################################################################################################
 
     def test_navigate_PV2_36(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV2.36')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV2_37(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_14, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_14, validate=False)
         result = message.get('PV2.37')
         self.assertEqual(result, 'N')
 
@@ -9901,22 +9901,22 @@ class Test_de_cgm_medico_15_15_ADT_A12_Stornierung_Verlegung_cancel_transfer(uni
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         self.assertIsInstance(message, ADT_A12)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A12')
@@ -9924,7 +9924,7 @@ class Test_de_cgm_medico_15_15_ADT_A12_Stornierung_Verlegung_cancel_transfer(uni
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -9933,539 +9933,539 @@ class Test_de_cgm_medico_15_15_ADT_A12_Stornierung_Verlegung_cancel_transfer(uni
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202604011935')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A12')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A12')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT002')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.46')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202604011935')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '67890')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.5')
         self.assertEqual(result, 'Stürmer')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.5.2')
         self.assertEqual(result, 'Bärbel')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.5.7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.5.8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.5.11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19840908')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Römerstraße 28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Römerstraße')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.11[1]')
         self.assertEqual(result, 'Bäckerweg 9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.11[1].1.2')
         self.assertEqual(result, 'Bäckerweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.11[1].1.3')
         self.assertEqual(result, '9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'BDL')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'married')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Sankt-Ägidius-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'CHI')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '303')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '3')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'CH')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.6')
         self.assertEqual(result, 'IN1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.6.2')
         self.assertEqual(result, '202')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.6.3')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.6.4')
         self.assertEqual(result, 'IN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.6.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.6.7')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.6.8')
         self.assertEqual(result, '2')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '4711')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PV2_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV2.9')
         self.assertEqual(result, '20260405')
 
 # ################################################################################################################
 
     def test_navigate_PV2_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_15, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_15, validate=False)
         result = message.get('PV2.10')
         self.assertEqual(result, '4')
 
@@ -10617,22 +10617,22 @@ class Test_de_cgm_medico_16_16_ADT_A12_Stornierung_fr_herer_Verlegung_cancel_ear
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         self.assertIsInstance(message, ADT_A12)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A12')
@@ -10640,7 +10640,7 @@ class Test_de_cgm_medico_16_16_ADT_A12_Stornierung_fr_herer_Verlegung_cancel_ear
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -10649,546 +10649,546 @@ class Test_de_cgm_medico_16_16_ADT_A12_Stornierung_fr_herer_Verlegung_cancel_ear
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202604011935')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A12')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A12')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT002')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.46')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202604011935')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '67890')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.5')
         self.assertEqual(result, 'Stürmer')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.5.2')
         self.assertEqual(result, 'Bärbel')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.5.7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.5.8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.5.11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19840908')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Römerstraße 28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Römerstraße')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.11[1]')
         self.assertEqual(result, 'Bäckerweg 9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.11[1].1.2')
         self.assertEqual(result, 'Bäckerweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.11[1].1.3')
         self.assertEqual(result, '9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'BDL')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'married')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Sankt-Ägidius-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'CHI')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '303')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '3')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'CH')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.6')
         self.assertEqual(result, 'IN1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.6.2')
         self.assertEqual(result, '202')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.6.3')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.6.4')
         self.assertEqual(result, 'IN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.6.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.6.7')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.6.8')
         self.assertEqual(result, '2')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '4711')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PV1_51(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV1.51')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PV2_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV2.9')
         self.assertEqual(result, '20260405')
 
 # ################################################################################################################
 
     def test_navigate_PV2_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_16, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_16, validate=False)
         result = message.get('PV2.10')
         self.assertEqual(result, '4')
 
@@ -11342,22 +11342,22 @@ class Test_de_cgm_medico_17_17_ADT_A04_Besuchsmeldung_Registrierung_outpatient_r
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         self.assertIsInstance(message, ADT_A01)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A01')
@@ -11365,7 +11365,7 @@ class Test_de_cgm_medico_17_17_ADT_A04_Besuchsmeldung_Registrierung_outpatient_r
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -11374,511 +11374,511 @@ class Test_de_cgm_medico_17_17_ADT_A04_Besuchsmeldung_Registrierung_outpatient_r
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202604011705')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A04')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT001')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.51')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('SFT.1')
         self.assertEqual(result, 'KIS System GmbH')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('SFT.1.2')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_SFT_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('SFT.2')
         self.assertEqual(result, '5.0')
 
 # ################################################################################################################
 
     def test_navigate_SFT_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('SFT.3')
         self.assertEqual(result, 'A1')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202604011705')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '67890')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.5[0]')
         self.assertEqual(result, 'Stürmer')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.5[0].2')
         self.assertEqual(result, 'Bärbel')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.5[0].7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.5[0].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.5[0].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.5[1]')
         self.assertEqual(result, 'Rößler')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.5[1].7')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.5[1].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.5[1].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19840908')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Römerstraße 28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Römerstraße')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.11[1]')
         self.assertEqual(result, 'Bäckerweg 9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.11[1].1.2')
         self.assertEqual(result, 'Bäckerweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.11[1].1.3')
         self.assertEqual(result, '9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'BDL')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'married')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Sankt-Ägidius-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'O')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'AIN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '4711')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_17, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_17, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202604011645')
 
@@ -12030,22 +12030,22 @@ class Test_de_cgm_medico_18_18_ADT_A04_Besuchsmeldung_Registrierung_pre_admissio
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         self.assertIsInstance(message, ADT_A01)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A01')
@@ -12053,7 +12053,7 @@ class Test_de_cgm_medico_18_18_ADT_A04_Besuchsmeldung_Registrierung_pre_admissio
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -12062,483 +12062,483 @@ class Test_de_cgm_medico_18_18_ADT_A04_Besuchsmeldung_Registrierung_pre_admissio
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202604011705')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A04')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT001')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.51')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202604011705')
 
 # ################################################################################################################
 
     def test_navigate_EVN_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('EVN.3')
         self.assertEqual(result, '20260601')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '67890')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.5[0]')
         self.assertEqual(result, 'Stürmer')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.5[0].2')
         self.assertEqual(result, 'Bärbel')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.5[0].7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.5[0].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.5[0].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.5[1]')
         self.assertEqual(result, 'Rößler')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.5[1].7')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.5[1].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.5[1].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19840908')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Römerstraße 28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Römerstraße')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '28')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.11[1]')
         self.assertEqual(result, 'Bäckerweg 9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.11[1].1.2')
         self.assertEqual(result, 'Bäckerweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.11[1].1.3')
         self.assertEqual(result, '9')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'München')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'BDL')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'married')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Sankt-Ägidius-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'IN1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'CH')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '4711')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Föhren-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PV2_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_18, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_18, validate=False)
         result = message.get('PV2.8')
         self.assertEqual(result, '20260601')
 
@@ -12686,22 +12686,22 @@ class Test_de_cgm_medico_19_19_ACK_A04_transport_acknowledgment_for_registration
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         self.assertIsInstance(message, ACK)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ACK')
@@ -12709,7 +12709,7 @@ class Test_de_cgm_medico_19_19_ACK_A04_transport_acknowledgment_for_registration
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -12718,168 +12718,168 @@ class Test_de_cgm_medico_19_19_ACK_A04_transport_acknowledgment_for_registration
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202604011706')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ACK')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A04')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ACK')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'RIS002')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.51')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_MSA_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSA.1')
         self.assertEqual(result, 'CA')
 
 # ################################################################################################################
 
     def test_navigate_MSA_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_19, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_19, validate=False)
         result = message.get('MSA.2')
         self.assertEqual(result, 'ADT001')
 
@@ -12960,22 +12960,22 @@ class Test_de_cgm_medico_20_20_ADT_A08_incoming_from_KIS_via_KomServer_integrati
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         self.assertIsInstance(message, ADT_A01)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A01')
@@ -12983,7 +12983,7 @@ class Test_de_cgm_medico_20_20_ADT_A08_incoming_from_KIS_via_KomServer_integrati
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -12992,231 +12992,231 @@ class Test_de_cgm_medico_20_20_ADT_A08_incoming_from_KIS_via_KomServer_integrati
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KomServer')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'KOMSERV')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'samedi-hl7gateway')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'samedi')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '20260410123517')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A08')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, '2638150947283')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_13(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('MSH.13')
         self.assertEqual(result, '9E72B53F8AC791B')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202604061019')
 
 # ################################################################################################################
 
     def test_navigate_PID_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('PID.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('PID.3[0]')
         self.assertEqual(result, '4477')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('PID.3[0].4.2')
         self.assertEqual(result, 'www.praxis-süd.de')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('PID.3[0].4.3')
         self.assertEqual(result, 'DNS')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('PID.3[0].5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('PID.3[1]')
         self.assertEqual(result, '287433')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1_4(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('PID.3[1].4')
         self.assertEqual(result, 'Röntgen')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('PID.3[1].5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('PID.5')
         self.assertEqual(result, 'Größe')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('PID.5.2')
         self.assertEqual(result, 'Fränze')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19500327')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('PID.11')
         self.assertEqual(result, 'Blücherstr. 41')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('PID.11.1.2')
         self.assertEqual(result, 'Blücherstr. 41')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_3(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('PID.11.3')
         self.assertEqual(result, 'Göttingen')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_5(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('PID.11.5')
         self.assertEqual(result, '37073')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_6(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('PID.11.6')
         self.assertEqual(result, 'DE')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_7(self) -> 'None':
-        message = parse_message(_Raw_de_cgm_medico_20, validate=False)
+        message = parse_hl7(_Raw_de_cgm_medico_20, validate=False)
         result = message.get('PID.11.7')
         self.assertEqual(result, 'L')
 
