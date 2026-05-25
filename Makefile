@@ -556,9 +556,12 @@ MLLP_TESTS  := $(CURDIR)/code/tests/python/zato-common/mllp
 
 hl7-haproxy: ## Start HAProxy in full debug mode with the production config.
 	@echo ">>> Starting HAProxy in debug mode"
+	@mkdir -p /tmp/zato-hl7-dev
+	@touch /tmp/zato-hl7-dev/blocked-paths.txt
+	@sed 's|/opt/zato/env/qs-1/blocked-paths.txt|/tmp/zato-hl7-dev/blocked-paths.txt|g' $(HAPROXY_CFG) > /tmp/zato-hl7-dev/haproxy.cfg
 	Zato_Load_Balancer_Stats_Password=dev \
 	Zato_Load_Balancer_Metrics_Password=dev \
-	haproxy -d -f $(HAPROXY_CFG)
+	haproxy -d -f /tmp/zato-hl7-dev/haproxy.cfg
 
 hl7-backend-mllp: ## Start the MLLP echo backend on port 31312.
 	@echo ">>> Starting MLLP echo backend on port 31312"
