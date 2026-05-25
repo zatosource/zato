@@ -395,6 +395,13 @@ $.fn.zato.channel.hl7.mllp.invoke = function(id) {
         title_prefix: 'Invoke HL7 MLLP channel',
         default_request: $.fn.zato.channel.hl7.mllp._default_hl7_message,
     });
+
+    $.fn.zato.invoker._request_ace_mode = 'ace/mode/hl7';
+
+    var pane = $.fn.zato.invoker._request_pane;
+    if (pane) {
+        pane.getEditor().session.setMode('ace/mode/hl7');
+    }
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
