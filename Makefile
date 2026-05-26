@@ -179,10 +179,10 @@ haproxy:
 	haproxy -d -f $(HAPROXY_DEV_DIR)/haproxy.cfg
 
 dev:
-	$$Zato_Dev_Prefix -e "make -C $(CURDIR) dashboard" -t dashboard
-	$$Zato_Dev_Prefix -e "make -C $(CURDIR) server" -t server
-	$$Zato_Dev_Prefix -e "make -C $(CURDIR) scheduler" -t scheduler
-	$$Zato_Dev_Prefix -e "make -C $(CURDIR) listener" -t listener
+	$$Zato_Dev_Prefix -t dashboard -- bash -c 'make -C $(CURDIR) dashboard; exec bash -i'
+	$$Zato_Dev_Prefix -t server -- bash -c 'make -C $(CURDIR) server; exec bash -i'
+	$$Zato_Dev_Prefix -t scheduler -- bash -c 'make -C $(CURDIR) scheduler; exec bash -i'
+	$$Zato_Dev_Prefix -t listener -- bash -c 'make -C $(CURDIR) listener; exec bash -i'
 	$(MAKE) haproxy
 
 # ############################################################################
