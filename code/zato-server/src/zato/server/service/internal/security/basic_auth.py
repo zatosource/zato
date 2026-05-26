@@ -87,8 +87,10 @@ class Create(AdminService):
                 if existing_one:
                     raise Exception('HTTP Basic Auth definition `{}` already exists in this cluster'.format(input.name))
 
+                realm = input.realm if input.realm else 'API'
+
                 auth = HTTPBasicAuth(None, input.name, input.is_active, input.username,
-                    input.realm or None, input.password, cluster)
+                    realm, input.password, cluster)
                 set_instance_opaque_attrs(auth, input)
 
                 session.add(auth)
@@ -176,7 +178,7 @@ class Edit(AdminService):
                 definition.name = input.name
                 definition.is_active = input.is_active
                 definition.username = input.username
-                definition.realm = input.realm or None
+                definition.realm = input.realm if input.realm else 'API'
 
                 session.add(definition)
                 session.commit()
