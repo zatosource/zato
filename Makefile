@@ -29,7 +29,7 @@
 	geiger geiger-zato \
 	rust-lint lint \
 	hl7-haproxy hl7-backend-mllp hl7-backend-rest hl7-send-message \
-	quickstart dashboard server listener haproxy
+	quickstart dashboard server listener haproxy dev
 
 MAKEFLAGS += --silent --no-print-directory
 
@@ -76,7 +76,7 @@ PERF_ARGS     := $(if $(HEAVY),heavy,) $(if $(JSON),json,) $(PERF_TIER)
 # Build targets
 # ############################################################################
 
-default: build
+default: dev
 
 build: common-core-build server-build scheduler-build io-build queue-bridge-build
 # build: ... fhir-rust-build  # FHIR commented out for now
@@ -177,6 +177,13 @@ haproxy:
 	Zato_Load_Balancer_Stats_Password=dev \
 	Zato_Load_Balancer_Metrics_Password=dev \
 	haproxy -d -f $(HAPROXY_DEV_DIR)/haproxy.cfg
+
+dev:
+	$$Zato_Dev_Prefix -e "make -C $(CURDIR) haproxy" -t haproxy
+	$$Zato_Dev_Prefix -e "make -C $(CURDIR) dashboard" -t dashboard
+	$$Zato_Dev_Prefix -e "make -C $(CURDIR) server" -t server
+	$$Zato_Dev_Prefix -e "make -C $(CURDIR) scheduler" -t scheduler
+	$$Zato_Dev_Prefix -e "make -C $(CURDIR) listener" -t listener
 
 # ############################################################################
 # Install targets
@@ -541,7 +548,7 @@ dylint-zato: ## Dylint all public Rust crates.
 
 dylint: dylint-zato ## Dylint everything.
 
-deny-zato: ## Dependency audit (advisories, licenses, bans) for public crates.
+rust-deny-zato: ## Dependency audit (advisories, licenses, bans) for public crates.
 	. $(HOME)/.cargo/env && \
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_common_core/Cargo.toml    check --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml && \
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    check --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml && \
@@ -549,7 +556,7 @@ deny-zato: ## Dependency audit (advisories, licenses, bans) for public crates.
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_input_output/Cargo.toml             check --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml && \
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_queue_bridge/Cargo.toml   check --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml
 
-deny: deny-zato ## Dependency audit everywhere.
+rust-deny: rust-deny-zato ## Dependency audit everywhere.
 
 vet-zato: ## Supply-chain audit for public crates.
 	. $(HOME)/.cargo/env && \
