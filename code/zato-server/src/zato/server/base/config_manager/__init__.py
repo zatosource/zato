@@ -1481,13 +1481,7 @@ class ConfigManager(_ConfigManagerBase):
     def on_config_event_CHANNEL_HTTP_SOAP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an HTTP/SOAP channel.
         """
-        # First, check if there was a cache for this channel. If so, make sure of all entries pointing
-        # to the channel are deleted too.
         item = self.get_channel_rest(msg.name) or {}
-        if item['cache_type']:
-            cache = self.server.get_cache(item['cache_type'], item['cache_name'])
-            cache.delete_by_prefix('http-channel-{}'.format(item['id']))
-
         channel_id = item['id']
         with self.server.gateway_services_allowed_lock:
             _ = self.server.gateway_services_allowed.pop(channel_id, None)

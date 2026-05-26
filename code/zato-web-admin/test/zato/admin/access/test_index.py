@@ -95,7 +95,6 @@ class IndexTestCase(BaseTestCase):
         to_skip = {
 
             'basic/save/',
-            'cache/builtin/clear',
             'favicon.ico',
 
             '/accounts/login',
