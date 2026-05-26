@@ -309,12 +309,6 @@ microsoft_365:
     scopes: Mail.Read Mail.Send
     tenant_id: 87654321-4321-4321-4321-cba987654321
 
-cache:
-
-  - name: enmasse.cache.builtin.1
-    extend_expiry_on_get: true
-    extend_expiry_on_set: false
-
 confluence:
 
   - name: enmasse.confluence.1

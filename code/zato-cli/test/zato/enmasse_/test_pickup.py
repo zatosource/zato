@@ -389,8 +389,6 @@ class TestEnmassePickup(TestCase):
                     item['timeout'] = item.get('timeout', 10) + 100
                 elif section_name == 'sql':
                     item['pool_size'] = item.get('pool_size', 10) + 5
-                elif section_name == 'cache':
-                    item['extend_expiry_on_get'] = not item.get('extend_expiry_on_get', True)
                 elif section_name in ('security', 'groups'):
                     pass
                 else:
