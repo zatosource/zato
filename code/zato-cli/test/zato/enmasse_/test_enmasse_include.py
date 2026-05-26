@@ -266,7 +266,6 @@ include:
         self.assertIn('sql', complete_config)
         self.assertIn('outgoing_soap', complete_config)
         self.assertIn('microsoft_365', complete_config)
-        self.assertIn('cache', complete_config)
         self.assertIn('confluence', complete_config)
         self.assertIn('email_imap', complete_config)
         self.assertIn('email_smtp', complete_config)

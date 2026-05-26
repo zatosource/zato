@@ -96,7 +96,12 @@ _utcnow=utcnow
 # ################################################################################################################################
 
 # For backward compatibility we ignore certain modules
-internal_to_ignore = []
+internal_to_ignore = [
+    'zato.server.service.internal.cache',
+    'zato.server.service.internal.cache.builtin',
+    'zato.server.service.internal.cache.builtin.entry',
+    'zato.server.service.internal.cache.builtin.pubapi',
+]
 
 # ################################################################################################################################
 # ################################################################################################################################
