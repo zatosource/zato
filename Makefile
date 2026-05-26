@@ -179,11 +179,11 @@ haproxy:
 	haproxy -d -f $(HAPROXY_DEV_DIR)/haproxy.cfg
 
 dev:
-	$$Zato_Dev_Prefix -e "make -C $(CURDIR) haproxy" -t haproxy
 	$$Zato_Dev_Prefix -e "make -C $(CURDIR) dashboard" -t dashboard
 	$$Zato_Dev_Prefix -e "make -C $(CURDIR) server" -t server
 	$$Zato_Dev_Prefix -e "make -C $(CURDIR) scheduler" -t scheduler
 	$$Zato_Dev_Prefix -e "make -C $(CURDIR) listener" -t listener
+	$(MAKE) haproxy
 
 # ############################################################################
 # Install targets
