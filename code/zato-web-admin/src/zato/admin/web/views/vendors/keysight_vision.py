@@ -52,7 +52,7 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    input_required = 'id', 'name', 'is_active', 'host', 'username', 'password'
+    input_required = 'name', 'is_active', 'host', 'username', 'password'
     output_required = 'id', 'name'
 
 # ################################################################################################################################
