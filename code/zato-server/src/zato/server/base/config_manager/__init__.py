@@ -1869,6 +1869,11 @@ class ConfigManager(_ConfigManagerBase):
             topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
             self._add_pubsub_sub_config(sub_key, topic_name, delivery_type, msg)
 
+            # .. set up the Redis consumer group so the subscriber can immediately
+            # .. receive messages published after this point.
+            if self.server._has_pubsub_redis:
+                self.server.pubsub_redis.subscribe(sub_key, topic_name)
+
     def on_config_event_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'bunch_') -> 'None':
 
         sub_key = msg.sub_key
