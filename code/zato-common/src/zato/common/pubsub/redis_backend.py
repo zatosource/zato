@@ -395,12 +395,17 @@ class RedisPubSubBackend:
         # .. add subscriber to topic's set ..
         _ = self.redis.sadd(topic_subs_key, sub_key)
 
-        # .. create consumer group if not exists.
+        # .. create consumer group starting from the stream's current tail ..
         try:
-            _ = self.redis.xgroup_create(stream_key, sub_key, id='0', mkstream=True)
+            _ = self.redis.xgroup_create(stream_key, sub_key, id='$', mkstream=True)
         except ResponseError as error:
             if 'BUSYGROUP' not in error.args[0]:
                 raise
+        else:
+            # .. the group was just created, so we need to seed entries-read
+            # .. to the current stream length so that XINFO GROUPS reports lag correctly.
+            stream_len = self.redis.xlen(stream_key)
+            _ = self.redis.xgroup_setid(stream_key, sub_key, id='$', entries_read=stream_len)
 
 # ################################################################################################################################
 

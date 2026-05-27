@@ -1,0 +1,25 @@
+security:
+
+  - name: test.newsub.publisher
+    type: basic_auth
+    username: test.newsub.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.newsub.subscriber
+    type: basic_auth
+    username: test.newsub.subscriber
+    password: "{{subscriber_password}}"
+
+pubsub_topic:
+
+  - name: newsub.test.topic.1
+
+pubsub_permission:
+
+  - security: test.newsub.publisher
+    pub:
+      - newsub.**
+
+  - security: test.newsub.subscriber
+    sub:
+      - newsub.**
