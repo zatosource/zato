@@ -502,28 +502,71 @@ class GraphQLInvoker:
 
 # ################################################################################################################################
 
-    def execute(self, query:'any_', params:'anydict | None'=None) -> 'anydict':
-        """ Executes a GraphQL query or mutation against the configured server.
+    @staticmethod
+    def _build_transport(config:'anydict', server:'any_'=None) -> 'any_':
+        """ Builds a RequestsHTTPTransport from a connection config dict,
+        including security headers based on auth_type.
         """
-
-        # gql
-        from gql import Client as GQLClient
-        from gql import gql as gql_parse
         from gql.transport.requests import RequestsHTTPTransport
 
-        # Get the connection's config ..
-        config = self._outconn_graphql[self._conn_name]
         address = config['address']
         timeout = config.get('default_query_timeout')
+        if timeout:
+            timeout = int(timeout)
 
         # .. extra headers ..
-        if extra_raw := config.get('extra'):
-            headers = json.loads(extra_raw)
+        if extra := config.get('extra'):
+            headers = json.loads(extra) if isinstance(extra, str) else dict(extra)
         else:
             headers = {}
 
-        # .. build the transport ..
-        transport = RequestsHTTPTransport(url=address, timeout=timeout, headers=headers)
+        # .. inject security based on auth_type ..
+        auth = None
+        auth_type = config.get('auth_type') or ''
+
+        if auth_type in ('basic_auth', 'apikey', 'oauth'):
+
+            # .. resolve the server reference - either from the conn wrapper or passed directly ..
+            if not server:
+                conn_wrapper = config.get('conn')
+                if conn_wrapper:
+                    server = conn_wrapper.server
+
+            security_id = config.get('security_id')
+
+            if server and security_id:
+
+                if auth_type == 'basic_auth':
+                    from requests.auth import HTTPBasicAuth
+                    sec_config = server.config_manager.basic_auth_get_by_id(security_id)
+                    auth = HTTPBasicAuth(sec_config['username'], sec_config['password'])
+
+                elif auth_type == 'apikey':
+                    sec_config = server.config_manager.apikey_get_by_id(security_id)
+                    headers[sec_config['username']] = sec_config['password']
+
+                elif auth_type == 'oauth':
+                    auth_header = server.oauth_store.get_auth_header(security_id)
+                    if auth_header:
+                        headers['Authorization'] = auth_header
+
+        out = RequestsHTTPTransport(url=address, timeout=timeout, headers=headers, auth=auth)
+        return out
+
+# ################################################################################################################################
+
+    def execute(self, query:'any_', params:'anydict | None'=None) -> 'anydict':
+        """ Executes a GraphQL query or mutation against the configured server.
+        """
+        # gql
+        from gql import Client as GQLClient
+        from gql import gql as gql_parse
+
+        # Get the connection's config ..
+        config = self._outconn_graphql[self._conn_name]
+
+        # .. build the transport with auth ..
+        transport = self._build_transport(config)
 
         # .. build the client ..
         client = GQLClient(transport=transport)
@@ -551,31 +594,21 @@ class GraphQLInvoker:
     def session(self) -> 'any_':
         """ Returns a context manager that yields a (session, DSLSchema) pair for DSL-based queries.
         """
-
         # stdlib
         from contextlib import contextmanager
 
         # gql
         from gql import Client as GQLClient
         from gql.dsl import DSLSchema
-        from gql.transport.requests import RequestsHTTPTransport
 
         # Get the connection's config ..
         config = self._outconn_graphql[self._conn_name]
-        address = config.config['address']
-        timeout = config.config.get('default_query_timeout')
-
-        # .. extra headers ..
-        if extra_raw := config.config.get('extra'):
-            headers = json.loads(extra_raw)
-        else:
-            headers = {}
 
         @contextmanager
         def _session_ctx():
 
-            # Build the transport and client with schema fetching enabled ..
-            transport = RequestsHTTPTransport(url=address, timeout=timeout, headers=headers)
+            # Build the transport with auth and schema fetching enabled ..
+            transport = GraphQLInvoker._build_transport(config)
             client = GQLClient(transport=transport, fetch_schema_from_transport=True)
 
             # .. open the session ..
@@ -604,19 +637,8 @@ class GraphQLInvoker:
         """
         from gql import Client as GQLClient
         from gql import gql as gql_parse
-        from gql.transport.requests import RequestsHTTPTransport
 
-        address = config['address']
-        timeout = config.get('default_query_timeout')
-        if timeout:
-            timeout = int(timeout)
-
-        if extra_raw := config.get('extra'):
-            headers = json.loads(extra_raw)
-        else:
-            headers = {}
-
-        transport = RequestsHTTPTransport(url=address, timeout=timeout, headers=headers)
+        transport = GraphQLInvoker._build_transport(config)
         client = GQLClient(transport=transport)
 
         try:

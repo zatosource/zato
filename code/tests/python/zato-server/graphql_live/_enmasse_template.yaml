@@ -1,0 +1,28 @@
+security:
+
+  - name: test.graphql.basic_auth
+    type: basic_auth
+    username: test.graphql.user
+    password: "{{basic_auth_password}}"
+
+  - name: test.graphql.apikey
+    type: apikey
+    username: X-API-Key
+    password: "{{apikey_value}}"
+
+outgoing_graphql:
+
+  - name: test.graphql.no_auth
+    address: http://127.0.0.1:{{graphql_port}}/graphql
+
+  - name: test.graphql.basic_auth
+    address: http://127.0.0.1:{{graphql_port}}/graphql
+    security: test.graphql.basic_auth
+
+  - name: test.graphql.apikey
+    address: http://127.0.0.1:{{graphql_port}}/graphql
+    security: test.graphql.apikey
+
+  - name: test.graphql.custom_headers
+    address: http://127.0.0.1:{{graphql_port}}/graphql
+    extra: '{"X-Tenant": "acme", "X-Request-Source": "zato-test"}'
