@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 from contextlib import closing
 from traceback import format_exc
 from uuid import uuid4
@@ -24,6 +25,8 @@ from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+logger = logging.getLogger(__name__)
 
 if 0:
     from zato.common.typing_ import any_
@@ -84,8 +87,10 @@ class Create(AdminService):
                 if existing_one:
                     raise Exception('HTTP Basic Auth definition `{}` already exists in this cluster'.format(input.name))
 
+                realm = input.realm if input.realm else 'API'
+
                 auth = HTTPBasicAuth(None, input.name, input.is_active, input.username,
-                    input.realm or None, input.password, cluster)
+                    realm, input.password, cluster)
                 set_instance_opaque_attrs(auth, input)
 
                 session.add(auth)
@@ -103,6 +108,9 @@ class Create(AdminService):
                 input.action = SECURITY.BASIC_AUTH_CREATE.value
                 input.sec_type = SEC_DEF_TYPE.BASIC_AUTH
 
+                logger.info('Create.handle: ODB insert done, name=%s, id=%s, username=%s, realm=%s',
+                    input.name, input.id, input.username, input.realm)
+
                 # .. build a message for pub/sub too ..
                 pubsub_msg = Bunch()
                 pubsub_msg.cid = self.cid
@@ -113,11 +121,14 @@ class Create(AdminService):
 
                 self.config_dispatcher.publish(input)
 
+                logger.info('Create.handle: config_dispatcher.publish done, name=%s, id=%s', input.name, input.id)
+
             self.response.payload.id = auth.id
             self.response.payload.name = auth.name
 
         # Make sure the object has been created
-        _:'any_' = self.server.config_manager.wait_for_basic_auth(input.name)
+        wait_result = self.server.config_manager.wait_for_basic_auth(input.name)
+        logger.info('Create.handle: wait_for_basic_auth result=%s, name=%s', wait_result, input.name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -134,6 +145,9 @@ class Edit(AdminService):
         input = self.request.input
         input_id = input.get('id')
         cluster_id = input.get('cluster_id') or self.server.cluster_id
+
+        logger.info('Edit.handle: name=%s, id=%s, username=%s, realm=%s, cluster_id=%s',
+            input.name, input_id, input.username, input.realm, cluster_id)
 
         with closing(self.odb.session()) as session: # type: ignore
             try:
@@ -164,7 +178,7 @@ class Edit(AdminService):
                 definition.name = input.name
                 definition.is_active = input.is_active
                 definition.username = input.username
-                definition.realm = input.realm or None
+                definition.realm = input.realm if input.realm else 'API'
 
                 session.add(definition)
                 session.commit()
@@ -183,6 +197,9 @@ class Edit(AdminService):
 
                 # .. publish it ..
                 self.config_dispatcher.publish(input)
+
+                logger.info('Edit.handle: config_dispatcher.publish done, name=%s, old_name=%s, id=%s',
+                    input.name, input.old_name, input.get('id'))
 
                 # .. build a message for pub/sub only if something has actually changed ..
                 has_sec_name_changed = input.name != old_name
@@ -230,6 +247,7 @@ class Delete(AdminService):
     input = 'id',
 
     def handle(self):
+        logger.info('Delete.handle: id=%s', self.request.input.id)
         with closing(self.odb.session()) as session:
             try:
                 auth = session.query(HTTPBasicAuth).\

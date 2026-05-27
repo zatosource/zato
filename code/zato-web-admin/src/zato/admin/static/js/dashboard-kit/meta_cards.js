@@ -7,9 +7,6 @@
 
 (function($) {
 
-    if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
-    if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = {}; }
-
     var kit = $.fn.zato.dashboard_kit;
     kit.meta_cards = {};
 

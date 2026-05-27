@@ -49,24 +49,6 @@ $.fn.zato.http_soap.openapi.init = function() {
         layer.scrollLeft = this.scrollLeft;
     });
 
-    let url_params = new URLSearchParams(window.location.search);
-    if (url_params.get("openapi_imported") === "1") {
-        let url = new URL(window.location.href);
-        url.searchParams.delete("openapi_imported");
-        window.history.replaceState({}, document.title, url.toString());
-
-        if (!document.getElementById("openapi-flash-style")) {
-            let style = document.createElement("style");
-            style.id = "openapi-flash-style";
-            style.textContent = "@keyframes flash-green { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }";
-            document.head.appendChild(style);
-        }
-
-        $("#user-message").text("OK, imported").addClass("user-message-success");
-        $("#user-message-div").show();
-        $("#user-message").css("animation", "flash-green 0.8s ease-in-out 2");
-    }
-
     let openapi_import_content = `
         <input type="button" id="openapi-from-copy-paste" value="From copy/paste" onclick="$.fn.zato.http_soap.openapi.on_from_copy_paste();"/>
         <input type="button" id="openapi-from-url" value="From URL" onclick="$.fn.zato.http_soap.openapi.on_from_url();"/>
@@ -237,9 +219,7 @@ $.fn.zato.http_soap.openapi.on_table_import = function() {
             $("#openapi-import-spinner").remove();
             if (response.success) {
                 $.fn.zato.http_soap.openapi.close_copy_paste_overlay();
-                let url = new URL(window.location.href);
-                url.searchParams.set("openapi_imported", "1");
-                window.location.href = url.toString();
+                window.location.href = window.location.href;
             }
         },
         error: function(xhr) {

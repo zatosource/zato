@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from copy import deepcopy
 from logging import getLogger
 from threading import RLock
+from traceback import format_stack
 
 # Paste
 from paste.util.multidict import MultiDict
@@ -65,6 +66,11 @@ class ConfigDict:
 
     def set(self, key, value):
         with self.lock:
+            original_key = key
+            key = key.strip()
+            if not key:
+                logger.info('ConfigDict.set: empty key after strip, original=%r, stack:\n%s',
+                    original_key, ''.join(format_stack()))
             self._impl[key] = value
 
     __setitem__ = set
@@ -73,19 +79,25 @@ class ConfigDict:
 
     def __getitem__(self, key):
         with self.lock:
+            original_key = key
             key = key.strip()
+            if not key:
+                logger.warning('ConfigDict.__getitem__: empty key after strip, original=%r, stack:\n%s',
+                    original_key, ''.join(format_stack()))
             return self._impl.__getitem__(key)
 
 # ################################################################################################################################
 
     def __delitem__(self, key):
         with self.lock:
+            key = key.strip()
             del self._impl[key]
 
 # ################################################################################################################################
 
     def pop(self, key, default):
         with self.lock:
+            key = key.strip()
             return self._impl.pop(key, default)
 
 # ################################################################################################################################

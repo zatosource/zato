@@ -258,15 +258,16 @@ $.fn.zato.settings.executeSteps = function(options) {
 
                     const pollDashboard = function() {
                         pollAttempts++;
-                        $.ajax({
-                            url: pollUrl,
-                            type: 'GET',
-                            timeout: pollTimeout,
-                            success: function() {
-                                currentStep++;
-                                runNextStep();
-                            },
-                            error: function() {
+                        fetch(pollUrl, {signal: AbortSignal.timeout(pollTimeout)})
+                            .then(function(resp) {
+                                if (resp.ok) {
+                                    currentStep++;
+                                    runNextStep();
+                                } else {
+                                    throw new Error('not ready');
+                                }
+                            })
+                            .catch(function() {
                                 if (pollAttempts < maxPollAttempts) {
                                     setTimeout(pollDashboard, 1000);
                                 } else {
@@ -278,8 +279,7 @@ $.fn.zato.settings.executeSteps = function(options) {
                                         options.onError(step, 'Dashboard did not restart');
                                     }
                                 }
-                            }
-                        });
+                            });
                     };
 
                     setTimeout(pollDashboard, pollDelay);

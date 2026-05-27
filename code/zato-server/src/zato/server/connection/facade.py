@@ -513,11 +513,11 @@ class GraphQLInvoker:
 
         # Get the connection's config ..
         config = self._outconn_graphql[self._conn_name]
-        address = config.config['address']
-        timeout = config.config.get('default_query_timeout')
+        address = config['address']
+        timeout = config.get('default_query_timeout')
 
         # .. extra headers ..
-        if extra_raw := config.config.get('extra'):
+        if extra_raw := config.get('extra'):
             headers = json.loads(extra_raw)
         else:
             headers = {}
@@ -543,6 +543,8 @@ class GraphQLInvoker:
             out = session.execute(query, **execute_kwargs)
 
         return out
+
+    invoke = execute
 
 # ################################################################################################################################
 

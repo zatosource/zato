@@ -132,8 +132,13 @@
         var trimmed = text.trim();
         var out;
 
-        // Check for Python traceback markers ..
-        if (trimmed.indexOf('Traceback') !== -1) {
+        // Check for HL7 v2 messages ..
+        if (trimmed.indexOf('MSH|') === 0) {
+            out = 'ace/mode/hl7';
+        }
+
+        // .. check for Python traceback markers ..
+        else if (trimmed.indexOf('Traceback') !== -1) {
             out = 'ace/mode/python_traceback';
         }
         else if (trimmed.indexOf('File "') !== -1) {

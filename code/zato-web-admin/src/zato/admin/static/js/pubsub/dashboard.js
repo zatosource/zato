@@ -1,6 +1,5 @@
 
-if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
-if (typeof $.fn.zato.pubsub === 'undefined') { $.fn.zato.pubsub = {}; }
+
 $.fn.zato.pubsub.dashboard = {};
 
 $.fn.zato.pubsub.dashboard.config = {

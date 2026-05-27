@@ -5,8 +5,7 @@
    of every rendered sparkline keyed by its container selector so
    correlated hover overlays can find xs/ys and data_points later. */
 
-if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
-if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = {}; }
+
 
 (function() {
     var ns = $.fn.zato.dashboard_kit;

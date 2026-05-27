@@ -372,23 +372,13 @@ $.fn.zato.ide.init_resizer = function() {
     console.debug("init_resizer: savedWidth from store:", JSON.stringify(savedWidth));
     console.debug("init_resizer: localStorage.length:", localStorage.length);
 
-    for (let i = 0; i < localStorage.length; i++) {
-        let key = localStorage.key(i);
-        console.debug("init_resizer: localStorage key " + i + ":", key);
-    }
-
     if (savedWidth) {
-        console.debug("init_resizer: setting actionArea width to:", savedWidth);
         actionArea.style.setProperty('width', savedWidth, 'important');
-        console.debug("init_resizer: actionArea.style.width after setting:", actionArea.style.width);
-    } else {
-        console.debug("init_resizer: no saved width found, using default");
     }
 
     let isResizing = false;
 
     resizer.addEventListener('mousedown', function(e) {
-        console.debug("init_resizer: mousedown on resizer");
         isResizing = true;
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
@@ -400,35 +390,20 @@ $.fn.zato.ide.init_resizer = function() {
         let containerRect = container.getBoundingClientRect();
         let newWidth = containerRect.right - e.clientX;
 
-        console.debug("init_resizer: mousemove - containerRect.right:", containerRect.right);
-        console.debug("init_resizer: mousemove - e.clientX:", e.clientX);
-        console.debug("init_resizer: mousemove - calculated newWidth:", newWidth);
-        console.debug("init_resizer: mousemove - containerRect.width:", containerRect.width);
-
         if (newWidth >= 200 && newWidth <= containerRect.width - 200) {
             actionArea.style.width = newWidth + 'px';
-            console.debug("init_resizer: mousemove - set width to:", newWidth + 'px');
-        } else {
-            console.debug("init_resizer: mousemove - width out of bounds, not setting");
         }
     });
 
     document.addEventListener('mouseup', function() {
         if (isResizing) {
-            console.debug("init_resizer: mouseup - resizing ended");
             isResizing = false;
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
             let widthToSave = actionArea.style.width;
-            console.debug("init_resizer: mouseup - actionArea.style.width:", widthToSave);
-            console.debug("init_resizer: mouseup - saving to store with key 'zato.action-area-width'");
             store.set('zato.action-area-width', widthToSave);
-            let verifyRead = store.get('zato.action-area-width');
-            console.debug("init_resizer: mouseup - immediately reading back from store:", JSON.stringify(verifyRead));
         }
     });
-
-    console.debug("init_resizer: END");
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
