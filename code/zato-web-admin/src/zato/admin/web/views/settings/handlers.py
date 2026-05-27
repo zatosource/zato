@@ -76,17 +76,13 @@ class RestartHandler:
             logger.info('restart_dashboard: executing make restart-dashboard')
             try:
                 makefile_dir = os.path.expanduser('~/projects/zatosource-zato/4.1')
-                logger.info('restart_dashboard: makefile_dir={}'.format(makefile_dir))
-                result = subprocess.run(
+                _ = subprocess.Popen(
                     ['make', 'restart-dashboard'],
                     cwd=makefile_dir,
-                    capture_output=True,
-                    text=True
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True
                 )
-                logger.info('restart_dashboard: returncode={}'.format(result.returncode))
-                logger.info('restart_dashboard: stdout={}'.format(result.stdout))
-                if result.stderr:
-                    logger.error('restart_dashboard: stderr={}'.format(result.stderr))
             except Exception as e:
                 logger.error('restart_dashboard: failed to execute make: {}'.format(e))
 
