@@ -369,12 +369,12 @@ class TestGraphQLInvokerExecute(TestCase):
         mock_client.schema = MagicMock()
         mock_client_class.return_value = mock_client
 
-        mock_ds = MagicMock()
-        mock_dsl_schema_class.return_value = mock_ds
+        mock_schema = MagicMock()
+        mock_dsl_schema_class.return_value = mock_schema
 
-        with invoker.session() as (session, ds):
+        with invoker.session() as (session, schema):
             self.assertIs(session, mock_gql_session)
-            self.assertIs(ds, mock_ds)
+            self.assertIs(schema, mock_schema)
 
         mock_client_class.assert_called_once()
         call_kwargs = mock_client_class.call_args
