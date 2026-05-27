@@ -94,7 +94,48 @@ class TestOutgoingGraphQL:
         assert 'test-graphql-1' not in names
 
     def test_08_ping(self, client):
-        pytest.skip('Ping requires a live GraphQL server')
+        import json
+        import socket
+        import threading
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+
+        class _PingHandler(BaseHTTPRequestHandler):
+            def log_message(self, format, *args):
+                pass
+            def do_POST(self):
+                length = int(self.headers.get('Content-Length', 0))
+                _ = self.rfile.read(length)
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                body = json.dumps({'data': {'__schema': {'queryType': {'name': 'Query'}}}})
+                _ = self.wfile.write(body.encode('utf-8'))
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as tcp_socket:
+            tcp_socket.bind(('127.0.0.1', 0))
+            port = tcp_socket.getsockname()[1]
+
+        server = HTTPServer(('127.0.0.1', port), _PingHandler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+
+        try:
+            response = client.create(f'{SERVICE}.create',
+                name='test-graphql-ping-live',
+                is_active=True,
+                type_='outconn-graphql',
+                address=f'http://127.0.0.1:{port}/graphql',
+                is_internal=False,
+                is_channel=False,
+                is_outconn=True,
+            )
+            ping_id = response['id']
+            self.__class__.created_ids.append(ping_id)
+
+            ping_result = client.invoke(f'{SERVICE}.ping', id=ping_id)
+            assert ping_result is not None
+        finally:
+            server.shutdown()
 
     def test_09_delete_one(self, client):
         item_id = self.__class__.created_ids.pop(0)
