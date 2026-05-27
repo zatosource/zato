@@ -207,8 +207,10 @@ class ZatoClient:
         full_address = '{}{}'.format(self.address, url_path)
         data = dumps(payload, default=default_json_handler) if payload else None
 
-        self.logger.info('ZatoClient._post url=%s, payload_type=%s', full_address, type(payload).__name__)
+        import threading
+        self.logger.info('ZatoClient._post url=%s, payload_type=%s, thread=%s', full_address, type(payload).__name__, threading.current_thread().name)
 
+        self.logger.info('ZatoClient._post about to call session.post, session_id=%s', id(self.session))
         raw_response = self.session.post(full_address, data=data, headers=headers, verify=self.tls_verify)
 
         self.logger.info('ZatoClient._post status=%s, text=%r', raw_response.status_code, raw_response.text)

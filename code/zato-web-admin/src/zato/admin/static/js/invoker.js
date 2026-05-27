@@ -825,7 +825,14 @@ $.fn.zato.invoker.toggle_more_options = function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.invoker.open_overlay = function(config) {
+    console.log('[invoker] 1. open_overlay called, config.default_request=', JSON.stringify(config.default_request));
     $.fn.zato.invoker.render_overlay_html();
+
+    if (config.default_request === undefined) {
+        config.default_request = '';
+    }
+    console.log('[invoker] 2. after normalize, config.default_request=', JSON.stringify(config.default_request));
+
     $.fn.zato.invoker._modal_config = config;
     window.zato_invoker_history_index = -1;
 
@@ -849,6 +856,10 @@ $.fn.zato.invoker.open_overlay = function(config) {
     }
 
     let saved = $.fn.zato.invoker._load_overlay_state(config.history_key);
+    console.log('[invoker] 3. loaded saved state, keys=', JSON.stringify(Object.keys(saved)));
+    console.log('[invoker] 4. saved.request=', JSON.stringify(saved.request));
+    console.log('[invoker] 5. typeof saved.request=', typeof saved.request);
+
     let content = $('.invoker-modal-content');
 
     if (saved.width) {
@@ -866,9 +877,13 @@ $.fn.zato.invoker.open_overlay = function(config) {
     }
 
     let requestValue = saved.request;
-    if (requestValue === undefined) {
-        requestValue = '';
+    console.log('[invoker] 6. initial requestValue=', JSON.stringify(requestValue));
+    console.log('[invoker] 7. !requestValue=', !requestValue);
+    if (!requestValue) {
+        requestValue = config.default_request;
+        console.log('[invoker] 8. used default_request, requestValue=', JSON.stringify(requestValue));
     }
+    console.log('[invoker] 9. final requestValue=', JSON.stringify(requestValue));
 
     let savedMethod = saved.method;
     if (savedMethod === undefined) {
@@ -907,6 +922,7 @@ $.fn.zato.invoker.open_overlay = function(config) {
         $.fn.zato.invoker._request_pane.destroy();
     }
 
+    console.log('[invoker] 10. passing to highlight_pane.init, text=', JSON.stringify(requestValue));
     $.fn.zato.invoker._request_pane = $.fn.zato.highlight_pane.init({
         container: $requestContainer,
         text: requestValue,

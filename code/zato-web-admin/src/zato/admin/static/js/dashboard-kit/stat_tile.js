@@ -5,8 +5,7 @@
    timestamp under the mouse, regardless of which tile the mouse is
    currently over. */
 
-if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
-if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = {}; }
+
 
 (function() {
     var ns = $.fn.zato.dashboard_kit;

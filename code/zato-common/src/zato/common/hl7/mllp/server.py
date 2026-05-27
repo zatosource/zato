@@ -19,10 +19,7 @@ from zato.common.hl7.mllp.dedup import MessageDeduplicator, extract_control_id
 from zato.common.hl7.mllp.preprocess import BatchPayload, preprocess_message
 from zato.common.hl7.mllp.router import HL7MessageRouter
 
-try:
-    from zato_hl7v2 import parse_message as hl7_parse_message
-except ImportError:
-    pass
+from zato.hl7v2 import parse_hl7
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -126,7 +123,7 @@ class HL7MLLPServer:
         self.default_character_encoding         = default_character_encoding
 
         # Build the Rust-level parser tolerance config from channel settings ..
-        from zato_hl7v2_rs import ToleranceConfig
+        from zato.hl7v2_rs import ToleranceConfig
         tolerance_config = ToleranceConfig()
         tolerance_config.normalize_obx2_value_type          = normalize_obx2_value_type
         tolerance_config.replace_invalid_obx2_value_type    = replace_invalid_obx2_value_type
@@ -459,7 +456,7 @@ class HL7MLLPServer:
 
                     # .. attempt to parse (and optionally validate) the message ..
                     try:
-                        callback_data = hl7_parse_message(
+                        callback_data = parse_hl7(
                             message_text, validate=self.should_validate, tolerance=self.tolerance_config)
 
                     # .. parsing or validation failed - send an AE reject ACK

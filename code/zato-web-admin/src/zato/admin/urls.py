@@ -43,6 +43,7 @@ from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.search import es
 from zato.admin.web.views.service import ide as service_ide
 from zato.admin.web.views.security import apikey, basic_auth, ntlm
+from zato.admin.web.views.security import posture as security_posture
 from zato.admin.web.views.security.oauth import outconn_client_credentials as oauth_outconn_client_credentials
 from zato.admin.web.views.stats import user as stats_user
 from zato.admin.web.views.monitoring import config as monitoring_config
@@ -207,6 +208,22 @@ urlpatterns += [
         login_required(ntlm.change_password), name='security-ntlm-change-password'),
     url(r'^zato/security/ntlm/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(ntlm.Delete()), name=ntlm.Delete.url_name),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. Security posture
+
+    url(r'^zato/security/posture/$',
+        login_required(security_posture.index), name='security-posture'),
+    url(r'^zato/security/posture/scan/$',
+        login_required(security_posture.run_scan), name='security-posture-scan'),
+    url(r'^zato/security/posture/save/$',
+        login_required(security_posture.save), name='security-posture-save'),
+    url(r'^zato/security/posture/poll/$',
+        login_required(security_posture.poll), name='security-posture-poll'),
     ]
 
 # ################################################################################################################################
@@ -553,6 +570,8 @@ urlpatterns += [
         login_required(channel_hl7_mllp.Edit()), name=channel_hl7_mllp.Edit.url_name),
     url(r'^zato/channel/hl7/mllp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_hl7_mllp.Delete()), name=channel_hl7_mllp.Delete.url_name),
+    url(r'^zato/channel/hl7/mllp/invoke/(?P<id>.*)/$',
+        login_required(channel_hl7_mllp.invoke_channel), name='channel-hl7-mllp-invoke'),
 
     # .. HL7 REST
 

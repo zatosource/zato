@@ -1,9 +1,8 @@
-/*
- * "How does it work?" badge - a subtle pill that sits in the
- * bottom-left of dialog forms, next to OK / Cancel.
- */
+/* ------------------------------------------------------------ */
+/* How it works - shared badge base                             */
+/* ------------------------------------------------------------ */
 
-.data-popup .how-it-works-badge {
+.how-it-works-badge {
     display: inline-block;
     padding: 2px 8px;
     font-size: 9px;
@@ -18,7 +17,30 @@
     transition: box-shadow 0.15s, transform 0.15s, background 0.15s;
 }
 
-.data-popup .how-it-works-badge.how-it-works-active {
+.how-it-works-badge:hover {
+    background: linear-gradient(to bottom, rgba(255, 230, 110, 0.5), rgba(255, 210, 70, 0.4));
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.how-it-works-badge.how-it-works-active {
     background: linear-gradient(to bottom, rgba(210, 170, 30, 0.35), rgba(240, 200, 60, 0.25));
     box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+/* ------------------------------------------------------------ */
+/* How it works - inline per-row badge                          */
+/* ------------------------------------------------------------ */
+
+.how-it-works-badge-inline {
+    position: absolute;
+    display: none;
+    padding: 1px 6px;
+    font-size: 8px;
+    white-space: nowrap;
+    z-index: 9999;
+    pointer-events: auto;
+}
+
+.how-it-works-badge-inline.how-it-works-badge-visible {
+    display: inline-block;
 }

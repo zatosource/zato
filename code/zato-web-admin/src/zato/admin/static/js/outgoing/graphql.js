@@ -52,8 +52,8 @@ $.fn.zato.outgoing.graphql.field_descriptions = {
 $.fn.zato.outgoing.graphql.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new GraphQL connection', null);
     $.fn.zato.how_it_works.init({
-        badge_id: 'create-how-it-works',
-        div_id: '#create-div',
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
         descriptions: $.fn.zato.outgoing.graphql.field_descriptions
     });
 }
@@ -63,8 +63,8 @@ $.fn.zato.outgoing.graphql.create = function() {
 $.fn.zato.outgoing.graphql.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the GraphQL connection', id);
     $.fn.zato.how_it_works.init({
-        badge_id: 'edit-how-it-works',
-        div_id: '#edit-div',
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
         descriptions: $.fn.zato.outgoing.graphql.field_descriptions
     });
 }

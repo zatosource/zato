@@ -222,66 +222,20 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
 
     // Comprehensive diagnostic logging
     console.log('DEBUG populate_sec_def_topics_callback: === DIAGNOSTIC CHECKS ===');
-    console.log('DEBUG populate_sec_def_topics_callback: dialog visible=' + $('#edit-div').is(':visible'));
-    console.log('DEBUG populate_sec_def_topics_callback: dialog open=' + $('#edit-div').dialog('isOpen'));
-    console.log('DEBUG populate_sec_def_topics_callback: multi-select-div visible=' + $(targetDivId).is(':visible'));
-    console.log('DEBUG populate_sec_def_topics_callback: multi-select-div display=' + $(targetDivId).css('display'));
-    console.log('DEBUG populate_sec_def_topics_callback: multi-select-div width=' + $(targetDivId).width());
-    console.log('DEBUG populate_sec_def_topics_callback: multi-select-div height=' + $(targetDivId).height());
     var tableSelector = isEditMode ? '#id_edit-multi-select-table' : '#multi-select-table';
-    console.log('DEBUG populate_sec_def_topics_callback: multi-select-table visible=' + $(tableSelector).is(':visible'));
-    console.log('DEBUG populate_sec_def_topics_callback: multi-select-table display=' + $(tableSelector).css('display'));
     var tdSelector = isEditMode ? '#id_edit-td_topic_list' : '#td_topic_list';
-    console.log('DEBUG populate_sec_def_topics_callback: td_topic_list visible=' + $(tdSelector).is(':visible'));
-    console.log('DEBUG populate_sec_def_topics_callback: topic_checkbox_1 exists=' + $('#topic_checkbox_1').length);
-    console.log('DEBUG populate_sec_def_topics_callback: topic_checkbox_2 exists=' + $('#topic_checkbox_2').length);
-    console.log('DEBUG populate_sec_def_topics_callback: topic_checkbox_3 exists=' + $('#topic_checkbox_3').length);
-    console.log('DEBUG populate_sec_def_topics_callback: topic_checkbox_1 checked=' + $('#topic_checkbox_1').prop('checked'));
-    console.log('DEBUG populate_sec_def_topics_callback: topic_checkbox_2 checked=' + $('#topic_checkbox_2').prop('checked'));
-    console.log('DEBUG populate_sec_def_topics_callback: topic_checkbox_3 checked=' + $('#topic_checkbox_3').prop('checked'));
-
-    // Check parent visibility chain
-    console.log('DEBUG populate_sec_def_topics_callback: === PARENT VISIBILITY CHAIN ===');
-    console.log('DEBUG populate_sec_def_topics_callback: edit-div visible=' + $('#edit-div').is(':visible'));
-    console.log('DEBUG populate_sec_def_topics_callback: edit form visible=' + $('#edit-form').is(':visible'));
-    console.log('DEBUG populate_sec_def_topics_callback: edit table visible=' + $('#edit-div table').first().is(':visible'));
-    console.log('DEBUG populate_sec_def_topics_callback: td_topic_list parent tr visible=' + $('#id_edit-td_topic_list').parent('tr').is(':visible'));
-
-    // Check CSS properties of td_topic_list
-    console.log('DEBUG populate_sec_def_topics_callback: === TD_TOPIC_LIST CSS ===');
-    console.log('DEBUG populate_sec_def_topics_callback: td_topic_list visibility=' + $('#id_edit-td_topic_list').css('visibility'));
-    console.log('DEBUG populate_sec_def_topics_callback: td_topic_list opacity=' + $('#id_edit-td_topic_list').css('opacity'));
-    console.log('DEBUG populate_sec_def_topics_callback: td_topic_list position=' + $('#id_edit-td_topic_list').css('position'));
-    console.log('DEBUG populate_sec_def_topics_callback: td_topic_list left=' + $('#id_edit-td_topic_list').css('left'));
-    console.log('DEBUG populate_sec_def_topics_callback: td_topic_list top=' + $('#id_edit-td_topic_list').css('top'));
-    console.log('DEBUG populate_sec_def_topics_callback: td_topic_list overflow=' + $('#id_edit-td_topic_list').css('overflow'));
-
-    // Check other form elements visibility for comparison
-    console.log('DEBUG populate_sec_def_topics_callback: === OTHER FORM ELEMENTS ===');
-    console.log('DEBUG populate_sec_def_topics_callback: delivery_type field visible=' + $('#id_edit-delivery_type').is(':visible'));
-    console.log('DEBUG populate_sec_def_topics_callback: sec_def container visible=' + $('#id_edit_sec_def_container').is(':visible'));
-
-    // Force browser repaint and check again
-    $(targetDivId).hide().show();
-    console.log('DEBUG populate_sec_def_topics_callback: after repaint - multi-select-div visible=' + $(targetDivId).is(':visible'));
-    console.log('DEBUG populate_sec_def_topics_callback: after repaint - td_topic_list visible=' + $(tdSelector).is(':visible'));
-
-    console.log('DEBUG populate_sec_def_topics_callback: callback complete, final DOM content=' + $(targetDivId).html().substring(0, 200));
 }
 
 $.fn.zato.pubsub.on_sec_def_changed = function() {
     var sec_base_id = $('#id_sec_base_id').val();
-    console.log('DEBUG on_sec_def_changed: sec_base_id=' + JSON.stringify(sec_base_id));
     if(sec_base_id) {
         var cluster_id = $('#cluster_id').val();
         var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', sec_base_id, cluster_id);
-        console.log('DEBUG on_sec_def_changed: posting to url=' + JSON.stringify(url));
         $.fn.zato.post(url, function(data, status) {
             $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, null);
         }, null, null, true);
     }
     else {
-        console.log('DEBUG on_sec_def_changed: no sec_base_id, calling cleanup_hook');
         $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
     }
 }

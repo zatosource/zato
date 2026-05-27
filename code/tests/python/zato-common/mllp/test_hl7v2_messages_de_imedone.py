@@ -12,7 +12,7 @@ import json
 import unittest
 
 # Zato
-from zato.hl7v2.v2_9 import parse_message
+from zato.hl7v2.v2_9 import parse_hl7
 from zato.hl7v2.v2_9.segments import *  # noqa: F403
 from zato.hl7v2.v2_9.datatypes import *  # noqa: F403
 from zato.hl7v2.v2_9.messages import *  # noqa: F403
@@ -27,22 +27,22 @@ class Test_de_imedone_01_1_ADT_A01_Admission_standard_profile_wiki_hl7_de(unitte
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         self.assertIsInstance(message, ADT_A01)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A01')
@@ -50,7 +50,7 @@ class Test_de_imedone_01_1_ADT_A01_Admission_standard_profile_wiki_hl7_de(unitte
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -59,686 +59,686 @@ class Test_de_imedone_01_1_ADT_A01_Admission_standard_profile_wiki_hl7_de(unitte
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202612151705')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT001')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/15')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.19.2')
         self.assertEqual(result, 'German')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.19.5')
         self.assertEqual(result, 'deutsch')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.38')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202612151705')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '202612151645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '7654321')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Ulmen-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.5[0]')
         self.assertEqual(result, 'Winkler')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.5[0].2')
         self.assertEqual(result, 'Ingëborg')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.5[0].7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.5[0].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.5[0].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.5[1]')
         self.assertEqual(result, 'Schröter')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.5[1].7')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.5[1].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.5[1].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.5[2]')
         self.assertEqual(result, 'Winkler')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.5[2].5')
         self.assertEqual(result, 'Frau')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.5[2].7')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.5[2].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19851023')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Kastanienweg 31')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Kastanienweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '31')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'Dresden')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.11[0].5')
         self.assertEqual(result, '01067')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.11[1]')
         self.assertEqual(result, 'Mühlenstr. 8')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.11[1].1.2')
         self.assertEqual(result, 'Mühlenstr.')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.11[1].1.3')
         self.assertEqual(result, '8')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'Dresden')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.11[1].5')
         self.assertEqual(result, '01067')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'BDL')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.15.2')
         self.assertEqual(result, 'German')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.15.5')
         self.assertEqual(result, 'deutsch')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'married')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.16.5')
         self.assertEqual(result, 'verheiratet')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.17.2')
         self.assertEqual(result, 'catholic')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.17.5')
         self.assertEqual(result, 'katholisch')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Elisabethen-Spital')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.26.2')
         self.assertEqual(result, 'German')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PID.26.5')
         self.assertEqual(result, 'deutsch')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'CHI')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '302')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '2')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'IN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.7')
         self.assertEqual(result, '620401')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.7.2')
         self.assertEqual(result, 'Vögler')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.7.3')
         self.assertEqual(result, 'Thëodor')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.7.6')
         self.assertEqual(result, 'Dr.')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.7.9')
         self.assertEqual(result, 'Ulmen-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.7.10')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_13(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.7.13')
         self.assertEqual(result, 'DN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.7.16')
         self.assertEqual(result, 'DN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.7.18')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '3142')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Ulmen-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202612151645')
 
 # ################################################################################################################
 
     def test_navigate_PV2_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV2.9')
         self.assertEqual(result, '20250405')
 
 # ################################################################################################################
 
     def test_navigate_PV2_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_01, validate=False)
+        message = parse_hl7(_Raw_de_imedone_01, validate=False)
         result = message.get('PV2.10')
         self.assertEqual(result, '4')
 
@@ -888,22 +888,22 @@ class Test_de_imedone_02_2_ADT_A01_Admission_for_DRG_wiki_hl7_de(unittest.TestCa
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         self.assertIsInstance(message, ADT_A01)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A01')
@@ -911,7 +911,7 @@ class Test_de_imedone_02_2_ADT_A01_Admission_for_DRG_wiki_hl7_de(unittest.TestCa
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -920,700 +920,700 @@ class Test_de_imedone_02_2_ADT_A01_Admission_for_DRG_wiki_hl7_de(unittest.TestCa
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202604011705')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT001')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.39')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('SFT.1')
         self.assertEqual(result, 'KIS System GmbH')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('SFT.1.2')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_SFT_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('SFT.2')
         self.assertEqual(result, '5.0')
 
 # ################################################################################################################
 
     def test_navigate_SFT_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('SFT.3')
         self.assertEqual(result, 'A1')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202604011705')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '020504011645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '54321')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Ulmen-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.5[0]')
         self.assertEqual(result, 'Bachmann')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.5[0].2')
         self.assertEqual(result, 'Liëselotte')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.5[0].7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.5[0].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.5[0].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.5[1]')
         self.assertEqual(result, 'Nölting')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.5[1].7')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.5[1].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.5[1].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19830711')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Kastanienweg 31')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Kastanienweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '31')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'Dresden')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.11[1]')
         self.assertEqual(result, 'Mühlenstr. 8')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.11[1].1.2')
         self.assertEqual(result, 'Mühlenstr.')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.11[1].1.3')
         self.assertEqual(result, '8')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'Dresden')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'BDL')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'married')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Elisabethen-Spital')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'URO')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '301')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'IN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.7')
         self.assertEqual(result, '620403')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.7.2')
         self.assertEqual(result, 'Hüttner')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.7.3')
         self.assertEqual(result, 'Frïedhelm')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.7.6')
         self.assertEqual(result, 'Dr.')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.7.9')
         self.assertEqual(result, 'Ulmen-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.7.10')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_13(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.7.13')
         self.assertEqual(result, 'DN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.8')
         self.assertEqual(result, '620405')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.8.2')
         self.assertEqual(result, 'Büchner')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.8.3')
         self.assertEqual(result, 'Wïlfried')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.8.6')
         self.assertEqual(result, 'Dr.')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.8.10')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8_13(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.8.13')
         self.assertEqual(result, 'DN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8_15(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.8.15')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.8.18')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PV1_13(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.13')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.18')
         self.assertEqual(result, 'E')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '3142')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Ulmen-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PV2_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV2.3')
         self.assertEqual(result, '0101')
 
 # ################################################################################################################
 
     def test_navigate_PV2_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV2.3.2')
         self.assertEqual(result, 'vollstationär, Normalfall')
 
 # ################################################################################################################
 
     def test_navigate_PV2_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV2.3.3')
         self.assertEqual(result, 'GSG0001')
 
 # ################################################################################################################
 
     def test_navigate_PV2_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV2.9')
         self.assertEqual(result, '20260405')
 
 # ################################################################################################################
 
     def test_navigate_PV2_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV2.10')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV2_36(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV2.36')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV2_37(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_02, validate=False)
+        message = parse_hl7(_Raw_de_imedone_02, validate=False)
         result = message.get('PV2.37')
         self.assertEqual(result, 'N')
 
@@ -1792,22 +1792,22 @@ class Test_de_imedone_03_3_ADT_A01_Admission_for_billing_wiki_hl7_de(unittest.Te
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         self.assertIsInstance(message, ADT_A01)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A01')
@@ -1815,7 +1815,7 @@ class Test_de_imedone_03_3_ADT_A01_Admission_for_billing_wiki_hl7_de(unittest.Te
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -1824,581 +1824,581 @@ class Test_de_imedone_03_3_ADT_A01_Admission_for_billing_wiki_hl7_de(unittest.Te
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202606051705')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT001')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.40')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202606051705')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '020506051645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '54321')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Eschen-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.5[0]')
         self.assertEqual(result, 'Ströbel')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.5[0].2')
         self.assertEqual(result, 'Hëlmut')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.5[0].5')
         self.assertEqual(result, 'Dr.')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.5[0].7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.5[0].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.5[0].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.5[1]')
         self.assertEqual(result, 'Ströbel')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.5[1].2')
         self.assertEqual(result, 'Hëlmut')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.5[1].5')
         self.assertEqual(result, 'Herr Dr.')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.5[1].7')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.5[1].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.5[1].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19720219')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.11')
         self.assertEqual(result, 'Weinbergstr. 19')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.11.1.2')
         self.assertEqual(result, 'Weinbergstr.')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.11.1.3')
         self.assertEqual(result, '19')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.11.3')
         self.assertEqual(result, 'Leipzig')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.11.5')
         self.assertEqual(result, '04103')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.11.7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'married')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Elisabethen-Spital')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'HNO')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '201')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '2')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'IN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.7')
         self.assertEqual(result, '620403')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.7.2')
         self.assertEqual(result, 'Hüttner')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.7.3')
         self.assertEqual(result, 'Frïedhelm')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.7.6')
         self.assertEqual(result, 'Dr.')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.7.9')
         self.assertEqual(result, 'Eschen-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.7.10')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.7.16')
         self.assertEqual(result, 'DN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '529814')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Eschen-Krankenhaus')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_20(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.20')
         self.assertEqual(result, '01100000')
 
 # ################################################################################################################
 
     def test_navigate_PV1_24(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.24')
         self.assertEqual(result, 'C')
 
 # ################################################################################################################
 
     def test_navigate_PV1_25(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.25')
         self.assertEqual(result, '202401')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '200506051645')
 
 # ################################################################################################################
 
     def test_navigate_PV2_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV2.9')
         self.assertEqual(result, '20260615')
 
 # ################################################################################################################
 
     def test_navigate_PV2_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_03, validate=False)
+        message = parse_hl7(_Raw_de_imedone_03, validate=False)
         result = message.get('PV2.10')
         self.assertEqual(result, '10')
 
@@ -2554,22 +2554,22 @@ class Test_de_imedone_04_4_ACK_A01_Transport_acknowledgment_wiki_hl7_de(unittest
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         self.assertIsInstance(message, ACK)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ACK')
@@ -2577,7 +2577,7 @@ class Test_de_imedone_04_4_ACK_A01_Transport_acknowledgment_wiki_hl7_de(unittest
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -2586,182 +2586,182 @@ class Test_de_imedone_04_4_ACK_A01_Transport_acknowledgment_wiki_hl7_de(unittest
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202604011706')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ACK')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ACK')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'RIS002')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.9')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('SFT.1')
         self.assertEqual(result, 'RIS System GmbH')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('SFT.1.2')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_SFT_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('SFT.2')
         self.assertEqual(result, '3.4')
 
 # ################################################################################################################
 
     def test_navigate_SFT_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('SFT.3')
         self.assertEqual(result, 'superRIS')
 
 # ################################################################################################################
 
     def test_navigate_MSA_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSA.1')
         self.assertEqual(result, 'CA')
 
 # ################################################################################################################
 
     def test_navigate_MSA_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_04, validate=False)
+        message = parse_hl7(_Raw_de_imedone_04, validate=False)
         result = message.get('MSA.2')
         self.assertEqual(result, 'ADT001')
 
@@ -2853,22 +2853,22 @@ class Test_de_imedone_05_5_ADT_A02_Transfer_standard_profile_wiki_hl7_de(unittes
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         self.assertIsInstance(message, ADT_A02)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A02')
@@ -2876,7 +2876,7 @@ class Test_de_imedone_05_5_ADT_A02_Transfer_standard_profile_wiki_hl7_de(unittes
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -2885,644 +2885,644 @@ class Test_de_imedone_05_5_ADT_A02_Transfer_standard_profile_wiki_hl7_de(unittes
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202604011935')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A02')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A02')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT002')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.44')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('SFT.1')
         self.assertEqual(result, 'KIS System GmbH')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('SFT.1.2')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_SFT_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('SFT.2')
         self.assertEqual(result, '5.0')
 
 # ################################################################################################################
 
     def test_navigate_SFT_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('SFT.3')
         self.assertEqual(result, 'A1')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202604011935')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '54321')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Ulmen-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.5[0]')
         self.assertEqual(result, 'Bachmann')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.5[0].2')
         self.assertEqual(result, 'Liëselotte')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.5[0].7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.5[0].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.5[0].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.5[1]')
         self.assertEqual(result, 'Nölting')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.5[1].7')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.5[1].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.5[1].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19830711')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Kastanienweg 31')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Kastanienweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '31')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'Dresden')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.11[1]')
         self.assertEqual(result, 'Mühlenstr. 8')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.11[1].1.2')
         self.assertEqual(result, 'Mühlenstr.')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.11[1].1.3')
         self.assertEqual(result, '8')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'Dresden')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'BDL')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'married')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Elisabethen-Spital')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'CHI')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '303')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '3')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'CH')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.6')
         self.assertEqual(result, 'IN1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.6.2')
         self.assertEqual(result, '202')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.6.3')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.6.4')
         self.assertEqual(result, 'IN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.6.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.6.7')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.6.8')
         self.assertEqual(result, '2')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.7')
         self.assertEqual(result, '620409')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.7.2')
         self.assertEqual(result, 'Hüttner')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.7.3')
         self.assertEqual(result, 'Frïedhelm')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.7.6')
         self.assertEqual(result, 'Dr.')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.7.9')
         self.assertEqual(result, 'Ulmen-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.7.10')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_13(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.7.13')
         self.assertEqual(result, 'DN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '3142')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Ulmen-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PV2_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV2.9')
         self.assertEqual(result, '20260405')
 
 # ################################################################################################################
 
     def test_navigate_PV2_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_05, validate=False)
+        message = parse_hl7(_Raw_de_imedone_05, validate=False)
         result = message.get('PV2.10')
         self.assertEqual(result, '4')
 
@@ -3691,22 +3691,22 @@ class Test_de_imedone_06_6_ADT_A02_Transfer_for_DRG_wiki_hl7_de(unittest.TestCas
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         self.assertIsInstance(message, ADT_A02)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A02')
@@ -3714,7 +3714,7 @@ class Test_de_imedone_06_6_ADT_A02_Transfer_for_DRG_wiki_hl7_de(unittest.TestCas
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -3723,609 +3723,609 @@ class Test_de_imedone_06_6_ADT_A02_Transfer_for_DRG_wiki_hl7_de(unittest.TestCas
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202604011935')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A02')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A02')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT002')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.45')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('SFT.1')
         self.assertEqual(result, 'KIS System GmbH')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('SFT.1.2')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_SFT_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('SFT.2')
         self.assertEqual(result, '5.0')
 
 # ################################################################################################################
 
     def test_navigate_SFT_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('SFT.3')
         self.assertEqual(result, 'A1')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202604011935')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '54321')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Ulmen-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.5[0]')
         self.assertEqual(result, 'Bachmann')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.5[0].2')
         self.assertEqual(result, 'Liëselotte')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.5[0].7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.5[0].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.5[0].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.5[1]')
         self.assertEqual(result, 'Nölting')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.5[1].7')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.5[1].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.5[1].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19830711')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Kastanienweg 31')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Kastanienweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '31')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'Dresden')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.11[1]')
         self.assertEqual(result, 'Mühlenstr. 8')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.11[1].1.2')
         self.assertEqual(result, 'Mühlenstr.')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.11[1].1.3')
         self.assertEqual(result, '8')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'Dresden')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'BDL')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'married')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Elisabethen-Spital')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'CHI')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '303')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '3')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'CH')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.6')
         self.assertEqual(result, 'IN1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.6.2')
         self.assertEqual(result, '202')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.6.3')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.6.4')
         self.assertEqual(result, 'IN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.6.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.6.7')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.6.8')
         self.assertEqual(result, '2')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '3142')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Ulmen-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202604011645')
 
 # ################################################################################################################
 
     def test_navigate_PV2_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV2.9')
         self.assertEqual(result, '20260406')
 
 # ################################################################################################################
 
     def test_navigate_PV2_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV2.10')
         self.assertEqual(result, '5')
 
 # ################################################################################################################
 
     def test_navigate_PV2_36(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV2.36')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV2_37(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_06, validate=False)
+        message = parse_hl7(_Raw_de_imedone_06, validate=False)
         result = message.get('PV2.37')
         self.assertEqual(result, 'N')
 
@@ -4496,22 +4496,22 @@ class Test_de_imedone_07_7_ADT_A03_Discharge_wiki_hl7_de(unittest.TestCase):
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         self.assertIsInstance(message, ADT_A03)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A03')
@@ -4519,7 +4519,7 @@ class Test_de_imedone_07_7_ADT_A03_Discharge_wiki_hl7_de(unittest.TestCase):
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -4528,602 +4528,602 @@ class Test_de_imedone_07_7_ADT_A03_Discharge_wiki_hl7_de(unittest.TestCase):
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'RIS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '202504011705')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A03')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A03')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'ADT001')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.12.2')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12_2_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.12.2.3')
         self.assertEqual(result, 'HL70399')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.19.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.21')
         self.assertEqual(result, '2.16.840.1.113883.2.6.9.47')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.21.3')
         self.assertEqual(result, '2.16.840.1.113883.2.6')
 
 # ################################################################################################################
 
     def test_navigate_MSH_21_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('MSH.21.4')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('SFT.1')
         self.assertEqual(result, 'KIS System GmbH')
 
 # ################################################################################################################
 
     def test_navigate_SFT_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('SFT.1.2')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_SFT_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('SFT.2')
         self.assertEqual(result, '5.0')
 
 # ################################################################################################################
 
     def test_navigate_SFT_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('SFT.3')
         self.assertEqual(result, 'A1')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202504011705')
 
 # ################################################################################################################
 
     def test_navigate_EVN_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('EVN.6')
         self.assertEqual(result, '202504011645')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '54321')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'Ulmen-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.3.5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.5[0]')
         self.assertEqual(result, 'Bachmann')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.5[0].2')
         self.assertEqual(result, 'Liëselotte')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.5[0].7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.5[0].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.5[0].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.5[1]')
         self.assertEqual(result, 'Nölting')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.5[1].7')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.5[1].8')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.5[1].11')
         self.assertEqual(result, 'G')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19830711')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Kastanienweg 31')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Kastanienweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '31')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'Dresden')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.11[1]')
         self.assertEqual(result, 'Mühlenstr. 8')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.11[1].1.2')
         self.assertEqual(result, 'Mühlenstr.')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.11[1].1.3')
         self.assertEqual(result, '8')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'Dresden')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'BDL')
 
 # ################################################################################################################
 
     def test_navigate_PID_15(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.15')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_15_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.15.3')
         self.assertEqual(result, 'HL70296')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.16.2')
         self.assertEqual(result, 'married')
 
 # ################################################################################################################
 
     def test_navigate_PID_16_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.16.3')
         self.assertEqual(result, 'HL70002')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_17_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.17.3')
         self.assertEqual(result, 'HL70006')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Elisabethen-Spital')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_26_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PID.26.3')
         self.assertEqual(result, 'HL70171')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'HNO')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '311')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '3')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'IN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.3.6')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.3.7')
         self.assertEqual(result, 'B')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.4')
         self.assertEqual(result, 'R')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.7')
         self.assertEqual(result, '620407')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.7.2')
         self.assertEqual(result, 'Hüttner')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.7.3')
         self.assertEqual(result, 'Frïedhelm')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.7.6')
         self.assertEqual(result, 'Dr.')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.7.9')
         self.assertEqual(result, 'Ulmen-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.7.10')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_13(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.7.13')
         self.assertEqual(result, 'DN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.7.16')
         self.assertEqual(result, 'DN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '3142')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.19.4')
         self.assertEqual(result, 'Ulmen-Klinik')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_36(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.36')
         self.assertEqual(result, '011')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '202504011645')
 
 # ################################################################################################################
 
     def test_navigate_PV1_45(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_07, validate=False)
+        message = parse_hl7(_Raw_de_imedone_07, validate=False)
         result = message.get('PV1.45')
         self.assertEqual(result, '202504061100')
 
@@ -5279,22 +5279,22 @@ class Test_de_imedone_08_8_ADT_A01_HL7_v2_5_admission_with_MEDOS_sending_applica
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         self.assertIsInstance(message, ADT_A01)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A01')
@@ -5302,7 +5302,7 @@ class Test_de_imedone_08_8_ADT_A01_HL7_v2_5_admission_with_MEDOS_sending_applica
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -5311,434 +5311,434 @@ class Test_de_imedone_08_8_ADT_A01_HL7_v2_5_admission_with_MEDOS_sending_applica
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'MEDOS')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'RAD')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'SAP-ISH')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '20240120116412002')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, '1325-1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_17(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('MSH.17')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_MSH_19(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('MSH.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '20240120164122')
 
 # ################################################################################################################
 
     def test_navigate_EVN_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('EVN.3')
         self.assertEqual(result, '20240120140000')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '8765')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.5[0]')
         self.assertEqual(result, 'Bachmann')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.5[0].2')
         self.assertEqual(result, 'Liëselotte')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.5[0].7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.5[1]')
         self.assertEqual(result, 'Schäfer')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.5[1].2')
         self.assertEqual(result, 'Liëselotte')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.5[1].7')
         self.assertEqual(result, 'B')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19820504')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.11[0]')
         self.assertEqual(result, 'Falkenweg 15')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.11[0].1.2')
         self.assertEqual(result, 'Falkenweg')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.11[0].1.3')
         self.assertEqual(result, '15')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.11[0].3')
         self.assertEqual(result, 'Dresden-Neustadt')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.11[0].5')
         self.assertEqual(result, '01099')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.11[0].6')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_0_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.11[0].7')
         self.assertEqual(result, 'H')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.11[1].3')
         self.assertEqual(result, 'Chemnitz')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.11[1].6')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.11[1].7')
         self.assertEqual(result, 'N')
 
 # ################################################################################################################
 
     def test_navigate_PID_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.16')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_17(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.17')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PID_23(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.23')
         self.assertEqual(result, 'Herz-Jesu-Hospital')
 
 # ################################################################################################################
 
     def test_navigate_PID_26(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.26')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_PID_27(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PID.27')
         self.assertEqual(result, 'Bühnentechniker')
 
 # ################################################################################################################
 
     def test_navigate_NK1_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('NK1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_NK1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('NK1.2')
         self.assertEqual(result, 'Bachmann')
 
 # ################################################################################################################
 
     def test_navigate_NK1_2_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('NK1.2.2')
         self.assertEqual(result, 'Wërner')
 
 # ################################################################################################################
 
     def test_navigate_NK1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('NK1.3')
         self.assertEqual(result, 'FTH')
 
 # ################################################################################################################
 
     def test_navigate_NK1_14(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('NK1.14')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_NK1_15(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('NK1.15')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_NK1_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('NK1.16')
         self.assertEqual(result, '19540108')
 
 # ################################################################################################################
 
     def test_navigate_NK1_19(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('NK1.19')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_NK1_20(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('NK1.20')
         self.assertEqual(result, 'DEU')
 
 # ################################################################################################################
 
     def test_navigate_NK1_25(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('NK1.25')
         self.assertEqual(result, 'CAT')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'IN2')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, '4')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, '3')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PV1.3.4')
         self.assertEqual(result, 'CHI')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PV1.3.8')
         self.assertEqual(result, '6')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '0712843')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PV1.19.5')
         self.assertEqual(result, 'VN')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PV1.19.6')
         self.assertEqual(result, 'KIS')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PV1.19.7')
         self.assertEqual(result, '20240120')
 
 # ################################################################################################################
 
     def test_navigate_PV1_44(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PV1.44')
         self.assertEqual(result, '20240120')
 
 # ################################################################################################################
 
     def test_navigate_PV2_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_08, validate=False)
+        message = parse_hl7(_Raw_de_imedone_08, validate=False)
         result = message.get('PV2.9')
         self.assertEqual(result, '20240402')
 
@@ -5893,22 +5893,22 @@ class Test_de_imedone_09_9_ADT_A08_Patient_update_samedi_HL7gateway_to_iMedOne_h
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         self.assertIsInstance(message, ADT_A01)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A01')
@@ -5916,7 +5916,7 @@ class Test_de_imedone_09_9_ADT_A08_Patient_update_samedi_HL7gateway_to_iMedOne_h
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -5925,217 +5925,217 @@ class Test_de_imedone_09_9_ADT_A08_Patient_update_samedi_HL7gateway_to_iMedOne_h
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'samedi-hl7gateway')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'samedi')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'APPLICATION')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'CLINIC')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '20260403151846+0200')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A08')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, '991765815154685352')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, 'UNICODE UTF-8')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202604031516+0200')
 
 # ################################################################################################################
 
     def test_navigate_PID_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('PID.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('PID.3[0]')
         self.assertEqual(result, 'qcë8bbf2b09')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('PID.3[0].4.2')
         self.assertEqual(result, 'www.praxis-öst.de')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('PID.3[0].4.3')
         self.assertEqual(result, 'DNS')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('PID.3[0].5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('PID.3[1]')
         self.assertEqual(result, '54321')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('PID.3[1].5')
         self.assertEqual(result, 'PT')
 
 # ################################################################################################################
 
     def test_navigate_PID_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('PID.5')
         self.assertEqual(result, 'Nächstname')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('PID.5.2')
         self.assertEqual(result, 'Rübën')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('PID.5.5')
         self.assertEqual(result, 'Prof.')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19970226')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('PID.11')
         self.assertEqual(result, 'Straßenweg 24')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('PID.11.3')
         self.assertEqual(result, 'Örtchen')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('PID.11.5')
         self.assertEqual(result, '54321')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('PID.11.6')
         self.assertEqual(result, 'DE')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_09, validate=False)
+        message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'U')
 
@@ -6240,22 +6240,22 @@ class Test_de_imedone_10_10_ADT_A29_Patient_deletion_samedi_HL7gateway_hl7gatewa
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         self.assertIsInstance(message, ADT_A21)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A21')
@@ -6263,7 +6263,7 @@ class Test_de_imedone_10_10_ADT_A29_Patient_deletion_samedi_HL7gateway_hl7gatewa
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -6272,175 +6272,175 @@ class Test_de_imedone_10_10_ADT_A29_Patient_deletion_samedi_HL7gateway_hl7gatewa
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'samedi-hl7gateway')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'samedi')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'APPLICATION')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'CLINIC')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '20260403152323+0200')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A29')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A21')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, '21471412864163822995')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, 'UNICODE UTF-8')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202604031523+0200')
 
 # ################################################################################################################
 
     def test_navigate_PID_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('PID.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('PID.3[0]')
         self.assertEqual(result, 'r72f56c8b65')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('PID.3[0].4.2')
         self.assertEqual(result, 'www.praxis-öst.de')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('PID.3[0].4.3')
         self.assertEqual(result, 'DNS')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('PID.3[0].5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('PID.3[1]')
         self.assertEqual(result, '77')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('PID.3[1].5')
         self.assertEqual(result, 'PT')
 
 # ################################################################################################################
 
     def test_navigate_PID_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('PID.5')
         self.assertEqual(result, 'Lëtzt')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('PID.5.2')
         self.assertEqual(result, 'Ërste')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '198510201')
 
 # ################################################################################################################
 
     def test_navigate_PV1_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('PV1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_10, validate=False)
+        message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'U')
 
@@ -6541,22 +6541,22 @@ class Test_de_imedone_11_11_ADT_A08_Inbound_from_KIS_to_samedi_hl7gateway_samedi
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         self.assertIsInstance(message, ADT_A01)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A01')
@@ -6564,7 +6564,7 @@ class Test_de_imedone_11_11_ADT_A08_Inbound_from_KIS_to_samedi_hl7gateway_samedi
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -6573,231 +6573,231 @@ class Test_de_imedone_11_11_ADT_A08_Inbound_from_KIS_to_samedi_hl7gateway_samedi
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KomServer')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'KOMSERV')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'samedi-hl7gateway')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'samedi')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '20260523123517')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A08')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, '2638170166537')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_13(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('MSH.13')
         self.assertEqual(result, '9E62D52F8DE791B')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202610260719')
 
 # ################################################################################################################
 
     def test_navigate_PID_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('PID.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('PID.3[0]')
         self.assertEqual(result, '4566')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('PID.3[0].4.2')
         self.assertEqual(result, 'www.praxis-öst.de')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('PID.3[0].4.3')
         self.assertEqual(result, 'DNS')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('PID.3[0].5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('PID.3[1]')
         self.assertEqual(result, '287711')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('PID.3[1].4')
         self.assertEqual(result, 'Rädvis')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('PID.3[1].5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('PID.5')
         self.assertEqual(result, 'Prüfer')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('PID.5.2')
         self.assertEqual(result, 'Hëide')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19500524')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('PID.11')
         self.assertEqual(result, 'Prüfweg 30')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('PID.11.1.2')
         self.assertEqual(result, 'Prüfweg 30')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('PID.11.3')
         self.assertEqual(result, 'Görlitz')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('PID.11.5')
         self.assertEqual(result, '02826')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('PID.11.6')
         self.assertEqual(result, 'DE')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_11, validate=False)
+        message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('PID.11.7')
         self.assertEqual(result, 'L')
 
@@ -6893,22 +6893,22 @@ class Test_de_imedone_12_12_ADT_A40_Patient_merge_hl7gateway_samedi_de(unittest.
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         self.assertIsInstance(message, ADT_A39)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A39')
@@ -6916,7 +6916,7 @@ class Test_de_imedone_12_12_ADT_A40_Patient_merge_hl7gateway_samedi_de(unittest.
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -6925,287 +6925,287 @@ class Test_de_imedone_12_12_ADT_A40_Patient_merge_hl7gateway_samedi_de(unittest.
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'KomServer')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'KOMSERV')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'samedi-hl7gateway')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'samedi')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '20260523123517')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A40')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, '2638170166537')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_13(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MSH.13')
         self.assertEqual(result, '9E62D52F8DE791B')
 
 # ################################################################################################################
 
     def test_navigate_MSH_15(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MSH.15')
         self.assertEqual(result, 'AL')
 
 # ################################################################################################################
 
     def test_navigate_MSH_16(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MSH.16')
         self.assertEqual(result, 'NE')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '202502041715')
 
 # ################################################################################################################
 
     def test_navigate_PID_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('PID.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('PID.3[0]')
         self.assertEqual(result, '4566')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('PID.3[0].4.2')
         self.assertEqual(result, 'www.praxis-öst.de')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('PID.3[0].4.3')
         self.assertEqual(result, 'DNS')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('PID.3[0].5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('PID.3[1]')
         self.assertEqual(result, '287711')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('PID.3[1].4')
         self.assertEqual(result, 'Rädvis')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('PID.3[1].5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('PID.5')
         self.assertEqual(result, 'Prüfer')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('PID.5.2')
         self.assertEqual(result, 'Hëide')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19500524')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('PID.11')
         self.assertEqual(result, 'Prüfweg 30')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('PID.11.1.2')
         self.assertEqual(result, 'Prüfweg 30')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('PID.11.3')
         self.assertEqual(result, 'Görlitz')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('PID.11.5')
         self.assertEqual(result, '02826')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('PID.11.6')
         self.assertEqual(result, 'DE')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('PID.11.7')
         self.assertEqual(result, 'L')
 
 # ################################################################################################################
 
     def test_navigate_MRG_1_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MRG.1[0]')
         self.assertEqual(result, '4567')
 
 # ################################################################################################################
 
     def test_navigate_MRG_1_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MRG.1[1]')
         self.assertEqual(result, 'u263401ef91')
 
 # ################################################################################################################
 
     def test_navigate_MRG_1_1_4_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MRG.1[1].4.2')
         self.assertEqual(result, 'www.praxis-öst.de')
 
 # ################################################################################################################
 
     def test_navigate_MRG_1_1_4_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MRG.1[1].4.3')
         self.assertEqual(result, 'DNS')
 
 # ################################################################################################################
 
     def test_navigate_MRG_1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MRG.1[2]')
         self.assertEqual(result, '4467533')
 
 # ################################################################################################################
 
     def test_navigate_MRG_1_2_4_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MRG.1[2].4.2')
         self.assertEqual(result, '1.2.276.0.76.3.1.660.1.1.1.2.1')
 
 # ################################################################################################################
 
     def test_navigate_MRG_1_2_4_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MRG.1[2].4.3')
         self.assertEqual(result, 'ISO')
 
 # ################################################################################################################
 
     def test_navigate_MRG_1_2_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_12, validate=False)
+        message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MRG.1[2].5')
         self.assertEqual(result, 'PI')
 
@@ -7305,22 +7305,22 @@ class Test_de_imedone_13_13_SIU_S12_New_appointment_booking_samedi_to_iMedOne_hl
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         self.assertIsInstance(message, SIU_S12)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'SIU_S12')
@@ -7328,7 +7328,7 @@ class Test_de_imedone_13_13_SIU_S12_New_appointment_booking_samedi_to_iMedOne_hl
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -7337,343 +7337,343 @@ class Test_de_imedone_13_13_SIU_S12_New_appointment_booking_samedi_to_iMedOne_hl
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'samedi-hl7gateway')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'samedi')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'system')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'clinic')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '20260207130859+0100')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'SIU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'S12')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'SIU_S12')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, '8615615175374780398')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, 'UNICODE UTF-8')
 
 # ################################################################################################################
 
     def test_navigate_SCH_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('SCH.2')
         self.assertEqual(result, 'a-ëqcdl7hwscfuze4w')
 
 # ################################################################################################################
 
     def test_navigate_SCH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('SCH.6')
         self.assertEqual(result, 'BOOKED')
 
 # ################################################################################################################
 
     def test_navigate_SCH_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('SCH.8')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_SCH_8_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('SCH.8.2')
         self.assertEqual(result, 'MRT')
 
 # ################################################################################################################
 
     def test_navigate_SCH_25(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('SCH.25')
         self.assertEqual(result, 'Booked')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('TQ1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('TQ1.7')
         self.assertEqual(result, '20260516130000+0200')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('TQ1.8')
         self.assertEqual(result, '20260516133000+0200')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_13(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('TQ1.13')
         self.assertEqual(result, '30')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_13_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('TQ1.13.2')
         self.assertEqual(result, 'min')
 
 # ################################################################################################################
 
     def test_navigate_NTE_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('NTE.2')
         self.assertEqual(result, '_default')
 
 # ################################################################################################################
 
     def test_navigate_NTE_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('NTE.3')
         self.assertEqual(result, 'Comment')
 
 # ################################################################################################################
 
     def test_navigate_PID_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('PID.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('PID.3[0]')
         self.assertEqual(result, 's1299de4014')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('PID.3[0].4.2')
         self.assertEqual(result, 'www.praxis-öst.de')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('PID.3[0].4.3')
         self.assertEqual(result, 'DNS')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('PID.3[0].5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('PID.3[1].5')
         self.assertEqual(result, 'PT')
 
 # ################################################################################################################
 
     def test_navigate_PID_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('PID.5')
         self.assertEqual(result, 'Förster')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('PID.5.2')
         self.assertEqual(result, 'Stëfan')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19820511')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_PID_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('PID.11')
         self.assertEqual(result, 'Gleisstraße 24')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('PID.11.3')
         self.assertEqual(result, 'Potsdam')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('PID.11.5')
         self.assertEqual(result, '14467')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('PID.11.6')
         self.assertEqual(result, 'DE')
 
 # ################################################################################################################
 
     def test_navigate_RGS_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('RGS.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_RGS_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('RGS.2')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_AIG_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('AIG.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_AIG_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('AIG.2')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('AIG.3')
         self.assertEqual(result, '2')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('AIG.3.2')
         self.assertEqual(result, 'Stëfan Möritz')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('AIG.3.3')
         self.assertEqual(result, '99SAMEDI-RESOURCE')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('AIG.3.4')
         self.assertEqual(result, 'radiologist')
 
 # ################################################################################################################
 
     def test_navigate_AIG_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('AIG.8')
         self.assertEqual(result, '20260516130000+0200')
 
 # ################################################################################################################
 
     def test_navigate_AIG_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('AIG.11')
         self.assertEqual(result, '1800')
 
 # ################################################################################################################
 
     def test_navigate_AIG_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_13, validate=False)
+        message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('AIG.12')
         self.assertEqual(result, 's')
 
@@ -7870,22 +7870,22 @@ class Test_de_imedone_14_14_SIU_S13_Appointment_rescheduling_samedi_to_iMedOne_h
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         self.assertIsInstance(message, SIU_S12)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'SIU_S12')
@@ -7893,7 +7893,7 @@ class Test_de_imedone_14_14_SIU_S13_Appointment_rescheduling_samedi_to_iMedOne_h
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -7902,224 +7902,224 @@ class Test_de_imedone_14_14_SIU_S13_Appointment_rescheduling_samedi_to_iMedOne_h
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'samedi-hl7gateway')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'samedi')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'system')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'clinic')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '20260207131000+0100')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'SIU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'S13')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'SIU_S12')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, '22310718558850378493')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, 'UNICODE UTF-8')
 
 # ################################################################################################################
 
     def test_navigate_SCH_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('SCH.2')
         self.assertEqual(result, 'a-ëqcdl7hwscfuze4w')
 
 # ################################################################################################################
 
     def test_navigate_SCH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('SCH.6')
         self.assertEqual(result, 'BOOKED')
 
 # ################################################################################################################
 
     def test_navigate_SCH_8_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('SCH.8.2')
         self.assertEqual(result, 'Test')
 
 # ################################################################################################################
 
     def test_navigate_SCH_25(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('SCH.25')
         self.assertEqual(result, 'Booked')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('TQ1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('TQ1.7')
         self.assertEqual(result, '20260410135000+0200')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('TQ1.8')
         self.assertEqual(result, '20260410142000+0200')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_13(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('TQ1.13')
         self.assertEqual(result, '30')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_13_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('TQ1.13.2')
         self.assertEqual(result, 'min')
 
 # ################################################################################################################
 
     def test_navigate_RGS_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('RGS.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_RGS_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('RGS.2')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_AIG_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('AIG.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_AIG_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('AIG.2')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('AIG.3')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('AIG.3.2')
         self.assertEqual(result, 'Sprechzimmer')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('AIG.3.3')
         self.assertEqual(result, '99SAMEDI-RESOURCE')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('AIG.3.4')
         self.assertEqual(result, 'c2')
 
 # ################################################################################################################
 
     def test_navigate_AIG_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('AIG.8')
         self.assertEqual(result, '20260410125500+0200')
 
 # ################################################################################################################
 
     def test_navigate_AIG_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('AIG.11')
         self.assertEqual(result, '1800')
 
 # ################################################################################################################
 
     def test_navigate_AIG_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_14, validate=False)
+        message = parse_hl7(_Raw_de_imedone_14, validate=False)
         result = message.get('AIG.12')
         self.assertEqual(result, 's')
 
@@ -8267,22 +8267,22 @@ class Test_de_imedone_15_15_SIU_S14_Appointment_modification_samedi_to_iMedOne_h
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         self.assertIsInstance(message, SIU_S12)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'SIU_S12')
@@ -8290,7 +8290,7 @@ class Test_de_imedone_15_15_SIU_S14_Appointment_modification_samedi_to_iMedOne_h
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -8299,315 +8299,315 @@ class Test_de_imedone_15_15_SIU_S14_Appointment_modification_samedi_to_iMedOne_h
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'samedi-hl7gateway')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'samedi')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'system')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'clinic')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '20260207131202+0100')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'SIU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'S14')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'SIU_S12')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, '23267051019177332434')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, 'UNICODE UTF-8')
 
 # ################################################################################################################
 
     def test_navigate_SCH_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('SCH.2')
         self.assertEqual(result, 'a-ëqcdl7hwscfuze4w')
 
 # ################################################################################################################
 
     def test_navigate_SCH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('SCH.6')
         self.assertEqual(result, 'BOOKED')
 
 # ################################################################################################################
 
     def test_navigate_SCH_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('SCH.8')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_SCH_8_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('SCH.8.2')
         self.assertEqual(result, 'MRT')
 
 # ################################################################################################################
 
     def test_navigate_SCH_25(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('SCH.25')
         self.assertEqual(result, 'Booked')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('TQ1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('TQ1.7')
         self.assertEqual(result, '20260516140000+0200')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('TQ1.8')
         self.assertEqual(result, '20260516143000+0200')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_13(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('TQ1.13')
         self.assertEqual(result, '30')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_13_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('TQ1.13.2')
         self.assertEqual(result, 'min')
 
 # ################################################################################################################
 
     def test_navigate_NTE_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('NTE.2')
         self.assertEqual(result, '_default')
 
 # ################################################################################################################
 
     def test_navigate_NTE_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('NTE.3')
         self.assertEqual(result, 'updated comment')
 
 # ################################################################################################################
 
     def test_navigate_PID_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('PID.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('PID.3[0]')
         self.assertEqual(result, 's1299de4014')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('PID.3[0].4.2')
         self.assertEqual(result, 'www.praxis-öst.de')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('PID.3[0].4.3')
         self.assertEqual(result, 'DNS')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('PID.3[0].5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('PID.3[1].5')
         self.assertEqual(result, 'PT')
 
 # ################################################################################################################
 
     def test_navigate_PID_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('PID.5')
         self.assertEqual(result, 'Förster')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('PID.5.2')
         self.assertEqual(result, 'Stëfan')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19820511')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_RGS_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('RGS.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_RGS_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('RGS.2')
         self.assertEqual(result, 'X')
 
 # ################################################################################################################
 
     def test_navigate_AIG_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('AIG.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_AIG_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('AIG.2')
         self.assertEqual(result, 'X')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('AIG.3')
         self.assertEqual(result, '2')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('AIG.3.2')
         self.assertEqual(result, 'Stëfan Möritz')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('AIG.3.3')
         self.assertEqual(result, '99SAMEDI-RESOURCE')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('AIG.3.4')
         self.assertEqual(result, 'radiologist')
 
 # ################################################################################################################
 
     def test_navigate_AIG_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('AIG.8')
         self.assertEqual(result, '20260516140000+0200')
 
 # ################################################################################################################
 
     def test_navigate_AIG_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('AIG.11')
         self.assertEqual(result, '1800')
 
 # ################################################################################################################
 
     def test_navigate_AIG_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_15, validate=False)
+        message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('AIG.12')
         self.assertEqual(result, 's')
 
@@ -8788,22 +8788,22 @@ class Test_de_imedone_16_16_SIU_S15_Appointment_cancellation_samedi_to_iMedOne_h
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         self.assertIsInstance(message, SIU_S12)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'SIU_S12')
@@ -8811,7 +8811,7 @@ class Test_de_imedone_16_16_SIU_S15_Appointment_cancellation_samedi_to_iMedOne_h
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -8820,315 +8820,315 @@ class Test_de_imedone_16_16_SIU_S15_Appointment_cancellation_samedi_to_iMedOne_h
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'samedi-hl7gateway')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'samedi')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'system')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'clinic')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '20260207131507+0100')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'SIU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'S15')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'SIU_S12')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, '7374561721650221901')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, 'UNICODE UTF-8')
 
 # ################################################################################################################
 
     def test_navigate_SCH_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('SCH.2')
         self.assertEqual(result, 'a-ëqcdl7hwscfuze4w')
 
 # ################################################################################################################
 
     def test_navigate_SCH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('SCH.6')
         self.assertEqual(result, 'BOOKED')
 
 # ################################################################################################################
 
     def test_navigate_SCH_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('SCH.8')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_SCH_8_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('SCH.8.2')
         self.assertEqual(result, 'MRT')
 
 # ################################################################################################################
 
     def test_navigate_SCH_25(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('SCH.25')
         self.assertEqual(result, 'Deleted')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('TQ1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('TQ1.7')
         self.assertEqual(result, '20260516140000+0200')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('TQ1.8')
         self.assertEqual(result, '20260516143000+0200')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_13(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('TQ1.13')
         self.assertEqual(result, '30')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_13_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('TQ1.13.2')
         self.assertEqual(result, 'min')
 
 # ################################################################################################################
 
     def test_navigate_NTE_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('NTE.2')
         self.assertEqual(result, '_default')
 
 # ################################################################################################################
 
     def test_navigate_NTE_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('NTE.3')
         self.assertEqual(result, 'updated comment')
 
 # ################################################################################################################
 
     def test_navigate_PID_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('PID.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('PID.3[0]')
         self.assertEqual(result, 's1299de4014')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('PID.3[0].4.2')
         self.assertEqual(result, 'www.praxis-öst.de')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('PID.3[0].4.3')
         self.assertEqual(result, 'DNS')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('PID.3[0].5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('PID.3[1].5')
         self.assertEqual(result, 'PT')
 
 # ################################################################################################################
 
     def test_navigate_PID_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('PID.5')
         self.assertEqual(result, 'Förster')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('PID.5.2')
         self.assertEqual(result, 'Stëfan')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19820511')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'M')
 
 # ################################################################################################################
 
     def test_navigate_RGS_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('RGS.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_RGS_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('RGS.2')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_AIG_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('AIG.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_AIG_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('AIG.2')
         self.assertEqual(result, 'D')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('AIG.3')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('AIG.3.2')
         self.assertEqual(result, 'Sprechzimmer')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('AIG.3.3')
         self.assertEqual(result, '99SAMEDI-RESOURCE')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('AIG.3.4')
         self.assertEqual(result, 'room-1')
 
 # ################################################################################################################
 
     def test_navigate_AIG_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('AIG.8')
         self.assertEqual(result, '20260516140000+0200')
 
 # ################################################################################################################
 
     def test_navigate_AIG_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('AIG.11')
         self.assertEqual(result, '1800')
 
 # ################################################################################################################
 
     def test_navigate_AIG_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_16, validate=False)
+        message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('AIG.12')
         self.assertEqual(result, 's')
 
@@ -9293,22 +9293,22 @@ class Test_de_imedone_17_17_SIU_S12_Appointment_with_external_patient_number_hl7
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         self.assertIsInstance(message, SIU_S12)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'SIU_S12')
@@ -9316,7 +9316,7 @@ class Test_de_imedone_17_17_SIU_S12_Appointment_with_external_patient_number_hl7
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -9325,315 +9325,315 @@ class Test_de_imedone_17_17_SIU_S12_Appointment_with_external_patient_number_hl7
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'samedi-hl7gateway')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'samedi')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'system')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'clinic')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '20260207124406+0100')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'SIU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'S12')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'SIU_S12')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, '5027690727398224048')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, 'UNICODE UTF-8')
 
 # ################################################################################################################
 
     def test_navigate_SCH_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('SCH.2')
         self.assertEqual(result, 'b-ëqcdl7hwscfuze4w')
 
 # ################################################################################################################
 
     def test_navigate_SCH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('SCH.6')
         self.assertEqual(result, 'BOOKED')
 
 # ################################################################################################################
 
     def test_navigate_SCH_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('SCH.8')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_SCH_8_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('SCH.8.2')
         self.assertEqual(result, 'MRT')
 
 # ################################################################################################################
 
     def test_navigate_SCH_25(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('SCH.25')
         self.assertEqual(result, 'Booked')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('TQ1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('TQ1.7')
         self.assertEqual(result, '20260516100000+0200')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('TQ1.8')
         self.assertEqual(result, '20260516103000+0200')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_13(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('TQ1.13')
         self.assertEqual(result, '30')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_13_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('TQ1.13.2')
         self.assertEqual(result, 'min')
 
 # ################################################################################################################
 
     def test_navigate_NTE_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('NTE.2')
         self.assertEqual(result, 'Kommentar zum Patienten')
 
 # ################################################################################################################
 
     def test_navigate_NTE_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('NTE.3')
         self.assertEqual(result, 'patient with an external patient ID')
 
 # ################################################################################################################
 
     def test_navigate_PID_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('PID.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('PID.3[0]')
         self.assertEqual(result, 't4538ef9435')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('PID.3[0].4.2')
         self.assertEqual(result, 'www.praxis-öst.de')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('PID.3[0].4.3')
         self.assertEqual(result, 'DNS')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('PID.3[0].5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('PID.3[1]')
         self.assertEqual(result, '54321')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('PID.3[1].5')
         self.assertEqual(result, 'PT')
 
 # ################################################################################################################
 
     def test_navigate_PID_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('PID.5')
         self.assertEqual(result, 'Kräuter')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('PID.5.2')
         self.assertEqual(result, 'Ännelïese')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_RGS_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('RGS.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_RGS_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('RGS.2')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_AIG_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('AIG.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_AIG_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('AIG.2')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('AIG.3')
         self.assertEqual(result, '2')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('AIG.3.2')
         self.assertEqual(result, 'Stëfan Möritz')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('AIG.3.3')
         self.assertEqual(result, '99SAMEDI-RESOURCE')
 
 # ################################################################################################################
 
     def test_navigate_AIG_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('AIG.3.4')
         self.assertEqual(result, 'radiologist')
 
 # ################################################################################################################
 
     def test_navigate_AIG_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('AIG.8')
         self.assertEqual(result, '20260516100000+0200')
 
 # ################################################################################################################
 
     def test_navigate_AIG_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('AIG.11')
         self.assertEqual(result, '1800')
 
 # ################################################################################################################
 
     def test_navigate_AIG_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_17, validate=False)
+        message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('AIG.12')
         self.assertEqual(result, 's')
 
@@ -9797,22 +9797,22 @@ class Test_de_imedone_18_18_SIU_S12_Inbound_from_KIS_to_samedi_hl7gateway_samedi
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         self.assertIsInstance(message, SIU_S12)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'SIU_S12')
@@ -9820,7 +9820,7 @@ class Test_de_imedone_18_18_SIU_S12_Inbound_from_KIS_to_samedi_hl7gateway_samedi
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -9829,315 +9829,315 @@ class Test_de_imedone_18_18_SIU_S12_Inbound_from_KIS_to_samedi_hl7gateway_samedi
 # ################################################################################################################
 
     def test_navigate_MSH_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('MSH.3')
         self.assertEqual(result, 'system')
 
 # ################################################################################################################
 
     def test_navigate_MSH_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('MSH.4')
         self.assertEqual(result, 'clinic')
 
 # ################################################################################################################
 
     def test_navigate_MSH_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('MSH.5')
         self.assertEqual(result, 'samedi-hl7gateway')
 
 # ################################################################################################################
 
     def test_navigate_MSH_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('MSH.6')
         self.assertEqual(result, 'samedi')
 
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '20260101000000')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'SIU')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'S12')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'SIU_S12')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, '87654')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.5')
 
 # ################################################################################################################
 
     def test_navigate_MSH_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('MSH.18')
         self.assertEqual(result, '8859/1')
 
 # ################################################################################################################
 
     def test_navigate_SCH_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('SCH.2')
         self.assertEqual(result, '567890')
 
 # ################################################################################################################
 
     def test_navigate_SCH_2_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('SCH.2.2')
         self.assertEqual(result, 'system')
 
 # ################################################################################################################
 
     def test_navigate_SCH_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('SCH.8')
         self.assertEqual(result, 'Sprechstunde, Peter Mueller')
 
 # ################################################################################################################
 
     def test_navigate_SCH_25(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('SCH.25')
         self.assertEqual(result, 'Booked')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('TQ1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('TQ1.7')
         self.assertEqual(result, '202601150800')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('TQ1.8')
         self.assertEqual(result, '202601150830')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_13(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('TQ1.13')
         self.assertEqual(result, '30')
 
 # ################################################################################################################
 
     def test_navigate_TQ1_13_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('TQ1.13.2')
         self.assertEqual(result, 'min')
 
 # ################################################################################################################
 
     def test_navigate_PID_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('PID.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('PID.3[0]')
         self.assertEqual(result, 't4538ef9435')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('PID.3[0].4.2')
         self.assertEqual(result, 'www.praxis-öst.de')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_4_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('PID.3[0].4.3')
         self.assertEqual(result, 'DNS')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_0_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('PID.3[0].5')
         self.assertEqual(result, 'PI')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('PID.3[1]')
         self.assertEqual(result, '54321')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_1_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('PID.3[1].5')
         self.assertEqual(result, 'PT')
 
 # ################################################################################################################
 
     def test_navigate_PID_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('PID.5')
         self.assertEqual(result, 'Kräuter')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('PID.5.2')
         self.assertEqual(result, 'Ännelïese')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_RGS_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('RGS.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_RGS_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('RGS.2')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_AIL_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('AIL.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_AIL_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('AIL.3')
         self.assertEqual(result, 'room-1')
 
 # ################################################################################################################
 
     def test_navigate_AIL_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('AIL.6')
         self.assertEqual(result, '202601150800')
 
 # ################################################################################################################
 
     def test_navigate_AIL_6_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('AIL.6.2')
         self.assertEqual(result, 'YYYYLLDDHHMM')
 
 # ################################################################################################################
 
     def test_navigate_AIL_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('AIL.9')
         self.assertEqual(result, '30')
 
 # ################################################################################################################
 
     def test_navigate_AIL_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('AIL.10')
         self.assertEqual(result, 'min')
 
 # ################################################################################################################
 
     def test_navigate_AIP_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('AIP.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_AIP_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('AIP.3')
         self.assertEqual(result, 'radiologist')
 
 # ################################################################################################################
 
     def test_navigate_AIP_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('AIP.6')
         self.assertEqual(result, '202601150800')
 
 # ################################################################################################################
 
     def test_navigate_AIP_6_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('AIP.6.2')
         self.assertEqual(result, 'YYYYLLDDHHMM')
 
 # ################################################################################################################
 
     def test_navigate_AIP_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('AIP.9')
         self.assertEqual(result, '30')
 
 # ################################################################################################################
 
     def test_navigate_AIP_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_18, validate=False)
+        message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('AIP.10')
         self.assertEqual(result, 'min')
 
@@ -10283,22 +10283,22 @@ class Test_de_imedone_19_19_ADT_A01_E_ConsentPro_Thieme_Compliance_support_thiem
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         self.assertIsInstance(message, ADT_A01)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A01')
@@ -10306,7 +10306,7 @@ class Test_de_imedone_19_19_ADT_A01_E_ConsentPro_Thieme_Compliance_support_thiem
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -10315,175 +10315,175 @@ class Test_de_imedone_19_19_ADT_A01_E_ConsentPro_Thieme_Compliance_support_thiem
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '20260912142642')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A01')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'MSG00001')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.6')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '20260912142642')
 
 # ################################################################################################################
 
     def test_navigate_PID_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('PID.1')
         self.assertEqual(result, '0')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '123456789')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'PVS1')
 
 # ################################################################################################################
 
     def test_navigate_PID_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('PID.5')
         self.assertEqual(result, 'Prüffrau')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('PID.5.2')
         self.assertEqual(result, 'Sïlke')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19670714')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('PID.11')
         self.assertEqual(result, 'Prüfstraße 789')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('PID.11.3')
         self.assertEqual(result, 'Prüfstadt')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('PID.11.5')
         self.assertEqual(result, '98765')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '8523')
 
 # ################################################################################################################
 
     def test_navigate_IN1_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('IN1.1')
         self.assertEqual(result, '1')
 
 # ################################################################################################################
 
     def test_navigate_IN1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('IN1.2')
         self.assertEqual(result, '0')
 
 # ################################################################################################################
 
     def test_navigate_IN1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('IN1.3')
         self.assertEqual(result, 'BKV2')
 
 # ################################################################################################################
 
     def test_navigate_IN1_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('IN1.4')
         self.assertEqual(result, 'ÜLMENKRANKENVERSICHERUNG')
 
 # ################################################################################################################
 
     def test_navigate_IN1_49(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_19, validate=False)
+        message = parse_hl7(_Raw_de_imedone_19, validate=False)
         result = message.get('IN1.49')
         self.assertEqual(result, '49')
 
@@ -10593,22 +10593,22 @@ class Test_de_imedone_20_20_ADT_A02_Transfer_E_ConsentPro_Thieme_Compliance_supp
     """
 
     def test_parse(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         self.assertIsInstance(message, ADT_A02)
 
 # ################################################################################################################
 
     def test_serialize_roundtrip(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         serialized = message.serialize()
-        reparsed = parse_message(serialized, validate=False)
+        reparsed = parse_hl7(serialized, validate=False)
         reserialized = reparsed.serialize()
         self.assertEqual(serialized, reserialized)
 
 # ################################################################################################################
 
     def test_to_dict(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         message_dict = message.to_dict()
         self.assertIsInstance(message_dict, dict)
         self.assertEqual(message_dict['_structure_id'], 'ADT_A02')
@@ -10616,7 +10616,7 @@ class Test_de_imedone_20_20_ADT_A02_Transfer_E_ConsentPro_Thieme_Compliance_supp
 # ################################################################################################################
 
     def test_to_json(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         message_json = message.to_json()
         loaded = json.loads(message_json)
         message_dict = message.to_dict()
@@ -10625,252 +10625,252 @@ class Test_de_imedone_20_20_ADT_A02_Transfer_E_ConsentPro_Thieme_Compliance_supp
 # ################################################################################################################
 
     def test_navigate_MSH_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('MSH.7')
         self.assertEqual(result, '20260912142642')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('MSH.9')
         self.assertEqual(result, 'ADT')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('MSH.9.2')
         self.assertEqual(result, 'A02')
 
 # ################################################################################################################
 
     def test_navigate_MSH_9_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('MSH.9.3')
         self.assertEqual(result, 'ADT_A02')
 
 # ################################################################################################################
 
     def test_navigate_MSH_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('MSH.10')
         self.assertEqual(result, 'MSG00001')
 
 # ################################################################################################################
 
     def test_navigate_MSH_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('MSH.11')
         self.assertEqual(result, 'P')
 
 # ################################################################################################################
 
     def test_navigate_MSH_12(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('MSH.12')
         self.assertEqual(result, '2.6')
 
 # ################################################################################################################
 
     def test_navigate_EVN_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('EVN.2')
         self.assertEqual(result, '20260912142642')
 
 # ################################################################################################################
 
     def test_navigate_PID_1(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PID.1')
         self.assertEqual(result, '0')
 
 # ################################################################################################################
 
     def test_navigate_PID_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PID.3')
         self.assertEqual(result, '123456789')
 
 # ################################################################################################################
 
     def test_navigate_PID_3_4(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PID.3.4')
         self.assertEqual(result, 'PVS1')
 
 # ################################################################################################################
 
     def test_navigate_PID_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PID.5')
         self.assertEqual(result, 'Prüffrau')
 
 # ################################################################################################################
 
     def test_navigate_PID_5_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PID.5.2')
         self.assertEqual(result, 'Sïlke')
 
 # ################################################################################################################
 
     def test_navigate_PID_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PID.7')
         self.assertEqual(result, '19670714')
 
 # ################################################################################################################
 
     def test_navigate_PID_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PID.8')
         self.assertEqual(result, 'F')
 
 # ################################################################################################################
 
     def test_navigate_PID_11(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PID.11')
         self.assertEqual(result, 'Prüfstraße 789')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PID.11.3')
         self.assertEqual(result, 'Prüfstadt')
 
 # ################################################################################################################
 
     def test_navigate_PID_11_5(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PID.11.5')
         self.assertEqual(result, '98765')
 
 # ################################################################################################################
 
     def test_navigate_PV1_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PV1.2')
         self.assertEqual(result, 'I')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PV1.3')
         self.assertEqual(result, 'neüStation')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PV1.3.2')
         self.assertEqual(result, 'neüZimmer')
 
 # ################################################################################################################
 
     def test_navigate_PV1_3_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PV1.3.3')
         self.assertEqual(result, 'neüBett')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PV1.6')
         self.assertEqual(result, 'ältStation')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PV1.6.2')
         self.assertEqual(result, 'ältZimmer')
 
 # ################################################################################################################
 
     def test_navigate_PV1_6_3(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PV1.6.3')
         self.assertEqual(result, 'ältBett')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PV1.7')
         self.assertEqual(result, '0100')
 
 # ################################################################################################################
 
     def test_navigate_PV1_7_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PV1.7.2')
         self.assertEqual(result, 'TÄT,HËINZ')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PV1.8')
         self.assertEqual(result, '0148')
 
 # ################################################################################################################
 
     def test_navigate_PV1_8_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PV1.8.2')
         self.assertEqual(result, 'TÄT,MÄJA ES')
 
 # ################################################################################################################
 
     def test_navigate_PV1_10(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PV1.10')
         self.assertEqual(result, 'SUR')
 
 # ################################################################################################################
 
     def test_navigate_PV1_17(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PV1.17')
         self.assertEqual(result, '0148')
 
 # ################################################################################################################
 
     def test_navigate_PV1_17_2(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PV1.17.2')
         self.assertEqual(result, 'TÄT,HËINZ')
 
 # ################################################################################################################
 
     def test_navigate_PV1_18(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PV1.18')
         self.assertEqual(result, 'S')
 
 # ################################################################################################################
 
     def test_navigate_PV1_19(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PV1.19')
         self.assertEqual(result, '2800')
 
 # ################################################################################################################
 
     def test_navigate_PV1_20(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PV1.20')
         self.assertEqual(result, 'A')
 
 # ################################################################################################################
 
     def test_navigate_PV1_39(self) -> 'None':
-        message = parse_message(_Raw_de_imedone_20, validate=False)
+        message = parse_hl7(_Raw_de_imedone_20, validate=False)
         result = message.get('PV1.39')
         self.assertEqual(result, 'GËNKRH')
 

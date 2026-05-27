@@ -1,6 +1,5 @@
 
-if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
-if (typeof $.fn.zato.scheduler === 'undefined') { $.fn.zato.scheduler = {}; }
+
 $.fn.zato.scheduler.job_detail = {};
 
 // Job detail page configuration.

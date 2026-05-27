@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import unittest
 
 # Zato
-from zato.hl7v2 import parse_message
+from zato.hl7v2 import parse_hl7
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -26,7 +26,7 @@ _Message_With_UTF8 = (
 # ################################################################################################################################
 
 class TestTolerancePreservesUTF8(unittest.TestCase):
-    """ The top-level parse_message applies tolerance by default.
+    """ The top-level parse_hl7 applies tolerance by default.
     UTF-8 characters must survive tolerance processing
     without mojibake.
     """
@@ -34,7 +34,7 @@ class TestTolerancePreservesUTF8(unittest.TestCase):
     def test_patient_name_preserves_umlaut(self) -> 'None':
         """ PID-5 must return 'Grünwald' not 'GrÃ¼nwald'.
         """
-        message = parse_message(_Message_With_UTF8, validate=False)
+        message = parse_hl7(_Message_With_UTF8, validate=False)
 
         out = message.get('PID.5')
         self.assertEqual(out, 'Grünwald')
@@ -42,7 +42,7 @@ class TestTolerancePreservesUTF8(unittest.TestCase):
     def test_sending_facility_preserves_umlaut(self) -> 'None':
         """ MSH-4 must return 'STÄDTISCH_KH' not 'STÃ\x84DTISCH_KH'.
         """
-        message = parse_message(_Message_With_UTF8, validate=False)
+        message = parse_hl7(_Message_With_UTF8, validate=False)
 
         out = message.get('MSH.4')
         self.assertEqual(out, 'STÄDTISCH_KH')
@@ -50,7 +50,7 @@ class TestTolerancePreservesUTF8(unittest.TestCase):
     def test_patient_address_preserves_eszett(self) -> 'None':
         """ PID-11 must preserve the eszett in 'Böttcherstraße'.
         """
-        message = parse_message(_Message_With_UTF8, validate=False)
+        message = parse_hl7(_Message_With_UTF8, validate=False)
 
         out = message.get('PID.11')
         self.assertIsNotNone(out)
@@ -59,7 +59,7 @@ class TestTolerancePreservesUTF8(unittest.TestCase):
     def test_receiving_facility_preserves_umlaut(self) -> 'None':
         """ MSH-6 must return 'RÖNTGEN_KH' not 'RÃ\x96NTGEN_KH'.
         """
-        message = parse_message(_Message_With_UTF8, validate=False)
+        message = parse_hl7(_Message_With_UTF8, validate=False)
 
         out = message.get('MSH.6')
         self.assertEqual(out, 'RÖNTGEN_KH')

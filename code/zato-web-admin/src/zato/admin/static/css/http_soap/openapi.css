@@ -158,36 +158,3 @@
     border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.openapi-overlay-footer button {
-    padding: 10px 24px;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-shadow: none;
-}
-
-.openapi-button-cancel {
-    background: #3a3a3a;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    color: #ccc;
-}
-
-.openapi-button-cancel:hover {
-    background: #4a4a4a;
-    border-color: rgba(255, 255, 255, 0.2);
-    color: #fff;
-}
-
-.openapi-button-ok {
-    background: #4a9eff;
-    border: 1px solid #4a9eff;
-    color: #fff;
-    min-width: 80px;
-}
-
-.openapi-button-ok:hover {
-    background: #5aafff;
-    border-color: #5aafff;
-}

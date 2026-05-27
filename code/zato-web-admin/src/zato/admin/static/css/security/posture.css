@@ -1,0 +1,173 @@
+/* ------------------------------------------------------------ */
+/* Security posture - layout overrides                          */
+/* ------------------------------------------------------------ */
+
+.dashboard-hero,
+.dashboard-chart-section {
+    display: none;
+}
+
+.dashboard-grid-section {
+    grid-template-columns: 1fr;
+    max-width: fit-content;
+    margin-top: 20px;
+}
+
+.dashboard-grid-section .dashboard-card {
+    max-height: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Security posture - card                                      */
+/* ------------------------------------------------------------ */
+
+.posture-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.posture-card .dashboard-card-header {
+    flex-wrap: wrap;
+}
+
+.posture-card .dashboard-tabs {
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+/* ------------------------------------------------------------ */
+/* Security posture - check list                                */
+/* ------------------------------------------------------------ */
+
+.posture-check-list {
+    padding: 8px 0;
+}
+
+.posture-check-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    transition: background 120ms ease;
+}
+
+.posture-check-item:last-child {
+    border-bottom: none;
+}
+
+.posture-check-item:hover {
+    background: rgba(0, 0, 0, 0.015);
+}
+
+.posture-check-text {
+    flex: 1;
+    min-width: 0;
+    padding-right: 24px;
+    cursor: pointer;
+}
+
+.posture-check-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin-bottom: 3px;
+}
+
+.posture-check-description {
+    font-size: 12px;
+    color: #71717a;
+    line-height: 1.4;
+}
+
+/* ------------------------------------------------------------ */
+/* Security posture - action bar                                */
+/* ------------------------------------------------------------ */
+
+.posture-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 24px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.posture-actions .secondary-button {
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.posture-actions .how-it-works-badge {
+    margin-right: auto;
+}
+
+/* ------------------------------------------------------------ */
+/* Security posture - status message                            */
+/* ------------------------------------------------------------ */
+
+.posture-status {
+    font-size: 12px;
+    color: #71717a;
+    transition: opacity 300ms ease;
+}
+
+.posture-status-saved {
+    color: #28a745;
+}
+
+.posture-status-error {
+    color: #dc3545;
+}
+
+/* ------------------------------------------------------------ */
+/* Security posture - tooltip explanation                       */
+/* ------------------------------------------------------------ */
+
+.how-it-works-posture-explanation {
+    max-width: 240px;
+    font-size: 12px;
+    line-height: 1.55;
+    color: #e8e8e8;
+}
+
+.how-it-works-posture-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffd54f;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.how-it-works-posture-body {
+    color: #d0d0d0;
+}
+
+.how-it-works-posture-highlight {
+    color: #ff7043;
+    font-weight: 600;
+}
+
+/* ------------------------------------------------------------ */
+/* Security posture - inline toggle inside tooltip              */
+/* ------------------------------------------------------------ */
+
+.how-it-works-posture-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.how-it-works-posture-toggle-label {
+    font-size: 11px;
+    color: #aaa;
+}
+
+.how-it-works-toggle-switch {
+    transform: scale(0.85);
+}

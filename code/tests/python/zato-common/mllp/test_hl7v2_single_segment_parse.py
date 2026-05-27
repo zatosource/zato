@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import unittest
 
 # Zato
-from zato.hl7v2 import parse_message
+from zato.hl7v2 import parse_hl7
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,13 +31,13 @@ class TestSingleSegmentParsing(unittest.TestCase):
     def test_msh_only_message_parses(self) -> 'None':
         """ Parsing a single-segment MSH-only message must not raise an exception.
         """
-        message = parse_message(_MSH_Only_Message)
+        message = parse_hl7(_MSH_Only_Message)
         self.assertIsNotNone(message)
 
     def test_msh_only_sending_application(self) -> 'None':
         """ The sending application must be accessible on a single-segment message.
         """
-        message = parse_message(_MSH_Only_Message)
+        message = parse_hl7(_MSH_Only_Message)
 
         out = message.get('MSH.3')
         self.assertEqual(out, 'KLINx')
@@ -45,7 +45,7 @@ class TestSingleSegmentParsing(unittest.TestCase):
     def test_msh_only_message_control_id(self) -> 'None':
         """ The message control ID must be accessible on a single-segment message.
         """
-        message = parse_message(_MSH_Only_Message)
+        message = parse_hl7(_MSH_Only_Message)
 
         out = message.get('MSH.10')
         self.assertEqual(out, '77')
@@ -53,7 +53,7 @@ class TestSingleSegmentParsing(unittest.TestCase):
     def test_msh_only_version(self) -> 'None':
         """ The version must be accessible on a single-segment message.
         """
-        message = parse_message(_MSH_Only_Message)
+        message = parse_hl7(_MSH_Only_Message)
 
         out = message.get('MSH.12')
         self.assertEqual(out, '2.5')

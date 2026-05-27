@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from hypothesis import given, strategies as st, settings, HealthCheck, assume
 
-from zato.hl7v2.v2_9 import parse_message
+from zato.hl7v2.v2_9 import parse_hl7
 from zato.hl7v2.tests.fakers import fake_msh, fake_pid, fake_evn, fake_pv1
 
 
@@ -22,7 +22,7 @@ class TestFuzzParser:
     @settings(max_examples=200, suppress_health_check=[HealthCheck.too_slow])
     def test_fuzz_parser_random_input_no_crash(self, raw):
         try:
-            parse_message(raw)
+            parse_hl7(raw)
         except (ValueError, Exception):
             pass
 
@@ -30,7 +30,7 @@ class TestFuzzParser:
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
     def test_fuzz_parser_binary_input_no_crash(self, raw):
         try:
-            parse_message(raw.decode("utf-8", errors="replace"))
+            parse_hl7(raw.decode("utf-8", errors="replace"))
         except (ValueError, Exception):
             pass
 
@@ -39,7 +39,7 @@ class TestFuzzParser:
     def test_fuzz_parser_modified_pid_no_crash(self, family_name, given_name):
         raw = fake_msh("ADT", "A01", "ADT_A01") + fake_evn("A01") + fake_pid() + fake_pv1()
         try:
-            msg = parse_message(raw)
+            msg = parse_hl7(raw)
             msg.set("PID.5.1", family_name)
             msg.set("PID.5.2", given_name)
         except (ValueError, Exception):
@@ -53,7 +53,7 @@ class TestFuzzParser:
             raw += fake_pid()
         raw += fake_pv1()
         try:
-            parse_message(raw)
+            parse_hl7(raw)
         except (ValueError, Exception):
             pass
 

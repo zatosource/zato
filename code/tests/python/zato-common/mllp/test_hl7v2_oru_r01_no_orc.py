@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import unittest
 
 # Zato
-from zato.hl7v2.v2_9 import parse_message
+from zato.hl7v2.v2_9 import parse_hl7
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,13 +35,13 @@ class TestORUR01WithoutORC(unittest.TestCase):
     def test_parse_succeeds(self) -> 'None':
         """ Parsing an ORU^R01 without ORC must not raise an exception.
         """
-        message = parse_message(_ORU_R01_Without_ORC, validate=False)
+        message = parse_hl7(_ORU_R01_Without_ORC, validate=False)
         self.assertIsNotNone(message)
 
     def test_obx_set_id(self) -> 'None':
         """ OBX-1 must be reachable and return '1' for the first OBX.
         """
-        message = parse_message(_ORU_R01_Without_ORC, validate=False)
+        message = parse_hl7(_ORU_R01_Without_ORC, validate=False)
 
         out = message.get('OBX.1')
         self.assertEqual(out, '1')
@@ -49,7 +49,7 @@ class TestORUR01WithoutORC(unittest.TestCase):
     def test_obx_observation_identifier(self) -> 'None':
         """ OBX-3 must return the observation identifier 'RASS'.
         """
-        message = parse_message(_ORU_R01_Without_ORC, validate=False)
+        message = parse_hl7(_ORU_R01_Without_ORC, validate=False)
 
         out = message.get('OBX.3')
         self.assertEqual(out, 'RASS')
@@ -57,7 +57,7 @@ class TestORUR01WithoutORC(unittest.TestCase):
     def test_obx_observation_value(self) -> 'None':
         """ OBX-5 must return the observation value '-4'.
         """
-        message = parse_message(_ORU_R01_Without_ORC, validate=False)
+        message = parse_hl7(_ORU_R01_Without_ORC, validate=False)
 
         out = message.get('OBX.5')
         self.assertEqual(out, '-4')
@@ -65,7 +65,7 @@ class TestORUR01WithoutORC(unittest.TestCase):
     def test_pid_reachable(self) -> 'None':
         """ PID-2 must be reachable and return '5678'.
         """
-        message = parse_message(_ORU_R01_Without_ORC, validate=False)
+        message = parse_hl7(_ORU_R01_Without_ORC, validate=False)
 
         out = message.get('PID.2')
         self.assertEqual(out, '5678')

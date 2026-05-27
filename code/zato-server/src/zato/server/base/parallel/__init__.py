@@ -2130,10 +2130,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         import json
         from contextlib import closing
         from sqlalchemy import text
+
+        # Map logical entity types used by the frontend to actual ODB table names ..
+        _entity_type_to_table = {
+            'security': 'sec_base',
+            'generic_connection': 'generic_conn',
+        }
+
+        table_name = _entity_type_to_table.get(entity_type, entity_type)
+
         exists = False
         with closing(self.odb.session()) as session:
             try:
-                query = f'SELECT 1 FROM {entity_type} WHERE {attr_name} = :val LIMIT 1'
+                query = f'SELECT 1 FROM {table_name} WHERE {attr_name} = :val LIMIT 1'
                 result = session.execute(
                     text(query),  # type: ignore[operator]
                     {'val': value}

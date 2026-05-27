@@ -158,7 +158,7 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    input_required = 'id', 'name', 'is_active', 'url_path'
+    input_required = 'name', 'is_active', 'url_path'
     input_optional = 'is_public',
     output_required = 'id', 'name'
     output_optional = 'rest_channel_list',

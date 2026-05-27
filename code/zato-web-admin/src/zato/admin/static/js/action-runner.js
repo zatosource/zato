@@ -20,8 +20,6 @@
 
 (function() {
 
-$.fn.zato = $.fn.zato || {};
-
 $.fn.zato.update_response_line_numbers = function(preElement) {
     var gutter = preElement.siblings('.invoker-modal-response-gutter');
     if (gutter.length === 0) {

@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from http import HTTPStatus
 from logging import getLogger
 
@@ -25,6 +26,7 @@ from zato.client import ZatoClient
 from zato.common.const import ServiceConst
 from zato.common.json_internal import loads
 from zato.common.odb.model import Cluster
+from zato.common.util.api import asbool
 from zato.common.version import get_version
 
 # ################################################################################################################################
@@ -192,7 +194,10 @@ class ZatoMiddleware:
                     filter_by(id=req.zato.cluster_id).\
                     one()
 
-                url = 'http://127.0.0.1:17010'
+                if url := os.environ.get('Zato_Server_Address'):
+                    pass
+                else:
+                    url = 'http://127.0.0.1:17010'
 
                 auth = (ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD)
                 req.zato.client = Client(req, url, ServiceConst.API_Invoke_Url_Path, auth, to_bunch=True)
@@ -224,6 +229,8 @@ class ZatoMiddleware:
             resp.context_data['zato_version'] = version
         else:
             resp.context_data = {'zato_version':version}
+
+        resp.context_data['security_posture_enabled'] = asbool(os.environ.get('Zato_Security_Posture_Enabled', 'false'))
 
         if req.path not in _Auth_Paths:
             try:
