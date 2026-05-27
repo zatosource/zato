@@ -613,12 +613,13 @@ class InvokeGraphQL(_BaseService):
 
         from gql import Client as GQLClient
         from gql import gql as gql_parse
-        from gql.transport.requests import RequestsHTTPTransport
+        from zato.server.connection.facade import GraphQLInvoker
 
         with closing(self.odb.session()) as session:
             instance = self._get_instance_by_id(session, ModelGenericConn, self.request.input.id)
             config = loads(instance.opaque1) if instance.opaque1 else {}
             config['address'] = instance.address
+            config['extra'] = instance.extra
 
         query_text = self.request.input.get('query', '')
         variables_text = self.request.input.get('variables', '')
@@ -631,16 +632,7 @@ class InvokeGraphQL(_BaseService):
         else:
             variables = None
 
-        timeout = config.get('default_query_timeout')
-        if timeout:
-            timeout = int(timeout)
-
-        if extra_raw := config.get('extra'):
-            headers = json.loads(extra_raw)
-        else:
-            headers = {}
-
-        transport = RequestsHTTPTransport(url=config['address'], timeout=timeout, headers=headers)
+        transport = GraphQLInvoker._build_transport(config, self.server)
         client = GQLClient(transport=transport)
 
         parsed_query = gql_parse(query_text)

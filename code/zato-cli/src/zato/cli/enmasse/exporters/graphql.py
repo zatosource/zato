@@ -33,7 +33,6 @@ logger = logging.getLogger(__name__)
 OUTGOING_OPTIONAL_FIELDS = [
     'default_query_timeout',
     'extra',
-    'security_name',
 ]
 
 # ################################################################################################################################
@@ -73,6 +72,9 @@ class OutgoingGraphQLExporter:
 
             if address := row.get('address'):
                 item['address'] = address
+
+            if security_name := row.get('security_name'):
+                item['security'] = security_name
 
             for field in OUTGOING_OPTIONAL_FIELDS:
                 if value := row.get(field):
