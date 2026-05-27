@@ -160,11 +160,24 @@ local function get_pel_count(stream_key, group_name)
     return pending[1]
 end
 
+-- Find the last-delivered-id for a consumer group by name ..
+local function get_group_last_delivered_id(groups, group_name)
+    for group_index = 1, #groups do
+        local group = groups[group_index]
+        local name = get_field(group, 'name')
+        if name == group_name then
+            return get_field(group, 'last-delivered-id')
+        end
+    end
+    return false
+end
+
 -- Get the unread backlog count for a consumer group ..
 -- .. these are messages in the stream that the group has not consumed yet.
 -- .. XINFO GROUPS returns a 'lag' field (Redis 7+) with this count.
 -- .. The call can fail if the stream does not exist ..
 -- .. and 'lag' can be nil (false in Lua) after XDEL or stream trimming.
+-- .. When lag is nil, we fall back to counting entries via XRANGE.
 local function get_lag_count(stream_key, group_name)
     local ok, groups = pcall(redis.call, 'XINFO', 'GROUPS', stream_key)
     if not ok then
@@ -172,11 +185,20 @@ local function get_lag_count(stream_key, group_name)
     end
 
     local lag = get_group_lag(groups, group_name)
-    redis.log(redis.LOG_WARNING, 'depth_debug lag: stream=' .. stream_key .. ' group=' .. group_name .. ' lag=' .. tostring(lag) .. ' groups_count=' .. #groups)
-    if lag == false then
-        return 0
+
+    if lag ~= false then
+        return lag
     end
-    return lag
+
+    -- .. lag is nil (deletions or trimming happened), count entries manually ..
+    local last_id = get_group_last_delivered_id(groups, group_name)
+
+    if last_id == false or last_id == '0-0' then
+        return redis.call('XLEN', stream_key)
+    end
+
+    local entries = redis.call('XRANGE', stream_key, '(' .. last_id, '+')
+    return #entries
 end
 
 -- Compute pending depths for all (stream_key, group_name) pairs ..
