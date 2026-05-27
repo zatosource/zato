@@ -613,8 +613,8 @@ class GraphQLInvoker:
 
             # .. open the session ..
             with client as gql_session:
-                ds = DSLSchema(client.schema)
-                yield gql_session, ds
+                schema = DSLSchema(client.schema)
+                yield gql_session, schema
 
         return _session_ctx()
 
