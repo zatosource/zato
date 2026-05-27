@@ -35,7 +35,6 @@ logger = logging.getLogger(__name__)
 _service_input_prefix = 'mcp_service_'
 _security_input_prefix = 'mcp_security_'
 _mcp_group_name_prefix = 'mcp.'
-_mcp_path_prefix = '/mcp/'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,7 +73,6 @@ class Index(_Index):
             'show_search_form': True,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
-            'mcp_path_prefix': _mcp_path_prefix,
         }
         return out
 
@@ -102,10 +100,6 @@ class _CreateEdit(CreateEdit):
 
         # .. and store them so they end up in opaque data.
         input_dict['services'] = service_names
-
-        # .. prepend the mandatory /mcp/ prefix to the user-supplied suffix ..
-        url_path = input_dict.get('url_path', '')
-        input_dict['url_path'] = _mcp_path_prefix + url_path.lstrip('/')
 
         # Collect security definitions from the security badge picker ..
         security_keys = [key for key in self.req.POST if key.startswith(_security_input_prefix)]

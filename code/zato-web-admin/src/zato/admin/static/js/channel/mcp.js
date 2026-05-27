@@ -245,15 +245,6 @@ $.fn.zato.channel.mcp.edit = function(id) {
     $.fn.zato.channel.mcp.security_badge_picker.load('edit', instance.id);
     $.fn.zato.data_table._create_edit('edit', 'Update the MCP channel', id);
 
-    // .. the form was populated with the full path including the /mcp/ prefix,
-    // .. but the prefix is displayed as a separate non-editable span,
-    // .. so strip it from the input value.
-    var url_field = $('#id_edit-url_path');
-    var current_value = url_field.val();
-    if (current_value.indexOf('/mcp/') === 0) {
-        url_field.val(current_value.substring(5));
-    }
-
     $('#edit-div').dialog('option', 'width', '45em');
 };
 
