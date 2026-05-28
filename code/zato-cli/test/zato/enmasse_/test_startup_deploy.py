@@ -146,6 +146,7 @@ def _start_server(server_dir, port, broker_port, extra_env=None, extra_args=None
     from zato.common.util.config import get_config_object, update_config_file
     config = get_config_object(repo_location, 'server.conf')
     config['main']['port'] = str(port)
+    config['main']['bind'] = f'0.0.0.0:{port}'
     update_config_file(config, repo_location, 'server.conf')
 
     env = os.environ.copy()
@@ -260,11 +261,22 @@ channel_rest:
         enmasse_env = os.environ.copy()
         enmasse_env.pop('COVERAGE_PROCESS_START', None)
 
+        print(f'\n--- DEBUG startup_deploy: enmasse_file={cls._enmasse_file}', file=sys.stderr)
+        with open(cls._enmasse_file) as _f:
+            print(f'--- DEBUG startup_deploy: enmasse content:\n{_f.read()}', file=sys.stderr)
+        print(f'--- DEBUG startup_deploy: env_ini_file={cls._env_ini_file}', file=sys.stderr)
+        with open(cls._env_ini_file) as _f:
+            print(f'--- DEBUG startup_deploy: env.ini content:\n{_f.read()}', file=sys.stderr)
+
         result = subprocess.run([
-            _ZATO_BIN, 'enmasse', cls.server_dir, '--import',
+            _ZATO_BIN, 'enmasse', cls.server_dir, '--import', '--verbose',
             '--input', cls._enmasse_file,
             '--env-file', cls._env_ini_file,
         ], capture_output=True, text=True, timeout=60, env=enmasse_env)
+
+        print(f'--- DEBUG startup_deploy: enmasse exit={result.returncode}', file=sys.stderr)
+        print(f'--- DEBUG startup_deploy: stdout:\n{result.stdout}', file=sys.stderr)
+        print(f'--- DEBUG startup_deploy: stderr:\n{result.stderr}', file=sys.stderr)
 
         cls._enmasse_result = result
         cls._enmasse_import_ok = result.returncode == 0

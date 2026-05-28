@@ -17,6 +17,7 @@ from sqlalchemy import MetaData, inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 
 # Zato
+from zato.cli.enmasse.util import get_value_from_environment
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.defaults import default_server_base_dir
 from zato.common.ext.configobj_ import ConfigObj
@@ -297,19 +298,23 @@ def wait_for_services(
     logger.info('Session obtained')
 
     # Build list of unique service names from the configuration
-    logger.info('Building list of service names from config')
+    logger.info('Building list of service names from config, config keys: %s', sorted(config_dict.keys()))
     service_names = set()
 
-    # Extract service names from channel_rest definitions if present
+    # Extract service names from channel_rest definitions if present,
+    # resolving any ${VAR} references before comparison ..
     if channel_rest := config_dict.get('channel_rest'):
         for item in channel_rest:
             if service := item.get('service'):
+                service = get_value_from_environment(service)
+                logger.info('channel_rest item service field: %r', service)
                 service_names.add(service)
 
-    # Extract service names from scheduler definitions if present
+    # .. same for scheduler definitions.
     if scheduler := config_dict.get('scheduler'):
         for item in scheduler:
             if service := item.get('service'):
+                service = get_value_from_environment(service)
                 service_names.add(service)
 
     if not service_names:
@@ -343,13 +348,16 @@ def wait_for_services(
                 should_log = True
                 logger.info(f'Still waiting for {service_label} after {log_after_seconds} seconds')
 
-            # Get list of all available non-internal services
-            db_services = service_list(session, 1, return_internal=False)
+            # Get list of all available services including internal ones
+            db_services = service_list(session, 1, return_internal=True)
             db_services = to_json(db_services)
             db_service_names = set()
 
             for service in db_services:
                 db_service_names.add(service['name'])
+
+            logger.info('DB has %d services, looking for %s, DB names sample: %s',
+                len(db_service_names), sorted(service_names), sorted(db_service_names)[:20])
 
             # Find missing services
             missing_services = service_names - db_service_names

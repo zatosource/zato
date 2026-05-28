@@ -174,6 +174,7 @@ class TestDashboardEnmasse(TestCase):
         from zato.common.util.config import get_config_object, update_config_file
         config = get_config_object(repo_location, 'server.conf')
         config['main']['port'] = str(cls.port)
+        config['main']['bind'] = f'0.0.0.0:{cls.port}'
         update_config_file(config, repo_location, 'server.conf')
 
         env = os.environ.copy()
@@ -291,8 +292,13 @@ class TestDashboardEnmasse(TestCase):
                 pass
 
         if isinstance(data, dict):
+            if not data.get('is_ok', False):
+                print(f'\n--- DEBUG dashboard import failed:', file=sys.stderr)
+                print(f'--- DEBUG stdout:\n{data.get("stdout", "")}', file=sys.stderr)
+                print(f'--- DEBUG stderr:\n{data.get("stderr", "")}', file=sys.stderr)
+                print(f'--- DEBUG exit_code: {data.get("exit_code")}', file=sys.stderr)
             self.assertTrue(data.get('is_ok', False),
-                f'Dashboard import returned is_ok=false: {data.get("stderr", "")[:300]}')
+                f'Dashboard import returned is_ok=false: {data.get("stderr", "")}')
 
         return data
 
