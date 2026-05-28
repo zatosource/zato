@@ -26,6 +26,7 @@ from zato.cli.enmasse.exporters.confluence import ConfluenceExporter
 from zato.cli.enmasse.exporters.channel_hl7_mllp import ChannelHL7MLLPExporter
 from zato.cli.enmasse.exporters.es import ElasticSearchExporter
 from zato.cli.enmasse.exporters.graphql import OutgoingGraphQLExporter
+from zato.cli.enmasse.exporters.kafka import ChannelKafkaExporter, OutgoingKafkaExporter
 from zato.cli.enmasse.exporters.outgoing_rest import OutgoingRESTExporter
 from zato.cli.enmasse.exporters.outgoing_soap import OutgoingSOAPExporter
 from zato.cli.enmasse.exporters.pubsub_topic import PubSubTopicExporter
@@ -68,6 +69,8 @@ class EnmasseYAMLExporter:
         self.channel_exporter = ChannelExporter(self)
         self.channel_hl7_mllp_exporter = ChannelHL7MLLPExporter(self)
         self.outgoing_graphql_exporter = OutgoingGraphQLExporter(self)
+        self.channel_kafka_exporter = ChannelKafkaExporter(self)
+        self.outgoing_kafka_exporter = OutgoingKafkaExporter(self)
         self.jira_exporter = JiraExporter(self)
         self.ldap_exporter = LDAPExporter(self)
         self.microsoft_365_exporter = Microsoft365Exporter(self)
@@ -179,6 +182,24 @@ class EnmasseYAMLExporter:
         _ = self.get_cluster(session)
         outgoing_graphql_list = self.outgoing_graphql_exporter.export(session, self.cluster_id)
         return outgoing_graphql_list
+
+# ################################################################################################################################
+
+    def export_channel_kafka(self, session:'SASession') -> 'list':
+        """ Exports Kafka channel definitions.
+        """
+        _ = self.get_cluster(session)
+        channel_kafka_list = self.channel_kafka_exporter.export(session, self.cluster_id)
+        return channel_kafka_list
+
+# ################################################################################################################################
+
+    def export_outgoing_kafka(self, session:'SASession') -> 'list':
+        """ Exports Kafka outgoing definitions.
+        """
+        _ = self.get_cluster(session)
+        outgoing_kafka_list = self.outgoing_kafka_exporter.export(session, self.cluster_id)
+        return outgoing_kafka_list
 
 # ################################################################################################################################
 
@@ -334,10 +355,20 @@ class EnmasseYAMLExporter:
         if channel_hl7_mllp_defs:
             output_dict['channel_hl7_mllp'] = channel_hl7_mllp_defs
 
+        # Export Kafka channel definitions
+        channel_kafka_defs = self.export_channel_kafka(session)
+        if channel_kafka_defs:
+            output_dict['channel_kafka'] = channel_kafka_defs
+
         # Export GraphQL outgoing definitions
         outgoing_graphql_defs = self.export_outgoing_graphql(session)
         if outgoing_graphql_defs:
             output_dict['outgoing_graphql'] = outgoing_graphql_defs
+
+        # Export Kafka outgoing definitions
+        outgoing_kafka_defs = self.export_outgoing_kafka(session)
+        if outgoing_kafka_defs:
+            output_dict['outgoing_kafka'] = outgoing_kafka_defs
 
         # Export outgoing REST connection definitions
         outgoing_rest_defs = self.export_outgoing_rest(session)
