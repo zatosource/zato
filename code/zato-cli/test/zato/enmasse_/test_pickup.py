@@ -253,21 +253,22 @@ class TestEnmassePickup(TestCase):
             f.write(yaml_content)
         return path
 
-    def _wait_for_section(self, section_name, expected_count, timeout=30):
+    def _wait_for_named_item(self, section_name, item_name, timeout=30):
+        """ Polls the export until a specific named item appears in a section.
+        """
         deadline = time.monotonic() + timeout
         last_data = {}
         poll_idx = 0
         while time.monotonic() < deadline:
             last_data = self._export_to_dict()
             items = last_data.get(section_name, [])
-            current_len = len(items) if isinstance(items, list) else 0
-            print(f'--- DEBUG _wait_for_section poll={poll_idx} section={section_name} '
-                  f'expected={expected_count} got={current_len}', file=sys.stderr)
-            if isinstance(items, list) and current_len >= expected_count:
+            names = [item['name'] for item in items if isinstance(item, dict) and 'name' in item]
+            print(f'--- DEBUG _wait_for_named_item poll={poll_idx} section={section_name} '
+                  f'looking_for={item_name} got_names={names}', file=sys.stderr)
+            if item_name in names:
                 return last_data
             time.sleep(2)
             poll_idx += 1
-        current_count = len(last_data.get(section_name) or [])
 
         print('\n--- Server stdout at time of failure: ---', file=sys.stderr)
         for line in self._server_output_lines[-30:]:
@@ -288,8 +289,8 @@ class TestEnmassePickup(TestCase):
         print('--- End of pickup directory ---\n', file=sys.stderr)
 
         self.fail(
-            f'Timeout waiting for section "{section_name}" to have {expected_count} items, '
-            f'got {current_count}. Current data sections: {list(last_data.keys())}')
+            f'Timeout waiting for item "{item_name}" in section "{section_name}". '
+            f'Current data sections: {list(last_data.keys())}')
 
 # ################################################################################################################################
 
@@ -309,13 +310,13 @@ class TestEnmassePickup(TestCase):
         # Step 2: place the full template as a single enmasse file
         self._place_enmasse_file('enmasse.yaml', template_complex_01)
 
-        # .. parse the template to know what sections and counts to expect ..
+        # .. parse the template to know what sections to expect ..
         template_data = yaml.safe_load(template_complex_01)
         section_names = [name for name in template_data.keys() if name not in skip_sections]
 
-        # .. wait for channel_rest (4 items) as it depends on security and groups,
+        # .. wait for channel_rest.4 which depends on security groups,
         # so if it's there, everything before it succeeded too ..
-        data = self._wait_for_section('channel_rest', 4, timeout=30)
+        data = self._wait_for_named_item('channel_rest', 'enmasse.channel.rest.4', timeout=30)
 
         # .. verify all sections are present ..
         for section_name in section_names:
