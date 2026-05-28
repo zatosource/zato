@@ -292,10 +292,6 @@ class EnmasseYAMLImporter:
         """ Synchronizes security definitions from a YAML configuration with the database.
         """
         if not security_list:
-            # .. even without a security section in the YAML, populate sec_defs
-            # from existing DB entries so that other importers (groups, channels)
-            # can resolve security references.
-            self.security_importer.populate_sec_defs_from_db(session)
             return [], []
 
         count = len(security_list)
