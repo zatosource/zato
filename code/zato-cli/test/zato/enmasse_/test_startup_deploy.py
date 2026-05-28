@@ -232,7 +232,7 @@ class TestDockerPostStartEnmasseImport(TestCase):
         cls._enmasse_file = os.path.join(cls._tmpdir, 'enmasse.yaml')
         cls._env_ini_file = os.path.join(cls._tmpdir, 'env.ini')
 
-        env_var_name = f'ENMASSE_SVC_{cls._token[:8]}'
+        env_var_name = f'Enmasse_Service_{cls._token[:8]}'
         enmasse_yaml = f'''\
 channel_rest:
   - name: {cls._channel_name}

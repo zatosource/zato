@@ -109,6 +109,21 @@ def get_value_from_environment(value:'any_') -> 'str':
     if not isinstance(value, str):
         return value
 
+    # Handle ${VAR} syntax ..
+    if value.startswith('${'):
+        if value.endswith('}'):
+            env_key = value[2:-1]
+            default = f'Missing_{env_key}_{uuid.uuid4().hex[:12]}'
+            value = os.environ.get(env_key, default)
+
+            try:
+                value = asbool(value)
+            except Exception:
+                pass
+
+            return value
+
+    # .. handle Zato_Enmasse_Env. prefix syntax.
     prefix = 'Zato_Enmasse_Env.'
 
     if not value.startswith(prefix):
