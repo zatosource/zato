@@ -157,8 +157,10 @@ class SecurityImporter:
                         continue
                     if key == 'username' and sec_type == 'apikey':
                         continue
+                    if key not in db_def:
+                        continue
 
-                    db_value = db_def.get(key)
+                    db_value = db_def[key]
                     if db_value != value:
                         logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_value)
                         needs_update = True
