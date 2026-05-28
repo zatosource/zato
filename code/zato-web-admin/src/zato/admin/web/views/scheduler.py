@@ -149,12 +149,15 @@ def _get_create_edit_message(user_profile, cluster, params, form_prefix=''):
     message = {
         'name': params[form_prefix + 'name'],
         'cluster_id': cluster.id,
-        'id': params.get(form_prefix + 'id', ''),
         'is_active': bool(params.get(form_prefix + 'is_active')),
         'service': params.get(form_prefix + 'service', ''),
         'extra': params.get(form_prefix + 'extra', ''),
         'start_date': start_date.isoformat(),
     }
+
+    id = params.get(form_prefix + 'id', '')
+    if id:
+        message['id'] = id
 
     for callback_field in ('on_success_service', 'on_success_job', 'on_error_service', 'on_error_job'):
         value = params.get(form_prefix + callback_field, '')
