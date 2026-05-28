@@ -249,8 +249,13 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += "<td class='impexp'><input type='checkbox' /></td>";
 
     /* 3 */
-    var gw_badge_class = (item.service === $.fn.zato.http_soap.gateway_trigger_service) ? 'gateway-badge visible' : 'gateway-badge';
-    row += String.format('<td><span class="{0}" id="gw-badge-{1}">GW</span><span class="name-value">{2}</span></td>', gw_badge_class, item.id, item.name);
+    if(is_channel) {
+        var gw_badge_class = (item.service === $.fn.zato.http_soap.gateway_trigger_service) ? 'gateway-badge visible' : 'gateway-badge';
+        row += String.format('<td><span class="{0}" id="gw-badge-{1}">GW</span><span class="name-value">{2}</span></td>', gw_badge_class, item.id, item.name);
+    }
+    else {
+        row += String.format('<td><span class="name-value">{0}</span></td>', item.name);
+    }
 
     /* 4 */
     row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');

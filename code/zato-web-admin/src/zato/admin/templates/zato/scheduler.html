@@ -130,7 +130,7 @@
                         <td style="text-align:center">{{ job.is_active|yesno:"Yes,No" }}</td>
                         <td>{{ job.definition_text|safe }}</td>
                         <td><a href="{% url "service-ide" "service" job.service_name %}?cluster={{ cluster_id }}">{{ job.service_name }}</a></td>
-                        <td><a href="{% url "scheduler-job-detail" job.id %}?cluster={{ cluster_id }}&outcomes=all">Statistics</a></td>
+                        <td><a href="{% url "scheduler-job-detail" job.id %}?cluster={{ cluster_id }}&range={{ default_time_range_minutes }}&outcomes=all">Statistics</a></td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.execute('{{ job.id }}', this)">Execute</a></td>
                         <td><a href="javascript:$.fn.zato.scheduler.edit('{{ job.job_type }}', '{{ job.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.scheduler.delete_('{{ job.id }}');">Delete</a></td>
