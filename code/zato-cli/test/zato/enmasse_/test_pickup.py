@@ -34,9 +34,12 @@ _random_fields = frozenset(['password', 'username'])
 
 _ZATO_BASE = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
 _ZATO_BIN = os.path.join(_ZATO_BASE, 'bin', 'zato')
+_PYTHON_BIN = os.path.join(_ZATO_BASE, 'bin', 'py')
+_LISTENER_PATH = os.path.join(_ZATO_BASE, 'zato-common', 'src', 'zato', 'common', 'file_transfer', 'listener.py')
 _PASSWORD = 'test.enmasse.pickup.' + os.urandom(8).hex()
 
 _server_proc = None
+_listener_proc = None
 _tmpdir = None
 
 # ################################################################################################################################
@@ -170,10 +173,9 @@ class TestEnmassePickup(TestCase):
         qs_dir = os.path.join(_tmpdir, 'qs')
         os.makedirs(qs_dir)
 
-        # Create the pickup directory. The server's file listener thread will watch
-        # directories from the Zato_Hot_Deploy_Dir env var. We point it at this dir.
-        cls.pickup_dir = os.path.join(_tmpdir, 'pickup')
-        os.makedirs(cls.pickup_dir)
+        # We will use the server's own pickup directory for enmasse files.
+        # The file listener watches this directory and processes enmasse YAML files
+        # via the server's REST API, just like in production.
 
         qs_env = os.environ.copy()
         qs_env.pop('COVERAGE_PROCESS_START', None)
@@ -193,19 +195,18 @@ class TestEnmassePickup(TestCase):
                 f'ZATO ENMASSE PICKUP TESTS SKIPPED - quickstart create failed:\n{result.stdout}\n{result.stderr}')
 
         cls.server_dir = os.path.join(qs_dir, 'server1')
+        cls.pickup_dir = os.path.join(cls.server_dir, 'pickup', 'incoming', 'services')
         repo_location = os.path.join(cls.server_dir, 'config', 'repo')
 
         from zato.common.util.config import get_config_object, update_config_file
         config = get_config_object(repo_location, 'server.conf')
         config['main']['port'] = str(cls.port)
+        config['main']['bind'] = f'0.0.0.0:{cls.port}'
         update_config_file(config, repo_location, 'server.conf')
 
-        # Start the server with the pickup directory exposed via Zato_Hot_Deploy_Dir.
-        # The server's in-process file listener thread will pick it up automatically.
         env = os.environ.copy()
         env['Zato_Config_Bind_Port'] = str(cls.port)
         env['Zato_Broker_HTTP_Port'] = str(broker_port)
-        env['Zato_Hot_Deploy_Dir'] = cls.pickup_dir
         env.pop('COVERAGE_PROCESS_START', None)
 
         _server_proc = subprocess.Popen(
@@ -244,9 +245,29 @@ class TestEnmassePickup(TestCase):
             _kill_proc(_server_proc)
             raise
 
+        # .. start the file listener for the pickup directory ..
+        global _listener_proc
+
+        listener_env = os.environ.copy()
+        listener_env['Zato_Config_Bind_Port'] = str(cls.port)
+        listener_env['Zato_Web_Admin_Repo_Dir'] = os.path.join(qs_dir, 'web-admin', 'config', 'repo')
+        listener_env.pop('COVERAGE_PROCESS_START', None)
+
+        _listener_proc = subprocess.Popen(
+            [_PYTHON_BIN, _LISTENER_PATH, cls.pickup_dir],
+            env=listener_env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+
+        # .. give the listener time to initialize.
+        time.sleep(2)
+
     @classmethod
     def tearDownClass(cls):
-        global _tmpdir, _server_proc
+        global _tmpdir, _server_proc, _listener_proc
+        _kill_proc(_listener_proc)
+        _listener_proc = None
         _kill_proc(_server_proc)
         _server_proc = None
         if _tmpdir and os.path.isdir(_tmpdir):
@@ -280,13 +301,18 @@ class TestEnmassePickup(TestCase):
     def _wait_for_section(self, section_name, expected_count, timeout=30):
         deadline = time.monotonic() + timeout
         last_data = {}
+        poll_idx = 0
         while time.monotonic() < deadline:
             last_data = self._export_to_dict()
             items = last_data.get(section_name, [])
-            if isinstance(items, list) and len(items) >= expected_count:
+            current_len = len(items) if isinstance(items, list) else 0
+            print(f'--- DEBUG _wait_for_section poll={poll_idx} section={section_name} '
+                  f'expected={expected_count} got={current_len}', file=sys.stderr)
+            if isinstance(items, list) and current_len >= expected_count:
                 return last_data
             time.sleep(2)
-        current_count = len(last_data.get(section_name, []))
+            poll_idx += 1
+        current_count = len(last_data.get(section_name) or [])
 
         print('\n--- Server stdout at time of failure: ---', file=sys.stderr)
         for line in self._server_output_lines[-30:]:

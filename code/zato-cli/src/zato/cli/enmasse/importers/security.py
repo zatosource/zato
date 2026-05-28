@@ -392,25 +392,7 @@ class SecurityImporter:
             session.commit()
             logger.info('Successfully committed all changes')
 
-            # Commit changes to ensure all definitions are in the database
-            logger.info('Committing changes: created=%d updated=%d', len(out_created), len(out_updated))
-            session.commit()
-            logger.info('Successfully committed all changes')
-
-            logger.info('Populating security definitions dictionary from database')
-            db_defs = self.get_security_defs_from_db(session, self.importer.cluster_id)
-
-            # Add each definition from the database to the dictionary
-            for name, def_info in db_defs.items():
-                self.importer.sec_defs[name] = {
-                    'id': def_info['id'],
-                    'name': name,
-                    'type': def_info['type']
-                }
-                logger.info('Added to sec_defs: name=%s id=%s type=%s', name, def_info['id'], def_info['type'])
-
-            logger.info('Populated %d security definitions in dictionary', len(self.importer.sec_defs))
-            logger.info('Final sec_defs keys: %s', list(self.importer.sec_defs.keys()))
+            self.populate_sec_defs_from_db(session)
 
         except Exception as e:
             logger.error('Error syncing security definitions: %s', e)
@@ -419,6 +401,22 @@ class SecurityImporter:
             raise
 
         return out_created, out_updated
+
+# ################################################################################################################################
+
+    def populate_sec_defs_from_db(self, session:'SASession') -> 'None':
+        """ Populates the importer's sec_defs dictionary from existing DB entries.
+        """
+        db_defs = self.get_security_defs_from_db(session, self.importer.cluster_id)
+
+        for name, def_info in db_defs.items():
+            self.importer.sec_defs[name] = {
+                'id': def_info['id'],
+                'name': name,
+                'type': def_info['type']
+            }
+
+        logger.info('Populated %d security definitions from database', len(self.importer.sec_defs))
 
 # ################################################################################################################################
 # ################################################################################################################################

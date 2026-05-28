@@ -113,6 +113,7 @@ def get_value_from_environment(value:'any_') -> 'str':
     if value.startswith('${'):
         if value.endswith('}'):
             env_key = value[2:-1]
+            logger.info('Resolving ${%s} from environment, present=%s', env_key, env_key in os.environ)
             default = f'Missing_{env_key}_{uuid.uuid4().hex[:12]}'
             value = os.environ.get(env_key, default)
 
