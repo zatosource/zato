@@ -315,7 +315,16 @@ $.fn.zato.invoker.save_to_history = function(key, requestText, responseText) {
         history = history.slice(0, 200);
     }
 
-    localStorage.setItem(key, JSON.stringify(history));
+    try {
+        localStorage.setItem(key, JSON.stringify(history));
+    }
+    catch (e) {
+        if (e.name === 'QuotaExceededError') {
+            history = history.slice(0, 50);
+            localStorage.setItem(key, JSON.stringify(history));
+        }
+    }
+
     return history;
 };
 
