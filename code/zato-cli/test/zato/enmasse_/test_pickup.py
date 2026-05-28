@@ -29,9 +29,6 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-_time_dependent_fields = frozenset(['start_date'])
-_random_fields = frozenset(['password', 'username'])
-
 _ZATO_BASE = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
 _ZATO_BIN = os.path.join(_ZATO_BASE, 'bin', 'zato')
 _PYTHON_BIN = os.path.join(_ZATO_BASE, 'bin', 'py')
@@ -105,48 +102,6 @@ def _export_via_cli(zato_bin, server_dir, output_path):
         capture_output=True, text=True, timeout=30,
     )
     return result
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _split_yaml_into_sections(yaml_string):
-    data = yaml.safe_load(yaml_string)
-    if not data:
-        return {}
-    out = {}
-    for section_name, items in data.items():
-        out[section_name] = yaml.dump({section_name: items}, default_flow_style=False, sort_keys=True)
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _get_sort_key(item):
-    if 'name' in item:
-        return ('name',)
-    if 'security' in item:
-        return ('security',)
-    return None
-
-def _normalize_for_comparison(data, skip_fields=None):
-    skip_fields = skip_fields or set()
-
-    if isinstance(data, dict):
-        return {
-            k: '<SKIPPED>' if k in skip_fields else _normalize_for_comparison(v, skip_fields)
-            for k, v in sorted(data.items())
-        }
-
-    elif isinstance(data, list):
-        normalized = [_normalize_for_comparison(item, skip_fields) for item in data]
-        if normalized and isinstance(normalized[0], dict):
-            sort_key = _get_sort_key(normalized[0])
-            if sort_key:
-                normalized.sort(key=lambda x: tuple(str(x.get(k, '')) for k in sort_key))
-        return normalized
-
-    else:
-        return data
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -341,68 +296,38 @@ class TestEnmassePickup(TestCase):
     def test_pickup_incremental_and_edit(self):
         """ Test the full pickup lifecycle:
         1. Export from empty server - should be empty (or just defaults)
-        2. Place enmasse files one by one, verify each is picked up incrementally
-        3. Place modified versions to trigger Edit, verify changes are visible
+        2. Place a single enmasse file, verify all sections are picked up
+        3. Place a modified version to trigger Edit, verify changes are visible
         """
         from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 
-        skip_fields = _time_dependent_fields | _random_fields
         skip_sections = frozenset(['pubsub_permission', 'pubsub_subscription'])
 
         # Step 1: baseline export from empty server
-        baseline = self._export_to_dict()
+        _ = self._export_to_dict()
 
-        # Step 2: split the big template into per-section YAML files and place them one by one.
-        # Security must come first because other sections reference it.
-        sections = _split_yaml_into_sections(template_complex_01)
+        # Step 2: place the full template as a single enmasse file
+        self._place_enmasse_file('enmasse.yaml', template_complex_01)
 
-        section_order = []
-        if 'security' in sections:
-            section_order.append('security')
-        if 'groups' in sections:
-            section_order.append('groups')
-        for name in sorted(sections.keys()):
-            if name not in section_order:
-                section_order.append(name)
+        # .. parse the template to know what sections and counts to expect ..
+        template_data = yaml.safe_load(template_complex_01)
+        section_names = [name for name in template_data.keys() if name not in skip_sections]
 
-        cumulative_sections = set()
+        # .. wait for channel_rest (4 items) as it depends on security and groups,
+        # so if it's there, everything before it succeeded too ..
+        data = self._wait_for_section('channel_rest', 4, timeout=30)
 
-        for section_name in section_order:
-            yaml_content = sections[section_name]
-            original_data = yaml.safe_load(yaml_content)
-            expected_count = len(original_data[section_name])
+        # .. verify all sections are present ..
+        for section_name in section_names:
+            self.assertIn(section_name, data, f'Section "{section_name}" missing from export')
 
-            file_name = f'enmasse-{section_name}.yaml'
-            self._place_enmasse_file(file_name, yaml_content)
+        # Step 3: place a modified version to trigger edits
+        modified_data = {}
 
-            cumulative_sections.add(section_name)
-
-            data = self._wait_for_section(section_name, expected_count, timeout=30)
-
-            for prev_section in cumulative_sections:
-                if prev_section in skip_sections:
-                    continue
-                self.assertIn(prev_section, data,
-                    f'Section "{prev_section}" disappeared after placing "{section_name}"')
-
-        # Step 3: full export after all files placed
-        full_data_round1 = self._export_to_dict()
-        self.assertTrue(full_data_round1, 'Full export after all files placed is empty')
-
-        for section_name in section_order:
+        for section_name, items in template_data.items():
             if section_name in skip_sections:
+                modified_data[section_name] = items
                 continue
-            self.assertIn(section_name, full_data_round1,
-                f'Section "{section_name}" missing from full export')
-
-        # Step 4: place modified versions to trigger edits
-        for section_name in section_order:
-            if section_name in skip_sections:
-                continue
-
-            yaml_content = sections[section_name]
-            original_data = yaml.safe_load(yaml_content)
-            items = original_data[section_name]
 
             modified_items = []
             for item in items:
@@ -420,33 +345,28 @@ class TestEnmassePickup(TestCase):
                 else:
                     item['is_active'] = not item.get('is_active', True)
                 modified_items.append(item)
+            modified_data[section_name] = modified_items
 
-            modified_yaml = yaml.dump({section_name: modified_items}, default_flow_style=False, sort_keys=True)
-            file_name = f'enmasse-{section_name}.yaml'
-            self._place_enmasse_file(file_name, modified_yaml)
+        modified_yaml = yaml.dump(modified_data, default_flow_style=False, sort_keys=True)
+        self._place_enmasse_file('enmasse.yaml', modified_yaml)
 
-        # Wait for edits to be picked up
+        # .. wait for edits to be picked up ..
         time.sleep(15)
 
         full_data_round2 = self._export_to_dict()
         self.assertTrue(full_data_round2, 'Full export after edits is empty')
 
-        # Verify edits took effect for verifiable sections
-        if 'elastic_search' in full_data_round2:
-            for item in full_data_round2['elastic_search']:
-                timeout = item.get('timeout', 0)
-                self.assertGreaterEqual(timeout, 100,
-                    f'elastic_search timeout should have been edited to >= 100, got {timeout}')
+        # .. verify edits took effect for verifiable sections ..
+        for item in full_data_round2['elastic_search']:
+            self.assertGreaterEqual(item['timeout'], 100,
+                f'elastic_search timeout should have been edited to >= 100, got {item["timeout"]}')
 
-        if 'outgoing_rest' in full_data_round2:
-            edited_timeouts = [item.get('timeout', 0) for item in full_data_round2['outgoing_rest']
-                               if item.get('timeout', 0) > 100]
-            self.assertTrue(len(edited_timeouts) > 0,
-                'Expected at least one outgoing_rest with edited timeout > 100')
+        edited_timeouts = [item['timeout'] for item in full_data_round2['outgoing_rest']
+                           if item['timeout'] > 100]
+        self.assertTrue(len(edited_timeouts) > 0,
+            'Expected at least one outgoing_rest with edited timeout > 100')
 
-        for section_name in section_order:
-            if section_name in skip_sections:
-                continue
+        for section_name in section_names:
             self.assertIn(section_name, full_data_round2,
                 f'Section "{section_name}" missing after edits')
 
