@@ -47,6 +47,7 @@ def _make_channel_item(overrides:'anydict | None'=None) -> 'anydict':
     """ Builds a minimal channel_item dict with sane defaults.
     """
     out = {
+        'id': 1,
         'name': 'test.channel',
         'is_active': True,
         'service_name': 'test.service',
@@ -102,6 +103,7 @@ def _make_wsgi_environ(overrides:'anydict | None'=None) -> 'anydict':
         'REMOTE_PORT': '12345',
         'HTTP_ACCEPT': '*/*',
         'wsgi.input': BytesIO(b''),
+        'zato.http.raw_request': b'',
         'zato.http.response.headers': {},
     }
     if overrides:
@@ -255,7 +257,7 @@ class DispatchURLMatchTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         payload_bytes = b'test-payload-data'
-        wsgi_environ = _make_wsgi_environ({'wsgi.input': BytesIO(payload_bytes)})
+        wsgi_environ = _make_wsgi_environ({'zato.http.raw_request': payload_bytes})
 
         _ = _dispatch(ctx, wsgi_environ)
 
@@ -788,7 +790,7 @@ class DispatchFinallyBlockTestCase(unittest.TestCase):
         original_handle = ctx.mock_handle
 
         def handle_with_headers(*args:'any_', **kwargs:'any_') -> 'any_':
-            container = args[10] if len(args) > 10 else kwargs['zato_response_headers_container']
+            container = args[9]
             container['X-Custom-Header'] = 'custom-value'
             return original_handle(*args, **kwargs)
 
@@ -807,7 +809,7 @@ class DispatchFinallyBlockTestCase(unittest.TestCase):
         wsgi_environ = _make_wsgi_environ()
 
         def handle_with_headers_and_error(*args:'any_', **kwargs:'any_') -> 'None':
-            container = args[10] if len(args) > 10 else kwargs['zato_response_headers_container']
+            container = args[9]
             container['X-Error-Header'] = 'error-value'
             raise RuntimeError('Boom')
 
@@ -1371,7 +1373,7 @@ class DispatchExceptionFormattingTestCase(unittest.TestCase):
         ctx = _make_dispatcher(channel_item=channel_item)
 
         def side_effect(*args:'any_', **kwargs:'any_') -> 'None':
-            args[10]['X-Custom-Header'] = 'custom-value'
+            args[9]['X-Custom-Header'] = 'custom-value'
             raise RuntimeError('fail')
 
         ctx.mock_handle.side_effect = side_effect
