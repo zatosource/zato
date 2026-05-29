@@ -44,14 +44,34 @@ class TestAPIResponsePaginationMeta(TestCase):
         inner = self._make_inner(OK, '[]', headers)
         response = _APIResponse(inner)
 
-        self.assertEqual(response.meta['cur_page'], '3')
-        self.assertEqual(response.meta['page_size'], '25')
-        self.assertEqual(response.meta['num_pages'], '10')
-        self.assertEqual(response.meta['prev_page'], '2')
-        self.assertEqual(response.meta['next_page'], '4')
-        self.assertEqual(response.meta['has_prev_page'], 'True')
-        self.assertEqual(response.meta['has_next_page'], 'True')
-        self.assertEqual(response.meta['total'], '245')
+        self.assertEqual(response.meta['cur_page'], 3)
+        self.assertEqual(response.meta['page_size'], 25)
+        self.assertEqual(response.meta['num_pages'], 10)
+        self.assertEqual(response.meta['prev_page'], 2)
+        self.assertEqual(response.meta['next_page'], 4)
+        self.assertIs(response.meta['has_prev_page'], True)
+        self.assertIs(response.meta['has_next_page'], True)
+        self.assertEqual(response.meta['total'], 245)
+
+    def test_meta_parses_false_and_none(self):
+        """ Verify that 'False' parses to bool False and 'None' parses to None.
+        """
+        headers = {
+            'X-Zato-Page-Current': '1',
+            'X-Zato-Page-Next': 'None',
+            'X-Zato-Page-Previous': '0',
+            'X-Zato-Page-Has-Previous': 'False',
+            'X-Zato-Page-Has-Next': 'False',
+        }
+
+        inner = self._make_inner(OK, '[]', headers)
+        response = _APIResponse(inner)
+
+        self.assertEqual(response.meta['cur_page'], 1)
+        self.assertIsNone(response.meta['next_page'])
+        self.assertEqual(response.meta['prev_page'], 0)
+        self.assertIs(response.meta['has_prev_page'], False)
+        self.assertIs(response.meta['has_next_page'], False)
 
     def test_meta_empty_when_no_pagination_headers(self):
         """ Verify that self.meta is empty when no pagination headers are present.
