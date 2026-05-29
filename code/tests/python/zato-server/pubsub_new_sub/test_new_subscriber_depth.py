@@ -79,7 +79,7 @@ class TestNewSubscriberDepth:
         """ A new subscriber on a topic with pre-existing messages should have zero pending.
         """
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_new_sub import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -110,7 +110,7 @@ class TestNewSubscriberDepth:
         """ A new subscriber should only see messages published after the subscription was created.
         """
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_new_sub import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -146,7 +146,7 @@ class TestNewSubscriberDepth:
         """ A new subscriber pulling via REST should only receive messages published after subscription.
         """
         from zato.common.test.client import AdminClient, PublishClient, PullClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_new_sub import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -174,7 +174,7 @@ class TestNewSubscriberDepth:
             time.sleep(_settle_time)
 
             # .. pull messages via REST ..
-            pull_result = puller.get_messages(max_messages=100)
+            pull_result = puller.pull(max_messages=100)
             received_count = pull_result['message_count']
             messages = pull_result['messages']
 

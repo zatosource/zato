@@ -18,7 +18,7 @@ import pytest
 from zato.common.test.client import AdminClient as ZatoClient
 
 # local
-from config import TestConfig
+from zato.common.test.config_pubsub_service import TestConfig
 
 # ################################################################################################################################
 # ################################################################################################################################

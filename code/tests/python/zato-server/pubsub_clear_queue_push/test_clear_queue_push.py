@@ -84,7 +84,7 @@ class TestPushClearBasic:
     def test_push_clear_basic(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue_push import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -121,7 +121,7 @@ class TestPushClearEmpty:
     def test_push_clear_empty(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue_push import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         sub_key = _get_sub_key(admin, TestConfig.pusher_a_username)
@@ -145,7 +145,7 @@ class TestPushClearDiskFiles:
     def test_push_disk_files_gone(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue_push import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -179,7 +179,7 @@ class TestPushClearThenPublishNew:
     def test_push_clear_then_new(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue_push import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -219,7 +219,7 @@ class TestPushClearStateAllEmpty:
     def test_push_state_all_empty(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue_push import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)

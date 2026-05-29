@@ -64,7 +64,7 @@ class TestDjangoPlugin(unittest.TestCase):
     @classmethod
     def setUpClass(class_) -> 'None': # pyright: ignore[reportSelfClsParameterName]
 
-        from config import TestConfig
+        from zato.common.test.config_django_plugin import TestConfig
 
         class_.test_config = TestConfig
 

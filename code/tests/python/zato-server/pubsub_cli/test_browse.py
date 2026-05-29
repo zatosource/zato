@@ -75,7 +75,7 @@ class TestBrowse:
     def test_browse_shows_messages(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_cli import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -102,7 +102,7 @@ class TestBrowse:
     def test_browse_with_pagination(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_cli import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -130,7 +130,7 @@ class TestBrowse:
     def test_browse_empty_queue(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_cli import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         sub_key = _get_sub_key(admin, TestConfig.puller_username)

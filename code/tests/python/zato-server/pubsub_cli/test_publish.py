@@ -60,7 +60,7 @@ class TestPublish:
     def test_publish_via_cli(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_cli import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         sub_key = _get_sub_key(admin, TestConfig.puller_username)
@@ -93,7 +93,7 @@ class TestPublish:
     def test_publish_with_priority(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_cli import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         sub_key = _get_sub_key(admin, TestConfig.puller_username)
