@@ -180,10 +180,11 @@ class IOPayload:
         if self.zato_meta:
             search = self.zato_meta.get('search')
             if search:
+                meta = {key: value for key, value in search.items() if key != 'result'}
                 if isinstance(value, dict):
-                    value['_meta'] = search
+                    value['_meta'] = meta
                 else:
-                    value = {'response': value, '_meta': search}
+                    value = {'response': value, '_meta': meta}
 
         logger.info('payload.getvalue: returning type=%s, keys=%s',
             type(value).__name__, list(value.keys()) if isinstance(value, dict) else 'N/A')
