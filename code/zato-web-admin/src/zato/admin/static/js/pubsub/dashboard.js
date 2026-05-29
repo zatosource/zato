@@ -267,7 +267,7 @@ $.fn.zato.pubsub.dashboard.series_labels = {
                 }
                 dash.render(data);
             },
-            error: function(xhr, status, err) {
+            error: function(xhr, status, error) {
                 console.log('[pubsub] poll error:', status);
             }
         });

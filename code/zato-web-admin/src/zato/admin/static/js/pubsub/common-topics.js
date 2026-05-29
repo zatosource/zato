@@ -1,15 +1,10 @@
+(function($) {
+
 // Common topics handling utility
 
 $.namespace('zato.pubsub.common');
 
-/**
- * Populate topics dropdown with AJAX loading and empty state handling
- * @param {string} formType - 'create' or 'edit'
- * @param {string|Array} selectedNamesOrIds - Selected topic names/IDs or array of topic names/IDs(s)
- * @param {string} endpoint - AJAX endpoint URL
- * @param {string} selectId - CSS selector for the dropdown
- * @param {Function} callback - Optional callback to execute after topics are loaded
- */
+// Populate topics dropdown with AJAX loading and empty state handling
 $.fn.zato.pubsub.common.populateTopics = function(formType, selectedNamesOrIds, endpoint, selectId, callback) {
     console.log('[DEBUG] populateTopics: Called with formType:', JSON.stringify({formType: formType, selectedNamesOrIds: selectedNamesOrIds, endpoint: endpoint, selectId: selectId}));
 
@@ -165,3 +160,5 @@ $.fn.zato.pubsub.common.populateTopics = function(formType, selectedNamesOrIds, 
         }
     });
 };
+
+})(jQuery);

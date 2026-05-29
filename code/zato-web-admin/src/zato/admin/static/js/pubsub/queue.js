@@ -96,8 +96,8 @@
             return;
         }
 
-        for (var i = 0; i < rows.length; i++) {
-            $body.append($.fn.zato.pubsub.queue._render_row(rows[i]));
+        for (var rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+            $body.append($.fn.zato.pubsub.queue._render_row(rows[rowIdx]));
         }
 
         var ns = $.fn.zato.pubsub.queue;
@@ -116,8 +116,8 @@
 
         var kit = $.fn.zato.dashboard_kit;
 
-        for (var i = 0; i < rows.length; i++) {
-            $body.prepend($.fn.zato.pubsub.queue._render_row(rows[i]));
+        for (var rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+            $body.prepend($.fn.zato.pubsub.queue._render_row(rows[rowIdx]));
             $.fn.zato.pubsub.queue._new_row_count++;
         }
 
