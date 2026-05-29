@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # Zato - test utilities
-from _client import ZatoClient
+from zato.common.test.client import AdminClient as ZatoClient
 
 SERVICE = 'zato.scheduler.holiday-calendar'
 

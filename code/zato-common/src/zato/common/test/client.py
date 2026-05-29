@@ -23,7 +23,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger('zato.test.pubsub_push.client')
+logger = logging.getLogger('zato.common.test.client')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,6 +31,44 @@ logger = logging.getLogger('zato.test.pubsub_push.client')
 class PublishRawResult(NamedTuple):
     status_code: int
     body: 'anydict'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AdminClient:
+    """ Invokes Zato admin services via the REST API.
+    """
+
+    def __init__(self, base_url:'str', password:'str') -> 'None':
+        self.base_url = base_url
+        credentials = f'admin.invoke:{password}'
+        self._auth = b64encode(credentials.encode()).decode()
+
+# ################################################################################################################################
+
+    def invoke(self, service_name:'str', payload:'anydict'=None) -> 'anydict':
+        """ Invokes a Zato service and returns the response.
+        """
+        url = f'{self.base_url}/zato/api/invoke/{service_name}'
+        body = json.dumps(payload).encode() if payload else b'{}'
+
+        request = Request(url, data=body, method='POST')
+        request.add_header('Authorization', f'Basic {self._auth}')
+        request.add_header('Content-Type', 'application/json')
+
+        try:
+            with urlopen(request) as response:
+                raw = response.read()
+        except HTTPError as error:
+            raw = error.read()
+            error_text = raw.decode('utf-8', errors='replace')
+            raise Exception(f'{service_name} returned HTTP {error.code}: {error_text}')
+
+        if not raw:
+            return {}
+
+        out = json.loads(raw)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

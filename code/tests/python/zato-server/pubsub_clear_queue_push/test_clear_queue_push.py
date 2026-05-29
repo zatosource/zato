@@ -83,7 +83,7 @@ class TestPushClearBasic:
 
     def test_push_clear_basic(self, zato_server:'any_') -> 'None':
 
-        from _client import AdminClient, PublishClient
+        from zato.common.test.client import AdminClient, PublishClient
         from config import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
@@ -120,7 +120,7 @@ class TestPushClearEmpty:
 
     def test_push_clear_empty(self, zato_server:'any_') -> 'None':
 
-        from _client import AdminClient
+        from zato.common.test.client import AdminClient
         from config import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
@@ -144,7 +144,7 @@ class TestPushClearDiskFiles:
 
     def test_push_disk_files_gone(self, zato_server:'any_') -> 'None':
 
-        from _client import AdminClient, PublishClient
+        from zato.common.test.client import AdminClient, PublishClient
         from config import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
@@ -178,7 +178,7 @@ class TestPushClearThenPublishNew:
 
     def test_push_clear_then_new(self, zato_server:'any_') -> 'None':
 
-        from _client import AdminClient, PublishClient
+        from zato.common.test.client import AdminClient, PublishClient
         from config import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
@@ -218,7 +218,7 @@ class TestPushClearStateAllEmpty:
 
     def test_push_state_all_empty(self, zato_server:'any_') -> 'None':
 
-        from _client import AdminClient, PublishClient
+        from zato.common.test.client import AdminClient, PublishClient
         from config import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)

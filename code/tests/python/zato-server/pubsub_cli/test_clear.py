@@ -74,7 +74,7 @@ class TestClear:
 
     def test_clear_queue(self, zato_server:'any_') -> 'None':
 
-        from _client import AdminClient, PublishClient
+        from zato.common.test.client import AdminClient, PublishClient
         from config import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
@@ -115,7 +115,7 @@ class TestClear:
 
     def test_clear_empty_queue(self, zato_server:'any_') -> 'None':
 
-        from _client import AdminClient
+        from zato.common.test.client import AdminClient
         from config import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
