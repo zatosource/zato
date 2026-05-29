@@ -11,8 +11,10 @@ import json
 import time
 import unittest
 
+# Zato
+from zato.common.test.client import AdminClient as ZatoClient
+
 # local
-from _client import ZatoClient
 from config import TestConfig
 
 # ################################################################################################################################

@@ -20,7 +20,7 @@ from redis import Redis
 from zato.common.typing_ import cast_
 
 # local
-from _client import PublishClient
+from zato.common.test.client import PublishClient
 from config import TestConfig
 
 # ################################################################################################################################

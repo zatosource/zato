@@ -18,7 +18,7 @@ from textwrap import dedent
 import pytest
 
 # Zato - test utilities
-from _client import ZatoClient
+from zato.common.test.client import AdminClient as ZatoClient
 
 # Zato - conftest
 import conftest

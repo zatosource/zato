@@ -78,7 +78,7 @@ class TestNewSubscriberDepth:
     def test_new_subscriber_has_zero_pending_on_existing_topic(self, zato_server:'any_') -> 'None':
         """ A new subscriber on a topic with pre-existing messages should have zero pending.
         """
-        from _client import AdminClient, PublishClient
+        from zato.common.test.client import AdminClient, PublishClient
         from config import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
@@ -109,7 +109,7 @@ class TestNewSubscriberDepth:
     def test_new_subscriber_receives_only_post_subscription_messages(self, zato_server:'any_') -> 'None':
         """ A new subscriber should only see messages published after the subscription was created.
         """
-        from _client import AdminClient, PublishClient
+        from zato.common.test.client import AdminClient, PublishClient
         from config import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
@@ -145,7 +145,7 @@ class TestNewSubscriberDepth:
     def test_new_subscriber_pulls_only_new_messages_via_rest(self, zato_server:'any_') -> 'None':
         """ A new subscriber pulling via REST should only receive messages published after subscription.
         """
-        from _client import AdminClient, PublishClient, PullClient
+        from zato.common.test.client import AdminClient, PublishClient, PullClient
         from config import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)

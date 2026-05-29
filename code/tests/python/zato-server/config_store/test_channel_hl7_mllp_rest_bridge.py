@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # Local
-from _client import ZatoClient
+from zato.common.test.client import AdminClient as ZatoClient
 
 # ################################################################################################################################
 # ################################################################################################################################
