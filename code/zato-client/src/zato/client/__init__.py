@@ -64,6 +64,20 @@ def default_json_handler(value):
 # ################################################################################################################################
 # ################################################################################################################################
 
+_pagination_header_map = {
+    'X-Zato-Page-Current': 'cur_page',
+    'X-Zato-Page-Size': 'page_size',
+    'X-Zato-Page-Total': 'num_pages',
+    'X-Zato-Page-Previous': 'prev_page',
+    'X-Zato-Page-Next': 'next_page',
+    'X-Zato-Page-Has-Previous': 'has_prev_page',
+    'X-Zato-Page-Has-Next': 'has_next_page',
+    'X-Zato-Result-Total': 'total',
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _APIResponse:
     """ Represents data returned by API services.
     """
@@ -74,23 +88,21 @@ class _APIResponse:
         self.response_time = inner.headers.get('x-response-time', '(No response time)')
         self.headers = inner.headers
         self.has_data = False
-        self.meta = {}
         self.details = None
         self.data = None
         self.inner_service_response = None
+
+        # .. extract pagination metadata from response headers ..
+        self.meta = {}
+        for header_name, meta_key in _pagination_header_map.items():
+            if value := inner.headers.get(header_name):
+                self.meta[meta_key] = value
 
         if self.ok:
             try:
                 raw_data = loads(inner.text)
             except ValueError:
                 raw_data = inner.text
-
-            mod_logger.info('_APIResponse raw_data type=%s, text=%r', type(raw_data).__name__, inner.text)
-
-            mod_logger.info('_APIResponse: raw_data_type=%s, has_meta=%s, meta_value=%s',
-                type(raw_data).__name__,
-                isinstance(raw_data, dict) and '_meta' in raw_data,
-                raw_data['_meta'] if isinstance(raw_data, dict) and '_meta' in raw_data else 'N/A')
 
             if to_bunch and isinstance(raw_data, (dict, list)):
                 self.data = bunchify(raw_data)
@@ -100,11 +112,8 @@ class _APIResponse:
             self.has_data = bool(self.data)
             self.inner_service_response = inner.text
 
-            mod_logger.info('_APIResponse: self.meta=%s, self.has_data=%s', self.meta, self.has_data)
-
         else:
             self.details = inner.text
-            mod_logger.info('_APIResponse NOT ok, status=%s, details=%r', inner.status_code, inner.text)
 
     def __repr__(self):
         cid = '[{}]'.format(self.cid)

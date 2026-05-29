@@ -21,7 +21,7 @@ class IOPayload:
     """
     _internal_attrs = frozenset({
         'io', 'all_output_elem_names', 'output_repeated',
-        'cid', 'data_format', 'user_attrs_dict', 'user_attrs_list', 'zato_meta',
+        'cid', 'data_format', 'user_attrs_dict', 'user_attrs_list',
     })
 
     def __init__(self, io:IOProcessor, all_output_elem_names:list, cid, data_format):
@@ -33,7 +33,6 @@ class IOPayload:
         _set(self, 'output_repeated', False)
         _set(self, 'cid', cid)
         _set(self, 'data_format', data_format)
-        _set(self, 'zato_meta', None)
 
 # ################################################################################################################################
 
@@ -164,16 +163,6 @@ class IOPayload:
         """ Returns a service's payload as a raw Python dict or list.
         """
         value = self.user_attrs_list if self.output_repeated else self.user_attrs_dict
-
-        if self.zato_meta:
-            search = self.zato_meta.get('search')
-            if search:
-                meta = {key: value for key, value in search.items() if key != 'result'}
-                if isinstance(value, dict):
-                    value['_meta'] = meta
-                else:
-                    value = {'response': value, '_meta': meta}
-
         return value
 
     def append(self, value):

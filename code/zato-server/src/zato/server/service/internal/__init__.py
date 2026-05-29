@@ -136,15 +136,17 @@ class AdminService(Service):
             logger.info('Response; service:`%s`, data:`%s` cid:`%s`, ',
                 self.name, get_response_value(self.response), self.cid)
 
-        payload = self.response.payload
-        is_text = isinstance(payload, basestring)
-        needs_meta = self.request.input.get('needs_meta', True) if self.request.input else True
-
-        if needs_meta and hasattr(self, '_search_tool'):
-            if not is_text:
-                if hasattr(payload, 'zato_meta'):
-                    payload.zato_meta = self._search_tool.output_meta
-                    logger.info('after_handle: payload.zato_meta set to %s', self._search_tool.output_meta)
+        if hasattr(self, '_search_tool'):
+            search_meta = self._search_tool.output_meta['search']
+            if search_meta:
+                self.response.headers['X-Zato-Page-Current'] = search_meta['cur_page']
+                self.response.headers['X-Zato-Page-Size'] = search_meta['page_size']
+                self.response.headers['X-Zato-Page-Total'] = search_meta['num_pages']
+                self.response.headers['X-Zato-Page-Previous'] = search_meta['prev_page']
+                self.response.headers['X-Zato-Page-Next'] = search_meta['next_page']
+                self.response.headers['X-Zato-Page-Has-Previous'] = search_meta['has_prev_page']
+                self.response.headers['X-Zato-Page-Has-Next'] = search_meta['has_next_page']
+                self.response.headers['X-Zato-Result-Total'] = search_meta['total']
 
 # ################################################################################################################################
 
@@ -199,7 +201,9 @@ class ServerInvoker(AdminService):
             entity_type = self.request.raw_request['entity_type']
             attr_name = self.request.raw_request['attr_name']
             value = self.request.raw_request['value']
-            response = func(entity_type, attr_name, value)
+            filter_name = self.request.raw_request.get('filter_name', '')
+            filter_value = self.request.raw_request.get('filter_value', '')
+            response = func(entity_type, attr_name, value, filter_name, filter_value)
         elif func_name == 'get_bearer_token':
             from json import loads as json_loads
             security_id = self.request.raw_request.get('security_id', '')

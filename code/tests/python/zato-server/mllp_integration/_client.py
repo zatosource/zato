@@ -28,7 +28,9 @@ class ZatoClient:
 
 # ################################################################################################################################
 
-    def invoke(self, service_name, payload=None):
+    def _invoke_raw(self, service_name, payload=None):
+        """ Invokes a service and returns both the parsed body and response headers.
+        """
         url = f'{self.base_url}/{service_name}'
         body = json.dumps(payload).encode() if payload else b'{}'
 
@@ -41,6 +43,7 @@ class ZatoClient:
         try:
             with urlopen(req) as resp:
                 raw = resp.read()
+                headers = dict(resp.headers)
         except HTTPError as e:
             raw = e.read()
             logger.error('<- %s HTTP %s: %s', service_name, e.code, raw.decode('utf-8', errors='replace'))
@@ -48,7 +51,7 @@ class ZatoClient:
 
         if not raw:
             logger.info('<- %s (empty)', service_name)
-            return {}
+            return {}, headers
 
         result = json.loads(raw)
 
@@ -59,17 +62,32 @@ class ZatoClient:
 
         logger.info('<- %s %s', service_name, raw.decode()[:200])
 
+        return result, headers
+
+# ################################################################################################################################
+
+    def invoke(self, service_name, payload=None):
+        result, _ = self._invoke_raw(service_name, payload)
         return result
 
 # ################################################################################################################################
 
     def get_list(self, service_name, **params):
-        response = self.invoke(service_name, params or None)
-        if isinstance(response, dict) and 'data' in response:
-            return response['data'], response.get('_meta', {})
+        response, headers = self._invoke_raw(service_name, params or None)
+
+        meta = {}
+        if cur_page := headers.get('X-Zato-Page-Current'):
+            meta['cur_page'] = cur_page
+        if page_size := headers.get('X-Zato-Page-Size'):
+            meta['page_size'] = page_size
+        if num_pages := headers.get('X-Zato-Page-Total'):
+            meta['num_pages'] = num_pages
+        if total := headers.get('X-Zato-Result-Total'):
+            meta['total'] = total
+
         if isinstance(response, list):
-            return response, {}
-        return response, {}
+            return response, meta
+        return response, meta
 
 # ################################################################################################################################
 
