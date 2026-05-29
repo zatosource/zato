@@ -21,7 +21,6 @@ from http.client import OK
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
-sys.path.insert(0, os.path.dirname(__file__))
 
 # pytest
 import pytest
@@ -160,7 +159,7 @@ def _render_template(placeholders:'anydict') -> 'str':
 def zato_server() -> 'any_':
     """ Session-scoped fixture that spins up a Zato server with pub/sub topics and pull subscriptions.
     """
-    from config import TestConfig
+    from zato.common.test.config_pubsub_cli import TestConfig
 
     # Kill any leftover Zato servers ..
     _ = subprocess.run(['pkill', '-f', 'zato.server.main'], capture_output=True)

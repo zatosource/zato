@@ -77,18 +77,19 @@ class ConfigLoader:
     def _load_sec_def_rate_limiting(self:'ParallelServer', config_dict:'ConfigDict') -> 'None': # pyright: ignore[reportSelfClsParameterName]
 
         # Go through each security definition in this config dict ..
+        loaded_count = 0
+        total_count = 0
+
         for item in config_dict.values():
+            total_count += 1
 
             # .. extract the inner configuration ..
             config = item['config']
             sec_def_id = config['id']
-            sec_def_name = config.get('name', '<unknown>')
             opaque1 = config.get('opaque1')
 
             # .. skip entries without opaque data ..
             if not opaque1:
-                logger.info('Startup rate limiting; sec_def_id:%s (type:%s), name:%s, no opaque1',
-                    sec_def_id, type(sec_def_id).__name__, sec_def_name)
                 continue
 
             # .. parse the JSON ..
@@ -96,12 +97,11 @@ class ConfigLoader:
 
             # .. and if rate limiting rules are configured, load them.
             if rate_limiting := opaque.get('rate_limiting'):
-                logger.info('Startup rate limiting; sec_def_id:%s (type:%s), name:%s, loading %s rules: %s',
-                    sec_def_id, type(sec_def_id).__name__, sec_def_name, len(rate_limiting), rate_limiting)
                 self.rate_limiting_manager.set_sec_def_config(sec_def_id, rate_limiting)
-            else:
-                logger.info('Startup rate limiting; sec_def_id:%s, name:%s, no rate_limiting in opaque',
-                    sec_def_id, sec_def_name)
+                loaded_count += 1
+
+        logger.info('Startup rate limiting; loaded rules for %d security definition%s out of %d',
+            loaded_count, '' if loaded_count == 1 else 's', total_count)
 
 # ################################################################################################################################
 
@@ -231,16 +231,15 @@ class ConfigLoader:
         self.config.http_soap = http_soap
 
         # Load rate limiting configuration for each channel that has it
-        for item in http_soap:
-            channel_id = item['id']
-            channel_name = item.get('name', '<unknown>')
+        channel_loaded_count = 0
 
+        for item in http_soap:
             if rate_limiting := item.get('rate_limiting'):
-                logger.info('Startup rate limiting; channel_id:%s, name:%s, loading %s rules: %s',
-                    channel_id, channel_name, len(rate_limiting), rate_limiting)
-                self.rate_limiting_manager.set_channel_config(channel_id, rate_limiting)
-            else:
-                logger.info('Startup rate limiting; channel_id:%s, name:%s, no rate_limiting', channel_id, channel_name)
+                self.rate_limiting_manager.set_channel_config(item['id'], rate_limiting)
+                channel_loaded_count += 1
+
+        logger.info('Startup rate limiting; loaded rules for %d channel%s out of %d',
+            channel_loaded_count, '' if channel_loaded_count == 1 else 's', len(http_soap))
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

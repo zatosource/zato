@@ -189,8 +189,6 @@ class GoogleClient:
                         parent_id = self._dir_map[current_parent_path_str]
                         dir_id = self.create_remote_directory(part, parent_id=parent_id)
                         self._dir_map[current_path_str] = dir_id
-                        logger.info('Caching directory %s -> %s', current_path_str, dir_id)
-                        logger.info('Current cache: %s', self._dir_map)
 
                     # Iterate down the list of parts
                     current_parent = part

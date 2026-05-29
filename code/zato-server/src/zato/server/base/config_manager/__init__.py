@@ -909,7 +909,6 @@ class ConfigManager(_ConfigManagerBase):
             msg.ack()
 
             # .. and let's return explicitly.
-            # logger.info('🍀 ACK ACK 111')
             return
 
         except Exception as e:
@@ -966,11 +965,9 @@ class ConfigManager(_ConfigManagerBase):
                 logger.info(log_msg)
 
                 # .. do sleep now ..
-                # logger.info('🕐 REJ REJ 111')
                 sleep(sleep_time)
 
                 # .. and then reject and enqueue the message, thus ensuring it will be redelivered ..
-                # logger.info('🕐 REJ REJ 222')
                 msg.reject(requeue=True)
 
             # .. if we go here, it means we run out of time, so we need to accept that message ..
@@ -979,7 +976,6 @@ class ConfigManager(_ConfigManagerBase):
                 log_msg = f'Subscriber: `{subscriber}` -> topic: `{topic_name}`' + \
                           f' -> Msg ID: `{msg_id}` -> Max wait time reached (attempts={delivery_count})'
                 logger.info(log_msg)
-                # logger.info('🏓 ACK ACK 222')
                 msg.ack()
 
 # ################################################################################################################################

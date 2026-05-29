@@ -13,7 +13,7 @@ import unittest
 
 # local
 from zato.common.test.client import PublishClient, PullClient
-from config import TestConfig
+from zato.common.test.config_pubsub_push import TestConfig
 
 # ################################################################################################################################
 # ################################################################################################################################

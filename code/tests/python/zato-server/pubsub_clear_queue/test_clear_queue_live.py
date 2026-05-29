@@ -70,7 +70,7 @@ class TestClearViaBrowse:
     def test_clear_then_browse_empty(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -104,7 +104,7 @@ class TestClearThenPublishNew:
     def test_clear_then_new_messages(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient, PullClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -135,7 +135,7 @@ class TestClearReturnsCorrectCount:
     def test_cleared_count(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -163,7 +163,7 @@ class TestClearEmptyQueueViaService:
     def test_clear_empty_queue(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         sub_key = _get_sub_key(admin, TestConfig.puller_a_username)
@@ -186,7 +186,7 @@ class TestClearWithPartiallyDelivered:
     def test_clear_after_partial_pull(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient, PullClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -229,7 +229,7 @@ class TestDiskFilesCleanedUp:
     def test_disk_cleanup(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -273,7 +273,7 @@ class TestClearOneSubscriberLeavesOther:
     def test_clear_one_leaves_other(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient, PullClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -316,7 +316,7 @@ class TestClearRemovesStreamEntries:
     def test_clear_xdel_state_all_empty(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -352,7 +352,7 @@ class TestClearXdelSurvivesForOtherSub:
     def test_clear_one_xdel_other_keeps(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -402,7 +402,7 @@ class TestClearAtMaxlenBoundary:
     def test_publish_beyond_maxlen_then_clear(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -439,7 +439,7 @@ class TestClearThenPublishNewUnderMaxlen:
     def test_clear_then_new_under_maxlen(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient, PullClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -475,7 +475,7 @@ class TestClearDeletesDiskFilesSoleSub:
     def test_disk_files_gone_after_clear(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
