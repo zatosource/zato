@@ -187,9 +187,6 @@ def index(req): # type: ignore
             'cluster_id': req.zato.cluster_id,
             'connection': connection,
             'transport': transport,
-            'paginate': True,
-            'cur_page': req.GET.get('cur_page', 1),
-            'query': req.GET.get('query', ''),
         }
 
         response = req.zato.client.invoke('zato.http-soap.get-list', input_dict)
