@@ -1,12 +1,11 @@
+(function($) {
+
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.data_table.PubSubPermission = new Class({
     toString: function() {
         var s = '<PubSubPermission id:{0} name:{1} pattern:{2} access_type:{3}>';
-        return String.format(s, this.id ? this.id : '(none)',
-                                this.name ? this.name : '(none)',
-                                this.pattern ? this.pattern : '(none)',
-                                this.access_type ? this.access_type : '(none)');
+        return String.format(s, this.id, this.name, this.pattern, this.access_type);
     }
 });
 
@@ -50,11 +49,11 @@ function showTopicsAlert(pattern, event) {
         clickX = event.pageX;
         clickY = event.pageY;
     } else {
-        // Fallback: find the pattern link element
-        var $link = $('a[onclick*="' + pattern.replace(/'/g, "\\'") + '"]').first();
-        if ($link.length) {
-            var offset = $link.offset();
-            clickX = offset.left + $link.outerWidth();
+        // Default: find the pattern link element
+        var $linkElement = $('a[onclick*="' + pattern.replace(/'/g, "\\'") + '"]').first();
+        if ($linkElement.length) {
+            var offset = $linkElement.offset();
+            clickX = offset.left + $linkElement.outerWidth();
             clickY = offset.top;
         } else {
             clickX = 200;
@@ -66,28 +65,27 @@ function showTopicsAlert(pattern, event) {
     var popupId = 'topic-matches-popup-' + Date.now();
 
     // Create popup content HTML
-    var popupHtml = `
-        <div id="${popupId}" title="Pattern: ${pattern}" style="font-size: 11px; line-height: 1.3; background-color: #f0f0f0;">
-            <div id="${popupId}-content" class="topic-popup-content" style="background-color: #f0f0f0; border-radius: 0; padding: 4px;">
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80px; padding: 8px; color: #666; background-color: #f0f0f0;">
-                    <div style="width: 12px; height: 12px; border: 1px solid #ddd; border-top: 1px solid #666; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                    <div style="margin-top: 4px; font-size: 10px;">Loading...</div>
-                </div>
-            </div>
-        </div>
-        <style>
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-            #${popupId} { background-color: #f0f0f0 !important; }
-            /* Only target the dialog that contains this specific popup ID */
-            .ui-dialog:has(#${popupId}) {
-                background-color: #f0f0f0 !important;
-                width: 20em !important;
-            }
-        </style>
-    `;
+    var popupHtml = '' +
+        '<div id="' + popupId + '" title="Pattern: ' + pattern + '" style="font-size: 11px; line-height: 1.3; background-color: #f0f0f0;">' +
+            '<div id="' + popupId + '-content" class="topic-popup-content" style="background-color: #f0f0f0; border-radius: 0; padding: 4px;">' +
+                '<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80px; padding: 8px; color: #666; background-color: #f0f0f0;">' +
+                    '<div style="width: 12px; height: 12px; border: 1px solid #ddd; border-top: 1px solid #666; border-radius: 50%; animation: spin 1s linear infinite;"></div>' +
+                    '<div style="margin-top: 4px; font-size: 10px;">Loading...</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>' +
+        '<style>' +
+            '@keyframes spin {' +
+                '0% { transform: rotate(0deg); }' +
+                '100% { transform: rotate(360deg); }' +
+            '}' +
+            '#' + popupId + ' { background-color: #f0f0f0 !important; }' +
+            // Only target the dialog that contains this specific popup ID
+            '.ui-dialog:has(#' + popupId + ') {' +
+                'background-color: #f0f0f0 !important;' +
+                'width: 20em !important;' +
+            '}' +
+        '</style>';
 
     // Add to page and create dialog
     $('body').append(popupHtml);
@@ -114,17 +112,17 @@ function showTopicsAlert(pattern, event) {
             $(this).parent('.ui-dialog').css('width', '20em');
         },
         open: function() {
-            var $dlg = $(this);
-            var $widget = $dlg.dialog('widget');
+            var $dialog = $(this);
+            var $widget = $dialog.dialog('widget');
 
             function dismissHandler(e) {
                 if (!$widget.is(e.target) && $widget.has(e.target).length === 0) {
-                    $dlg.dialog('close');
+                    $dialog.dialog('close');
                 }
             }
             function escHandler(e) {
                 if (e.key === 'Escape' || e.keyCode === 27) {
-                    $dlg.dialog('close');
+                    $dialog.dialog('close');
                 }
             }
 
@@ -133,7 +131,7 @@ function showTopicsAlert(pattern, event) {
                 $(document).on('keydown.topicPopup' + popupId, escHandler);
             }, 0);
 
-            $dlg.on('dialogclose', function() {
+            $dialog.on('dialogclose', function() {
                 $(document).off('mousedown.topicPopup' + popupId);
                 $(document).off('keydown.topicPopup' + popupId);
             });
@@ -143,10 +141,10 @@ function showTopicsAlert(pattern, event) {
     // Customize the close button to be a small "x" on the right
     var $dialog = $('#' + popupId).dialog('widget');
     var $titlebar = $dialog.find('.ui-dialog-titlebar');
-    var $closeBtn = $titlebar.find('.ui-dialog-titlebar-close');
+    var $closeButton = $titlebar.find('.ui-dialog-titlebar-close');
 
     // Style the close button - white background with black X
-    $closeBtn.html('×').css({
+    $closeButton.html('×').css({
         'position': 'absolute',
         'right': '4px',
         'top': '50%',
@@ -166,7 +164,7 @@ function showTopicsAlert(pattern, event) {
     });
 
     // Remove any UI widget styling
-    $closeBtn.removeClass('ui-button ui-corner-all ui-widget ui-button-icon-only ui-dialog-titlebar-close');
+    $closeButton.removeClass('ui-button ui-corner-all ui-widget ui-button-icon-only ui-dialog-titlebar-close');
 
     // Adjust title bar to make room for close button
     $titlebar.css('position', 'relative');
@@ -196,15 +194,10 @@ function showTopicsAlert(pattern, event) {
     }
 
     // Make AJAX call to get matching topics
-    var clusterIdVal = $('#cluster_id').val() || (typeof cluster_id !== 'undefined' ? cluster_id : '1');
+    var clusterIdVal = '1';
 
-    // Try multiple ways to find CSRF token
-    var csrfToken = $('input[name=csrfmiddlewaretoken]').val() ||
-                   $('input[name="csrfmiddlewaretoken"]').val() ||
-                   $('[name=csrfmiddlewaretoken]').val() ||
-                   $('meta[name=csrf-token]').attr('content') ||
-                   window.csrfToken ||
-                   $.cookie('csrftoken');
+    // Get the CSRF token
+    var csrfToken = $.cookie('csrftoken');
 
     // Data to be sent to server
     var requestData = {
@@ -288,7 +281,7 @@ function showTopicsAlert(pattern, event) {
         },
         error: function(xhr, status, error) {
         var errorHtml = '<div style="text-align: center; padding: 8px; color: #d32f2f; font-size: 10px; background-color: #f0f0f0;">';
-            errorHtml += 'Error: ' + (error || 'Failed to load');
+            errorHtml += 'Error: ' + error;
             if (xhr.status) {
                 errorHtml += ' (' + xhr.status + ')';
             }
@@ -299,6 +292,8 @@ function showTopicsAlert(pattern, event) {
     });
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
 // Function to close the topics popup
 function closeTopicMatchesOverlay() {
     // Close all topic match popups
@@ -308,6 +303,8 @@ function closeTopicMatchesOverlay() {
         }
     });
 }
+
+// /////////////////////////////////////////////////////////////////////////////
 
 // Function to render pattern tables
 function renderPatternTables() {
@@ -392,18 +389,20 @@ function renderPatternTables() {
     });
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
 // Initialize custom inline editing for pattern values
 function initializePatternEditing() {
     $('.pattern-editable').off('click.patternEdit').on('click.patternEdit', function(e) {
         e.preventDefault();
-        var $link = $(this);
-        var currentValue = $link.data('value');
-        var permissionId = $link.data('pk');
-        var prefix = $link.data('prefix');
-        var original = $link.data('original');
+        var $linkElement = $(this);
+        var currentValue = $linkElement.data('value');
+        var permissionId = $linkElement.data('pk');
+        var prefix = $linkElement.data('prefix');
+        var original = $linkElement.data('original');
 
         // Don't edit if already editing
-        if ($link.hasClass('editing')) {
+        if ($linkElement.hasClass('editing')) {
             return;
         }
 
@@ -412,8 +411,8 @@ function initializePatternEditing() {
         $input.val(currentValue);
 
         // Replace link with input
-        $link.addClass('editing').hide();
-        $link.after($input);
+        $linkElement.addClass('editing').hide();
+        $linkElement.after($input);
         $input.focus().select();
 
         // Handle save on Enter or blur
@@ -423,7 +422,7 @@ function initializePatternEditing() {
             if (newValue === currentValue) {
                 // No change, just restore
                 $input.remove();
-                $link.removeClass('editing').show();
+                $linkElement.removeClass('editing').show();
                 return;
             }
 
@@ -449,10 +448,10 @@ function initializePatternEditing() {
                     if (response.status === 'success') {
                         // Update the link with new value
                         var newPattern = prefix + newValue;
-                        $link.text(newValue).data('value', newValue).data('original', newPattern);
+                        $linkElement.text(newValue).data('value', newValue).data('original', newPattern);
 
                         // Update the "Show matches" link
-                        var $showLink = $link.closest('.pattern-row').find('.pattern-link');
+                        var $showLink = $linkElement.closest('.pattern-row').find('.pattern-link');
                         $showLink.attr('data-pattern', newPattern);
                     } else {
                         alert('Failed to update pattern: ' + (response.message || 'Unknown error'));
@@ -460,14 +459,14 @@ function initializePatternEditing() {
 
                     // Restore link
                     $input.remove();
-                    $link.removeClass('editing').show();
+                    $linkElement.removeClass('editing').show();
                 },
                 error: function(xhr, status, error) {
                     alert('Failed to update pattern: ' + error);
 
                     // Restore link
                     $input.remove();
-                    $link.removeClass('editing').show();
+                    $linkElement.removeClass('editing').show();
                 }
             });
         }
@@ -475,7 +474,7 @@ function initializePatternEditing() {
         // Handle cancel on Escape
         function cancelEdit() {
             $input.remove();
-            $link.removeClass('editing').show();
+            $linkElement.removeClass('editing').show();
         }
 
         // Bind events
@@ -559,6 +558,8 @@ $(document).ready(function() {
     };
 })
 
+// /////////////////////////////////////////////////////////////////////////////
+
 // Helper function to sort patterns by type (pub first, then sub) and alphabetically within each type
 function sortPatternsByTypeAndValue(patterns) {
     // Group patterns by type
@@ -591,8 +592,12 @@ function sortPatternsByTypeAndValue(patterns) {
     return [].concat(pubPatterns, subPatterns, otherPatterns);
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.pubsub.permission = {};
 $.fn.zato.pubsub.permission.data_table = {};
+
+// /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.permission.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new permission', null);
@@ -629,6 +634,8 @@ $.fn.zato.pubsub.permission.create = function() {
         renderPatternTables();
     };
 }
+
+// /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.permission.edit = function(id) {
 
@@ -749,8 +756,8 @@ patternData = instance.pattern;
             $container.empty();
             $container.append('<input type="hidden" id="id_edit-sec_base_id" name="edit-sec_base_id" value="' + instance.sec_base_id + '"/>');
 
-            var secName = instance.name || 'Security definition ID: ' + instance.sec_base_id;
-            var clusterID = $('#cluster_id').val() || (typeof cluster_id !== 'undefined' ? cluster_id : '1');
+            var secName = instance.name;
+            var clusterID = '1';
             var secLink = '<a href="/zato/security/basic-auth/?cluster=' + clusterID + '&query=' + encodeURIComponent(secName) + '" target="_blank">' + secName + '</a>';
             $container.append(secLink);
 
@@ -810,6 +817,8 @@ patternData = instance.pattern;
     };
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
 // Function to validate that at least one pattern has a non-empty value
 function validatePatterns(formType) {
     var container = $('#' + formType + '-patterns-container');
@@ -826,6 +835,8 @@ function validatePatterns(formType) {
 
     return hasValidPattern;
 }
+
+// /////////////////////////////////////////////////////////////////////////////
 
 // Function to log all form fields
 function logAllFormFields(prefix) {
@@ -900,6 +911,8 @@ $(document).on('click', '.pattern-remove-button', function() {
     }, 100);
 });
 
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.pubsub.permission.data_table.new_row = function(item, data, include_tr) {
 
     var row = '';
@@ -959,6 +972,8 @@ $.fn.zato.pubsub.permission.data_table.new_row = function(item, data, include_tr
     return row;
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.pubsub.permission.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Permission `{0}` deleted',
@@ -966,7 +981,8 @@ $.fn.zato.pubsub.permission.delete_ = function(id) {
         true);
 }
 
-// Multi-pattern UI functions
+// /////////////////////////////////////////////////////////////////////////////
+
 function addPatternRow(formType) {
     var container = $('#' + formType + '-patterns-container');
     var rowCount = container.find('.pattern-row').length;
@@ -977,7 +993,7 @@ function addPatternRow(formType) {
 
     // Build options based on current access type
     var optionsHtml = '';
-    var defaultValue = 'pub'; // fallback default
+    var defaultValue = 'pub';
 
     if (accessType === 'publisher' || accessType === 'publisher-subscriber') {
         optionsHtml += '<option value="pub">Publish</option>';
@@ -1017,6 +1033,8 @@ function addPatternRow(formType) {
     // No need to call updatePatternTypeOptions since we created the row with correct options
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
 function removePatternRow(button) {
     var row = $(button).closest('.pattern-row');
     var container = row.closest('[id$="-patterns-container"]');
@@ -1033,6 +1051,8 @@ function removePatternRow(button) {
         });
     }
 }
+
+// /////////////////////////////////////////////////////////////////////////////
 
 function consolidatePatterns(formType) {
     var container = $('#' + formType + '-patterns-container');
@@ -1055,6 +1075,8 @@ function consolidatePatterns(formType) {
     $('#' + formType + '-pattern-hidden').val(patterns.join('\n'));
     return patterns.join('\n');
 }
+
+// /////////////////////////////////////////////////////////////////////////////
 
 function populatePatterns(formType, patternString) {
     var container = $('#' + formType + '-patterns-container');
@@ -1109,7 +1131,7 @@ function populatePatterns(formType, patternString) {
     updatePatternTypeOptions(formType);
 }
 
-
+// /////////////////////////////////////////////////////////////////////////////
 
 function updatePatternTypeOptions(formType) {
     var accessTypeId = formType === 'create' ? '#id_access_type' : '#id_edit-access_type';
@@ -1173,3 +1195,5 @@ $.fn.zato.live_form_updates.register('create', [
 $.fn.zato.live_form_updates.register('edit', [
     {object_type: 'security_basic', target_select: '#id_edit-sec_base_id'}
 ]);
+
+})(jQuery);

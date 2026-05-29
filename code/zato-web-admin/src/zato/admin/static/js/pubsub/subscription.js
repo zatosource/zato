@@ -1,3 +1,5 @@
+(function($) {
+
 // /////////////////////////////////////////////////////////////////////////////
 
 $.namespace('zato.pubsub.subscription');
@@ -225,6 +227,8 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
     var tableSelector = isEditMode ? '#id_edit-multi-select-table' : '#multi-select-table';
     var tdSelector = isEditMode ? '#id_edit-td_topic_list' : '#td_topic_list';
 }
+
+// /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.on_sec_def_changed = function() {
     var sec_base_id = $('#id_sec_base_id').val();
@@ -470,6 +474,8 @@ $(document).ready(function() {
     };
 })
 
+// /////////////////////////////////////////////////////////////////////////////
+
 // Function to populate REST endpoints
 $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, selectedId, showSpan) {
     var endpointSelectId = form_type === 'create' ? '#id_rest_push_endpoint_id' : '#id_edit-rest_push_endpoint_id';
@@ -556,6 +562,8 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
     });
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
 // Function to load REST channels using multi-checkbox component
 $.fn.zato.pubsub.subscription.loadRestChannels = function() {
     var cluster_id = $('#cluster_id').val();
@@ -570,8 +578,8 @@ $.fn.zato.pubsub.subscription.loadRestChannels = function() {
         success: function(response) {
             if (response.rest_channels.length > 0) {
                 var items = [];
-                for (var i = 0; i < response.rest_channels.length; i++) {
-                    var channel = response.rest_channels[i];
+                for (var channelIdx = 0; channelIdx < response.rest_channels.length; channelIdx++) {
+                    var channel = response.rest_channels[channelIdx];
                     items.push({
                         id: channel.id,
                         state: $.fn.zato.multi_checkbox.State.Off,
@@ -605,6 +613,8 @@ $.fn.zato.pubsub.subscription.loadRestChannels = function() {
         }
     });
 }
+
+// /////////////////////////////////////////////////////////////////////////////
 
 // Function to populate Services
 $.fn.zato.pubsub.subscription.populateServices = function(form_type, selectedId, showSpan) {
@@ -682,12 +692,16 @@ $.fn.zato.pubsub.subscription.populateServices = function(form_type, selectedId,
 
 $.fn.zato.pubsub.subscription.data_table = {};
 
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.data_table.add_row_hook = function(instance, name, html_elem, data) {
 
     if (name === 'sub_key') {
         instance.sub_key = data.sub_key;
     }
 };
+
+// /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_tr) {
     var row = '';
@@ -719,8 +733,8 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
             }
             if(!endpointName) {
                 var selectIds = ['#id_edit-rest_push_endpoint_id', '#id_rest_push_endpoint_id'];
-                for(var i=0; i<selectIds.length; i++) {
-                    $(selectIds[i] + ' option').each(function() {
+                for(var selectIdx=0; selectIdx<selectIds.length; selectIdx++) {
+                    $(selectIds[selectIdx] + ' option').each(function() {
                         if($(this).val() == item.rest_push_endpoint_id) {
                             endpointName = $(this).text();
                             return false;
@@ -762,7 +776,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 
     row += String.format("<td class='ignore'>{0}</td>", item.rest_push_endpoint_name);
     row += String.format("<td class='ignore'>{0}</td>", item.push_service_name);
-    row += String.format("<td class='ignore'>{0}</td>", item.topic_name_list || '');
+    row += String.format("<td class='ignore'>{0}</td>", item.topic_name_list);
     row += String.format("<td class='ignore'>{0}</td>", pendingDepth);
 
     if(include_tr) {
@@ -847,8 +861,8 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
         console.log('DEBUG edit: added hidden input for sec_base_id=' + JSON.stringify(instance.sec_base_id));
 
         // Display the security definition name as a link
-        var secName = instance.security || 'Security definition ID: ' + instance.sec_base_id;
-        var clusterID = $('#cluster_id').val() || '1';
+        var secName = instance.security;
+        var clusterID = '1';
         var secLink = '<a href="/zato/security/basic-auth/?cluster=' + clusterID + '&query=' + encodeURIComponent(secName) + '" target="_blank">' + secName + '</a>';
         $container.append(secLink);
         console.log('DEBUG edit: displaying security definition as link, secName=' + JSON.stringify(secName) + ', link=' + JSON.stringify(secLink));
@@ -1068,8 +1082,8 @@ $.fn.zato.pubsub.subscription._puff_changed_rows = function(container_selector, 
     });
 
     var old_ids = Object.keys(old_values);
-    for (var i = 0; i < old_ids.length; i++) {
-        if (!$(container_selector).find('#' + old_ids[i]).length) {
+    for (var idIdx = 0; idIdx < old_ids.length; idIdx++) {
+        if (!$(container_selector).find('#' + old_ids[idIdx]).length) {
             $.fn.zato.live_form_updates._puff($(container_selector).find('.multi-select-table'));
             break;
         }
@@ -1120,3 +1134,5 @@ $.fn.zato.live_form_updates.register('edit', [
 ]);
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+})(jQuery);
