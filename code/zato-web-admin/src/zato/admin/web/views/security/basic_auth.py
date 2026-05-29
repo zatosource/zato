@@ -65,6 +65,7 @@ class Create(_CreateEdit):
     service_name = 'zato.security.basic-auth.create'
 
     def __call__(self, req, *args, **kwargs):
+        logger.info('basic_auth Create.__call__ is_active trace -> POST=%s', dict(req.POST))
         response = super().__call__(req, *args, **kwargs)
         if response.status_code == HTTPStatus.OK:
             data = loads(response.content)

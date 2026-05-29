@@ -309,8 +309,17 @@ class BaseView:
                 if not value:
                     value = req.zato.args.get(self.form_prefix + name)
 
-                if not value and name.startswith(_boolean_prefixes):
-                    value = False
+                is_boolean = name.startswith(_boolean_prefixes)
+
+                if is_boolean:
+                    if not value:
+                        value = False
+                    elif isinstance(value, str):
+                        value = True
+
+                if name == 'is_active':
+                    logger.info('set_input is_active trace -> value=%r, type=%s, form_prefix=%r',
+                        value, type(value).__name__, self.form_prefix)
 
                 self.input[name] = value
 
@@ -589,6 +598,9 @@ class CreateEdit(BaseView):
             logger.info('CreateEdit step 5: input_optional=%s', self.input_optional)
             logger.info('CreateEdit step 5: self.input=%s', self.input)
             logger.info('CreateEdit step 5: POST=%s', dict(self.req.POST))
+            logger.info('CreateEdit step 5 is_active trace -> input_dict=%r (type=%s), self.input=%r (type=%s)',
+                self.input_dict.get('is_active'), type(self.input_dict.get('is_active')).__name__,
+                self.input.get('is_active'), type(self.input.get('is_active')).__name__)
 
             logger.info('CreateEdit step 6: invoking service_name=%s', self.service_name)
             response = self.req.zato.client.invoke(self.service_name, self.input_dict)
