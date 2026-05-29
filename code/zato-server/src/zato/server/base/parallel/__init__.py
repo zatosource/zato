@@ -1309,7 +1309,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     for item in items:
                         conn = GenericConnection.from_model(item)
                         config = conn.to_dict()
-                        logger.info('Queue bridge loading %s -> %s', type_, config)
+                        logger.info('Queue bridge loading %s', type_)
 
                         if type_ == GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA:
                             channels.append(config)
@@ -1666,7 +1666,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             self._reload_queue_bridge()
 
         # .. finally, log what happened.
-        logger.info('⭐ Config loaded OK')
+        logger.info('Config loaded OK')
 
 # ################################################################################################################################
 

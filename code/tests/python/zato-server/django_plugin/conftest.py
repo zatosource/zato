@@ -20,7 +20,6 @@ from http.client import OK
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
-sys.path.insert(0, os.path.dirname(__file__))
 
 # pytest
 import pytest
@@ -134,7 +133,7 @@ def zato_server() -> 'any_':
 
     global _server_process, _temp_directory
 
-    from config import TestConfig
+    from zato.common.test.config_django_plugin import TestConfig
 
     # .. kill any leftover Zato servers from interrupted previous runs ..
     _ = subprocess.run(['pkill', '-f', 'zato.server.main'], capture_output=True)

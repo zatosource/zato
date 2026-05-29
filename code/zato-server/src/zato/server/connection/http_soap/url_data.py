@@ -86,8 +86,6 @@ class URLData(PyURLData):
 
     def dispatcher_callback(self, event, ctx, **opaque):
         handler_name = 'on_config_event_{}'.format(code_to_name[event])
-        logger.info('URLData.dispatcher_callback: event=%s, handler=%s, ctx.name=%s',
-            event, handler_name, ctx.get('name') if hasattr(ctx, 'get') else 'N/A')
         getattr(self, handler_name)(ctx)
 
 # ################################################################################################################################

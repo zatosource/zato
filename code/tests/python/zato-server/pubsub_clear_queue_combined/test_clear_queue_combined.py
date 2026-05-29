@@ -85,7 +85,7 @@ class TestCombinedClearPullLeavePush:
     def test_clear_pull_leave_push(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue_combined import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -122,7 +122,7 @@ class TestCombinedClearPushLeavePull:
     def test_clear_push_leave_pull(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient, PullClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue_combined import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -157,7 +157,7 @@ class TestCombinedClearBothEmpty:
     def test_clear_both_empty(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue_combined import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -200,7 +200,7 @@ class TestCombinedClearBothDiskFiles:
     def test_clear_both_disk_files(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue_combined import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
@@ -236,7 +236,7 @@ class TestCombinedClearOrderIndependent:
     def test_clear_order_independent(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_clear_queue_combined import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
