@@ -240,7 +240,12 @@ def get_pubsub_security_choices(request:'any_', form_type:'str'='edit', context:
     """ Get filtered security definitions for Django form choices (tuples format).
     """
     definitions = get_pubsub_security_definitions(request, form_type, context)
-    return [(item['id'], item['name']) for item in definitions]
+
+    out = []
+    for item in definitions:
+        out.append((item['id'], item['name']))
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -74,11 +74,11 @@ _No_Age           = 0
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_dashboard_data(req:'HttpRequest') -> 'str':
+def _get_dashboard_data(request:'HttpRequest') -> 'str':
 
     # Get the list of topics ..
     try:
-        response = req.zato.client.invoke('zato.pubsub.topic.get-list', {
+        response = request.zato.client.invoke('zato.pubsub.topic.get-list', {
             'cluster_id': default_cluster_id,
         })
         if response.ok:
@@ -91,7 +91,7 @@ def _get_dashboard_data(req:'HttpRequest') -> 'str':
 
     # .. get the list of subscriptions ..
     try:
-        sub_response = req.zato.client.invoke('zato.pubsub.subscription.get-list', {
+        sub_response = request.zato.client.invoke('zato.pubsub.subscription.get-list', {
             'cluster_id': default_cluster_id,
         })
         if sub_response.ok:
@@ -138,7 +138,7 @@ def _get_dashboard_data(req:'HttpRequest') -> 'str':
 
     # .. get the publish timeline from Redis streams ..
     try:
-        timeline_response = req.zato.client.invoke('zato.pubsub.topic.get-publish-timeline', {
+        timeline_response = request.zato.client.invoke('zato.pubsub.topic.get-publish-timeline', {
             'since_minutes': 60,
         })
         if timeline_response.ok:
@@ -153,7 +153,7 @@ def _get_dashboard_data(req:'HttpRequest') -> 'str':
 
     # .. get the distinct publisher count ..
     try:
-        publisher_response = req.zato.client.invoke('zato.pubsub.topic.get-publisher-count', {
+        publisher_response = request.zato.client.invoke('zato.pubsub.topic.get-publisher-count', {
             'since_minutes': 60,
         })
         if publisher_response.ok:
@@ -192,11 +192,11 @@ def _get_dashboard_data(req:'HttpRequest') -> 'str':
 # ################################################################################################################################
 
 @method_allowed('GET')
-def index(req:'HttpRequest') -> 'TemplateResponse':
+def index(request:'HttpRequest') -> 'TemplateResponse':
 
-    data_json = _get_dashboard_data(req)
+    data_json = _get_dashboard_data(request)
 
-    return TemplateResponse(req, 'zato/pubsub/dashboard.html', {
+    out = TemplateResponse(request, 'zato/pubsub/dashboard.html', {
         'cluster_id': default_cluster_id,
         'dashboard_data': data_json,
         'dashboard_base_url': _Dashboard_Base_Url,
@@ -204,32 +204,41 @@ def index(req:'HttpRequest') -> 'TemplateResponse':
         'zato_template_name': 'zato/pubsub/dashboard.html',
     })
 
+    return out
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
-def poll(req:'HttpRequest') -> 'HttpResponse':
+def poll(request:'HttpRequest') -> 'HttpResponse':
 
     try:
-        data_json = _get_dashboard_data(req)
-        return HttpResponse(data_json.encode('utf-8'), content_type='application/json')
+        data_json = _get_dashboard_data(request)
+        data_bytes = data_json.encode('utf-8')
+
+        out = HttpResponse(data_bytes, content_type='application/json')
+
     except Exception as error:
         logger.error('Pub/sub dashboard poll error: %s', error)
         error_json = json.dumps({'error': str(error)})
-        return HttpResponse(
-            error_json.encode('utf-8'),
+        error_bytes = error_json.encode('utf-8')
+
+        out = HttpResponse(
+            error_bytes,
             content_type='application/json',
             status=HTTPStatus.INTERNAL_SERVER_ERROR,
         )
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('GET')
-def import_demo_config(req:'HttpRequest') -> 'HttpResponse':
+def import_demo_config(request:'HttpRequest') -> 'HttpResponse':
 
     try:
-        response = req.zato.client.invoke('zato.server.invoker', {
+        response = request.zato.client.invoke('zato.server.invoker', {
             'func_name': 'import_demo_pubsub',
         })
 
@@ -243,11 +252,15 @@ def import_demo_config(req:'HttpRequest') -> 'HttpResponse':
     except Exception as error:
         logger.error('Pub/sub import demo config error: %s', error)
         error_message = str(error)
-        return HttpResponse(
-            error_message.encode('utf-8'),
+        error_bytes = error_message.encode('utf-8')
+
+        out = HttpResponse(
+            error_bytes,
             content_type='text/plain',
             status=HTTPStatus.INTERNAL_SERVER_ERROR,
         )
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

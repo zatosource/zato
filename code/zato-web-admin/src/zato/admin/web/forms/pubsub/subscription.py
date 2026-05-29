@@ -31,16 +31,22 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_rest_endpoint_choices(req:'HttpRequest') -> 'list':
-    response = req.zato.client.invoke('zato.http-soap.get-list', {
-        'cluster_id': req.zato.cluster_id,
+def get_rest_endpoint_choices(request:'HttpRequest') -> 'list':
+    response = request.zato.client.invoke('zato.http-soap.get-list', {
+        'cluster_id': request.zato.cluster_id,
         'connection': 'outgoing',
         'transport': 'plain_http'
     })
-    choices = [('', '---')]
+
+    out = [('', '---')]
+
     for item in response.data:
-        choices.append((item.id, item.name))
-    return choices
+        out.append((item.id, item.name))
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class CreateForm(forms.Form):
     is_delivery_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
@@ -89,6 +95,9 @@ class CreateForm(forms.Form):
             # Set default option for service select
             self.fields['push_service_name'].choices = [('', 'Select a service')]
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class EditForm(CreateForm):
     is_delivery_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     is_pub_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
@@ -107,3 +116,6 @@ class EditForm(CreateForm):
 
             # Set default option for REST endpoints (will be populated via AJAX)
             self.fields['rest_push_endpoint_id'].choices = [('', 'Select a REST endpoint')]
+
+# ################################################################################################################################
+# ################################################################################################################################

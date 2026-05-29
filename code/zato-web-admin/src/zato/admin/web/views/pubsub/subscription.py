@@ -19,8 +19,7 @@ from django.http import HttpResponse, HttpResponseServerError
 from zato.admin.web.forms.pubsub.subscription import CreateForm, EditForm
 from zato.admin.web.util import get_pubsub_security_definitions, get_service_list as util_get_service_list
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, get_outconn_rest_list
-from zato.common.api import CONNECTION, PubSub, URL_TYPE
-# Bunch
+from zato.common.api import PubSub
 from zato.common.ext.bunch import Bunch
 
 # ################################################################################################################################
@@ -62,11 +61,14 @@ class Index(_Index):
 
         create_form = CreateForm(req=self.req)
         edit_form = EditForm(prefix='edit', req=self.req)
-        return {
+
+        out = {
             'create_form': create_form,
             'edit_form': edit_form,
             'show_search_form': True,
         }
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -203,44 +205,44 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('GET')
-def get_security_definitions(req:'HttpRequest') -> 'HttpResponse':
+def get_security_definitions(request:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of security definitions for pubsub subscriptions.
     """
-    form_type = req.GET.get('form_type', 'create')
+    form_type = request.GET.get('form_type', 'create')
 
     try:
-        security_definitions = get_pubsub_security_definitions(req, form_type, 'subscription')
+        security_definitions = get_pubsub_security_definitions(request, form_type, 'subscription')
 
-        return HttpResponse(
-            dumps({
-                'msg': 'Security definitions retrieved successfully',
-                'security_definitions': security_definitions
-            }),
-            content_type='application/json'
-        )
-    except Exception as e:
-        return HttpResponse(
-            dumps({
-                'error': str(e) or 'Error retrieving security definitions'
-            }),
-            content_type='application/json',
-            status=HTTPStatus.INTERNAL_SERVER_ERROR
-        )
+        response_json = dumps({
+            'msg': 'Security definitions retrieved successfully',
+            'security_definitions': security_definitions
+        })
+
+        out = HttpResponse(response_json, content_type='application/json')
+        return out
+
+    except Exception as error:
+        error_json = dumps({
+            'error': str(error) or 'Error retrieving security definitions'
+        })
+
+        out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('GET')
-def get_topics(req:'HttpRequest') -> 'HttpResponse':
+def get_topics(request:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of topics for pubsub subscriptions.
     """
-    cluster_id = req.GET.get('cluster_id')
-    form_type = req.GET.get('form_type', 'create')
+    cluster_id = request.GET.get('cluster_id')
+    form_type = request.GET.get('form_type', 'create')
 
     logger.info('VIEW get_topics: received request with cluster_id=%s, form_type=%s', cluster_id, form_type)
 
     try:
-        response = req.zato.client.invoke('zato.pubsub.topic.get-list', {
+        response = request.zato.client.invoke('zato.pubsub.topic.get-list', {
             'cluster_id': cluster_id
         })
 
@@ -254,22 +256,23 @@ def get_topics(req:'HttpRequest') -> 'HttpResponse':
 
         logger.info('VIEW get_topics: returning %d topics', len(topics))
 
-        return HttpResponse(
-            dumps({
-                'msg': 'Topics retrieved successfully',
-                'topics': topics
-            }),
-            content_type='application/json'
-        )
-    except Exception as e:
-        logger.error('VIEW get_topics: error=%s', e)
-        return HttpResponse(
-            dumps({
-                'error': str(e) or 'Error retrieving topics'
-            }),
-            content_type='application/json',
-            status=HTTPStatus.INTERNAL_SERVER_ERROR
-        )
+        response_json = dumps({
+            'msg': 'Topics retrieved successfully',
+            'topics': topics
+        })
+
+        out = HttpResponse(response_json, content_type='application/json')
+        return out
+
+    except Exception as error:
+        logger.error('VIEW get_topics: error=%s', error)
+
+        error_json = dumps({
+            'error': str(error) or 'Error retrieving topics'
+        })
+
+        out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -277,51 +280,71 @@ def get_topics(req:'HttpRequest') -> 'HttpResponse':
 def _get_topic_name_from_tuple(topic_tuple:'tuple') -> 'str':
     """ Get topic name from tuple (id, name).
     """
-    return topic_tuple[1]
+    out = topic_tuple[1]
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 def _get_topic_name_from_dict(topic_dict:'anydict') -> 'str':
     """ Get topic name from dictionary.
     """
-    return topic_dict['name']
+    out = topic_dict['name']
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 def _sort_topics_by_name(topics:'any_') -> 'anylist':
     """ Sort topics by name.
     """
-    return sorted(topics, key=_get_topic_name_from_tuple)
+    out = sorted(topics, key=_get_topic_name_from_tuple)
+    return out
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 def _sort_topic_dicts_by_name(topic_dicts:'anylist') -> 'anylist':
     """ Sort topic dictionaries by name.
     """
-    return sorted(topic_dicts, key=_get_topic_name_from_dict)
+    out = sorted(topic_dicts, key=_get_topic_name_from_dict)
+    return out
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 def _is_subscriber_access(access_type:'str') -> 'bool':
     """ Check if access type allows subscription.
     """
-    return access_type in (PubSub.API_Client.Subscriber, PubSub.API_Client.Publisher_Subscriber)
+    out = access_type in (PubSub.API_Client.Subscriber, PubSub.API_Client.Publisher_Subscriber)
+    return out
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-def _get_subscriber_patterns_for_sec_def(req:'HttpRequest', sec_base_id:'str', cluster_id:'str') -> 'strlist':
+def _get_subscriber_patterns_for_sec_def(request:'HttpRequest', sec_base_id:'str', cluster_id:'str') -> 'strlist':
     """ Get subscriber patterns for a given security definition.
     """
-    logger = logging.getLogger(__name__)
+
 
     logger.info('Getting permissions for cluster_id=%s', cluster_id)
-    permissions_response = req.zato.client.invoke('zato.pubsub.permission.get-list', {
+    permissions_response = request.zato.client.invoke('zato.pubsub.permission.get-list', {
         'cluster_id': cluster_id,
     })
     logger.info('Got %d permissions', len(permissions_response.data))
 
     subscriber_patterns = []
     sec_base_id = int(sec_base_id)
-    for perm in permissions_response.data:
-        if perm.sec_base_id == sec_base_id and _is_subscriber_access(perm.access_type):
-            logger.info('Found subscriber permission with pattern: %s', perm.pattern)
-            patterns = [p.strip() for p in perm.pattern.splitlines() if p.strip()]
+    for permission in permissions_response.data:
+        if permission.sec_base_id == sec_base_id and _is_subscriber_access(permission.access_type):
+            logger.info('Found subscriber permission with pattern: %s', permission.pattern)
+
+            patterns = []
+            for line in permission.pattern.splitlines():
+                stripped = line.strip()
+                if stripped:
+                    patterns.append(stripped)
+
             subscriber_patterns.extend(patterns)
 
     logger.info('Found %d subscriber patterns: %s', len(subscriber_patterns), subscriber_patterns)
@@ -329,23 +352,23 @@ def _get_subscriber_patterns_for_sec_def(req:'HttpRequest', sec_base_id:'str', c
 
 # ################################################################################################################################
 
-def _get_topics_for_patterns(req:'HttpRequest', subscriber_patterns:'strlist', cluster_id:'str') -> 'set':
+def _get_topics_for_patterns(request:'HttpRequest', subscriber_patterns:'strlist', cluster_id:'str') -> 'set':
     """ Get all topics matching the given patterns.
     """
-    logger = logging.getLogger(__name__)
+
 
     all_topics = set()
     for pattern in subscriber_patterns:
         try:
-            matches_response = req.zato.client.invoke('zato.pubsub.topic.get-matches', {
+            matches_response = request.zato.client.invoke('zato.pubsub.topic.get-matches', {
                 'cluster_id': cluster_id,
                 'pattern': pattern
             })
             logger.info('Got %d matches for pattern: %s', len(matches_response.data), pattern)
             for topic in matches_response.data:
                 all_topics.add((topic.get('id', ''), topic.get('name', '')))
-        except Exception as e:
-            logger.error('Error getting matches for pattern: %s, error: %s', pattern, e)
+        except Exception as error:
+            logger.error('Error getting matches for pattern: %s, error: %s', pattern, error)
 
     logger.info('Found %d topics', len(all_topics))
     return all_topics
@@ -381,14 +404,14 @@ def _build_topic_checkbox_html(all_topics:'set', cluster_id:'str') -> 'str':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def sec_def_topic_sub_list(req:'HttpRequest', sec_base_id:'str', cluster_id:'str') -> 'HttpResponse':
+def sec_def_topic_sub_list(request:'HttpRequest', sec_base_id:'str', cluster_id:'str') -> 'HttpResponse':
     """ Returns HTML for topics to which a given security definition has access for subscription.
     """
-    logger = logging.getLogger(__name__)
+
     logger.info('Starting with sec_base_id=%s, cluster_id=%s', sec_base_id, cluster_id)
 
     try:
-        subscriber_patterns = _get_subscriber_patterns_for_sec_def(req, sec_base_id, cluster_id)
+        subscriber_patterns = _get_subscriber_patterns_for_sec_def(request, sec_base_id, cluster_id)
 
         if not subscriber_patterns:
             logger.warning('No subscription permissions found for sec_base_id=%s', sec_base_id)
@@ -400,31 +423,37 @@ def sec_def_topic_sub_list(req:'HttpRequest', sec_base_id:'str', cluster_id:'str
                 '</td></tr>'
                 '</table>'
             )
-            return HttpResponse(html_content, content_type='text/html')
+            out = HttpResponse(html_content, content_type='text/html')
+            return out
 
-        all_topics = _get_topics_for_patterns(req, subscriber_patterns, cluster_id)
+        all_topics = _get_topics_for_patterns(request, subscriber_patterns, cluster_id)
         html_content = _build_topic_checkbox_html(all_topics, cluster_id)
 
-        return HttpResponse(html_content, content_type='text/html')
+        out = HttpResponse(html_content, content_type='text/html')
+        return out
 
     except Exception:
         logger.error('Exception occurred: %s', format_exc())
-        return HttpResponseServerError(format_exc())
+
+        error_text = format_exc()
+
+        out = HttpResponseServerError(error_text)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('GET')
-def get_rest_endpoints(req:'HttpRequest') -> 'HttpResponse':
+def get_rest_endpoints(request:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of REST outgoing connections for pubsub subscriptions.
     """
-    cluster_id = req.GET.get('cluster_id')
-    form_type = req.GET.get('form_type', 'create')
+    cluster_id = request.GET.get('cluster_id')
+    form_type = request.GET.get('form_type', 'create')
 
     logger.info('VIEW get_rest_endpoints: received request with cluster_id=%s, form_type=%s', cluster_id, form_type)
 
     try:
-        rest_endpoints = get_outconn_rest_list(req, name_to_id=False)
+        rest_endpoints = get_outconn_rest_list(request, name_to_id=False)
         endpoints_list = []
 
         for endpoint_id, endpoint_name in rest_endpoints.items():
@@ -435,109 +464,117 @@ def get_rest_endpoints(req:'HttpRequest') -> 'HttpResponse':
 
         logger.info('VIEW get_rest_endpoints: returning %d endpoints', len(endpoints_list))
 
-        return HttpResponse(
-            dumps({
-                'msg': 'REST endpoints retrieved successfully',
-                'rest_endpoints': endpoints_list
-            }),
-            content_type='application/json'
-        )
-    except Exception as e:
-        logger.error('VIEW get_rest_endpoints: error=%s', e)
-        return HttpResponse(
-            dumps({
-                'error': str(e) or 'Error retrieving REST endpoints'
-            }),
-            content_type='application/json',
-            status=HTTPStatus.INTERNAL_SERVER_ERROR
-        )
+        response_json = dumps({
+            'msg': 'REST endpoints retrieved successfully',
+            'rest_endpoints': endpoints_list
+        })
+
+        out = HttpResponse(response_json, content_type='application/json')
+        return out
+
+    except Exception as error:
+        logger.error('VIEW get_rest_endpoints: error=%s', error)
+
+        error_json = dumps({
+            'error': str(error) or 'Error retrieving REST endpoints'
+        })
+
+        out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('GET')
-def get_service_list(req:'HttpRequest') -> 'HttpResponse':
+def get_service_list(request:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of services for pubsub subscriptions.
     """
-    cluster_id = req.GET.get('cluster_id')
-    form_type = req.GET.get('form_type', 'create')
+    cluster_id = request.GET.get('cluster_id')
+    form_type = request.GET.get('form_type', 'create')
 
     logger.info('VIEW get_service_list: received request with cluster_id=%s, form_type=%s', cluster_id, form_type)
 
     try:
-        services = util_get_service_list(req)
+        services = util_get_service_list(request)
 
         logger.info('VIEW get_service_list: returning %d services', len(services))
 
-        return HttpResponse(
-            dumps({
-                'msg': 'Services retrieved successfully',
-                'services': services
-            }),
-            content_type='application/json'
-        )
-    except Exception as e:
-        logger.error('VIEW get_service_list: error=%s', e)
-        return HttpResponse(
-            dumps({
-                'error': str(e) or 'Error retrieving services'
-            }),
-            content_type='application/json',
-            status=HTTPStatus.INTERNAL_SERVER_ERROR
-        )
+        response_json = dumps({
+            'msg': 'Services retrieved successfully',
+            'services': services
+        })
+
+        out = HttpResponse(response_json, content_type='application/json')
+        return out
+
+    except Exception as error:
+        logger.error('VIEW get_service_list: error=%s', error)
+
+        error_json = dumps({
+            'error': str(error) or 'Error retrieving services'
+        })
+
+        out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('GET')
-def get_topics_by_security(req:'HttpRequest') -> 'HttpResponse':
+def get_topics_by_security(request:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of topics filtered by security definition's subscribe permissions.
     """
-    cluster_id = req.GET.get('cluster_id')
-    sec_base_id = req.GET.get('sec_base_id')
+    cluster_id = request.GET.get('cluster_id')
+    sec_base_id = request.GET.get('sec_base_id')
 
     logger.info('VIEW get_topics_by_security: cluster_id=%s, sec_base_id=%s', cluster_id, sec_base_id)
 
     if not sec_base_id:
-        return HttpResponse(
-            dumps({
-                'error': 'Security definition ID is required'
-            }),
-            content_type='application/json',
-            status=HTTPStatus.BAD_REQUEST
-        )
+        error_json = dumps({
+            'error': 'Security definition ID is required'
+        })
+
+        out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.BAD_REQUEST)
+        return out
 
     try:
         # Get subscribe permissions for this security definition
-        permissions_response = req.zato.client.invoke('zato.pubsub.permission.get-list', {
+        permissions_response = request.zato.client.invoke('zato.pubsub.permission.get-list', {
             'cluster_id': cluster_id
         })
 
         # Filter permissions for this security definition and subscribe access
         subscribe_permissions = []
         if permissions_response and hasattr(permissions_response, 'data'):
-            for perm in permissions_response.data:
-                if (perm.sec_base_id == sec_base_id and
-                    _is_subscriber_access(perm.access_type)):
-                    subscribe_permissions.append(perm)
+            for permission in permissions_response.data:
+                if (permission.sec_base_id == sec_base_id and
+                    _is_subscriber_access(permission.access_type)):
+                    subscribe_permissions.append(permission)
 
         logger.info('VIEW get_topics_by_security: found %d subscribe permissions', len(subscribe_permissions))
 
         if not subscribe_permissions:
             # No subscribe permissions found for this security definition
             logger.info('VIEW get_topics_by_security: no subscribe permissions found')
-            return HttpResponse(
-                dumps({
-                    'msg': 'No topics available for this security definition',
-                    'topics': []
-                }),
-                content_type='application/json'
-            )
+
+            response_json = dumps({
+                'msg': 'No topics available for this security definition',
+                'topics': []
+            })
+
+            out = HttpResponse(response_json, content_type='application/json')
+            return out
 
         # Collect all patterns from permissions (split newline-separated patterns)
         all_patterns = []
-        for perm in subscribe_permissions:
-            patterns = [p.strip() for p in perm.pattern.split('\n') if p.strip()]
+        for permission in subscribe_permissions:
+
+            patterns = []
+            for line in permission.pattern.split('\n'):
+                stripped = line.strip()
+                if stripped:
+                    patterns.append(stripped)
+
             # Only include patterns that start with 'sub=' or have no prefix (assume subscribe)
             for pattern in patterns:
                 if pattern.startswith('sub='):
@@ -550,19 +587,20 @@ def get_topics_by_security(req:'HttpRequest') -> 'HttpResponse':
         if not all_patterns:
             # No valid subscribe patterns found
             logger.info('VIEW get_topics_by_security: no valid subscribe patterns found')
-            return HttpResponse(
-                dumps({
-                    'msg': 'No topics available for this security definition',
-                    'topics': []
-                }),
-                content_type='application/json'
-            )
+
+            response_json = dumps({
+                'msg': 'No topics available for this security definition',
+                'topics': []
+            })
+
+            out = HttpResponse(response_json, content_type='application/json')
+            return out
 
         # Get matching topics for each pattern using existing service
         matched_topics = set()  # Use set to avoid duplicates
         for pattern in all_patterns:
             try:
-                matches_response = req.zato.client.invoke('zato.pubsub.topic.get-matches', {
+                matches_response = request.zato.client.invoke('zato.pubsub.topic.get-matches', {
                     'cluster_id': cluster_id,
                     'pattern': pattern
                 })
@@ -571,8 +609,8 @@ def get_topics_by_security(req:'HttpRequest') -> 'HttpResponse':
                     for topic in matches_response.data:
                         matched_topics.add((topic.id, topic.name))  # Use tuple to ensure uniqueness
 
-            except Exception as e:
-                logger.warning('VIEW get_topics_by_security: error matching pattern %s: %s', pattern, e)
+            except Exception as error:
+                logger.warning('VIEW get_topics_by_security: error matching pattern %s: %s', pattern, error)
                 continue
 
         # Convert set back to list of dicts
@@ -588,21 +626,23 @@ def get_topics_by_security(req:'HttpRequest') -> 'HttpResponse':
 
         logger.info('VIEW get_topics_by_security: returning %d topics', len(topics_list))
 
-        return HttpResponse(
-            dumps({
-                'msg': 'Topics retrieved successfully',
-                'topics': topics_list
-            }),
-            content_type='application/json'
-        )
+        response_json = dumps({
+            'msg': 'Topics retrieved successfully',
+            'topics': topics_list
+        })
 
-    except Exception as e:
-        logger.error('VIEW get_topics_by_security: error=%s', e)
-        return HttpResponse(
-            dumps({
-                'error': str(e) or 'Error retrieving topics for security definition'
-            }),
-            content_type='application/json',
-            status=HTTPStatus.INTERNAL_SERVER_ERROR
-        )
+        out = HttpResponse(response_json, content_type='application/json')
+        return out
 
+    except Exception as error:
+        logger.error('VIEW get_topics_by_security: error=%s', error)
+
+        error_json = dumps({
+            'error': str(error) or 'Error retrieving topics for security definition'
+        })
+
+        out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################

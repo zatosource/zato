@@ -15,9 +15,8 @@ from django.views import View
 
 # Zato
 from zato.admin.web.forms.pubsub.permission import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.admin.web.util import get_pubsub_security_definitions
-# Bunch
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common.ext.bunch import Bunch
 
 # ################################################################################################################################
@@ -32,6 +31,7 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Index(_Index):
@@ -50,12 +50,15 @@ class Index(_Index):
         create_form = CreateForm()
         edit_form = EditForm(prefix='edit')
 
-        return {
+        out = {
             'create_form': create_form,
             'edit_form': edit_form,
             'show_search_form': True,
         }
 
+        return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetSecurityDefinitions(View):
@@ -64,8 +67,11 @@ class GetSecurityDefinitions(View):
     def get(self, request:'HttpRequest') -> 'JsonResponse':
         form_type = request.GET.get('form_type', 'edit')
         choices = get_pubsub_security_definitions(request, form_type, 'permission')
-        return JsonResponse({'security_definitions': choices})
 
+        out = JsonResponse({'security_definitions': choices})
+        return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _CreateEdit(CreateEdit):
@@ -82,8 +88,10 @@ class _CreateEdit(CreateEdit):
             for item in response.data:
                 choices.append((item['id'], item['name']))
 
-        return {'sec_base_choices': choices}
+        out = {'sec_base_choices': choices}
+        return out
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
@@ -100,6 +108,7 @@ class Create(_CreateEdit):
     def success_message(self, item:'any_') -> 'str':
         return 'Successfully created the PubSub permission'
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Edit(_CreateEdit):
@@ -130,6 +139,7 @@ class Edit(_CreateEdit):
             raise Exception(response)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Delete(_Delete):
     url_name = 'pubsub-permission-delete'
@@ -139,4 +149,5 @@ class Delete(_Delete):
     def success_message(self, item:'any_') -> 'str':
         return 'Successfully deleted the PubSub permission'
 
+# ################################################################################################################################
 # ################################################################################################################################

@@ -19,8 +19,6 @@ from django.http import HttpResponse, JsonResponse
 from zato.admin.web.forms.pubsub.topic import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.admin.web.views.http_soap import _build_invoke_response
-
-# Bunch
 from zato.common.ext.bunch import Bunch
 
 # ################################################################################################################################
@@ -52,11 +50,13 @@ class Index(_Index):
     output_repeated = True
 
     def handle(self) -> 'anydict':
-        return {
+        out = {
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'show_search_form': True,
         }
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,15 +99,15 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def get_matches(req:'HttpRequest') -> 'HttpResponse':
+def get_matches(request:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of topics matching a pattern.
     """
-    cluster_id = req.POST.get('cluster_id')
-    pattern = req.POST.get('pattern')
+    cluster_id = request.POST.get('cluster_id')
+    pattern = request.POST.get('pattern')
 
     logger.info('VIEW get_matches: received request with cluster_id=%s, pattern=%s', cluster_id, pattern)
 
-    service_response = req.zato.client.invoke('zato.pubsub.topic.get-matches', {
+    service_response = request.zato.client.invoke('zato.pubsub.topic.get-matches', {
         'cluster_id': cluster_id,
         'pattern': pattern,
     })
@@ -116,21 +116,21 @@ def get_matches(req:'HttpRequest') -> 'HttpResponse':
                 service_response.ok, service_response.data if service_response.ok else service_response.details)
 
     if service_response.ok:
-        return HttpResponse(
-            json.dumps({
-                'msg': 'Topics retrieved successfully',
-                'matches': service_response.data
-            }),
-            content_type='application/json'
-        )
+        response_json = json.dumps({
+            'msg': 'Topics retrieved successfully',
+            'matches': service_response.data
+        })
+
+        out = HttpResponse(response_json, content_type='application/json')
+
     else:
-        return HttpResponse(
-            json.dumps({
-                'error': service_response.details or 'Error retrieving matching topics'
-            }),
-            content_type='application/json',
-            status=HTTPStatus.INTERNAL_SERVER_ERROR
-        )
+        error_json = json.dumps({
+            'error': service_response.details or 'Error retrieving matching topics'
+        })
+
+        out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
