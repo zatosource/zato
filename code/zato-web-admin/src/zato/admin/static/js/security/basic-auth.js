@@ -21,11 +21,13 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'username']);
     var unique_constraints = [
-        {field: 'name', entity_type: 'security', attr_name: 'name'}
+        {field: 'name', entity_type: 'security', attr_name: 'name'},
+        {field: 'username', entity_type: 'security', attr_name: 'username',
+            filter_name: 'sec_type', filter_value: 'basic_auth'}
     ];
-    $.each(unique_constraints, function(i, c) {
-        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
-        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+    $.each(unique_constraints, function(index, constraint) {
+        $.fn.zato.validate_unique('#id_' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
+        $.fn.zato.validate_unique('#id_edit-' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
     });
 })
 

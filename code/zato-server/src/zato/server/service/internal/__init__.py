@@ -201,7 +201,9 @@ class ServerInvoker(AdminService):
             entity_type = self.request.raw_request['entity_type']
             attr_name = self.request.raw_request['attr_name']
             value = self.request.raw_request['value']
-            response = func(entity_type, attr_name, value)
+            filter_name = self.request.raw_request.get('filter_name', '')
+            filter_value = self.request.raw_request.get('filter_value', '')
+            response = func(entity_type, attr_name, value, filter_name, filter_value)
         elif func_name == 'get_bearer_token':
             from json import loads as json_loads
             security_id = self.request.raw_request.get('security_id', '')

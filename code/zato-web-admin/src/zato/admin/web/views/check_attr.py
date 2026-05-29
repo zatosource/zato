@@ -20,11 +20,19 @@ def check_attr_exists(req):
     entity_type = req.POST['entity_type']
     attr_name = req.POST['attr_name']
     value = req.POST['value']
+
+    # An optional scoping filter, present only for checks that are unique within a sub-group
+    # (e.g. a username is unique per sec_type rather than globally) ..
+    filter_name = req.POST.get('filter_name', '')
+    filter_value = req.POST.get('filter_value', '')
+
     response = req.zato.client.invoke('zato.server.invoker', {
         'func_name': 'check_attr_exists',
         'entity_type': entity_type,
         'attr_name': attr_name,
         'value': value,
+        'filter_name': filter_name,
+        'filter_value': filter_value,
     })
     data = response.data
     if isinstance(data, dict):
