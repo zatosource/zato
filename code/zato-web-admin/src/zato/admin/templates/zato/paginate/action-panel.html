@@ -15,13 +15,13 @@
   {% if meta.has_prev_page%}
     {% include "zato/paginate/prev-page.html" %}
   {% else %}
-    <span class="previous-next form_hint" >Previous</span>
+    <span class="previous-next form_hint prev-slot">Previous</span>
   {% endif %}
 
   {% if meta.has_next_page %}
     {% include "zato/paginate/next-page.html" %}
   {% else %}
-    <span class="previous-next">Next</span>
+    <span class="previous-next next-slot">Next</span>
   {% endif %}
     </span>
   </form>
