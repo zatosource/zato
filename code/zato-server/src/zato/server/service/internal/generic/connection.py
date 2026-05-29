@@ -414,27 +414,21 @@ class GetList(AdminService):
 # ################################################################################################################################
 
     def handle(self) -> 'None':
-        out = {'_meta':{}, 'response':[]}
-        _meta = cast_('anydict', out['_meta'])
+        out:'anylist' = []
 
         self.logger.info('GenericConn GetList.handle: type_=%s', self.request.input.type_)
 
         with closing(self.odb.session()) as session:
 
             search_result = self.get_data(session)
-            _meta.update(search_result.to_dict())
 
             for item in search_result:
                 conn = GenericConnection.from_model(item)
                 conn_dict = conn.to_dict()
                 self._enrich_conn_dict(conn_dict)
-                cast_('anylist', out['response']).append(conn_dict)
+                out.append(conn_dict)
 
-        response_count = len(cast_('anylist', out['response']))
-        self.logger.info('GenericConn GetList.handle: returning %s items for type_=%s', response_count, self.request.input.type_)
-
-        # Results are already included in the list of out['response'] elements
-        _ = _meta.pop('result', None)
+        self.logger.info('GenericConn GetList.handle: returning %s items for type_=%s', len(out), self.request.input.type_)
 
         self.response.payload = dumps(out)
 

@@ -159,7 +159,8 @@ def index(req): # type: ignore
 
     create_form = None
     edit_form = None
-    meta = None
+    meta = {}
+    response = None
 
     colspan = 17
 
@@ -253,6 +254,8 @@ def index(req): # type: ignore
                 setattr(http_soap, name, item.get(name))
 
             items.append(http_soap)
+
+        meta = response.meta
 
     openapi_sample_data = ''
     if connection == 'outgoing' and transport == 'plain_http':
