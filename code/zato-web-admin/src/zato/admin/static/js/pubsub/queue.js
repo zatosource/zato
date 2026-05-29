@@ -13,7 +13,6 @@
     $.fn.zato.pubsub.queue._pagination = null;
     $.fn.zato.pubsub.queue._auto_refresh = null;
     $.fn.zato.pubsub.queue._new_row_count = 0;
-    $.fn.zato.pubsub.queue._time_ticker = null;
     $.fn.zato.pubsub.queue._page_size = 50;
 
 // ////////////////////////////////////////////////////////////////////////
@@ -480,9 +479,6 @@
         $(document).on('click.queue_state', function() {
             $stateMenu.removeClass('dashboard-time-range-menu-open');
         });
-
-        $.fn.zato.pubsub.queue._time_ticker = setInterval(
-            $.fn.zato.pubsub.queue._tick_times, 1000);
     };
 
 // ////////////////////////////////////////////////////////////////////////

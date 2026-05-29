@@ -14,9 +14,6 @@ $.fn.zato.pubsub.common.populateTopics = function(formType, selectedNamesOrIds, 
     var selectContainer = select.parent();
 
 
-    // Show spinner with smooth transition and minimum display time
-    var startTime = Date.now();
-
     // Hide select and clear existing content
     select.hide();
     selectContainer.find('.no-topics-message').remove();
@@ -25,11 +22,7 @@ $.fn.zato.pubsub.common.populateTopics = function(formType, selectedNamesOrIds, 
     // Add spinner
     var spinner = $('<span class="loading-spinner" style="font-style: italic; color: #666;">Loading ..</span>');
     selectContainer.append(spinner);
-
-    // Smooth fade-in for spinner
-    setTimeout(function() {
-        spinner.addClass('show');
-    }, 50);
+    spinner.addClass('show');
 
     $.ajax({
         url: endpoint,
@@ -39,108 +32,83 @@ $.fn.zato.pubsub.common.populateTopics = function(formType, selectedNamesOrIds, 
             form_type: formType
         },
         success: function(data) {
-            // Ensure minimum spinner display time for smooth UX
-            var elapsedTime = Date.now() - startTime;
-            var remainingTime = Math.max(300 - elapsedTime, 0);
+            selectContainer.find('.loading-spinner').remove();
+            select.empty();
 
-            setTimeout(function() {
-                // Remove spinner with fade-out
-                setTimeout(function() {
-                    selectContainer.find('.loading-spinner').remove();
+            if (data.topics && data.topics.length > 0) {
 
-                    // Clear existing options
-                    select.empty();
+                // Normalize selectedNamesOrIds to array and match to topic IDs
+                var selectedIdsArray = [];
+                if (selectedNamesOrIds) {
+                    var inputArray = Array.isArray(selectedNamesOrIds) ? selectedNamesOrIds : [selectedNamesOrIds];
 
-                    if (data.topics && data.topics.length > 0) {
-
-                        // Normalize selectedNamesOrIds to array and match to topic IDs
-                        var selectedIdsArray = [];
-                        if (selectedNamesOrIds) {
-                            var inputArray = Array.isArray(selectedNamesOrIds) ? selectedNamesOrIds : [selectedNamesOrIds];
-
-                            // Match names or IDs to topic IDs
-                            inputArray.forEach(function(nameOrId) {
-                                var str = nameOrId.toString();
-                                // First try to find by ID
-                                var topicById = data.topics.find(function(topic) { return topic.id.toString() === str; });
-                                if (topicById) {
-                                    selectedIdsArray.push(topicById.id.toString());
-                                } else {
-                                    // Try to find by name
-                                    var topicByName = data.topics.find(function(topic) { return topic.name === str; });
-                                    if (topicByName) {
-                                        selectedIdsArray.push(topicByName.id.toString());
-                                    } else {
-                                    }
-                                }
-                            });
-                        }
-
-                        // Add topic options
-                        var selectedCount = 0;
-                        $.each(data.topics, function(index, topic) {
-
-                            var option = $('<option></option>')
-                                .attr('value', topic.id)
-                                .text(topic.name);
-
-                            // Select topics that are in the selectedIds array
-                            var shouldSelect = false;
-                            if (selectedIdsArray.length > 0 && selectedIdsArray.indexOf(topic.id.toString()) !== -1) {
-                                shouldSelect = true;
-                                selectedCount++;
-                            } else if (index === 0 && selectedIdsArray.length === 0) {
-                                // Only select first option if no specific selections provided
-                                shouldSelect = true;
-                            }
-
-                            if (shouldSelect) {
-                                option.attr('selected', 'selected');
-                            }
-
-                            select.append(option);
-                        });
-
-
-                        // Don't show the select yet - let callback handle it
-                        select.removeClass('hide').addClass('topic-select');
-
-                        // Enable OK button
-                        var okButton = select.closest('form').find('input[type="submit"]');
-                        okButton.prop('disabled', false);
-
-                        // Execute callback if provided
-                        if (callback && typeof callback === 'function') {
-                            callback();
+                    inputArray.forEach(function(nameOrId) {
+                        var str = nameOrId.toString();
+                        var topicById = data.topics.find(function(topic) { return topic.id.toString() === str; });
+                        if (topicById) {
+                            selectedIdsArray.push(topicById.id.toString());
                         } else {
-                            // If no callback, show the select (default for non-SlimSelect usage)
-                            select.show();
+                            var topicByName = data.topics.find(function(topic) { return topic.name === str; });
+                            if (topicByName) {
+                                selectedIdsArray.push(topicByName.id.toString());
+                            }
                         }
-                    } else {
-                        // No topics available - show message
-                        var hasExistingTopics = $.fn.zato.data_table.data && Object.keys($.fn.zato.data_table.data).length > 0;
-                        var message = hasExistingTopics ? 'No topics left' : 'No topics available';
+                    });
+                }
 
-                        // Add message with link
-                        var messageElement = $('<span class="no-topics-message" style="font-style: italic; color: #666;">' + message + ' - <a href="/zato/pubsub/topic/?cluster=' + clusterId + '" target="_blank">Click to create one</a></span>');
-                        selectContainer.append(messageElement);
+                // Add topic options
+                var selectedCount = 0;
+                $.each(data.topics, function(index, topic) {
 
-                        // Disable OK button
-                        var okButton = select.closest('form').find('input[type="submit"]');
-                        okButton.prop('disabled', true);
+                    var option = $('<option></option>')
+                        .attr('value', topic.id)
+                        .text(topic.name);
+
+                    var shouldSelect = false;
+                    if (selectedIdsArray.length > 0 && selectedIdsArray.indexOf(topic.id.toString()) !== -1) {
+                        shouldSelect = true;
+                        selectedCount++;
+                    } else if (index === 0 && selectedIdsArray.length === 0) {
+                        shouldSelect = true;
                     }
-                }, 300);
-            }, remainingTime);
+
+                    if (shouldSelect) {
+                        option.attr('selected', 'selected');
+                    }
+
+                    select.append(option);
+                });
+
+                select.removeClass('hide').addClass('topic-select');
+
+                // Enable OK button
+                var okButton = select.closest('form').find('input[type="submit"]');
+                okButton.prop('disabled', false);
+
+                // Execute callback if provided
+                if (callback && typeof callback === 'function') {
+                    callback();
+                } else {
+                    select.show();
+                }
+            } else {
+                // No topics available
+                var hasExistingTopics = $.fn.zato.data_table.data && Object.keys($.fn.zato.data_table.data).length > 0;
+                var message = hasExistingTopics ? 'No topics left' : 'No topics available';
+
+                var messageElement = $('<span class="no-topics-message" style="font-style: italic; color: #666;">' + message + ' - <a href="/zato/pubsub/topic/?cluster=' + clusterId + '" target="_blank">Click to create one</a></span>');
+                selectContainer.append(messageElement);
+
+                var okButton = select.closest('form').find('input[type="submit"]');
+                okButton.prop('disabled', true);
+            }
         },
         error: function(xhr, status, error) {
-            // Remove spinner on error
             selectContainer.find('.loading-spinner').remove();
 
-            // Show error message
             var errorElement = $('<span class="no-topics-message" style="font-style: italic; color: #d00;">Error loading topics</span>');
             selectContainer.append(errorElement);
 
-            // Disable OK button
             var okButton = select.closest('form').find('input[type="submit"]');
             okButton.prop('disabled', true);
         }
