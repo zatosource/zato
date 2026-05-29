@@ -962,24 +962,29 @@ div.action-panel span.form_hint {
     display: inline-block
 }
 
-div.action-panel span.previous-next {
-    color: #666;
-    font-size: 0.85rem;
-    padding: 3px;
-    vertical-align: middle;
-    display: inline-block;
-    position: relative;
-    top: 0px
-}
-
+div.action-panel span.previous-next,
 div.action-panel a {
     font-size: 0.85rem;
     vertical-align: middle;
     display: inline-block;
-    padding: 3px;
+    padding: 3px 3px 2px 3px;
     position: relative;
     top: 0px;
-    padding-bottom: 2px;
+    text-align: center;
+}
+
+div.action-panel span.previous-next.prev-slot,
+div.action-panel a.prev-slot {
+    min-width: 61px;
+}
+
+div.action-panel span.previous-next.next-slot,
+div.action-panel a.next-slot {
+    min-width: 36px;
+}
+
+div.action-panel span.previous-next {
+    color: #666;
 }
 
 .status-badge {
