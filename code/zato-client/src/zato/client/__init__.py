@@ -64,15 +64,33 @@ def default_json_handler(value):
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _pagination_to_int(value):
+    """ Parses a pagination header into an int, or None if the value is 'None'.
+    """
+    if value == 'None':
+        return None
+    return int(value)
+
+# ################################################################################################################################
+
+def _pagination_to_bool(value):
+    """ Parses a pagination header into a bool.
+    """
+    return value == 'True'
+
+# ################################################################################################################################
+
+# Each entry maps an HTTP header to a (meta key, parser) pair so the values are
+# turned back into proper Python types (ints, bools) instead of raw strings.
 _pagination_header_map = {
-    'X-Zato-Page-Current': 'cur_page',
-    'X-Zato-Page-Size': 'page_size',
-    'X-Zato-Page-Total': 'num_pages',
-    'X-Zato-Page-Previous': 'prev_page',
-    'X-Zato-Page-Next': 'next_page',
-    'X-Zato-Page-Has-Previous': 'has_prev_page',
-    'X-Zato-Page-Has-Next': 'has_next_page',
-    'X-Zato-Result-Total': 'total',
+    'X-Zato-Page-Current':       ('cur_page', _pagination_to_int),
+    'X-Zato-Page-Size':          ('page_size', _pagination_to_int),
+    'X-Zato-Page-Total':         ('num_pages', _pagination_to_int),
+    'X-Zato-Page-Previous':      ('prev_page', _pagination_to_int),
+    'X-Zato-Page-Next':          ('next_page', _pagination_to_int),
+    'X-Zato-Page-Has-Previous':  ('has_prev_page', _pagination_to_bool),
+    'X-Zato-Page-Has-Next':      ('has_next_page', _pagination_to_bool),
+    'X-Zato-Result-Total':       ('total', _pagination_to_int),
 }
 
 # ################################################################################################################################
@@ -92,11 +110,13 @@ class _APIResponse:
         self.data = None
         self.inner_service_response = None
 
-        # .. extract pagination metadata from response headers ..
+        # .. extract pagination metadata from response headers, parsing each value
+        # .. back into its proper Python type (int or bool) ..
         self.meta = {}
-        for header_name, meta_key in _pagination_header_map.items():
-            if value := inner.headers.get(header_name):
-                self.meta[meta_key] = value
+        for header_name, (meta_key, parser) in _pagination_header_map.items():
+            value = inner.headers.get(header_name)
+            if value is not None:
+                self.meta[meta_key] = parser(value)
 
         if self.ok:
             try:

@@ -979,7 +979,7 @@ div.action-panel a {
     padding: 3px;
     position: relative;
     top: 0px;
-    background-image: none;
+    padding-bottom: 2px;
 }
 
 .status-badge {
