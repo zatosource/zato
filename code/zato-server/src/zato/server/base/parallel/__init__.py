@@ -1049,17 +1049,34 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     if not result:
                         continue
 
+                    logger.info('Fire event: got %d streams in batch', len(result))
+
                     for stream_name, messages in result:  # type: ignore[union-attr]
+
+                        logger.info('Fire event: stream=%r msg_count=%d stream_type=%s',
+                            stream_name, len(messages), type(stream_name).__name__)
+
                         for msg_id, fields in messages:
+
+                            logger.info('Fire event: msg_id=%s stream=%r matched_fire=%s matched_timeout=%s fields_keys=%s',
+                                msg_id, stream_name,
+                                stream_name == fire_stream,
+                                stream_name == timeout_stream,
+                                list(fields.keys()))
+
                             if stream_name == fire_stream:
                                 _ = spawn(self._handle_fire_event, fields)
                             elif stream_name == timeout_stream:
                                 _ = spawn(self._handle_timeout_event, fields)
+                            else:
+                                logger.warning('Fire event: UNMATCHED stream_name=%r (type=%s) fire_stream=%r (type=%s)',
+                                    stream_name, type(stream_name).__name__,
+                                    fire_stream, type(fire_stream).__name__)
 
                             _ = fire_redis.xack(stream_name, group_name, msg_id)
 
                 except Exception:
-                    logger.warning('Error in scheduler fire listener: %s', format_exc())
+                    logger.warning('Fire event: listener loop exception: %s', format_exc())
                     sleep(1)
 
         _ = spawn(_fire_listener_loop)
@@ -1118,6 +1135,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         from zato.common.api import SCHEDULER
         from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 
+        logger.info('Fire event: handler entered, fields_keys=%s', list(fields.keys()))
+
         payload_json = fields['payload']
         ctx = json_loads(payload_json)
 
@@ -1165,15 +1184,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         except Exception:
             outcome = SCHEDULER.OUTCOME.ERROR
             error_traceback = format_exc()
-            logger.warning('Scheduler job_id=%s; name=%s; outcome=error; traceback=%s', job_id, job_name, error_traceback)
+            logger.warning('Fire event: service exception job_id=%s name=%s traceback=%s', job_id, job_name, error_traceback)
 
         duration_ms = int((_time.monotonic() - _t0) * 1000)
+
+        logger.info('Fire event: before mark_complete job_id=%s name=%s outcome=%s duration_ms=%s run=%s error_tb_len=%s',
+            job_id, job_name, outcome, duration_ms, current_run, len(error_traceback))
 
         # .. report the outcome to the Rust scheduler ..
         try:
             self._scheduler.mark_complete(job_id, outcome, duration_ms, current_run)
+            logger.info('Fire event: mark_complete sent job_id=%s run=%s outcome=%s', job_id, current_run, outcome)
         except Exception:
-            logger.warning('Scheduler mark_complete failed; job_id=%s; name=%s; traceback=%s', job_id, job_name, format_exc())
+            logger.warning('Fire event: mark_complete failed job_id=%s name=%s traceback=%s', job_id, job_name, format_exc())
 
         # .. and spawn callback greenlets based on the outcome.
         callback_context = {
