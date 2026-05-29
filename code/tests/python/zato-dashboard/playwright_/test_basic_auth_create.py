@@ -229,7 +229,7 @@ class TestBasicAuthCreate:
 
         assert name_value == '', f'Expected empty name, got: "{name_value}"'
         assert username_value == '', f'Expected empty username, got: "{username_value}"'
-        assert realm_value == '', f'Expected empty realm, got: "{realm_value}"'
+        assert realm_value == 'API', f'Expected default realm "API", got: "{realm_value}"'
         assert password_value == '', f'Expected empty password, got: "{password_value}"'
 
         # .. verify no uniqueness indicators remain.
@@ -276,7 +276,7 @@ class TestBasicAuthCreate:
 
         assert name_value == '', f'Expected empty name, got: "{name_value}"'
         assert username_value == '', f'Expected empty username, got: "{username_value}"'
-        assert realm_value == '', f'Expected empty realm, got: "{realm_value}"'
+        assert realm_value == 'API', f'Expected default realm "API", got: "{realm_value}"'
         assert password_value == '', f'Expected empty password, got: "{password_value}"'
 
 # ################################################################################################################################
