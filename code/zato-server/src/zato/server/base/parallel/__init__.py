@@ -2126,7 +2126,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def check_attr_exists(self, entity_type:'str', attr_name:'str', value:'any_') -> 'str':
+    def check_attr_exists(
+        self,
+        entity_type:'str',
+        attr_name:'str',
+        value:'any_',
+        filter_name:'str'='',
+        filter_value:'str'='',
+        ) -> 'str':
         import json
         from contextlib import closing
         from sqlalchemy import text
@@ -2139,18 +2146,28 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         table_name = _entity_type_to_table.get(entity_type, entity_type)
 
-        exists = False
+        # The value we are checking for is always bound under this key ..
+        params = {'val': value}
+
+        # .. start with the primary equality condition ..
+        where = f'{attr_name} = :val'
+
+        # .. and, when a scoping filter is given, narrow the check down further so that
+        # .. it matches the real ODB unique constraint (e.g. username is unique per sec_type) ..
+        if filter_name:
+            where = f'{where} AND {filter_name} = :filter_value'
+            params['filter_value'] = filter_value
+
         with closing(self.odb.session()) as session:
-            try:
-                query = f'SELECT 1 FROM {table_name} WHERE {attr_name} = :val LIMIT 1'
-                result = session.execute(
-                    text(query),  # type: ignore[operator]
-                    {'val': value}
-                )
-                exists = result.fetchone() is not None
-            except Exception:
-                pass
-        return json.dumps({'exists': exists})
+            query = f'SELECT 1 FROM {table_name} WHERE {where} LIMIT 1'
+            result = session.execute(
+                text(query),  # type: ignore[operator]
+                params
+            )
+            exists = result.fetchone() is not None
+
+        out = json.dumps({'exists': exists})
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -2446,7 +2446,7 @@ $.fn.zato.pubsub.import_demo_config = function() {
     });
 };
 
-$.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
+$.fn.zato.validate_unique = function(field_id, entity_type, attr_name, filter) {
     var field = $(field_id);
     if(!field.length) {
         return;
@@ -2476,14 +2476,25 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
         }
 
         timer = setTimeout(function() {
+
+            // The base payload always carries the entity, attribute and value being checked ..
+            var data = {
+                'entity_type': entity_type,
+                'attr_name': attr_name,
+                'value': value
+            };
+
+            // .. and, when a scoping filter is supplied, narrow the check down to that sub-group
+            // .. (e.g. a username is unique per sec_type rather than globally).
+            if(filter) {
+                data['filter_name'] = filter.filter_name;
+                data['filter_value'] = filter.filter_value;
+            }
+
             $.ajax({
                 type: 'POST',
                 url: '/zato/check-attr-exists/',
-                data: {
-                    'entity_type': entity_type,
-                    'attr_name': attr_name,
-                    'value': value
-                },
+                data: data,
                 headers: {'X-CSRFToken': $.cookie('csrftoken')},
                 dataType: 'json',
                 success: function(data) {
