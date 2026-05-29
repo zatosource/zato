@@ -21,11 +21,7 @@ from http.client import OK
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
-_pubsub_push_dir = os.path.join(os.path.dirname(__file__), '..', 'pubsub_push')
-_pubsub_push_dir = os.path.abspath(_pubsub_push_dir)
 
-sys.path.insert(0, os.path.dirname(__file__))
-sys.path.insert(0, _pubsub_push_dir)
 
 # pytest
 import pytest
@@ -34,8 +30,8 @@ import pytest
 # ################################################################################################################################
 
 if 0:
-    from _receiver import WebhookReceiver
-    from config import endpoint_config_dict as endpoint_config_dict
+    from zato.common.test.receiver import WebhookReceiver
+    from zato.common.test.config_pubsub_push import endpoint_config_dict as endpoint_config_dict
     from zato.common.typing_ import any_, anydict, strstrdict
 
 # ################################################################################################################################
@@ -55,6 +51,8 @@ logger = logging.getLogger('zato.test.pubsub_cleanup.conftest')
 _zato_base = os.environ['ZATO_TEST_BASE_DIR']
 _zato_bin  = os.path.join(_zato_base, 'code', 'bin', 'zato')
 
+_pubsub_push_dir = os.path.join(os.path.dirname(__file__), '..', 'pubsub_push')
+_pubsub_push_dir = os.path.abspath(_pubsub_push_dir)
 _template_path = os.path.join(_pubsub_push_dir, '_enmasse_template.yaml')
 
 _process_kill_timeout = 5
@@ -236,8 +234,8 @@ def zato_server() -> 'any_':
     and yields connection details for the pub/sub cleanup tests.
     """
 
-    from _receiver import WebhookReceiver
-    from config import EndpointConfig, TestConfig
+    from zato.common.test.receiver import WebhookReceiver
+    from zato.common.test.config_pubsub_push import EndpointConfig, TestConfig
 
     # Kill any leftover Zato servers from interrupted previous runs ..
     _ = subprocess.run(['pkill', '-f', 'zato.server.main'], capture_output=True)
@@ -431,7 +429,7 @@ def zato_server() -> 'any_':
 def clear_all_outputs() -> 'any_':
     """ Clears all delivered message files from every receiver's output directory before each test.
     """
-    from config import TestConfig
+    from zato.common.test.config_pubsub_push import TestConfig
 
     for endpoint_config in TestConfig.endpoints.values():
         endpoint_config.receiver.clear_output()

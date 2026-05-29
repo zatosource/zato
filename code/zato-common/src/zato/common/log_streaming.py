@@ -131,30 +131,16 @@ class LogStreamingManager:
 
     def enable_streaming(self):
         redis_handler = self.get_redis_handler()
-        stream_logger = logging.getLogger('zato.stream_manager')
-        stream_logger.info('LogStreamingManager.enable_streaming: called for logger "{}"'.format(self.logger_name))
 
         if redis_handler not in self.logger.handlers:
-            stream_logger.info('LogStreamingManager.enable_streaming: adding redis_handler to logger')
             self.logger.addHandler(redis_handler)
-            stream_logger.info('LogStreamingManager: enabled streaming on logger "{}", propagate={}'.format(
-                self.logger_name, self.logger.propagate))
-            stream_logger.info('LogStreamingManager: logger level={}, handler count={}'.format(
-                self.logger.level, len(self.logger.handlers)))
 
             for logger_name in self.loggers_to_stream:
                 logger_obj = logging.getLogger(logger_name)
-                stream_logger.info('LogStreamingManager.enable_streaming: checking logger "{}"'.format(logger_name))
                 if redis_handler not in logger_obj.handlers:
-                    stream_logger.info('LogStreamingManager.enable_streaming: adding RedisHandler to "{}"'.format(logger_name))
                     logger_obj.addHandler(redis_handler)
-                    stream_logger.info('LogStreamingManager: added RedisHandler to {} logger'.format(logger_name))
-                else:
-                    stream_logger.info('LogStreamingManager.enable_streaming: RedisHandler already in "{}"'.format(logger_name))
 
             return True
-        stream_logger = logging.getLogger('zato.stream_manager')
-        stream_logger.info('LogStreamingManager: streaming already enabled on logger "{}"'.format(self.logger_name))
         return False
 
     def disable_streaming(self):

@@ -21,7 +21,6 @@ from http.client import OK
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
-sys.path.insert(0, os.path.dirname(__file__))
 
 # pytest
 import pytest
@@ -30,8 +29,8 @@ import pytest
 # ################################################################################################################################
 
 if 0:
-    from _receiver import WebhookReceiver
-    from config import endpoint_config_dict as endpoint_config_dict
+    from zato.common.test.receiver import WebhookReceiver
+    from zato.common.test.config_pubsub_push import endpoint_config_dict as endpoint_config_dict
     from zato.common.typing_ import any_, anydict, strstrdict
 
 # ################################################################################################################################
@@ -232,8 +231,8 @@ def zato_server() -> 'any_':
     and yields connection details for the pub/sub push tests.
     """
 
-    from _receiver import WebhookReceiver
-    from config import EndpointConfig, TestConfig
+    from zato.common.test.receiver import WebhookReceiver
+    from zato.common.test.config_pubsub_push import EndpointConfig, TestConfig
 
     # Kill any leftover Zato servers from interrupted previous runs ..
     _ = subprocess.run(['pkill', '-f', 'zato.server.main'], capture_output=True)
@@ -427,7 +426,7 @@ def zato_server() -> 'any_':
 def clear_all_outputs() -> 'any_':
     """ Clears all delivered message files from every receiver's output directory before each test.
     """
-    from config import TestConfig
+    from zato.common.test.config_pubsub_push import TestConfig
 
     for endpoint_config in TestConfig.endpoints.values():
         endpoint_config.receiver.clear_output()
@@ -441,7 +440,7 @@ def clear_all_outputs() -> 'any_':
 def reset_receivers() -> 'any_':
     """ Resets all receivers to accept mode before the test, then clears output.
     """
-    from config import TestConfig
+    from zato.common.test.config_pubsub_push import TestConfig
 
     for endpoint_config in TestConfig.endpoints.values():
         endpoint_config.receiver.behavior.reset()
@@ -457,7 +456,7 @@ def drain_pull_queue() -> 'any_':
     """ Drains the pull queue so the test starts with zero pending messages.
     """
     from zato.common.test.client import PullClient
-    from config import TestConfig
+    from zato.common.test.config_pubsub_push import TestConfig
 
     client = PullClient(TestConfig.base_url, TestConfig.puller_username, TestConfig.puller_password)
     client.drain()

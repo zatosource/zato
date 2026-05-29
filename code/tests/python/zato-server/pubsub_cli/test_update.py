@@ -60,7 +60,7 @@ class TestUpdate:
     def test_update_message_payload(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
-        from config import TestConfig
+        from zato.common.test.config_pubsub_cli import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
         publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)

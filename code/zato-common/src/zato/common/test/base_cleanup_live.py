@@ -21,7 +21,7 @@ from zato.common.typing_ import cast_
 
 # local
 from zato.common.test.client import PublishClient
-from config import TestConfig
+from zato.common.test.config_pubsub_push import TestConfig
 
 # ################################################################################################################################
 # ################################################################################################################################

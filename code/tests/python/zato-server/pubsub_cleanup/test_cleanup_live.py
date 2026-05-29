@@ -12,7 +12,7 @@ import time
 import unittest
 
 # local
-from _base_cleanup_live import BaseCleanupLiveTestCase
+from zato.common.test.base_cleanup_live import BaseCleanupLiveTestCase
 
 # ################################################################################################################################
 # ################################################################################################################################
