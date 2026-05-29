@@ -1049,12 +1049,15 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     if not result:
                         continue
 
-                    logger.info('Fire event: got %d streams in batch', len(result))
+                    len_result = len(result)
+                    logger.info('Fire event: got %d %s in batch', len_result, 'stream' if len_result == 1 else 'streams')
 
                     for stream_name, messages in result:  # type: ignore[union-attr]
 
-                        logger.info('Fire event: stream=%r msg_count=%d stream_type=%s',
-                            stream_name, len(messages), type(stream_name).__name__)
+                        len_messages = len(messages)
+                        logger.info('Fire event: stream=%r %d %s stream_type=%s',
+                            stream_name, len_messages, 'message' if len_messages == 1 else 'messages',
+                            type(stream_name).__name__)
 
                         for msg_id, fields in messages:
 
