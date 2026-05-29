@@ -26,6 +26,13 @@ from zato.common.ext.bunch import Bunch
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from django.http import HttpRequest
+    from zato.common.typing_ import any_, anydict, anylist, strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
@@ -45,13 +52,13 @@ class Index(_Index):
         'topic_link_list', 'pending_depth'
     output_repeated = True
 
-    def on_before_append_item(self, item):
+    def on_before_append_item(self, item:'any_') -> 'any_':
 
         topic_name_list = item.topic_name_list
         item.topic_name_list = dumps(topic_name_list)
         return item
 
-    def handle(self):
+    def handle(self) -> 'anydict':
 
         create_form = CreateForm(req=self.req)
         edit_form = EditForm(prefix='edit', req=self.req)
@@ -66,7 +73,7 @@ class Index(_Index):
 
 class _CreateEdit(CreateEdit):
 
-    def post_process_return_data(self, return_data):
+    def post_process_return_data(self, return_data:'anydict') -> 'anydict':
 
         topic_name_list = return_data.get('topic_name_list', [])
         return_data['topic_name_list'] = dumps(topic_name_list)
@@ -76,7 +83,7 @@ class _CreateEdit(CreateEdit):
 
         return return_data
 
-    def _get_input_dict_common(self, topic_field_name):
+    def _get_input_dict_common(self, topic_field_name:'str') -> 'anydict':
 
         input_dict = {}
 
@@ -87,7 +94,7 @@ class _CreateEdit(CreateEdit):
 
         return input_dict
 
-    def _pre_process_input_dict_common(self, input_dict, field_prefix):
+    def _pre_process_input_dict_common(self, input_dict:'anydict', field_prefix:'str') -> 'None':
 
         if self.req.method == 'POST':
             topic_data_list = self.req.POST.getlist('topic_data')
@@ -117,7 +124,7 @@ class _CreateEdit(CreateEdit):
                 elif service_field in ('is_delivery_active', 'is_pub_active'):
                     input_dict[service_field] = False
 
-    def _get_field_mapping(self, prefix):
+    def _get_field_mapping(self, prefix:'str') -> 'anydict':
         raise NotImplementedError('Subclasses must implement _get_field_mapping')
 
 # ################################################################################################################################
@@ -133,10 +140,10 @@ class Create(_CreateEdit):
     output_required = 'id', 'sub_key', 'is_delivery_active', 'created', 'security', 'delivery_type', \
         'topic_name_list', 'topic_link_list',
 
-    def _get_input_dict(self):
+    def _get_input_dict(self) -> 'anydict':
         return self._get_input_dict_common('create-topic_name')
 
-    def _get_field_mapping(self, prefix):
+    def _get_field_mapping(self, prefix:'str') -> 'anydict':
         return {
             'sec_base_id': 'sec_base_id',
             'delivery_type': 'delivery_type',
@@ -145,10 +152,10 @@ class Create(_CreateEdit):
             'rest_push_endpoint_id': 'rest_push_endpoint_id'
         }
 
-    def pre_process_input_dict(self, input_dict):
+    def pre_process_input_dict(self, input_dict:'anydict') -> 'None':
         self._pre_process_input_dict_common(input_dict, '')
 
-    def success_message(self, item):
+    def success_message(self, item:'any_') -> 'str':
         return 'Successfully created pub/sub subscription'
 
 # ################################################################################################################################
@@ -163,10 +170,10 @@ class Edit(_CreateEdit):
     input_optional = 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
     output_required = 'id', 'sub_key', 'security', 'delivery_type', 'is_delivery_active', 'topic_name_list', 'topic_link_list'
 
-    def _get_input_dict(self):
+    def _get_input_dict(self) -> 'anydict':
         return self._get_input_dict_common('topic_name')
 
-    def _get_field_mapping(self, prefix):
+    def _get_field_mapping(self, prefix:'str') -> 'anydict':
         return {
             f'{prefix}sub_key': 'sub_key',
             f'{prefix}sec_base_id': 'sec_base_id',
@@ -178,10 +185,10 @@ class Edit(_CreateEdit):
             f'{prefix}push_service_name': 'push_service_name',
         }
 
-    def pre_process_input_dict(self, input_dict):
+    def pre_process_input_dict(self, input_dict:'anydict') -> 'None':
         self._pre_process_input_dict_common(input_dict, 'edit-')
 
-    def success_message(self, item):
+    def success_message(self, item:'any_') -> 'str':
         return 'Successfully updated pub/sub subscription'
 
 # ################################################################################################################################
@@ -196,7 +203,7 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('GET')
-def get_security_definitions(req):
+def get_security_definitions(req:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of security definitions for pubsub subscriptions.
     """
     form_type = req.GET.get('form_type', 'create')
@@ -224,7 +231,7 @@ def get_security_definitions(req):
 # ################################################################################################################################
 
 @method_allowed('GET')
-def get_topics(req):
+def get_topics(req:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of topics for pubsub subscriptions.
     """
     cluster_id = req.GET.get('cluster_id')
@@ -267,38 +274,38 @@ def get_topics(req):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_topic_name_from_tuple(topic_tuple):
+def _get_topic_name_from_tuple(topic_tuple:'tuple') -> 'str':
     """ Get topic name from tuple (id, name).
     """
     return topic_tuple[1]
 
-def _get_topic_name_from_dict(topic_dict):
+def _get_topic_name_from_dict(topic_dict:'anydict') -> 'str':
     """ Get topic name from dictionary.
     """
     return topic_dict['name']
 
-def _sort_topics_by_name(topics):
+def _sort_topics_by_name(topics:'any_') -> 'anylist':
     """ Sort topics by name.
     """
     return sorted(topics, key=_get_topic_name_from_tuple)
 
 # ################################################################################################################################
 
-def _sort_topic_dicts_by_name(topic_dicts):
+def _sort_topic_dicts_by_name(topic_dicts:'anylist') -> 'anylist':
     """ Sort topic dictionaries by name.
     """
     return sorted(topic_dicts, key=_get_topic_name_from_dict)
 
 # ################################################################################################################################
 
-def _is_subscriber_access(access_type):
+def _is_subscriber_access(access_type:'str') -> 'bool':
     """ Check if access type allows subscription.
     """
     return access_type in (PubSub.API_Client.Subscriber, PubSub.API_Client.Publisher_Subscriber)
 
 # ################################################################################################################################
 
-def _get_subscriber_patterns_for_sec_def(req, sec_base_id, cluster_id):
+def _get_subscriber_patterns_for_sec_def(req:'HttpRequest', sec_base_id:'str', cluster_id:'str') -> 'strlist':
     """ Get subscriber patterns for a given security definition.
     """
     logger = logging.getLogger(__name__)
@@ -322,7 +329,7 @@ def _get_subscriber_patterns_for_sec_def(req, sec_base_id, cluster_id):
 
 # ################################################################################################################################
 
-def _get_topics_for_patterns(req, subscriber_patterns, cluster_id):
+def _get_topics_for_patterns(req:'HttpRequest', subscriber_patterns:'strlist', cluster_id:'str') -> 'set':
     """ Get all topics matching the given patterns.
     """
     logger = logging.getLogger(__name__)
@@ -345,7 +352,7 @@ def _get_topics_for_patterns(req, subscriber_patterns, cluster_id):
 
 # ################################################################################################################################
 
-def _build_topic_checkbox_html(all_topics, cluster_id):
+def _build_topic_checkbox_html(all_topics:'set', cluster_id:'str') -> 'str':
     """ Build HTML for topic checkboxes.
     """
     html_parts = []
@@ -374,7 +381,7 @@ def _build_topic_checkbox_html(all_topics, cluster_id):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def sec_def_topic_sub_list(req, sec_base_id, cluster_id):
+def sec_def_topic_sub_list(req:'HttpRequest', sec_base_id:'str', cluster_id:'str') -> 'HttpResponse':
     """ Returns HTML for topics to which a given security definition has access for subscription.
     """
     logger = logging.getLogger(__name__)
@@ -408,7 +415,7 @@ def sec_def_topic_sub_list(req, sec_base_id, cluster_id):
 # ################################################################################################################################
 
 @method_allowed('GET')
-def get_rest_endpoints(req):
+def get_rest_endpoints(req:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of REST outgoing connections for pubsub subscriptions.
     """
     cluster_id = req.GET.get('cluster_id')
@@ -449,7 +456,7 @@ def get_rest_endpoints(req):
 # ################################################################################################################################
 
 @method_allowed('GET')
-def get_service_list(req):
+def get_service_list(req:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of services for pubsub subscriptions.
     """
     cluster_id = req.GET.get('cluster_id')
@@ -483,7 +490,7 @@ def get_service_list(req):
 # ################################################################################################################################
 
 @method_allowed('GET')
-def get_topics_by_security(req):
+def get_topics_by_security(req:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of topics filtered by security definition's subscribe permissions.
     """
     cluster_id = req.GET.get('cluster_id')

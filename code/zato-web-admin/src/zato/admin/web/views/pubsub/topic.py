@@ -27,7 +27,8 @@ from zato.common.ext.bunch import Bunch
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from django.http import HttpRequest
+    from zato.common.typing_ import any_, anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,7 +51,7 @@ class Index(_Index):
     output_optional = 'description', 'publisher_count', 'subscriber_count',
     output_repeated = True
 
-    def handle(self):
+    def handle(self) -> 'anydict':
         return {
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
@@ -68,7 +69,7 @@ class _CreateEdit(CreateEdit):
     input_optional = 'description',
     output_required = 'id', 'name'
 
-    def success_message(self, item):
+    def success_message(self, item:'any_') -> 'str':
         return 'Successfully {} Pub/Sub topic `{}`'.format(self.verb, item.name)
 
 # ################################################################################################################################
@@ -98,7 +99,7 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def get_matches(req):
+def get_matches(req:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of topics matching a pattern.
     """
     cluster_id = req.POST.get('cluster_id')
@@ -135,7 +136,7 @@ def get_matches(req):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def publish_message(request:'any_', id:'str') -> 'JsonResponse':
+def publish_message(request:'HttpRequest', id:'str') -> 'JsonResponse':
     """ Publishes a message to a pub/sub topic from the dashboard.
     """
     try:

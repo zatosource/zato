@@ -16,9 +16,22 @@ from django import forms
 from zato.admin.web.util import get_pubsub_security_choices
 from zato.common.api import PubSub
 
-logger = logging.getLogger()
+# ################################################################################################################################
+# ################################################################################################################################
 
-def get_rest_endpoint_choices(req):
+if 0:
+    from django.http import HttpRequest
+    from zato.common.typing_ import any_, strnone
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_rest_endpoint_choices(req:'HttpRequest') -> 'list':
     response = req.zato.client.invoke('zato.http-soap.get-list', {
         'cluster_id': req.zato.cluster_id,
         'connection': 'outgoing',
@@ -59,8 +72,8 @@ class CreateForm(forms.Form):
         widget=forms.Select()
     )
 
-    def __init__(self, prefix=None, post_data=None, req=None):
-        super(CreateForm, self).__init__(post_data, prefix=prefix)
+    def __init__(self, prefix:'strnone'=None, post_data:'any_'=None, req:'any_'=None) -> 'None':
+        super().__init__(post_data, prefix=prefix)
         if req:
 
             # Topics will be populated dynamically via AJAX
@@ -80,8 +93,8 @@ class EditForm(CreateForm):
     is_delivery_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     is_pub_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
-    def __init__(self, prefix=None, post_data=None, req=None):
-        super(EditForm, self).__init__(prefix, post_data, req)
+    def __init__(self, prefix:'strnone'=None, post_data:'any_'=None, req:'any_'=None) -> 'None':
+        super().__init__(prefix, post_data, req)
 
         if req:
             # Topics will be populated dynamically via AJAX

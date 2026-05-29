@@ -21,6 +21,14 @@ from zato.admin.web.util import get_pubsub_security_definitions
 from zato.common.ext.bunch import Bunch
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from django.http import HttpRequest
+    from zato.common.typing_ import any_, anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +46,7 @@ class Index(_Index):
     output_required = 'id', 'name', 'pattern', 'access_type', 'sec_base_id', 'subscription_count'
     output_repeated = True
 
-    def handle(self):
+    def handle(self) -> 'anydict':
         create_form = CreateForm()
         edit_form = EditForm(prefix='edit')
 
@@ -53,7 +61,7 @@ class Index(_Index):
 class GetSecurityDefinitions(View):
     url_name = 'pubsub-permission-get-security-definitions'
 
-    def get(self, request):
+    def get(self, request:'HttpRequest') -> 'JsonResponse':
         form_type = request.GET.get('form_type', 'edit')
         choices = get_pubsub_security_definitions(request, form_type, 'permission')
         return JsonResponse({'security_definitions': choices})
@@ -64,7 +72,7 @@ class _CreateEdit(CreateEdit):
 
     method_allowed = 'POST'
 
-    def get_form_kwargs(self):
+    def get_form_kwargs(self) -> 'anydict':
         response = self.req.zato.client.invoke('zato.security.basic-auth.get-list', {
             'cluster_id': self.req.zato.cluster_id,
         })
@@ -89,7 +97,7 @@ class Create(_CreateEdit):
     input_optional = 'cluster_id',
     output_required = 'id', 'security'
 
-    def success_message(self, item):
+    def success_message(self, item:'any_') -> 'str':
         return 'Successfully created the PubSub permission'
 
 # ################################################################################################################################
@@ -106,7 +114,7 @@ class Edit(_CreateEdit):
     input_optional = 'cluster_id',
     output_required = 'id', 'security'
 
-    def success_message(self, item):
+    def success_message(self, item:'any_') -> 'str':
 
         sec_base_id = self.input.sec_base_id
 
@@ -128,7 +136,7 @@ class Delete(_Delete):
     error_message = 'Could not delete the PubSub permission'
     service_name = 'zato.pubsub.permission.delete'
 
-    def success_message(self, item):
+    def success_message(self, item:'any_') -> 'str':
         return 'Successfully deleted the PubSub permission'
 
 # ################################################################################################################################

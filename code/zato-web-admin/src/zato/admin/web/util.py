@@ -24,6 +24,12 @@ from zato.common.util.platform_ import is_windows
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -155,7 +161,7 @@ def was_modified_since(header=None, mtime=0):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_pubsub_security_definitions(request, form_type='edit', context='subscription'):
+def get_pubsub_security_definitions(request:'any_', form_type:'str'='edit', context:'str'='subscription') -> 'list':
 
     response = request.zato.client.invoke('zato.security.basic-auth.get-list', {
         'cluster_id': request.zato.cluster_id,
@@ -230,7 +236,7 @@ def get_pubsub_security_definitions(request, form_type='edit', context='subscrip
 
     return choices
 
-def get_pubsub_security_choices(request, form_type='edit', context='subscription'):
+def get_pubsub_security_choices(request:'any_', form_type:'str'='edit', context:'str'='subscription') -> 'list':
     """ Get filtered security definitions for Django form choices (tuples format).
     """
     definitions = get_pubsub_security_definitions(request, form_type, context)
