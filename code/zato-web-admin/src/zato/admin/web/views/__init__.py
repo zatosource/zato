@@ -285,6 +285,7 @@ class BaseView:
 
     def set_input(self, req=None, default_attrs=('cur_page', 'query')):
         req = req or self.req
+        logger.info('set_input: paginate=%s, cluster_id=%s', getattr(self, 'paginate', False), self.cluster_id)
         self.input.update({
             'cluster_id':self.cluster_id,
             'paginate': getattr(self, 'paginate', False),
@@ -494,12 +495,17 @@ class Index(BaseView):
                 if response and response.ok:
                     return_data['response_inner'] = response.inner_service_response
 
+                    logger.info('__call__: response.data type=%s, response.meta=%s',
+                        type(response.data).__name__, response.meta)
+
                     if isinstance(response.data, list):
                         logger.info('View: handling as list, len=%d', len(response.data))
                         self.handle_item_list(response.data, True)
                     elif hasattr(response.data, 'get'):
                         if response_list := response.data.get('response'):
                             logger.info('View: handling as paginated response, len=%d', len(response_list))
+                            logger.info('__call__: paginated response_list len=%d, _meta=%s',
+                                len(response_list), response.data.get('_meta'))
                             self.handle_item_list(response_list, True)
                         else:
                             logger.info('View: handling as single item (dict without response key)')
@@ -520,7 +526,12 @@ class Index(BaseView):
             return_data['input'] = self.input
             return_data['zato_clusters'] = req.zato.clusters
             return_data['search_form'] = req.zato.search_form
-            return_data['meta'] = response.meta if response else {}
+            logger.info('__call__: final meta=%s, items_count=%d',
+                response.meta if response else 'no-response', len(self.items))
+            if response and hasattr(response.data, 'get') and response.data.get('_meta'):
+                return_data['meta'] = response.data['_meta']
+            else:
+                return_data['meta'] = response.meta if response else {}
             return_data['paginate'] = getattr(self, 'paginate', False)
             return_data['zato_template_name'] = template_name
 

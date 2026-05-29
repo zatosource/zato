@@ -829,6 +829,10 @@ class Service:
         if _zato_needs_response_wrapper is False:
             kwargs['skip_response_elem'] = True
 
+        logger.info('update_handle: skip_response_elem=%s, response type=%s, has_keys=%s, keys=%s',
+            kwargs.get('skip_response_elem'), type(response).__name__, hasattr(response, 'keys'),
+            list(response.keys()) if hasattr(response, 'keys') else 'N/A')
+
         if kwargs.get('skip_response_elem') and hasattr(response, 'keys'):
 
             # If if has .keys, it means it is a dict.
@@ -845,10 +849,16 @@ class Service:
             # It is possible that the dictionary is empty
             response_elem = keys[0] if keys else None
 
+            logger.info('update_handle: after _meta removal, keys=%s, response_elem=%s', keys, response_elem)
+
             # This covers responses that have only one top-level element
             # and that element's name is 'response' or, e.g. 'zato_amqp_...'
             if len(keys) == 1:
                 if response_elem == 'response' or (isinstance(response_elem, str) and response_elem.startswith('zato')):
+                    if '_meta' in response:
+                        logger.info('update_handle: _meta present, returning full response dict')
+                        return response
+                    logger.info('update_handle: returning response[%s], type=%s', response_elem, type(response[response_elem]).__name__)
                     return response[response_elem]
 
                 # This may be a dict response from a service, in which case we return it as is
