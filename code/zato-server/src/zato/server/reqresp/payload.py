@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import traceback
 from logging import getLogger
 
 # Zato
@@ -172,6 +173,10 @@ class IOPayload:
         """
         value = self.user_attrs_list if self.output_repeated else self.user_attrs_dict
 
+        stack = ''.join(traceback.format_stack())
+        logger.info('payload.getvalue: zato_meta=%s, output_repeated=%s, list_len=%d\n%s',
+            self.zato_meta, self.output_repeated, len(self.user_attrs_list), stack)
+
         if self.zato_meta:
             search = self.zato_meta.get('search')
             if search:
@@ -179,6 +184,9 @@ class IOPayload:
                     value['_meta'] = search
                 else:
                     value = {'response': value, '_meta': search}
+
+        logger.info('payload.getvalue: returning type=%s, keys=%s',
+            type(value).__name__, list(value.keys()) if isinstance(value, dict) else 'N/A')
 
         return value
 

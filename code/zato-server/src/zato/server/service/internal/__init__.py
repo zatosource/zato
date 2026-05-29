@@ -144,6 +144,7 @@ class AdminService(Service):
             if not is_text:
                 if hasattr(payload, 'zato_meta'):
                     payload.zato_meta = self._search_tool.output_meta
+                    logger.info('after_handle: payload.zato_meta set to %s', self._search_tool.output_meta)
 
 # ################################################################################################################################
 
@@ -162,6 +163,7 @@ class AdminService(Service):
         if needs_pagination:
             result = sql_search(search_func, self.request.input, self._filter_by, session, cluster_id, *args, **kwargs)
             self._search_tool.set_output_meta(result)
+            logger.info('_search: pagination meta -> %s', self._search_tool.output_meta)
         else:
             # No pagination requested at all
             result = search_func(session, cluster_id, *args)
