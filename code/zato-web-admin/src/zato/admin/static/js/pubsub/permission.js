@@ -66,26 +66,14 @@ function showTopicsAlert(pattern, event) {
 
     // Create popup content HTML
     var popupHtml = '' +
-        '<div id="' + popupId + '" title="Pattern: ' + pattern + '" style="font-size: 11px; line-height: 1.3; background-color: #f0f0f0;">' +
-            '<div id="' + popupId + '-content" class="topic-popup-content" style="background-color: #f0f0f0; border-radius: 0; padding: 4px;">' +
-                '<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80px; padding: 8px; color: #666; background-color: #f0f0f0;">' +
-                    '<div style="width: 12px; height: 12px; border: 1px solid #ddd; border-top: 1px solid #666; border-radius: 50%; animation: spin 1s linear infinite;"></div>' +
-                    '<div style="margin-top: 4px; font-size: 10px;">Loading...</div>' +
+        '<div id="' + popupId + '" title="Pattern: ' + pattern + '" class="topic-matches-popup-container">' +
+            '<div id="' + popupId + '-content" class="topic-popup-content">' +
+                '<div class="topic-matches-popup-loading">' +
+                    '<div class="topic-matches-popup-spinner"></div>' +
+                    '<div class="topic-matches-popup-loading-text">Loading...</div>' +
                 '</div>' +
             '</div>' +
-        '</div>' +
-        '<style>' +
-            '@keyframes spin {' +
-                '0% { transform: rotate(0deg); }' +
-                '100% { transform: rotate(360deg); }' +
-            '}' +
-            '#' + popupId + ' { background-color: #f0f0f0 !important; }' +
-            // Only target the dialog that contains this specific popup ID
-            '.ui-dialog:has(#' + popupId + ') {' +
-                'background-color: #f0f0f0 !important;' +
-                'width: 20em !important;' +
-            '}' +
-        '</style>';
+        '</div>';
 
     // Add to page and create dialog
     $('body').append(popupHtml);
@@ -143,25 +131,8 @@ function showTopicsAlert(pattern, event) {
     var $titlebar = $dialog.find('.ui-dialog-titlebar');
     var $closeButton = $titlebar.find('.ui-dialog-titlebar-close');
 
-    // Style the close button - white background with black X
-    $closeButton.html('×').css({
-        'position': 'absolute',
-        'right': '4px',
-        'top': '50%',
-        'transform': 'translateY(-50%)',
-        'width': '14px',
-        'height': '14px',
-        'font-size': '12px',
-        'line-height': '14px',
-        'text-align': 'center',
-        'color': '#000000',
-        'background': '#ddd',
-        'border': 'none',
-        'border-radius': '0',
-        'box-shadow': 'none',
-        'cursor': 'pointer',
-        'padding': '0'
-    });
+    // Style the close button
+    $closeButton.html('×').addClass('topic-matches-popup-close');
 
     // Remove any UI widget styling
     $closeButton.removeClass('ui-button ui-corner-all ui-widget ui-button-icon-only ui-dialog-titlebar-close');
@@ -280,7 +251,7 @@ function showTopicsAlert(pattern, event) {
 
         },
         error: function(xhr, status, error) {
-        var errorHtml = '<div style="text-align: center; padding: 8px; color: #d32f2f; font-size: 10px; background-color: #f0f0f0;">';
+        var errorHtml = '<div class="topic-matches-popup-error">';
             errorHtml += 'Error: ' + error;
             if (xhr.status) {
                 errorHtml += ' (' + xhr.status + ')';
