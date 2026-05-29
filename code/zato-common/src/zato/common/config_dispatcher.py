@@ -55,17 +55,11 @@ def handle_config_event(msg:'anydict', context:'any_') -> 'ConfigEventResult':
         handler_name = f'on_config_event_{action_code}'
         func = getattr(context, handler_name, None)
 
-        msg_keys = list(msg.keys()) if hasattr(msg, 'keys') else 'N/A'
-        logger.info('handle_config_event: action_code=%s, handler=%s, found=%s, msg keys=%s',
-            action_code, handler_name, func is not None, msg_keys)
-
         if func:
             msg = bunchify(msg)
-            logger.info('handle_config_event: calling %s', handler_name)
             response = func(msg)
             result.response = response
             result.was_handled = True
-            logger.info('handle_config_event: %s completed, response type=%s', handler_name, type(response).__name__)
         else:
             logger.warning('No handler: %s in context: %s -> %s', handler_name, context, msg)
 

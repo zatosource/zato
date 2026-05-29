@@ -14,7 +14,7 @@ import time
 import unittest
 
 # local
-from _client import PublishClient
+from zato.common.test.client import PublishClient
 from config import TestConfig
 
 # ################################################################################################################################

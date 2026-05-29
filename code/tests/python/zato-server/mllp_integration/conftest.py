@@ -28,7 +28,7 @@ import pytest
 from zato.common.util.config import get_config_object, update_config_file
 
 # Local
-from _client import ZatoClient
+from zato.common.test.client import AdminClient as ZatoClient
 from _services import echo_service_source, error_service_source, forward_service_source, inspect_service_source
 
 # ################################################################################################################################

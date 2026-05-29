@@ -77,7 +77,14 @@ class TestEnmasseOutgoingGraphQLExport(TestCase):
         exported_data = self.exporter.export_to_dict(self.session)
 
         self.assertIn('outgoing_graphql', exported_data)
-        exported_graphql_list = exported_data['outgoing_graphql']
+
+        # Filter to test-created items only, ignoring pre-existing DB entries
+        exported_graphql_list = []
+
+        for item in exported_data['outgoing_graphql']:
+            if item['name'].startswith('enmasse.'):
+                exported_graphql_list.append(item)
+
         self.assertEqual(len(exported_graphql_list), 2)
 
         exported_by_name = {item['name']: item for item in exported_graphql_list}
@@ -101,12 +108,13 @@ class TestEnmasseOutgoingGraphQLExport(TestCase):
         self.assertEqual(len(created), 2)
 
         exported_data = self.exporter.export_to_dict(self.session)
-        exported_graphql_list = exported_data['outgoing_graphql']
 
+        # Filter to test-created items only, ignoring pre-existing DB entries
         exported_names = set()
 
-        for item in exported_graphql_list:
-            exported_names.add(item['name'])
+        for item in exported_data['outgoing_graphql']:
+            if item['name'].startswith('enmasse.'):
+                exported_names.add(item['name'])
 
         yaml_names = set()
 
@@ -122,7 +130,16 @@ class TestEnmasseOutgoingGraphQLExport(TestCase):
 
         exported_data = self.exporter.export_to_dict(self.session)
 
-        self.assertNotIn('outgoing_graphql', exported_data)
+        # Verify no test-created items exist, ignoring pre-existing DB entries
+        if 'outgoing_graphql' in exported_data:
+
+            test_items = []
+
+            for item in exported_data['outgoing_graphql']:
+                if item['name'].startswith('enmasse.'):
+                    test_items.append(item)
+
+            self.assertEqual(len(test_items), 0)
 
 # ################################################################################################################################
 # ################################################################################################################################

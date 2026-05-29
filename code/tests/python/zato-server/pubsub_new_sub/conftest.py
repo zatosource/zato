@@ -301,7 +301,7 @@ def zato_server() -> 'any_':
     TestConfig.zato_bin             = _zato_bin
 
     # .. look up the subscriber sec_base_id for use in subscription creation ..
-    from _client import AdminClient
+    from zato.common.test.client import AdminClient
     admin = AdminClient(TestConfig.base_url, invoke_password)
 
     sec_list = admin.invoke('zato.security.get-list', {'cluster_id': 1})

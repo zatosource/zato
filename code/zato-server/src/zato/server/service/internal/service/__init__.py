@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 import os
 import subprocess
 from base64 import b64decode, b64encode
@@ -26,6 +27,8 @@ from zato.common.exception import BadRequest, ZatoException
 from zato.common.ext.validate_ import is_boolean
 from zato.common.json_internal import dumps, loads
 from zato.common.marshal_.api import Model
+
+logger = logging.getLogger(__name__)
 from zato.common.odb.model import Cluster, ChannelAMQP, DeployedService, HTTPSOAP, Server, Service as ODBService
 from zato.common.odb.query import service_deployment_list, service_list
 from zato.common.scheduler import get_startup_job_services
@@ -522,6 +525,10 @@ class ServiceInvoker(Service):
                 wsgi_environ=target_wsgi_environ,
                 zato_response_headers_container=zato_response_headers_container
                 )
+
+            logger.info('invoker: self.invoke returned type=%s, is_str=%s, keys=%s',
+                type(response).__name__, isinstance(response, str),
+                list(response.keys()) if hasattr(response, 'keys') else 'N/A')
 
             # Take dataclass-based models into account
             response = response.to_dict() if isinstance(response, Model) else response

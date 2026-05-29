@@ -6,15 +6,8 @@ Copyright (C) Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from logging import getLogger
-
 # Zato
 from zato.input_output import IOProcessor
-
-# ################################################################################################################################
-
-logger = getLogger('zato')
 
 # ################################################################################################################################
 
@@ -175,10 +168,11 @@ class IOPayload:
         if self.zato_meta:
             search = self.zato_meta.get('search')
             if search:
+                meta = {key: value for key, value in search.items() if key != 'result'}
                 if isinstance(value, dict):
-                    value['_meta'] = search
+                    value['_meta'] = meta
                 else:
-                    value = {'response': value, '_meta': search}
+                    value = {'response': value, '_meta': meta}
 
         return value
 

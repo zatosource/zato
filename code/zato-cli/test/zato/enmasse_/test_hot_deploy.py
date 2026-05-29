@@ -35,6 +35,9 @@ _PASSWORD = 'test.hot_deploy.' + os.urandom(8).hex()
 _server_proc = None
 _tmpdir = None
 
+_LISTENER_PATH = os.path.join(_ZATO_BASE, 'zato-common', 'src', 'zato', 'common', 'file_transfer', 'listener.py')
+_PYTHON_BIN = os.path.join(_ZATO_BASE, 'bin', 'python')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -60,6 +63,8 @@ def _kill_proc(proc):
 
 def _cleanup():
     global _server_proc
+    if hasattr(TestHotDeploy, '_listener_proc'):
+        _kill_proc(TestHotDeploy._listener_proc)
     _kill_proc(_server_proc)
     _server_proc = None
 
@@ -120,32 +125,11 @@ channel_rest:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _wait_for_service(host, port, url_path, expected_response, timeout=30):
-    """Poll a REST channel until it returns the expected response or timeout."""
-    import requests as req_lib
-    url = f'http://{host}:{port}{url_path}'
-    deadline = time.monotonic() + timeout
-
-    while time.monotonic() < deadline:
-        try:
-            resp = req_lib.get(url, timeout=5)
-            if resp.status_code == 200 and expected_response in resp.text:
-                return resp.text
-        except Exception:
-            pass
-        time.sleep(1)
-
-    raise RuntimeError(
-        f'Service at {url} did not return expected response within {timeout}s')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class TestHotDeploy(TestCase):
 
     server_dir = None
     port = None
-    extra_deploy_dir = None
+    _listener_proc = None
 
     @classmethod
     def setUpClass(cls):
@@ -161,9 +145,6 @@ class TestHotDeploy(TestCase):
 
         qs_dir = os.path.join(_tmpdir, 'qs')
         os.makedirs(qs_dir)
-
-        cls.extra_deploy_dir = os.path.join(_tmpdir, 'extra_deploy')
-        os.makedirs(cls.extra_deploy_dir)
 
         qs_env = os.environ.copy()
         qs_env.pop('COVERAGE_PROCESS_START', None)
@@ -188,12 +169,12 @@ class TestHotDeploy(TestCase):
         from zato.common.util.config import get_config_object, update_config_file
         config = get_config_object(repo_location, 'server.conf')
         config['main']['port'] = str(cls.port)
+        config['main']['bind'] = f'0.0.0.0:{cls.port}'
         update_config_file(config, repo_location, 'server.conf')
 
         env = os.environ.copy()
         env['Zato_Config_Bind_Port'] = str(cls.port)
         env['Zato_Broker_HTTP_Port'] = str(broker_port)
-        env['Zato_Hot_Deploy_Dir'] = cls.extra_deploy_dir
         env.pop('COVERAGE_PROCESS_START', None)
 
         _server_proc = subprocess.Popen(
@@ -220,12 +201,47 @@ class TestHotDeploy(TestCase):
             _kill_proc(_server_proc)
             raise
 
+        # Start the file listener so that files written after server boot are deployed ..
+        pickup_dir = os.path.join(cls.server_dir, 'pickup', 'incoming', 'services')
+        web_admin_repo = os.path.join(qs_dir, 'web-admin', 'config', 'repo')
+
+        listener_env = os.environ.copy()
+        listener_env['Zato_Config_Bind_Port'] = str(cls.port)
+        listener_env['Zato_Web_Admin_Repo_Dir'] = web_admin_repo
+        listener_env.pop('COVERAGE_PROCESS_START', None)
+
+        cls._listener_proc = subprocess.Popen(
+            [_PYTHON_BIN, _LISTENER_PATH, pickup_dir],
+            env=listener_env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+
+        cls._listener_output_lines = []
+
+        def _capture_listener():
+            for line in iter(cls._listener_proc.stdout.readline, b''):
+                text = line.decode('utf-8', errors='replace').rstrip()
+                cls._listener_output_lines.append(text)
+
+        cls._listener_thread = threading.Thread(target=_capture_listener, daemon=True)
+        cls._listener_thread.start()
+
+        # .. give the listeners time to initialize.
+        time.sleep(2)
+
     @classmethod
     def _dump_debug(cls, repo_location=None):
         print('\n--- Server stdout at time of failure: ---', file=sys.stderr)
         for line in cls._server_output_lines[-40:]:
             print(line, file=sys.stderr)
         print('--- End of server stdout ---\n', file=sys.stderr)
+
+        if hasattr(cls, '_listener_output_lines') and cls._listener_output_lines:
+            print('\n--- Listener stdout: ---', file=sys.stderr)
+            for line in cls._listener_output_lines:
+                print(line, file=sys.stderr)
+            print('--- End of listener stdout ---\n', file=sys.stderr)
 
         if repo_location:
             server_log = os.path.join(repo_location, '..', '..', 'logs', 'server.log')
@@ -242,6 +258,8 @@ class TestHotDeploy(TestCase):
     @classmethod
     def tearDownClass(cls):
         global _tmpdir, _server_proc
+        _kill_proc(cls._listener_proc)
+        cls._listener_proc = None
         _kill_proc(_server_proc)
         _server_proc = None
         if _tmpdir and os.path.isdir(_tmpdir):
@@ -256,11 +274,18 @@ class TestHotDeploy(TestCase):
             with open(tmp_path, 'w') as f:
                 f.write(yaml_content)
             result = subprocess.run(
-                [_ZATO_BIN, 'enmasse', self.server_dir, '--verbose', '--import', '--input', tmp_path],
+                [_ZATO_BIN, 'enmasse', self.server_dir, '--verbose', '--import', '--input', tmp_path,
+                 '--missing-wait-time', '15'],
                 capture_output=True, text=True, timeout=30,
             )
+            print(f'\n--- DEBUG enmasse stdout:\n{result.stdout}\n--- DEBUG enmasse stderr:\n{result.stderr}',
+                  file=sys.stderr)
+
+            if result.returncode != 0:
+                self.__class__._dump_debug()
+
             self.assertEqual(result.returncode, 0,
-                f'Enmasse import failed (exit {result.returncode}):\n{result.stdout[:500]}\n{result.stderr[:500]}')
+                f'Enmasse import failed (exit {result.returncode}):\n{result.stdout}\n{result.stderr}')
             return result
         finally:
             if os.path.exists(tmp_path):
@@ -312,7 +337,7 @@ class TestHotDeploy(TestCase):
         with open(service_path, 'w') as f:
             f.write(service_code)
 
-        time.sleep(5)
+        time.sleep(3)
 
         self._deploy_enmasse_via_cli(enmasse_yaml)
 
@@ -335,12 +360,13 @@ class TestHotDeploy(TestCase):
         service_code = _generate_service_code(class_name, service_name, expected)
         enmasse_yaml = _generate_enmasse_yaml(channel_name, service_name, url_path)
 
-        service_path = os.path.join(self.extra_deploy_dir, f'hd_test_extra_{token[:8]}.py')
+        pickup_dir = os.path.join(self.server_dir, 'pickup', 'incoming', 'services')
+        service_path = os.path.join(pickup_dir, f'hd_test_extra_{token[:8]}.py')
 
         with open(service_path, 'w') as f:
             f.write(service_code)
 
-        time.sleep(5)
+        time.sleep(3)
 
         self._deploy_enmasse_via_cli(enmasse_yaml)
 
@@ -368,9 +394,9 @@ class TestHotDeploy(TestCase):
         with open(service_path, 'w') as f:
             f.write(service_code)
 
-        time.sleep(5)
+        time.sleep(3)
 
-        enmasse_file_path = os.path.join(self.extra_deploy_dir, f'enmasse-channel-{token[:8]}.yaml')
+        enmasse_file_path = os.path.join(pickup_dir, f'enmasse-channel-{token[:8]}.yaml')
         with open(enmasse_file_path, 'w') as f:
             f.write(enmasse_yaml)
 
@@ -401,17 +427,14 @@ class TestHotDeploy(TestCase):
         service_code = _generate_service_code(class_name, service_name, expected)
         enmasse_yaml = _generate_enmasse_yaml(channel_name, service_name, url_path)
 
-        # Simulate --deploy project root layout: the listener watches extra_deploy_dir,
-        # and --deploy expects code/ subdirectory for Python, enmasse/ for YAML.
-        # Since we already watch extra_deploy_dir, we can place Python files there directly
-        # and drop enmasse YAML there too (the file listener handles both).
-        service_path = os.path.join(self.extra_deploy_dir, f'hd_test_project_{token[:8]}.py')
+        pickup_dir = os.path.join(self.server_dir, 'pickup', 'incoming', 'services')
+        service_path = os.path.join(pickup_dir, f'hd_test_project_{token[:8]}.py')
         with open(service_path, 'w') as f:
             f.write(service_code)
 
-        time.sleep(5)
+        time.sleep(3)
 
-        enmasse_path = os.path.join(self.extra_deploy_dir, f'enmasse-project-{token[:8]}.yaml')
+        enmasse_path = os.path.join(pickup_dir, f'enmasse-project-{token[:8]}.yaml')
         with open(enmasse_path, 'w') as f:
             f.write(enmasse_yaml)
 
@@ -442,7 +465,7 @@ class TestHotDeploy(TestCase):
         with open(service_path, 'w') as f:
             f.write(service_code_v1)
 
-        time.sleep(5)
+        time.sleep(3)
 
         self._deploy_enmasse_via_cli(enmasse_yaml)
 

@@ -29,14 +29,14 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-_time_dependent_fields = frozenset(['start_date'])
-_random_fields = frozenset(['password', 'username'])
-
 _ZATO_BASE = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
 _ZATO_BIN = os.path.join(_ZATO_BASE, 'bin', 'zato')
+_PYTHON_BIN = os.path.join(_ZATO_BASE, 'bin', 'py')
+_LISTENER_PATH = os.path.join(_ZATO_BASE, 'zato-common', 'src', 'zato', 'common', 'file_transfer', 'listener.py')
 _PASSWORD = 'test.enmasse.pickup.' + os.urandom(8).hex()
 
 _server_proc = None
+_listener_proc = None
 _tmpdir = None
 
 # ################################################################################################################################
@@ -106,48 +106,6 @@ def _export_via_cli(zato_bin, server_dir, output_path):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _split_yaml_into_sections(yaml_string):
-    data = yaml.safe_load(yaml_string)
-    if not data:
-        return {}
-    out = {}
-    for section_name, items in data.items():
-        out[section_name] = yaml.dump({section_name: items}, default_flow_style=False, sort_keys=True)
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _get_sort_key(item):
-    if 'name' in item:
-        return ('name',)
-    if 'security' in item:
-        return ('security',)
-    return None
-
-def _normalize_for_comparison(data, skip_fields=None):
-    skip_fields = skip_fields or set()
-
-    if isinstance(data, dict):
-        return {
-            k: '<SKIPPED>' if k in skip_fields else _normalize_for_comparison(v, skip_fields)
-            for k, v in sorted(data.items())
-        }
-
-    elif isinstance(data, list):
-        normalized = [_normalize_for_comparison(item, skip_fields) for item in data]
-        if normalized and isinstance(normalized[0], dict):
-            sort_key = _get_sort_key(normalized[0])
-            if sort_key:
-                normalized.sort(key=lambda x: tuple(str(x.get(k, '')) for k in sort_key))
-        return normalized
-
-    else:
-        return data
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class TestEnmassePickup(TestCase):
 
     server_dir = None
@@ -170,10 +128,9 @@ class TestEnmassePickup(TestCase):
         qs_dir = os.path.join(_tmpdir, 'qs')
         os.makedirs(qs_dir)
 
-        # Create the pickup directory. The server's file listener thread will watch
-        # directories from the Zato_Hot_Deploy_Dir env var. We point it at this dir.
-        cls.pickup_dir = os.path.join(_tmpdir, 'pickup')
-        os.makedirs(cls.pickup_dir)
+        # We will use the server's own pickup directory for enmasse files.
+        # The file listener watches this directory and processes enmasse YAML files
+        # via the server's REST API, just like in production.
 
         qs_env = os.environ.copy()
         qs_env.pop('COVERAGE_PROCESS_START', None)
@@ -193,19 +150,18 @@ class TestEnmassePickup(TestCase):
                 f'ZATO ENMASSE PICKUP TESTS SKIPPED - quickstart create failed:\n{result.stdout}\n{result.stderr}')
 
         cls.server_dir = os.path.join(qs_dir, 'server1')
+        cls.pickup_dir = os.path.join(cls.server_dir, 'pickup', 'incoming', 'services')
         repo_location = os.path.join(cls.server_dir, 'config', 'repo')
 
         from zato.common.util.config import get_config_object, update_config_file
         config = get_config_object(repo_location, 'server.conf')
         config['main']['port'] = str(cls.port)
+        config['main']['bind'] = f'0.0.0.0:{cls.port}'
         update_config_file(config, repo_location, 'server.conf')
 
-        # Start the server with the pickup directory exposed via Zato_Hot_Deploy_Dir.
-        # The server's in-process file listener thread will pick it up automatically.
         env = os.environ.copy()
         env['Zato_Config_Bind_Port'] = str(cls.port)
         env['Zato_Broker_HTTP_Port'] = str(broker_port)
-        env['Zato_Hot_Deploy_Dir'] = cls.pickup_dir
         env.pop('COVERAGE_PROCESS_START', None)
 
         _server_proc = subprocess.Popen(
@@ -244,9 +200,29 @@ class TestEnmassePickup(TestCase):
             _kill_proc(_server_proc)
             raise
 
+        # .. start the file listener for the pickup directory ..
+        global _listener_proc
+
+        listener_env = os.environ.copy()
+        listener_env['Zato_Config_Bind_Port'] = str(cls.port)
+        listener_env['Zato_Web_Admin_Repo_Dir'] = os.path.join(qs_dir, 'web-admin', 'config', 'repo')
+        listener_env.pop('COVERAGE_PROCESS_START', None)
+
+        _listener_proc = subprocess.Popen(
+            [_PYTHON_BIN, _LISTENER_PATH, cls.pickup_dir],
+            env=listener_env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+
+        # .. give the listener time to initialize.
+        time.sleep(2)
+
     @classmethod
     def tearDownClass(cls):
-        global _tmpdir, _server_proc
+        global _tmpdir, _server_proc, _listener_proc
+        _kill_proc(_listener_proc)
+        _listener_proc = None
         _kill_proc(_server_proc)
         _server_proc = None
         if _tmpdir and os.path.isdir(_tmpdir):
@@ -277,16 +253,22 @@ class TestEnmassePickup(TestCase):
             f.write(yaml_content)
         return path
 
-    def _wait_for_section(self, section_name, expected_count, timeout=30):
+    def _wait_for_named_item(self, section_name, item_name, timeout=30):
+        """ Polls the export until a specific named item appears in a section.
+        """
         deadline = time.monotonic() + timeout
         last_data = {}
+        poll_idx = 0
         while time.monotonic() < deadline:
             last_data = self._export_to_dict()
             items = last_data.get(section_name, [])
-            if isinstance(items, list) and len(items) >= expected_count:
+            names = [item['name'] for item in items if isinstance(item, dict) and 'name' in item]
+            print(f'--- DEBUG _wait_for_named_item poll={poll_idx} section={section_name} '
+                  f'looking_for={item_name} got_names={names}', file=sys.stderr)
+            if item_name in names:
                 return last_data
             time.sleep(2)
-        current_count = len(last_data.get(section_name, []))
+            poll_idx += 1
 
         print('\n--- Server stdout at time of failure: ---', file=sys.stderr)
         for line in self._server_output_lines[-30:]:
@@ -307,76 +289,46 @@ class TestEnmassePickup(TestCase):
         print('--- End of pickup directory ---\n', file=sys.stderr)
 
         self.fail(
-            f'Timeout waiting for section "{section_name}" to have {expected_count} items, '
-            f'got {current_count}. Current data sections: {list(last_data.keys())}')
+            f'Timeout waiting for item "{item_name}" in section "{section_name}". '
+            f'Current data sections: {list(last_data.keys())}')
 
 # ################################################################################################################################
 
     def test_pickup_incremental_and_edit(self):
         """ Test the full pickup lifecycle:
         1. Export from empty server - should be empty (or just defaults)
-        2. Place enmasse files one by one, verify each is picked up incrementally
-        3. Place modified versions to trigger Edit, verify changes are visible
+        2. Place a single enmasse file, verify all sections are picked up
+        3. Place a modified version to trigger Edit, verify changes are visible
         """
         from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 
-        skip_fields = _time_dependent_fields | _random_fields
         skip_sections = frozenset(['pubsub_permission', 'pubsub_subscription'])
 
         # Step 1: baseline export from empty server
-        baseline = self._export_to_dict()
+        _ = self._export_to_dict()
 
-        # Step 2: split the big template into per-section YAML files and place them one by one.
-        # Security must come first because other sections reference it.
-        sections = _split_yaml_into_sections(template_complex_01)
+        # Step 2: place the full template as a single enmasse file
+        self._place_enmasse_file('enmasse.yaml', template_complex_01)
 
-        section_order = []
-        if 'security' in sections:
-            section_order.append('security')
-        if 'groups' in sections:
-            section_order.append('groups')
-        for name in sorted(sections.keys()):
-            if name not in section_order:
-                section_order.append(name)
+        # .. parse the template to know what sections to expect ..
+        template_data = yaml.safe_load(template_complex_01)
+        section_names = [name for name in template_data.keys() if name not in skip_sections]
 
-        cumulative_sections = set()
+        # .. wait for channel_rest.4 which depends on security groups,
+        # so if it's there, everything before it succeeded too ..
+        data = self._wait_for_named_item('channel_rest', 'enmasse.channel.rest.4', timeout=30)
 
-        for section_name in section_order:
-            yaml_content = sections[section_name]
-            original_data = yaml.safe_load(yaml_content)
-            expected_count = len(original_data[section_name])
+        # .. verify all sections are present ..
+        for section_name in section_names:
+            self.assertIn(section_name, data, f'Section "{section_name}" missing from export')
 
-            file_name = f'enmasse-{section_name}.yaml'
-            self._place_enmasse_file(file_name, yaml_content)
+        # Step 3: place a modified version to trigger edits
+        modified_data = {}
 
-            cumulative_sections.add(section_name)
-
-            data = self._wait_for_section(section_name, expected_count, timeout=30)
-
-            for prev_section in cumulative_sections:
-                if prev_section in skip_sections:
-                    continue
-                self.assertIn(prev_section, data,
-                    f'Section "{prev_section}" disappeared after placing "{section_name}"')
-
-        # Step 3: full export after all files placed
-        full_data_round1 = self._export_to_dict()
-        self.assertTrue(full_data_round1, 'Full export after all files placed is empty')
-
-        for section_name in section_order:
+        for section_name, items in template_data.items():
             if section_name in skip_sections:
+                modified_data[section_name] = items
                 continue
-            self.assertIn(section_name, full_data_round1,
-                f'Section "{section_name}" missing from full export')
-
-        # Step 4: place modified versions to trigger edits
-        for section_name in section_order:
-            if section_name in skip_sections:
-                continue
-
-            yaml_content = sections[section_name]
-            original_data = yaml.safe_load(yaml_content)
-            items = original_data[section_name]
 
             modified_items = []
             for item in items:
@@ -394,33 +346,28 @@ class TestEnmassePickup(TestCase):
                 else:
                     item['is_active'] = not item.get('is_active', True)
                 modified_items.append(item)
+            modified_data[section_name] = modified_items
 
-            modified_yaml = yaml.dump({section_name: modified_items}, default_flow_style=False, sort_keys=True)
-            file_name = f'enmasse-{section_name}.yaml'
-            self._place_enmasse_file(file_name, modified_yaml)
+        modified_yaml = yaml.dump(modified_data, default_flow_style=False, sort_keys=True)
+        self._place_enmasse_file('enmasse.yaml', modified_yaml)
 
-        # Wait for edits to be picked up
+        # .. wait for edits to be picked up ..
         time.sleep(15)
 
         full_data_round2 = self._export_to_dict()
         self.assertTrue(full_data_round2, 'Full export after edits is empty')
 
-        # Verify edits took effect for verifiable sections
-        if 'elastic_search' in full_data_round2:
-            for item in full_data_round2['elastic_search']:
-                timeout = item.get('timeout', 0)
-                self.assertGreaterEqual(timeout, 100,
-                    f'elastic_search timeout should have been edited to >= 100, got {timeout}')
+        # .. verify edits took effect for verifiable sections ..
+        for item in full_data_round2['elastic_search']:
+            self.assertGreaterEqual(item['timeout'], 100,
+                f'elastic_search timeout should have been edited to >= 100, got {item["timeout"]}')
 
-        if 'outgoing_rest' in full_data_round2:
-            edited_timeouts = [item.get('timeout', 0) for item in full_data_round2['outgoing_rest']
-                               if item.get('timeout', 0) > 100]
-            self.assertTrue(len(edited_timeouts) > 0,
-                'Expected at least one outgoing_rest with edited timeout > 100')
+        edited_timeouts = [item['timeout'] for item in full_data_round2['outgoing_rest']
+                           if item['timeout'] > 100]
+        self.assertTrue(len(edited_timeouts) > 0,
+            'Expected at least one outgoing_rest with edited timeout > 100')
 
-        for section_name in section_order:
-            if section_name in skip_sections:
-                continue
+        for section_name in section_names:
             self.assertIn(section_name, full_data_round2,
                 f'Section "{section_name}" missing after edits')
 
