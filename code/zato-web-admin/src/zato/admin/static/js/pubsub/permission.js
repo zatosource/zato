@@ -1,5 +1,3 @@
-(function($) {
-
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.data_table.PubSubPermission = new Class({
@@ -114,10 +112,8 @@ function showTopicsAlert(pattern, event) {
                 }
             }
 
-            setTimeout(function() {
-                $(document).on('mousedown.topicPopup' + popupId, dismissHandler);
-                $(document).on('keydown.topicPopup' + popupId, escHandler);
-            }, 0);
+            $(document).on('mousedown.topicPopup' + popupId, dismissHandler);
+            $(document).on('keydown.topicPopup' + popupId, escHandler);
 
             $dialog.on('dialogclose', function() {
                 $(document).off('mousedown.topicPopup' + popupId);
@@ -220,33 +216,13 @@ function showTopicsAlert(pattern, event) {
                 contentHtml += '</div>';
             }
 
-            var $content = $('#' + popupId + '-content');
-
-            // Fade out current content
-            $content.addClass('topic-popup-fade-out');
-
-            // Wait for fade out, then replace content and fade in
-            setTimeout(function() {
-                $content.html(contentHtml);
-                $content.removeClass('topic-popup-fade-out');
-                $content.addClass('topic-popup-fade-in');
-
-                // Trigger fade in
-                setTimeout(function() {
-                    $content.addClass('topic-popup-visible');
-                }, 10);
-            }, 150);
-
-            // Ensure shadow doesn't get clipped for all cases
             var $popup = $('#' + popupId);
             $popup.css('overflow', 'visible');
             $popup.parent('.ui-dialog').css('overflow', 'visible');
 
             var $content = $('#' + popupId + '-content');
             $content.fadeOut(100, function() {
-                $content.html(contentHtml).fadeIn(100, function() {
-
-                });
+                $content.html(contentHtml).fadeIn(100);
             });
 
         },
@@ -460,8 +436,7 @@ function initializePatternEditing() {
         });
 
         $input.on('blur', function() {
-            // Small delay to allow for other events
-            setTimeout(saveEdit, 100);
+            saveEdit();
         });
     });
 }
@@ -582,22 +557,19 @@ $.fn.zato.pubsub.permission.create = function() {
 
     // Always populate security definitions via AJAX when select element becomes available
     // Use a timeout to ensure the DOM is ready, then always make fresh AJAX call
-    setTimeout(function() {
-        var selectElement = $('#id_sec_base_id');
-        if (selectElement.length > 0) {
-            initializeCreateForm();
-        } else {
-            // Use MutationObserver to watch for the element if not immediately available
-            var observer = new MutationObserver(function(mutations) {
-                var selectElement = $('#id_sec_base_id');
-                if (selectElement.length > 0) {
-                    initializeCreateForm();
-                    observer.disconnect();
-                }
-            });
-            observer.observe(document.body, { childList: true, subtree: true });
-        }
-    }, 100);
+    var selectElement = $('#id_sec_base_id');
+    if (selectElement.length > 0) {
+        initializeCreateForm();
+    } else {
+        var observer = new MutationObserver(function() {
+            var selectElement = $('#id_sec_base_id');
+            if (selectElement.length > 0) {
+                initializeCreateForm();
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
 
     // Set callback to re-render pattern tables after successful create
     $.fn.zato.data_table.on_submit_complete_callback = function() {
@@ -622,165 +594,118 @@ $.fn.zato.pubsub.permission.edit = function(id) {
 
     $.fn.zato.data_table._create_edit('edit', 'Update permission `' + instance.name + '`', id);
 
-    // Hide the form initially to prevent flicker, it will be shown in setTimeout below.
     $('#edit-div').hide();
 
     $.fn.zato.data_table.reset_form('edit');
     $('#edit-id').val(instance.id);
 
-    // Delay setting the access_type to ensure the form is fully initialized
-    setTimeout(function() {
-        // Get the access type select element - try all possible selectors
-        var $accessTypeSelect = $('#id_edit-access_type');
-        if (!$accessTypeSelect.length) {
-            $accessTypeSelect = $('#edit-access_type');
-        }
-        if (!$accessTypeSelect.length) {
-            $accessTypeSelect = $('select[name="edit-access_type"]');
-        }
-        // Default to any select in the edit form if all else fails
-        if (!$accessTypeSelect.length) {
-            $accessTypeSelect = $('#edit-div select').filter(function() {
-                return $(this).attr('name') && $(this).attr('name').indexOf('access_type') >= 0;
-            });
-        }
+    // Get the access type select element
+    var $accessTypeSelect = $('#id_edit-access_type');
+    if (!$accessTypeSelect.length) {
+        $accessTypeSelect = $('#edit-access_type');
+    }
+    if (!$accessTypeSelect.length) {
+        $accessTypeSelect = $('select[name="edit-access_type"]');
+    }
+    if (!$accessTypeSelect.length) {
+        $accessTypeSelect = $('#edit-div select').filter(function() {
+            return $(this).attr('name') && $(this).attr('name').indexOf('access_type') >= 0;
+        });
+    }
 
-        if ($accessTypeSelect.length) {
-            // Normalize access_type to lowercase for form value matching
-            var accessType = instance.access_type;
-            if (accessType) {
-                accessType = accessType.toLowerCase().trim();
+    if ($accessTypeSelect.length) {
+        var accessType = instance.access_type;
+        if (accessType) {
+            accessType = accessType.toLowerCase().trim();
 
-                // Declare option found flag before using it
-                var optionFound = false;
+            var optionFound = false;
 
-                // Special handling for Publisher-subscriber which needs to map to publisher-subscriber
-                if (accessType === 'publisher-subscriber' ||
-                    accessType === 'publisher & subscriber' ||
-                    accessType === 'publisher&subscriber' ||
-                    accessType === 'publisher-subscriber') {
-                    // Find the publisher-subscriber option
-                    $accessTypeSelect.find('option').each(function() {
-                        var optionValue = $(this).val().toLowerCase();
-                        if (optionValue === 'publisher-subscriber' ||
-                            optionValue.indexOf('publisher') >= 0 && optionValue.indexOf('subscriber') >= 0) {
-                            $accessTypeSelect.val($(this).val());
-                            optionFound = true;
-                            return false;
-                        }
-                    });
-                } else {
-                    // Standard case - find the matching option and select it
-                    $accessTypeSelect.find('option').each(function() {
-                        if ($(this).val() === accessType) {
-                            $accessTypeSelect.val($(this).val());
-                            optionFound = true;
-                            return false;
-                        }
-                    });
-
-                    // If exact match not found, try partial match
-                    if (!optionFound) {
-                        $accessTypeSelect.find('option').each(function() {
-                            if (accessType.indexOf($(this).val()) >= 0 || $(this).val().indexOf(accessType) >= 0) {
-                                $accessTypeSelect.val($(this).val());
-                                return false;
-                            }
-                        });
-                    }
-                }
-
-                // Trigger change event to update dependent UI elements
-
-// Get pattern data from the hidden cell that contains the raw patterns
-// This cell was created in new_row function with the raw pattern data
-var $row = $('#tr_' + id);
-patternData = $row.find('td:eq(9)').text();
-
-// If no data found in hidden cell, try to get it from data-patterns attribute
-if (!patternData || patternData.trim() === '') {
-patternData = $row.find('.pattern-display').attr('data-patterns');
-}
-
-// If still no data, try instance.pattern as last resort
-if (!patternData || patternData.trim() === '') {
-patternData = instance.pattern;
-}
-                if (!patternData || patternData.trim() === '') {
-                    patternData = instance.pattern;
-                }
-
-                // Decode any HTML entities in the pattern data
-                if (patternData) {
-                    patternData = patternData.replace(/\\u003D/g, '=');
-                    patternData = patternData.replace(/\\u000A/g, '\n');
-                }
-
-                // Populate patterns
-                populatePatterns('edit', patternData);
-            }
-        }
-
-        // Function to display security definition name and add hidden input for ID
-        function initializeEditForm() {
-            var $container = $('#edit-form .security-definition-container');
-            $container.empty();
-            $container.append('<input type="hidden" id="id_edit-sec_base_id" name="edit-sec_base_id" value="' + instance.sec_base_id + '"/>');
-
-            var secName = instance.name;
-            var clusterID = '1';
-            var secLink = '<a href="/zato/security/basic-auth/?cluster=' + clusterID + '&query=' + encodeURIComponent(secName) + '" target="_blank">' + secName + '</a>';
-            $container.append(secLink);
-
-            updatePatternTypeOptions('edit');
-        }
-
-        var selectElement = $('#id_edit-sec_base_id');
-        if (selectElement.length > 0) {
-            initializeEditForm();
-        } else {
-            var $container = $('#edit-form .security-definition-container');
-            if ($container.length > 0) {
-                initializeEditForm();
-            } else {
-                var observer = new MutationObserver(function(mutations) {
-                    var selectElement = $('#id_edit-sec_base_id');
-                    if (selectElement.length > 0) {
-                        initializeEditForm();
-                        observer.disconnect();
+            if (accessType === 'publisher-subscriber' ||
+                accessType === 'publisher & subscriber' ||
+                accessType === 'publisher&subscriber') {
+                $accessTypeSelect.find('option').each(function() {
+                    var optionValue = $(this).val().toLowerCase();
+                    if (optionValue === 'publisher-subscriber' ||
+                        optionValue.indexOf('publisher') >= 0 && optionValue.indexOf('subscriber') >= 0) {
+                        $accessTypeSelect.val($(this).val());
+                        optionFound = true;
+                        return false;
                     }
                 });
-                observer.observe(document.body, { childList: true, subtree: true });
+            } else {
+                $accessTypeSelect.find('option').each(function() {
+                    if ($(this).val() === accessType) {
+                        $accessTypeSelect.val($(this).val());
+                        optionFound = true;
+                        return false;
+                    }
+                });
+
+                if (!optionFound) {
+                    $accessTypeSelect.find('option').each(function() {
+                        if (accessType.indexOf($(this).val()) >= 0 || $(this).val().indexOf(accessType) >= 0) {
+                            $accessTypeSelect.val($(this).val());
+                            return false;
+                        }
+                    });
+                }
             }
+
+            // Get pattern data from the hidden cell
+            var $row = $('#tr_' + id);
+            var patternData = $row.find('td:eq(9)').text();
+
+            if (!patternData || patternData.trim() === '') {
+                patternData = $row.find('.pattern-display').attr('data-patterns');
+            }
+
+            if (!patternData || patternData.trim() === '') {
+                patternData = instance.pattern;
+            }
+
+            if (patternData) {
+                patternData = patternData.replace(/\\u003D/g, '=');
+                patternData = patternData.replace(/\\u000A/g, '\n');
+            }
+
+            populatePatterns('edit', patternData);
         }
+    }
 
-        // Show the form now that it's populated.
-        $('#edit-div').show();
+    // Display security definition name and add hidden input for ID
+    function initializeEditForm() {
+        var $container = $('#edit-form .security-definition-container');
+        $container.empty();
+        $container.append('<input type="hidden" id="id_edit-sec_base_id" name="edit-sec_base_id" value="' + instance.sec_base_id + '"/>');
 
-    }, 100);
+        var secName = instance.name;
+        var clusterID = '1';
+        var secLink = '<a href="/zato/security/basic-auth/?cluster=' + clusterID + '&query=' + encodeURIComponent(secName) + '" target="_blank">' + secName + '</a>';
+        $container.append(secLink);
 
-    // Add extensive debugging for access type changes
-    setTimeout(function() {
-        var accessTypeSelect = $('#edit-access_type');
-        if (accessTypeSelect.length > 0) {
+        updatePatternTypeOptions('edit');
+    }
 
-            accessTypeSelect.off('change.debug').on('change.debug', function() {
-                // Log all form fields before and after
-                logAllFormFields('edit');
-
-                // Store new value for next comparison
-                $(this).data('prev-value', $(this).val());
-
-                // Log again after a short delay to catch any changes
-                setTimeout(function() {
-                    logAllFormFields('edit');
-                }, 100);
+    var selectElement = $('#id_edit-sec_base_id');
+    if (selectElement.length > 0) {
+        initializeEditForm();
+    } else {
+        var $container = $('#edit-form .security-definition-container');
+        if ($container.length > 0) {
+            initializeEditForm();
+        } else {
+            var observer = new MutationObserver(function() {
+                var selectElement = $('#id_edit-sec_base_id');
+                if (selectElement.length > 0) {
+                    initializeEditForm();
+                    observer.disconnect();
+                }
             });
-
-            // Store initial value
-            accessTypeSelect.data('prev-value', accessTypeSelect.val());
+            observer.observe(document.body, { childList: true, subtree: true });
         }
-    }, 500);
+    }
+
+    $('#edit-div').show();
 
     // Set callback to re-render pattern tables after successful edit
     $.fn.zato.data_table.on_submit_complete_callback = function() {
@@ -807,80 +732,6 @@ function validatePatterns(formType) {
     return hasValidPattern;
 }
 
-// /////////////////////////////////////////////////////////////////////////////
-
-// Function to log all form fields
-function logAllFormFields(prefix) {
-    var form = $('#' + prefix + '-form');
-    if (form.length === 0) {
-        return;
-    }
-
-    // Log all input fields
-    form.find('input').each(function() {
-        var $input = $(this);
-    });
-
-    // Log all select fields
-    form.find('select').each(function() {
-        var $select = $(this);
-    });
-
-    // Log all textarea fields
-    form.find('textarea').each(function() {
-        var $textarea = $(this);
-    });
-
-    // Log pattern container specifically
-    var patternContainer = $('#' + prefix + '-pattern-container');
-    if (patternContainer.length > 0) {
-        patternContainer.find('.pattern-row').each(function(index) {
-            var $row = $(this);
-            var typeSelect = $row.find('select[name$="_type_' + index + '"]');
-            var valueInput = $row.find('input[name$="_' + index + '"]');
-        });
-    }
-
-    // Log hidden pattern field
-    var hiddenPattern = $('#' + prefix + '-pattern-hidden');
-    if (hiddenPattern.length > 0) {
-    }
-}
-
-// Add debugging for plus/minus button clicks
-$(document).on('click', '.pattern-add-button', function() {
-
-    // Determine which form we're in
-    var form = $(this).closest('form');
-    var prefix = 'create';
-    if (form.attr('id') === 'edit-form') {
-        prefix = 'edit';
-    }
-
-    logAllFormFields(prefix);
-
-    // Log after a short delay to catch the new row
-    setTimeout(function() {
-        logAllFormFields(prefix);
-    }, 100);
-});
-
-$(document).on('click', '.pattern-remove-button', function() {
-
-    // Determine which form we're in
-    var form = $(this).closest('form');
-    var prefix = 'create';
-    if (form.attr('id') === 'edit-form') {
-        prefix = 'edit';
-    }
-
-    logAllFormFields(prefix);
-
-    // Log after a short delay to catch the removal
-    setTimeout(function() {
-        logAllFormFields(prefix);
-    }, 100);
-});
 
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -1166,5 +1017,3 @@ $.fn.zato.live_form_updates.register('create', [
 $.fn.zato.live_form_updates.register('edit', [
     {object_type: 'security_basic', target_select: '#id_edit-sec_base_id'}
 ]);
-
-})(jQuery);

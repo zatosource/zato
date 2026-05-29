@@ -261,48 +261,35 @@ $(document).ready(function() {
             $('.loading-spinner').remove();
             $('#rest-endpoint-edit, #push-service-edit, #push-type-edit').hide();
 
-            // Use requestAnimationFrame to ensure dialog is painted before making changes
-            requestAnimationFrame(function() {
+            if (instance.delivery_type !== 'push') {
+                $('#rest-endpoint-edit').hide();
+                $('#push-service-edit').hide();
+                $('#push-type-edit').hide();
+            } else {
+                $('#push-type-edit').show();
 
-                // Check initial span visibility before any changes
-
-                // Immediately hide REST endpoint span if not push to prevent flicker
-                if (instance.delivery_type !== 'push') {
+                if (instance.push_type === 'rest') {
+                    $('#rest-endpoint-edit').show();
+                    $('#push-service-edit').hide();
+                } else if (instance.push_type === 'service') {
+                    $('#rest-endpoint-edit').hide();
+                    $('#push-service-edit').show();
+                } else {
                     $('#rest-endpoint-edit').hide();
                     $('#push-service-edit').hide();
-                    $('#push-type-edit').hide();
-                } else {
-                    // For push delivery, show push type but conditionally show endpoint spans
-                    $('#push-type-edit').show();
-
-                    if (instance.push_type === 'rest') {
-                        $('#rest-endpoint-edit').show();
-                        $('#push-service-edit').hide();
-                    } else if (instance.push_type === 'service') {
-                        $('#rest-endpoint-edit').hide();
-                        $('#push-service-edit').show();
-                    } else {
-                        $('#rest-endpoint-edit').hide();
-                        $('#push-service-edit').hide();
-                    }
                 }
+            }
 
-                // Check span visibility after changes
+            $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('edit', instance_id);
 
-                // Setup delivery type visibility first, then conditionally populate REST endpoints
-                $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('edit', instance_id);
-
-                // Load topics for the current security definition in edit mode
-                if(instance.sec_base_id) {
-                    var cluster_id = $('#cluster_id').val();
-                    var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', instance.sec_base_id, cluster_id);
-                    $.fn.zato.post(url, function(data, status) {
-                        $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id);
-                    }, null, null, true);
-                } else {
-                }
-
-            });
+            // Load topics for the current security definition in edit mode
+            if(instance.sec_base_id) {
+                var cluster_id = $('#cluster_id').val();
+                var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', instance.sec_base_id, cluster_id);
+                $.fn.zato.post(url, function(data, status) {
+                    $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id);
+                }, null, null, true);
+            }
         }
     });
 
