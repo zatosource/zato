@@ -14,8 +14,10 @@ import unittest
 # pytest
 import pytest
 
+# Zato
+from zato.common.test.client import AdminClient as ZatoClient
+
 # local
-from _client import ZatoClient
 from config import TestConfig
 
 # ################################################################################################################################

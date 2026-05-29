@@ -87,6 +87,11 @@ class _APIResponse:
 
             mod_logger.info('_APIResponse raw_data type=%s, text=%r', type(raw_data).__name__, inner.text)
 
+            mod_logger.info('_APIResponse: raw_data_type=%s, has_meta=%s, meta_value=%s',
+                type(raw_data).__name__,
+                isinstance(raw_data, dict) and '_meta' in raw_data,
+                raw_data['_meta'] if isinstance(raw_data, dict) and '_meta' in raw_data else 'N/A')
+
             if to_bunch and isinstance(raw_data, (dict, list)):
                 self.data = bunchify(raw_data)
             else:
@@ -94,6 +99,8 @@ class _APIResponse:
 
             self.has_data = bool(self.data)
             self.inner_service_response = inner.text
+
+            mod_logger.info('_APIResponse: self.meta=%s, self.has_data=%s', self.meta, self.has_data)
 
         else:
             self.details = inner.text

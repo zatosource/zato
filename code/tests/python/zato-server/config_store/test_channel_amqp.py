@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 import pytest
-from _client import ZatoClient
+from zato.common.test.client import AdminClient as ZatoClient
 
 SERVICE = 'zato.channel.amqp'
 

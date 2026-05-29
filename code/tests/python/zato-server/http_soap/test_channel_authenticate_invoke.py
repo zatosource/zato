@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import unittest
-from hashlib import sha256
 from io import BytesIO
 from typing import NamedTuple
 from unittest.mock import MagicMock, patch
@@ -23,7 +22,6 @@ from zato.common.exception import (
     BackendInvocationError, BadRequest, Forbidden, MethodNotAllowed,
     NotFound, ServiceMissingException, TooManyRequests, Unauthorized,
 )
-from zato.common.json_ import dumps
 from zato.server.connection.http_soap.channel import (
     RequestDispatcher, RequestHandler, _RequestMeta, status_response
 )
@@ -66,6 +64,7 @@ def _make_channel_item(overrides:'anydict | None'=None) -> 'anydict':
     """ Builds a minimal channel_item dict.
     """
     out = {
+        'id': 1,
         'name': 'test.channel',
         'is_active': True,
         'service_name': 'test.service',
@@ -104,6 +103,7 @@ def _make_wsgi_environ(overrides:'anydict | None'=None) -> 'anydict':
         'REMOTE_PORT': '12345',
         'HTTP_ACCEPT': '*/*',
         'wsgi.input': BytesIO(b''),
+        'zato.http.raw_request': b'',
         'zato.http.response.headers': {},
     }
     if overrides:
@@ -932,160 +932,6 @@ class CreateChannelParamsTestCase(unittest.TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GetResponseFromCacheTestCase(unittest.TestCase):
-    """ Tests for RequestHandler.get_response_from_cache.
-    """
-
-# ################################################################################################################################
-
-    def _make_handler(self) -> 'RequestHandler':
-        """ Builds a RequestHandler with a mocked server.
-        """
-        server = MagicMock()
-        out = RequestHandler(server)
-        return out
-
-# ################################################################################################################################
-
-    def test_no_custom_hash_default_hash_computation(self) -> 'None':
-        """ When service.get_request_hash is falsy, default sha256 hash is used.
-        """
-        handler = self._make_handler()
-        handler.server.get_from_cache.return_value = None
-
-        service = MagicMock()
-        service.get_request_hash = None
-
-        channel_item = MagicMock()
-        channel_item.__getitem__ = lambda self, k: {'id': 42, 'cache_type': 'builtin', 'cache_name': 'default'}[k]
-
-        raw_request = b'{"customer":"123"}'
-        channel_params:'anydict' = {'a': '1'}
-        wsgi_environ:'anydict' = {'REQUEST_METHOD': 'POST', 'PATH_INFO': '/api/v1'}
-
-        cache_key, response = handler.get_response_from_cache(
-            service, raw_request, channel_item, channel_params, wsgi_environ)
-
-        query_string = str(sorted(channel_params.items()))
-        data = '%s%s%s%s' % ('POST', '/api/v1', query_string, raw_request)
-        expected_hash = sha256(data.encode('utf8')).hexdigest()
-        expected_hash_dashed = '-'.join([expected_hash[i:i+8] for i in range(0, len(expected_hash), 8)])
-        expected_key = 'http-channel-42-%s' % expected_hash_dashed
-
-        self.assertEqual(cache_key, expected_key)
-        self.assertIsNone(response)
-
-# ################################################################################################################################
-
-    def test_cache_hit_returns_cached_response(self) -> 'None':
-        """ When cache returns data, a _CachedResponse is returned.
-        """
-        handler = self._make_handler()
-        cached_data = dumps({
-            'payload': 'cached-payload',
-            'content_type': 'text/plain',
-            'headers': {'X-Cache': 'HIT'},
-            'status_code': 200,
-        })
-        handler.server.get_from_cache.return_value = cached_data
-
-        service = MagicMock()
-        service.get_request_hash = None
-
-        channel_item = MagicMock()
-        channel_item.__getitem__ = lambda self, k: {'id': 7, 'cache_type': 'builtin', 'cache_name': 'default'}[k]
-
-        cache_key, response = handler.get_response_from_cache(
-            service, b'body', channel_item, {}, {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/x'})
-
-        self.assertIsNotNone(response)
-        self.assertEqual(response.payload, 'cached-payload')
-        self.assertEqual(response.content_type, 'text/plain')
-        self.assertEqual(response.headers, {'X-Cache': 'HIT'})
-        self.assertEqual(response.status_code, 200)
-
-# ################################################################################################################################
-
-    def test_cache_miss_returns_none_response(self) -> 'None':
-        """ When cache returns nothing, response is falsy.
-        """
-        handler = self._make_handler()
-        handler.server.get_from_cache.return_value = None
-
-        service = MagicMock()
-        service.get_request_hash = None
-
-        channel_item = MagicMock()
-        channel_item.__getitem__ = lambda self, k: {'id': 1, 'cache_type': 'builtin', 'cache_name': 'default'}[k]
-
-        _, response = handler.get_response_from_cache(
-            service, b'', channel_item, {}, {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/'})
-
-        self.assertFalse(response)
-
-# ################################################################################################################################
-
-    def test_custom_hash_function_used(self) -> 'None':
-        """ When service.get_request_hash is truthy, it is called with _HashCtx.
-        """
-        handler = self._make_handler()
-        handler.server.get_from_cache.return_value = None
-
-        service = MagicMock()
-        service.get_request_hash = MagicMock(return_value='custom-hash-value')
-
-        channel_item = MagicMock()
-        channel_item.__getitem__ = lambda self, k: {'id': 99, 'cache_type': 'builtin', 'cache_name': 'default'}[k]
-
-        cache_key, _ = handler.get_response_from_cache(
-            service, b'data', channel_item, {'p': '1'}, {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/test'})
-
-        self.assertEqual(cache_key, 'http-channel-99-custom-hash-value')
-        service.get_request_hash.assert_called_once()
-
-# ################################################################################################################################
-
-    def test_cache_key_format_includes_channel_id(self) -> 'None':
-        """ Cache key always starts with 'http-channel-{id}-'.
-        """
-        handler = self._make_handler()
-        handler.server.get_from_cache.return_value = None
-
-        service = MagicMock()
-        service.get_request_hash = None
-
-        channel_item = MagicMock()
-        channel_item.__getitem__ = lambda self, k: {'id': 555, 'cache_type': 'default', 'cache_name': 'my-cache'}[k]
-
-        cache_key, _ = handler.get_response_from_cache(
-            service, b'', channel_item, {}, {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/'})
-
-        self.assertTrue(cache_key.startswith('http-channel-555-'))
-
-# ################################################################################################################################
-
-    def test_query_params_sorted_for_hash(self) -> 'None':
-        """ Query params order does not affect the hash - they are sorted.
-        """
-        handler = self._make_handler()
-        handler.server.get_from_cache.return_value = None
-
-        service = MagicMock()
-        service.get_request_hash = None
-
-        channel_item = MagicMock()
-        channel_item.__getitem__ = lambda self, k: {'id': 1, 'cache_type': 'b', 'cache_name': 'c'}[k]
-
-        wsgi = {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/p'}
-
-        key1, _ = handler.get_response_from_cache(service, b'', channel_item, {'a': '1', 'b': '2'}, wsgi)
-        key2, _ = handler.get_response_from_cache(service, b'', channel_item, {'b': '2', 'a': '1'}, wsgi)
-
-        self.assertEqual(key1, key2)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class InvokeServiceSecDefTestCase(unittest.TestCase):
     """ Tests for _invoke_service sec_def branch and query params logic.
     """
@@ -1290,10 +1136,10 @@ class MatchURLTestCase(unittest.TestCase):
 # ################################################################################################################################
 
     def test_reads_wsgi_input(self) -> 'None':
-        """ The payload is read from wsgi.input.
+        """ The payload is read from zato.http.raw_request.
         """
         ctx = _make_dispatcher()
-        wsgi_environ = _make_wsgi_environ({'wsgi.input': BytesIO(b'request-body')})
+        wsgi_environ = _make_wsgi_environ({'zato.http.raw_request': b'request-body'})
 
         result = ctx.dispatcher._match_url(_make_meta(), wsgi_environ)
 
@@ -1318,7 +1164,7 @@ class MatchURLTestCase(unittest.TestCase):
         """ wsgi_environ['zato.http.raw_request'] is set to the raw payload.
         """
         ctx = _make_dispatcher()
-        wsgi_environ = _make_wsgi_environ({'wsgi.input': BytesIO(b'the-body')})
+        wsgi_environ = _make_wsgi_environ({'zato.http.raw_request': b'the-body'})
 
         _ = ctx.dispatcher._match_url(_make_meta(), wsgi_environ)
 

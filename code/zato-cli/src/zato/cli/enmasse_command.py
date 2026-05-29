@@ -166,11 +166,13 @@ class Enmasse(ZatoCommand):
                 if asbool(os.environ.get('Zato_Needs_Config_Reload', True)):
 
                     # .. build an invoker ..
+                    self.logger.info('Building client from server_dir=%s for config reload', server_path)
                     client = get_client_from_server_conf(
                         server_dir=server_path,
                         require_server=True,
                         initial_wait_time=int(args.initial_wait_time)
                     )
+                    self.logger.info('Client address=%s', client.address)
 
                     # .. reload configuration ..
                     _ = client.invoke('zato.server.invoker', {'func_name':'reload_config'})

@@ -456,7 +456,7 @@ def reset_receivers() -> 'any_':
 def drain_pull_queue() -> 'any_':
     """ Drains the pull queue so the test starts with zero pending messages.
     """
-    from _client import PullClient
+    from zato.common.test.client import PullClient
     from config import TestConfig
 
     client = PullClient(TestConfig.base_url, TestConfig.puller_username, TestConfig.puller_password)

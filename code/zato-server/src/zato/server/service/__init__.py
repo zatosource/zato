@@ -845,10 +845,16 @@ class Service:
             # It is possible that the dictionary is empty
             response_elem = keys[0] if keys else None
 
+            logger.info('update_handle: after _meta removal, keys=%s, response_elem=%s', keys, response_elem)
+
             # This covers responses that have only one top-level element
             # and that element's name is 'response' or, e.g. 'zato_amqp_...'
             if len(keys) == 1:
                 if response_elem == 'response' or (isinstance(response_elem, str) and response_elem.startswith('zato')):
+                    if '_meta' in response:
+                        logger.info('update_handle: _meta present, returning full response dict')
+                        return response
+                    logger.info('update_handle: returning response[%s], type=%s', response_elem, type(response[response_elem]).__name__)
                     return response[response_elem]
 
                 # This may be a dict response from a service, in which case we return it as is

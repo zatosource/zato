@@ -84,7 +84,7 @@ class TestCombinedClearPullLeavePush:
 
     def test_clear_pull_leave_push(self, zato_server:'any_') -> 'None':
 
-        from _client import AdminClient, PublishClient
+        from zato.common.test.client import AdminClient, PublishClient
         from config import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
@@ -121,7 +121,7 @@ class TestCombinedClearPushLeavePull:
 
     def test_clear_push_leave_pull(self, zato_server:'any_') -> 'None':
 
-        from _client import AdminClient, PublishClient, PullClient
+        from zato.common.test.client import AdminClient, PublishClient, PullClient
         from config import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
@@ -156,7 +156,7 @@ class TestCombinedClearBothEmpty:
 
     def test_clear_both_empty(self, zato_server:'any_') -> 'None':
 
-        from _client import AdminClient, PublishClient
+        from zato.common.test.client import AdminClient, PublishClient
         from config import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
@@ -199,7 +199,7 @@ class TestCombinedClearBothDiskFiles:
 
     def test_clear_both_disk_files(self, zato_server:'any_') -> 'None':
 
-        from _client import AdminClient, PublishClient
+        from zato.common.test.client import AdminClient, PublishClient
         from config import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)
@@ -235,7 +235,7 @@ class TestCombinedClearOrderIndependent:
 
     def test_clear_order_independent(self, zato_server:'any_') -> 'None':
 
-        from _client import AdminClient, PublishClient
+        from zato.common.test.client import AdminClient, PublishClient
         from config import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)

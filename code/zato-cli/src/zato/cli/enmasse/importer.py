@@ -791,6 +791,15 @@ class EnmasseYAMLImporter:
         # Wait for all services referenced in the configuration to be available
         if server_dir:
             timeout = wait_for_services_timeout or Default_Service_Wait_Timeout
+            logger.info('About to call wait_for_services with timeout=%s, server_dir=%s', timeout, server_dir)
+
+            # Log raw service names from YAML before env var resolution
+            for section_name in ('channel_rest', 'scheduler'):
+                if section_items := yaml_config.get(section_name):
+                    for item in section_items:
+                        if svc := item.get('service'):
+                            logger.info('Raw service name in %s: %r', section_name, svc)
+
             missing_services = wait_for_services(yaml_config, server_dir, timeout_seconds=timeout)
 
             if missing_services:
