@@ -667,7 +667,7 @@ $.fn.zato.pubsub.permission.edit = function(id) {
         if (!$accessTypeSelect.length) {
             $accessTypeSelect = $('select[name="edit-access_type"]');
         }
-        // Fallback to any select in the edit form if all else fails
+        // Default to any select in the edit form if all else fails
         if (!$accessTypeSelect.length) {
             $accessTypeSelect = $('#edit-div select').filter(function() {
                 return $(this).attr('name') && $(this).attr('name').indexOf('access_type') >= 0;
@@ -929,14 +929,14 @@ $.fn.zato.pubsub.permission.data_table.new_row = function(item, data, include_tr
         item.access_type = item.access_type.toLowerCase();
     }
 
-    var access_type_label = '';
+    var accessTypeLabel = '';
 
     if(item.access_type == 'publisher') {
-        access_type_label = 'Publisher';
+        accessTypeLabel = 'Publisher';
     } else if(item.access_type == 'subscriber') {
-        access_type_label = 'Subscriber';
+        accessTypeLabel = 'Subscriber';
     } else if(item.access_type == 'publisher-subscriber') {
-        access_type_label = 'Publisher & Subscriber';
+        accessTypeLabel = 'Publisher & Subscriber';
     }
 
     // Create pattern display structure to match initial rendering
@@ -956,7 +956,7 @@ $.fn.zato.pubsub.permission.data_table.new_row = function(item, data, include_tr
                               item.name);
     row += String.format('<td>{0}</td>', secLink);
     row += String.format('<td>{0}</td>', pattern_display_html);
-    row += String.format('<td style="text-align:center"><span class="access-type-inner">{0}</span></td>', access_type_label);
+    row += String.format('<td style="text-align:center"><span class="access-type-inner">{0}</span></td>', accessTypeLabel);
     row += String.format('<td style="display:none" style="text-align:center">{0}</td>', item.subscription_count);
     row += String.format('<td><a href="javascript:$.fn.zato.pubsub.permission.edit(\'{0}\')">Edit</a></td>', item.id);
     row += String.format('<td><a href="javascript:$.fn.zato.pubsub.permission.delete_(\'{0}\')">Delete</a></td>', item.id);
