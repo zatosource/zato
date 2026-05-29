@@ -1159,6 +1159,12 @@ $.fn.zato.data_table.on_submit = function(action) {
     }
 
     if($.fn.zato.is_form_valid(form)) {
+
+        // Block submission when any uniqueness-validated field already exists in the database ..
+        if(!$.fn.zato.validate_unique_on_submit(form)) {
+            return false;
+        }
+
         var label = action === 'create' ? 'Creating ...' : 'Saving ...';
         console.log('[DEBUG] on_submit: form valid, calling show_action_overlay for action=' + action);
         $.fn.zato.show_action_overlay(label);
@@ -2446,6 +2452,94 @@ $.fn.zato.pubsub.import_demo_config = function() {
     });
 };
 
+// A registry of every field that has live uniqueness validation attached, keyed by field id.
+// It lets the submit handler re-check each such field synchronously when OK is clicked.
+$.fn.zato.data_table._unique_checks = {};
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Builds the POST payload for a uniqueness check of a single field.
+$.fn.zato.build_unique_check_data = function(entity_type, attr_name, value, filter) {
+
+    // The base payload always carries the entity, attribute and value being checked ..
+    var data = {
+        'entity_type': entity_type,
+        'attr_name': attr_name,
+        'value': value
+    };
+
+    // .. and, when a scoping filter is supplied, narrow the check down to that sub-group
+    // .. (e.g. a username is unique per sec_type rather than globally).
+    if(filter) {
+        data['filter_name'] = filter.filter_name;
+        data['filter_value'] = filter.filter_value;
+    }
+
+    return data;
+}
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Renders the taken/available indicator next to a field, positioned right after its current text.
+$.fn.zato.render_unique_indicator = function(field, value, exists) {
+
+    field.siblings('.zato-unique-indicator').remove();
+
+    var wrapper = field.parent();
+    if(!wrapper.hasClass('zato-unique-wrapper')) {
+        wrapper.css('position', 'relative');
+        wrapper.addClass('zato-unique-wrapper');
+    }
+
+    var html;
+    if(exists) {
+        html = '<span class="zato-unique-indicator zato-unique-taken">Already taken</span>';
+    }
+    else {
+        html = '<span class="zato-unique-indicator zato-unique-ok">&#10003;</span>';
+    }
+    field.after(html);
+
+    var indicator = field.next('.zato-unique-indicator');
+    var measure_span = $('<span>').css({
+        'font': field.css('font'),
+        'font-size': field.css('font-size'),
+        'font-family': field.css('font-family'),
+        'letter-spacing': field.css('letter-spacing'),
+        'visibility': 'hidden',
+        'position': 'absolute',
+        'white-space': 'pre'
+    }).text(value).appendTo('body');
+    var text_width = measure_span.width();
+    measure_span.remove();
+    var field_left = field.position().left;
+    var input_padding_left = parseInt(field.css('padding-left'), 10) || 2;
+    indicator.css('left', (field_left + input_padding_left + text_width + 7) + 'px');
+}
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Returns the value of a field that should be checked, or an empty string when the check should be
+// skipped (empty value, or an edit form whose value has not changed from the original).
+$.fn.zato.get_unique_check_value = function(field, is_edit) {
+
+    var value = field.val().trim();
+    if(!value) {
+        return '';
+    }
+
+    if(is_edit) {
+        var original = field.data('zato-original-value');
+        if(original !== undefined && value === original) {
+            return '';
+        }
+    }
+
+    return value;
+}
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.validate_unique = function(field_id, entity_type, attr_name, filter) {
     var field = $(field_id);
     if(!field.length) {
@@ -2455,6 +2549,14 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name, filter) {
     var timer = null;
     var is_edit = field_id.indexOf('edit-') !== -1;
 
+    // Remember this field so the submit handler can re-check it synchronously on OK.
+    $.fn.zato.data_table._unique_checks[field_id] = {
+        'entity_type': entity_type,
+        'attr_name': attr_name,
+        'filter': filter,
+        'is_edit': is_edit
+    };
+
     field.on('input', function() {
         field.siblings('.zato-unique-indicator').css('opacity', '0');
         setTimeout(function() { field.siblings('.zato-unique-indicator').remove(); }, 200);
@@ -2463,33 +2565,14 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name, filter) {
             clearTimeout(timer);
         }
 
-        var value = field.val().trim();
+        var value = $.fn.zato.get_unique_check_value(field, is_edit);
         if(!value) {
             return;
         }
 
-        if(is_edit) {
-            var original = field.data('zato-original-value');
-            if(original !== undefined && value === original) {
-                return;
-            }
-        }
-
         timer = setTimeout(function() {
 
-            // The base payload always carries the entity, attribute and value being checked ..
-            var data = {
-                'entity_type': entity_type,
-                'attr_name': attr_name,
-                'value': value
-            };
-
-            // .. and, when a scoping filter is supplied, narrow the check down to that sub-group
-            // .. (e.g. a username is unique per sec_type rather than globally).
-            if(filter) {
-                data['filter_name'] = filter.filter_name;
-                data['filter_value'] = filter.filter_value;
-            }
+            var data = $.fn.zato.build_unique_check_data(entity_type, attr_name, value, filter);
 
             $.ajax({
                 type: 'POST',
@@ -2498,39 +2581,11 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name, filter) {
                 headers: {'X-CSRFToken': $.cookie('csrftoken')},
                 dataType: 'json',
                 success: function(data) {
-                    field.siblings('.zato-unique-indicator').remove();
                     var current = field.val().trim();
                     if(current !== value) {
                         return;
                     }
-                    var wrapper = field.parent();
-                    if(!wrapper.hasClass('zato-unique-wrapper')) {
-                        wrapper.css('position', 'relative');
-                        wrapper.addClass('zato-unique-wrapper');
-                    }
-                    var html;
-                    if(data.exists) {
-                        html = '<span class="zato-unique-indicator zato-unique-taken">Already taken</span>';
-                    }
-                    else {
-                        html = '<span class="zato-unique-indicator zato-unique-ok">&#10003;</span>';
-                    }
-                    field.after(html);
-                    var indicator = field.next('.zato-unique-indicator');
-                    var measure_span = $('<span>').css({
-                        'font': field.css('font'),
-                        'font-size': field.css('font-size'),
-                        'font-family': field.css('font-family'),
-                        'letter-spacing': field.css('letter-spacing'),
-                        'visibility': 'hidden',
-                        'position': 'absolute',
-                        'white-space': 'pre'
-                    }).text(value).appendTo('body');
-                    var text_width = measure_span.width();
-                    measure_span.remove();
-                    var field_left = field.position().left;
-                    var input_padding_left = parseInt(field.css('padding-left'), 10) || 2;
-                    indicator.css('left', (field_left + input_padding_left + text_width + 7) + 'px');
+                    $.fn.zato.render_unique_indicator(field, value, data.exists);
                 },
                 error: function(xhr, status, err) {
                     console.log('[validate_unique] Error: status=' + JSON.stringify(status) + ', err=' + JSON.stringify(err));
@@ -2538,6 +2593,69 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name, filter) {
             });
         }, 300);
     });
+}
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Re-checks every uniqueness-validated field that belongs to the given form, synchronously,
+// so that clicking OK cannot submit a value that is already taken. Returns true when the form
+// may be submitted and false when at least one field is taken.
+$.fn.zato.validate_unique_on_submit = function(form) {
+
+    var is_valid = true;
+    var first_taken = null;
+
+    // Walk every registered field and only act on the ones living inside the form being submitted ..
+    for(var field_id in $.fn.zato.data_table._unique_checks) {
+
+        var field = $(field_id);
+        if(!field.length) {
+            continue;
+        }
+        if(!$.contains(form.get(0), field.get(0))) {
+            continue;
+        }
+
+        var check = $.fn.zato.data_table._unique_checks[field_id];
+
+        // .. skip empty fields and unchanged edit values, exactly like the live check does ..
+        var value = $.fn.zato.get_unique_check_value(field, check.is_edit);
+        if(!value) {
+            continue;
+        }
+
+        var data = $.fn.zato.build_unique_check_data(check.entity_type, check.attr_name, value, check.filter);
+
+        // .. a synchronous request is needed here because the submit decision depends on its result.
+        var exists = false;
+        $.ajax({
+            type: 'POST',
+            url: '/zato/check-attr-exists/',
+            data: data,
+            headers: {'X-CSRFToken': $.cookie('csrftoken')},
+            dataType: 'json',
+            async: false,
+            success: function(response) {
+                exists = response.exists;
+            }
+        });
+
+        if(exists) {
+            $.fn.zato.render_unique_indicator(field, value, true);
+            $.fn.zato.blink_elem(field);
+            $.fn.zato.add_css_attention(field);
+            if(!first_taken) {
+                first_taken = field;
+            }
+            is_valid = false;
+        }
+    }
+
+    if(first_taken) {
+        first_taken.focus();
+    }
+
+    return is_valid;
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
