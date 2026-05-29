@@ -55,6 +55,7 @@ from zato.common.defaults import default_cluster_id
 # ################################################################################################################################
 
 if 0:
+    from django.http import HttpRequest
     from zato.common.typing_ import any_
 
 # ################################################################################################################################
@@ -73,7 +74,7 @@ _No_Age           = 0
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_dashboard_data(req:'any_') -> 'str':
+def _get_dashboard_data(req:'HttpRequest') -> 'str':
 
     # Get the list of topics ..
     try:
@@ -191,7 +192,7 @@ def _get_dashboard_data(req:'any_') -> 'str':
 # ################################################################################################################################
 
 @method_allowed('GET')
-def index(req:'any_') -> 'TemplateResponse':
+def index(req:'HttpRequest') -> 'TemplateResponse':
 
     data_json = _get_dashboard_data(req)
 
@@ -207,7 +208,7 @@ def index(req:'any_') -> 'TemplateResponse':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def poll(req:'any_') -> 'HttpResponse':
+def poll(req:'HttpRequest') -> 'HttpResponse':
 
     try:
         data_json = _get_dashboard_data(req)
@@ -225,7 +226,7 @@ def poll(req:'any_') -> 'HttpResponse':
 # ################################################################################################################################
 
 @method_allowed('GET')
-def import_demo_config(req:'any_') -> 'HttpResponse':
+def import_demo_config(req:'HttpRequest') -> 'HttpResponse':
 
     try:
         response = req.zato.client.invoke('zato.server.invoker', {
