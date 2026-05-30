@@ -1966,6 +1966,16 @@ class ConfigManager(_ConfigManagerBase):
         sub_key = msg.sub_key
         username = msg.username
 
+        # .. collect topic names this sub_key belongs to before we remove them from memory ..
+        topic_names = [
+            topic_name for topic_name, sub_list in self.config_store.pubsub_subs.items()
+            if any(item['sub_key'] == sub_key for item in sub_list)
+        ]
+
+        # .. clean up Redis state for each topic ..
+        for topic_name in topic_names:
+            self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
+
         self._remove_pubsub_sub_configs_by_sub_key(sub_key)
         self.server.pubsub_subscriptions.remove_user(username)
 
