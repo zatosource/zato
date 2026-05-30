@@ -1,0 +1,44 @@
+security:
+
+  - name: test.sub.edit.publisher
+    type: basic_auth
+    username: test.sub.edit.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.sub.edit.subscriber
+    type: basic_auth
+    username: test.sub.edit.subscriber
+    password: "{{subscriber_password}}"
+
+outgoing_rest:
+
+  - name: test.sub.edit.out.webhook
+    host: "http://127.0.0.1:{{webhook_port}}"
+    url_path: /webhook
+    data_format: json
+    timeout: 30
+
+pubsub_topic:
+
+  - name: sub.edit.topic.one
+  - name: sub.edit.topic.two
+  - name: sub.edit.topic.three
+  - name: sub.edit.topic.four
+
+pubsub_permission:
+
+  - security: test.sub.edit.publisher
+    pub:
+      - sub.edit.**
+
+  - security: test.sub.edit.subscriber
+    sub:
+      - sub.edit.**
+
+pubsub_subscription:
+
+  - security: test.sub.edit.subscriber
+    delivery_type: pull
+    topic_list:
+      - sub.edit.topic.one
+      - sub.edit.topic.two

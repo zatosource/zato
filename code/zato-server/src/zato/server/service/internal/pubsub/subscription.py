@@ -568,8 +568,9 @@ class Edit(AdminService):
                 pubsub_msg.topic_name_list = topic_objects_list
                 pubsub_msg.delivery_type = sub.delivery_type
                 pubsub_msg.old_delivery_type = old_delivery_type
-                pubsub_msg.rest_push_endpoint_id = input.rest_push_endpoint_id
-                pubsub_msg.push_service_name = input.push_service_name
+                pubsub_msg.push_type = sub.push_type
+                pubsub_msg.rest_push_endpoint_id = sub.rest_push_endpoint_id
+                pubsub_msg.push_service_name = sub.push_service_name
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_EDIT.value
 
                 # .. our own process we invoke directly ..
