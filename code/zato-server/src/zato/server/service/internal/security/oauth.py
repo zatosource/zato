@@ -186,6 +186,9 @@ class Delete(AdminService):
                     filter(OAuth.id==self.request.input.id).\
                     one()
 
+                # .. clean up all pub/sub state before the CASCADE delete ..
+                self.server.config_manager.cleanup_security_pubsub(session, auth.id, auth.username)
+
                 session.delete(auth)
                 session.commit()
             except Exception:
