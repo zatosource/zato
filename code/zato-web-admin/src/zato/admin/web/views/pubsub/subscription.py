@@ -138,15 +138,17 @@ class _CreateEdit(CreateEdit):
             field_mapping = self._get_field_mapping(field_prefix)
 
             for form_field, service_field in field_mapping.items():
-                if form_field in self.req.POST and self.req.POST[form_field]:
+                is_present = form_field in self.req.POST
+                is_boolean_field = service_field in ('is_delivery_active', 'is_pub_active')
 
+                if is_present and self.req.POST[form_field]:
                     value = self.req.POST[form_field]
 
-                    if service_field in ('is_delivery_active', 'is_pub_active'):
+                    if is_boolean_field:
                         input_dict[service_field] = value == 'on'
                     else:
                         input_dict[service_field] = value
-                elif service_field in ('is_delivery_active', 'is_pub_active'):
+                elif is_boolean_field:
                     input_dict[service_field] = False
 
     def _get_field_mapping(self, prefix:'str') -> 'anydict':
@@ -375,7 +377,10 @@ def _get_subscriber_patterns_for_sec_def(request:'HttpRequest', sec_base_id:'str
     subscriber_patterns = []
     sec_base_id = int(sec_base_id)
     for permission in permissions_response.data:
-        if permission.sec_base_id == sec_base_id and _is_subscriber_access(permission.access_type):
+        is_matching_sec = permission.sec_base_id == sec_base_id
+        is_subscriber = _is_subscriber_access(permission.access_type)
+
+        if is_matching_sec and is_subscriber:
             logger.info('Found subscriber permission with pattern: %s', permission.pattern)
 
             patterns = []
@@ -586,7 +591,9 @@ def get_topics_by_security(request:'HttpRequest') -> 'HttpResponse':
     logger.info('VIEW get_topics_by_security: cluster_id=%s, sec_base_id=%s', cluster_id, sec_base_id)
 
     # .. validate the input ..
-    if not sec_base_id:
+    has_no_sec_base_id = not sec_base_id
+
+    if has_no_sec_base_id:
         error_json = dumps({
             'error': 'Security definition ID is required'
         })
@@ -605,8 +612,10 @@ def get_topics_by_security(request:'HttpRequest') -> 'HttpResponse':
         subscribe_permissions = []
         if permissions_response and hasattr(permissions_response, 'data'):
             for permission in permissions_response.data:
-                if (permission.sec_base_id == sec_base_id and
-                    _is_subscriber_access(permission.access_type)):
+                is_matching_sec = permission.sec_base_id == sec_base_id
+                is_subscriber = _is_subscriber_access(permission.access_type)
+
+                if is_matching_sec and is_subscriber:
                     subscribe_permissions.append(permission)
 
         logger.info('VIEW get_topics_by_security: found %d subscribe permissions', len(subscribe_permissions))
