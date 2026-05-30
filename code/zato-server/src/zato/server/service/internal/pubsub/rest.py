@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from base64 import b64decode
-from http.client import BAD_REQUEST, UNAUTHORIZED
+from http.client import BAD_REQUEST, FORBIDDEN, UNAUTHORIZED
 from logging import getLogger
 
 # Zato
@@ -43,6 +43,7 @@ _max_len_limit = PubSub.Message.Default_Max_Len
 _status_ok = PubSub.Status.OK
 _status_bad_request = PubSub.Status.Bad_Request
 _status_unauthorized = PubSub.Status.Unauthorized
+_status_forbidden = PubSub.Status.Forbidden
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -161,6 +162,15 @@ class Publish(PubSubRESTService):
             self.response.payload.status = _status_unauthorized
             self.response.payload.details = 'Permission denied'
             self.response.status_code = UNAUTHORIZED
+            return
+
+        # Check if the topic is active ..
+        if not self.server.config_manager.is_pubsub_topic_active(topic_name):
+            self.response.payload.is_ok = False
+            self.response.payload.cid = cid
+            self.response.payload.status = _status_forbidden
+            self.response.payload.details = f'Topic {topic_name} is inactive'
+            self.response.status_code = FORBIDDEN
             return
 
         # Get message data

@@ -212,6 +212,11 @@ class ConfigManager(_ConfigManagerBase):
         # Lock to serialize service-topic setup/teardown
         self._service_topic_lock = RLock()
 
+        # Pub/sub topic manager for topic-level lookups
+        from zato.common.pubsub.topic_manager import TopicManager
+        session = server.odb.session()
+        self.pubsub_topic_manager = TopicManager(session, server.cluster_id)
+
 # ################################################################################################################################
 
     def init(self) -> 'None':
@@ -1104,6 +1109,14 @@ class ConfigManager(_ConfigManagerBase):
             subs = sorted(not_applicable.items())
             msg = f'No such sub_key `{sub_key}` among `{subs}`'
             raise Exception(msg)
+
+# ################################################################################################################################
+
+    def is_pubsub_topic_active(self, topic_name:'str') -> 'bool':
+        """ Returns True if the topic exists and is active.
+        """
+        out = self.pubsub_topic_manager.is_topic_active(topic_name)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -2023,7 +2036,7 @@ class ConfigManager(_ConfigManagerBase):
         """ Re-populates in-memory subscription state for a single topic from ODB.
         """
         from contextlib import closing
-        from zato.common.odb.model import PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
+        from zato.common.odb.model import PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic
 
         with closing(self.server.odb.session()) as session:
 
