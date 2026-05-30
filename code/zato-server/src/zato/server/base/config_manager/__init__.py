@@ -203,6 +203,20 @@ class ConfigManager(_ConfigManagerBase):
         # Generic connections - MongoDB outconns
         self.outconn_mongodb = {}
 
+        # Pub/sub push subscriptions keyed by sub_key -> list of sub config dicts
+        self._push_subs = {} # type: dict[str, list]
+
+        # Cache of service names that have already had their topic auto-created
+        self._service_topic_cache = set() # type: set[str]
+
+        # Lock to serialize service-topic setup/teardown
+        self._service_topic_lock = RLock()
+
+        # Pub/sub topic manager for topic-level lookups
+        from zato.common.pubsub.topic_manager import TopicManager
+        session = server.odb.session()
+        self.pubsub_topic_manager = TopicManager(session, server.cluster_id)
+
 # ################################################################################################################################
 
     def init(self) -> 'None':
@@ -980,8 +994,83 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def init_pubsub(self):
+    def init_pubsub(self) -> 'None':
         pass
+
+# ################################################################################################################################
+
+    def _sync_pubsub_subscriptions(self) -> 'None':
+
+        from contextlib import closing
+        from zato.common.odb.model import HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
+
+        _push = PubSub.Delivery_Type.Push
+
+        logger.info('Syncing ODB subscriptions to Redis pub/sub backend')
+
+        with closing(self.server.odb.session()) as session:
+
+            total_count = session.query(PubSubSubscription).filter(
+                PubSubSubscription.cluster_id == self.server.cluster_id).count()
+
+            rows = session.query(
+                PubSubSubscription.sub_key,
+                PubSubSubscription.delivery_type,
+                PubSubSubscription.push_type,
+                PubSubSubscription.push_service_name,
+                PubSubSubscription.rest_push_endpoint_id,
+                PubSubTopic.name,
+                SecurityBase.username,
+                SecurityBase.name.label('sec_name'),
+            ).join(
+                PubSubSubscriptionTopic, PubSubSubscriptionTopic.subscription_id == PubSubSubscription.id
+            ).join(
+                PubSubTopic, PubSubTopic.id == PubSubSubscriptionTopic.topic_id
+            ).join(
+                SecurityBase, SecurityBase.id == PubSubSubscription.sec_base_id
+            ).filter(
+                PubSubSubscription.cluster_id == self.server.cluster_id
+            ).all()
+
+            logger.info('_sync_pubsub_subscriptions trace -> total_in_odb=%d, after_query=%d',
+                total_count, len(rows))
+
+            synced = 0
+            push_subs = {} # type: dict[str, list]
+
+            for row in rows:
+                topic_name = row.name
+                sub_key = row.sub_key
+                logger.info('_sync_pubsub_subscriptions trace -> syncing sub_key=%s, sec_name=%s, topic=%s',
+                    sub_key, row.sec_name, topic_name)
+                self.server.pubsub_redis.subscribe(sub_key, topic_name)
+                synced += 1
+
+                if row.delivery_type == _push:
+                    sub_config = {
+                        'sub_key': sub_key,
+                        'topic_name': topic_name,
+                        'push_type': row.push_type,
+                        'push_service_name': row.push_service_name,
+                        'rest_push_endpoint_id': row.rest_push_endpoint_id,
+                    }
+
+                    if row.push_type == 'rest' and row.rest_push_endpoint_id:
+                        endpoint = session.query(HTTPSOAP).filter(
+                            HTTPSOAP.id == row.rest_push_endpoint_id
+                        ).first()
+                        if endpoint:
+                            sub_config['rest_push_url'] = (endpoint.host or '') + endpoint.url_path
+
+                    if sub_key not in push_subs:
+                        push_subs[sub_key] = []
+                    push_subs[sub_key].append(sub_config)
+
+            self._push_subs = push_subs
+
+        noun = 'pair' if synced == 1 else 'pairs'
+        push_count = sum(len(v) for v in push_subs.values())
+        logger.info('Synced %d ODB subscription-topic %s to Redis (%d push)', synced, noun, push_count)
 
 # ################################################################################################################################
 
@@ -1020,6 +1109,14 @@ class ConfigManager(_ConfigManagerBase):
             subs = sorted(not_applicable.items())
             msg = f'No such sub_key `{sub_key}` among `{subs}`'
             raise Exception(msg)
+
+# ################################################################################################################################
+
+    def is_pubsub_topic_active(self, topic_name:'str') -> 'bool':
+        """ Returns True if the topic exists and is active.
+        """
+        out = self.pubsub_topic_manager.is_topic_active(topic_name)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1851,27 +1948,101 @@ class ConfigManager(_ConfigManagerBase):
 
             # .. set up the Redis consumer group so the subscriber can immediately
             # .. receive messages published after this point.
-            if self.server._has_pubsub_redis:
-                self.server.pubsub_redis.subscribe(sub_key, topic_name)
+            self.server.pubsub_redis.subscribe(sub_key, topic_name)
 
     def on_config_event_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'bunch_') -> 'None':
 
         sub_key = msg.sub_key
         delivery_type = msg.delivery_type
 
+        # Collect old topic names before we remove them from memory ..
+        old_topic_names:'list[str]' = []
+
+        for topic_name, sub_list in self.config_store.pubsub_subs.items():
+            for item in sub_list:
+                if item['sub_key'] == sub_key:
+                    old_topic_names.append(topic_name)
+
+        # .. unsubscribe from old topics in Redis (GAP 12) ..
+        for topic_name in old_topic_names:
+            self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
+
+        # .. remove old in-memory configs ..
         self._remove_pubsub_sub_configs_by_sub_key(sub_key)
 
+        # .. add new in-memory configs and subscribe in Redis (GAP 13) ..
         for topic_item in msg.topic_name_list:
             topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
             self._add_pubsub_sub_config(sub_key, topic_name, delivery_type, msg)
+            self.server.pubsub_redis.subscribe(sub_key, topic_name)
+
+        # .. stop the old delivery greenlet (GAP 15) ..
+        self.server.pubsub_push_delivery.stop_sub_key(sub_key)
+
+        # .. remove old push delivery config (GAP 14) ..
+        _ = self._push_subs.pop(sub_key, None)
+
+        # .. if the new delivery type is push, rebuild _push_subs and start the greenlet (GAP 14 + 15).
+        if delivery_type == 'push':
+
+            push_type = getattr(msg, 'push_type', None)
+            push_service_name = getattr(msg, 'push_service_name', None)
+            rest_push_endpoint_id = getattr(msg, 'rest_push_endpoint_id', None)
+
+            # .. resolve the REST endpoint URL from ODB if needed ..
+            rest_push_url = ''
+
+            if push_type == 'rest':
+                if rest_push_endpoint_id:
+                    from contextlib import closing as closing_
+                    from zato.common.odb.model import HTTPSOAP
+                    with closing_(self.server.odb.session()) as session:
+                        endpoint = session.query(HTTPSOAP).filter(
+                            HTTPSOAP.id == rest_push_endpoint_id
+                        ).first()
+                        if endpoint:
+                            host = endpoint.host or ''
+                            rest_push_url = host + endpoint.url_path
+
+            self._push_subs[sub_key] = []
+
+            for topic_item in msg.topic_name_list:
+                topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
+                sub_config = {
+                    'sub_key': sub_key,
+                    'topic_name': topic_name,
+                    'push_type': push_type,
+                    'push_service_name': push_service_name,
+                    'rest_push_endpoint_id': rest_push_endpoint_id,
+                    'rest_push_url': rest_push_url,
+                }
+                self._push_subs[sub_key].append(sub_config)
+
+            self.server.pubsub_push_delivery.start_sub_key(sub_key)
 
     def on_config_event_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'bunch_') -> 'None':
 
         sub_key = msg.sub_key
         username = msg.username
 
+        # .. collect topic names this sub_key belongs to before we remove them from memory ..
+        topic_names = [
+            topic_name for topic_name, sub_list in self.config_store.pubsub_subs.items()
+            if any(item['sub_key'] == sub_key for item in sub_list)
+        ]
+
+        # .. clean up Redis state for each topic ..
+        for topic_name in topic_names:
+            self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
+
         self._remove_pubsub_sub_configs_by_sub_key(sub_key)
         self.server.pubsub_subscriptions.remove_user(username)
+
+        # .. remove push delivery config ..
+        self._push_subs.pop(sub_key, None)
+
+        # .. stop the delivery greenlet for this sub_key ..
+        self.server.pubsub_push_delivery.stop_sub_key(sub_key)
 
 # ################################################################################################################################
 
@@ -1879,14 +2050,112 @@ class ConfigManager(_ConfigManagerBase):
 
         old_name = msg.old_topic_name
         new_name = msg.new_topic_name
+        is_active = getattr(msg, 'is_active', None)
 
-        # .. update in-memory pattern matcher ..
-        matcher = self.server.pubsub_pattern_matcher
-        for client_id in list(matcher._clients):
-            matcher.rename_topic(client_id, old_name, new_name)
+        # Handle name change ..
+        if old_name != new_name:
 
-        # .. rename Redis keys and subscriber sets ..
-        self.server.pubsub_redis.rename_topic(old_name, new_name)
+            # .. update in-memory pattern matcher ..
+            matcher = self.server.pubsub_pattern_matcher
+            for client_id in list(matcher._clients):
+                matcher.rename_topic(client_id, old_name, new_name)
+
+            # .. rename Redis keys and subscriber sets ..
+            self.server.pubsub_redis.rename_topic(old_name, new_name)
+
+            # .. re-key pubsub_subs from old topic name to new topic name ..
+            sub_configs = self.config_store.pubsub_subs.pop(old_name, None)
+            if sub_configs:
+                for sub_config in sub_configs:
+                    sub_config['topic_name'] = new_name
+                self.config_store.pubsub_subs[new_name] = sub_configs
+
+            # .. update topic_name inside each _push_subs entry.
+            for sub_key_configs in self._push_subs.values():
+                for sub_config in sub_key_configs:
+                    if sub_config['topic_name'] == old_name:
+                        sub_config['topic_name'] = new_name
+
+        # Handle is_active change ..
+        if is_active is False:
+
+            # .. the topic name to use is the new name (which may be the same as old) ..
+            topic_name = new_name
+
+            # .. remove subscription configs for this topic ..
+            sub_configs = self.config_store.pubsub_subs.pop(topic_name, None)
+
+            # .. stop push delivery greenlets and remove _push_subs entries for this topic ..
+            sub_keys_to_remove:'list' = []
+
+            for sub_key, config_list in self._push_subs.items():
+                for sub_config in config_list:
+                    if sub_config['topic_name'] == topic_name:
+                        sub_keys_to_remove.append(sub_key)
+                        break
+
+            for sub_key in sub_keys_to_remove:
+                _ = self._push_subs.pop(sub_key, None)
+                self.server.pubsub_push_delivery.stop_sub_key(sub_key)
+
+        elif is_active is True:
+
+            # .. re-activation: re-sync subscriptions for this topic from ODB.
+            self._resync_topic_subscriptions(new_name)
+
+# ################################################################################################################################
+
+    def _resync_topic_subscriptions(self, topic_name:'str') -> 'None':
+        """ Re-populates in-memory subscription state for a single topic from ODB.
+        """
+        from contextlib import closing
+        from zato.common.odb.model import PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic
+
+        with closing(self.server.odb.session()) as session:
+
+            rows = session.query(
+                PubSubSubscription.sub_key,
+                PubSubSubscription.delivery_type,
+                PubSubSubscription.push_type,
+                PubSubSubscription.push_service_name,
+                PubSubSubscription.rest_push_endpoint_id,
+                PubSubTopic.name,
+            ).join(
+                PubSubSubscriptionTopic, PubSubSubscription.id == PubSubSubscriptionTopic.subscription_id
+            ).join(
+                PubSubTopic, PubSubSubscriptionTopic.topic_id == PubSubTopic.id
+            ).filter(
+                PubSubTopic.name == topic_name,
+                PubSubTopic.is_active == True, # noqa: E712
+                PubSubSubscription.cluster_id == self.server.cluster_id,
+            ).all()
+
+            for row in rows:
+
+                # .. re-add to pubsub_subs ..
+                self._add_pubsub_sub_config(row.sub_key, topic_name, row.delivery_type, Bunch({
+                    'push_type': row.push_type,
+                    'push_service_name': row.push_service_name,
+                    'rest_push_endpoint_id': row.rest_push_endpoint_id,
+                }))
+
+                # .. re-add push delivery if needed ..
+                if row.delivery_type == 'push':
+                    sub_config = {
+                        'sub_key': row.sub_key,
+                        'topic_name': topic_name,
+                        'push_type': row.push_type,
+                        'push_service_name': row.push_service_name,
+                        'rest_push_endpoint_id': row.rest_push_endpoint_id,
+                    }
+
+                    if row.sub_key not in self._push_subs:
+                        self._push_subs[row.sub_key] = []
+                    self._push_subs[row.sub_key].append(sub_config)
+
+                    self.server.pubsub_push_delivery.start_sub_key(row.sub_key)
+
+# ################################################################################################################################
 
     def on_config_event_PUBSUB_TOPIC_DELETE(self, msg:'bunch_') -> 'None':
 
@@ -1962,10 +2231,10 @@ class ConfigManager(_ConfigManagerBase):
         server = self.server
 
         # .. acquire the lock to prevent races with the setup path ..
-        with server._service_topic_lock:
+        with self._service_topic_lock:
 
             # .. if this service was never set up, there is nothing to do ..
-            if service_name not in server._service_topic_cache:
+            if service_name not in self._service_topic_cache:
                 return
 
             # .. build the subscription key and topic name ..
@@ -1973,17 +2242,16 @@ class ConfigManager(_ConfigManagerBase):
             topic_name = _service_name_to_topic(service_name)
 
             # .. remove the Redis consumer group and subscription sets ..
-            if server._has_pubsub_redis:
-                server.pubsub_redis.unsubscribe(sub_key, topic_name)
+            server.pubsub_redis.unsubscribe(sub_key, topic_name)
 
             # .. remove push delivery config ..
-            server._push_subs.pop(sub_key, None)
+            self._push_subs.pop(sub_key, None)
 
             # .. stop the delivery greenlet for this sub_key ..
             server.pubsub_push_delivery.stop_sub_key(sub_key)
 
             # .. and remove from cache.
-            server._service_topic_cache.discard(service_name)
+            self._service_topic_cache.discard(service_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

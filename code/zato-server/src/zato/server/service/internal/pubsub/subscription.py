@@ -280,6 +280,9 @@ class Create(AdminService):
                 cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
                 sec_base = session.query(SecurityBase).filter_by(id=input.sec_base_id).first()
 
+                logger.info('subscription Create.handle is_active trace -> sec_base.name=%s, sec_base.is_active=%r, type=%s',
+                    sec_base.name, sec_base.is_active, type(sec_base.is_active).__name__)
+
                 # Generate a new subscription key
                 sub_key = input.sub_key or new_sub_key()
 
@@ -565,8 +568,9 @@ class Edit(AdminService):
                 pubsub_msg.topic_name_list = topic_objects_list
                 pubsub_msg.delivery_type = sub.delivery_type
                 pubsub_msg.old_delivery_type = old_delivery_type
-                pubsub_msg.rest_push_endpoint_id = input.rest_push_endpoint_id
-                pubsub_msg.push_service_name = input.push_service_name
+                pubsub_msg.push_type = sub.push_type
+                pubsub_msg.rest_push_endpoint_id = sub.rest_push_endpoint_id
+                pubsub_msg.push_service_name = sub.push_service_name
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_EDIT.value
 
                 # .. our own process we invoke directly ..

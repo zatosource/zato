@@ -33,6 +33,7 @@ from zato.common.pubsub.disk_store import DiskMessageStore
 # ################################################################################################################################
 
 if 0:
+    from django.http import HttpRequest
     from zato.common.typing_ import any_, anydict
     any_ = any_
     anydict = anydict
@@ -88,7 +89,7 @@ def _parse_response_data(response:'any_') -> 'anydict':
 # ################################################################################################################################
 
 @method_allowed('GET')
-def index(request:'any_') -> 'TemplateResponse':
+def index(request:'HttpRequest') -> 'TemplateResponse':
     """ Displays a read-only message browser for a subscription queue.
     """
 
@@ -145,12 +146,9 @@ def index(request:'any_') -> 'TemplateResponse':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def clear_queue(request:'any_') -> 'HttpResponse':
+def clear_queue(request:'HttpRequest') -> 'HttpResponse':
     """ Clears all pending messages from a subscription queue.
     """
-
-    # Our response to produce
-    out = None
 
     # Invoke the clear queue service ..
     sub_key = request.POST['sub_key']
@@ -190,7 +188,7 @@ def clear_queue(request:'any_') -> 'HttpResponse':
 # ################################################################################################################################
 
 @method_allowed('GET')
-def message_detail(request:'any_') -> 'TemplateResponse':
+def message_detail(request:'HttpRequest') -> 'TemplateResponse':
     """ Displays the detail/edit form for a single message.
     """
 
@@ -280,7 +278,7 @@ def message_detail(request:'any_') -> 'TemplateResponse':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def message_payload(request:'any_') -> 'HttpResponse':
+def message_payload(request:'HttpRequest') -> 'HttpResponse':
     """ Returns the message payload read directly from disk (no server round-trip).
     """
 
@@ -314,12 +312,9 @@ def message_payload(request:'any_') -> 'HttpResponse':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def delete_message(request:'any_') -> 'HttpResponse':
+def delete_message(request:'HttpRequest') -> 'HttpResponse':
     """ Deletes a single message from a subscription queue.
     """
-
-    # Our response to produce
-    out = None
 
     # Parse the request body ..
     body = json.loads(request.body)

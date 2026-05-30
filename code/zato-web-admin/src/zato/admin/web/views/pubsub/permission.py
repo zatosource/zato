@@ -15,18 +15,30 @@ from django.views import View
 
 # Zato
 from zato.admin.web.forms.pubsub.permission import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.admin.web.util import get_pubsub_security_definitions
-# Bunch
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common.ext.bunch import Bunch
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from django.http import HttpRequest
+    from zato.common.typing_ import any_, anydict
+    any_ = any_
+    anydict = anydict
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Index(_Index):
+    """ Lists pub/sub permissions.
+    """
     method_allowed = 'GET'
     url_name = 'pubsub-permission'
     template = 'zato/pubsub/permission.html'
@@ -38,47 +50,65 @@ class Index(_Index):
     output_required = 'id', 'name', 'pattern', 'access_type', 'sec_base_id', 'subscription_count'
     output_repeated = True
 
-    def handle(self):
+    def handle(self) -> 'anydict':
         create_form = CreateForm()
         edit_form = EditForm(prefix='edit')
 
-        return {
+        out = {
             'create_form': create_form,
             'edit_form': edit_form,
             'show_search_form': True,
         }
 
+        return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetSecurityDefinitions(View):
+    """ Returns security definitions for pub/sub permissions.
+    """
     url_name = 'pubsub-permission-get-security-definitions'
 
-    def get(self, request):
-        form_type = request.GET.get('form_type', 'edit')
+    def get(self, request:'HttpRequest') -> 'JsonResponse':
+        form_type = request.GET['form_type']
         choices = get_pubsub_security_definitions(request, form_type, 'permission')
-        return JsonResponse({'security_definitions': choices})
 
+        out = JsonResponse({'security_definitions': choices})
+        return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _CreateEdit(CreateEdit):
+    """ Base create/edit view for pub/sub permissions.
+    """
 
     method_allowed = 'POST'
 
-    def get_form_kwargs(self):
+    def get_form_kwargs(self) -> 'anydict':
+
+        # Get the list of security definitions ..
         response = self.req.zato.client.invoke('zato.security.basic-auth.get-list', {
             'cluster_id': self.req.zato.cluster_id,
         })
 
+        # .. build the choices list ..
         choices = []
         if response.ok:
             for item in response.data:
                 choices.append((item['id'], item['name']))
 
-        return {'sec_base_choices': choices}
+        # .. and return the result.
+        out = {'sec_base_choices': choices}
+        return out
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
+    """ Creates a pub/sub permission.
+    """
     action = 'create'
     error_message = 'Could not create the PubSub permission'
     url_name = 'pubsub-permission-create'
@@ -89,12 +119,15 @@ class Create(_CreateEdit):
     input_optional = 'cluster_id',
     output_required = 'id', 'security'
 
-    def success_message(self, item):
+    def success_message(self, item:'any_') -> 'str':
         return 'Successfully created the PubSub permission'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Edit(_CreateEdit):
+    """ Edits a pub/sub permission.
+    """
     action = 'edit'
     error_message = 'Could not update the PubSub permission'
     url_name = 'pubsub-permission-edit'
@@ -106,29 +139,33 @@ class Edit(_CreateEdit):
     input_optional = 'cluster_id',
     output_required = 'id', 'security'
 
-    def success_message(self, item):
+    def success_message(self, item:'any_') -> 'str':
 
-        sec_base_id = self.input.sec_base_id
+        # Get the security definition ID ..
+        sec_base_id = int(self.input.sec_base_id)
 
+        # .. look it up in the list of all definitions ..
         response = self.req.zato.client.invoke('zato.security.get-list', {
             'cluster_id': self.req.zato.cluster_id,
         })
 
-        if response.ok:
-            for sec_def in response.data:
-                if sec_def.id == int(sec_base_id):
-                    return f'Successfully updated permission `{sec_def.name}`'
-        else:
-            raise Exception(response)
+        # .. and return the name.
+        for sec_def in response.data:
+            if sec_def.id == sec_base_id:
+                return f'Successfully updated permission `{sec_def.name}`'
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Delete(_Delete):
+    """ Deletes a pub/sub permission.
+    """
     url_name = 'pubsub-permission-delete'
     error_message = 'Could not delete the PubSub permission'
     service_name = 'zato.pubsub.permission.delete'
 
-    def success_message(self, item):
+    def success_message(self, item:'any_') -> 'str':
         return 'Successfully deleted the PubSub permission'
 
+# ################################################################################################################################
 # ################################################################################################################################

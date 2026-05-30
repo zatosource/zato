@@ -2,3 +2,70 @@
     --pubsub-pub-bg: #FFE8CC;
     --pubsub-sub-bg: #e0f0ff;
 }
+
+/* ------------------------------------------------------------ */
+/* Topic matches popup                                           */
+/* ------------------------------------------------------------ */
+
+.topic-matches-popup-container {
+    font-size: 11px;
+    line-height: 1.3;
+    background-color: #f0f0f0;
+}
+
+.topic-matches-popup-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+    padding: 8px;
+    color: #666;
+    background-color: #f0f0f0;
+}
+
+.topic-matches-popup-spinner {
+    width: 12px;
+    height: 12px;
+    border: 1px solid #ddd;
+    border-top: 1px solid #666;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.topic-matches-popup-loading-text {
+    margin-top: 4px;
+    font-size: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.topic-matches-popup-close {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    font-size: 12px;
+    line-height: 14px;
+    text-align: center;
+    color: #000000;
+    background: #ddd;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.topic-matches-popup-error {
+    text-align: center;
+    padding: 8px;
+    color: #d32f2f;
+    font-size: 10px;
+    background-color: #f0f0f0;
+}

@@ -13,6 +13,8 @@ from django import forms
 # ################################################################################################################################
 
 class CreateForm(forms.Form):
+    """ Form for creating a pub/sub topic.
+    """
     id = forms.CharField(widget=forms.HiddenInput())
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:90%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
@@ -22,6 +24,8 @@ class CreateForm(forms.Form):
 # ################################################################################################################################
 
 class EditForm(CreateForm):
+    """ Form for editing a pub/sub topic.
+    """
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 # ################################################################################################################################

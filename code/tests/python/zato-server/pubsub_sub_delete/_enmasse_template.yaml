@@ -1,0 +1,40 @@
+security:
+
+  - name: test.sd.publisher
+    type: basic_auth
+    username: test.sd.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.sd.subscriber
+    type: basic_auth
+    username: test.sd.subscriber
+    password: "{{subscriber_password}}"
+
+pubsub_topic:
+
+  - name: sd.topic.alpha
+  - name: sd.topic.beta
+  - name: sd.topic.gamma
+
+pubsub_permission:
+
+  - security: test.sd.publisher
+    pub:
+      - sd.**
+
+  - security: test.sd.subscriber
+    sub:
+      - sd.**
+
+pubsub_subscription:
+
+  - security: test.sd.subscriber
+    delivery_type: pull
+    topic_list:
+      - sd.topic.alpha
+
+  - security: test.sd.subscriber
+    delivery_type: pull
+    topic_list:
+      - sd.topic.beta
+      - sd.topic.gamma
