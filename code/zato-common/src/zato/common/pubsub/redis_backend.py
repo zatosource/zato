@@ -114,6 +114,41 @@ return deleted_refs
 # ################################################################################################################################
 # ################################################################################################################################
 
+_lua_publish_script = """
+local stream_key = KEYS[1]
+local topic_subs_key = KEYS[2]
+local pending_key = KEYS[3]
+local expiry_key = KEYS[4]
+
+local max_len = tonumber(ARGV[1])
+local data_ref = ARGV[2]
+local expiration_ts = tonumber(ARGV[3])
+local sub_pending_prefix = ARGV[4]
+local field_count = tonumber(ARGV[5])
+
+-- Get subscribers for this topic ..
+local subscriber_keys = redis.call('SMEMBERS', topic_subs_key)
+
+-- .. populate pending sets before the message becomes visible ..
+if #subscriber_keys > 0 then
+    redis.call('SADD', pending_key, unpack(subscriber_keys))
+    for _, sk in ipairs(subscriber_keys) do
+        local sub_pending_key = sub_pending_prefix .. sk
+        redis.call('SADD', sub_pending_key, data_ref)
+    end
+    redis.call('ZADD', expiry_key, expiration_ts, data_ref)
+end
+
+-- .. now add to stream (this is when XREADGROUP consumers can see it) ..
+local fields_start = 6
+local stream_id = redis.call('XADD', stream_key, 'MAXLEN', '~', max_len, '*', unpack(ARGV, fields_start, fields_start + field_count * 2 - 1))
+
+return {stream_id, #subscriber_keys}
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _lua_pending_depths_script = """
 
 -- Extract a named field from a flat key-value array returned by XINFO ..
@@ -234,6 +269,7 @@ class RedisPubSubBackend:
         self.disk_store = disk_store
         self.server = server
         self._lua_unsub_sha:'str' = cast_('str', self.redis.script_load(_lua_unsub_script))
+        self._lua_publish_sha:'str' = cast_('str', self.redis.script_load(_lua_publish_script))
         self._lua_pending_depths_sha:'str' = cast_('str', self.redis.script_load(_lua_pending_depths_script))
 
 # ################################################################################################################################
@@ -332,7 +368,7 @@ class RedisPubSubBackend:
 
         # .. build the message with a reference to the disk file ..
         recv_time_iso = now.isoformat()
-        data_size = len(serialized_data)
+        data_size = str(len(serialized_data))
         data_preview = serialized_data[:_default_data_preview_len]
 
         message:'dict[FieldT, EncodableT]' = {
@@ -360,32 +396,47 @@ class RedisPubSubBackend:
         if publisher:
             message['publisher'] = publisher
 
-        # .. add to stream ..
+        # .. atomically populate pending sets and add to stream via Lua ..
         stream_key = self._get_stream_key(topic_name)
-        redis_stream_id = self.redis.xadd(stream_key, message, maxlen=_default_stream_max_len)
+        topic_subs_key = self._get_topic_subs_key(topic_name)
+        pending_key = self._get_pending_key(data_ref)
+        expiration_timestamp = expiration_time.timestamp()
+
+        # .. flatten message dict into key, value, key, value, ... for ARGV ..
+        message_fields:'list[str]' = []
+        for field_key, field_value in message.items():
+            message_fields.append(field_key)
+            message_fields.append(field_value)
+
+        field_count = len(message)
+
+        _lua_publish_num_keys = 4
+
+        lua_result:'anylist' = cast_('anylist', self.redis.evalsha(
+            self._lua_publish_sha,
+            _lua_publish_num_keys,
+            stream_key,
+            topic_subs_key,
+            pending_key,
+            ModuleCtx.Pending_Expiry_Key,
+            str(_default_stream_max_len),
+            data_ref,
+            str(expiration_timestamp),
+            ModuleCtx.Sub_Pending_Prefix,
+            str(field_count),
+            *message_fields,
+        ))
+
+        _lua_result_stream_id_idx = 0
+        _lua_result_sub_count_idx = 1
+
+        redis_stream_id = lua_result[_lua_result_stream_id_idx]
+        subscriber_count = lua_result[_lua_result_sub_count_idx]
 
         logger.info('Published to stream -> message_id:%s, data_ref:%s, stream_key:%s, redis_stream_id:%s',
             message_id, data_ref, stream_key, redis_stream_id)
 
-        # .. populate the pending subscriber set and index by expiration time ..
-        topic_subs_key = self._get_topic_subs_key(topic_name)
-        subscriber_keys:'strset' = cast_('strset', self.redis.smembers(topic_subs_key))
-
-        # .. if there are any subscribers, record which ones still need this message ..
-        if subscriber_keys:
-            pending_key = self._get_pending_key(data_ref)
-            _ = self.redis.sadd(pending_key, *subscriber_keys)
-
-            # .. populate the reverse index for each subscriber ..
-            for sk in subscriber_keys:
-                sub_pending_key = self._get_sub_pending_key(sk)
-                _ = self.redis.sadd(sub_pending_key, data_ref)
-
-            # .. and index the message by its expiration time for the cleanup job ..
-            expiration_timestamp = expiration_time.timestamp()
-            _ = self.redis.zadd(ModuleCtx.Pending_Expiry_Key, {data_ref: expiration_timestamp})
-
-            subscriber_count = len(subscriber_keys)
+        if subscriber_count:
             logger.info('Populated pending set -> data_ref:%s, subscriber_count:%d, expiration_timestamp:%.1f',
                 data_ref, subscriber_count, expiration_timestamp)
         # .. update the publish counter and return the result.
