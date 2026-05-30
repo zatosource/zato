@@ -28,6 +28,10 @@ from zato.common.ext.bunch import Bunch
 if 0:
     from django.http import HttpRequest
     from zato.common.typing_ import any_, anydict, anylist, strlist
+    any_ = any_
+    anydict = anydict
+    anylist = anylist
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -124,11 +128,12 @@ class _CreateEdit(CreateEdit):
 
         for topic_data_json in topic_data_list:
             topic_data = loads(topic_data_json)
-            topic_names.append({
+            topic_entry = {
                 'topic_name': topic_data['topic_name'],
                 'is_pub_enabled': topic_data['is_pub_enabled'],
                 'is_delivery_enabled': topic_data['is_delivery_enabled'],
-            })
+            }
+            topic_names.append(topic_entry)
 
         input_dict['topic_name_list'] = topic_names
 
@@ -605,7 +610,6 @@ def get_topics_by_security(request:'HttpRequest') -> 'HttpResponse':
         logger.info('VIEW get_topics_by_security: found %d subscribe permissions', len(subscribe_permissions))
 
         if not subscribe_permissions:
-            # No subscribe permissions found for this security definition
             logger.info('VIEW get_topics_by_security: no subscribe permissions found')
 
             response_json = dumps({
@@ -616,7 +620,7 @@ def get_topics_by_security(request:'HttpRequest') -> 'HttpResponse':
             out = HttpResponse(response_json, content_type='application/json')
             return out
 
-        # Collect all patterns from permissions (split newline-separated patterns)
+        # .. collect all patterns from the permissions ..
         all_patterns = []
         for permission in subscribe_permissions:
 
@@ -626,7 +630,7 @@ def get_topics_by_security(request:'HttpRequest') -> 'HttpResponse':
                 if stripped:
                     patterns.append(stripped)
 
-            # Only include patterns that start with 'sub=' or have no prefix (assume subscribe)
+            # .. only include patterns that start with 'sub=' or have no prefix ..
             for pattern in patterns:
                 if pattern.startswith('sub='):
                     all_patterns.append(pattern[4:])  # Remove 'sub=' prefix
@@ -636,7 +640,6 @@ def get_topics_by_security(request:'HttpRequest') -> 'HttpResponse':
         logger.info('VIEW get_topics_by_security: collected %d patterns', len(all_patterns))
 
         if not all_patterns:
-            # No valid subscribe patterns found
             logger.info('VIEW get_topics_by_security: no valid subscribe patterns found')
 
             response_json = dumps({
