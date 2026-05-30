@@ -35,6 +35,8 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 class Index(_Index):
+    """ Lists pub/sub permissions.
+    """
     method_allowed = 'GET'
     url_name = 'pubsub-permission'
     template = 'zato/pubsub/permission.html'
@@ -62,6 +64,8 @@ class Index(_Index):
 # ################################################################################################################################
 
 class GetSecurityDefinitions(View):
+    """ Returns security definitions for pub/sub permissions.
+    """
     url_name = 'pubsub-permission-get-security-definitions'
 
     def get(self, request:'HttpRequest') -> 'JsonResponse':
@@ -75,19 +79,25 @@ class GetSecurityDefinitions(View):
 # ################################################################################################################################
 
 class _CreateEdit(CreateEdit):
+    """ Base create/edit view for pub/sub permissions.
+    """
 
     method_allowed = 'POST'
 
     def get_form_kwargs(self) -> 'anydict':
+
+        # Get the list of security definitions ..
         response = self.req.zato.client.invoke('zato.security.basic-auth.get-list', {
             'cluster_id': self.req.zato.cluster_id,
         })
 
+        # .. build the choices list ..
         choices = []
         if response.ok:
             for item in response.data:
                 choices.append((item['id'], item['name']))
 
+        # .. and return the result.
         out = {'sec_base_choices': choices}
         return out
 
@@ -95,6 +105,8 @@ class _CreateEdit(CreateEdit):
 # ################################################################################################################################
 
 class Create(_CreateEdit):
+    """ Creates a pub/sub permission.
+    """
     action = 'create'
     error_message = 'Could not create the PubSub permission'
     url_name = 'pubsub-permission-create'
@@ -112,6 +124,8 @@ class Create(_CreateEdit):
 # ################################################################################################################################
 
 class Edit(_CreateEdit):
+    """ Edits a pub/sub permission.
+    """
     action = 'edit'
     error_message = 'Could not update the PubSub permission'
     url_name = 'pubsub-permission-edit'
@@ -125,12 +139,15 @@ class Edit(_CreateEdit):
 
     def success_message(self, item:'any_') -> 'str':
 
+        # Get the security definition ID ..
         sec_base_id = self.input.sec_base_id
 
+        # .. look it up in the list of all definitions ..
         response = self.req.zato.client.invoke('zato.security.get-list', {
             'cluster_id': self.req.zato.cluster_id,
         })
 
+        # .. and return the name.
         if response.ok:
             for sec_def in response.data:
                 if sec_def.id == int(sec_base_id):
@@ -142,6 +159,8 @@ class Edit(_CreateEdit):
 # ################################################################################################################################
 
 class Delete(_Delete):
+    """ Deletes a pub/sub permission.
+    """
     url_name = 'pubsub-permission-delete'
     error_message = 'Could not delete the PubSub permission'
     service_name = 'zato.pubsub.permission.delete'

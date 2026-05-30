@@ -181,40 +181,31 @@ def get_pubsub_security_definitions(request:'any_', form_type:'str'='edit', cont
 
         if form_type == 'create':
             if context == 'subscription':
-                # For subscriptions page, exclude definitions used by other subscriptions
+                # For subscriptions, exclude definitions used by other subscriptions ..
                 subscriptions_response = request.zato.client.invoke('zato.pubsub.subscription.get-list', {
                     'cluster_id': request.zato.cluster_id,
                 })
                 if subscriptions_response.ok:
-                    # Create a mapping of security names to IDs from the basic auth definitions
+
+                    # .. create a mapping of security names to IDs ..
                     sec_name_to_id = {}
                     for sec_def in response.data:
                         sec_name_to_id[sec_def['name']] = sec_def['id']
 
+                    # .. and collect used IDs.
                     for item in subscriptions_response.data:
-                        # Check both security_id and sec_name fields
                         sec_id = None
                         if item.get('security_id'):
                             sec_id = item['security_id']
                         elif item.get('sec_name'):
-                            # Map security name to ID
                             sec_name = item['sec_name']
                             sec_id = sec_name_to_id.get(sec_name)
 
                         if sec_id:
                             used_sec_ids.add(sec_id)
-            elif context == 'permission':
-                # For permissions page, exclude definitions used by other permissions
-                permissions_response = request.zato.client.invoke('zato.pubsub.permission.get-list', {
-                    'cluster_id': request.zato.cluster_id,
-                })
-                if permissions_response.ok:
-                    for item in permissions_response.data:
-                        if item.get('sec_base_id'):
-                            used_sec_ids.add(item['sec_base_id'])
-            elif context == 'client':
-                # For client context, we might want different filtering logic
-                # For now, treat it similar to permissions since clients are related to permissions
+
+            elif context in ('permission', 'client'):
+                # For permissions and clients, exclude definitions already in use.
                 permissions_response = request.zato.client.invoke('zato.pubsub.permission.get-list', {
                     'cluster_id': request.zato.cluster_id,
                 })

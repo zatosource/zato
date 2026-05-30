@@ -7,9 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import json
 import logging
 from http import HTTPStatus
+from json import dumps as json_dumps
 from traceback import format_exc
 
 # Django
@@ -37,6 +37,8 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 class Index(_Index):
+    """ Lists pub/sub topics.
+    """
     method_allowed = 'GET'
     url_name = 'pubsub-topic'
     template = 'zato/pubsub/topic.html'
@@ -62,6 +64,8 @@ class Index(_Index):
 # ################################################################################################################################
 
 class _CreateEdit(CreateEdit):
+    """ Base create/edit view for pub/sub topics.
+    """
 
     method_allowed = 'POST'
 
@@ -70,12 +74,14 @@ class _CreateEdit(CreateEdit):
     output_required = 'id', 'name'
 
     def success_message(self, item:'any_') -> 'str':
-        return 'Successfully {} Pub/Sub topic `{}`'.format(self.verb, item.name)
+        return f'Successfully {self.verb} Pub/Sub topic `{item.name}`'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
+    """ Creates a pub/sub topic.
+    """
     url_name = 'pubsub-topic-create'
     service_name = 'zato.pubsub.topic.create'
 
@@ -83,6 +89,8 @@ class Create(_CreateEdit):
 # ################################################################################################################################
 
 class Edit(_CreateEdit):
+    """ Edits a pub/sub topic.
+    """
     url_name = 'pubsub-topic-edit'
     form_prefix = 'edit-'
     service_name = 'zato.pubsub.topic.edit'
@@ -91,6 +99,8 @@ class Edit(_CreateEdit):
 # ################################################################################################################################
 
 class Delete(_Delete):
+    """ Deletes a pub/sub topic.
+    """
     url_name = 'pubsub-topic-delete'
     error_message = 'Could not delete the Pub/Sub topic'
     service_name = 'zato.pubsub.topic.delete'
@@ -102,11 +112,13 @@ class Delete(_Delete):
 def get_matches(request:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of topics matching a pattern.
     """
+    # Get the input parameters ..
     cluster_id = request.POST.get('cluster_id')
     pattern = request.POST.get('pattern')
 
     logger.info('VIEW get_matches: received request with cluster_id=%s, pattern=%s', cluster_id, pattern)
 
+    # .. invoke the service ..
     service_response = request.zato.client.invoke('zato.pubsub.topic.get-matches', {
         'cluster_id': cluster_id,
         'pattern': pattern,
@@ -115,8 +127,9 @@ def get_matches(request:'HttpRequest') -> 'HttpResponse':
     logger.info('VIEW get_matches: service_response.ok=%s, data=%r',
                 service_response.ok, service_response.data if service_response.ok else service_response.details)
 
+    # .. and return the result.
     if service_response.ok:
-        response_json = json.dumps({
+        response_json = json_dumps({
             'msg': 'Topics retrieved successfully',
             'matches': service_response.data
         })
@@ -124,7 +137,7 @@ def get_matches(request:'HttpRequest') -> 'HttpResponse':
         out = HttpResponse(response_json, content_type='application/json')
 
     else:
-        error_json = json.dumps({
+        error_json = json_dumps({
             'error': service_response.details or 'Error retrieving matching topics'
         })
 
