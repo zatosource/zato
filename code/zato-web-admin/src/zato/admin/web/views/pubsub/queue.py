@@ -150,9 +150,6 @@ def clear_queue(request:'HttpRequest') -> 'HttpResponse':
     """ Clears all pending messages from a subscription queue.
     """
 
-    # Our response to produce
-    out = None
-
     # Invoke the clear queue service ..
     sub_key = request.POST['sub_key']
 
@@ -318,9 +315,6 @@ def message_payload(request:'HttpRequest') -> 'HttpResponse':
 def delete_message(request:'HttpRequest') -> 'HttpResponse':
     """ Deletes a single message from a subscription queue.
     """
-
-    # Our response to produce
-    out = None
 
     # Parse the request body ..
     body = json.loads(request.body)

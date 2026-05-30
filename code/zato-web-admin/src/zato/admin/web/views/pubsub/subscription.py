@@ -97,11 +97,11 @@ class _CreateEdit(CreateEdit):
     def post_process_return_data(self, return_data:'anydict') -> 'anydict':
 
         # Get the topic name list ..
-        topic_name_list = return_data.get('topic_name_list', [])
+        topic_name_list = return_data['topic_name_list']
         return_data['topic_name_list'] = dumps(topic_name_list)
 
         # .. and set the link list.
-        topic_link_list = return_data.get('topic_link_list', [])
+        topic_link_list = return_data['topic_link_list']
         return_data['topic_link_list'] = ', '.join(topic_link_list)
 
         return return_data
@@ -111,45 +111,42 @@ class _CreateEdit(CreateEdit):
         # Build the input dict based on POST data ..
         input_dict = {}
 
-        if self.req.method == 'POST':
-            topic_name_list = self.req.POST.getlist(topic_field_name)
-            if topic_name_list:
-                input_dict['topic_name_list'] = topic_name_list
+        topic_name_list = self.req.POST.getlist(topic_field_name)
+        input_dict['topic_name_list'] = topic_name_list
 
         # .. and return the result.
         return input_dict
 
     def _pre_process_input_dict_common(self, input_dict:'anydict', field_prefix:'str') -> 'None':
 
-        if self.req.method == 'POST':
-            topic_data_list = self.req.POST.getlist('topic_data')
-            topic_names = []
+        topic_data_list = self.req.POST.getlist('topic_data')
+        topic_names = []
 
-            for topic_data_json in topic_data_list:
-                topic_data = loads(topic_data_json)
-                topic_names.append({
-                    'topic_name': topic_data['topic_name'],
-                    'is_pub_enabled': topic_data['is_pub_enabled'],
-                    'is_delivery_enabled': topic_data['is_delivery_enabled'],
-                })
+        for topic_data_json in topic_data_list:
+            topic_data = loads(topic_data_json)
+            topic_names.append({
+                'topic_name': topic_data['topic_name'],
+                'is_pub_enabled': topic_data['is_pub_enabled'],
+                'is_delivery_enabled': topic_data['is_delivery_enabled'],
+            })
 
-            input_dict['topic_name_list'] = topic_names
+        input_dict['topic_name_list'] = topic_names
 
-            field_mapping = self._get_field_mapping(field_prefix)
+        field_mapping = self._get_field_mapping(field_prefix)
 
-            for form_field, service_field in field_mapping.items():
-                is_present = form_field in self.req.POST
-                is_boolean_field = service_field in ('is_delivery_active', 'is_pub_active')
+        for form_field, service_field in field_mapping.items():
+            is_present = form_field in self.req.POST
+            is_boolean_field = service_field in ('is_delivery_active', 'is_pub_active')
 
-                if is_present and self.req.POST[form_field]:
-                    value = self.req.POST[form_field]
+            if is_present and self.req.POST[form_field]:
+                value = self.req.POST[form_field]
 
-                    if is_boolean_field:
-                        input_dict[service_field] = value == 'on'
-                    else:
-                        input_dict[service_field] = value
-                elif is_boolean_field:
-                    input_dict[service_field] = False
+                if is_boolean_field:
+                    input_dict[service_field] = value == 'on'
+                else:
+                    input_dict[service_field] = value
+            elif is_boolean_field:
+                input_dict[service_field] = False
 
     def _get_field_mapping(self, prefix:'str') -> 'anydict':
         raise NotImplementedError('Subclasses must implement _get_field_mapping')
@@ -240,7 +237,7 @@ def get_security_definitions(request:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of security definitions for pubsub subscriptions.
     """
     # Get the form type ..
-    form_type = request.GET.get('form_type', 'create')
+    form_type = request.GET['form_type']
 
     try:
 
@@ -258,7 +255,7 @@ def get_security_definitions(request:'HttpRequest') -> 'HttpResponse':
 
     except Exception as error:
         error_json = dumps({
-            'error': str(error) or 'Error retrieving security definitions'
+            'error': str(error)
         })
 
         out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -272,8 +269,8 @@ def get_topics(request:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of topics for pubsub subscriptions.
     """
     # Get the input parameters ..
-    cluster_id = request.GET.get('cluster_id')
-    form_type = request.GET.get('form_type', 'create')
+    cluster_id = request.GET['cluster_id']
+    form_type = request.GET['form_type']
 
     logger.info('VIEW get_topics: received request with cluster_id=%s, form_type=%s', cluster_id, form_type)
 
@@ -286,12 +283,11 @@ def get_topics(request:'HttpRequest') -> 'HttpResponse':
 
         # .. build the topic list ..
         topics = []
-        if response and hasattr(response, 'data'):
-            for item in response.data:
-                topics.append({
-                    'id': item.id,
-                    'name': item.name
-                })
+        for item in response.data:
+            topics.append({
+                'id': item.id,
+                'name': item.name
+            })
 
         logger.info('VIEW get_topics: returning %d topics', len(topics))
 
@@ -308,7 +304,7 @@ def get_topics(request:'HttpRequest') -> 'HttpResponse':
         logger.error('VIEW get_topics: error=%s', error)
 
         error_json = dumps({
-            'error': str(error) or 'Error retrieving topics'
+            'error': str(error)
         })
 
         out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -412,7 +408,7 @@ def _get_topics_for_patterns(request:'HttpRequest', subscriber_patterns:'strlist
             })
             logger.info('Got %d matches for pattern: %s', len(matches_response.data), pattern)
             for topic in matches_response.data:
-                all_topics.add((topic.get('id', ''), topic.get('name', '')))
+                all_topics.add((topic['id'], topic['name']))
         except Exception as error:
             logger.error('Error getting matches for pattern: %s, error: %s', pattern, error)
 
@@ -498,8 +494,8 @@ def get_rest_endpoints(request:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of REST outgoing connections for pubsub subscriptions.
     """
     # Get the input parameters ..
-    cluster_id = request.GET.get('cluster_id')
-    form_type = request.GET.get('form_type', 'create')
+    cluster_id = request.GET['cluster_id']
+    form_type = request.GET['form_type']
 
     logger.info('VIEW get_rest_endpoints: received request with cluster_id=%s, form_type=%s', cluster_id, form_type)
 
@@ -532,7 +528,7 @@ def get_rest_endpoints(request:'HttpRequest') -> 'HttpResponse':
         logger.error('VIEW get_rest_endpoints: error=%s', error)
 
         error_json = dumps({
-            'error': str(error) or 'Error retrieving REST endpoints'
+            'error': str(error)
         })
 
         out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -546,8 +542,8 @@ def get_service_list(request:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of services for pubsub subscriptions.
     """
     # Get the input parameters ..
-    cluster_id = request.GET.get('cluster_id')
-    form_type = request.GET.get('form_type', 'create')
+    cluster_id = request.GET['cluster_id']
+    form_type = request.GET['form_type']
 
     logger.info('VIEW get_service_list: received request with cluster_id=%s, form_type=%s', cluster_id, form_type)
 
@@ -571,7 +567,7 @@ def get_service_list(request:'HttpRequest') -> 'HttpResponse':
         logger.error('VIEW get_service_list: error=%s', error)
 
         error_json = dumps({
-            'error': str(error) or 'Error retrieving services'
+            'error': str(error)
         })
 
         out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -585,21 +581,10 @@ def get_topics_by_security(request:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of topics filtered by security definition's subscribe permissions.
     """
     # Get the input parameters ..
-    cluster_id = request.GET.get('cluster_id')
-    sec_base_id = request.GET.get('sec_base_id')
+    cluster_id = request.GET['cluster_id']
+    sec_base_id = request.GET['sec_base_id']
 
     logger.info('VIEW get_topics_by_security: cluster_id=%s, sec_base_id=%s', cluster_id, sec_base_id)
-
-    # .. validate the input ..
-    has_no_sec_base_id = not sec_base_id
-
-    if has_no_sec_base_id:
-        error_json = dumps({
-            'error': 'Security definition ID is required'
-        })
-
-        out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.BAD_REQUEST)
-        return out
 
     try:
 
@@ -610,13 +595,12 @@ def get_topics_by_security(request:'HttpRequest') -> 'HttpResponse':
 
         # .. filter for subscribe permissions ..
         subscribe_permissions = []
-        if permissions_response and hasattr(permissions_response, 'data'):
-            for permission in permissions_response.data:
-                is_matching_sec = permission.sec_base_id == sec_base_id
-                is_subscriber = _is_subscriber_access(permission.access_type)
+        for permission in permissions_response.data:
+            is_matching_sec = permission.sec_base_id == sec_base_id
+            is_subscriber = _is_subscriber_access(permission.access_type)
 
-                if is_matching_sec and is_subscriber:
-                    subscribe_permissions.append(permission)
+            if is_matching_sec and is_subscriber:
+                subscribe_permissions.append(permission)
 
         logger.info('VIEW get_topics_by_security: found %d subscribe permissions', len(subscribe_permissions))
 
@@ -672,9 +656,8 @@ def get_topics_by_security(request:'HttpRequest') -> 'HttpResponse':
                     'pattern': pattern
                 })
 
-                if matches_response and hasattr(matches_response, 'data'):
-                    for topic in matches_response.data:
-                        matched_topics.add((topic.id, topic.name))  # Use tuple to ensure uniqueness
+                for topic in matches_response.data:
+                    matched_topics.add((topic.id, topic.name))
 
             except Exception as error:
                 logger.warning('VIEW get_topics_by_security: error matching pattern %s: %s', pattern, error)
@@ -706,7 +689,7 @@ def get_topics_by_security(request:'HttpRequest') -> 'HttpResponse':
         logger.error('VIEW get_topics_by_security: error=%s', error)
 
         error_json = dumps({
-            'error': str(error) or 'Error retrieving topics for security definition'
+            'error': str(error)
         })
 
         out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)

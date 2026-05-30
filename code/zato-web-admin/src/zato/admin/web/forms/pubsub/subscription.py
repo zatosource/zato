@@ -87,20 +87,19 @@ class CreateForm(forms.Form):
 
     def __init__(self, prefix:'strnone'=None, post_data:'any_'=None, req:'any_'=None) -> 'None':
         super().__init__(post_data, prefix=prefix)
-        if req:
 
-            # Topics will be populated dynamically via AJAX
-            self.fields['topic_id'].choices = []
+        # Topics will be populated dynamically via AJAX
+        self.fields['topic_id'].choices = []
 
-            # Use filtered security definitions for PubSub clients with empty first option
-            choices = [('', 'Select a security definition')] + get_pubsub_security_choices(req, 'create', 'subscription')
-            self.fields['sec_base_id'].choices = choices
+        # Use filtered security definitions for PubSub clients with empty first option
+        choices = [('', 'Select a security definition')] + get_pubsub_security_choices(req, 'create', 'subscription')
+        self.fields['sec_base_id'].choices = choices
 
-            # Set default option for REST endpoints
-            self.fields['rest_push_endpoint_id'].choices = [('', 'Select a REST endpoint')]
+        # Set default option for REST endpoints
+        self.fields['rest_push_endpoint_id'].choices = [('', 'Select a REST endpoint')]
 
-            # Set default option for service select
-            self.fields['push_service_name'].choices = [('', 'Select a service')]
+        # Set default option for service select
+        self.fields['push_service_name'].choices = [('', 'Select a service')]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -114,17 +113,16 @@ class EditForm(CreateForm):
     def __init__(self, prefix:'strnone'=None, post_data:'any_'=None, req:'any_'=None) -> 'None':
         super().__init__(prefix, post_data, req)
 
-        if req:
-            # Topics will be populated dynamically via AJAX
-            self.fields['topic_id'].choices = []
+        # Topics will be populated dynamically via AJAX
+        self.fields['topic_id'].choices = []
 
-            # Use filtered security definitions for edit (allows all available ones) with empty first option
-            choices = [('', 'Select a security definition')] + get_pubsub_security_choices(req, 'edit', 'subscription')
+        # Use filtered security definitions for edit (allows all available ones) with empty first option
+        choices = [('', 'Select a security definition')] + get_pubsub_security_choices(req, 'edit', 'subscription')
 
-            self.fields['sec_base_id'].choices = choices
+        self.fields['sec_base_id'].choices = choices
 
-            # Set default option for REST endpoints (will be populated via AJAX)
-            self.fields['rest_push_endpoint_id'].choices = [('', 'Select a REST endpoint')]
+        # Set default option for REST endpoints (will be populated via AJAX)
+        self.fields['rest_push_endpoint_id'].choices = [('', 'Select a REST endpoint')]
 
 # ################################################################################################################################
 # ################################################################################################################################

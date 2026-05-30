@@ -56,7 +56,6 @@ from zato.common.defaults import default_cluster_id
 
 if 0:
     from django.http import HttpRequest
-    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -77,30 +76,16 @@ _No_Age           = 0
 def _get_dashboard_data(request:'HttpRequest') -> 'str':
 
     # Get the list of topics ..
-    try:
-        response = request.zato.client.invoke('zato.pubsub.topic.get-list', {
-            'cluster_id': default_cluster_id,
-        })
-        if response.ok:
-            topics = response.data
-        else:
-            topics = []
-    except Exception as error:
-        logger.warning('Pub/sub dashboard - could not get topics: %s', error)
-        topics = []
+    response = request.zato.client.invoke('zato.pubsub.topic.get-list', {
+        'cluster_id': default_cluster_id,
+    })
+    topics = response.data
 
     # .. get the list of subscriptions ..
-    try:
-        sub_response = request.zato.client.invoke('zato.pubsub.subscription.get-list', {
-            'cluster_id': default_cluster_id,
-        })
-        if sub_response.ok:
-            subscriptions = sub_response.data
-        else:
-            subscriptions = []
-    except Exception as error:
-        logger.warning('Pub/sub dashboard - could not get subscriptions: %s', error)
-        subscriptions = []
+    sub_response = request.zato.client.invoke('zato.pubsub.subscription.get-list', {
+        'cluster_id': default_cluster_id,
+    })
+    subscriptions = sub_response.data
 
     # .. build the topic list ..
     topic_count = len(topics)
@@ -137,35 +122,21 @@ def _get_dashboard_data(request:'HttpRequest') -> 'str':
             oldest_unacked_age_seconds = queue_age
 
     # .. get the publish timeline from Redis streams ..
-    try:
-        timeline_response = request.zato.client.invoke('zato.pubsub.topic.get-publish-timeline', {
-            'since_minutes': 60,
-        })
-        if timeline_response.ok:
-            publishes_timeline = timeline_response.data
-            if isinstance(publishes_timeline, str):
-                publishes_timeline = json_loads(publishes_timeline)
-        else:
-            publishes_timeline = []
-    except Exception as error:
-        logger.warning('Pub/sub dashboard - could not get timeline: %s', error)
-        publishes_timeline = []
+    timeline_response = request.zato.client.invoke('zato.pubsub.topic.get-publish-timeline', {
+        'since_minutes': 60,
+    })
+    publishes_timeline = timeline_response.data
+    if isinstance(publishes_timeline, str):
+        publishes_timeline = json_loads(publishes_timeline)
 
     # .. get the distinct publisher count ..
-    try:
-        publisher_response = request.zato.client.invoke('zato.pubsub.topic.get-publisher-count', {
-            'since_minutes': 60,
-        })
-        if publisher_response.ok:
-            publisher_data = publisher_response.data
-            if isinstance(publisher_data, str):
-                publisher_data = json_loads(publisher_data)
-            total_publishers = publisher_data['publisher_count']
-        else:
-            total_publishers = _No_Rate
-    except Exception as error:
-        logger.warning('Pub/sub dashboard - could not get publisher count: %s', error)
-        total_publishers = _No_Rate
+    publisher_response = request.zato.client.invoke('zato.pubsub.topic.get-publisher-count', {
+        'since_minutes': 60,
+    })
+    publisher_data = publisher_response.data
+    if isinstance(publisher_data, str):
+        publisher_data = json_loads(publisher_data)
+    total_publishers = publisher_data['publisher_count']
 
     # .. and return the combined data.
     data = {
