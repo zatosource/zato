@@ -69,7 +69,7 @@ class GetSecurityDefinitions(View):
     url_name = 'pubsub-permission-get-security-definitions'
 
     def get(self, request:'HttpRequest') -> 'JsonResponse':
-        form_type = request.GET.get('form_type', 'edit')
+        form_type = request.GET['form_type']
         choices = get_pubsub_security_definitions(request, form_type, 'permission')
 
         out = JsonResponse({'security_definitions': choices})

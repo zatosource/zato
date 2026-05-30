@@ -113,8 +113,8 @@ def get_matches(request:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of topics matching a pattern.
     """
     # Get the input parameters ..
-    cluster_id = request.POST.get('cluster_id')
-    pattern = request.POST.get('pattern')
+    cluster_id = request.POST['cluster_id']
+    pattern = request.POST['pattern']
 
     logger.info('VIEW get_matches: received request with cluster_id=%s, pattern=%s', cluster_id, pattern)
 
@@ -138,7 +138,7 @@ def get_matches(request:'HttpRequest') -> 'HttpResponse':
 
     else:
         error_json = json_dumps({
-            'error': service_response.details or 'Error retrieving matching topics'
+            'error': service_response.details
         })
 
         out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)

@@ -174,56 +174,52 @@ def get_pubsub_security_definitions(request:'any_', form_type:'str'='edit', cont
         'ide_publisher'
     }
 
+    # Get already used security definitions based on context
     choices = []
-    if response.ok:
-        # Get already used security definitions based on context
-        used_sec_ids = set()
+    used_sec_ids = set()
 
-        if form_type == 'create':
-            if context == 'subscription':
-                # For subscriptions, exclude definitions used by other subscriptions ..
-                subscriptions_response = request.zato.client.invoke('zato.pubsub.subscription.get-list', {
-                    'cluster_id': request.zato.cluster_id,
-                })
-                if subscriptions_response.ok:
+    if form_type == 'create':
+        if context == 'subscription':
+            # For subscriptions, exclude definitions used by other subscriptions ..
+            subscriptions_response = request.zato.client.invoke('zato.pubsub.subscription.get-list', {
+                'cluster_id': request.zato.cluster_id,
+            })
 
-                    # .. create a mapping of security names to IDs ..
-                    sec_name_to_id = {}
-                    for sec_def in response.data:
-                        sec_name_to_id[sec_def['name']] = sec_def['id']
+            # .. create a mapping of security names to IDs ..
+            sec_name_to_id = {}
+            for sec_def in response.data:
+                sec_name_to_id[sec_def['name']] = sec_def['id']
 
-                    # .. and collect used IDs.
-                    for item in subscriptions_response.data:
-                        sec_id = None
-                        if item.get('security_id'):
-                            sec_id = item['security_id']
-                        elif item.get('sec_name'):
-                            sec_name = item['sec_name']
-                            sec_id = sec_name_to_id.get(sec_name)
+            # .. and collect used IDs.
+            for item in subscriptions_response.data:
+                sec_id = None
+                if item.get('security_id'):
+                    sec_id = item['security_id']
+                elif item.get('sec_name'):
+                    sec_name = item['sec_name']
+                    sec_id = sec_name_to_id.get(sec_name)
 
-                        if sec_id:
-                            used_sec_ids.add(sec_id)
+                if sec_id:
+                    used_sec_ids.add(sec_id)
 
-            elif context in ('permission', 'client'):
-                # For permissions and clients, exclude definitions already in use.
-                permissions_response = request.zato.client.invoke('zato.pubsub.permission.get-list', {
-                    'cluster_id': request.zato.cluster_id,
-                })
-                if permissions_response.ok:
-                    for item in permissions_response.data:
-                        if item.get('sec_base_id'):
-                            used_sec_ids.add(item['sec_base_id'])
+        elif context in ('permission', 'client'):
+            # For permissions and clients, exclude definitions already in use.
+            permissions_response = request.zato.client.invoke('zato.pubsub.permission.get-list', {
+                'cluster_id': request.zato.cluster_id,
+            })
+            for item in permissions_response.data:
+                used_sec_ids.add(item['sec_base_id'])
 
-        for item in response.data:
-            is_not_used = item['id'] not in used_sec_ids
-            is_not_filtered = item['name'] not in filtered_names
-            is_not_zato = not item['name'].startswith('zato')
+    for item in response.data:
+        is_not_used = item['id'] not in used_sec_ids
+        is_not_filtered = item['name'] not in filtered_names
+        is_not_zato = not item['name'].startswith('zato')
 
-            if is_not_used and is_not_filtered and is_not_zato:
-                choices.append({
-                    'id': item['id'],
-                    'name': item['name']
-                })
+        if is_not_used and is_not_filtered and is_not_zato:
+            choices.append({
+                'id': item['id'],
+                'name': item['name']
+            })
 
     return choices
 
@@ -248,11 +244,10 @@ def get_service_list(request):
     })
 
     services = []
-    if response.ok:
-        for item in response.data:
-            services.append({
-                'service_name': item['name']
-            })
+    for item in response.data:
+        services.append({
+            'service_name': item['name']
+        })
 
     return services
 
