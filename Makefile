@@ -351,6 +351,7 @@ test-pubsub: ## All pub/sub tests.
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_push/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_cli/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_new_sub/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_edit/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 

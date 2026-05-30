@@ -1955,11 +1955,70 @@ class ConfigManager(_ConfigManagerBase):
         sub_key = msg.sub_key
         delivery_type = msg.delivery_type
 
+        # Collect old topic names before we remove them from memory ..
+        old_topic_names:'list[str]' = []
+
+        for topic_name, sub_list in self.config_store.pubsub_subs.items():
+            for item in sub_list:
+                if item['sub_key'] == sub_key:
+                    old_topic_names.append(topic_name)
+
+        # .. unsubscribe from old topics in Redis (GAP 12) ..
+        for topic_name in old_topic_names:
+            self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
+
+        # .. remove old in-memory configs ..
         self._remove_pubsub_sub_configs_by_sub_key(sub_key)
 
+        # .. add new in-memory configs and subscribe in Redis (GAP 13) ..
         for topic_item in msg.topic_name_list:
             topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
             self._add_pubsub_sub_config(sub_key, topic_name, delivery_type, msg)
+            self.server.pubsub_redis.subscribe(sub_key, topic_name)
+
+        # .. stop the old delivery greenlet (GAP 15) ..
+        self.server.pubsub_push_delivery.stop_sub_key(sub_key)
+
+        # .. remove old push delivery config (GAP 14) ..
+        _ = self._push_subs.pop(sub_key, None)
+
+        # .. if the new delivery type is push, rebuild _push_subs and start the greenlet (GAP 14 + 15).
+        if delivery_type == 'push':
+
+            push_type = getattr(msg, 'push_type', None)
+            push_service_name = getattr(msg, 'push_service_name', None)
+            rest_push_endpoint_id = getattr(msg, 'rest_push_endpoint_id', None)
+
+            # .. resolve the REST endpoint URL from ODB if needed ..
+            rest_push_url = ''
+
+            if push_type == 'rest':
+                if rest_push_endpoint_id:
+                    from contextlib import closing as closing_
+                    from zato.common.odb.model import HTTPSOAP
+                    with closing_(self.server.odb.session()) as session:
+                        endpoint = session.query(HTTPSOAP).filter(
+                            HTTPSOAP.id == rest_push_endpoint_id
+                        ).first()
+                        if endpoint:
+                            host = endpoint.host or ''
+                            rest_push_url = host + endpoint.url_path
+
+            self._push_subs[sub_key] = []
+
+            for topic_item in msg.topic_name_list:
+                topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
+                sub_config = {
+                    'sub_key': sub_key,
+                    'topic_name': topic_name,
+                    'push_type': push_type,
+                    'push_service_name': push_service_name,
+                    'rest_push_endpoint_id': rest_push_endpoint_id,
+                    'rest_push_url': rest_push_url,
+                }
+                self._push_subs[sub_key].append(sub_config)
+
+            self.server.pubsub_push_delivery.start_sub_key(sub_key)
 
     def on_config_event_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'bunch_') -> 'None':
 
