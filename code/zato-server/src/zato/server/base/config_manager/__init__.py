@@ -2020,11 +2020,9 @@ class ConfigManager(_ConfigManagerBase):
 
             self.server.pubsub_push_delivery.start_sub_key(sub_key)
 
-    def on_config_event_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'bunch_') -> 'None':
-
-        sub_key = msg.sub_key
-        username = msg.username
-
+    def cleanup_subscription(self, sub_key:'str', username:'str') -> 'None':
+        """ Cleans up all in-memory and Redis state for a single subscription.
+        """
         # .. collect topic names this sub_key belongs to before we remove them from memory ..
         topic_names = [
             topic_name for topic_name, sub_list in self.config_store.pubsub_subs.items()
@@ -2035,14 +2033,40 @@ class ConfigManager(_ConfigManagerBase):
         for topic_name in topic_names:
             self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
 
+        # .. remove in-memory subscription configs ..
         self._remove_pubsub_sub_configs_by_sub_key(sub_key)
+
+        # .. remove user from the subscriptions store ..
         self.server.pubsub_subscriptions.remove_user(username)
 
         # .. remove push delivery config ..
-        self._push_subs.pop(sub_key, None)
+        _ = self._push_subs.pop(sub_key, None)
 
         # .. stop the delivery greenlet for this sub_key ..
         self.server.pubsub_push_delivery.stop_sub_key(sub_key)
+
+# ################################################################################################################################
+
+    def cleanup_security_pubsub(self, session:'any_', sec_base_id:'int', username:'str') -> 'None':
+        """ Cleans up all pub/sub state for subscriptions and permissions tied to a security definition.
+        Called before the security definition is cascade-deleted from ODB.
+        """
+        from zato.common.odb.query import pubsub_subscriptions_by_sec_base
+
+        # .. find all subscriptions for this security definition ..
+        subscriptions = pubsub_subscriptions_by_sec_base(session, sec_base_id, self.server.cluster_id)
+
+        # .. clean up each subscription's in-memory and Redis state ..
+        for sub in subscriptions:
+            self.cleanup_subscription(sub.sub_key, username)
+
+        # .. remove the client from the pattern matcher ..
+        self.server.pubsub_pattern_matcher.remove_client(username)
+
+# ################################################################################################################################
+
+    def on_config_event_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'bunch_') -> 'None':
+        self.cleanup_subscription(msg.sub_key, msg.username)
 
 # ################################################################################################################################
 

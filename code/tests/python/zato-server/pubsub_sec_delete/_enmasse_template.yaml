@@ -1,0 +1,40 @@
+security:
+
+  - name: test.secdel.publisher
+    type: basic_auth
+    username: test.secdel.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.secdel.subscriber
+    type: basic_auth
+    username: test.secdel.subscriber
+    password: "{{subscriber_password}}"
+
+pubsub_topic:
+
+  - name: secdel.topic.alpha
+  - name: secdel.topic.beta
+  - name: secdel.topic.gamma
+
+pubsub_permission:
+
+  - security: test.secdel.publisher
+    pub:
+      - secdel.**
+
+  - security: test.secdel.subscriber
+    sub:
+      - secdel.**
+
+pubsub_subscription:
+
+  - security: test.secdel.subscriber
+    delivery_type: pull
+    topic_list:
+      - secdel.topic.alpha
+
+  - security: test.secdel.subscriber
+    delivery_type: pull
+    topic_list:
+      - secdel.topic.beta
+      - secdel.topic.gamma
