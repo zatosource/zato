@@ -39,9 +39,9 @@ Poll JSON contract returned by _get_dashboard_data:
 """
 
 # stdlib
-import json
 import logging
 from http import HTTPStatus
+from json import dumps as json_dumps, loads as json_loads
 
 # Django
 from django.http import HttpResponse
@@ -63,7 +63,7 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
-_Dashboard_Base_Url = '/zato/pubsub/dashboard/'
+_Dashboard_Base_URL = '/zato/pubsub/dashboard/'
 
 # Metrics not yet available from the backend - depth, rates, and age
 # will be populated once the corresponding services are implemented.
@@ -144,7 +144,7 @@ def _get_dashboard_data(request:'HttpRequest') -> 'str':
         if timeline_response.ok:
             publishes_timeline = timeline_response.data
             if isinstance(publishes_timeline, str):
-                publishes_timeline = json.loads(publishes_timeline)
+                publishes_timeline = json_loads(publishes_timeline)
         else:
             publishes_timeline = []
     except Exception as error:
@@ -159,7 +159,7 @@ def _get_dashboard_data(request:'HttpRequest') -> 'str':
         if publisher_response.ok:
             publisher_data = publisher_response.data
             if isinstance(publisher_data, str):
-                publisher_data = json.loads(publisher_data)
+                publisher_data = json_loads(publisher_data)
             total_publishers = publisher_data['publisher_count']
         else:
             total_publishers = _No_Rate
@@ -185,7 +185,7 @@ def _get_dashboard_data(request:'HttpRequest') -> 'str':
         },
     }
 
-    out = json.dumps(data)
+    out = json_dumps(data)
     return out
 
 # ################################################################################################################################
@@ -199,7 +199,7 @@ def index(request:'HttpRequest') -> 'TemplateResponse':
     out = TemplateResponse(request, 'zato/pubsub/dashboard.html', {
         'cluster_id': default_cluster_id,
         'dashboard_data': data_json,
-        'dashboard_base_url': _Dashboard_Base_Url,
+        'dashboard_base_url': _Dashboard_Base_URL,
         'zato_clusters': True,
         'zato_template_name': 'zato/pubsub/dashboard.html',
     })
@@ -220,7 +220,7 @@ def poll(request:'HttpRequest') -> 'HttpResponse':
 
     except Exception as error:
         logger.error('Pub/sub dashboard poll error: %s', error)
-        error_json = json.dumps({'error': str(error)})
+        error_json = json_dumps({'error': str(error)})
         error_bytes = error_json.encode('utf-8')
 
         out = HttpResponse(

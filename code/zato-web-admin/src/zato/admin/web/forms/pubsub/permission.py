@@ -28,6 +28,8 @@ ACCESS_TYPE_CHOICES = [
 # ################################################################################################################################
 
 class CreateForm(forms.Form):
+    """ Form for creating a pub/sub permission.
+    """
     sec_base_id = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:50%'}))
     access_type = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:50%'}))
 
@@ -41,6 +43,8 @@ class CreateForm(forms.Form):
 # ################################################################################################################################
 
 class EditForm(CreateForm):
+    """ Form for editing a pub/sub permission.
+    """
     id = forms.CharField(widget=forms.HiddenInput())
 
     def __init__(self, sec_base_choices:'listnone'=None, *args:'any_', **kwargs:'any_') -> 'None':

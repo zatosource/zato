@@ -32,23 +32,30 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 def get_rest_endpoint_choices(request:'HttpRequest') -> 'list':
+    """ Returns a list of REST outgoing connections as form choices.
+    """
+    # Invoke the service ..
     response = request.zato.client.invoke('zato.http-soap.get-list', {
         'cluster_id': request.zato.cluster_id,
         'connection': 'outgoing',
         'transport': 'plain_http'
     })
 
+    # .. build the choices list ..
     out = [('', '---')]
 
     for item in response.data:
         out.append((item.id, item.name))
 
+    # .. and return the result.
     return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class CreateForm(forms.Form):
+    """ Form for creating a pub/sub subscription.
+    """
     is_delivery_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     is_pub_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     topic_id = forms.MultipleChoiceField(widget=forms.SelectMultiple())
@@ -99,6 +106,8 @@ class CreateForm(forms.Form):
 # ################################################################################################################################
 
 class EditForm(CreateForm):
+    """ Form for editing a pub/sub subscription.
+    """
     is_delivery_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     is_pub_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
