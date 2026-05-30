@@ -284,3 +284,22 @@ def zato_server() -> 'any_':
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+@pytest.fixture(autouse=True)
+def trim_streams() -> 'any_':
+    """ Trims all pub/sub streams before each test so no in-flight deliveries leak across tests.
+    """
+    # redis
+    from redis import Redis
+
+    redis_client = Redis(host='localhost', port=6379, decode_responses=True)
+
+    for key in redis_client.scan_iter('zato:pubsub:stream:*'):
+        _ = redis_client.xtrim(key, maxlen=0)
+
+    redis_client.close()
+
+    yield
+
+# ################################################################################################################################
+# ################################################################################################################################
