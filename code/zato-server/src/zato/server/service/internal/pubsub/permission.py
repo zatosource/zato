@@ -148,6 +148,11 @@ class Edit(AdminService):
             try:
                 permission = session.query(PubSubPermission).filter_by(id=input.id).one()
 
+                # .. capture old values before the update so we can check
+                # .. whether subscriptions need to be deleted afterwards ..
+                old_sec_base_id = permission.sec_base_id
+                cluster_id = permission.cluster_id
+
                 # Update permission fields
                 permission.sec_base_id = input.sec_base_id
                 permission.access_type = input.access_type
@@ -173,6 +178,15 @@ class Edit(AdminService):
 
                 self.config_dispatcher.publish(input)
 
+                # .. GAP 16: if the pattern was narrowed, delete subscriptions
+                # .. whose topics no longer have a matching permission ..
+                _delete_subs_without_permission(self, session, input.sec_base_id, cluster_id)
+
+                # .. GAP 17: if sec_base_id changed, the old security definition
+                # .. lost a permission - check its subscriptions too ..
+                if old_sec_base_id != input.sec_base_id:
+                    _delete_subs_without_permission(self, session, old_sec_base_id, cluster_id)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -195,9 +209,45 @@ def _topic_is_covered(topic_name:'str', permissions:'anylist') -> 'bool':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _delete_subs_without_permission(
+    service:'AdminService',
+    session:'object',
+    sec_base_id:'int',
+    cluster_id:'int',
+) -> 'None':
+    """ Deletes subscriptions whose topics have no matching permission remaining
+    for the given security definition.
+    """
+
+    # .. get remaining permissions after the change ..
+    remaining_permissions = get_permissions_for_sec_base(session, sec_base_id, cluster_id)
+
+    # .. get all subscriptions for this security definition ..
+    subscriptions = pubsub_subscriptions_by_sec_base(session, sec_base_id, cluster_id)
+
+    for sub in subscriptions:
+
+        # .. get the topic names for this subscription ..
+        topic_names = pubsub_subscription_topic_names(session, sub.id)
+
+        # .. check if at least one topic still has a matching permission ..
+        has_permitted_topic = False
+
+        for topic_name in topic_names:
+            if _topic_is_covered(topic_name, remaining_permissions):
+                has_permitted_topic = True
+                break
+
+        # .. if no topic has a permission, delete the subscription ..
+        if not has_permitted_topic:
+            _ = service.invoke('zato.pubsub.subscription.delete', {'id': sub.id})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Delete(AdminService):
     """ Deletes a pub/sub permission and cascade-deletes any subscriptions
-    that are no longer covered by remaining permissions.
+    that no longer have a matching permission remaining.
     """
     input = 'id',
 
@@ -228,39 +278,9 @@ class Delete(AdminService):
                 self.request.input.cid = self.cid
                 self.config_dispatcher.publish(self.request.input)
 
-                # .. now, find and delete any subscriptions that are no longer
-                # .. covered by remaining permissions for this security definition.
-                self._delete_orphaned_subscriptions(session, sec_base_id, cluster_id)
-
-    def _delete_orphaned_subscriptions(
-        self,
-        session:'object',
-        sec_base_id:'int',
-        cluster_id:'int',
-    ) -> 'None':
-
-        # .. get remaining permissions after the deletion ..
-        remaining_permissions = get_permissions_for_sec_base(session, sec_base_id, cluster_id)
-
-        # .. get all subscriptions for this security definition ..
-        subscriptions = pubsub_subscriptions_by_sec_base(session, sec_base_id, cluster_id)
-
-        for sub in subscriptions:
-
-            # .. get the topic names for this subscription ..
-            topic_names = pubsub_subscription_topic_names(session, sub.id)
-
-            # .. check if at least one topic is still covered by remaining permissions ..
-            has_covered_topic = False
-
-            for topic_name in topic_names:
-                if _topic_is_covered(topic_name, remaining_permissions):
-                    has_covered_topic = True
-                    break
-
-            # .. if no topic is covered, delete the subscription ..
-            if not has_covered_topic:
-                _ = self.invoke('zato.pubsub.subscription.delete', {'id': sub.id})
+                # .. now, find and delete any subscriptions that no longer
+                # .. have a matching permission for this security definition.
+                _delete_subs_without_permission(self, session, sec_base_id, cluster_id)
 
 # ################################################################################################################################
 # ################################################################################################################################
