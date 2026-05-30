@@ -146,6 +146,7 @@ class Edit(AdminService):
                 topic = topic.one()
 
                 old_name = topic.name
+                old_is_active = topic.is_active
 
                 set_instance_opaque_attrs(topic, input)
 
@@ -163,14 +164,19 @@ class Edit(AdminService):
                 raise
             else:
 
-                # Don't notify the broker only if the names are different, otherwise, there's no need to.
-                if input.name != old_name:
+                # Notify the broker if the name or active status changed ..
+                name_changed = input.name != old_name
+                active_changed = input.is_active != old_is_active
+                has_changes = name_changed or active_changed
+
+                if has_changes:
 
                     pubsub_msg = Bunch()
                     pubsub_msg.cid = self.cid
                     pubsub_msg.action = PUBSUB.TOPIC_EDIT.value
                     pubsub_msg.new_topic_name = input.name
                     pubsub_msg.old_topic_name = old_name
+                    pubsub_msg.is_active = input.is_active
 
                     self.config_dispatcher.publish(pubsub_msg)
 

@@ -358,7 +358,6 @@ class TestServer:
         self.config_manager = config_manager
 
         self.repo_location = rand_string()
-        self.delivery_store = None
         self.user_config = Bunch()
         self.static_config = Bunch()
         self.time_util = Bunch()

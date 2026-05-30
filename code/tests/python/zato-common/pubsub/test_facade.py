@@ -43,9 +43,9 @@ class TestPubSubFacadePublish(unittest.TestCase):
 
         # Build a mock server with the attributes that PubSubFacade.publish relies on ..
         self.server = MagicMock()
-        self.server._service_topic_cache = set()
-        self.server._service_topic_lock = threading.RLock()
-        self.server._push_subs = {}
+        self.server.config_manager._service_topic_cache = set()
+        self.server.config_manager._service_topic_lock = threading.RLock()
+        self.server.config_manager._push_subs = {}
 
         # .. the service store knows about two services ..
         self.server.service_store.name_to_impl_name = {
@@ -121,9 +121,9 @@ class TestPubSubFacadePublish(unittest.TestCase):
         expected_sub_key = _service_sub_key_prefix + 'my.api.customer.new'
         expected_topic = _service_topic_prefix + 'my.api.customer.new'
 
-        self.assertIn(expected_sub_key, self.server._push_subs)
+        self.assertIn(expected_sub_key, self.server.config_manager._push_subs)
 
-        config_list = self.server._push_subs[expected_sub_key]
+        config_list = self.server.config_manager._push_subs[expected_sub_key]
         config_list_len = len(config_list)
 
         self.assertEqual(config_list_len, 1)
@@ -142,7 +142,7 @@ class TestPubSubFacadePublish(unittest.TestCase):
         """
         self.facade.publish('my.api.customer.new', 'test data')
 
-        self.assertIn('my.api.customer.new', self.server._service_topic_cache)
+        self.assertIn('my.api.customer.new', self.server.config_manager._service_topic_cache)
 
 # ################################################################################################################################
 
@@ -158,8 +158,8 @@ class TestPubSubFacadePublish(unittest.TestCase):
         sub_key_customer = _service_sub_key_prefix + 'my.api.customer.new'
         sub_key_order = _service_sub_key_prefix + 'my.api.order.create'
 
-        self.assertIn(sub_key_customer, self.server._push_subs)
-        self.assertIn(sub_key_order, self.server._push_subs)
+        self.assertIn(sub_key_customer, self.server.config_manager._push_subs)
+        self.assertIn(sub_key_order, self.server.config_manager._push_subs)
 
 # ################################################################################################################################
 
@@ -209,9 +209,9 @@ class TestPubSubFacadePublishInputModel(unittest.TestCase):
     def setUp(self) -> 'None':
 
         self.server = MagicMock()
-        self.server._service_topic_cache = set()
-        self.server._service_topic_lock = threading.RLock()
-        self.server._push_subs = {}
+        self.server.config_manager._service_topic_cache = set()
+        self.server.config_manager._service_topic_lock = threading.RLock()
+        self.server.config_manager._push_subs = {}
         self.server.service_store.name_to_impl_name = {
             'my.typed.service': 'my_typed_service.MyTypedService',
         }

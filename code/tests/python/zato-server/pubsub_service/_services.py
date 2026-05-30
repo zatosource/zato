@@ -149,7 +149,7 @@ class PubSubTestCheckRedisTopics(Service):
 # ################################################################################################################################
 
 class PubSubTestCheckSubscriptions(Service):
-    """ Returns the count of subscription keys in the server's _push_subs dict.
+    """ Returns the count of subscription keys in the config_manager's _push_subs dict.
     """
 
     name = 'test.pubsub.check-subscriptions'
@@ -157,7 +157,7 @@ class PubSubTestCheckSubscriptions(Service):
     def handle(self) -> 'None':
         from json import dumps
 
-        push_subs = self.server._push_subs
+        push_subs = self.server.config_manager._push_subs
         sub_keys = list(push_subs.keys())
 
         self.response.payload = dumps({
@@ -562,10 +562,10 @@ class PubSubTestResetServiceStreams(Service):
                 self.server.pubsub_push_delivery.stop_sub_key(sub_key)
 
             # .. remove from push subs ..
-            _ = self.server._push_subs.pop(sub_key, None)
+            _ = self.server.config_manager._push_subs.pop(sub_key, None)
 
             # .. remove from topic cache ..
-            _ = self.server._service_topic_cache.discard(service_name)
+            _ = self.server.config_manager._service_topic_cache.discard(service_name)
 
         # .. clear the in-memory received lists too ..
         for received_list in _service_received.values():
