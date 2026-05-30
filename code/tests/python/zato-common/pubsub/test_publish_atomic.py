@@ -21,6 +21,7 @@ from redis import Redis
 from zato.common.api import PubSub
 from zato.common.pubsub.redis_backend import ModuleCtx, RedisPubSubBackend
 from zato.common.pubsub.disk_store import DiskMessageStore
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -91,10 +92,10 @@ class TestPublishAtomicWithLua(unittest.TestCase):
 
         # .. read the data_ref from the stream ..
         stream_key = f'{ModuleCtx.Stream_Prefix}{self.topic_name}'
-        messages = self.redis.xrevrange(stream_key, count=1)
+        messages:'list' = cast_('list', self.redis.xrevrange(stream_key, count=1))
         _, message_data = messages[0]
-        data_ref = message_data['data_ref']
-        redis_message_id = messages[0][0]
+        data_ref:'str' = message_data['data_ref']
+        redis_message_id:'str' = messages[0][0]
 
         # .. simulate push greenlet acking immediately ..
         self.backend.ack_message(stream_key, self.push_sk, redis_message_id, data_ref)
@@ -158,7 +159,7 @@ class TestPublishAtomicWithLua(unittest.TestCase):
         }
 
         # Step 1: XADD (old code did this first)
-        redis_message_id = self.redis.xadd(stream_key, message, maxlen=_default_stream_max_len)
+        redis_message_id:'str' = cast_('str', self.redis.xadd(stream_key, message, maxlen=_default_stream_max_len)) # pyright: ignore[reportArgumentType]
 
         # Step 2: Simulate the greenlet acking between XADD and SADD
         self.backend.ack_message(stream_key, self.push_sk, redis_message_id, data_ref)
