@@ -12,9 +12,16 @@ from contextlib import closing
 # Zato
 from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import PubSubPermission, SecurityBase
-from zato.common.odb.query import pubsub_permission_list
+from zato.common.odb.query import pubsub_permission_list, pubsub_subscriptions_by_sec_base, pubsub_subscription_topic_names
+from zato.common.pubsub.util import get_permissions_for_sec_base
 from zato.common.util.sql import set_instance_opaque_attrs
 from zato.server.service.internal import AdminService
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -169,20 +176,42 @@ class Edit(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _topic_is_covered(topic_name:'str', permissions:'anylist') -> 'bool':
+    """ Checks whether any of the given permissions cover the topic name for subscribe access.
+    """
+    # Zato
+    from zato.common.pubsub.matcher import PatternMatcher
+
+    if not permissions:
+        return False
+
+    matcher = PatternMatcher()
+    client_id = f'cover_check.{topic_name}'
+    matcher.add_client(client_id, permissions)
+
+    result = matcher.evaluate(client_id, topic_name, 'subscribe')
+    return result.is_ok and bool(result.matched_pattern)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Delete(AdminService):
-    """ Deletes a pub/sub permission.
+    """ Deletes a pub/sub permission and cascade-deletes any subscriptions
+    that are no longer covered by remaining permissions.
     """
     input = 'id',
 
-    def handle(self):
+    def handle(self) -> 'None':
         with closing(self.odb.session()) as session:
             try:
                 permission = session.query(PubSubPermission).\
                     filter(PubSubPermission.id==self.request.input.id).\
                     one()
 
-                # Store permission details before deletion
-                self.request.input.sec_base_id = permission.sec_base_id
+                # .. store permission details before deletion ..
+                sec_base_id = permission.sec_base_id
+                cluster_id = permission.cluster_id
+                self.request.input.sec_base_id = sec_base_id
                 self.request.input.pattern = permission.pattern
                 self.request.input.access_type = permission.access_type
                 self.request.input.username = permission.sec_base.username
@@ -193,10 +222,45 @@ class Delete(AdminService):
                 session.rollback()
                 raise
             else:
+
+                # .. notify config manager about the permission deletion ..
                 self.request.input.action = PUBSUB.PERMISSION_DELETE.value
                 self.request.input.cid = self.cid
-
                 self.config_dispatcher.publish(self.request.input)
+
+                # .. now, find and delete any subscriptions that are no longer
+                # .. covered by remaining permissions for this security definition.
+                self._delete_orphaned_subscriptions(session, sec_base_id, cluster_id)
+
+    def _delete_orphaned_subscriptions(
+        self,
+        session:'object',
+        sec_base_id:'int',
+        cluster_id:'int',
+    ) -> 'None':
+
+        # .. get remaining permissions after the deletion ..
+        remaining_permissions = get_permissions_for_sec_base(session, sec_base_id, cluster_id)
+
+        # .. get all subscriptions for this security definition ..
+        subscriptions = pubsub_subscriptions_by_sec_base(session, sec_base_id, cluster_id)
+
+        for sub in subscriptions:
+
+            # .. get the topic names for this subscription ..
+            topic_names = pubsub_subscription_topic_names(session, sub.id)
+
+            # .. check if at least one topic is still covered by remaining permissions ..
+            has_covered_topic = False
+
+            for topic_name in topic_names:
+                if _topic_is_covered(topic_name, remaining_permissions):
+                    has_covered_topic = True
+                    break
+
+            # .. if no topic is covered, delete the subscription ..
+            if not has_covered_topic:
+                _ = self.invoke('zato.pubsub.subscription.delete', {'id': sub.id})
 
 # ################################################################################################################################
 # ################################################################################################################################
