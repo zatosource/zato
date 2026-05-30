@@ -25,6 +25,8 @@ from zato.common.ext.bunch import Bunch
 if 0:
     from django.http import HttpRequest
     from zato.common.typing_ import any_, anydict
+    any_ = any_
+    anydict = anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -140,7 +142,7 @@ class Edit(_CreateEdit):
     def success_message(self, item:'any_') -> 'str':
 
         # Get the security definition ID ..
-        sec_base_id = self.input.sec_base_id
+        sec_base_id = int(self.input.sec_base_id)
 
         # .. look it up in the list of all definitions ..
         response = self.req.zato.client.invoke('zato.security.get-list', {
@@ -148,12 +150,9 @@ class Edit(_CreateEdit):
         })
 
         # .. and return the name.
-        if response.ok:
-            for sec_def in response.data:
-                if sec_def.id == int(sec_base_id):
-                    return f'Successfully updated permission `{sec_def.name}`'
-        else:
-            raise Exception(response)
+        for sec_def in response.data:
+            if sec_def.id == sec_base_id:
+                return f'Successfully updated permission `{sec_def.name}`'
 
 # ################################################################################################################################
 # ################################################################################################################################
