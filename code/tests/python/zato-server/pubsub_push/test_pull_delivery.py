@@ -26,7 +26,7 @@ if 0:
 
 logger = logging.getLogger('zato.test.pubsub_push.pull_delivery')
 
-_delivery_poll_timeout  = 10
+_delivery_poll_timeout  = 5
 _delivery_poll_interval = 0.5
 
 # ################################################################################################################################
