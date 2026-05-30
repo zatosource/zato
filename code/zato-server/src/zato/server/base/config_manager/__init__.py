@@ -1970,6 +1970,12 @@ class ConfigManager(_ConfigManagerBase):
         self._remove_pubsub_sub_configs_by_sub_key(sub_key)
         self.server.pubsub_subscriptions.remove_user(username)
 
+        # .. remove push delivery config ..
+        self._push_subs.pop(sub_key, None)
+
+        # .. stop the delivery greenlet for this sub_key ..
+        self.server.pubsub_push_delivery.stop_sub_key(sub_key)
+
 # ################################################################################################################################
 
     def on_config_event_PUBSUB_TOPIC_EDIT(self, msg:'bunch_') -> 'None':
