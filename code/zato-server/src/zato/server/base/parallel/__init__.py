@@ -160,7 +160,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.use_tls = False
         self.is_starting_first = '<not-set>'
         self.odb_data = Bunch()
-        self._has_pubsub_redis = False
         self.repo_location = ''
         self.user_conf_location:'strlist' = []
         self.user_conf_location_extra:'strset' = set()
@@ -1436,42 +1435,37 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         redis_config = self.fs_server_config.redis
         redis_password = redis_config.password if redis_config.password else None
 
-        try:
+        # .. set up the disk store for message payloads ..
+        work_dir = self.work_dir
+        disk_store_base_dir = os.path.join(work_dir, 'pubsub-messages')
+        disk_store = DiskMessageStore(disk_store_base_dir, crypto_manager=self.crypto_manager)
 
-            # .. set up the disk store for message payloads ..
-            work_dir = self.work_dir
-            disk_store_base_dir = os.path.join(work_dir, 'pubsub-messages')
-            disk_store = DiskMessageStore(disk_store_base_dir, crypto_manager=self.crypto_manager)
+        redis_conn = Redis(
+            host=redis_config.host,
+            port=redis_config.port,
+            db=redis_config.db,
+            password=redis_password,
+            decode_responses=True,
+        )
+        self.pubsub_redis = RedisPubSubBackend(redis_conn, disk_store, server=self)
 
-            redis_conn = Redis(
-                host=redis_config.host,
-                port=redis_config.port,
-                db=redis_config.db,
-                password=redis_password,
-                decode_responses=True,
-            )
-            self.pubsub_redis = RedisPubSubBackend(redis_conn, disk_store, server=self)
-            self._has_pubsub_redis = True
+        self.config_manager._sync_pubsub_subscriptions()
 
-            self.config_manager._sync_pubsub_subscriptions()
+        # .. pass connection params so each delivery greenlet creates its own connection ..
+        redis_conn_params = {
+            'host': redis_config.host,
+            'port': redis_config.port,
+            'db': redis_config.db,
+            'password': redis_password,
+            'decode_responses': True,
+        }
 
-            # .. pass connection params so each delivery greenlet creates its own connection ..
-            redis_conn_params = {
-                'host': redis_config.host,
-                'port': redis_config.port,
-                'db': redis_config.db,
-                'password': redis_password,
-                'decode_responses': True,
-            }
+        self.pubsub_push_delivery = RedisPushDelivery(self, redis_conn_params)
 
-            self.pubsub_push_delivery = RedisPushDelivery(self, redis_conn_params)
+        for sub_key in self.config_manager._push_subs:
+            self.pubsub_push_delivery.start_sub_key(sub_key)
 
-            for sub_key in self.config_manager._push_subs:
-                self.pubsub_push_delivery.start_sub_key(sub_key)
-
-            logger.info('PubSub Redis backend started')
-        except Exception:
-            logger.warning('PubSub Redis backend could not be started: %s', format_exc())
+        logger.info('PubSub Redis backend started')
 
 # ################################################################################################################################
 
@@ -1581,9 +1575,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 PubSubSubscription.cluster_id == self.cluster_id
             ).all()
 
-            if self._has_pubsub_redis:
-                for sub_key, topic_name in subscription_topics:
-                    self.pubsub_redis.subscribe(sub_key, topic_name)
+            for sub_key, topic_name in subscription_topics:
+                self.pubsub_redis.subscribe(sub_key, topic_name)
 
 # ################################################################################################################################
 
@@ -2036,10 +2029,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             else:
                 self._is_process_closing = True
 
-            # Stop the Redis pub/sub backend if it was started
-            if self._has_pubsub_redis:
-                self.pubsub_push_delivery.stop()
-                self.pubsub_redis.redis.close()
+            # .. stop the Redis pub/sub backend ..
+            self.pubsub_push_delivery.stop()
+            self.pubsub_redis.redis.close()
 
             # Close SQL pools
             self.sql_pool_store.cleanup_on_stop()
