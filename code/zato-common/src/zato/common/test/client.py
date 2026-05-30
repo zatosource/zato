@@ -71,6 +71,37 @@ class AdminClient:
         return out
 
 # ################################################################################################################################
+
+    def create(self, service_name:'str', **kwargs:'any_') -> 'anydict':
+        """ Convenience wrapper that invokes a create service.
+        """
+        return self.invoke(service_name, kwargs)
+
+# ################################################################################################################################
+
+    def edit(self, service_name:'str', **kwargs:'any_') -> 'anydict':
+        """ Convenience wrapper that invokes an edit service.
+        """
+        return self.invoke(service_name, kwargs)
+
+# ################################################################################################################################
+
+    def delete(self, service_name:'str', **kwargs:'any_') -> 'anydict':
+        """ Convenience wrapper that invokes a delete service.
+        """
+        return self.invoke(service_name, kwargs)
+
+# ################################################################################################################################
+
+    def get_list(self, service_name:'str', **kwargs:'any_') -> 'tuple':
+        """ Invokes a get-list service and returns (data_list, meta_dict).
+        """
+        response = self.invoke(service_name, kwargs)
+        data = response['response']
+        meta = response['_meta']
+        return data, meta
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class PublishClient:

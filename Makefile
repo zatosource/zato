@@ -341,6 +341,30 @@ test-rate-limiting: ## All rate limiting tests.
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-pubsub: ## All pub/sub tests.
+	ruff check \
+		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_service/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_push/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_cleanup/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_combined/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_push/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_cli/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_new_sub/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_edit/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_perm_edit/
+	pyright \
+		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_service/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_push/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_cleanup/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_combined/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_push/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_cli/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_new_sub/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_edit/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_perm_edit/
 	$(ZATO_PY) -m unittest discover -s $(CURDIR)/code/tests/python/zato-common/pubsub -p 'test_*.py' -v
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_service/ \

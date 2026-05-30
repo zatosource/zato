@@ -89,7 +89,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
         topic_name = 'test.topic'
         data = 'test message payload'
 
-        result = self.backend.publish(topic_name, data, publisher='testuser')
+        _ = self.backend.publish(topic_name, data, publisher='testuser')
 
         # .. get the data_ref from the xadd call ..
         call_args = self.redis_mock.xadd.call_args
@@ -359,7 +359,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
         encrypted_dir = tempfile.mkdtemp()
         encrypted_store = DiskMessageStore(encrypted_dir, crypto_manager=crypto_manager)
 
-        mock_server = unittest.mock.MagicMock()
+        mock_server = MagicMock()
         mock_server.encrypt_at_rest = True
 
         encrypted_backend = RedisPubSubBackend(self.redis_mock, encrypted_store, server=mock_server)
