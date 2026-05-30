@@ -215,8 +215,9 @@ def _delete_subs_without_permission(
     sec_base_id:'int',
     cluster_id:'int',
 ) -> 'None':
-    """ Deletes subscriptions whose topics have no matching permission remaining
-    for the given security definition.
+    """ For each subscription belonging to the given security definition,
+    removes individual topics that no longer have a matching permission.
+    If all topics are removed, the entire subscription is deleted.
     """
 
     # .. get remaining permissions after the change ..
@@ -230,17 +231,39 @@ def _delete_subs_without_permission(
         # .. get the topic names for this subscription ..
         topic_names = pubsub_subscription_topic_names(session, sub.id)
 
-        # .. check if at least one topic still has a matching permission ..
-        has_permitted_topic = False
+        # .. split topics into those that still match a permission ..
+        topics_to_keep:'list[str]' = []
 
         for topic_name in topic_names:
             if _topic_is_covered(topic_name, remaining_permissions):
-                has_permitted_topic = True
-                break
+                topics_to_keep.append(topic_name)
 
-        # .. if no topic has a permission, delete the subscription ..
-        if not has_permitted_topic:
+        # .. if all topics still match, nothing to do ..
+        if len(topics_to_keep) == len(topic_names):
+            continue
+
+        # .. if no topic matches any permission, delete the entire subscription ..
+        if not topics_to_keep:
             _ = service.invoke('zato.pubsub.subscription.delete', {'id': sub.id})
+        else:
+            # .. otherwise, edit the subscription to keep only matching topics ..
+            topic_name_list = []
+            for name in topics_to_keep:
+                topic_name_list.append({
+                    'topic_name': name,
+                    'is_pub_enabled': True,
+                    'is_delivery_enabled': True,
+                })
+
+            _ = service.invoke('zato.pubsub.subscription.edit', {
+                'sub_key': sub.sub_key,
+                'cluster_id': cluster_id,
+                'topic_name_list': topic_name_list,
+                'sec_base_id': sec_base_id,
+                'delivery_type': sub.delivery_type,
+                'is_pub_active': True,
+                'is_delivery_active': True,
+            })
 
 # ################################################################################################################################
 # ################################################################################################################################
