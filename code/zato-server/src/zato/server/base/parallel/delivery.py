@@ -142,7 +142,7 @@ class RedisPushDelivery:
         # .. on startup, drain any messages that were read but never acknowledged
         # .. before the process stopped (e.g. after a restart) ..
         while not self._stop_event.is_set():
-            if sub_key not in self.server._push_subs:
+            if sub_key not in self.server.config_manager._push_subs:
                 break
             pending = backend.fetch_pending(sub_key, max_messages=_delivery_batch_size)
             if not pending:
@@ -151,7 +151,7 @@ class RedisPushDelivery:
 
         # .. then block for new messages ..
         while not self._stop_event.is_set():
-            if sub_key not in self.server._push_subs:
+            if sub_key not in self.server.config_manager._push_subs:
                 break
             try:
                 messages = backend.fetch_messages(
@@ -168,7 +168,7 @@ class RedisPushDelivery:
     def _deliver_batch(self, messages:'list', sub_key:'str', backend:'RedisPubSubBackend') -> 'None':
         """ Deliver a batch of raw messages, retrying each one individually.
         """
-        config_list = self.server._push_subs[sub_key]
+        config_list = self.server.config_manager._push_subs[sub_key]
 
         config_by_topic:'anydict' = {}
         for config in config_list:

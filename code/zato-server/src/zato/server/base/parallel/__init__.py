@@ -161,9 +161,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.is_starting_first = '<not-set>'
         self.odb_data = Bunch()
         self._has_pubsub_redis = False
-        self._push_subs = {} # type: dict[str, list]
-        self._service_topic_cache = set() # type: set[str]
-        self._service_topic_lock = RLock()
         self.repo_location = ''
         self.user_conf_location:'strlist' = []
         self.user_conf_location_extra:'strset' = set()
@@ -196,7 +193,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.deployment_lock_timeout = -1
         self.deployment_key = ''
         self.has_gevent = True
-        self.delivery_store = None
         self.static_config = Bunch()
         self.component_enabled = Bunch()
         self.client_address_headers = client_address_headers
@@ -1457,7 +1453,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             self.pubsub_redis = RedisPubSubBackend(redis_conn, disk_store, server=self)
             self._has_pubsub_redis = True
 
-            self._sync_pubsub_subscriptions()
+            self.config_manager._sync_pubsub_subscriptions()
 
             # .. pass connection params so each delivery greenlet creates its own connection ..
             redis_conn_params = {
@@ -1470,87 +1466,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             self.pubsub_push_delivery = RedisPushDelivery(self, redis_conn_params)
 
-            for sub_key in self._push_subs:
+            for sub_key in self.config_manager._push_subs:
                 self.pubsub_push_delivery.start_sub_key(sub_key)
 
             logger.info('PubSub Redis backend started')
         except Exception:
             logger.warning('PubSub Redis backend could not be started: %s', format_exc())
-
-# ################################################################################################################################
-
-    def _sync_pubsub_subscriptions(self) -> 'None':
-
-        from contextlib import closing
-        from zato.common.odb.model import HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
-
-        _push = PubSub.Delivery_Type.Push
-
-        logger.info('Syncing ODB subscriptions to Redis pub/sub backend')
-
-        with closing(self.odb.session()) as session:
-
-            total_count = session.query(PubSubSubscription).filter(
-                PubSubSubscription.cluster_id == self.cluster_id).count()
-
-            rows = session.query(
-                PubSubSubscription.sub_key,
-                PubSubSubscription.delivery_type,
-                PubSubSubscription.push_type,
-                PubSubSubscription.push_service_name,
-                PubSubSubscription.rest_push_endpoint_id,
-                PubSubTopic.name,
-                SecurityBase.username,
-                SecurityBase.name.label('sec_name'),
-            ).join(
-                PubSubSubscriptionTopic, PubSubSubscriptionTopic.subscription_id == PubSubSubscription.id
-            ).join(
-                PubSubTopic, PubSubTopic.id == PubSubSubscriptionTopic.topic_id
-            ).join(
-                SecurityBase, SecurityBase.id == PubSubSubscription.sec_base_id
-            ).filter(
-                PubSubSubscription.cluster_id == self.cluster_id
-            ).all()
-
-            logger.info('_sync_pubsub_subscriptions trace -> total_in_odb=%d, after_query=%d',
-                total_count, len(rows))
-
-            synced = 0
-            push_subs = {} # type: dict[str, list]
-
-            for row in rows:
-                topic_name = row.name
-                sub_key = row.sub_key
-                logger.info('_sync_pubsub_subscriptions trace -> syncing sub_key=%s, sec_name=%s, topic=%s',
-                    sub_key, row.sec_name, topic_name)
-                self.pubsub_redis.subscribe(sub_key, topic_name)
-                synced += 1
-
-                if row.delivery_type == _push:
-                    sub_config = {
-                        'sub_key': sub_key,
-                        'topic_name': topic_name,
-                        'push_type': row.push_type,
-                        'push_service_name': row.push_service_name,
-                        'rest_push_endpoint_id': row.rest_push_endpoint_id,
-                    }
-
-                    if row.push_type == 'rest' and row.rest_push_endpoint_id:
-                        endpoint = session.query(HTTPSOAP).filter(
-                            HTTPSOAP.id == row.rest_push_endpoint_id
-                        ).first()
-                        if endpoint:
-                            sub_config['rest_push_url'] = (endpoint.host or '') + endpoint.url_path
-
-                    if sub_key not in push_subs:
-                        push_subs[sub_key] = []
-                    push_subs[sub_key].append(sub_config)
-
-            self._push_subs = push_subs
-
-        noun = 'pair' if synced == 1 else 'pairs'
-        push_count = sum(len(v) for v in push_subs.values())
-        logger.info('Synced %d ODB subscription-topic %s to Redis (%d push)', synced, noun, push_count)
 
 # ################################################################################################################################
 
