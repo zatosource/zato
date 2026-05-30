@@ -30,6 +30,13 @@ from zato.common.util.search import SearchResults as _SearchResults
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from sqlalchemy.orm.session import Session as SASession
+    from zato.common.typing_ import list_, strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
@@ -957,5 +964,29 @@ def pubsub_subscription_list(session, cluster_id, filter_by=None, needs_columns=
     # Group by subscription ID to handle subscriptions with multiple topics
     # This ensures we get one row per subscription with the first topic name
     return query
+
+# ################################################################################################################################
+
+def pubsub_subscriptions_by_sec_base(session:'SASession', sec_base_id:'int', cluster_id:'int') -> 'list_[PubSubSubscription]':
+    """ Returns all PubSubSubscription rows for a given security definition.
+    """
+    out = session.query(PubSubSubscription).\
+        filter(PubSubSubscription.sec_base_id == sec_base_id).\
+        filter(PubSubSubscription.cluster_id == cluster_id).\
+        all()
+    return out
+
+# ################################################################################################################################
+
+def pubsub_subscription_topic_names(session:'SASession', subscription_id:'int') -> 'strlist':
+    """ Returns topic names for a subscription by joining PubSubSubscriptionTopic with PubSubTopic.
+    """
+    rows = session.query(PubSubTopic.name).\
+        join(PubSubSubscriptionTopic, PubSubTopic.id == PubSubSubscriptionTopic.topic_id).\
+        filter(PubSubSubscriptionTopic.subscription_id == subscription_id).\
+        all()
+
+    out = [row[0] for row in rows]
+    return out
 
 # ################################################################################################################################
