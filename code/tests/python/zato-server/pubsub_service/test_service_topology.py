@@ -104,10 +104,10 @@ class TestServiceTopology(unittest.TestCase):
             name = _service_name(number)
             self.assertGreaterEqual(result[f'{name}_count'], 1, f'{name} should have received a message')
 
-        self.assertIn(f'broadcast-via-00006-via-00007', result[_service_name(7)][0])
-        self.assertIn(f'broadcast-via-00006-via-00008', result[_service_name(8)][0])
-        self.assertIn(f'broadcast-via-00006-via-00009', result[_service_name(9)][0])
-        self.assertIn(f'broadcast-via-00006-via-00010', result[_service_name(10)][0])
+        self.assertIn('broadcast-via-00006-via-00007', result[_service_name(7)][0])
+        self.assertIn('broadcast-via-00006-via-00008', result[_service_name(8)][0])
+        self.assertIn('broadcast-via-00006-via-00009', result[_service_name(9)][0])
+        self.assertIn('broadcast-via-00006-via-00010', result[_service_name(10)][0])
 
 # ################################################################################################################################
 

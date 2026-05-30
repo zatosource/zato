@@ -14,7 +14,7 @@ import time
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import any_, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,19 +75,6 @@ def _get_subscriptions(admin:'any_', sec_name:'str') -> 'anylist':
         if item['sec_name'] == sec_name:
             out.append(item)
 
-    return out
-
-# ################################################################################################################################
-
-def _get_pending_depth(admin:'any_', sub_key:'str') -> 'int':
-    """ Returns the pending depth for a subscription.
-    """
-    browse_result = admin.invoke('zato.pubsub.subscription.browse-queue', {
-        'sub_key': sub_key,
-        'state': 'pending',
-    })
-
-    out = browse_result['total']
     return out
 
 # ################################################################################################################################

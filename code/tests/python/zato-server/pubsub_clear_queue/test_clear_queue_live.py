@@ -12,7 +12,7 @@ import os
 import time
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, strlist
+    from zato.common.typing_ import any_, anylist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -249,7 +249,7 @@ class TestDiskFilesCleanedUp:
 
         def _count_msg_files(directory:'str') -> 'int':
             count = 0
-            for root, _dirs, files in os.walk(directory):
+            for _, _dirs, files in os.walk(directory):
                 for fname in files:
                     if fname.endswith('.msg'):
                         count += 1
@@ -495,7 +495,7 @@ class TestClearDeletesDiskFilesSoleSub:
 
         def _count_msg_files(directory:'str') -> 'int':
             count = 0
-            for root, _dirs, files in os.walk(directory):
+            for _, _dirs, files in os.walk(directory):
                 for fname in files:
                     if fname.endswith('.msg'):
                         count += 1

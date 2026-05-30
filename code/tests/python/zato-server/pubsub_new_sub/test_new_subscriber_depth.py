@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import time
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import any_, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################

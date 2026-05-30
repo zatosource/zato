@@ -74,7 +74,7 @@ class TestDeliveryRetry(unittest.TestCase):
         self.test_dir = tempfile.mkdtemp()
         self.disk_store = DiskMessageStore(self.test_dir)
         self.backend = RedisPubSubBackend(self.redis, self.disk_store)
-        self.server = _MockServer()
+        self.server:'any_' = _MockServer()
         self.server.pubsub_redis = self.backend
 
     def tearDown(self) -> 'None':
@@ -98,7 +98,7 @@ class TestDeliveryRetry(unittest.TestCase):
         """
         stream_key = self.backend._get_stream_key(topic_name)
         try:
-            pending_info = self.redis.xpending(stream_key, sub_key)
+            pending_info:'anydict' = self.redis.xpending(stream_key, sub_key) # type: ignore[assignment]
             return pending_info['pending']
         except Exception:
             return 0
@@ -159,7 +159,9 @@ class TestDeliveryRetry(unittest.TestCase):
             if call_count == 1:
                 raise Exception('transient failure')
 
-        self.server.config_manager._push_subs[_test_sub_key] = [{'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'}]
+        self.server.config_manager._push_subs[_test_sub_key] = [{
+            'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'
+        }]
 
         redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
@@ -181,7 +183,9 @@ class TestDeliveryRetry(unittest.TestCase):
         messages = self.backend.fetch_messages(_test_sub_key)
         message = messages[0]
 
-        self.server.config_manager._push_subs[_test_sub_key] = [{'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'}]
+        self.server.config_manager._push_subs[_test_sub_key] = [{
+            'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'
+        }]
 
         redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
@@ -251,7 +255,9 @@ class TestDeliveryRetry(unittest.TestCase):
             if call_count == 1:
                 raise Exception('fail first message on first try')
 
-        self.server.config_manager._push_subs[_test_sub_key] = [{'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'}]
+        self.server.config_manager._push_subs[_test_sub_key] = [{
+            'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'
+        }]
 
         redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
