@@ -745,6 +745,22 @@ class ConfigManager(_ConfigManagerBase):
         wrapper.config['password'] = msg['password']
         wrapper.set_auth()
 
+    def _update_pubsub_security_rename(self, msg:'bunch_') -> 'None':
+        """ Updates pub/sub in-memory state when a security definition's username or name changes.
+        """
+        old_username = msg['old_username']
+        new_username = msg['username']
+
+        if old_username != new_username:
+            self.server.pubsub_subscriptions.update_username(old_username, new_username)
+            self.server.pubsub_pattern_matcher.change_client_id(old_username, new_username)
+
+        old_name = msg['old_name']
+        new_name = msg['name']
+
+        if old_name != new_name:
+            self.server.pubsub_subscriptions.update_sec_name(old_name, new_name)
+
 # ################################################################################################################################
 
     def init_generic_connections(self) -> 'None':
@@ -1164,9 +1180,12 @@ class ConfigManager(_ConfigManagerBase):
         # .. extract the newest information  ..
         sec_def = self.basic_auth_get_by_id(msg.id)
 
-        # .. update security groups.
+        # .. update security groups ..
         for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
             security_groups_ctx.set_current_basic_auth(msg.id, sec_def['username'], sec_def['password'])
+
+        # .. update pub/sub in-memory state if username or sec def name changed.
+        self._update_pubsub_security_rename(msg)
 
 # ################################################################################################################################
 
