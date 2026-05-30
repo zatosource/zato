@@ -35,7 +35,7 @@ class TestCleanupExpiredViaAPI(BaseCleanupLiveTestCase):
     def test_cleanup_removes_expired_messages(self) -> 'None':
 
         topic_name = 'iam.user.created'
-        ttl_seconds = 5
+        ttl_seconds = 1
 
         # Publish 5 messages with short TTL ..
         for _ in range(5):
@@ -49,7 +49,7 @@ class TestCleanupExpiredViaAPI(BaseCleanupLiveTestCase):
         self.assert_files_exist(data_refs)
 
         # .. wait for messages to expire ..
-        time.sleep(ttl_seconds + 2)
+        time.sleep(ttl_seconds + 1)
 
         # .. run the cleanup ..
         self._run_cleanup_once()
@@ -68,7 +68,7 @@ class TestCleanupMixedExpiry(BaseCleanupLiveTestCase):
     def test_cleanup_only_removes_expired_leaves_live(self) -> 'None':
 
         topic_name = 'iam.user.deleted'
-        short_ttl = 5
+        short_ttl = 1
 
         # Publish 5 messages with short TTL ..
         for _ in range(5):
@@ -91,7 +91,7 @@ class TestCleanupMixedExpiry(BaseCleanupLiveTestCase):
         self.assertEqual(len(live_refs), 5)
 
         # .. wait for the short-lived messages to expire ..
-        time.sleep(short_ttl + 2)
+        time.sleep(short_ttl + 1)
 
         # .. run the cleanup ..
         self._run_cleanup_once()
@@ -113,7 +113,7 @@ class TestCleanupAfterSubscriptionDeleted(BaseCleanupLiveTestCase):
     def test_cleanup_handles_deleted_subscription(self) -> 'None':
 
         topic_name = 'iam.role.assigned'
-        ttl_seconds = 5
+        ttl_seconds = 1
 
         # Publish a message with short TTL ..
         _ = self.publisher.publish(topic_name, 'will expire undelivered', expiration=ttl_seconds)
@@ -131,7 +131,7 @@ class TestCleanupAfterSubscriptionDeleted(BaseCleanupLiveTestCase):
         logger.info('Deleted topic_subs key -> %s', topic_subs_key)
 
         # .. wait for expiry ..
-        time.sleep(ttl_seconds + 2)
+        time.sleep(ttl_seconds + 1)
 
         # .. run cleanup - the expiry sweep should remove the file.
         self._run_cleanup_once()
