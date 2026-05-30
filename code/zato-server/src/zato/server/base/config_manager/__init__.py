@@ -1948,8 +1948,7 @@ class ConfigManager(_ConfigManagerBase):
 
             # .. set up the Redis consumer group so the subscriber can immediately
             # .. receive messages published after this point.
-            if self.server._has_pubsub_redis:
-                self.server.pubsub_redis.subscribe(sub_key, topic_name)
+            self.server.pubsub_redis.subscribe(sub_key, topic_name)
 
     def on_config_event_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'bunch_') -> 'None':
 
@@ -2028,8 +2027,7 @@ class ConfigManager(_ConfigManagerBase):
 
             for sub_key in sub_keys_to_remove:
                 _ = self._push_subs.pop(sub_key, None)
-                if self.server._has_pubsub_redis:
-                    self.server.pubsub_push_delivery.stop_sub_key(sub_key)
+                self.server.pubsub_push_delivery.stop_sub_key(sub_key)
 
         elif is_active is True:
 
@@ -2086,8 +2084,7 @@ class ConfigManager(_ConfigManagerBase):
                         self._push_subs[row.sub_key] = []
                     self._push_subs[row.sub_key].append(sub_config)
 
-                    if self.server._has_pubsub_redis:
-                        self.server.pubsub_push_delivery.start_sub_key(row.sub_key)
+                    self.server.pubsub_push_delivery.start_sub_key(row.sub_key)
 
 # ################################################################################################################################
 
@@ -2176,8 +2173,7 @@ class ConfigManager(_ConfigManagerBase):
             topic_name = _service_name_to_topic(service_name)
 
             # .. remove the Redis consumer group and subscription sets ..
-            if server._has_pubsub_redis:
-                server.pubsub_redis.unsubscribe(sub_key, topic_name)
+            server.pubsub_redis.unsubscribe(sub_key, topic_name)
 
             # .. remove push delivery config ..
             self._push_subs.pop(sub_key, None)

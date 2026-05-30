@@ -558,8 +558,7 @@ class PubSubTestResetServiceStreams(Service):
             sub_key = 'zato.service.' + service_name
 
             # .. stop the delivery greenlet if running ..
-            if hasattr(self.server, 'pubsub_push_delivery'):
-                self.server.pubsub_push_delivery.stop_sub_key(sub_key)
+            self.server.pubsub_push_delivery.stop_sub_key(sub_key)
 
             # .. remove from push subs ..
             _ = self.server.config_manager._push_subs.pop(sub_key, None)

@@ -25,7 +25,7 @@ from zato.server.base.parallel.delivery import RedisPushDelivery
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,6 +52,7 @@ class _MockServer:
 
     def __init__(self) -> 'None':
         self.config_manager = _MockConfigManager()
+        self.pubsub_redis:'any_' = None
         self._invoke_side_effect = None
         self._invoke_calls:'list' = []
 
