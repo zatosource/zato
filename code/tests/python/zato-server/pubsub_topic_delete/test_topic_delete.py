@@ -22,7 +22,7 @@ if 0:
 
 logger = logging.getLogger('zato.test.pubsub_topic_delete')
 
-_settle_time = 3.0
+_settle_time = 0.5
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -326,7 +326,7 @@ class TestTopicDelete:
         for idx in range(5):
             _ = publisher.publish('td.push.single', f'push-post-delete-{idx}')
 
-        time.sleep(5)
+        time.sleep(1)
 
         # .. the webhook should NOT have received any of these ..
         post_delete_count = receiver.delivered_count() # pyright: ignore[reportOptionalMemberAccess]

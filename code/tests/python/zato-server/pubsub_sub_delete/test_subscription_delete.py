@@ -25,7 +25,7 @@ if 0:
 
 logger = logging.getLogger('zato.test.pubsub_sub_delete')
 
-_settle_time = 3.0
+_settle_time = 0.5
 
 _test_redis_host = 'localhost'
 _test_redis_port = 6379

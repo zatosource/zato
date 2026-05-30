@@ -21,7 +21,7 @@ if 0:
 
 logger = logging.getLogger('zato.test.pubsub_sub_edit')
 
-_settle_time = 3.0
+_settle_time = 0.5
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -379,7 +379,7 @@ class TestSubEdit:
         _ = publisher.publish('sub.edit.topic.one', 'push-delivery-test')
 
         # .. wait for delivery to the webhook ..
-        delivered = receiver.wait_for_delivery(expected_count=1, timeout=15.0)
+        delivered = receiver.wait_for_delivery(expected_count=1, timeout=10.0)
         delivered_count = len(delivered)
 
         assert delivered_count >= 1, f'Expected at least 1 push-delivered message, got {delivered_count}'
