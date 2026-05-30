@@ -3,10 +3,7 @@
 $.fn.zato.data_table.PubSubPermission = new Class({
     toString: function() {
         var s = '<PubSubPermission id:{0} name:{1} pattern:{2} access_type:{3}>';
-        return String.format(s, this.id ? this.id : '(none)',
-                                this.name ? this.name : '(none)',
-                                this.pattern ? this.pattern : '(none)',
-                                this.access_type ? this.access_type : '(none)');
+        return String.format(s, this.id, this.name, this.pattern, this.access_type);
     }
 });
 
@@ -50,11 +47,11 @@ function showTopicsAlert(pattern, event) {
         clickX = event.pageX;
         clickY = event.pageY;
     } else {
-        // Fallback: find the pattern link element
-        var $link = $('a[onclick*="' + pattern.replace(/'/g, "\\'") + '"]').first();
-        if ($link.length) {
-            var offset = $link.offset();
-            clickX = offset.left + $link.outerWidth();
+        // Default: find the pattern link element
+        var $linkElement = $('a[onclick*="' + pattern.replace(/'/g, "\\'") + '"]').first();
+        if ($linkElement.length) {
+            var offset = $linkElement.offset();
+            clickX = offset.left + $linkElement.outerWidth();
             clickY = offset.top;
         } else {
             clickX = 200;
@@ -66,28 +63,15 @@ function showTopicsAlert(pattern, event) {
     var popupId = 'topic-matches-popup-' + Date.now();
 
     // Create popup content HTML
-    var popupHtml = `
-        <div id="${popupId}" title="Pattern: ${pattern}" style="font-size: 11px; line-height: 1.3; background-color: #f0f0f0;">
-            <div id="${popupId}-content" class="topic-popup-content" style="background-color: #f0f0f0; border-radius: 0; padding: 4px;">
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80px; padding: 8px; color: #666; background-color: #f0f0f0;">
-                    <div style="width: 12px; height: 12px; border: 1px solid #ddd; border-top: 1px solid #666; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                    <div style="margin-top: 4px; font-size: 10px;">Loading...</div>
-                </div>
-            </div>
-        </div>
-        <style>
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-            #${popupId} { background-color: #f0f0f0 !important; }
-            /* Only target the dialog that contains this specific popup ID */
-            .ui-dialog:has(#${popupId}) {
-                background-color: #f0f0f0 !important;
-                width: 20em !important;
-            }
-        </style>
-    `;
+    var popupHtml = '' +
+        '<div id="' + popupId + '" title="Pattern: ' + pattern + '" class="topic-matches-popup-container">' +
+            '<div id="' + popupId + '-content" class="topic-popup-content">' +
+                '<div class="topic-matches-popup-loading">' +
+                    '<div class="topic-matches-popup-spinner"></div>' +
+                    '<div class="topic-matches-popup-loading-text">Loading...</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
 
     // Add to page and create dialog
     $('body').append(popupHtml);
@@ -114,26 +98,24 @@ function showTopicsAlert(pattern, event) {
             $(this).parent('.ui-dialog').css('width', '20em');
         },
         open: function() {
-            var $dlg = $(this);
-            var $widget = $dlg.dialog('widget');
+            var $dialog = $(this);
+            var $widget = $dialog.dialog('widget');
 
             function dismissHandler(e) {
                 if (!$widget.is(e.target) && $widget.has(e.target).length === 0) {
-                    $dlg.dialog('close');
+                    $dialog.dialog('close');
                 }
             }
             function escHandler(e) {
                 if (e.key === 'Escape' || e.keyCode === 27) {
-                    $dlg.dialog('close');
+                    $dialog.dialog('close');
                 }
             }
 
-            setTimeout(function() {
-                $(document).on('mousedown.topicPopup' + popupId, dismissHandler);
-                $(document).on('keydown.topicPopup' + popupId, escHandler);
-            }, 0);
+            $(document).on('mousedown.topicPopup' + popupId, dismissHandler);
+            $(document).on('keydown.topicPopup' + popupId, escHandler);
 
-            $dlg.on('dialogclose', function() {
+            $dialog.on('dialogclose', function() {
                 $(document).off('mousedown.topicPopup' + popupId);
                 $(document).off('keydown.topicPopup' + popupId);
             });
@@ -143,30 +125,13 @@ function showTopicsAlert(pattern, event) {
     // Customize the close button to be a small "x" on the right
     var $dialog = $('#' + popupId).dialog('widget');
     var $titlebar = $dialog.find('.ui-dialog-titlebar');
-    var $closeBtn = $titlebar.find('.ui-dialog-titlebar-close');
+    var $closeButton = $titlebar.find('.ui-dialog-titlebar-close');
 
-    // Style the close button - white background with black X
-    $closeBtn.html('×').css({
-        'position': 'absolute',
-        'right': '4px',
-        'top': '50%',
-        'transform': 'translateY(-50%)',
-        'width': '14px',
-        'height': '14px',
-        'font-size': '12px',
-        'line-height': '14px',
-        'text-align': 'center',
-        'color': '#000000',
-        'background': '#ddd',
-        'border': 'none',
-        'border-radius': '0',
-        'box-shadow': 'none',
-        'cursor': 'pointer',
-        'padding': '0'
-    });
+    // Style the close button
+    $closeButton.html('×').addClass('topic-matches-popup-close');
 
     // Remove any UI widget styling
-    $closeBtn.removeClass('ui-button ui-corner-all ui-widget ui-button-icon-only ui-dialog-titlebar-close');
+    $closeButton.removeClass('ui-button ui-corner-all ui-widget ui-button-icon-only ui-dialog-titlebar-close');
 
     // Adjust title bar to make room for close button
     $titlebar.css('position', 'relative');
@@ -196,15 +161,10 @@ function showTopicsAlert(pattern, event) {
     }
 
     // Make AJAX call to get matching topics
-    var clusterIdVal = $('#cluster_id').val() || (typeof cluster_id !== 'undefined' ? cluster_id : '1');
+    var clusterIdVal = '1';
 
-    // Try multiple ways to find CSRF token
-    var csrfToken = $('input[name=csrfmiddlewaretoken]').val() ||
-                   $('input[name="csrfmiddlewaretoken"]').val() ||
-                   $('[name=csrfmiddlewaretoken]').val() ||
-                   $('meta[name=csrf-token]').attr('content') ||
-                   window.csrfToken ||
-                   $.cookie('csrftoken');
+    // Get the CSRF token
+    var csrfToken = $.cookie('csrftoken');
 
     // Data to be sent to server
     var requestData = {
@@ -256,39 +216,19 @@ function showTopicsAlert(pattern, event) {
                 contentHtml += '</div>';
             }
 
-            var $content = $('#' + popupId + '-content');
-
-            // Fade out current content
-            $content.addClass('topic-popup-fade-out');
-
-            // Wait for fade out, then replace content and fade in
-            setTimeout(function() {
-                $content.html(contentHtml);
-                $content.removeClass('topic-popup-fade-out');
-                $content.addClass('topic-popup-fade-in');
-
-                // Trigger fade in
-                setTimeout(function() {
-                    $content.addClass('topic-popup-visible');
-                }, 10);
-            }, 150);
-
-            // Ensure shadow doesn't get clipped for all cases
             var $popup = $('#' + popupId);
             $popup.css('overflow', 'visible');
             $popup.parent('.ui-dialog').css('overflow', 'visible');
 
             var $content = $('#' + popupId + '-content');
             $content.fadeOut(100, function() {
-                $content.html(contentHtml).fadeIn(100, function() {
-
-                });
+                $content.html(contentHtml).fadeIn(100);
             });
 
         },
         error: function(xhr, status, error) {
-        var errorHtml = '<div style="text-align: center; padding: 8px; color: #d32f2f; font-size: 10px; background-color: #f0f0f0;">';
-            errorHtml += 'Error: ' + (error || 'Failed to load');
+        var errorHtml = '<div class="topic-matches-popup-error">';
+            errorHtml += 'Error: ' + error;
             if (xhr.status) {
                 errorHtml += ' (' + xhr.status + ')';
             }
@@ -299,6 +239,8 @@ function showTopicsAlert(pattern, event) {
     });
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
 // Function to close the topics popup
 function closeTopicMatchesOverlay() {
     // Close all topic match popups
@@ -308,6 +250,8 @@ function closeTopicMatchesOverlay() {
         }
     });
 }
+
+// /////////////////////////////////////////////////////////////////////////////
 
 // Function to render pattern tables
 function renderPatternTables() {
@@ -392,18 +336,20 @@ function renderPatternTables() {
     });
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
 // Initialize custom inline editing for pattern values
 function initializePatternEditing() {
     $('.pattern-editable').off('click.patternEdit').on('click.patternEdit', function(e) {
         e.preventDefault();
-        var $link = $(this);
-        var currentValue = $link.data('value');
-        var permissionId = $link.data('pk');
-        var prefix = $link.data('prefix');
-        var original = $link.data('original');
+        var $linkElement = $(this);
+        var currentValue = $linkElement.data('value');
+        var permissionId = $linkElement.data('pk');
+        var prefix = $linkElement.data('prefix');
+        var original = $linkElement.data('original');
 
         // Don't edit if already editing
-        if ($link.hasClass('editing')) {
+        if ($linkElement.hasClass('editing')) {
             return;
         }
 
@@ -412,8 +358,8 @@ function initializePatternEditing() {
         $input.val(currentValue);
 
         // Replace link with input
-        $link.addClass('editing').hide();
-        $link.after($input);
+        $linkElement.addClass('editing').hide();
+        $linkElement.after($input);
         $input.focus().select();
 
         // Handle save on Enter or blur
@@ -423,7 +369,7 @@ function initializePatternEditing() {
             if (newValue === currentValue) {
                 // No change, just restore
                 $input.remove();
-                $link.removeClass('editing').show();
+                $linkElement.removeClass('editing').show();
                 return;
             }
 
@@ -449,10 +395,10 @@ function initializePatternEditing() {
                     if (response.status === 'success') {
                         // Update the link with new value
                         var newPattern = prefix + newValue;
-                        $link.text(newValue).data('value', newValue).data('original', newPattern);
+                        $linkElement.text(newValue).data('value', newValue).data('original', newPattern);
 
                         // Update the "Show matches" link
-                        var $showLink = $link.closest('.pattern-row').find('.pattern-link');
+                        var $showLink = $linkElement.closest('.pattern-row').find('.pattern-link');
                         $showLink.attr('data-pattern', newPattern);
                     } else {
                         alert('Failed to update pattern: ' + (response.message || 'Unknown error'));
@@ -460,14 +406,14 @@ function initializePatternEditing() {
 
                     // Restore link
                     $input.remove();
-                    $link.removeClass('editing').show();
+                    $linkElement.removeClass('editing').show();
                 },
                 error: function(xhr, status, error) {
                     alert('Failed to update pattern: ' + error);
 
                     // Restore link
                     $input.remove();
-                    $link.removeClass('editing').show();
+                    $linkElement.removeClass('editing').show();
                 }
             });
         }
@@ -475,7 +421,7 @@ function initializePatternEditing() {
         // Handle cancel on Escape
         function cancelEdit() {
             $input.remove();
-            $link.removeClass('editing').show();
+            $linkElement.removeClass('editing').show();
         }
 
         // Bind events
@@ -490,8 +436,7 @@ function initializePatternEditing() {
         });
 
         $input.on('blur', function() {
-            // Small delay to allow for other events
-            setTimeout(saveEdit, 100);
+            saveEdit();
         });
     });
 }
@@ -559,6 +504,8 @@ $(document).ready(function() {
     };
 })
 
+// /////////////////////////////////////////////////////////////////////////////
+
 // Helper function to sort patterns by type (pub first, then sub) and alphabetically within each type
 function sortPatternsByTypeAndValue(patterns) {
     // Group patterns by type
@@ -591,8 +538,12 @@ function sortPatternsByTypeAndValue(patterns) {
     return [].concat(pubPatterns, subPatterns, otherPatterns);
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.pubsub.permission = {};
 $.fn.zato.pubsub.permission.data_table = {};
+
+// /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.permission.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new permission', null);
@@ -606,22 +557,19 @@ $.fn.zato.pubsub.permission.create = function() {
 
     // Always populate security definitions via AJAX when select element becomes available
     // Use a timeout to ensure the DOM is ready, then always make fresh AJAX call
-    setTimeout(function() {
-        var selectElement = $('#id_sec_base_id');
-        if (selectElement.length > 0) {
-            initializeCreateForm();
-        } else {
-            // Use MutationObserver to watch for the element if not immediately available
-            var observer = new MutationObserver(function(mutations) {
-                var selectElement = $('#id_sec_base_id');
-                if (selectElement.length > 0) {
-                    initializeCreateForm();
-                    observer.disconnect();
-                }
-            });
-            observer.observe(document.body, { childList: true, subtree: true });
-        }
-    }, 100);
+    var selectElement = $('#id_sec_base_id');
+    if (selectElement.length > 0) {
+        initializeCreateForm();
+    } else {
+        var observer = new MutationObserver(function() {
+            var selectElement = $('#id_sec_base_id');
+            if (selectElement.length > 0) {
+                initializeCreateForm();
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
 
     // Set callback to re-render pattern tables after successful create
     $.fn.zato.data_table.on_submit_complete_callback = function() {
@@ -629,6 +577,8 @@ $.fn.zato.pubsub.permission.create = function() {
         renderPatternTables();
     };
 }
+
+// /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.permission.edit = function(id) {
 
@@ -644,171 +594,126 @@ $.fn.zato.pubsub.permission.edit = function(id) {
 
     $.fn.zato.data_table._create_edit('edit', 'Update permission `' + instance.name + '`', id);
 
-    // Hide the form initially to prevent flicker, it will be shown in setTimeout below.
     $('#edit-div').hide();
 
     $.fn.zato.data_table.reset_form('edit');
     $('#edit-id').val(instance.id);
 
-    // Delay setting the access_type to ensure the form is fully initialized
-    setTimeout(function() {
-        // Get the access type select element - try all possible selectors
-        var $accessTypeSelect = $('#id_edit-access_type');
-        if (!$accessTypeSelect.length) {
-            $accessTypeSelect = $('#edit-access_type');
-        }
-        if (!$accessTypeSelect.length) {
-            $accessTypeSelect = $('select[name="edit-access_type"]');
-        }
-        // Fallback to any select in the edit form if all else fails
-        if (!$accessTypeSelect.length) {
-            $accessTypeSelect = $('#edit-div select').filter(function() {
-                return $(this).attr('name') && $(this).attr('name').indexOf('access_type') >= 0;
-            });
-        }
+    // Get the access type select element
+    var $accessTypeSelect = $('#id_edit-access_type');
+    if (!$accessTypeSelect.length) {
+        $accessTypeSelect = $('#edit-access_type');
+    }
+    if (!$accessTypeSelect.length) {
+        $accessTypeSelect = $('select[name="edit-access_type"]');
+    }
+    if (!$accessTypeSelect.length) {
+        $accessTypeSelect = $('#edit-div select').filter(function() {
+            return $(this).attr('name') && $(this).attr('name').indexOf('access_type') >= 0;
+        });
+    }
 
-        if ($accessTypeSelect.length) {
-            // Normalize access_type to lowercase for form value matching
-            var accessType = instance.access_type;
-            if (accessType) {
-                accessType = accessType.toLowerCase().trim();
+    if ($accessTypeSelect.length) {
+        var accessType = instance.access_type;
+        if (accessType) {
+            accessType = accessType.toLowerCase().trim();
 
-                // Declare option found flag before using it
-                var optionFound = false;
+            var optionFound = false;
 
-                // Special handling for Publisher-subscriber which needs to map to publisher-subscriber
-                if (accessType === 'publisher-subscriber' ||
-                    accessType === 'publisher & subscriber' ||
-                    accessType === 'publisher&subscriber' ||
-                    accessType === 'publisher-subscriber') {
-                    // Find the publisher-subscriber option
-                    $accessTypeSelect.find('option').each(function() {
-                        var optionValue = $(this).val().toLowerCase();
-                        if (optionValue === 'publisher-subscriber' ||
-                            optionValue.indexOf('publisher') >= 0 && optionValue.indexOf('subscriber') >= 0) {
-                            $accessTypeSelect.val($(this).val());
-                            optionFound = true;
-                            return false;
-                        }
-                    });
-                } else {
-                    // Standard case - find the matching option and select it
-                    $accessTypeSelect.find('option').each(function() {
-                        if ($(this).val() === accessType) {
-                            $accessTypeSelect.val($(this).val());
-                            optionFound = true;
-                            return false;
-                        }
-                    });
-
-                    // If exact match not found, try partial match
-                    if (!optionFound) {
-                        $accessTypeSelect.find('option').each(function() {
-                            if (accessType.indexOf($(this).val()) >= 0 || $(this).val().indexOf(accessType) >= 0) {
-                                $accessTypeSelect.val($(this).val());
-                                return false;
-                            }
-                        });
-                    }
-                }
-
-                // Trigger change event to update dependent UI elements
-
-// Get pattern data from the hidden cell that contains the raw patterns
-// This cell was created in new_row function with the raw pattern data
-var $row = $('#tr_' + id);
-patternData = $row.find('td:eq(9)').text();
-
-// If no data found in hidden cell, try to get it from data-patterns attribute
-if (!patternData || patternData.trim() === '') {
-patternData = $row.find('.pattern-display').attr('data-patterns');
-}
-
-// If still no data, try instance.pattern as last resort
-if (!patternData || patternData.trim() === '') {
-patternData = instance.pattern;
-}
-                if (!patternData || patternData.trim() === '') {
-                    patternData = instance.pattern;
-                }
-
-                // Decode any HTML entities in the pattern data
-                if (patternData) {
-                    patternData = patternData.replace(/\\u003D/g, '=');
-                    patternData = patternData.replace(/\\u000A/g, '\n');
-                }
-
-                // Populate patterns
-                populatePatterns('edit', patternData);
-            }
-        }
-
-        // Function to display security definition name and add hidden input for ID
-        function initializeEditForm() {
-            var $container = $('#edit-form .security-definition-container');
-            $container.empty();
-            $container.append('<input type="hidden" id="id_edit-sec_base_id" name="edit-sec_base_id" value="' + instance.sec_base_id + '"/>');
-
-            var secName = instance.name || 'Security definition ID: ' + instance.sec_base_id;
-            var clusterID = $('#cluster_id').val() || (typeof cluster_id !== 'undefined' ? cluster_id : '1');
-            var secLink = '<a href="/zato/security/basic-auth/?cluster=' + clusterID + '&query=' + encodeURIComponent(secName) + '" target="_blank">' + secName + '</a>';
-            $container.append(secLink);
-
-            updatePatternTypeOptions('edit');
-        }
-
-        var selectElement = $('#id_edit-sec_base_id');
-        if (selectElement.length > 0) {
-            initializeEditForm();
-        } else {
-            var $container = $('#edit-form .security-definition-container');
-            if ($container.length > 0) {
-                initializeEditForm();
-            } else {
-                var observer = new MutationObserver(function(mutations) {
-                    var selectElement = $('#id_edit-sec_base_id');
-                    if (selectElement.length > 0) {
-                        initializeEditForm();
-                        observer.disconnect();
+            if (accessType === 'publisher-subscriber' ||
+                accessType === 'publisher & subscriber' ||
+                accessType === 'publisher&subscriber') {
+                $accessTypeSelect.find('option').each(function() {
+                    var optionValue = $(this).val().toLowerCase();
+                    if (optionValue === 'publisher-subscriber' ||
+                        optionValue.indexOf('publisher') >= 0 && optionValue.indexOf('subscriber') >= 0) {
+                        $accessTypeSelect.val($(this).val());
+                        optionFound = true;
+                        return false;
                     }
                 });
-                observer.observe(document.body, { childList: true, subtree: true });
+            } else {
+                $accessTypeSelect.find('option').each(function() {
+                    if ($(this).val() === accessType) {
+                        $accessTypeSelect.val($(this).val());
+                        optionFound = true;
+                        return false;
+                    }
+                });
+
+                if (!optionFound) {
+                    $accessTypeSelect.find('option').each(function() {
+                        if (accessType.indexOf($(this).val()) >= 0 || $(this).val().indexOf(accessType) >= 0) {
+                            $accessTypeSelect.val($(this).val());
+                            return false;
+                        }
+                    });
+                }
             }
+
+            // Get pattern data from the hidden cell
+            var $row = $('#tr_' + id);
+            var patternData = $row.find('td:eq(9)').text();
+
+            if (!patternData || patternData.trim() === '') {
+                patternData = $row.find('.pattern-display').attr('data-patterns');
+            }
+
+            if (!patternData || patternData.trim() === '') {
+                patternData = instance.pattern;
+            }
+
+            if (patternData) {
+                patternData = patternData.replace(/\\u003D/g, '=');
+                patternData = patternData.replace(/\\u000A/g, '\n');
+            }
+
+            populatePatterns('edit', patternData);
         }
+    }
 
-        // Show the form now that it's populated.
-        $('#edit-div').show();
+    // Display security definition name and add hidden input for ID
+    function initializeEditForm() {
+        var $container = $('#edit-form .security-definition-container');
+        $container.empty();
+        $container.append('<input type="hidden" id="id_edit-sec_base_id" name="edit-sec_base_id" value="' + instance.sec_base_id + '"/>');
 
-    }, 100);
+        var secName = instance.name;
+        var clusterID = '1';
+        var secLink = '<a href="/zato/security/basic-auth/?cluster=' + clusterID + '&query=' + encodeURIComponent(secName) + '" target="_blank">' + secName + '</a>';
+        $container.append(secLink);
 
-    // Add extensive debugging for access type changes
-    setTimeout(function() {
-        var accessTypeSelect = $('#edit-access_type');
-        if (accessTypeSelect.length > 0) {
+        updatePatternTypeOptions('edit');
+    }
 
-            accessTypeSelect.off('change.debug').on('change.debug', function() {
-                // Log all form fields before and after
-                logAllFormFields('edit');
-
-                // Store new value for next comparison
-                $(this).data('prev-value', $(this).val());
-
-                // Log again after a short delay to catch any changes
-                setTimeout(function() {
-                    logAllFormFields('edit');
-                }, 100);
+    var selectElement = $('#id_edit-sec_base_id');
+    if (selectElement.length > 0) {
+        initializeEditForm();
+    } else {
+        var $container = $('#edit-form .security-definition-container');
+        if ($container.length > 0) {
+            initializeEditForm();
+        } else {
+            var observer = new MutationObserver(function() {
+                var selectElement = $('#id_edit-sec_base_id');
+                if (selectElement.length > 0) {
+                    initializeEditForm();
+                    observer.disconnect();
+                }
             });
-
-            // Store initial value
-            accessTypeSelect.data('prev-value', accessTypeSelect.val());
+            observer.observe(document.body, { childList: true, subtree: true });
         }
-    }, 500);
+    }
+
+    $('#edit-div').show();
 
     // Set callback to re-render pattern tables after successful edit
     $.fn.zato.data_table.on_submit_complete_callback = function() {
         renderPatternTables();
     };
 }
+
+// /////////////////////////////////////////////////////////////////////////////
 
 // Function to validate that at least one pattern has a non-empty value
 function validatePatterns(formType) {
@@ -827,78 +732,8 @@ function validatePatterns(formType) {
     return hasValidPattern;
 }
 
-// Function to log all form fields
-function logAllFormFields(prefix) {
-    var form = $('#' + prefix + '-form');
-    if (form.length === 0) {
-        return;
-    }
 
-    // Log all input fields
-    form.find('input').each(function() {
-        var $input = $(this);
-    });
-
-    // Log all select fields
-    form.find('select').each(function() {
-        var $select = $(this);
-    });
-
-    // Log all textarea fields
-    form.find('textarea').each(function() {
-        var $textarea = $(this);
-    });
-
-    // Log pattern container specifically
-    var patternContainer = $('#' + prefix + '-pattern-container');
-    if (patternContainer.length > 0) {
-        patternContainer.find('.pattern-row').each(function(index) {
-            var $row = $(this);
-            var typeSelect = $row.find('select[name$="_type_' + index + '"]');
-            var valueInput = $row.find('input[name$="_' + index + '"]');
-        });
-    }
-
-    // Log hidden pattern field
-    var hiddenPattern = $('#' + prefix + '-pattern-hidden');
-    if (hiddenPattern.length > 0) {
-    }
-}
-
-// Add debugging for plus/minus button clicks
-$(document).on('click', '.pattern-add-button', function() {
-
-    // Determine which form we're in
-    var form = $(this).closest('form');
-    var prefix = 'create';
-    if (form.attr('id') === 'edit-form') {
-        prefix = 'edit';
-    }
-
-    logAllFormFields(prefix);
-
-    // Log after a short delay to catch the new row
-    setTimeout(function() {
-        logAllFormFields(prefix);
-    }, 100);
-});
-
-$(document).on('click', '.pattern-remove-button', function() {
-
-    // Determine which form we're in
-    var form = $(this).closest('form');
-    var prefix = 'create';
-    if (form.attr('id') === 'edit-form') {
-        prefix = 'edit';
-    }
-
-    logAllFormFields(prefix);
-
-    // Log after a short delay to catch the removal
-    setTimeout(function() {
-        logAllFormFields(prefix);
-    }, 100);
-});
+// /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.permission.data_table.new_row = function(item, data, include_tr) {
 
@@ -916,14 +751,14 @@ $.fn.zato.pubsub.permission.data_table.new_row = function(item, data, include_tr
         item.access_type = item.access_type.toLowerCase();
     }
 
-    var access_type_label = '';
+    var accessTypeLabel = '';
 
     if(item.access_type == 'publisher') {
-        access_type_label = 'Publisher';
+        accessTypeLabel = 'Publisher';
     } else if(item.access_type == 'subscriber') {
-        access_type_label = 'Subscriber';
+        accessTypeLabel = 'Subscriber';
     } else if(item.access_type == 'publisher-subscriber') {
-        access_type_label = 'Publisher & Subscriber';
+        accessTypeLabel = 'Publisher & Subscriber';
     }
 
     // Create pattern display structure to match initial rendering
@@ -943,7 +778,7 @@ $.fn.zato.pubsub.permission.data_table.new_row = function(item, data, include_tr
                               item.name);
     row += String.format('<td>{0}</td>', secLink);
     row += String.format('<td>{0}</td>', pattern_display_html);
-    row += String.format('<td style="text-align:center"><span class="access-type-inner">{0}</span></td>', access_type_label);
+    row += String.format('<td style="text-align:center"><span class="access-type-inner">{0}</span></td>', accessTypeLabel);
     row += String.format('<td style="display:none" style="text-align:center">{0}</td>', item.subscription_count);
     row += String.format('<td><a href="javascript:$.fn.zato.pubsub.permission.edit(\'{0}\')">Edit</a></td>', item.id);
     row += String.format('<td><a href="javascript:$.fn.zato.pubsub.permission.delete_(\'{0}\')">Delete</a></td>', item.id);
@@ -959,6 +794,8 @@ $.fn.zato.pubsub.permission.data_table.new_row = function(item, data, include_tr
     return row;
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.pubsub.permission.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Permission `{0}` deleted',
@@ -966,7 +803,8 @@ $.fn.zato.pubsub.permission.delete_ = function(id) {
         true);
 }
 
-// Multi-pattern UI functions
+// /////////////////////////////////////////////////////////////////////////////
+
 function addPatternRow(formType) {
     var container = $('#' + formType + '-patterns-container');
     var rowCount = container.find('.pattern-row').length;
@@ -977,7 +815,7 @@ function addPatternRow(formType) {
 
     // Build options based on current access type
     var optionsHtml = '';
-    var defaultValue = 'pub'; // fallback default
+    var defaultValue = 'pub';
 
     if (accessType === 'publisher' || accessType === 'publisher-subscriber') {
         optionsHtml += '<option value="pub">Publish</option>';
@@ -1017,6 +855,8 @@ function addPatternRow(formType) {
     // No need to call updatePatternTypeOptions since we created the row with correct options
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
 function removePatternRow(button) {
     var row = $(button).closest('.pattern-row');
     var container = row.closest('[id$="-patterns-container"]');
@@ -1033,6 +873,8 @@ function removePatternRow(button) {
         });
     }
 }
+
+// /////////////////////////////////////////////////////////////////////////////
 
 function consolidatePatterns(formType) {
     var container = $('#' + formType + '-patterns-container');
@@ -1055,6 +897,8 @@ function consolidatePatterns(formType) {
     $('#' + formType + '-pattern-hidden').val(patterns.join('\n'));
     return patterns.join('\n');
 }
+
+// /////////////////////////////////////////////////////////////////////////////
 
 function populatePatterns(formType, patternString) {
     var container = $('#' + formType + '-patterns-container');
@@ -1109,7 +953,7 @@ function populatePatterns(formType, patternString) {
     updatePatternTypeOptions(formType);
 }
 
-
+// /////////////////////////////////////////////////////////////////////////////
 
 function updatePatternTypeOptions(formType) {
     var accessTypeId = formType === 'create' ? '#id_access_type' : '#id_edit-access_type';

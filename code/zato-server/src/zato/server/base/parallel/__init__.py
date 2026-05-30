@@ -160,10 +160,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.use_tls = False
         self.is_starting_first = '<not-set>'
         self.odb_data = Bunch()
-        self._has_pubsub_redis = False
-        self._push_subs = {} # type: dict[str, list]
-        self._service_topic_cache = set() # type: set[str]
-        self._service_topic_lock = RLock()
         self.repo_location = ''
         self.user_conf_location:'strlist' = []
         self.user_conf_location_extra:'strset' = set()
@@ -196,7 +192,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.deployment_lock_timeout = -1
         self.deployment_key = ''
         self.has_gevent = True
-        self.delivery_store = None
         self.static_config = Bunch()
         self.component_enabled = Bunch()
         self.client_address_headers = client_address_headers
@@ -1049,17 +1044,37 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     if not result:
                         continue
 
+                    len_result = len(result)
+                    logger.info('Fire event: got %d %s in batch', len_result, 'stream' if len_result == 1 else 'streams')
+
                     for stream_name, messages in result:  # type: ignore[union-attr]
+
+                        len_messages = len(messages)
+                        logger.info('Fire event: stream=%r %d %s stream_type=%s',
+                            stream_name, len_messages, 'message' if len_messages == 1 else 'messages',
+                            type(stream_name).__name__)
+
                         for msg_id, fields in messages:
+
+                            logger.info('Fire event: msg_id=%s stream=%r matched_fire=%s matched_timeout=%s fields_keys=%s',
+                                msg_id, stream_name,
+                                stream_name == fire_stream,
+                                stream_name == timeout_stream,
+                                list(fields.keys()))
+
                             if stream_name == fire_stream:
                                 _ = spawn(self._handle_fire_event, fields)
                             elif stream_name == timeout_stream:
                                 _ = spawn(self._handle_timeout_event, fields)
+                            else:
+                                logger.warning('Fire event: UNMATCHED stream_name=%r (type=%s) fire_stream=%r (type=%s)',
+                                    stream_name, type(stream_name).__name__,
+                                    fire_stream, type(fire_stream).__name__)
 
                             _ = fire_redis.xack(stream_name, group_name, msg_id)
 
                 except Exception:
-                    logger.warning('Error in scheduler fire listener: %s', format_exc())
+                    logger.warning('Fire event: listener loop exception: %s', format_exc())
                     sleep(1)
 
         _ = spawn(_fire_listener_loop)
@@ -1118,6 +1133,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         from zato.common.api import SCHEDULER
         from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 
+        logger.info('Fire event: handler entered, fields_keys=%s', list(fields.keys()))
+
         payload_json = fields['payload']
         ctx = json_loads(payload_json)
 
@@ -1165,15 +1182,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         except Exception:
             outcome = SCHEDULER.OUTCOME.ERROR
             error_traceback = format_exc()
-            logger.warning('Scheduler job_id=%s; name=%s; outcome=error; traceback=%s', job_id, job_name, error_traceback)
+            logger.warning('Fire event: service exception job_id=%s name=%s traceback=%s', job_id, job_name, error_traceback)
 
         duration_ms = int((_time.monotonic() - _t0) * 1000)
+
+        logger.info('Fire event: before mark_complete job_id=%s name=%s outcome=%s duration_ms=%s run=%s error_tb_len=%s',
+            job_id, job_name, outcome, duration_ms, current_run, len(error_traceback))
 
         # .. report the outcome to the Rust scheduler ..
         try:
             self._scheduler.mark_complete(job_id, outcome, duration_ms, current_run)
+            logger.info('Fire event: mark_complete sent job_id=%s run=%s outcome=%s', job_id, current_run, outcome)
         except Exception:
-            logger.warning('Scheduler mark_complete failed; job_id=%s; name=%s; traceback=%s', job_id, job_name, format_exc())
+            logger.warning('Fire event: mark_complete failed job_id=%s name=%s traceback=%s', job_id, job_name, format_exc())
 
         # .. and spawn callback greenlets based on the outcome.
         callback_context = {
@@ -1414,111 +1435,37 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         redis_config = self.fs_server_config.redis
         redis_password = redis_config.password if redis_config.password else None
 
-        try:
+        # .. set up the disk store for message payloads ..
+        work_dir = self.work_dir
+        disk_store_base_dir = os.path.join(work_dir, 'pubsub-messages')
+        disk_store = DiskMessageStore(disk_store_base_dir, crypto_manager=self.crypto_manager)
 
-            # .. set up the disk store for message payloads ..
-            work_dir = self.work_dir
-            disk_store_base_dir = os.path.join(work_dir, 'pubsub-messages')
-            disk_store = DiskMessageStore(disk_store_base_dir, crypto_manager=self.crypto_manager)
+        redis_conn = Redis(
+            host=redis_config.host,
+            port=redis_config.port,
+            db=redis_config.db,
+            password=redis_password,
+            decode_responses=True,
+        )
+        self.pubsub_redis = RedisPubSubBackend(redis_conn, disk_store, server=self)
 
-            redis_conn = Redis(
-                host=redis_config.host,
-                port=redis_config.port,
-                db=redis_config.db,
-                password=redis_password,
-                decode_responses=True,
-            )
-            self.pubsub_redis = RedisPubSubBackend(redis_conn, disk_store, server=self)
-            self._has_pubsub_redis = True
+        self.config_manager._sync_pubsub_subscriptions()
 
-            self._sync_pubsub_subscriptions()
+        # .. pass connection params so each delivery greenlet creates its own connection ..
+        redis_conn_params = {
+            'host': redis_config.host,
+            'port': redis_config.port,
+            'db': redis_config.db,
+            'password': redis_password,
+            'decode_responses': True,
+        }
 
-            # .. pass connection params so each delivery greenlet creates its own connection ..
-            redis_conn_params = {
-                'host': redis_config.host,
-                'port': redis_config.port,
-                'db': redis_config.db,
-                'password': redis_password,
-                'decode_responses': True,
-            }
+        self.pubsub_push_delivery = RedisPushDelivery(self, redis_conn_params)
 
-            self.pubsub_push_delivery = RedisPushDelivery(self, redis_conn_params)
+        for sub_key in self.config_manager._push_subs:
+            self.pubsub_push_delivery.start_sub_key(sub_key)
 
-            for sub_key in self._push_subs:
-                self.pubsub_push_delivery.start_sub_key(sub_key)
-
-            logger.info('PubSub Redis backend started')
-        except Exception:
-            logger.warning('PubSub Redis backend could not be started: %s', format_exc())
-
-# ################################################################################################################################
-
-    def _sync_pubsub_subscriptions(self) -> 'None':
-
-        from contextlib import closing
-        from zato.common.odb.model import HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
-
-        _push = PubSub.Delivery_Type.Push
-
-        logger.info('Syncing ODB subscriptions to Redis pub/sub backend')
-
-        with closing(self.odb.session()) as session:
-
-            rows = session.query(
-                PubSubSubscription.sub_key,
-                PubSubSubscription.delivery_type,
-                PubSubSubscription.push_type,
-                PubSubSubscription.push_service_name,
-                PubSubSubscription.rest_push_endpoint_id,
-                PubSubTopic.name,
-                SecurityBase.username,
-                SecurityBase.name.label('sec_name'),
-            ).join(
-                PubSubSubscriptionTopic, PubSubSubscriptionTopic.subscription_id == PubSubSubscription.id
-            ).join(
-                PubSubTopic, PubSubTopic.id == PubSubSubscriptionTopic.topic_id
-            ).join(
-                SecurityBase, SecurityBase.id == PubSubSubscription.sec_base_id
-            ).filter(
-                PubSubSubscription.cluster_id == self.cluster_id
-            ).filter(
-                SecurityBase.is_active == True  # noqa: E712
-            ).all()
-
-            synced = 0
-            push_subs = {} # type: dict[str, list]
-
-            for row in rows:
-                topic_name = row.name
-                sub_key = row.sub_key
-                self.pubsub_redis.subscribe(sub_key, topic_name)
-                synced += 1
-
-                if row.delivery_type == _push:
-                    sub_config = {
-                        'sub_key': sub_key,
-                        'topic_name': topic_name,
-                        'push_type': row.push_type,
-                        'push_service_name': row.push_service_name,
-                        'rest_push_endpoint_id': row.rest_push_endpoint_id,
-                    }
-
-                    if row.push_type == 'rest' and row.rest_push_endpoint_id:
-                        endpoint = session.query(HTTPSOAP).filter(
-                            HTTPSOAP.id == row.rest_push_endpoint_id
-                        ).first()
-                        if endpoint:
-                            sub_config['rest_push_url'] = (endpoint.host or '') + endpoint.url_path
-
-                    if sub_key not in push_subs:
-                        push_subs[sub_key] = []
-                    push_subs[sub_key].append(sub_config)
-
-            self._push_subs = push_subs
-
-        noun = 'pair' if synced == 1 else 'pairs'
-        push_count = sum(len(v) for v in push_subs.values())
-        logger.info('Synced %d ODB subscription-topic %s to Redis (%d push)', synced, noun, push_count)
+        logger.info('PubSub Redis backend started')
 
 # ################################################################################################################################
 
@@ -1615,22 +1562,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             for sub_key, username, sec_name in subscriptions:
                 _ = self.pubsub_subscriptions.register_user(username, sec_name, sub_key)
-
-            # Load subscription topics and set up Redis consumer groups
-            subscription_topics = session.query(
-                PubSubSubscription.sub_key,
-                PubSubTopic.name
-            ).join(
-                PubSubSubscriptionTopic, PubSubSubscription.id == PubSubSubscriptionTopic.subscription_id
-            ).join(
-                PubSubTopic, PubSubSubscriptionTopic.topic_id == PubSubTopic.id
-            ).filter(
-                PubSubSubscription.cluster_id == self.cluster_id
-            ).all()
-
-            if self._has_pubsub_redis:
-                for sub_key, topic_name in subscription_topics:
-                    self.pubsub_redis.subscribe(sub_key, topic_name)
 
 # ################################################################################################################################
 
@@ -2083,10 +2014,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             else:
                 self._is_process_closing = True
 
-            # Stop the Redis pub/sub backend if it was started
-            if self._has_pubsub_redis:
-                self.pubsub_push_delivery.stop()
-                self.pubsub_redis.redis.close()
+            # .. stop the Redis pub/sub backend ..
+            self.pubsub_push_delivery.stop()
+            self.pubsub_redis.redis.close()
 
             # Close SQL pools
             self.sql_pool_store.cleanup_on_stop()

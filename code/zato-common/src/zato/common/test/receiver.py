@@ -278,6 +278,10 @@ class WebhookReceiver:
             with open(file_path, 'r') as input_file:
                 content = input_file.read()
 
+            # .. skip files that are still being written ..
+            if not content:
+                continue
+
             parsed = json.loads(content)
             out.append(parsed)
 

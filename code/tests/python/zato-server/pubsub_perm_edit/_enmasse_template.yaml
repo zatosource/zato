@@ -1,0 +1,41 @@
+security:
+
+  - name: test.perm.edit.publisher
+    type: basic_auth
+    username: test.perm.edit.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.perm.edit.subscriber.a
+    type: basic_auth
+    username: test.perm.edit.subscriber.a
+    password: "{{subscriber_a_password}}"
+
+  - name: test.perm.edit.subscriber.b
+    type: basic_auth
+    username: test.perm.edit.subscriber.b
+    password: "{{subscriber_b_password}}"
+
+pubsub_topic:
+
+  - name: perm.edit.topic.one
+  - name: perm.edit.topic.two
+  - name: perm.edit.topic.three
+  - name: perm.edit.topic.four
+
+pubsub_permission:
+
+  - security: test.perm.edit.publisher
+    pub:
+      - perm.edit.**
+
+  - security: test.perm.edit.subscriber.a
+    sub:
+      - perm.edit.**
+
+pubsub_subscription:
+
+  - security: test.perm.edit.subscriber.a
+    delivery_type: pull
+    topic_list:
+      - perm.edit.topic.one
+      - perm.edit.topic.two

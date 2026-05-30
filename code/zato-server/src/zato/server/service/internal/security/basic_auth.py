@@ -72,6 +72,9 @@ class Create(AdminService):
         input = self.request.input
         input.password = uuid4().hex
 
+        logger.info('Create.handle is_active trace -> input.is_active=%r, type=%s, name=%s',
+            input.is_active, type(input.is_active).__name__, input.name)
+
         cluster_id = input.get('cluster_id') or self.server.cluster_id
 
         with closing(self.odb.session()) as session:
@@ -89,12 +92,18 @@ class Create(AdminService):
 
                 realm = input.realm if input.realm else 'API'
 
+                logger.info('Create.handle is_active trace -> before constructor, is_active=%r, type=%s, name=%s',
+                    input.is_active, type(input.is_active).__name__, input.name)
+
                 auth = HTTPBasicAuth(None, input.name, input.is_active, input.username,
                     realm, input.password, cluster)
                 set_instance_opaque_attrs(auth, input)
 
                 session.add(auth)
                 session.commit()
+
+                logger.info('Create.handle is_active trace -> after commit, auth.is_active=%r, type=%s, name=%s, id=%s',
+                    auth.is_active, type(auth.is_active).__name__, auth.name, auth.id)
 
             except Exception:
                 self.logger.error('Could not create an HTTP Basic Auth definition, e:`%s`', format_exc())
@@ -172,6 +181,11 @@ class Edit(AdminService):
 
                 old_name = definition.name
                 old_username = definition.username
+
+                logger.info('Edit.handle is_active trace -> old=%r (type=%s), new=%r (type=%s), name=%s, id=%s',
+                    definition.is_active, type(definition.is_active).__name__,
+                    input.is_active, type(input.is_active).__name__,
+                    definition.name, definition.id)
 
                 set_instance_opaque_attrs(definition, input)
 

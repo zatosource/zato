@@ -1,0 +1,64 @@
+security:
+
+  - name: test.td.publisher
+    type: basic_auth
+    username: test.td.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.td.subscriber
+    type: basic_auth
+    username: test.td.subscriber
+    password: "{{subscriber_password}}"
+
+  - name: test.td.push.subscriber
+    type: basic_auth
+    username: test.td.push.subscriber
+    password: "{{push_subscriber_password}}"
+
+outgoing_rest:
+
+  - name: test.td.out.push
+    host: "http://127.0.0.1:{{push_receiver_port}}"
+    url_path: /webhook/td/push
+    data_format: json
+    timeout: 30
+
+pubsub_topic:
+
+  - name: td.push.single
+  - name: td.pull.single
+  - name: td.multi.first
+  - name: td.multi.second
+
+pubsub_permission:
+
+  - security: test.td.publisher
+    pub:
+      - td.**
+
+  - security: test.td.subscriber
+    sub:
+      - td.**
+
+  - security: test.td.push.subscriber
+    sub:
+      - td.push.single
+
+pubsub_subscription:
+
+  - security: test.td.push.subscriber
+    delivery_type: push
+    push_rest_endpoint: test.td.out.push
+    topic_list:
+      - td.push.single
+
+  - security: test.td.subscriber
+    delivery_type: pull
+    topic_list:
+      - td.pull.single
+
+  - security: test.td.subscriber
+    delivery_type: pull
+    topic_list:
+      - td.multi.first
+      - td.multi.second

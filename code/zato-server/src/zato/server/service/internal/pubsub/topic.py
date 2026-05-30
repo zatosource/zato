@@ -15,14 +15,20 @@ from zato.common.ext.bunch import Bunch
 
 # Zato
 from zato.common.api import query_parameters
-from zato.common.json_internal import dumps
 from zato.common.broker_message import PUBSUB
+from zato.common.json_internal import dumps
 from zato.common.odb.model import Cluster, PubSubTopic
-from zato.common.odb.query import pubsub_topic_list
+from zato.common.odb.query import pubsub_subscription_topic_names, pubsub_topic_list
 from zato.common.pubsub.matcher import PatternMatcher
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service.internal import AdminService
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -146,6 +152,7 @@ class Edit(AdminService):
                 topic = topic.one()
 
                 old_name = topic.name
+                old_is_active = topic.is_active
 
                 set_instance_opaque_attrs(topic, input)
 
@@ -163,14 +170,19 @@ class Edit(AdminService):
                 raise
             else:
 
-                # Don't notify the broker only if the names are different, otherwise, there's no need to.
-                if input.name != old_name:
+                # Notify the broker if the name or active status changed ..
+                name_changed = input.name != old_name
+                active_changed = input.is_active != old_is_active
+                has_changes = name_changed or active_changed
+
+                if has_changes:
 
                     pubsub_msg = Bunch()
                     pubsub_msg.cid = self.cid
                     pubsub_msg.action = PUBSUB.TOPIC_EDIT.value
                     pubsub_msg.new_topic_name = input.name
                     pubsub_msg.old_topic_name = old_name
+                    pubsub_msg.is_active = input.is_active
 
                     self.config_dispatcher.publish(pubsub_msg)
 
@@ -185,12 +197,19 @@ class Delete(AdminService):
     """
     input = 'id',
 
-    def handle(self):
+    def handle(self) -> 'None':
+
         with closing(self.odb.session()) as session:
             try:
                 topic = session.query(PubSubTopic).\
                     filter(PubSubTopic.id==self.request.input.id).\
                     one()
+
+                # .. snapshot subscriptions linked to this topic before deletion,
+                # .. because the FK cascade on PubSubSubscriptionTopic will remove
+                # .. the junction rows when the topic row is deleted ..
+                topic_manager = self.server.config_manager.pubsub_topic_manager
+                linked_subs = topic_manager.get_subscriptions_by_topic_id(topic.id)
 
                 session.delete(topic)
                 session.commit()
@@ -207,6 +226,21 @@ class Delete(AdminService):
                 pubsub_msg.topic_name = topic.name
 
                 self.config_dispatcher.publish(pubsub_msg)
+
+                # .. delete subscriptions that have no remaining topics ..
+                self._delete_subscriptions_without_topics(session, linked_subs)
+
+    def _delete_subscriptions_without_topics(self, session:'object', linked_subs:'list') -> 'None':
+        """ Deletes subscriptions that no longer have any topics after the topic was removed.
+        """
+        for sub in linked_subs:
+
+            # .. check if this subscription still has topics ..
+            remaining_topics = pubsub_subscription_topic_names(session, sub.id)
+
+            # .. if no topics remain, the subscription must be deleted ..
+            if not remaining_topics:
+                _ = self.invoke('zato.pubsub.subscription.delete', {'id': sub.id})
 
 # ################################################################################################################################
 # ################################################################################################################################

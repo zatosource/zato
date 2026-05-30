@@ -111,10 +111,10 @@ class PubSubFacade:
         computed_topic = _service_name_to_topic(service_name)
 
         # .. acquire the lock to prevent races during setup ..
-        with self.server._service_topic_lock:
+        with self.server.config_manager._service_topic_lock:
 
             # .. if already set up, there is nothing to do ..
-            if service_name not in self.server._service_topic_cache:
+            if service_name not in self.server.config_manager._service_topic_cache:
 
                 # .. build the subscription key ..
                 sub_key = _service_sub_key_prefix + service_name
@@ -131,16 +131,16 @@ class PubSubFacade:
                     'rest_push_endpoint_id': None,
                 }
 
-                if sub_key not in self.server._push_subs:
-                    self.server._push_subs[sub_key] = []
+                if sub_key not in self.server.config_manager._push_subs:
+                    self.server.config_manager._push_subs[sub_key] = []
 
-                self.server._push_subs[sub_key].append(sub_config)
+                self.server.config_manager._push_subs[sub_key].append(sub_config)
 
                 # .. start a delivery greenlet for this sub_key ..
                 self.server.pubsub_push_delivery.start_sub_key(sub_key)
 
                 # .. mark as set up ..
-                self.server._service_topic_cache.add(service_name)
+                self.server.config_manager._service_topic_cache.add(service_name)
 
                 # .. and log it.
                 logger.info('Auto-created service topic `%s` for service `%s`', computed_topic, service_name)

@@ -39,9 +39,9 @@ Poll JSON contract returned by _get_dashboard_data:
 """
 
 # stdlib
-import json
 import logging
 from http import HTTPStatus
+from json import dumps as json_dumps, loads as json_loads
 
 # Django
 from django.http import HttpResponse
@@ -55,14 +55,15 @@ from zato.common.defaults import default_cluster_id
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from django.http import HttpRequest
+    HttpRequest = HttpRequest
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
-_Dashboard_Base_Url = '/zato/pubsub/dashboard/'
+_Dashboard_Base_URL = '/zato/pubsub/dashboard/'
 
 # Metrics not yet available from the backend - depth, rates, and age
 # will be populated once the corresponding services are implemented.
@@ -73,33 +74,19 @@ _No_Age           = 0
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_dashboard_data(req:'any_') -> 'str':
+def _get_dashboard_data(request:'HttpRequest') -> 'str':
 
     # Get the list of topics ..
-    try:
-        response = req.zato.client.invoke('zato.pubsub.topic.get-list', {
-            'cluster_id': default_cluster_id,
-        })
-        if response.ok:
-            topics = response.data
-        else:
-            topics = []
-    except Exception as error:
-        logger.warning('Pub/sub dashboard - could not get topics: %s', error)
-        topics = []
+    response = request.zato.client.invoke('zato.pubsub.topic.get-list', {
+        'cluster_id': default_cluster_id,
+    })
+    topics = response.data
 
     # .. get the list of subscriptions ..
-    try:
-        sub_response = req.zato.client.invoke('zato.pubsub.subscription.get-list', {
-            'cluster_id': default_cluster_id,
-        })
-        if sub_response.ok:
-            subscriptions = sub_response.data
-        else:
-            subscriptions = []
-    except Exception as error:
-        logger.warning('Pub/sub dashboard - could not get subscriptions: %s', error)
-        subscriptions = []
+    sub_response = request.zato.client.invoke('zato.pubsub.subscription.get-list', {
+        'cluster_id': default_cluster_id,
+    })
+    subscriptions = sub_response.data
 
     # .. build the topic list ..
     topic_count = len(topics)
@@ -136,35 +123,21 @@ def _get_dashboard_data(req:'any_') -> 'str':
             oldest_unacked_age_seconds = queue_age
 
     # .. get the publish timeline from Redis streams ..
-    try:
-        timeline_response = req.zato.client.invoke('zato.pubsub.topic.get-publish-timeline', {
-            'since_minutes': 60,
-        })
-        if timeline_response.ok:
-            publishes_timeline = timeline_response.data
-            if isinstance(publishes_timeline, str):
-                publishes_timeline = json.loads(publishes_timeline)
-        else:
-            publishes_timeline = []
-    except Exception as error:
-        logger.warning('Pub/sub dashboard - could not get timeline: %s', error)
-        publishes_timeline = []
+    timeline_response = request.zato.client.invoke('zato.pubsub.topic.get-publish-timeline', {
+        'since_minutes': 60,
+    })
+    publishes_timeline = timeline_response.data
+    if isinstance(publishes_timeline, str):
+        publishes_timeline = json_loads(publishes_timeline)
 
     # .. get the distinct publisher count ..
-    try:
-        publisher_response = req.zato.client.invoke('zato.pubsub.topic.get-publisher-count', {
-            'since_minutes': 60,
-        })
-        if publisher_response.ok:
-            publisher_data = publisher_response.data
-            if isinstance(publisher_data, str):
-                publisher_data = json.loads(publisher_data)
-            total_publishers = publisher_data['publisher_count']
-        else:
-            total_publishers = _No_Rate
-    except Exception as error:
-        logger.warning('Pub/sub dashboard - could not get publisher count: %s', error)
-        total_publishers = _No_Rate
+    publisher_response = request.zato.client.invoke('zato.pubsub.topic.get-publisher-count', {
+        'since_minutes': 60,
+    })
+    publisher_data = publisher_response.data
+    if isinstance(publisher_data, str):
+        publisher_data = json_loads(publisher_data)
+    total_publishers = publisher_data['publisher_count']
 
     # .. and return the combined data.
     data = {
@@ -184,51 +157,60 @@ def _get_dashboard_data(req:'any_') -> 'str':
         },
     }
 
-    out = json.dumps(data)
+    out = json_dumps(data)
     return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('GET')
-def index(req:'any_') -> 'TemplateResponse':
+def index(request:'HttpRequest') -> 'TemplateResponse':
 
-    data_json = _get_dashboard_data(req)
+    data_json = _get_dashboard_data(request)
 
-    return TemplateResponse(req, 'zato/pubsub/dashboard.html', {
+    out = TemplateResponse(request, 'zato/pubsub/dashboard.html', {
         'cluster_id': default_cluster_id,
         'dashboard_data': data_json,
-        'dashboard_base_url': _Dashboard_Base_Url,
+        'dashboard_base_url': _Dashboard_Base_URL,
         'zato_clusters': True,
         'zato_template_name': 'zato/pubsub/dashboard.html',
     })
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
-def poll(req:'any_') -> 'HttpResponse':
+def poll(request:'HttpRequest') -> 'HttpResponse':
 
     try:
-        data_json = _get_dashboard_data(req)
-        return HttpResponse(data_json.encode('utf-8'), content_type='application/json')
+        data_json = _get_dashboard_data(request)
+        data_bytes = data_json.encode('utf-8')
+
+        out = HttpResponse(data_bytes, content_type='application/json')
+
     except Exception as error:
         logger.error('Pub/sub dashboard poll error: %s', error)
-        error_json = json.dumps({'error': str(error)})
-        return HttpResponse(
-            error_json.encode('utf-8'),
+        error_json = json_dumps({'error': str(error)})
+        error_bytes = error_json.encode('utf-8')
+
+        out = HttpResponse(
+            error_bytes,
             content_type='application/json',
             status=HTTPStatus.INTERNAL_SERVER_ERROR,
         )
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('GET')
-def import_demo_config(req:'any_') -> 'HttpResponse':
+def import_demo_config(request:'HttpRequest') -> 'HttpResponse':
 
     try:
-        response = req.zato.client.invoke('zato.server.invoker', {
+        response = request.zato.client.invoke('zato.server.invoker', {
             'func_name': 'import_demo_pubsub',
         })
 
@@ -242,11 +224,15 @@ def import_demo_config(req:'any_') -> 'HttpResponse':
     except Exception as error:
         logger.error('Pub/sub import demo config error: %s', error)
         error_message = str(error)
-        return HttpResponse(
-            error_message.encode('utf-8'),
+        error_bytes = error_message.encode('utf-8')
+
+        out = HttpResponse(
+            error_bytes,
             content_type='text/plain',
             status=HTTPStatus.INTERNAL_SERVER_ERROR,
         )
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

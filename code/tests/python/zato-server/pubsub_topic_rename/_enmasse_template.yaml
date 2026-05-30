@@ -1,0 +1,32 @@
+security:
+
+  - name: test.rename.publisher
+    type: basic_auth
+    username: test.rename.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.rename.subscriber
+    type: basic_auth
+    username: test.rename.subscriber
+    password: "{{subscriber_password}}"
+
+pubsub_topic:
+
+  - name: test.rename.topic1
+
+pubsub_permission:
+
+  - security: test.rename.publisher
+    pub:
+      - test.rename.**
+
+  - security: test.rename.subscriber
+    sub:
+      - test.rename.**
+
+pubsub_subscription:
+
+  - security: test.rename.subscriber
+    delivery_type: pull
+    topic_list:
+      - test.rename.topic1

@@ -25,7 +25,7 @@ from zato.server.base.parallel.delivery import RedisPushDelivery
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,12 +37,22 @@ _test_redis_conn_params = {'host': 'localhost', 'port': 6379, 'db': PubSub.Test_
 # ################################################################################################################################
 # ################################################################################################################################
 
+class _MockConfigManager:
+    """ Minimal config_manager mock that holds push subscription state.
+    """
+
+    def __init__(self) -> 'None':
+        self._push_subs:'anydict' = {}
+
+# ################################################################################################################################
+
 class _MockServer:
     """ Minimal server mock that provides only what the delivery loop needs.
     """
 
     def __init__(self) -> 'None':
-        self._push_subs:'anydict' = {}
+        self.config_manager = _MockConfigManager()
+        self.pubsub_redis:'any_' = None
         self._invoke_side_effect = None
         self._invoke_calls:'list' = []
 
@@ -149,13 +159,13 @@ class TestDeliveryRetry(unittest.TestCase):
             if call_count == 1:
                 raise Exception('transient failure')
 
-        self.server._push_subs[_test_sub_key] = [{'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'}]
+        self.server.config_manager._push_subs[_test_sub_key] = [{'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'}]
 
         redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
 
         with patch.object(delivery, '_deliver_message', side_effect=_deliver):
-            delivery._deliver_with_retry(message, self.server._push_subs[_test_sub_key][0], _test_sub_key, self.backend)
+            delivery._deliver_with_retry(message, self.server.config_manager._push_subs[_test_sub_key][0], _test_sub_key, self.backend)
 
         self.assertEqual(call_count, 2)
         self.assertEqual(self._get_pending_count(), 0)
@@ -171,7 +181,7 @@ class TestDeliveryRetry(unittest.TestCase):
         messages = self.backend.fetch_messages(_test_sub_key)
         message = messages[0]
 
-        self.server._push_subs[_test_sub_key] = [{'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'}]
+        self.server.config_manager._push_subs[_test_sub_key] = [{'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'}]
 
         redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
@@ -189,7 +199,7 @@ class TestDeliveryRetry(unittest.TestCase):
              patch.object(delivery, '_deliver_message', side_effect=Exception('permanent failure')), \
              patch('zato.server.base.parallel.delivery.logger') as mock_logger:
 
-            delivery._deliver_with_retry(message, self.server._push_subs[_test_sub_key][0], _test_sub_key, self.backend)
+            delivery._deliver_with_retry(message, self.server.config_manager._push_subs[_test_sub_key][0], _test_sub_key, self.backend)
             mock_logger.error.assert_called_once()
 
         # .. message is acked even though delivery failed ..
@@ -241,7 +251,7 @@ class TestDeliveryRetry(unittest.TestCase):
             if call_count == 1:
                 raise Exception('fail first message on first try')
 
-        self.server._push_subs[_test_sub_key] = [{'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'}]
+        self.server.config_manager._push_subs[_test_sub_key] = [{'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'}]
 
         redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
@@ -267,7 +277,7 @@ class TestDeliveryRetry(unittest.TestCase):
         message = messages[0]
 
         sub_config = {'topic_name': _test_topic, 'push_type': PubSub.Push_Type.REST, 'rest_push_url': 'http://localhost:19999/test'}
-        self.server._push_subs[_test_sub_key] = [sub_config]
+        self.server.config_manager._push_subs[_test_sub_key] = [sub_config]
 
         redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
@@ -301,7 +311,7 @@ class TestDeliveryRetry(unittest.TestCase):
         message = messages[0]
 
         sub_config = {'topic_name': _test_topic, 'push_type': PubSub.Push_Type.REST, 'rest_push_url': 'http://localhost:19999/test'}
-        self.server._push_subs[_test_sub_key] = [sub_config]
+        self.server.config_manager._push_subs[_test_sub_key] = [sub_config]
 
         redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
