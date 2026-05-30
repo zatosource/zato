@@ -33,9 +33,9 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestPublishAckRaceWithLua(unittest.TestCase):
-    """ Proves that the Lua-based atomic publish prevents the race condition
-    where a fast ack between XADD and SADD causes premature disk file deletion.
+class TestPublishAtomicWithLua(unittest.TestCase):
+    """ Proves that the Lua-based atomic publish prevents premature disk file
+    deletion when a subscriber acks immediately after the message becomes visible.
     """
 
     def setUp(self) -> 'None':
@@ -52,7 +52,7 @@ class TestPublishAckRaceWithLua(unittest.TestCase):
 
         # .. use a unique topic name per test run to avoid collisions ..
         self._run_id = f'{int(time.time())}'
-        self.topic_name = f'test.race.{self._run_id}'
+        self.topic_name = f'test.atomic.{self._run_id}'
         self.push_sk = f'sk_push_{self._run_id}'
         self.pull_sk = f'sk_pull_{self._run_id}'
 
@@ -87,8 +87,7 @@ class TestPublishAckRaceWithLua(unittest.TestCase):
         """
 
         # Publish a message ..
-        result = self.backend.publish(self.topic_name, 'race-test-payload')
-        msg_id = result.msg_id
+        _ = self.backend.publish(self.topic_name, 'atomic-test-payload')
 
         # .. read the data_ref from the stream ..
         stream_key = f'{ModuleCtx.Stream_Prefix}{self.topic_name}'
@@ -112,7 +111,7 @@ class TestPublishAckRaceWithLua(unittest.TestCase):
 
         # .. and loadable ..
         load_result = self.disk_store.load(data_ref)
-        self.assertEqual(load_result.data, 'race-test-payload')
+        self.assertEqual(load_result.data, 'atomic-test-payload')
 
         # .. cleanup ..
         _ = self.redis.delete(pending_key)
@@ -120,7 +119,7 @@ class TestPublishAckRaceWithLua(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_old_non_atomic_path_triggers_race(self) -> 'None':
+    def test_old_non_atomic_path_triggers_deletion(self) -> 'None':
         """ Demonstrates that without the Lua script (individual commands in the
         old order: XADD first, then SADD), an inline ack between them causes
         premature disk file deletion.
@@ -139,7 +138,7 @@ class TestPublishAckRaceWithLua(unittest.TestCase):
         message_id = new_msg_id()
         now = datetime.now(timezone.utc)
         expiration_time = now + timedelta(seconds=3600)
-        data = 'race-trigger-payload'
+        data = 'non-atomic-payload'
 
         data_ref = self.disk_store.store(message_id, self.topic_name, data, '')
 
