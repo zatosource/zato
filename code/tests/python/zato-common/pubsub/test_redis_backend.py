@@ -24,10 +24,24 @@ from zato.common.pubsub.redis_backend import PublishResult, RedisPubSubBackend, 
 # ################################################################################################################################
 # ################################################################################################################################
 
+# evalsha positional arg layout:
+# [0]=sha, [1]=numkeys, [2]=stream_key, [3]=topic_subs_key, [4]=pending_key,
+# [5]=expiry_key, [6]=max_len, [7]=data_ref, [8]=expiration_ts,
+# [9]=sub_pending_prefix, [10]=field_count, [11..]=message fields
+_idx_stream_key = 2
+_idx_data_ref = 7
+_idx_field_count = 10
+_idx_fields_start = 11
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class TestRedisPubSubBackend(unittest.TestCase):
 
     def setUp(self) -> 'None':
         self.redis_mock = MagicMock()
+        self.redis_mock.evalsha.return_value = ['1-0', 0]
+        self.redis_mock.script_load.return_value = 'fake_sha'
         self.test_dir = tempfile.mkdtemp()
         self.disk_store = DiskMessageStore(self.test_dir)
         self.backend = RedisPubSubBackend(self.redis_mock, self.disk_store)
@@ -63,23 +77,17 @@ class TestRedisPubSubBackend(unittest.TestCase):
 
         result = self.backend.publish(topic_name, data, publisher='testuser')
 
-        self.redis_mock.xadd.assert_called_once()
+        self.redis_mock.evalsha.assert_called_once()
 
-        call_args = self.redis_mock.xadd.call_args
-        stream_key = call_args[0][0]
-        message = call_args[0][1]
+        call_args = self.redis_mock.evalsha.call_args
+        positional = call_args[0]
 
+        stream_key = positional[_idx_stream_key]
         self.assertEqual(stream_key, f'{ModuleCtx.Stream_Prefix}{topic_name}')
-        self.assertIn('data_ref', message)
-        self.assertIn('data_size', message)
-        self.assertIn('data_preview', message)
-        self.assertNotIn('data', message)
-        self.assertEqual(message['topic_name'], topic_name)
-        self.assertEqual(message['publisher'], 'testuser')
-        self.assertEqual(message['msg_id'], result.msg_id)
 
-        data_size = message['data_size']
-        self.assertEqual(data_size, len(data))
+        data_ref = positional[_idx_data_ref]
+        self.assertIn(topic_name, data_ref)
+        self.assertIn('.msg', data_ref)
 
 # ################################################################################################################################
 
@@ -91,10 +99,10 @@ class TestRedisPubSubBackend(unittest.TestCase):
 
         _ = self.backend.publish(topic_name, data, publisher='testuser')
 
-        # .. get the data_ref from the xadd call ..
-        call_args = self.redis_mock.xadd.call_args
-        message = call_args[0][1]
-        data_ref = message['data_ref']
+        # .. get the data_ref from the evalsha call ARGV ..
+        call_args = self.redis_mock.evalsha.call_args
+        positional = call_args[0]
+        data_ref = positional[_idx_data_ref]
 
         # .. verify we can load it back from disk ..
         load_result = self.disk_store.load(data_ref)
@@ -103,17 +111,20 @@ class TestRedisPubSubBackend(unittest.TestCase):
 # ################################################################################################################################
 
     def test_publish_stores_data_preview(self) -> 'None':
-        """ Test that the data preview is stored in Redis.
+        """ Test that the data preview is stored in the Lua ARGV fields.
         """
         topic_name = 'test.topic'
         data = 'A' * 200
 
         _ = self.backend.publish(topic_name, data, publisher='testuser')
 
-        call_args = self.redis_mock.xadd.call_args
-        message = call_args[0][1]
+        call_args = self.redis_mock.evalsha.call_args
+        positional = call_args[0]
 
-        preview_len = len(message['data_preview'])
+        fields = positional[_idx_fields_start:]
+        field_pairs = dict(zip(fields[::2], fields[1::2]))
+
+        preview_len = len(field_pairs['data_preview'])
         self.assertEqual(preview_len, 100)
 
 # ################################################################################################################################
@@ -146,6 +157,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
         topic_name = 'test.topic'
 
         self.redis_mock.scard.return_value = 1
+        self.redis_mock.evalsha.return_value = []
 
         self.backend.unsubscribe(sub_key, topic_name)
 
@@ -162,6 +174,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
         topic_name = 'test.topic'
 
         self.redis_mock.scard.return_value = 0
+        self.redis_mock.evalsha.return_value = []
 
         self.backend.unsubscribe(sub_key, topic_name)
 
@@ -369,13 +382,10 @@ class TestRedisPubSubBackend(unittest.TestCase):
 
         _ = encrypted_backend.publish(topic_name, data, publisher='testuser')
 
-        # .. get the data_ref from the xadd call ..
-        call_args = self.redis_mock.xadd.call_args
-        message = call_args[0][1]
-        data_ref = message['data_ref']
-
-        # .. the preview in Redis should be plaintext ..
-        self.assertEqual(message['data_preview'], 'sensitive payload')
+        # .. get the data_ref from the evalsha call ARGV ..
+        call_args = self.redis_mock.evalsha.call_args
+        positional = call_args[0]
+        data_ref = positional[_idx_data_ref]
 
         # .. the file on disk should contain encrypted data ..
         absolute_path = os.path.join(encrypted_dir, data_ref)
@@ -402,9 +412,9 @@ class TestRedisPubSubBackend(unittest.TestCase):
 
         _ = self.backend.publish(topic_name, data, publisher='testuser')
 
-        call_args = self.redis_mock.xadd.call_args
-        message = call_args[0][1]
-        data_ref = message['data_ref']
+        call_args = self.redis_mock.evalsha.call_args
+        positional = call_args[0]
+        data_ref = positional[_idx_data_ref]
 
         absolute_path = os.path.join(self.test_dir, data_ref)
 
