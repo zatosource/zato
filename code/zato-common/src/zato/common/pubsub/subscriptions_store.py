@@ -165,17 +165,24 @@ class SubscriptionsStore:
         """
         with self._lock:
 
-            # Update sub_key mapping
-            sub_key = self._username_to_sub_key.pop(old_username, None)
-            if sub_key:
+            if sub_key := self._username_to_sub_key.pop(old_username, None):
                 self._username_to_sub_key[new_username] = sub_key
                 self._sub_key_to_username[sub_key] = new_username
 
-            # Update sec_name mapping
-            sec_name = self._username_to_sec_name.pop(old_username, None)
-            if sec_name:
+            if sec_name := self._username_to_sec_name.pop(old_username, None):
                 self._username_to_sec_name[new_username] = sec_name
                 self._sec_name_to_username[sec_name] = new_username
+
+# ################################################################################################################################
+
+    def update_sec_name(self, old_sec_name:'str', new_sec_name:'str') -> 'None':
+        """ Update security definition name in all mappings.
+        """
+        with self._lock:
+
+            if username := self._sec_name_to_username.pop(old_sec_name, None):
+                self._sec_name_to_username[new_sec_name] = username
+                self._username_to_sec_name[username] = new_sec_name
 
 # ################################################################################################################################
 
