@@ -1563,21 +1563,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             for sub_key, username, sec_name in subscriptions:
                 _ = self.pubsub_subscriptions.register_user(username, sec_name, sub_key)
 
-            # Load subscription topics and set up Redis consumer groups
-            subscription_topics = session.query(
-                PubSubSubscription.sub_key,
-                PubSubTopic.name
-            ).join(
-                PubSubSubscriptionTopic, PubSubSubscription.id == PubSubSubscriptionTopic.subscription_id
-            ).join(
-                PubSubTopic, PubSubSubscriptionTopic.topic_id == PubSubTopic.id
-            ).filter(
-                PubSubSubscription.cluster_id == self.cluster_id
-            ).all()
-
-            for sub_key, topic_name in subscription_topics:
-                self.pubsub_redis.subscribe(sub_key, topic_name)
-
 # ################################################################################################################################
 
     def reload_config(self):
