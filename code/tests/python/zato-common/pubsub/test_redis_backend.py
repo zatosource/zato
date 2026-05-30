@@ -75,7 +75,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
         topic_name = 'test.topic'
         data = 'test message'
 
-        result = self.backend.publish(topic_name, data, publisher='testuser')
+        _ = self.backend.publish(topic_name, data, publisher='testuser')
 
         self.redis_mock.evalsha.assert_called_once()
 
