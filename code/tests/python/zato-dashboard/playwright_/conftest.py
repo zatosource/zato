@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import atexit
 import glob
+import logging
 import os
 import re
 import shutil
@@ -41,6 +42,8 @@ if 0:
 
 from client import ZatoClient
 from login import login as login_to_dashboard
+
+logger = logging.getLogger('zato.test.playwright')
 
 _Zato_Base = os.environ['ZATO_TEST_BASE_DIR']
 _Zato_Bin  = os.path.join(_Zato_Base, 'code', 'bin', 'zato')
@@ -139,12 +142,12 @@ def _wait_for_http(host:'str', port:'int', path:'str', timeout:'int' = _Server_W
 
                 # Accept either OK or redirect as a sign of readiness ..
                 if response.status in (OK, FOUND):
-                    print(f'[TIMING] {url} OK after {elapsed:.1f}s (attempt {attempt})')
+                    logger.info(f'[TIMING] {url} OK after {elapsed:.1f}s (attempt {attempt})')
                     return
 
         except Exception as exception:
             error_text = str(exception)[:80]
-            print(f'[TIMING] {url} attempt {attempt} at {elapsed:.1f}s: {error_text}')
+            logger.info(f'[TIMING] {url} attempt {attempt} at {elapsed:.1f}s: {error_text}')
 
         time.sleep(_Ping_Poll_Interval)
 
@@ -160,7 +163,7 @@ def _stream_output(process:'subprocess.Popen', label:'str', time_reference:'floa
     for line in iter(process.stdout.readline, b''):
         text = line.decode('utf-8', errors='replace').rstrip()
         elapsed = time.monotonic() - time_reference
-        print(f'[{label} {elapsed:6.1f}s] {text}')
+        logger.info(f'[{label} {elapsed:6.1f}s] {text}')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -200,7 +203,7 @@ def zato_dashboard() -> 'any_':
         raise RuntimeError(f'quickstart create failed:\nstdout: {result.stdout}\nstderr: {result.stderr}')
 
     time_after_quickstart = time.monotonic()
-    print(f'\n[TIMING] quickstart create: {time_after_quickstart - time_start:.1f}s')
+    logger.info(f'[TIMING] quickstart create: {time_after_quickstart - time_start:.1f}s')
 
     # .. 2) patch server.conf to bind on our dynamic port ..
 
@@ -235,7 +238,7 @@ def zato_dashboard() -> 'any_':
         _ = config_file.write(dumps(dashboard_config))
 
     time_after_config = time.monotonic()
-    print(f'[TIMING] config patch: {time_after_config - time_after_quickstart:.1f}s')
+    logger.info(f'[TIMING] config patch: {time_after_config - time_after_quickstart:.1f}s')
 
     # .. 4) start the server ..
 
@@ -281,15 +284,15 @@ def zato_dashboard() -> 'any_':
     try:
         _wait_for_http(host, server_port, '/zato/ping')
         time_server_ready = time.monotonic()
-        print(f'[TIMING] server ready: {time_server_ready - time_after_server_start:.1f}s')
+        logger.info(f'[TIMING] server ready: {time_server_ready - time_after_server_start:.1f}s')
 
         _wait_for_http(host, dashboard_port, '/accounts/login/')
         time_dashboard_ready = time.monotonic()
-        print(f'[TIMING] dashboard ready: {time_dashboard_ready - time_after_server_start:.1f}s')
-        print(f'[TIMING] total setup: {time_dashboard_ready - time_start:.1f}s')
+        logger.info(f'[TIMING] dashboard ready: {time_dashboard_ready - time_after_server_start:.1f}s')
+        logger.info(f'[TIMING] total setup: {time_dashboard_ready - time_start:.1f}s')
 
     except Exception:
-        print('\n--- Components did not become ready, stdout was streamed above ---\n')
+        logger.error('Components did not become ready, stdout was streamed above')
         _kill_process(_server_process)
         _kill_process(_dashboard_process)
         raise
