@@ -186,8 +186,13 @@ class TestTopicRename:
         assert len(subs) == 1, f'Expected 1 subscription, got {len(subs)}'
 
         topic_name_list = subs[0]['topic_name_list']
-        assert _renamed_topic_name in topic_name_list, f'Renamed topic not in subscription topic list: {topic_name_list}'
-        assert _original_topic_name not in topic_name_list, f'Old topic still in subscription topic list: {topic_name_list}'
+
+        topic_names:'anylist' = []
+        for entry in topic_name_list:
+            topic_names.append(entry['topic_name'])
+
+        assert _renamed_topic_name in topic_names, f'Renamed topic not in subscription topic list: {topic_names}'
+        assert _original_topic_name not in topic_names, f'Old topic still in subscription topic list: {topic_names}'
 
 # ################################################################################################################################
 
