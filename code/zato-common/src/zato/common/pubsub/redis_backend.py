@@ -87,7 +87,7 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_lua_unsub_script = """
+_lua_remove_subscriber_pending = """
 local sub_pending_key = KEYS[1]
 local expiry_key = KEYS[2]
 local sub_key = ARGV[1]
@@ -114,7 +114,38 @@ return deleted_refs
 # ################################################################################################################################
 # ################################################################################################################################
 
-_lua_publish_script = """
+_lua_clean_up_after_ack = """
+local pending_key = KEYS[1]
+local sub_pending_key = KEYS[2]
+local expiry_key = KEYS[3]
+
+local sub_key = ARGV[1]
+local data_ref = ARGV[2]
+
+-- Remove this subscriber from the message's pending set ..
+redis.call('SREM', pending_key, sub_key)
+
+-- .. remove this message from the subscriber's reverse index ..
+redis.call('SREM', sub_pending_key, data_ref)
+
+-- .. check if any subscribers still need this message ..
+local remaining = redis.call('SCARD', pending_key)
+
+if remaining == 0 then
+
+    -- .. no one needs it, clean up the pending key and expiry entry.
+    redis.call('DEL', pending_key)
+    redis.call('ZREM', expiry_key, data_ref)
+    return {0, 1}
+end
+
+return {remaining, 0}
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_lua_populate_pending_and_publish = """
 local stream_key = KEYS[1]
 local topic_subs_key = KEYS[2]
 local pending_key = KEYS[3]
@@ -149,7 +180,7 @@ return {stream_id, #subscriber_keys}
 # ################################################################################################################################
 # ################################################################################################################################
 
-_lua_pending_depths_script = """
+_lua_compute_pending_depths = """
 
 -- Extract a named field from a flat key-value array returned by XINFO ..
 local function get_field(info, field_name)
@@ -268,9 +299,10 @@ class RedisPubSubBackend:
         self.redis = redis_client
         self.disk_store = disk_store
         self.server = server
-        self._lua_unsub_sha:'str' = cast_('str', self.redis.script_load(_lua_unsub_script))
-        self._lua_publish_sha:'str' = cast_('str', self.redis.script_load(_lua_publish_script))
-        self._lua_pending_depths_sha:'str' = cast_('str', self.redis.script_load(_lua_pending_depths_script))
+        self.lua_remove_subscriber_pending:'str'    = cast_('str', self.redis.script_load(_lua_remove_subscriber_pending))
+        self.lua_clean_up_after_ack:'str'           = cast_('str', self.redis.script_load(_lua_clean_up_after_ack))
+        self.lua_populate_pending_and_publish:'str' = cast_('str', self.redis.script_load(_lua_populate_pending_and_publish))
+        self.lua_compute_pending_depths:'str'       = cast_('str', self.redis.script_load(_lua_compute_pending_depths))
 
 # ################################################################################################################################
 
@@ -410,11 +442,11 @@ class RedisPubSubBackend:
 
         field_count = len(message)
 
-        _lua_publish_num_keys = 4
+        _publish_num_keys = 4
 
         lua_result:'anylist' = cast_('anylist', self.redis.evalsha(
-            self._lua_publish_sha,
-            _lua_publish_num_keys,
+            self.lua_populate_pending_and_publish,
+            _publish_num_keys,
             stream_key,
             topic_subs_key,
             pending_key,
@@ -503,7 +535,7 @@ class RedisPubSubBackend:
         # .. eagerly clean up all pending messages for this subscriber via Lua script ..
         sub_pending_key = self._get_sub_pending_key(sub_key)
         deleted_refs:'anylist' = cast_('anylist', self.redis.evalsha(
-            self._lua_unsub_sha, 2,
+            self.lua_remove_subscriber_pending, 2,
             sub_pending_key, ModuleCtx.Pending_Expiry_Key,
             sub_key, ModuleCtx.Pending_Prefix
         ))
@@ -596,7 +628,7 @@ class RedisPubSubBackend:
 
                 if now > expiration_time:
                     expired_data_ref = decoded['data_ref']
-                    self.ack_message(stream_name, sub_key, redis_message_id, expired_data_ref)
+                    _ = self.ack_message(stream_name, sub_key, redis_message_id, expired_data_ref)
                     continue
 
                 # .. check max_len constraint using data_size from metadata ..
@@ -615,7 +647,7 @@ class RedisPubSubBackend:
                 except FileNotFoundError:
                     logger.warning('Orphaned message -> sub_key:%s, data_ref:%s, redis_id:%s - acking and skipping',
                         sub_key, data_ref, redis_message_id)
-                    self.ack_message(stream_name, sub_key, redis_message_id, data_ref)
+                    _ = self.ack_message(stream_name, sub_key, redis_message_id, data_ref)
                     continue
 
                 decoded['data'] = load_result.data
@@ -647,8 +679,9 @@ class RedisPubSubBackend:
 
 # ################################################################################################################################
 
-    def ack_message(self, stream_name:'str', sub_key:'str', redis_message_id:'str', data_ref:'strnone'=None) -> 'None':
+    def ack_message(self, stream_name:'str', sub_key:'str', redis_message_id:'str', data_ref:'strnone'=None) -> 'bool':
         """ Acknowledge a single message after successful processing.
+        Returns True if no subscribers remain (the message was fully cleaned up).
         """
         # Acknowledge the message in the stream ..
         logger.info('ack_message -> sub_key:%s, stream_name:%s, redis_message_id:%s, data_ref:%s',
@@ -656,31 +689,73 @@ class RedisPubSubBackend:
 
         _ = self.redis.xack(stream_name, sub_key, redis_message_id)
 
-        # .. remove this subscriber from the message's pending set and the reverse index ..
+        # .. atomically remove this subscriber from the pending set and clean up if last ..
         if data_ref:
             pending_key = self._get_pending_key(data_ref)
-
-            _ = self.redis.srem(pending_key, sub_key)
-
             sub_pending_key = self._get_sub_pending_key(sub_key)
-            _ = self.redis.srem(sub_pending_key, data_ref)
 
-            # .. check if any subscribers still need this message ..
-            remaining = self.redis.scard(pending_key)
+            _ack_cleanup_num_keys = 3
 
-            if remaining == 0:
+            cleanup_result:'anylist' = cast_('anylist', self.redis.evalsha(
+                self.lua_clean_up_after_ack,
+                _ack_cleanup_num_keys,
+                pending_key,
+                sub_pending_key,
+                ModuleCtx.Pending_Expiry_Key,
+                sub_key,
+                data_ref,
+            ))
 
-                # .. no one needs this message anymore, delete everything.
-                _ = self.redis.delete(pending_key)
-                _ = self.redis.zrem(ModuleCtx.Pending_Expiry_Key, data_ref)
+            _cleanup_remaining_idx = 0
+            _cleanup_deleted_idx   = 1
+
+            remaining = cleanup_result[_cleanup_remaining_idx]
+            needs_disk_delete = cleanup_result[_cleanup_deleted_idx]
+
+            if needs_disk_delete:
                 self.disk_store.delete(data_ref)
-
                 logger.info('ack_message deleted file -> data_ref:%s, sub_key:%s',
                     data_ref, sub_key)
+
+                return True
 
             else:
                 logger.info('ack_message pending remaining -> data_ref:%s, sub_key:%s, remaining:%s',
                     data_ref, sub_key, remaining)
+
+        return False
+
+# ################################################################################################################################
+
+    def _run_ack_cleanup(self, sub_key:'str', data_ref:'str') -> 'bool':
+        """ Atomically removes a subscriber from a message's pending set, cleans up if last.
+        Returns True if no subscribers remain and the disk file was deleted.
+        Used by clear_queue for entries that do not need XACK (unread or already-acked entries).
+        """
+        pending_key = self._get_pending_key(data_ref)
+        sub_pending_key = self._get_sub_pending_key(sub_key)
+
+        _ack_cleanup_num_keys = 3
+
+        cleanup_result:'anylist' = cast_('anylist', self.redis.evalsha(
+            self.lua_clean_up_after_ack,
+            _ack_cleanup_num_keys,
+            pending_key,
+            sub_pending_key,
+            ModuleCtx.Pending_Expiry_Key,
+            sub_key,
+            data_ref,
+        ))
+
+        _cleanup_deleted_idx = 1
+
+        needs_disk_delete = cleanup_result[_cleanup_deleted_idx]
+
+        if needs_disk_delete:
+            self.disk_store.delete(data_ref)
+
+        out = bool(needs_disk_delete)
+        return out
 
 # ################################################################################################################################
 
@@ -752,7 +827,7 @@ class RedisPubSubBackend:
             })
 
             # .. acknowledge and clean up the disk file ..
-            self.ack_message(stream_name, sub_key, redis_message_id, data_ref)
+            _ = self.ack_message(stream_name, sub_key, redis_message_id, data_ref)
 
             # .. update the delivery counter.
             counter = zato_pubsub_messages_delivered_total.labels(topic_name=message['topic_name'])
@@ -1284,7 +1359,7 @@ class RedisPubSubBackend:
         _depth_debug_logger.info('get_pending_depths INPUT pairs=%s argv=%s', sub_topic_pairs, argv)
 
         # .. call the Lua script ..
-        counts:'anylist' = cast_('anylist', self.redis.evalsha(self._lua_pending_depths_sha, 0, *argv))
+        counts:'anylist' = cast_('anylist', self.redis.evalsha(self.lua_compute_pending_depths, 0, *argv))
 
         _depth_debug_logger.info('get_pending_depths RAW counts=%s', counts)
 
@@ -1530,12 +1605,9 @@ class RedisPubSubBackend:
                     data_ref = message_data['data_ref']
 
                     # .. ack and clean up pending indexes and disk ..
-                    self.ack_message(stream_key, sub_key, redis_stream_id, data_ref)
+                    no_subscribers_remain = self.ack_message(stream_key, sub_key, redis_stream_id, data_ref)
 
-                    # .. check if no other subscriber needs this entry ..
-                    pending_key = self._get_pending_key(data_ref)
-                    remaining = self.redis.scard(pending_key)
-                    if remaining == 0:
+                    if no_subscribers_remain:
                         ids_to_xdel.append(redis_stream_id)
 
                     cleared_count += 1
@@ -1570,19 +1642,10 @@ class RedisPubSubBackend:
                     for redis_stream_id, message_data in unread_entries:
                         data_ref = message_data['data_ref']
 
-                        # .. remove this subscriber from the message's pending set ..
-                        pending_key = self._get_pending_key(data_ref)
-                        _ = self.redis.srem(pending_key, sub_key)
+                        # .. atomically remove this subscriber and clean up if last ..
+                        no_subscribers_remain = self._run_ack_cleanup(sub_key, data_ref)
 
-                        sub_pending_key = self._get_sub_pending_key(sub_key)
-                        _ = self.redis.srem(sub_pending_key, data_ref)
-
-                        # .. if no subscribers remain, delete everything ..
-                        remaining = self.redis.scard(pending_key)
-                        if remaining == 0:
-                            _ = self.redis.delete(pending_key)
-                            _ = self.redis.zrem(ModuleCtx.Pending_Expiry_Key, data_ref)
-                            self.disk_store.delete(data_ref)
+                        if no_subscribers_remain:
                             ids_to_xdel.append(redis_stream_id)
 
                         cleared_count += 1
@@ -1611,24 +1674,11 @@ class RedisPubSubBackend:
                 for redis_stream_id, message_data in delivered_entries:
                     data_ref = message_data['data_ref']
 
-                    # .. remove this subscriber from the message's pending set ..
-                    pending_key = self._get_pending_key(data_ref)
-                    was_removed = self.redis.srem(pending_key, sub_key)
+                    # .. atomically remove this subscriber and clean up if last ..
+                    no_subscribers_remain = self._run_ack_cleanup(sub_key, data_ref)
 
-                    sub_pending_key = self._get_sub_pending_key(sub_key)
-                    _ = self.redis.srem(sub_pending_key, data_ref)
-
-                    # .. check if any other subscriber still needs this message ..
-                    remaining = self.redis.scard(pending_key)
-
-                    if remaining == 0:
-                        # .. no one needs it, remove the stream entry and disk file ..
-                        _ = self.redis.delete(pending_key)
-                        _ = self.redis.zrem(ModuleCtx.Pending_Expiry_Key, data_ref)
-                        self.disk_store.delete(data_ref)
+                    if no_subscribers_remain:
                         ids_to_xdel.append(redis_stream_id)
-
-                    if was_removed:
                         cleared_count += 1
 
                 # .. advance the scan cursor ..

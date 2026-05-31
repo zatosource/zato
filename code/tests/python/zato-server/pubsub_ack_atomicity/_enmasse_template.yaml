@@ -1,0 +1,48 @@
+security:
+
+  - name: test.pubsub.ack.publisher
+    type: basic_auth
+    username: test.pubsub.ack.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.pubsub.ack.puller.a
+    type: basic_auth
+    username: test.pubsub.ack.puller.a
+    password: "{{puller_a_password}}"
+
+  - name: test.pubsub.ack.puller.b
+    type: basic_auth
+    username: test.pubsub.ack.puller.b
+    password: "{{puller_b_password}}"
+
+pubsub_topic:
+
+  - name: ack.test.shared
+  - name: ack.test.sole
+
+pubsub_permission:
+
+  - security: test.pubsub.ack.publisher
+    pub:
+      - ack.**
+
+  - security: test.pubsub.ack.puller.a
+    sub:
+      - ack.**
+
+  - security: test.pubsub.ack.puller.b
+    sub:
+      - ack.**
+
+pubsub_subscription:
+
+  - security: test.pubsub.ack.puller.a
+    delivery_type: pull
+    topic_list:
+      - ack.test.shared
+      - ack.test.sole
+
+  - security: test.pubsub.ack.puller.b
+    delivery_type: pull
+    topic_list:
+      - ack.test.shared
