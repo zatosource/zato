@@ -386,4 +386,138 @@ class TestTopicDelete:
                         f'Server log line {line_number} has error referencing {topic_name}: {line.strip()}'
 
 # ################################################################################################################################
+
+    def test_08_multi_topic_delete_does_not_leak_stale_sub_config(self, zato_server:'any_') -> 'None':
+        """ Deleting one topic from a multi-topic pull subscription must not leave
+        a stale pubsub_subs entry that causes messages to route to the old sub_key
+        when the topic is re-created.
+        """
+        from zato.common.test.config_pubsub_topic_delete import TestConfig
+
+        admin = _get_admin()
+        publisher = _get_publisher()
+
+        # .. create two fresh topics for this test ..
+        _ = admin.invoke('zato.pubsub.topic.create', {
+            'name': 'td.leak.pull.first',
+            'is_active': True,
+        })
+
+        _ = admin.invoke('zato.pubsub.topic.create', {
+            'name': 'td.leak.pull.second',
+            'is_active': True,
+        })
+
+        time.sleep(_settle_time)
+
+        # .. create a multi-topic pull subscription ..
+        _ = admin.invoke('zato.pubsub.subscription.create', {
+            'cluster_id': 1,
+            'topic_name_list': ['td.leak.pull.first', 'td.leak.pull.second'],
+            'sec_base_id': TestConfig.subscriber_sec_base_id,
+            'delivery_type': 'pull',
+        })
+
+        time.sleep(_settle_time)
+
+        # .. delete td.leak.pull.first (the subscription survives on td.leak.pull.second) ..
+        topic_id = _get_topic_id(admin, 'td.leak.pull.first')
+        _ = admin.invoke('zato.pubsub.topic.delete', {'id': topic_id})
+
+        time.sleep(_settle_time)
+
+        # .. re-create td.leak.pull.first with no subscription attached ..
+        _ = admin.invoke('zato.pubsub.topic.create', {
+            'name': 'td.leak.pull.first',
+            'is_active': True,
+        })
+
+        time.sleep(_settle_time)
+
+        # .. publish to the re-created topic ..
+        _ = publisher.publish('td.leak.pull.first', 'leak-test-message')
+
+        time.sleep(_settle_time)
+
+        # .. pull as the subscriber - must get 0 messages because there is no subscription ..
+        puller = _get_puller()
+        result = puller.pull(max_messages=10)
+        message_count = result['message_count']
+
+        assert message_count == 0, \
+            f'Expected 0 messages (stale pubsub_subs leak), got {message_count}'
+
+        # .. clean up ..
+        topic_id = _get_topic_id(admin, 'td.leak.pull.first')
+        _ = admin.invoke('zato.pubsub.topic.delete', {'id': topic_id})
+
+        topic_id = _get_topic_id(admin, 'td.leak.pull.second')
+        _ = admin.invoke('zato.pubsub.topic.delete', {'id': topic_id})
+
+        time.sleep(_settle_time)
+
+# ################################################################################################################################
+
+    def test_09_multi_topic_delete_does_not_leak_push_subs(self, zato_server:'any_') -> 'None':
+        """ Deleting one topic from a multi-topic push subscription must not leave
+        a stale _push_subs entry that causes messages to deliver to the old webhook
+        when the topic is re-created.
+        """
+        from zato.common.test.config_pubsub_topic_delete import TestConfig
+
+        admin = _get_admin()
+        publisher = _get_publisher()
+        receiver = TestConfig.push_receiver
+
+        # .. the enmasse template created td.push.multi.first + td.push.multi.second
+        # .. with a push subscription to both topics via test.td.out.push ..
+
+        # .. clear any prior deliveries ..
+        receiver.clear_output() # pyright: ignore[reportOptionalMemberAccess]
+
+        # .. publish to td.push.multi.first and confirm delivery ..
+        _ = publisher.publish('td.push.multi.first', 'push-multi-pre-delete')
+
+        time.sleep(_settle_time)
+
+        pre_delete_count = receiver.delivered_count() # pyright: ignore[reportOptionalMemberAccess]
+        assert pre_delete_count >= 1, f'Expected at least 1 push delivery before delete, got {pre_delete_count}'
+
+        # .. clear and delete td.push.multi.first (subscription survives on td.push.multi.second) ..
+        receiver.clear_output() # pyright: ignore[reportOptionalMemberAccess]
+
+        topic_id = _get_topic_id(admin, 'td.push.multi.first')
+        _ = admin.invoke('zato.pubsub.topic.delete', {'id': topic_id})
+
+        time.sleep(_settle_time)
+
+        # .. re-create td.push.multi.first with no push subscription ..
+        _ = admin.invoke('zato.pubsub.topic.create', {
+            'name': 'td.push.multi.first',
+            'is_active': True,
+        })
+
+        time.sleep(_settle_time)
+
+        # .. publish to the re-created topic ..
+        _ = publisher.publish('td.push.multi.first', 'push-multi-post-delete')
+
+        time.sleep(_settle_time)
+
+        # .. the webhook must NOT have received anything ..
+        post_delete_count = receiver.delivered_count() # pyright: ignore[reportOptionalMemberAccess]
+
+        assert post_delete_count == 0, \
+            f'Expected 0 push deliveries after topic delete (stale _push_subs leak), got {post_delete_count}'
+
+        # .. clean up ..
+        topic_id = _get_topic_id(admin, 'td.push.multi.first')
+        _ = admin.invoke('zato.pubsub.topic.delete', {'id': topic_id})
+
+        topic_id = _get_topic_id(admin, 'td.push.multi.second')
+        _ = admin.invoke('zato.pubsub.topic.delete', {'id': topic_id})
+
+        time.sleep(_settle_time)
+
+# ################################################################################################################################
 # ################################################################################################################################
