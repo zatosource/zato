@@ -437,6 +437,8 @@ class RedisPubSubBackend:
         # .. flatten message dict into key, value, key, value, ... for ARGV ..
         message_fields:'list[str]' = []
         for field_key, field_value in message.items():
+            field_key = cast_('str', field_key)
+            field_value = cast_('str', field_value)
             message_fields.append(field_key)
             message_fields.append(field_value)
 
@@ -510,6 +512,7 @@ class RedisPubSubBackend:
             # .. the group was just created, so we need to seed entries-read
             # .. to the current stream length so that XINFO GROUPS reports lag correctly.
             stream_len = self.redis.xlen(stream_key)
+            stream_len = cast_('int', stream_len)
             _ = self.redis.xgroup_setid(stream_key, sub_key, id='$', entries_read=stream_len)
 
 # ################################################################################################################################
@@ -1400,6 +1403,7 @@ class RedisPubSubBackend:
 
             try:
                 out = self.redis.xlen(stream_key)
+                out = cast_('int', out)
             except ResponseError:
                 out = 0
 
@@ -1619,6 +1623,7 @@ class RedisPubSubBackend:
             # Phase 2: handle unread entries beyond the consumer group cursor ..
             try:
                 stream_info = self.redis.xinfo_stream(stream_key)
+                stream_info = cast_('anydict', stream_info)
                 last_entry_id = stream_info['last-generated-id']
             except ResponseError:
                 continue
@@ -1679,7 +1684,6 @@ class RedisPubSubBackend:
 
                     if no_subscribers_remain:
                         ids_to_xdel.append(redis_stream_id)
-                        cleared_count += 1
 
                 # .. advance the scan cursor ..
                 last_scanned_id = delivered_entries[-1][0]
