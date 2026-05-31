@@ -2147,21 +2147,8 @@ class ConfigManager(_ConfigManagerBase):
             # .. the topic name to use is the new name (which may be the same as old) ..
             topic_name = new_name
 
-            # .. remove subscription configs for this topic ..
-            sub_configs = self.config_store.pubsub_subs.pop(topic_name, None)
-
-            # .. stop push delivery greenlets and remove _push_subs entries for this topic ..
-            sub_keys_to_remove:'list' = []
-
-            for sub_key, config_list in self._push_subs.items():
-                for sub_config in config_list:
-                    if sub_config['topic_name'] == topic_name:
-                        sub_keys_to_remove.append(sub_key)
-                        break
-
-            for sub_key in sub_keys_to_remove:
-                _ = self._push_subs.pop(sub_key, None)
-                self.server.pubsub_push_delivery.stop_sub_key(sub_key)
+            # .. remove in-memory subscription and push delivery configs for this topic.
+            self._remove_topic_sub_configs(topic_name)
 
         elif is_active is True:
 
@@ -2234,6 +2221,9 @@ class ConfigManager(_ConfigManagerBase):
         # .. delete Redis keys, subscriber sets, and disk files ..
         self.server.pubsub_redis.delete_topic(topic_name)
 
+        # .. remove in-memory subscription and push delivery configs for this topic.
+        self._remove_topic_sub_configs(topic_name)
+
 # ################################################################################################################################
 
     def on_config_event_PUBSUB_PERMISSION_CREATE(self, msg:'bunch_') -> 'None':
@@ -2269,6 +2259,25 @@ class ConfigManager(_ConfigManagerBase):
                 empty_topics.append(topic_name)
         for topic_name in empty_topics:
             del self.config_store.pubsub_subs[topic_name]
+
+    def _remove_topic_sub_configs(self, topic_name:'str') -> 'None':
+        """ Removes in-memory subscription and push delivery configs for a topic.
+        """
+        # .. remove subscription configs for this topic ..
+        _ = self.config_store.pubsub_subs.pop(topic_name, None)
+
+        # .. stop push delivery greenlets referencing this topic ..
+        sub_keys_to_remove:'list' = []
+
+        for sub_key, config_list in self._push_subs.items():
+            for sub_config in config_list:
+                if sub_config['topic_name'] == topic_name:
+                    sub_keys_to_remove.append(sub_key)
+                    break
+
+        for sub_key in sub_keys_to_remove:
+            _ = self._push_subs.pop(sub_key, None)
+            self.server.pubsub_push_delivery.stop_sub_key(sub_key)
 
     def _update_pubsub_permissions(self, msg:'bunch_') -> 'None':
         if hasattr(msg, 'username') and msg.username:

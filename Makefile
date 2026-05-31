@@ -359,6 +359,7 @@ _test-pubsub:
 		$(CURDIR)/code/tests/python/zato-server/pubsub_new_sub/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_edit/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_perm_edit/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete/ \
 		2>&1 | $(TS)
 	pyright \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
@@ -372,6 +373,7 @@ _test-pubsub:
 		$(CURDIR)/code/tests/python/zato-server/pubsub_new_sub/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_edit/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_perm_edit/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete/ \
 		2>&1 | $(TS)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
@@ -385,6 +387,7 @@ _test-pubsub:
 		$(CURDIR)/code/tests/python/zato-server/pubsub_new_sub/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_edit/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_perm_edit/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		2>&1 | $(TS)
