@@ -85,8 +85,8 @@ var Multi_Select_Empty_Message = '<table id="multi-select-table" class="multi-se
 
 $.fn.zato.data_table.PubSubSubscription = new Class({
     toString: function() {
-        var s = '<PubSubSubscription id:{0} topic_link_list:{1} security:{2} pattern_matched:{3}>';
-        return String.format(s, this.id, this.topic_link_list, this.security, this.pattern_matched);
+        var template = '<PubSubSubscription id:{0} topic_link_list:{1} security:{2} pattern_matched:{3}>';
+        return String.format(template, this.id, this.topic_link_list, this.security, this.pattern_matched);
     }
 });
 
@@ -456,7 +456,7 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
                 $(spanId).show();
             }
         },
-        error: function(xhr, status, error) {
+        error: function(request, status, error) {
             // Remove loading spinner
             $container.find('.loading-spinner').remove();
             $endpointSelect.append('<option value="">Error loading endpoints</option>');
@@ -505,7 +505,7 @@ $.fn.zato.pubsub.subscription.loadRestChannels = function() {
                 );
             }
         },
-        error: function(xhr, status, error) {
+        error: function(request, status, error) {
             $('#' + containerId).html(
                 '<table class="multi-select-table"><tr><td colspan="2">' +
                 '<span class="multi-select-message">Error loading REST channels</span>' +
@@ -583,7 +583,7 @@ $.fn.zato.pubsub.subscription.populateServices = function(form_type, selectedId,
             }
         }
     })
-    .fail(function(xhr, status, error) {
+    .fail(function(request, status, error) {
         console.error('Error loading services:', error);
     });
 }
@@ -771,7 +771,7 @@ $.fn.zato.pubsub.subscription.stripHtml = function(html) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.subscription.create_edit_submit = function(data, status, xhr) {
+$.fn.zato.pubsub.subscription.create_edit_submit = function(data, status, request) {
     var ret_data = $.parseJSON(data.responseText);
 
     // Publish message to status_msg topic

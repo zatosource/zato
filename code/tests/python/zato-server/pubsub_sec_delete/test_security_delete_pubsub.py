@@ -283,9 +283,9 @@ class TestSecurityDeletePubSubCleanup:
             # .. if we reach here, the server accepted the request which means
             # .. the old credentials still work - that's a failure ..
             assert False, 'Expected publish with deleted credentials to fail'
-        except Exception as exc:
+        except Exception as error:
             # .. any error (401, 403, connection error) proves the old credentials are gone ..
-            logger.info('Publish with deleted credentials correctly failed: %s', exc)
+            logger.info('Publish with deleted credentials correctly failed: %s', error)
 
 # ################################################################################################################################
 

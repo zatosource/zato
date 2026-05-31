@@ -2,8 +2,8 @@
 
 $.fn.zato.data_table.PubSubPermission = new Class({
     toString: function() {
-        var s = '<PubSubPermission id:{0} name:{1} pattern:{2} access_type:{3}>';
-        return String.format(s, this.id, this.name, this.pattern, this.access_type);
+        var template = '<PubSubPermission id:{0} name:{1} pattern:{2} access_type:{3}>';
+        return String.format(template, this.id, this.name, this.pattern, this.access_type);
     }
 });
 
@@ -177,7 +177,7 @@ function showTopicsAlert(pattern, event) {
         url: '/zato/pubsub/topic/get-matches/',
         type: 'POST',
         data: requestData,
-        beforeSend: function(xhr) {
+        beforeSend: function(request) {
         },
         success: function(response) {
 
@@ -226,11 +226,11 @@ function showTopicsAlert(pattern, event) {
             });
 
         },
-        error: function(xhr, status, error) {
+        error: function(request, status, error) {
         var errorHtml = '<div class="topic-matches-popup-error">';
             errorHtml += 'Error: ' + error;
-            if (xhr.status) {
-                errorHtml += ' (' + xhr.status + ')';
+            if (request.status) {
+                errorHtml += ' (' + request.status + ')';
             }
             errorHtml += '</div>';
 
@@ -408,7 +408,7 @@ function initializePatternEditing() {
                     $input.remove();
                     $linkElement.removeClass('editing').show();
                 },
-                error: function(xhr, status, error) {
+                error: function(request, status, error) {
                     alert('Failed to update pattern: ' + error);
 
                     // Restore link
@@ -908,7 +908,7 @@ function populatePatterns(formType, patternString) {
         patternString = '';
     }
 
-    var patterns = patternString.split('\n').filter(function(p) { return p.trim() !== ''; });
+    var patterns = patternString.split('\n').filter(function(pattern) { return pattern.trim() !== ''; });
     if (patterns.length === 0) {
         patterns = [''];
     } else {

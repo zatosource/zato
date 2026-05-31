@@ -34,13 +34,13 @@ def _get_or_create_sec_def(client:'ZatoClient') -> 'int':
     if data:
         return data[0]['id']
 
-    resp = client.create('zato.security.basic-auth.create',
+    response = client.create('zato.security.basic-auth.create',
         name='test-pubsub-sub-sec',
         is_active=True,
         username='subtestuser',
         realm='testrealm',
     )
-    return resp['id']
+    return response['id']
 
 class TestPubSubSubscription:
     created_sub_keys = []
@@ -55,7 +55,7 @@ class TestPubSubSubscription:
         self.__class__.topic_name = _ensure_topic(client, '/test/sub/topic/1')
         self.__class__.sec_id = _get_or_create_sec_def(client)
 
-        resp = client.create(f'{SERVICE}.create',
+        response = client.create(f'{SERVICE}.create',
             cluster_id=1,
             topic_name_list=[self.__class__.topic_name],
             sec_base_id=self.__class__.sec_id,
@@ -63,7 +63,7 @@ class TestPubSubSubscription:
             is_delivery_active=True,
             is_pub_active=True,
         )
-        sub_key = resp.get('sub_key') or resp.get('id')
+        sub_key = response.get('sub_key') or response.get('id')
         assert sub_key
         self.__class__.created_sub_keys.append(sub_key)
 
@@ -74,7 +74,7 @@ class TestPubSubSubscription:
     def test_04_create_batch(self, client:'ZatoClient') -> 'None':
         for i in range(2, 6):
             topic = _ensure_topic(client, f'/test/sub/topic/{i}')
-            resp = client.create(f'{SERVICE}.create',
+            response = client.create(f'{SERVICE}.create',
                 cluster_id=1,
                 topic_name_list=[topic],
                 sec_base_id=self.__class__.sec_id,
@@ -82,7 +82,7 @@ class TestPubSubSubscription:
                 is_delivery_active=True,
                 is_pub_active=True,
             )
-            sub_key = resp.get('sub_key') or resp.get('id')
+            sub_key = response.get('sub_key') or response.get('id')
             assert sub_key
             self.__class__.created_sub_keys.append(sub_key)
 
