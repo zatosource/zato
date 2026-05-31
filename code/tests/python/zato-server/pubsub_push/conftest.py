@@ -160,10 +160,12 @@ def clear_all_outputs() -> 'any_':
     # redis
     from redis import Redis
 
+    # Zato
+    from zato.common.api import PubSub
     from zato.common.test.config_pubsub_push import TestConfig
 
     # .. trim all pub/sub streams to 0 so no in-flight deliveries leak across tests ..
-    redis_client = Redis(host='localhost', port=6379, decode_responses=True)
+    redis_client = Redis(host='localhost', port=6379, db=PubSub.Test_Redis_DB, decode_responses=True)
 
     for key in redis_client.scan_iter('zato:pubsub:stream:*'):
         _ = redis_client.xtrim(key, maxlen=0)

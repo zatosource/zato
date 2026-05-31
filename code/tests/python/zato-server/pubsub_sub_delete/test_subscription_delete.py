@@ -14,6 +14,9 @@ import time
 # redis
 from redis import Redis
 
+# Zato
+from zato.common.api import PubSub
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -29,7 +32,7 @@ _settle_time = 0.5
 
 _test_redis_host = 'localhost'
 _test_redis_port = 6379
-_test_redis_db   = 0
+_test_redis_db   = PubSub.Test_Redis_DB
 
 _Subs_Prefix        = 'zato:pubsub:subs:'
 _Topic_Subs_Prefix  = 'zato:pubsub:topic_subs:'
