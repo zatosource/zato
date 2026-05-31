@@ -355,6 +355,7 @@ _test-pubsub:
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_combined/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_push/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_ack_atomicity/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_cli/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_new_sub/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_edit/ \
@@ -370,6 +371,7 @@ _test-pubsub:
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_combined/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_push/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_ack_atomicity/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_cli/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_new_sub/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_edit/ \
@@ -385,6 +387,7 @@ _test-pubsub:
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_combined/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_push/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_ack_atomicity/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_cli/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_new_sub/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_edit/ \
