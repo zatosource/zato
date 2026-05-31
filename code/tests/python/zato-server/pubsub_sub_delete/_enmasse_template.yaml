@@ -12,9 +12,9 @@ security:
 
 pubsub_topic:
 
-  - name: sd.topic.alpha
-  - name: sd.topic.beta
-  - name: sd.topic.gamma
+  - name: sd.topic.single
+  - name: sd.topic.multi.first
+  - name: sd.topic.multi.second
 
 pubsub_permission:
 
@@ -31,10 +31,10 @@ pubsub_subscription:
   - security: test.sd.subscriber
     delivery_type: pull
     topic_list:
-      - sd.topic.alpha
+      - sd.topic.single
 
   - security: test.sd.subscriber
     delivery_type: pull
     topic_list:
-      - sd.topic.beta
-      - sd.topic.gamma
+      - sd.topic.multi.first
+      - sd.topic.multi.second
