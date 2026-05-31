@@ -98,7 +98,13 @@ class TestPublishAtomicWithLua(unittest.TestCase):
         redis_message_id:'str' = messages[0][0]
 
         # .. simulate push greenlet acking immediately ..
-        self.backend.ack_message(stream_key, self.push_sk, redis_message_id, data_ref)
+        logger.info('ack_message input -> stream_key:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+            stream_key, self.push_sk, redis_message_id, data_ref)
+
+        is_fully_cleaned = self.backend.ack_message(stream_key, self.push_sk, redis_message_id, data_ref)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+        self.assertFalse(is_fully_cleaned)
 
         # .. pending set should still have pull_sk ..
         pending_key = f'{ModuleCtx.Pending_Prefix}{data_ref}'
@@ -162,7 +168,13 @@ class TestPublishAtomicWithLua(unittest.TestCase):
         redis_message_id:'str' = cast_('str', self.redis.xadd(stream_key, message, maxlen=_default_stream_max_len)) # pyright: ignore[reportArgumentType]
 
         # Step 2: Simulate the greenlet acking between XADD and SADD
-        self.backend.ack_message(stream_key, self.push_sk, redis_message_id, data_ref)
+        logger.info('ack_message input -> stream_key:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+            stream_key, self.push_sk, redis_message_id, data_ref)
+
+        is_fully_cleaned = self.backend.ack_message(stream_key, self.push_sk, redis_message_id, data_ref)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+        self.assertTrue(is_fully_cleaned)
 
         # At this point, pending_key does not exist yet (SADD hasn't run).
         # ack_message does SREM (returns 0 on non-existent key), SCARD (returns 0),

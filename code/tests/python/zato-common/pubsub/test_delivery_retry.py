@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 import shutil
 import tempfile
 import unittest
@@ -29,6 +30,8 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+logger = logging.getLogger(__name__)
 
 _test_topic = 'test.delivery.topic'
 _test_sub_key = 'sk_test_delivery'
@@ -113,11 +116,22 @@ class TestDeliveryRetry(unittest.TestCase):
         messages = self.backend.fetch_messages(_test_sub_key)
         self.assertEqual(len(messages), 1)
 
+        msg = messages[0]
+
         # .. message is now pending (read but not acked) ..
         self.assertEqual(self._get_pending_count(), 1)
 
         # .. ack it ..
-        self.backend.ack_message(messages[0]['_stream_name'], _test_sub_key, messages[0]['_redis_message_id'])
+        stream_name = msg['_stream_name']
+        redis_id = msg['_redis_message_id']
+
+        logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s',
+            stream_name, _test_sub_key, redis_id)
+
+        is_fully_cleaned = self.backend.ack_message(stream_name, _test_sub_key, redis_id)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+        self.assertFalse(is_fully_cleaned)
 
         # .. no longer pending ..
         self.assertEqual(self._get_pending_count(), 0)
@@ -225,10 +239,22 @@ class TestDeliveryRetry(unittest.TestCase):
         # .. simulate restart: fetch_pending returns the unacked message ..
         pending = self.backend.fetch_pending(_test_sub_key)
         self.assertEqual(len(pending), 1)
-        self.assertEqual(pending[0]['msg_id'], messages[0]['msg_id'])
+
+        pending_msg = pending[0]
+        self.assertEqual(pending_msg['msg_id'], messages[0]['msg_id'])
 
         # .. ack it ..
-        self.backend.ack_message(pending[0]['_stream_name'], _test_sub_key, pending[0]['_redis_message_id'])
+        stream_name = pending_msg['_stream_name']
+        redis_id = pending_msg['_redis_message_id']
+
+        logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s',
+            stream_name, _test_sub_key, redis_id)
+
+        is_fully_cleaned = self.backend.ack_message(stream_name, _test_sub_key, redis_id)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+        self.assertFalse(is_fully_cleaned)
+
         self.assertEqual(self._get_pending_count(), 0)
 
 # ################################################################################################################################

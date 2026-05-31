@@ -41,7 +41,7 @@ def _build_config(
 
     # .. flush the test Redis DB to remove stale data from previous runs ..
     redis_conn = Redis(host='localhost', port=6379, db=PubSub.Test_Redis_DB, decode_responses=True)
-    redis_conn.flushdb()
+    _ = redis_conn.flushdb()
     redis_conn.close()
 
     publisher_password = 'test.pub.' + os.urandom(8).hex()
