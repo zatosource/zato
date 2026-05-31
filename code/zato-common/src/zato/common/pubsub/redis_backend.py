@@ -329,6 +329,72 @@ return #subscriber_keys
 # ################################################################################################################################
 # ################################################################################################################################
 
+_lua_delete_topic = """
+local stream_key = KEYS[1]
+local topic_subs_key = KEYS[2]
+local expiry_key = KEYS[3]
+local subs_prefix = ARGV[1]
+local topic_name = ARGV[2]
+local pending_prefix = ARGV[3]
+local sub_pending_prefix = ARGV[4]
+
+-- Atomically read and delete topic_subs_key so no new subscribe can add to it ..
+local subscriber_keys = redis.call('SMEMBERS', topic_subs_key)
+redis.call('DEL', topic_subs_key)
+
+-- .. collect all data_refs from this topic's stream ..
+local topic_data_refs = {}
+local stream_exists = redis.call('EXISTS', stream_key)
+
+if stream_exists == 1 then
+    local stream_entries = redis.call('XRANGE', stream_key, '-', '+')
+    for _, entry in ipairs(stream_entries) do
+        local fields = entry[2]
+        for fi = 1, #fields, 2 do
+            if fields[fi] == 'data_ref' then
+                table.insert(topic_data_refs, fields[fi + 1])
+                break
+            end
+        end
+    end
+end
+
+-- .. per subscriber: remove topic from subs set, clean pending for this topic only, destroy group ..
+for _, sk in ipairs(subscriber_keys) do
+    local subs_key = subs_prefix .. sk
+    redis.call('SREM', subs_key, topic_name)
+
+    local sub_pending_key = sub_pending_prefix .. sk
+    for _, data_ref in ipairs(topic_data_refs) do
+        redis.call('SREM', sub_pending_key, data_ref)
+
+        local pending_key = pending_prefix .. data_ref
+        redis.call('SREM', pending_key, sk)
+        local remaining = redis.call('SCARD', pending_key)
+        if remaining == 0 then
+            redis.call('DEL', pending_key)
+            redis.call('ZREM', expiry_key, data_ref)
+        end
+    end
+
+    -- .. if sub_pending is now empty, delete it ..
+    local sub_pending_remaining = redis.call('SCARD', sub_pending_key)
+    if sub_pending_remaining == 0 then
+        redis.call('DEL', sub_pending_key)
+    end
+
+    pcall(redis.call, 'XGROUP', 'DESTROY', stream_key, sk)
+end
+
+-- .. delete the stream last (after topic_subs_key is gone, publish Lua sees 0 subscribers).
+redis.call('DEL', stream_key)
+
+return #subscriber_keys
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class RedisPubSubBackend:
     """ Redis Streams-based pub/sub backend.
     """
@@ -342,6 +408,7 @@ class RedisPubSubBackend:
         self.lua_populate_pending_and_publish:'str'  = cast_('str', self.redis.script_load(_lua_populate_pending_and_publish))
         self.lua_compute_pending_depths:'str'        = cast_('str', self.redis.script_load(_lua_compute_pending_depths))
         self.lua_rename_topic:'str'                  = cast_('str', self.redis.script_load(_lua_rename_topic)) # noqa: E222
+        self.lua_delete_topic:'str'                  = cast_('str', self.redis.script_load(_lua_delete_topic)) # noqa: E222
 
 # ################################################################################################################################
 
@@ -1486,34 +1553,30 @@ class RedisPubSubBackend:
 # ################################################################################################################################
 
     def delete_topic(self, topic_name:'str') -> 'None':
-        """ Delete a topic and all its data.
+        """ Delete a topic and all its data atomically.
         """
         # Build the key names ..
         stream_key = self._get_stream_key(topic_name)
         topic_subs_key = self._get_topic_subs_key(topic_name)
 
-        # .. delete all payload files from disk before removing the stream ..
+        _delete_topic_num_keys = 3
+
+        # .. atomically remove all Redis state via Lua ..
+        _ = self.redis.evalsha(
+            self.lua_delete_topic,
+            _delete_topic_num_keys,
+            stream_key,
+            topic_subs_key,
+            ModuleCtx.Pending_Expiry_Key,
+            ModuleCtx.Subs_Prefix,
+            topic_name,
+            ModuleCtx.Pending_Prefix,
+            ModuleCtx.Sub_Pending_Prefix,
+        )
+
+        # .. delete disk files last - catches any files from in-flight publishes
+        # .. that wrote to disk before the Lua removed topic_subs_key.
         self.disk_store.delete_topic_dir(topic_name)
-
-        # .. get all subscribers to this topic ..
-        subscriptions = self.get_topic_subscribers(topic_name)
-
-        # .. remove topic from each subscriber's set ..
-        for sub_key in subscriptions:
-            subs_key = self._get_subs_key(sub_key)
-            _ = self.redis.srem(subs_key, topic_name)
-
-            # .. destroy consumer group ..
-            try:
-                _ = self.redis.xgroup_destroy(stream_key, sub_key)
-            except ResponseError:
-                logger.debug('Consumer group %s not found for stream %s during delete', sub_key, stream_key)
-
-        # .. delete the stream ..
-        _ = self.redis.delete(stream_key)
-
-        # .. delete the topic subscribers set.
-        _ = self.redis.delete(topic_subs_key)
 
 # ################################################################################################################################
 

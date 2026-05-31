@@ -1,0 +1,34 @@
+security:
+
+  - name: test.tda.publisher
+    type: basic_auth
+    username: test.tda.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.tda.subscriber
+    type: basic_auth
+    username: test.tda.subscriber
+    password: "{{subscriber_password}}"
+
+pubsub_topic:
+
+  - name: tda.topic.a
+  - name: tda.topic.b
+
+pubsub_permission:
+
+  - security: test.tda.publisher
+    pub:
+      - tda.**
+
+  - security: test.tda.subscriber
+    sub:
+      - tda.**
+
+pubsub_subscription:
+
+  - security: test.tda.subscriber
+    delivery_type: pull
+    topic_list:
+      - tda.topic.a
+      - tda.topic.b

@@ -330,10 +330,9 @@ def playwright_browser() -> 'any_':
     """ Launches a Playwright Chromium browser for the entire test session.
     """
 
-    # Show the browser window when running from a real terminal with a display ..
-    has_display = bool(os.environ.get('DISPLAY'))
-    has_tty = sys.stdout.isatty()
-    use_headless = not (has_display and has_tty)
+    # Show the browser window when a display server is available ..
+    has_display = bool(os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY'))
+    use_headless = not has_display
 
     # .. start playwright ..
     playwright = sync_playwright().start()
