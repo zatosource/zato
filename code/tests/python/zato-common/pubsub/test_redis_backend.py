@@ -281,8 +281,8 @@ class TestRedisPubSubBackend(unittest.TestCase):
         message_id = 'zpsm.20260517-113200-1234-abcdef1234567890'
         data_ref = self.disk_store.store(message_id, 'test.topic', 'test data', '')
 
-        # .. make the mock return 0 remaining subscribers after SREM ..
-        self.redis_mock.scard.return_value = 0
+        # .. make the Lua cleanup script return [remaining=0, needs_disk_delete=1] ..
+        self.redis_mock.evalsha.return_value = [0, 1]
 
         # .. ack with data_ref should delete the file ..
         logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s, data_ref:%s',
