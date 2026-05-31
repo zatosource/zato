@@ -2084,6 +2084,28 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
+    def cleanup_rest_endpoint_pubsub(self, session:'any_', rest_endpoint_id:'int') -> 'None':
+        """ Cleans up all pub/sub state for subscriptions whose push endpoint is the given HTTPSOAP connection.
+        Called before the HTTPSOAP row is cascade-deleted from ODB.
+        """
+        from zato.common.odb.model import SecurityBase
+        from zato.common.odb.query import pubsub_subscriptions_by_rest_endpoint
+
+        # .. find all subscriptions pointing at this REST endpoint ..
+        subscriptions = pubsub_subscriptions_by_rest_endpoint(session, rest_endpoint_id, self.server.cluster_id)
+
+        # .. clean up each subscription's in-memory and Redis state ..
+        for sub in subscriptions:
+
+            # .. look up the username from the subscription's security definition ..
+            sec_def = session.query(SecurityBase).\
+                filter(SecurityBase.id == sub.sec_base_id).\
+                one()
+
+            self.cleanup_subscription(sub.sub_key, sec_def.username)
+
+# ################################################################################################################################
+
     def on_config_event_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'bunch_') -> 'None':
         self.cleanup_subscription(msg.sub_key, msg.username)
 
