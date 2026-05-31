@@ -1712,10 +1712,6 @@ class RedisPubSubBackend:
                 logger.warning('xgroup_setid failed -> stream_key:%s, sub_key:%s, error:%s',
                     stream_key, sub_key, error)
 
-        # .. clean out the sub_pending set entirely ..
-        sub_pending_key = self._get_sub_pending_key(sub_key)
-        _ = self.redis.delete(sub_pending_key)
-
         logger.info('clear_queue -> sub_key:%s, cleared_count:%d', sub_key, cleared_count)
 
         out:'anydict' = {
