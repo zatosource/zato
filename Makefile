@@ -289,7 +289,7 @@ restart-dashboard:
 COSMIC_RAY := $(CURDIR)/code/bin/cosmic-ray
 
 test-server: ## Server unit and integration tests.
-	$(ZATO_PY) -m pytest \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/zato-common/test/zato/common/marshall_/ \
 		$(CURDIR)/code/tests/python/zato-server/marshall/ \
 		$(CURDIR)/code/tests/python/zato-server/config_store/ \
@@ -415,7 +415,7 @@ test-graphql: ## GraphQL live tests.
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-hl7: ## HL7v2 parsing and MLLP tests.
-	$(ZATO_PY) -m pytest \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/mllp/ \
 		$(CURDIR)/code/tests/python/zato-server/mllp_integration/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7 -W ignore::DeprecationWarning \

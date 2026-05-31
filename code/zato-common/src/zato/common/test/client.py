@@ -28,7 +28,7 @@ logger = logging.getLogger('zato.common.test.client')
 # ################################################################################################################################
 # ################################################################################################################################
 
-class PublishRawResult(NamedTuple):
+class PublishResult(NamedTuple):
     status_code: int
     body: 'anydict'
 
@@ -46,8 +46,8 @@ class AdminClient:
 
 # ################################################################################################################################
 
-    def invoke(self, service_name:'str', payload:'anydict'=None) -> 'anydict':
-        """ Invokes a Zato service and returns the response.
+    def _invoke(self, service_name:'str', payload:'anydict'=None) -> 'tuple':
+        """ Invokes a service and returns both the parsed body and response headers.
         """
         url = f'{self.base_url}/zato/api/invoke/{service_name}'
         body = json.dumps(payload).encode() if payload else b'{}'
@@ -58,16 +58,25 @@ class AdminClient:
 
         try:
             with urlopen(request) as response:
-                raw = response.read()
+                data = response.read()
+                headers = dict(response.headers)
         except HTTPError as error:
-            raw = error.read()
-            error_text = raw.decode('utf-8', errors='replace')
+            data = error.read()
+            error_text = data.decode('utf-8', errors='replace')
             raise Exception(f'{service_name} returned HTTP {error.code}: {error_text}')
 
-        if not raw:
-            return {}
+        if not data:
+            return {}, headers
 
-        out = json.loads(raw)
+        out = json.loads(data)
+        return out, headers
+
+# ################################################################################################################################
+
+    def invoke(self, service_name:'str', payload:'anydict'=None) -> 'anydict':
+        """ Invokes a Zato service and returns the response.
+        """
+        out, _ = self._invoke(service_name, payload)
         return out
 
 # ################################################################################################################################
@@ -96,10 +105,24 @@ class AdminClient:
     def get_list(self, service_name:'str', **kwargs:'any_') -> 'tuple':
         """ Invokes a get-list service and returns (data_list, meta_dict).
         """
-        response = self.invoke(service_name, kwargs)
-        data = response['response']
-        meta = response['_meta']
-        return data, meta
+        response, headers = self._invoke(service_name, kwargs)
+
+        meta:'anydict' = {}
+
+        if cur_page := headers.get('X-Zato-Page-Current'):
+            meta['cur_page'] = cur_page
+
+        if page_size := headers.get('X-Zato-Page-Size'):
+            meta['page_size'] = page_size
+
+        if num_pages := headers.get('X-Zato-Page-Total'):
+            meta['num_pages'] = num_pages
+
+        if total := headers.get('X-Zato-Result-Total'):
+            meta['total'] = total
+
+        out = response, meta
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -177,8 +200,8 @@ class PublishClient:
 
 # ################################################################################################################################
 
-    def publish_raw(self, topic_name:'str', data:'any_', username:'str'='', password:'str'='') -> 'PublishRawResult':
-        """ Publishes with custom credentials and returns a PublishRawResult.
+    def _publish(self, topic_name:'str', data:'any_', username:'str'='', password:'str'='') -> 'PublishResult':
+        """ Publishes with custom credentials and returns a PublishResult.
         Used for negative tests with wrong credentials.
         """
         url = f'{self.base_url}/pubsub/topic/{topic_name}'
@@ -200,7 +223,7 @@ class PublishClient:
             auth = encoded.decode()
             request.add_header('Authorization', f'Basic {auth}')
 
-        logger.info('Publishing raw to %s (username=%s)', topic_name, username)
+        logger.info('Publishing to %s (username=%s)', topic_name, username)
 
         try:
             with urlopen(request) as response:
@@ -215,9 +238,9 @@ class PublishClient:
         else:
             response_body = {}
 
-        logger.info('Raw publish result: status=%d, body=%s', status_code, response_body)
+        logger.info('Publish result: status=%d, body=%s', status_code, response_body)
 
-        out = PublishRawResult(status_code=status_code, body=response_body)
+        out = PublishResult(status_code=status_code, body=response_body)
         return out
 
 # ################################################################################################################################

@@ -28,7 +28,7 @@ class ZatoClient:
 
 # ################################################################################################################################
 
-    def _invoke_raw(self, service_name, payload=None):
+    def _invoke(self, service_name, payload=None):
         """ Invokes a service and returns both the parsed body and response headers.
         """
         url = f'{self.base_url}/{service_name}'
@@ -67,13 +67,13 @@ class ZatoClient:
 # ################################################################################################################################
 
     def invoke(self, service_name, payload=None):
-        result, _ = self._invoke_raw(service_name, payload)
+        result, _ = self._invoke(service_name, payload)
         return result
 
 # ################################################################################################################################
 
     def get_list(self, service_name, **params):
-        response, headers = self._invoke_raw(service_name, params or None)
+        response, headers = self._invoke(service_name, params or None)
 
         meta = {}
         if cur_page := headers.get('X-Zato-Page-Current'):
