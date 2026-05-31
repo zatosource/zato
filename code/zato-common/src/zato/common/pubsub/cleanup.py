@@ -25,7 +25,7 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strlist, strset
+    from zato.common.typing_ import strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,6 +44,41 @@ _Default_Redis_DB         = 0
 _Pending_Prefix      = 'zato:pubsub:pending:'
 _Pending_Expiry_Key  = 'zato:pubsub:pending_expiry'
 _Sub_Pending_Prefix  = 'zato:pubsub:sub_pending:'
+
+# Atomically cleans up a single expired message's Redis state:
+# removes the data_ref from each subscriber's reverse index,
+# deletes the pending set, and removes the expiry entry.
+# Returns 1 if this call owned the cleanup (pending_key existed), 0 if already cleaned.
+_lua_sweep_cleanup = """
+local pending_key = KEYS[1]
+local expiry_key = KEYS[2]
+
+local data_ref = ARGV[1]
+local sub_pending_prefix = ARGV[2]
+
+-- Check whether the pending set still exists ..
+local subscriber_keys = redis.call('SMEMBERS', pending_key)
+local had_pending = #subscriber_keys > 0
+
+-- .. remove this data_ref from each subscriber's reverse index ..
+for _, subscriber_key in ipairs(subscriber_keys) do
+    local sub_pending_key = sub_pending_prefix .. subscriber_key
+    redis.call('SREM', sub_pending_key, data_ref)
+end
+
+-- .. delete the pending set ..
+redis.call('DEL', pending_key)
+
+-- .. remove from the expiry index ..
+redis.call('ZREM', expiry_key, data_ref)
+
+-- .. return whether this call owned the cleanup.
+if had_pending then
+    return 1
+end
+
+return 0
+"""
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,6 +100,9 @@ class PubSubCleanup:
         self.interval_seconds = interval_seconds
         self.batch_size = batch_size
         self._should_stop = False
+
+        # Load the Lua script for atomic per-message cleanup ..
+        self._lua_sweep_cleanup_sha:'str' = cast_('str', self.redis.script_load(_lua_sweep_cleanup))
 
 # ################################################################################################################################
 
@@ -93,29 +131,30 @@ class PubSubCleanup:
 
         deleted_count = 0
 
+        _sweep_num_keys = 2
+
         for data_ref in expired_refs:
 
             # Build the pending key for this message ..
             pending_key = self._get_pending_key(data_ref)
 
-            # .. remove this data_ref from the reverse index of each remaining subscriber ..
-            remaining_subs:'strset' = cast_('strset', self.redis.smembers(pending_key))
+            # .. atomically clean up all Redis state for this expired message ..
+            owned_cleanup:'int' = cast_('int', self.redis.evalsha(
+                self._lua_sweep_cleanup_sha,
+                _sweep_num_keys,
+                pending_key,
+                _Pending_Expiry_Key,
+                data_ref,
+                _Sub_Pending_Prefix,
+            ))
 
-            for sub_key in remaining_subs:
-                sub_pending_key = f'{_Sub_Pending_Prefix}{sub_key}'
-                _ = self.redis.srem(sub_pending_key, data_ref)
-
-            # .. delete the pending set ..
-            _ = self.redis.delete(pending_key)
-
-            # .. remove from the expiry index ..
-            _ = self.redis.zrem(_Pending_Expiry_Key, data_ref)
-
-            # .. and delete the disk file.
-            self.disk_store.delete(data_ref)
+            # .. only delete the disk file if this call owned the cleanup -
+            # .. a concurrent ack_message may have already cleaned it ..
+            if owned_cleanup:
+                self.disk_store.delete(data_ref)
 
             deleted_count += 1
-            logger.info('Cleaned up expired message -> data_ref:%s', data_ref)
+            logger.info('Cleaned up expired message -> data_ref:%s, owned_cleanup:%s', data_ref, owned_cleanup)
 
         return deleted_count
 
