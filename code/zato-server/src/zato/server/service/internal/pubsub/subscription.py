@@ -641,8 +641,8 @@ class Delete(AdminService):
         pubsub_msg = Bunch()
         pubsub_msg.cid = self.cid
         pubsub_msg.sub_key = sub.sub_key
-        pubsub_msg.username = sec_def_name
-        pubsub_msg.sec_name = sec_def_username
+        pubsub_msg.username = sec_def_username
+        pubsub_msg.sec_name = sec_def_name
         pubsub_msg.action = PUBSUB.SUBSCRIPTION_DELETE.value
 
         # .. our own consumer task (from the same process) we want to stop synchronously so we call the handler directly ..

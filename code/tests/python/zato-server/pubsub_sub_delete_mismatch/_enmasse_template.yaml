@@ -1,0 +1,32 @@
+security:
+
+  - name: test.mismatch.security.publisher
+    type: basic_auth
+    username: test.mismatch.credential.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.mismatch.security.subscriber
+    type: basic_auth
+    username: test.mismatch.credential.subscriber
+    password: "{{subscriber_password}}"
+
+pubsub_topic:
+
+  - name: mismatch.topic.delete
+
+pubsub_permission:
+
+  - security: test.mismatch.security.publisher
+    pub:
+      - mismatch.**
+
+  - security: test.mismatch.security.subscriber
+    sub:
+      - mismatch.**
+
+pubsub_subscription:
+
+  - security: test.mismatch.security.subscriber
+    delivery_type: pull
+    topic_list:
+      - mismatch.topic.delete
