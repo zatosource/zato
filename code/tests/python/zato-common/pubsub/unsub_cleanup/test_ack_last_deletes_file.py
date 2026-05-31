@@ -43,7 +43,17 @@ class TestAckLastSubscriberDeletesFile(BaseUnsubCleanupTestCase):
         logger.info('fetch_messages(sub_key_a) -> %s', messages_a)
 
         message_a = messages_a[0]
-        self.backend.ack_message(message_a['_stream_name'], sub_key_a, message_a['_redis_message_id'], message_a['_data_ref'])
+        stream_name_a = message_a['_stream_name']
+        redis_id_a = message_a['_redis_message_id']
+        data_ref_a = message_a['_data_ref']
+
+        logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+            stream_name_a, sub_key_a, redis_id_a, data_ref_a)
+
+        is_fully_cleaned_a = self.backend.ack_message(stream_name_a, sub_key_a, redis_id_a, data_ref_a)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned_a)
+        self.assertFalse(is_fully_cleaned_a)
 
         # .. file still exists after first ack ..
         file_present = self.file_exists(data_ref)
@@ -54,7 +64,17 @@ class TestAckLastSubscriberDeletesFile(BaseUnsubCleanupTestCase):
         logger.info('fetch_messages(sub_key_b) -> %s', messages_b)
 
         message_b = messages_b[0]
-        self.backend.ack_message(message_b['_stream_name'], sub_key_b, message_b['_redis_message_id'], message_b['_data_ref'])
+        stream_name_b = message_b['_stream_name']
+        redis_id_b = message_b['_redis_message_id']
+        data_ref_b = message_b['_data_ref']
+
+        logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+            stream_name_b, sub_key_b, redis_id_b, data_ref_b)
+
+        is_fully_cleaned_b = self.backend.ack_message(stream_name_b, sub_key_b, redis_id_b, data_ref_b)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned_b)
+        self.assertTrue(is_fully_cleaned_b)
 
         # .. pending:{data_ref} key is gone ..
         pending_count = self.get_pending_count(data_ref)

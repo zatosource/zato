@@ -53,9 +53,17 @@ class TestAckOneThenUnsub(BaseUnsubCleanupTestCase):
         messages = self.backend.fetch_messages(sub_key_a)
         first_message = messages[0]
 
-        self.backend.ack_message(
-            first_message['_stream_name'], sub_key_a,
-            first_message['_redis_message_id'], first_message['_data_ref'])
+        stream_name = first_message['_stream_name']
+        redis_id = first_message['_redis_message_id']
+        msg_data_ref = first_message['_data_ref']
+
+        logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+            stream_name, sub_key_a, redis_id, msg_data_ref)
+
+        is_fully_cleaned = self.backend.ack_message(stream_name, sub_key_a, redis_id, msg_data_ref)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+        self.assertFalse(is_fully_cleaned)
 
         # .. now unsubscribe sub_a ..
         self.backend.unsubscribe(sub_key_a, self.topic_name)

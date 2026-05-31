@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 import os
 import shutil
 import tempfile
@@ -23,6 +24,8 @@ from zato.common.pubsub.redis_backend import PublishResult, RedisPubSubBackend, 
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+logger = logging.getLogger(__name__)
 
 # evalsha positional arg layout:
 # [0]=sha, [1]=numkeys, [2]=stream_key, [3]=topic_subs_key, [4]=pending_key,
@@ -282,7 +285,13 @@ class TestRedisPubSubBackend(unittest.TestCase):
         self.redis_mock.scard.return_value = 0
 
         # .. ack with data_ref should delete the file ..
-        self.backend.ack_message('stream:test', 'sub1', '1-0', data_ref)
+        logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+            'stream:test', 'sub1', '1-0', data_ref)
+
+        is_fully_cleaned = self.backend.ack_message('stream:test', 'sub1', '1-0', data_ref)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+        self.assertTrue(is_fully_cleaned)
 
         absolute_path = os.path.join(self.test_dir, data_ref)
         self.assertFalse(os.path.exists(absolute_path))
@@ -292,7 +301,11 @@ class TestRedisPubSubBackend(unittest.TestCase):
     def test_ack_message_without_data_ref(self) -> 'None':
         """ Test that acknowledging without data_ref still works.
         """
-        self.backend.ack_message('stream:test', 'sub1', '1-0')
+        is_fully_cleaned = self.backend.ack_message('stream:test', 'sub1', '1-0')
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+        self.assertFalse(is_fully_cleaned)
+
         self.redis_mock.xack.assert_called_once()
 
 # ################################################################################################################################
