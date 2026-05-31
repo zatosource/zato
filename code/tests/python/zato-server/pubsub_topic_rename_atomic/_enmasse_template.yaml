@@ -1,0 +1,32 @@
+security:
+
+  - name: test.rename.atomic.publisher
+    type: basic_auth
+    username: test.rename.atomic.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.rename.atomic.subscriber
+    type: basic_auth
+    username: test.rename.atomic.subscriber
+    password: "{{subscriber_password}}"
+
+pubsub_topic:
+
+  - name: test.rename.atomic.topic1
+
+pubsub_permission:
+
+  - security: test.rename.atomic.publisher
+    pub:
+      - test.rename.atomic.**
+
+  - security: test.rename.atomic.subscriber
+    sub:
+      - test.rename.atomic.**
+
+pubsub_subscription:
+
+  - security: test.rename.atomic.subscriber
+    delivery_type: pull
+    topic_list:
+      - test.rename.atomic.topic1
