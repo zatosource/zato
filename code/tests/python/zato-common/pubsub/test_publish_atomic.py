@@ -71,10 +71,10 @@ class TestPublishAtomicWithLua(unittest.TestCase):
         _ = self.redis.delete(topic_subs_key)
         _ = self.redis.delete(stream_key)
 
-        for sk in (self.push_sk, self.pull_sk):
-            subs_key = f'{ModuleCtx.Subs_Prefix}{sk}'
+        for sub_key in (self.push_sk, self.pull_sk):
+            subs_key = f'{ModuleCtx.Subs_Prefix}{sub_key}'
             _ = self.redis.delete(subs_key)
-            sub_pending_key = f'{ModuleCtx.Sub_Pending_Prefix}{sk}'
+            sub_pending_key = f'{ModuleCtx.Sub_Pending_Prefix}{sub_key}'
             _ = self.redis.delete(sub_pending_key)
 
         # .. and the temp directory.

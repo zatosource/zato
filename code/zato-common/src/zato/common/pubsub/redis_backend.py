@@ -42,9 +42,9 @@ logger = getLogger(__name__)
 
 _depth_debug_logger = _depth_logging.getLogger('zato.depth_debug')
 _depth_debug_logger.setLevel(_depth_logging.DEBUG)
-_depth_fh = _depth_logging.FileHandler('/tmp/zato-depth-debug.log')
-_depth_fh.setFormatter(_depth_logging.Formatter('%(asctime)s %(message)s'))
-_depth_debug_logger.addHandler(_depth_fh)
+_depth_file_handler = _depth_logging.FileHandler('/tmp/zato-depth-debug.log')
+_depth_file_handler.setFormatter(_depth_logging.Formatter('%(asctime)s %(message)s'))
+_depth_debug_logger.addHandler(_depth_file_handler)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1487,7 +1487,7 @@ class RedisPubSubBackend:
 
     def get_publish_timeline(self, topic_names:'strlist', since_minutes:'int'=60) -> 'dictlist':
         """ Return a per-minute publish count timeline aggregated across the given topics.
-        Each entry is {'ts': <epoch_ms>, 'count': <int>}.
+        Each entry is {'timestamp': <epoch_ms>, 'count': <int>}.
         """
 
         # Compute the cutoff timestamp for the XRANGE query ..
@@ -1532,7 +1532,7 @@ class RedisPubSubBackend:
         out:'dictlist' = []
 
         for key_ms in sorted_keys:
-            entry = {'ts': key_ms, 'count': buckets[key_ms]}
+            entry = {'timestamp': key_ms, 'count': buckets[key_ms]}
             out.append(entry)
 
         return out

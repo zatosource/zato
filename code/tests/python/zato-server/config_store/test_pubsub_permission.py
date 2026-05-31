@@ -36,15 +36,15 @@ class TestPubSubPermission:
 
     def test_02_create_one(self, client:'ZatoClient') -> 'None':
         self.__class__.sec_id = _get_sec_id(client)
-        resp = client.create(f'{SERVICE}.create',
+        response = client.create(f'{SERVICE}.create',
             cluster_id=1,
             sec_base_id=self.__class__.sec_id,
             pub='topic-a,topic-b',
             sub='topic-c',
         )
-        assert 'id' in resp
-        assert resp['security'] == 'admin.invoke'
-        self.__class__.created_ids.append(resp['id'])
+        assert 'id' in response
+        assert response['security'] == 'admin.invoke'
+        self.__class__.created_ids.append(response['id'])
 
     def test_03_get_list_after_create(self, client:'ZatoClient') -> 'None':
         data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
@@ -54,21 +54,21 @@ class TestPubSubPermission:
     def test_04_create_batch(self, client:'ZatoClient') -> 'None':
         for i in range(2, 6):
             sec_name = f'test-perm-sec-{i}'
-            sec_resp = client.create('zato.security.basic-auth.create',
+            sec_response = client.create('zato.security.basic-auth.create',
                 cluster_id=1,
                 name=sec_name,
                 is_active=True,
                 username=f'permuser{i}',
                 realm='testrealm',
             )
-            resp = client.create(f'{SERVICE}.create',
+            response = client.create(f'{SERVICE}.create',
                 cluster_id=1,
-                sec_base_id=sec_resp['id'],
+                sec_base_id=sec_response['id'],
                 pub=f'topic-pub-{i}',
                 sub=f'topic-sub-{i}',
             )
-            assert 'id' in resp
-            self.__class__.created_ids.append(resp['id'])
+            assert 'id' in response
+            self.__class__.created_ids.append(response['id'])
 
     def test_05_get_list_batch(self, client:'ZatoClient') -> 'None':
         data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
@@ -77,14 +77,14 @@ class TestPubSubPermission:
 
     def test_06_edit_one(self, client:'ZatoClient') -> 'None':
         item_id = self.__class__.created_ids[0]
-        resp = client.edit(f'{SERVICE}.edit',
+        response = client.edit(f'{SERVICE}.edit',
             id=item_id,
             cluster_id=1,
             sec_base_id=self.__class__.sec_id,
             pub='topic-a-edited',
             sub='topic-c-edited',
         )
-        assert resp['id']
+        assert response['id']
 
     def test_07_get_list_after_edit(self, client:'ZatoClient') -> 'None':
         data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)

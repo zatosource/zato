@@ -68,8 +68,8 @@ class PubSubRESTServerBaseTestCase(TestCase):
         cls.skip_tests = False
 
         # Load configuration
-        with open(cls.config_path, 'r') as f:
-            cls.config = yaml_load(f, Loader=Loader)
+        with open(cls.config_path, 'r') as file_handle:
+            cls.config = yaml_load(file_handle, Loader=Loader)
 
         # Extract demo user credentials
         cls.username = 'user.1'

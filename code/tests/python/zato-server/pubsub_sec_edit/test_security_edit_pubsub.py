@@ -172,9 +172,9 @@ class TestSecurityEditPubSub:
         try:
             _ = puller_old.pull(max_messages=50)
             assert False, 'Expected pull with old credentials to fail'
-        except Exception as exc:
+        except Exception as error:
             # .. 401 proves the old credentials are rejected ..
-            assert '401' in str(exc), f'Expected 401 error, got: {exc}'
+            assert '401' in str(error), f'Expected 401 error, got: {error}'
 
 # ################################################################################################################################
 

@@ -40,14 +40,14 @@ def client(zato_server:'any_') -> 'ZatoClient':
 def _create_sec_def(client:'ZatoClient', name:'str', username:'str') -> 'int':
     """ Creates a basic auth security definition and returns its ID.
     """
-    resp = client.create('zato.security.basic-auth.create',
+    response = client.create('zato.security.basic-auth.create',
         cluster_id=1,
         name=name,
         is_active=True,
         username=username,
         realm='testrealm',
     )
-    return resp['id']
+    return response['id']
 
 # ################################################################################################################################
 
@@ -65,20 +65,20 @@ def _create_topic(client:'ZatoClient', name:'str') -> 'None':
 def _create_permission(client:'ZatoClient', sec_base_id:'int', pattern:'str') -> 'int':
     """ Creates a pub/sub permission and returns its ID.
     """
-    resp = client.create('zato.pubsub.permission.create',
+    response = client.create('zato.pubsub.permission.create',
         cluster_id=1,
         sec_base_id=sec_base_id,
         pattern=pattern,
         access_type='publisher-subscriber',
     )
-    return resp['id']
+    return response['id']
 
 # ################################################################################################################################
 
 def _create_subscription(client:'ZatoClient', sec_base_id:'int', topic_names:'anylist') -> 'str':
     """ Creates a pull subscription and returns its sub_key.
     """
-    resp = client.create('zato.pubsub.subscription.create',
+    response = client.create('zato.pubsub.subscription.create',
         cluster_id=1,
         topic_name_list=topic_names,
         sec_base_id=sec_base_id,
@@ -86,7 +86,7 @@ def _create_subscription(client:'ZatoClient', sec_base_id:'int', topic_names:'an
         is_delivery_active=True,
         is_pub_active=True,
     )
-    return resp['sub_key']
+    return response['sub_key']
 
 # ################################################################################################################################
 
