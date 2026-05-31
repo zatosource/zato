@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import json
-import logging as _depth_logging
 from logging import getLogger
 import os
 
@@ -39,12 +38,6 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
-
-_depth_debug_logger = _depth_logging.getLogger('zato.depth_debug')
-_depth_debug_logger.setLevel(_depth_logging.DEBUG)
-_depth_file_handler = _depth_logging.FileHandler('/tmp/zato-depth-debug.log')
-_depth_file_handler.setFormatter(_depth_logging.Formatter('%(asctime)s %(message)s'))
-_depth_debug_logger.addHandler(_depth_file_handler)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -147,6 +140,56 @@ if remaining == 0 then
 end
 
 return {remaining, 0}
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_lua_subscribe = """
+local subs_key = KEYS[1]
+local topic_subs_key = KEYS[2]
+local stream_key = KEYS[3]
+
+local topic_name = ARGV[1]
+local sub_key = ARGV[2]
+
+-- Read entries-added from the stream before creating the group ..
+-- .. pcall in case the stream does not exist yet (MKSTREAM will create it) ..
+local entries_added_count = 0
+local info_ok, stream_info = pcall(redis.call, 'XINFO', 'STREAM', stream_key)
+
+if info_ok then
+    for field_index = 1, #stream_info, 2 do
+        if stream_info[field_index] == 'entries-added' then
+            entries_added_count = stream_info[field_index + 1]
+            break
+        end
+    end
+end
+
+-- .. create the consumer group before making the subscriber visible ..
+-- .. ENTRIESREAD ensures lag reports correctly even after XDELs ..
+-- .. pcall handles BUSYGROUP when the group already exists ..
+local ok, err = pcall(redis.call, 'XGROUP', 'CREATE', stream_key, sub_key, '$', 'MKSTREAM', 'ENTRIESREAD', entries_added_count)
+
+local group_created = 0
+
+if ok then
+    group_created = 1
+
+elseif not string.find(tostring(err), 'BUSYGROUP') then
+
+    -- .. unexpected error, propagate it.
+    return redis.error_reply(tostring(err))
+end
+
+-- .. now make the subscriber visible to publish Lua (SMEMBERS topic_subs_key) ..
+redis.call('SADD', topic_subs_key, sub_key)
+
+-- .. and record this topic in the subscriber's set.
+redis.call('SADD', subs_key, topic_name)
+
+return group_created
 """
 
 # ################################################################################################################################
@@ -403,6 +446,7 @@ class RedisPubSubBackend:
         self.redis = redis_client
         self.disk_store = disk_store
         self.server = server
+        self.lua_subscribe:'str'                     = cast_('str', self.redis.script_load(_lua_subscribe)) # noqa: E222
         self.lua_unsubscribe_and_clean_pending:'str' = cast_('str', self.redis.script_load(_lua_unsubscribe_and_clean_pending))
         self.lua_clean_up_after_ack:'str'            = cast_('str', self.redis.script_load(_lua_clean_up_after_ack)) # noqa: E222
         self.lua_populate_pending_and_publish:'str'  = cast_('str', self.redis.script_load(_lua_populate_pending_and_publish))
@@ -607,24 +651,18 @@ class RedisPubSubBackend:
         topic_subs_key = self._get_topic_subs_key(topic_name)
         stream_key = self._get_stream_key(topic_name)
 
-        # .. add topic to subscriber's set ..
-        _ = self.redis.sadd(subs_key, topic_name)
+        # .. atomically create the consumer group and make the subscriber visible via Lua ..
+        _subscribe_num_keys = 3
 
-        # .. add subscriber to topic's set ..
-        _ = self.redis.sadd(topic_subs_key, sub_key)
-
-        # .. create consumer group starting from the stream's current tail ..
-        try:
-            _ = self.redis.xgroup_create(stream_key, sub_key, id='$', mkstream=True)
-        except ResponseError as error:
-            if 'BUSYGROUP' not in error.args[0]:
-                raise
-        else:
-            # .. the group was just created, so we need to seed entries-read
-            # .. to the current stream length so that XINFO GROUPS reports lag correctly.
-            stream_len = self.redis.xlen(stream_key)
-            stream_len = cast_('int', stream_len)
-            _ = self.redis.xgroup_setid(stream_key, sub_key, id='$', entries_read=stream_len)
+        _ = self.redis.evalsha(
+            self.lua_subscribe,
+            _subscribe_num_keys,
+            subs_key,
+            topic_subs_key,
+            stream_key,
+            topic_name,
+            sub_key,
+        )
 
 # ################################################################################################################################
 
@@ -1107,8 +1145,6 @@ class RedisPubSubBackend:
         # .. find the group's last-delivered-id so we know where unread messages start ..
         last_delivered_id = self._get_last_delivered_id(stream_key, sub_key)
 
-        _depth_debug_logger.info('_browse_pending last_delivered_id=%s stream_key=%s sub_key=%s', last_delivered_id, stream_key, sub_key)
-
         if reverse:
             return self._browse_pending_reverse(
                 stream_key, sub_key, cursor, page_size, needs_data, last_delivered_id)
@@ -1142,8 +1178,6 @@ class RedisPubSubBackend:
 
         unread_ids:'anylist' = [entry[0] for entry in unread_entries]
 
-        _depth_debug_logger.info('_browse_pending PEL=%d unread=%d stream_key=%s sub_key=%s', len(pending_ids), len(unread_ids), stream_key, sub_key)
-
         # .. merge and deduplicate the two sets of IDs ..
         seen:'set' = set()
         all_ids:'anylist' = []
@@ -1160,7 +1194,6 @@ class RedisPubSubBackend:
 
         all_ids.sort()
 
-        _depth_debug_logger.info('_browse_pending merged=%d stream_key=%s sub_key=%s', len(all_ids), stream_key, sub_key)
         all_ids = all_ids[:page_size]
 
         if not all_ids:
@@ -1467,12 +1500,8 @@ class RedisPubSubBackend:
             argv.append(stream_key)
             argv.append(sub_key)
 
-        _depth_debug_logger.info('get_pending_depths INPUT pairs=%s argv=%s', sub_topic_pairs, argv)
-
         # .. call the Lua script ..
         counts:'anylist' = cast_('anylist', self.redis.evalsha(self.lua_compute_pending_depths, 0, *argv))
-
-        _depth_debug_logger.info('get_pending_depths RAW counts=%s', counts)
 
         # .. and sum the per-pair results into per-subscriber totals.
         out:'anydict' = {}
@@ -1485,8 +1514,6 @@ class RedisPubSubBackend:
                 out[sub_key] = out[sub_key] + count
             else:
                 out[sub_key] = count
-
-        _depth_debug_logger.info('get_pending_depths OUTPUT=%s', out)
 
         return out
 
@@ -1501,7 +1528,6 @@ class RedisPubSubBackend:
             # Reuse the existing Lua script (PEL + lag) for pending depth ..
             depths = self.get_pending_depths([(sub_key, topic_name)])
             out = depths[sub_key]
-            _depth_debug_logger.info('get_total_count PENDING sub_key=%s topic=%s depth=%s', sub_key, topic_name, out)
             return out
 
         elif state == 'all':
