@@ -205,7 +205,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
 # ################################################################################################################################
 
     def test_delete_topic_removes_all_data(self) -> 'None':
-        """ Test that deleting a topic removes stream, subscriber mappings, and disk files.
+        """ Test that deleting a topic calls the atomic Lua script and removes disk files.
         """
         topic_name = 'test.topic'
 
@@ -216,12 +216,24 @@ class TestRedisPubSubBackend(unittest.TestCase):
         topic_dir = os.path.join(self.test_dir, topic_name)
         self.assertTrue(os.path.exists(topic_dir))
 
-        self.redis_mock.smembers.return_value = ['sk_user1', 'sk_user2']
+        # .. the Lua delete script returns subscriber count ..
+        self.redis_mock.evalsha.return_value = 2
 
         self.backend.delete_topic(topic_name)
 
-        self.redis_mock.delete.assert_called()
-        self.assertTrue(self.redis_mock.srem.call_count >= 2)
+        # .. verify evalsha was called with the correct keys and args ..
+        call_args = self.redis_mock.evalsha.call_args
+        positional = call_args[0]
+
+        # positional: (sha, numkeys, stream_key, topic_subs_key, expiry_key, subs_prefix, topic_name, pending_prefix, sub_pending_prefix)
+        self.assertEqual(positional[1], 3)
+        self.assertEqual(positional[2], f'{ModuleCtx.Stream_Prefix}{topic_name}')
+        self.assertEqual(positional[3], f'{ModuleCtx.Topic_Subs_Prefix}{topic_name}')
+        self.assertEqual(positional[4], ModuleCtx.Pending_Expiry_Key)
+        self.assertEqual(positional[5], ModuleCtx.Subs_Prefix)
+        self.assertEqual(positional[6], topic_name)
+        self.assertEqual(positional[7], ModuleCtx.Pending_Prefix)
+        self.assertEqual(positional[8], ModuleCtx.Sub_Pending_Prefix)
 
         # .. disk directory should be gone ..
         self.assertFalse(os.path.exists(topic_dir))
