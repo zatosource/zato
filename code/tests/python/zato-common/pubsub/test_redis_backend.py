@@ -143,16 +143,18 @@ class TestRedisPubSubBackend(unittest.TestCase):
 
         self.backend.subscribe(sub_key, topic_name)
 
-        self.assertEqual(self.redis_mock.sadd.call_count, 2)
+        self.redis_mock.evalsha.assert_called_once()
 
-        self.redis_mock.xgroup_create.assert_called_once()
+        call_args = self.redis_mock.evalsha.call_args
+        positional = call_args[0]
 
-        call_args = self.redis_mock.xgroup_create.call_args
-        stream_key = call_args[0][0]
-        group_name = call_args[0][1]
-
-        self.assertEqual(stream_key, f'{ModuleCtx.Stream_Prefix}{topic_name}')
-        self.assertEqual(group_name, sub_key)
+        # positional: (sha, numkeys, subs_key, topic_subs_key, stream_key, topic_name, sub_key)
+        self.assertEqual(positional[1], 3)
+        self.assertEqual(positional[2], f'{ModuleCtx.Subs_Prefix}{sub_key}')
+        self.assertEqual(positional[3], f'{ModuleCtx.Topic_Subs_Prefix}{topic_name}')
+        self.assertEqual(positional[4], f'{ModuleCtx.Stream_Prefix}{topic_name}')
+        self.assertEqual(positional[5], topic_name)
+        self.assertEqual(positional[6], sub_key)
 
 # ################################################################################################################################
 
