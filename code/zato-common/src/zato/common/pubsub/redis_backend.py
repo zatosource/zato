@@ -87,12 +87,18 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_lua_remove_subscriber_pending = """
+_lua_unsubscribe_and_clean_pending = """
 local sub_pending_key = KEYS[1]
 local expiry_key = KEYS[2]
+local topic_subs_key = KEYS[3]
 local sub_key = ARGV[1]
 local pending_prefix = ARGV[2]
 
+-- Remove subscriber from topic's set atomically before cleaning pending ..
+redis.call('SREM', topic_subs_key, sub_key)
+
+-- .. now clean pending - no publish Lua can add new entries for this sub_key
+-- .. because SMEMBERS topic_subs_key will no longer return sub_key ..
 local data_refs = redis.call('SMEMBERS', sub_pending_key)
 local deleted_refs = {}
 
@@ -107,6 +113,7 @@ for _, data_ref in ipairs(data_refs) do
     end
 end
 
+-- .. delete the subscriber's pending set.
 redis.call('DEL', sub_pending_key)
 return deleted_refs
 """
@@ -299,10 +306,10 @@ class RedisPubSubBackend:
         self.redis = redis_client
         self.disk_store = disk_store
         self.server = server
-        self.lua_remove_subscriber_pending:'str'    = cast_('str', self.redis.script_load(_lua_remove_subscriber_pending))
-        self.lua_clean_up_after_ack:'str'           = cast_('str', self.redis.script_load(_lua_clean_up_after_ack))
-        self.lua_populate_pending_and_publish:'str' = cast_('str', self.redis.script_load(_lua_populate_pending_and_publish))
-        self.lua_compute_pending_depths:'str'       = cast_('str', self.redis.script_load(_lua_compute_pending_depths))
+        self.lua_unsubscribe_and_clean_pending:'str' = cast_('str', self.redis.script_load(_lua_unsubscribe_and_clean_pending))
+        self.lua_clean_up_after_ack:'str'            = cast_('str', self.redis.script_load(_lua_clean_up_after_ack)) # noqa: E222
+        self.lua_populate_pending_and_publish:'str'  = cast_('str', self.redis.script_load(_lua_populate_pending_and_publish))
+        self.lua_compute_pending_depths:'str'        = cast_('str', self.redis.script_load(_lua_compute_pending_depths))
 
 # ################################################################################################################################
 
@@ -473,6 +480,11 @@ class RedisPubSubBackend:
         if subscriber_count:
             logger.info('Populated pending set -> data_ref:%s, subscriber_count:%d, expiration_timestamp:%.1f',
                 data_ref, subscriber_count, expiration_timestamp)
+
+        # .. no subscribers exist - delete the disk file since nothing references it.
+        else:
+            self.disk_store.delete(data_ref)
+
         # .. update the publish counter and return the result.
         counter = zato_pubsub_messages_published_total.labels(topic_name=topic_name)
         _ = counter.inc()
@@ -532,14 +544,11 @@ class RedisPubSubBackend:
         # .. remove topic from subscriber's set ..
         _ = self.redis.srem(subs_key, topic_name)
 
-        # .. remove subscriber from topic's set ..
-        _ = self.redis.srem(topic_subs_key, sub_key)
-
-        # .. eagerly clean up all pending messages for this subscriber via Lua script ..
+        # .. atomically remove subscriber from topic's set and clean up all pending messages via Lua ..
         sub_pending_key = self._get_sub_pending_key(sub_key)
         deleted_refs:'anylist' = cast_('anylist', self.redis.evalsha(
-            self.lua_remove_subscriber_pending, 2,
-            sub_pending_key, ModuleCtx.Pending_Expiry_Key,
+            self.lua_unsubscribe_and_clean_pending, 3,
+            sub_pending_key, ModuleCtx.Pending_Expiry_Key, topic_subs_key,
             sub_key, ModuleCtx.Pending_Prefix
         ))
 

@@ -97,6 +97,9 @@ class TestRedisPubSubBackend(unittest.TestCase):
     def test_publish_writes_payload_to_disk(self) -> 'None':
         """ Test that publishing writes the payload to a disk file.
         """
+        # .. simulate one subscriber so the file is kept on disk ..
+        self.redis_mock.evalsha.return_value = ['1-0', 1]
+
         topic_name = 'test.topic'
         data = 'test message payload'
 
@@ -164,7 +167,9 @@ class TestRedisPubSubBackend(unittest.TestCase):
 
         self.backend.unsubscribe(sub_key, topic_name)
 
-        self.assertEqual(self.redis_mock.srem.call_count, 2)
+        # .. one Python-level SREM (topic from subscriber's set),
+        # .. the other SREM (subscriber from topic's set) is now inside the Lua script.
+        self.assertEqual(self.redis_mock.srem.call_count, 1)
 
         self.redis_mock.xgroup_destroy.assert_not_called()
 
@@ -379,6 +384,8 @@ class TestRedisPubSubBackend(unittest.TestCase):
     def test_publish_with_encrypt_writes_encrypted_payload(self) -> 'None':
         """ Test that publishing with encrypt_at_rest=True stores encrypted payload on disk.
         """
+        # .. simulate one subscriber so the file is kept on disk ..
+        self.redis_mock.evalsha.return_value = ['1-0', 1]
 
         # .. create a backend with a crypto-enabled disk store and a mock server ..
         crypto_manager = CryptoManager.from_secret_key(secret_key=Fernet.generate_key())
@@ -420,6 +427,9 @@ class TestRedisPubSubBackend(unittest.TestCase):
     def test_publish_without_encrypt_writes_plaintext(self) -> 'None':
         """ Test that publishing without encrypt stores plaintext on disk.
         """
+        # .. simulate one subscriber so the file is kept on disk ..
+        self.redis_mock.evalsha.return_value = ['1-0', 1]
+
         topic_name = 'test.topic'
         data = 'not secret'
 
