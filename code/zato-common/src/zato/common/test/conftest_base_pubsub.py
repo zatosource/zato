@@ -24,6 +24,9 @@ from urllib.request import Request, urlopen
 # pytest
 import pytest
 
+# Zato
+from zato.common.api import PubSub
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -197,13 +200,21 @@ def start_server_process(
     for env_key, env_value in extra_server_env.items():
         server_environment[env_key] = env_value
 
-    # .. patch server.conf if needed so that CLI commands use the dynamic port ..
+    # .. patch server.conf so the server uses the test Redis DB ..
+    server_conf_path = os.path.join(server_directory, 'config', 'repo', 'server.conf')
+
+    with open(server_conf_path, 'r') as server_conf_file:
+        server_conf_content = server_conf_file.read()
+
+    server_conf_content = re.sub(
+        r'^(db\s*=\s*)\d+',
+        f'\\g<1>{PubSub.Test_Redis_DB}',
+        server_conf_content,
+        flags=re.MULTILINE,
+    )
+
+    # .. patch bind port if needed so that CLI commands use the dynamic port ..
     if patch_server_conf_bind:
-        server_conf_path = os.path.join(server_directory, 'config', 'repo', 'server.conf')
-
-        with open(server_conf_path, 'r') as server_conf_file:
-            server_conf_content = server_conf_file.read()
-
         server_conf_content = re.sub(
             r'^(bind\s*=\s*)\S+',
             f'\\g<1>0.0.0.0:{server_port}',
@@ -211,8 +222,8 @@ def start_server_process(
             flags=re.MULTILINE,
         )
 
-        with open(server_conf_path, 'w') as server_conf_file:
-            _ = server_conf_file.write(server_conf_content)
+    with open(server_conf_path, 'w') as server_conf_file:
+        _ = server_conf_file.write(server_conf_content)
 
     state.server_process = subprocess.Popen(
         [zato_bin, 'start', server_directory, '--fg'],
