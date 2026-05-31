@@ -298,6 +298,37 @@ return result
 # ################################################################################################################################
 # ################################################################################################################################
 
+_lua_rename_topic = """
+local old_stream_key = KEYS[1]
+local new_stream_key = KEYS[2]
+local old_topic_subs_key = KEYS[3]
+local new_topic_subs_key = KEYS[4]
+local old_topic_name = ARGV[1]
+local new_topic_name = ARGV[2]
+local subs_prefix = ARGV[3]
+
+-- Get all subscribers before any mutation ..
+local subscriber_keys = redis.call('SMEMBERS', old_topic_subs_key)
+
+-- .. rename the stream (pcall - stream may not exist yet) ..
+pcall(redis.call, 'RENAME', old_stream_key, new_stream_key)
+
+-- .. rename the topic subscribers set ..
+pcall(redis.call, 'RENAME', old_topic_subs_key, new_topic_subs_key)
+
+-- .. update each subscriber's topic membership ..
+for _, sk in ipairs(subscriber_keys) do
+    local subs_key = subs_prefix .. sk
+    redis.call('SREM', subs_key, old_topic_name)
+    redis.call('SADD', subs_key, new_topic_name)
+end
+
+return #subscriber_keys
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class RedisPubSubBackend:
     """ Redis Streams-based pub/sub backend.
     """
@@ -310,6 +341,7 @@ class RedisPubSubBackend:
         self.lua_clean_up_after_ack:'str'            = cast_('str', self.redis.script_load(_lua_clean_up_after_ack)) # noqa: E222
         self.lua_populate_pending_and_publish:'str'  = cast_('str', self.redis.script_load(_lua_populate_pending_and_publish))
         self.lua_compute_pending_depths:'str'        = cast_('str', self.redis.script_load(_lua_compute_pending_depths))
+        self.lua_rename_topic:'str'                  = cast_('str', self.redis.script_load(_lua_rename_topic)) # noqa: E222
 
 # ################################################################################################################################
 
@@ -1723,7 +1755,7 @@ class RedisPubSubBackend:
 # ################################################################################################################################
 
     def rename_topic(self, old_topic_name:'str', new_topic_name:'str') -> 'None':
-        """ Rename a topic.
+        """ Rename a topic atomically via Lua to prevent races with concurrent publish/fetch.
         """
         # Build old and new key names ..
         old_stream_key = self._get_stream_key(old_topic_name)
@@ -1731,26 +1763,23 @@ class RedisPubSubBackend:
         old_topic_subs_key = self._get_topic_subs_key(old_topic_name)
         new_topic_subs_key = self._get_topic_subs_key(new_topic_name)
 
-        # .. get all subscribers ..
-        subscriptions = self.get_topic_subscribers(old_topic_name)
+        _rename_num_keys = 4
 
-        # .. rename stream ..
-        try:
-            _ = self.redis.rename(old_stream_key, new_stream_key)
-        except ResponseError:
-            logger.debug('Stream %s not found during rename', old_stream_key)
+        # .. execute the atomic rename Lua script ..
+        subscriber_count:'int' = cast_('int', self.redis.evalsha(
+            self.lua_rename_topic,
+            _rename_num_keys,
+            old_stream_key,
+            new_stream_key,
+            old_topic_subs_key,
+            new_topic_subs_key,
+            old_topic_name,
+            new_topic_name,
+            ModuleCtx.Subs_Prefix,
+        ))
 
-        # .. rename topic subscribers set ..
-        try:
-            _ = self.redis.rename(old_topic_subs_key, new_topic_subs_key)
-        except ResponseError:
-            logger.debug('Topic subscribers set %s not found during rename', old_topic_subs_key)
-
-        # .. update each subscriber's topic set.
-        for sub_key in subscriptions:
-            subs_key = self._get_subs_key(sub_key)
-            _ = self.redis.srem(subs_key, old_topic_name)
-            _ = self.redis.sadd(subs_key, new_topic_name)
+        logger.info('rename_topic -> old:%s, new:%s, subscribers_updated:%d',
+            old_topic_name, new_topic_name, subscriber_count)
 
         # Note: we do not rename the on-disk directory because Redis Streams
         # do not support in-place field updates, so existing data_ref values

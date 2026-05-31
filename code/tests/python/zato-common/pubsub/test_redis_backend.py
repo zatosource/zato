@@ -255,7 +255,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
 # ################################################################################################################################
 
     def test_rename_topic(self) -> 'None':
-        """ Test renaming a topic updates Redis keys but keeps disk files in place.
+        """ Test renaming a topic calls the atomic Lua script and keeps disk files in place.
         """
         old_name = 'old.topic'
         new_name = 'new.topic'
@@ -264,13 +264,24 @@ class TestRedisPubSubBackend(unittest.TestCase):
         message_id = 'zpsm.20260517-113200-1234-abcdef1234567890'
         data_ref = self.disk_store.store(message_id, old_name, 'test data', '')
 
-        self.redis_mock.smembers.return_value = ['sk_user1']
+        # .. the Lua rename script returns subscriber count ..
+        self.redis_mock.evalsha.return_value = 1
 
         self.backend.rename_topic(old_name, new_name)
 
-        self.redis_mock.rename.assert_called()
-        self.redis_mock.srem.assert_called()
-        self.redis_mock.sadd.assert_called()
+        # .. verify evalsha was called with the correct keys and args ..
+        call_args = self.redis_mock.evalsha.call_args
+        positional = call_args[0]
+
+        # positional: (sha, numkeys, old_stream, new_stream, old_topic_subs, new_topic_subs, old_name, new_name, subs_prefix)
+        self.assertEqual(positional[1], 4)
+        self.assertEqual(positional[2], f'{ModuleCtx.Stream_Prefix}{old_name}')
+        self.assertEqual(positional[3], f'{ModuleCtx.Stream_Prefix}{new_name}')
+        self.assertEqual(positional[4], f'{ModuleCtx.Topic_Subs_Prefix}{old_name}')
+        self.assertEqual(positional[5], f'{ModuleCtx.Topic_Subs_Prefix}{new_name}')
+        self.assertEqual(positional[6], old_name)
+        self.assertEqual(positional[7], new_name)
+        self.assertEqual(positional[8], ModuleCtx.Subs_Prefix)
 
         # .. the old disk directory should still exist because we do not rename it ..
         old_path = os.path.join(self.test_dir, data_ref)
