@@ -1,0 +1,42 @@
+security:
+
+  - name: test.ed.publisher
+    type: basic_auth
+    username: test.ed.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.ed.subscriber
+    type: basic_auth
+    username: test.ed.subscriber
+    password: "{{subscriber_password}}"
+
+outgoing_rest:
+
+  - name: test.ed.out.webhook
+    host: "http://127.0.0.1:{{webhook_port}}"
+    url_path: /webhook
+    data_format: json
+    timeout: 30
+
+pubsub_topic:
+
+  - name: ed.topic.push
+  - name: ed.topic.pending
+
+pubsub_permission:
+
+  - security: test.ed.publisher
+    pub:
+      - ed.**
+
+  - security: test.ed.subscriber
+    sub:
+      - ed.**
+
+pubsub_subscription:
+
+  - security: test.ed.subscriber
+    delivery_type: push
+    push_rest_endpoint: test.ed.out.webhook
+    topic_list:
+      - ed.topic.push
