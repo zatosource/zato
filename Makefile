@@ -8,7 +8,7 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener \
 	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-enmasse \
-	test-cli test-mcp test-graphql test-hl7 test-dashboard test-ui _test-ui test-common test-distlock \
+	test-cli test-mcp test-graphql test-hl7 test-ui _test-ui test-common test-distlock \
 	test-all test \
 	health-ruff health-clippy \
 	format format-zato \
@@ -430,15 +430,9 @@ test-hl7: ## HL7v2 parsing and MLLP tests.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7 -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-dashboard: ## Dashboard backend and Playwright tests.
-	$(MAKE) -C $(CURDIR)/code/zato-web-admin test
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright \
-		$(FAIL_FAST) $(PYTEST_ARGS)
-
-test-ui: ## Dashboard Playwright tests (standalone).
+test-ui: ## Dashboard backend and Playwright tests.
 	$(MAKE) _test-ui 2>&1 | tee /tmp/logs-test-ui.txt
+	$(MAKE) -C $(CURDIR)/code/zato-web-admin test
 
 _test-ui:
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -453,7 +447,7 @@ test-distlock: ## Distlock tests.
 	$(MAKE) -C $(CURDIR)/code/zato-distlock test
 
 test-all: test-server test-rest test-scheduler test-rate-limiting test-pubsub test-enmasse \
-	test-cli test-mcp test-graphql test-hl7 test-dashboard test-common test-distlock ## Everything.
+	test-cli test-mcp test-graphql test-hl7 test-ui test-common test-distlock ## Everything.
 
 test: test-all ## Alias for test-all.
 
