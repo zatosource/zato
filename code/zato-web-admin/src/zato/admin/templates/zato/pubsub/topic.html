@@ -8,6 +8,24 @@
     <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
     <link rel="stylesheet" type="text/css" href="/static/css/zato_highlight_pane.css">
+    <style>
+        .zato-name-invalid {
+            font-family: monospace;
+            font-size: 0.55rem;
+            font-weight: bold;
+            background-color: rgba(220, 53, 69, 0.15);
+            color: #b71c1c;
+            border: 1px solid rgba(220, 53, 69, 0.25);
+            padding: 0.02rem 0.4rem;
+            border-radius: 10px;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            white-space: nowrap;
+            pointer-events: none;
+            animation: zatoFadeIn 0.25s ease-in;
+        }
+    </style>
 {% endblock %}
 
 {% block "extra_js" %}

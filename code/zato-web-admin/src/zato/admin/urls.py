@@ -967,6 +967,8 @@ urlpatterns += [
     url(r'^zato/pubsub/topic/get-matches/$', login_required(topic.get_matches), name='pubsub-topic-get-matches'),
     url(r'^zato/pubsub/topic/publish/(?P<id>.*)/$',
         login_required(topic.publish_message), name='pubsub-topic-publish'),
+    url(r'^zato/pubsub/topic/validate-name/$',
+        login_required(topic.validate_name), name='pubsub-topic-validate-name'),
 
     # PubSub Permissions
 

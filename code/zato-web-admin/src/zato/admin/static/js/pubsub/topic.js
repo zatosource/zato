@@ -25,6 +25,13 @@ $(document).ready(function() {
         $.fn.zato.validate_unique('#id_' + constraint.field, constraint.entity_type, constraint.attr_name);
         $.fn.zato.validate_unique('#id_edit-' + constraint.field, constraint.entity_type, constraint.attr_name);
     });
+
+    // Wire up live name validation on both create and edit fields ..
+    $.fn.zato.pubsub.topic.wireNameValidation('#id_name');
+    $.fn.zato.pubsub.topic.wireNameValidation('#id_edit-name');
+
+    // .. and block form submission when the name is invalid.
+    $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.topic.beforeSubmitHook;
 })
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -116,6 +123,111 @@ $.fn.zato.pubsub.topic.collectPublishFormData = function(item) {
         formData['topic_name'] = item.name;
         return formData;
     };
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.pubsub.topic.wireNameValidation = function(fieldId) {
+
+    var field = $(fieldId);
+    if(!field.length) {
+        return;
+    }
+
+    var timer = null;
+
+    field.on('input', function() {
+
+        // Clear any existing indicator ..
+        $.fn.zato.pubsub.topic.clearNameInvalid(field);
+
+        if(timer) {
+            clearTimeout(timer);
+        }
+
+        var value = field.val().trim();
+        if(!value) {
+            return;
+        }
+
+        // .. debounce at 300ms, same as the uniqueness check ..
+        timer = setTimeout(function() {
+            $.ajax({
+                type: 'POST',
+                url: '/zato/pubsub/topic/validate-name/',
+                data: {'name': value},
+                headers: {'X-CSRFToken': $.cookie('csrftoken')},
+                dataType: 'json',
+                success: function(response) {
+                    if(!response.valid) {
+                        $.fn.zato.pubsub.topic.showNameInvalid(field);
+                    }
+                }
+            });
+        }, 300);
+    });
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.pubsub.topic.showNameInvalid = function(field) {
+
+    // Remove any existing indicator first ..
+    $.fn.zato.pubsub.topic.clearNameInvalid(field);
+
+    // .. create and insert the indicator.
+    var indicator = '<span class="zato-name-invalid">Name cannot be used</span>';
+    field.after(indicator);
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.pubsub.topic.clearNameInvalid = function(field) {
+    field.siblings('.zato-name-invalid').remove();
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.pubsub.topic.beforeSubmitHook = function(form) {
+
+    var formId = form.attr('id');
+    var prefix = formId === 'edit-form' ? 'edit-' : '';
+    var field = $('#id_' + prefix + 'name');
+    var value = field.val().trim();
+
+    // Clear any previous indicator ..
+    $.fn.zato.pubsub.topic.clearNameInvalid(field);
+
+    // .. empty name is handled by the required-field check, but we also validate it here ..
+    if(!value) {
+        $.fn.zato.pubsub.topic.showNameInvalid(field);
+        return false;
+    }
+
+    // .. call the backend synchronously to check the name ..
+    var isValid = true;
+
+    $.ajax({
+        type: 'POST',
+        url: '/zato/pubsub/topic/validate-name/',
+        data: {'name': value},
+        headers: {'X-CSRFToken': $.cookie('csrftoken')},
+        dataType: 'json',
+        async: false,
+        success: function(response) {
+            if(!response.valid) {
+                isValid = false;
+            }
+        }
+    });
+
+    // .. if invalid, show the indicator and block submission.
+    if(!isValid) {
+        $.fn.zato.pubsub.topic.showNameInvalid(field);
+        return false;
+    }
+
+    return true;
 }
 
 // /////////////////////////////////////////////////////////////////////////////
