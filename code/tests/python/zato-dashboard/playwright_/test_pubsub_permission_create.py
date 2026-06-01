@@ -24,7 +24,7 @@ _Permission_Page_Url = '/zato/pubsub/permission/?cluster=1'
 _Basic_Auth_Page_Url = '/zato/security/basic-auth/?cluster=1'
 _Topic_Page_Url = '/zato/pubsub/topic/?cluster=1'
 
-_Test_Name_Prefix = 'test.perm.' + os.urandom(4).hex() + '.'
+_Test_Name_Prefix = 'test.permission.' + os.urandom(4).hex() + '.'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -470,6 +470,130 @@ class TestPubSubPermissionCreate:
         assert is_visible, 'Expected create dialog to still be open after rejection'
 
         page.remove_listener('dialog', handle_dialog)
+
+# ################################################################################################################################
+
+    def test_show_matches_wildcard(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        # Create multiple topics that share a common prefix ..
+        suffix = os.urandom(3).hex()
+        topic_prefix = _Test_Name_Prefix + 'wc.' + suffix
+
+        topic_name_1 = topic_prefix + '.orders'
+        topic_name_2 = topic_prefix + '.invoices'
+        topic_name_3 = topic_prefix + '.refunds'
+
+        for topic_name in (topic_name_1, topic_name_2, topic_name_3):
+
+            _ = page.goto(f'{base_url}{_Topic_Page_Url}')
+            page.wait_for_selector('#data-table', state='visible')
+
+            page.click('#markup .page_prompt a')
+            page.wait_for_selector('#create-div', state='visible')
+
+            page.fill('#id_name', topic_name)
+            page.click('#create-div input[type="submit"]')
+            page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+
+        # .. create a sec def ..
+        sec_name = _create_basic_auth(page, base_url, 'wc.' + suffix)
+
+        # .. use a wildcard pattern that should match all 3 topics ..
+        pattern_value = topic_prefix + '.*'
+
+        # .. create the permission ..
+        _create_permission(page, base_url, sec_name, 'publisher', 'pub', pattern_value)
+
+        # .. reload the page so pattern tables are rendered ..
+        _ = page.goto(f'{base_url}{_Permission_Page_Url}')
+        page.wait_for_selector('#data-table', state='visible')
+        time.sleep(0.5)
+
+        # .. find the "Show matches" link for our pattern ..
+        link_selector = f'.pattern-link[data-pattern="pub={pattern_value}"]'
+        show_matches_link = page.wait_for_selector(link_selector, state='visible', timeout=5000)
+
+        # .. click it ..
+        show_matches_link.click()
+
+        # .. wait for the popup dialog to appear ..
+        page.wait_for_selector('[id^="topic-matches-popup-"]', state='visible', timeout=10000)
+
+        # .. wait for loading to finish ..
+        page.wait_for_function(
+            '''() => {
+                let popup = document.querySelector("[id^='topic-matches-popup-']");
+                if (!popup) return false;
+                let content = popup.querySelector(".topic-popup-content");
+                if (!content) return false;
+                return content.textContent.indexOf("Loading") === -1 && content.textContent.trim().length > 0;
+            }''',
+            timeout=10000
+        )
+
+        # .. verify the popup shows all 3 matching topics.
+        popup = page.query_selector('[id^="topic-matches-popup-"]')
+        popup_text = popup.inner_text()
+
+        assert topic_name_1 in popup_text, \
+            f'Expected "{topic_name_1}" in popup, got: "{popup_text}"'
+        assert topic_name_2 in popup_text, \
+            f'Expected "{topic_name_2}" in popup, got: "{popup_text}"'
+        assert topic_name_3 in popup_text, \
+            f'Expected "{topic_name_3}" in popup, got: "{popup_text}"'
+
+        # .. verify the count header shows 3 matches.
+        assert '3 match' in popup_text, f'Expected "3 match" in popup, got: "{popup_text}"'
+
+# ################################################################################################################################
+
+    def test_show_matches_no_results(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        # Create a sec def ..
+        sec_name = _create_basic_auth(page, base_url, 'no-match')
+
+        # .. create a permission with a pattern that matches nothing ..
+        pattern_value = 'nonexistent.topic.that.will.never.match'
+        _create_permission(page, base_url, sec_name, 'publisher', 'pub', pattern_value)
+
+        # .. reload the page ..
+        _ = page.goto(f'{base_url}{_Permission_Page_Url}')
+        page.wait_for_selector('#data-table', state='visible')
+        time.sleep(0.5)
+
+        # .. find the "Show matches" link ..
+        link_selector = f'.pattern-link[data-pattern="pub={pattern_value}"]'
+        show_matches_link = page.wait_for_selector(link_selector, state='visible', timeout=5000)
+
+        # .. click it ..
+        show_matches_link.click()
+
+        # .. wait for the popup ..
+        page.wait_for_selector('[id^="topic-matches-popup-"]', state='visible', timeout=10000)
+
+        # .. wait for loading to finish ..
+        page.wait_for_function(
+            '''() => {
+                let popup = document.querySelector("[id^='topic-matches-popup-']");
+                if (!popup) return false;
+                let content = popup.querySelector(".topic-popup-content");
+                if (!content) return false;
+                return content.textContent.indexOf("Loading") === -1 && content.textContent.trim().length > 0;
+            }''',
+            timeout=10000
+        )
+
+        # .. verify the popup shows "No matching topics found".
+        popup = page.query_selector('[id^="topic-matches-popup-"]')
+        popup_text = popup.inner_text()
+        assert 'No matching topics' in popup_text, \
+            f'Expected "No matching topics" in popup, got: "{popup_text}"'
 
 # ################################################################################################################################
 # ################################################################################################################################
