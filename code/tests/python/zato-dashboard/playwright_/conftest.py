@@ -348,9 +348,33 @@ def playwright_browser() -> 'any_':
 # ################################################################################################################################
 
 @pytest.fixture()
-def logged_in_page(zato_dashboard:'anydict', playwright_browser:'any_') -> 'any_':
+def logged_in_page(zato_dashboard:'anydict', playwright_browser:'any_', request:'any_') -> 'any_':
     """ Provides a fresh, logged-in Playwright page for each test.
     """
+
+    test_name = request.node.name
+
+    # Capture process and browser state before doing anything ..
+    dashboard_poll = _dashboard_process.poll() if _dashboard_process else 'no-process'
+    server_poll = _server_process.poll() if _server_process else 'no-process'
+    browser_connected = playwright_browser.is_connected()
+    browser_contexts = len(playwright_browser.contexts)
+
+    logger.info(
+        f'[FIXTURE-SETUP] {test_name}: '
+        f'dashboard_pid={getattr(_dashboard_process, "pid", None)} poll={dashboard_poll}, '
+        f'server_pid={getattr(_server_process, "pid", None)} poll={server_poll}, '
+        f'browser_connected={browser_connected} contexts={browser_contexts}'
+    )
+
+    # Probe dashboard HTTP before creating the page ..
+    dashboard_url = zato_dashboard['dashboard_url']
+    try:
+        probe_request = Request(f'{dashboard_url}/accounts/login/', method='GET')
+        with urlopen(probe_request, timeout=5) as probe_response:
+            logger.info(f'[FIXTURE-SETUP] {test_name}: HTTP probe status={probe_response.status}')
+    except Exception as probe_exc:
+        logger.error(f'[FIXTURE-SETUP] {test_name}: HTTP probe FAILED: {probe_exc}')
 
     # Create a new browser context ..
     context = playwright_browser.new_context()
@@ -358,10 +382,52 @@ def logged_in_page(zato_dashboard:'anydict', playwright_browser:'any_') -> 'any_
     # .. open a page ..
     page = context.new_page()
 
+    # .. listen for page crashes and unexpected closes ..
+    _close_reasons = [] # type: list
+
+    def _on_page_crash() -> 'None':
+        _close_reasons.append('PAGE_CRASH')
+        logger.debug(f'[PAGE-EVENT] {test_name}: page renderer stopped')
+
+    def _on_page_close(_p:'any_') -> 'None':
+        _close_reasons.append('PAGE_CLOSE')
+        import traceback
+        stack = ''.join(traceback.format_stack())
+        logger.debug(f'[PAGE-EVENT] {test_name}: PAGE CLOSED, stack:\n{stack}')
+
+    def _on_context_close(_c:'any_') -> 'None':
+        _close_reasons.append('CONTEXT_CLOSE')
+        import traceback
+        stack = ''.join(traceback.format_stack())
+        logger.debug(f'[PAGE-EVENT] {test_name}: CONTEXT CLOSED, stack:\n{stack}')
+
+    page.on('crash', _on_page_crash)
+    page.on('close', _on_page_close)
+    context.on('close', _on_context_close)
+
+    # .. also capture all response errors from the dashboard ..
+    def _on_response(response:'any_') -> 'None':
+        if response.status >= 400:
+            logger.warning(f'[HTTP] {test_name}: {response.status} {response.url}')
+
+    page.on('response', _on_response)
+
     # .. log into the dashboard ..
-    dashboard_url = zato_dashboard['dashboard_url']
     password = zato_dashboard['password']
-    login_to_dashboard(page, dashboard_url, password)
+
+    try:
+        login_to_dashboard(page, dashboard_url, password)
+    except Exception as login_exc:
+        # Dump full diagnostic state on login failure
+        logger.error(
+            f'[FIXTURE-SETUP] {test_name}: LOGIN FAILED: {login_exc}, '
+            f'page.is_closed={page.is_closed()}, '
+            f'close_reasons={_close_reasons}, '
+            f'dashboard_poll={_dashboard_process.poll() if _dashboard_process else "no-process"}, '
+            f'server_poll={_server_process.poll() if _server_process else "no-process"}, '
+            f'browser_connected={playwright_browser.is_connected()}'
+        )
+        raise
 
     yield page
 
@@ -462,7 +528,6 @@ def check_no_log_errors(zato_dashboard:'anydict', request:'any_') -> 'any_':
             problems.append(f'[{label}] {line.strip()}')
 
     if problems:
-        test_name = request.node.name
         joined = '\n'.join(problems)
         pytest.fail(f'Log errors/warnings during {test_name}:\n{joined}')
 
