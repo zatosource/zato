@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 import shutil
 import tempfile
 import unittest
@@ -29,6 +30,8 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+logger = logging.getLogger(__name__)
 
 _test_topic = 'test.delivery.topic'
 _test_sub_key = 'sk_test_delivery'
@@ -74,7 +77,7 @@ class TestDeliveryRetry(unittest.TestCase):
         self.test_dir = tempfile.mkdtemp()
         self.disk_store = DiskMessageStore(self.test_dir)
         self.backend = RedisPubSubBackend(self.redis, self.disk_store)
-        self.server = _MockServer()
+        self.server:'any_' = _MockServer()
         self.server.pubsub_redis = self.backend
 
     def tearDown(self) -> 'None':
@@ -98,7 +101,7 @@ class TestDeliveryRetry(unittest.TestCase):
         """
         stream_key = self.backend._get_stream_key(topic_name)
         try:
-            pending_info = self.redis.xpending(stream_key, sub_key)
+            pending_info:'anydict' = self.redis.xpending(stream_key, sub_key) # type: ignore[assignment]
             return pending_info['pending']
         except Exception:
             return 0
@@ -113,11 +116,22 @@ class TestDeliveryRetry(unittest.TestCase):
         messages = self.backend.fetch_messages(_test_sub_key)
         self.assertEqual(len(messages), 1)
 
+        msg = messages[0]
+
         # .. message is now pending (read but not acked) ..
         self.assertEqual(self._get_pending_count(), 1)
 
         # .. ack it ..
-        self.backend.ack_message(messages[0]['_stream_name'], _test_sub_key, messages[0]['_redis_message_id'])
+        stream_name = msg['_stream_name']
+        redis_id = msg['_redis_message_id']
+
+        logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s',
+            stream_name, _test_sub_key, redis_id)
+
+        is_fully_cleaned = self.backend.ack_message(stream_name, _test_sub_key, redis_id)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+        self.assertFalse(is_fully_cleaned)
 
         # .. no longer pending ..
         self.assertEqual(self._get_pending_count(), 0)
@@ -159,7 +173,9 @@ class TestDeliveryRetry(unittest.TestCase):
             if call_count == 1:
                 raise Exception('transient failure')
 
-        self.server.config_manager._push_subs[_test_sub_key] = [{'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'}]
+        self.server.config_manager._push_subs[_test_sub_key] = [{
+            'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'
+        }]
 
         redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
@@ -181,7 +197,9 @@ class TestDeliveryRetry(unittest.TestCase):
         messages = self.backend.fetch_messages(_test_sub_key)
         message = messages[0]
 
-        self.server.config_manager._push_subs[_test_sub_key] = [{'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'}]
+        self.server.config_manager._push_subs[_test_sub_key] = [{
+            'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'
+        }]
 
         redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)
@@ -221,10 +239,22 @@ class TestDeliveryRetry(unittest.TestCase):
         # .. simulate restart: fetch_pending returns the unacked message ..
         pending = self.backend.fetch_pending(_test_sub_key)
         self.assertEqual(len(pending), 1)
-        self.assertEqual(pending[0]['msg_id'], messages[0]['msg_id'])
+
+        pending_msg = pending[0]
+        self.assertEqual(pending_msg['msg_id'], messages[0]['msg_id'])
 
         # .. ack it ..
-        self.backend.ack_message(pending[0]['_stream_name'], _test_sub_key, pending[0]['_redis_message_id'])
+        stream_name = pending_msg['_stream_name']
+        redis_id = pending_msg['_redis_message_id']
+
+        logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s',
+            stream_name, _test_sub_key, redis_id)
+
+        is_fully_cleaned = self.backend.ack_message(stream_name, _test_sub_key, redis_id)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+        self.assertFalse(is_fully_cleaned)
+
         self.assertEqual(self._get_pending_count(), 0)
 
 # ################################################################################################################################
@@ -251,7 +281,9 @@ class TestDeliveryRetry(unittest.TestCase):
             if call_count == 1:
                 raise Exception('fail first message on first try')
 
-        self.server.config_manager._push_subs[_test_sub_key] = [{'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'}]
+        self.server.config_manager._push_subs[_test_sub_key] = [{
+            'topic_name': _test_topic, 'push_type': PubSub.Push_Type.Service, 'push_service_name': 'test.service'
+        }]
 
         redis_conn_params = _test_redis_conn_params
         delivery = RedisPushDelivery(self.server, redis_conn_params)

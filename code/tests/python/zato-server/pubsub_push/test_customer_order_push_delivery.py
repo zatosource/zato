@@ -129,7 +129,7 @@ class TestCustomerOrderPushDelivery(unittest.TestCase):
         logger.info('Published %d sequential messages to %s', message_count, topic_name)
 
         # .. give the server a moment to ingest ..
-        time.sleep(1)
+        time.sleep(0.5)
 
         # .. pull all messages ..
         result = puller.pull(max_messages=message_count)
@@ -177,7 +177,7 @@ class TestCustomerOrderPushDelivery(unittest.TestCase):
         _ = self.publisher.publish(topic_name, publish_data)
 
         # .. give the server a moment to ingest ..
-        time.sleep(1)
+        time.sleep(0.5)
 
         # .. pull the message back ..
         result = puller.pull(max_messages=1)
@@ -224,7 +224,7 @@ class TestCustomerOrderPushDelivery(unittest.TestCase):
         logger.info('Published %d messages with priorities %s to %s', message_count, expected_priorities, topic_name)
 
         # .. give the server a moment to ingest ..
-        time.sleep(1)
+        time.sleep(0.5)
 
         # .. pull all messages ..
         result = puller.pull(max_messages=10)

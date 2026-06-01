@@ -4,8 +4,8 @@
 
 $.fn.zato.data_table.PubSubTopic = new Class({
     toString: function() {
-        var s = '<PubSubTopic id:{0} name:{1} description:{2} publisher_count:{3} subscriber_count:{4}>';
-        return String.format(s, this.id, this.name, this.description, this.publisher_count, this.subscriber_count);
+        var template = '<PubSubTopic id:{0} name:{1} description:{2} publisher_count:{3} subscriber_count:{4}>';
+        return String.format(template, this.id, this.name, this.description, this.publisher_count, this.subscriber_count);
     }
 });
 

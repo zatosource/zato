@@ -1,0 +1,32 @@
+security:
+
+  - name: test.pubsub.concurrent.publisher
+    type: basic_auth
+    username: test.pubsub.concurrent.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.pubsub.concurrent.puller
+    type: basic_auth
+    username: test.pubsub.concurrent.puller
+    password: "{{puller_password}}"
+
+pubsub_topic:
+
+  - name: clear.concurrent.topic.1
+
+pubsub_permission:
+
+  - security: test.pubsub.concurrent.publisher
+    pub:
+      - clear.concurrent.**
+
+  - security: test.pubsub.concurrent.puller
+    sub:
+      - clear.concurrent.**
+
+pubsub_subscription:
+
+  - security: test.pubsub.concurrent.puller
+    delivery_type: pull
+    topic_list:
+      - clear.concurrent.topic.1

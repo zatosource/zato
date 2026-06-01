@@ -77,7 +77,11 @@ class PubSubPermissionExporter:
 
             elif permission_obj.access_type == PubSub.API_Client.Publisher_Subscriber:
                 # Split combined patterns on newlines and parse prefixes
-                patterns = [p.strip() for p in permission_obj.pattern.splitlines() if p.strip()]
+                patterns = []
+                for pattern_line in permission_obj.pattern.splitlines():
+                    stripped = pattern_line.strip()
+                    if stripped:
+                        patterns.append(stripped)
                 for individual_pattern in patterns:
                     if individual_pattern.startswith(pub_prefix):
                         clean_pattern = individual_pattern[len(pub_prefix):]

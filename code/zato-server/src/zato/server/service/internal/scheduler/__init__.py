@@ -482,12 +482,12 @@ class GetHistory(_SchedulerAdmin):
     """
     name = _service_name_prefix + 'get-history'
 
-    input = Int('id'), Int('-page'), Int('-page_size'), '-since_ts', '-since_iso', List('-outcomes'), List('-running_runs')
+    input = Int('id'), Int('-page'), Int('-page_size'), '-since_timestamp', '-since_iso', List('-outcomes'), List('-running_runs')
 
     def handle(self) -> 'None':
         try:
             job_id = self.request.input.id
-            since_ts = self.request.input.get('since_ts')
+            since_timestamp = self.request.input.get('since_timestamp')
             since_iso = self.request.input.get('since_iso') or ''
             outcomes = self.request.input.get('outcomes')
             if not outcomes:
@@ -495,9 +495,9 @@ class GetHistory(_SchedulerAdmin):
 
             scheduler = self.server._scheduler
 
-            if since_ts:
+            if since_timestamp:
                 running_runs = self.request.input.get('running_runs') or []
-                result = scheduler.get_history_since(job_id, since_ts, outcomes, running_runs, since_iso)
+                result = scheduler.get_history_since(job_id, since_timestamp, outcomes, running_runs, since_iso)
                 self.response.payload = {'rows': result['rows'], 'total': result['total']}
             else:
                 page = self.request.input.get('page')

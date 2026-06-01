@@ -696,6 +696,9 @@ class Delete(AdminService, _HTTPSOAPService):
                 old_http_method = item.method
                 old_http_accept = opaque.get('http_accept')
 
+                # .. clean up all pub/sub state before the CASCADE delete ..
+                self.server.config_manager.cleanup_rest_endpoint_pubsub(session, item.id)
+
                 session.delete(item)
                 session.commit()
 

@@ -103,10 +103,14 @@ def get_permissions_for_sec_base(session, sec_base_id:'int', cluster_id:'int') -
     sub_prefix = 'sub='
     pub_prefix = 'pub='
 
-    for perm in permissions:
+    for permission in permissions:
 
         # Split patterns on newlines since service layer joins them
-        patterns = [elem.strip() for elem in perm.pattern.splitlines() if elem.strip()]
+        patterns = []
+        for element in permission.pattern.splitlines():
+            stripped = element.strip()
+            if stripped:
+                patterns.append(stripped)
 
         for individual_pattern in patterns:
             for prefix in [sub_prefix, pub_prefix]:
@@ -114,7 +118,7 @@ def get_permissions_for_sec_base(session, sec_base_id:'int', cluster_id:'int') -
                     clean_pattern = individual_pattern[len(prefix):]
                     result.append({
                         'pattern': clean_pattern,
-                        'access_type': perm.access_type
+                        'access_type': permission.access_type
                     })
                     break
 

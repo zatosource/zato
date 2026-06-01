@@ -1,0 +1,85 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# stdlib
+import os
+
+# Zato
+from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    import logging
+    from zato.common.test.conftest_base_pubsub import SessionState
+    from zato.common.typing_ import anydict, strstrdict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_template_path = os.path.join(os.path.dirname(__file__), '_enmasse_template.yaml')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _build_config(
+    state:'SessionState',
+    logger:'logging.Logger',
+    zato_bin:'str',
+    server_port:'int',
+    invoke_password:'str',
+) -> 'anydict':
+
+    publisher_password = 'test.pub.' + os.urandom(8).hex()
+    puller_password    = 'test.pull.' + os.urandom(8).hex()
+
+    placeholders:'strstrdict' = {
+        'publisher_password': publisher_password,
+        'puller_password': puller_password,
+    }
+
+    def _populate(
+        host:'str',
+        server_port:'int',
+        invoke_password:'str',
+        server_directory:'str',
+        zato_bin:'str',
+    ) -> 'None':
+        from zato.common.test.config_pubsub_clear_queue_concurrent import TestConfig
+
+        TestConfig.base_url           = f'http://{host}:{server_port}'
+        TestConfig.invoke_password    = invoke_password
+        TestConfig.publisher_username = 'test.pubsub.concurrent.publisher'
+        TestConfig.publisher_password = publisher_password
+        TestConfig.puller_username    = 'test.pubsub.concurrent.puller'
+        TestConfig.puller_password    = puller_password
+        TestConfig.server_directory   = server_directory
+
+    out:'anydict' = {
+        'placeholders': placeholders,
+        'populate_callback': _populate,
+    }
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+zato_server = create_zato_server_fixture(
+    logger_name='zato.test.pubsub_clear_queue_concurrent.conftest',
+    server_log_copy_name='server-logs-clear-queue-concurrent.txt',
+    template_path=_template_path,
+    quickstart_prefix='zato_clear_queue_concurrent_qs_',
+    extra_server_env={'Zato_Stream_Max_Len': '3'},
+    patch_server_conf_bind=False,
+    build_config_callback=_build_config,
+)
+
+# ################################################################################################################################
+# ################################################################################################################################

@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 import os
 import shutil
 import tempfile
@@ -24,10 +25,26 @@ from zato.common.pubsub.redis_backend import PublishResult, RedisPubSubBackend, 
 # ################################################################################################################################
 # ################################################################################################################################
 
+logger = logging.getLogger(__name__)
+
+# evalsha positional arg layout:
+# [0]=sha, [1]=numkeys, [2]=stream_key, [3]=topic_subs_key, [4]=pending_key,
+# [5]=expiry_key, [6]=max_len, [7]=data_ref, [8]=expiration_ts,
+# [9]=sub_pending_prefix, [10]=field_count, [11..]=message fields
+_idx_stream_key = 2
+_idx_data_ref = 7
+_idx_field_count = 10
+_idx_fields_start = 11
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class TestRedisPubSubBackend(unittest.TestCase):
 
     def setUp(self) -> 'None':
         self.redis_mock = MagicMock()
+        self.redis_mock.evalsha.return_value = ['1-0', 0]
+        self.redis_mock.script_load.return_value = 'fake_sha'
         self.test_dir = tempfile.mkdtemp()
         self.disk_store = DiskMessageStore(self.test_dir)
         self.backend = RedisPubSubBackend(self.redis_mock, self.disk_store)
@@ -61,40 +78,37 @@ class TestRedisPubSubBackend(unittest.TestCase):
         topic_name = 'test.topic'
         data = 'test message'
 
-        result = self.backend.publish(topic_name, data, publisher='testuser')
+        _ = self.backend.publish(topic_name, data, publisher='testuser')
 
-        self.redis_mock.xadd.assert_called_once()
+        self.redis_mock.evalsha.assert_called_once()
 
-        call_args = self.redis_mock.xadd.call_args
-        stream_key = call_args[0][0]
-        message = call_args[0][1]
+        call_args = self.redis_mock.evalsha.call_args
+        positional = call_args[0]
 
+        stream_key = positional[_idx_stream_key]
         self.assertEqual(stream_key, f'{ModuleCtx.Stream_Prefix}{topic_name}')
-        self.assertIn('data_ref', message)
-        self.assertIn('data_size', message)
-        self.assertIn('data_preview', message)
-        self.assertNotIn('data', message)
-        self.assertEqual(message['topic_name'], topic_name)
-        self.assertEqual(message['publisher'], 'testuser')
-        self.assertEqual(message['msg_id'], result.msg_id)
 
-        data_size = message['data_size']
-        self.assertEqual(data_size, len(data))
+        data_ref = positional[_idx_data_ref]
+        self.assertIn(topic_name, data_ref)
+        self.assertIn('.msg', data_ref)
 
 # ################################################################################################################################
 
     def test_publish_writes_payload_to_disk(self) -> 'None':
         """ Test that publishing writes the payload to a disk file.
         """
+        # .. simulate one subscriber so the file is kept on disk ..
+        self.redis_mock.evalsha.return_value = ['1-0', 1]
+
         topic_name = 'test.topic'
         data = 'test message payload'
 
-        result = self.backend.publish(topic_name, data, publisher='testuser')
+        _ = self.backend.publish(topic_name, data, publisher='testuser')
 
-        # .. get the data_ref from the xadd call ..
-        call_args = self.redis_mock.xadd.call_args
-        message = call_args[0][1]
-        data_ref = message['data_ref']
+        # .. get the data_ref from the evalsha call ARGV ..
+        call_args = self.redis_mock.evalsha.call_args
+        positional = call_args[0]
+        data_ref = positional[_idx_data_ref]
 
         # .. verify we can load it back from disk ..
         load_result = self.disk_store.load(data_ref)
@@ -103,17 +117,20 @@ class TestRedisPubSubBackend(unittest.TestCase):
 # ################################################################################################################################
 
     def test_publish_stores_data_preview(self) -> 'None':
-        """ Test that the data preview is stored in Redis.
+        """ Test that the data preview is stored in the Lua ARGV fields.
         """
         topic_name = 'test.topic'
         data = 'A' * 200
 
         _ = self.backend.publish(topic_name, data, publisher='testuser')
 
-        call_args = self.redis_mock.xadd.call_args
-        message = call_args[0][1]
+        call_args = self.redis_mock.evalsha.call_args
+        positional = call_args[0]
 
-        preview_len = len(message['data_preview'])
+        fields = positional[_idx_fields_start:]
+        field_pairs = dict(zip(fields[::2], fields[1::2]))
+
+        preview_len = len(field_pairs['data_preview'])
         self.assertEqual(preview_len, 100)
 
 # ################################################################################################################################
@@ -126,16 +143,18 @@ class TestRedisPubSubBackend(unittest.TestCase):
 
         self.backend.subscribe(sub_key, topic_name)
 
-        self.assertEqual(self.redis_mock.sadd.call_count, 2)
+        self.redis_mock.evalsha.assert_called_once()
 
-        self.redis_mock.xgroup_create.assert_called_once()
+        call_args = self.redis_mock.evalsha.call_args
+        positional = call_args[0]
 
-        call_args = self.redis_mock.xgroup_create.call_args
-        stream_key = call_args[0][0]
-        group_name = call_args[0][1]
-
-        self.assertEqual(stream_key, f'{ModuleCtx.Stream_Prefix}{topic_name}')
-        self.assertEqual(group_name, sub_key)
+        # positional: (sha, numkeys, subs_key, topic_subs_key, stream_key, topic_name, sub_key)
+        self.assertEqual(positional[1], 3)
+        self.assertEqual(positional[2], f'{ModuleCtx.Subs_Prefix}{sub_key}')
+        self.assertEqual(positional[3], f'{ModuleCtx.Topic_Subs_Prefix}{topic_name}')
+        self.assertEqual(positional[4], f'{ModuleCtx.Stream_Prefix}{topic_name}')
+        self.assertEqual(positional[5], topic_name)
+        self.assertEqual(positional[6], sub_key)
 
 # ################################################################################################################################
 
@@ -146,10 +165,13 @@ class TestRedisPubSubBackend(unittest.TestCase):
         topic_name = 'test.topic'
 
         self.redis_mock.scard.return_value = 1
+        self.redis_mock.evalsha.return_value = []
 
         self.backend.unsubscribe(sub_key, topic_name)
 
-        self.assertEqual(self.redis_mock.srem.call_count, 2)
+        # .. one Python-level SREM (topic from subscriber's set),
+        # .. the other SREM (subscriber from topic's set) is now inside the Lua script.
+        self.assertEqual(self.redis_mock.srem.call_count, 1)
 
         self.redis_mock.xgroup_destroy.assert_not_called()
 
@@ -162,6 +184,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
         topic_name = 'test.topic'
 
         self.redis_mock.scard.return_value = 0
+        self.redis_mock.evalsha.return_value = []
 
         self.backend.unsubscribe(sub_key, topic_name)
 
@@ -184,7 +207,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
 # ################################################################################################################################
 
     def test_delete_topic_removes_all_data(self) -> 'None':
-        """ Test that deleting a topic removes stream, subscriber mappings, and disk files.
+        """ Test that deleting a topic calls the atomic Lua script and removes disk files.
         """
         topic_name = 'test.topic'
 
@@ -195,12 +218,24 @@ class TestRedisPubSubBackend(unittest.TestCase):
         topic_dir = os.path.join(self.test_dir, topic_name)
         self.assertTrue(os.path.exists(topic_dir))
 
-        self.redis_mock.smembers.return_value = ['sk_user1', 'sk_user2']
+        # .. the Lua delete script returns subscriber count ..
+        self.redis_mock.evalsha.return_value = 2
 
         self.backend.delete_topic(topic_name)
 
-        self.redis_mock.delete.assert_called()
-        self.assertTrue(self.redis_mock.srem.call_count >= 2)
+        # .. verify evalsha was called with the correct keys and args ..
+        call_args = self.redis_mock.evalsha.call_args
+        positional = call_args[0]
+
+        # positional: (sha, numkeys, stream_key, topic_subs_key, expiry_key, subs_prefix, topic_name, pending_prefix, sub_pending_prefix)
+        self.assertEqual(positional[1], 3)
+        self.assertEqual(positional[2], f'{ModuleCtx.Stream_Prefix}{topic_name}')
+        self.assertEqual(positional[3], f'{ModuleCtx.Topic_Subs_Prefix}{topic_name}')
+        self.assertEqual(positional[4], ModuleCtx.Pending_Expiry_Key)
+        self.assertEqual(positional[5], ModuleCtx.Subs_Prefix)
+        self.assertEqual(positional[6], topic_name)
+        self.assertEqual(positional[7], ModuleCtx.Pending_Prefix)
+        self.assertEqual(positional[8], ModuleCtx.Sub_Pending_Prefix)
 
         # .. disk directory should be gone ..
         self.assertFalse(os.path.exists(topic_dir))
@@ -234,7 +269,7 @@ class TestRedisPubSubBackend(unittest.TestCase):
 # ################################################################################################################################
 
     def test_rename_topic(self) -> 'None':
-        """ Test renaming a topic updates Redis keys but keeps disk files in place.
+        """ Test renaming a topic calls the atomic Lua script and keeps disk files in place.
         """
         old_name = 'old.topic'
         new_name = 'new.topic'
@@ -243,13 +278,24 @@ class TestRedisPubSubBackend(unittest.TestCase):
         message_id = 'zpsm.20260517-113200-1234-abcdef1234567890'
         data_ref = self.disk_store.store(message_id, old_name, 'test data', '')
 
-        self.redis_mock.smembers.return_value = ['sk_user1']
+        # .. the Lua rename script returns subscriber count ..
+        self.redis_mock.evalsha.return_value = 1
 
         self.backend.rename_topic(old_name, new_name)
 
-        self.redis_mock.rename.assert_called()
-        self.redis_mock.srem.assert_called()
-        self.redis_mock.sadd.assert_called()
+        # .. verify evalsha was called with the correct keys and args ..
+        call_args = self.redis_mock.evalsha.call_args
+        positional = call_args[0]
+
+        # positional: (sha, numkeys, old_stream, new_stream, old_topic_subs, new_topic_subs, old_name, new_name, subs_prefix)
+        self.assertEqual(positional[1], 4)
+        self.assertEqual(positional[2], f'{ModuleCtx.Stream_Prefix}{old_name}')
+        self.assertEqual(positional[3], f'{ModuleCtx.Stream_Prefix}{new_name}')
+        self.assertEqual(positional[4], f'{ModuleCtx.Topic_Subs_Prefix}{old_name}')
+        self.assertEqual(positional[5], f'{ModuleCtx.Topic_Subs_Prefix}{new_name}')
+        self.assertEqual(positional[6], old_name)
+        self.assertEqual(positional[7], new_name)
+        self.assertEqual(positional[8], ModuleCtx.Subs_Prefix)
 
         # .. the old disk directory should still exist because we do not rename it ..
         old_path = os.path.join(self.test_dir, data_ref)
@@ -265,11 +311,17 @@ class TestRedisPubSubBackend(unittest.TestCase):
         message_id = 'zpsm.20260517-113200-1234-abcdef1234567890'
         data_ref = self.disk_store.store(message_id, 'test.topic', 'test data', '')
 
-        # .. make the mock return 0 remaining subscribers after SREM ..
-        self.redis_mock.scard.return_value = 0
+        # .. make the Lua cleanup script return [remaining=0, needs_disk_delete=1] ..
+        self.redis_mock.evalsha.return_value = [0, 1]
 
         # .. ack with data_ref should delete the file ..
-        self.backend.ack_message('stream:test', 'sub1', '1-0', data_ref)
+        logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+            'stream:test', 'sub1', '1-0', data_ref)
+
+        is_fully_cleaned = self.backend.ack_message('stream:test', 'sub1', '1-0', data_ref)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+        self.assertTrue(is_fully_cleaned)
 
         absolute_path = os.path.join(self.test_dir, data_ref)
         self.assertFalse(os.path.exists(absolute_path))
@@ -279,7 +331,11 @@ class TestRedisPubSubBackend(unittest.TestCase):
     def test_ack_message_without_data_ref(self) -> 'None':
         """ Test that acknowledging without data_ref still works.
         """
-        self.backend.ack_message('stream:test', 'sub1', '1-0')
+        is_fully_cleaned = self.backend.ack_message('stream:test', 'sub1', '1-0')
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+        self.assertFalse(is_fully_cleaned)
+
         self.redis_mock.xack.assert_called_once()
 
 # ################################################################################################################################
@@ -353,13 +409,15 @@ class TestRedisPubSubBackend(unittest.TestCase):
     def test_publish_with_encrypt_writes_encrypted_payload(self) -> 'None':
         """ Test that publishing with encrypt_at_rest=True stores encrypted payload on disk.
         """
+        # .. simulate one subscriber so the file is kept on disk ..
+        self.redis_mock.evalsha.return_value = ['1-0', 1]
 
         # .. create a backend with a crypto-enabled disk store and a mock server ..
         crypto_manager = CryptoManager.from_secret_key(secret_key=Fernet.generate_key())
         encrypted_dir = tempfile.mkdtemp()
         encrypted_store = DiskMessageStore(encrypted_dir, crypto_manager=crypto_manager)
 
-        mock_server = unittest.mock.MagicMock()
+        mock_server = MagicMock()
         mock_server.encrypt_at_rest = True
 
         encrypted_backend = RedisPubSubBackend(self.redis_mock, encrypted_store, server=mock_server)
@@ -369,13 +427,10 @@ class TestRedisPubSubBackend(unittest.TestCase):
 
         _ = encrypted_backend.publish(topic_name, data, publisher='testuser')
 
-        # .. get the data_ref from the xadd call ..
-        call_args = self.redis_mock.xadd.call_args
-        message = call_args[0][1]
-        data_ref = message['data_ref']
-
-        # .. the preview in Redis should be plaintext ..
-        self.assertEqual(message['data_preview'], 'sensitive payload')
+        # .. get the data_ref from the evalsha call ARGV ..
+        call_args = self.redis_mock.evalsha.call_args
+        positional = call_args[0]
+        data_ref = positional[_idx_data_ref]
 
         # .. the file on disk should contain encrypted data ..
         absolute_path = os.path.join(encrypted_dir, data_ref)
@@ -397,14 +452,17 @@ class TestRedisPubSubBackend(unittest.TestCase):
     def test_publish_without_encrypt_writes_plaintext(self) -> 'None':
         """ Test that publishing without encrypt stores plaintext on disk.
         """
+        # .. simulate one subscriber so the file is kept on disk ..
+        self.redis_mock.evalsha.return_value = ['1-0', 1]
+
         topic_name = 'test.topic'
         data = 'not secret'
 
         _ = self.backend.publish(topic_name, data, publisher='testuser')
 
-        call_args = self.redis_mock.xadd.call_args
-        message = call_args[0][1]
-        data_ref = message['data_ref']
+        call_args = self.redis_mock.evalsha.call_args
+        positional = call_args[0]
+        data_ref = positional[_idx_data_ref]
 
         absolute_path = os.path.join(self.test_dir, data_ref)
 

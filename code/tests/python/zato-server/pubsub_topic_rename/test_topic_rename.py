@@ -21,7 +21,7 @@ if 0:
 
 logger = logging.getLogger('zato.test.pubsub_topic_rename')
 
-_settle_time = 3.0
+_settle_time = 0.5
 
 _original_topic_name = 'test.rename.topic1'
 _renamed_topic_name  = 'test.rename.topic1.renamed'

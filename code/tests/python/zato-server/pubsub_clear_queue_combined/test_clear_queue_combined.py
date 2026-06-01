@@ -12,7 +12,7 @@ import os
 import time
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, strlist
+    from zato.common.typing_ import any_, anylist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -21,7 +21,7 @@ logger = logging.getLogger('zato.test.pubsub_clear_queue_combined.live')
 
 _topic_1 = 'clear.combined.topic.1'
 
-_settle_time = 2.0
+_settle_time = 0.5
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,7 +67,7 @@ def _count_msg_files(directory:'str') -> 'int':
     count = 0
     if not os.path.isdir(directory):
         return 0
-    for root, _dirs, files in os.walk(directory):
+    for _, _dirs, files in os.walk(directory):
         for fname in files:
             if fname.endswith('.msg'):
                 count += 1

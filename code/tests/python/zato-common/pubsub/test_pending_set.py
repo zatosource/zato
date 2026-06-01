@@ -210,7 +210,13 @@ class TestAckFirstSubscriber(BasePendingSetTestCase):
         msg_data_ref = msg['_data_ref']
 
         # .. ack from subscriber A ..
-        self.backend.ack_message(stream_name, sub_key_a, redis_message_id, msg_data_ref)
+        logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+            stream_name, sub_key_a, redis_message_id, msg_data_ref)
+
+        is_fully_cleaned = self.backend.ack_message(stream_name, sub_key_a, redis_message_id, msg_data_ref)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+        self.assertFalse(is_fully_cleaned)
 
         # .. verify the pending set now has only subscriber B ..
         pending_count = self.get_pending_count(data_ref)
@@ -257,7 +263,17 @@ class TestAckSecondSubscriber(BasePendingSetTestCase):
         logger.info('fetch_messages(sub_key_a) -> %s', messages_a)
 
         msg_a = messages_a[0]
-        self.backend.ack_message(msg_a['_stream_name'], sub_key_a, msg_a['_redis_message_id'], msg_a['_data_ref'])
+        stream_name_a = msg_a['_stream_name']
+        redis_id_a = msg_a['_redis_message_id']
+        data_ref_a = msg_a['_data_ref']
+
+        logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+            stream_name_a, sub_key_a, redis_id_a, data_ref_a)
+
+        is_fully_cleaned_a = self.backend.ack_message(stream_name_a, sub_key_a, redis_id_a, data_ref_a)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned_a)
+        self.assertFalse(is_fully_cleaned_a)
 
         # .. verify file still exists after first ack ..
         file_present = self.file_exists(data_ref)
@@ -268,7 +284,17 @@ class TestAckSecondSubscriber(BasePendingSetTestCase):
         logger.info('fetch_messages(sub_key_b) -> %s', messages_b)
 
         msg_b = messages_b[0]
-        self.backend.ack_message(msg_b['_stream_name'], sub_key_b, msg_b['_redis_message_id'], msg_b['_data_ref'])
+        stream_name_b = msg_b['_stream_name']
+        redis_id_b = msg_b['_redis_message_id']
+        data_ref_b = msg_b['_data_ref']
+
+        logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+            stream_name_b, sub_key_b, redis_id_b, data_ref_b)
+
+        is_fully_cleaned_b = self.backend.ack_message(stream_name_b, sub_key_b, redis_id_b, data_ref_b)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned_b)
+        self.assertTrue(is_fully_cleaned_b)
 
         # .. verify the pending set is gone ..
         pending_count = self.get_pending_count(data_ref)
@@ -312,7 +338,17 @@ class TestAckOnlySubscriber(BasePendingSetTestCase):
         self.assertEqual(len(messages), 1)
 
         msg = messages[0]
-        self.backend.ack_message(msg['_stream_name'], sub_key, msg['_redis_message_id'], msg['_data_ref'])
+        stream_name = msg['_stream_name']
+        redis_id = msg['_redis_message_id']
+        msg_data_ref = msg['_data_ref']
+
+        logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+            stream_name, sub_key, redis_id, msg_data_ref)
+
+        is_fully_cleaned = self.backend.ack_message(stream_name, sub_key, redis_id, msg_data_ref)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+        self.assertTrue(is_fully_cleaned)
 
         # .. verify the pending set is gone ..
         pending_count = self.get_pending_count(data_ref)
@@ -380,7 +416,17 @@ class TestAckAfterUnsubscribe(BasePendingSetTestCase):
         self.assertEqual(len(messages), 1)
 
         msg = messages[0]
-        self.backend.ack_message(msg['_stream_name'], sub_key_a, msg['_redis_message_id'], msg['_data_ref'])
+        stream_name = msg['_stream_name']
+        redis_id = msg['_redis_message_id']
+        msg_data_ref = msg['_data_ref']
+
+        logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+            stream_name, sub_key_a, redis_id, msg_data_ref)
+
+        is_fully_cleaned = self.backend.ack_message(stream_name, sub_key_a, redis_id, msg_data_ref)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+        self.assertTrue(is_fully_cleaned)
 
         # .. after A's ack, pending set is empty, everything cleaned up ..
         pending_count = self.get_pending_count(data_ref)
@@ -454,7 +500,17 @@ class TestAckAfterMultipleUnsubscribes(BasePendingSetTestCase):
         logger.info('fetch_messages(sub_key_a) -> %s', messages_a)
 
         msg_a = messages_a[0]
-        self.backend.ack_message(msg_a['_stream_name'], sub_keys[0], msg_a['_redis_message_id'], msg_a['_data_ref'])
+        stream_name_a = msg_a['_stream_name']
+        redis_id_a = msg_a['_redis_message_id']
+        data_ref_a = msg_a['_data_ref']
+
+        logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+            stream_name_a, sub_keys[0], redis_id_a, data_ref_a)
+
+        is_fully_cleaned_a = self.backend.ack_message(stream_name_a, sub_keys[0], redis_id_a, data_ref_a)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned_a)
+        self.assertFalse(is_fully_cleaned_a)
 
         # .. after A's ack, pending set is {B}, file stays ..
         pending_count = self.get_pending_count(data_ref)
@@ -468,7 +524,17 @@ class TestAckAfterMultipleUnsubscribes(BasePendingSetTestCase):
         logger.info('fetch_messages(sub_key_b) -> %s', messages_b)
 
         msg_b = messages_b[0]
-        self.backend.ack_message(msg_b['_stream_name'], sub_keys[1], msg_b['_redis_message_id'], msg_b['_data_ref'])
+        stream_name_b = msg_b['_stream_name']
+        redis_id_b = msg_b['_redis_message_id']
+        data_ref_b = msg_b['_data_ref']
+
+        logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+            stream_name_b, sub_keys[1], redis_id_b, data_ref_b)
+
+        is_fully_cleaned_b = self.backend.ack_message(stream_name_b, sub_keys[1], redis_id_b, data_ref_b)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned_b)
+        self.assertTrue(is_fully_cleaned_b)
 
         # .. after B's ack, pending set is empty, everything cleaned up ..
         pending_count = self.get_pending_count(data_ref)
@@ -522,9 +588,17 @@ class TestBulkAckDeletesAll(BasePendingSetTestCase):
         self.assertEqual(len(messages_a), 50)
 
         for message in messages_a:
-            self.backend.ack_message(
-                message['_stream_name'], sub_key_a,
-                message['_redis_message_id'], message['_data_ref'])
+            stream_name = message['_stream_name']
+            redis_id = message['_redis_message_id']
+            data_ref = message['_data_ref']
+
+            logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+                stream_name, sub_key_a, redis_id, data_ref)
+
+            is_fully_cleaned = self.backend.ack_message(stream_name, sub_key_a, redis_id, data_ref)
+
+            logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+            self.assertFalse(is_fully_cleaned)
 
         # .. files still exist because B has not acked ..
         for data_ref in data_refs:
@@ -536,9 +610,17 @@ class TestBulkAckDeletesAll(BasePendingSetTestCase):
         self.assertEqual(len(messages_b), 50)
 
         for message in messages_b:
-            self.backend.ack_message(
-                message['_stream_name'], sub_key_b,
-                message['_redis_message_id'], message['_data_ref'])
+            stream_name = message['_stream_name']
+            redis_id = message['_redis_message_id']
+            data_ref = message['_data_ref']
+
+            logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+                stream_name, sub_key_b, redis_id, data_ref)
+
+            is_fully_cleaned = self.backend.ack_message(stream_name, sub_key_b, redis_id, data_ref)
+
+            logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+            self.assertTrue(is_fully_cleaned)
 
         # .. zero pending keys remain ..
         for data_ref in data_refs:

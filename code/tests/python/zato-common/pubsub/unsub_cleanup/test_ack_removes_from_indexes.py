@@ -43,7 +43,17 @@ class TestAckRemovesFromBothIndexes(BaseUnsubCleanupTestCase):
         logger.info('fetch_messages(sub_key_a) -> %s', messages)
 
         message = messages[0]
-        self.backend.ack_message(message['_stream_name'], sub_key_a, message['_redis_message_id'], message['_data_ref'])
+        stream_name = message['_stream_name']
+        redis_id = message['_redis_message_id']
+        msg_data_ref = message['_data_ref']
+
+        logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+            stream_name, sub_key_a, redis_id, msg_data_ref)
+
+        is_fully_cleaned = self.backend.ack_message(stream_name, sub_key_a, redis_id, msg_data_ref)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+        self.assertFalse(is_fully_cleaned)
 
         # .. pending:{data_ref} no longer contains sub_a ..
         has_a = self.has_pending_member(data_ref, sub_key_a)

@@ -49,36 +49,36 @@ $.fn.zato.pubsub.dashboard.series_labels = {
 
 (function($) {
     var kit = $.fn.zato.dashboard_kit;
-    var dash = $.fn.zato.pubsub.dashboard;
+    var dashboard = $.fn.zato.pubsub.dashboard;
 
-    dash.series_colors['published'] = dash.theme.tile_pub_rate;
-    dash.series_colors['delivered'] = dash.theme.tile_delivery;
+    dashboard.series_colors['published'] = dashboard.theme.tile_pub_rate;
+    dashboard.series_colors['delivered'] = dashboard.theme.tile_delivery;
 
-    dash._spark_buffers = kit.spark.create({
+    dashboard._spark_buffers = kit.spark.create({
         keys: ['topics', 'publishers', 'subscribers', 'pub_rate', 'delivery_rate', 'depth'],
         window_ms: 60 * 60 * 1000,
         bucket_count: 60
     });
 
-    dash._prev_delivery_rate = null;
+    dashboard._prev_delivery_rate = null;
 
     // ////////////////////////////////////////////////////////////////////////
     // Render
     // ////////////////////////////////////////////////////////////////////////
 
-    dash._format_age = function(seconds) {
+    dashboard._format_age = function(seconds) {
         if (seconds <= 0) return '-';
         return kit.format_compact_duration(seconds);
     };
 
-    dash._backlog_trend_html = function(current, previous) {
+    dashboard._backlog_trend_html = function(current, previous) {
         if (previous === null) return '';
         if (current > previous) return 'rising';
         if (current < previous) return 'falling';
         return 'flat';
     };
 
-    dash.render = function(data) {
+    dashboard.render = function(data) {
 
         var topic_count = data.topic_count;
         var total_publishers = data.total_publishers;
@@ -105,11 +105,11 @@ $.fn.zato.pubsub.dashboard.series_labels = {
         kit.set_number($('#stat-depth'), total_depth);
 
         // .. set the backlog trend sublabel on the delivery rate tile ..
-        var trend_html = dash._backlog_trend_html(delivery_rate, dash._prev_delivery_rate);
+        var trend_html = dashboard._backlog_trend_html(delivery_rate, dashboard._prev_delivery_rate);
         $('#stat-delivery-rate-sublabel').html(trend_html);
-        dash._prev_delivery_rate = delivery_rate;
+        dashboard._prev_delivery_rate = delivery_rate;
 
-        dash._spark_buffers.seed_flat({
+        dashboard._spark_buffers.seed_flat({
             topics: topic_count,
             publishers: total_publishers,
             subscribers: total_subscribers,
@@ -118,33 +118,33 @@ $.fn.zato.pubsub.dashboard.series_labels = {
             depth: total_depth
         });
 
-        dash._spark_buffers.push('topics', topic_count);
-        dash._spark_buffers.push('publishers', total_publishers);
-        dash._spark_buffers.push('subscribers', total_subscribers);
-        dash._spark_buffers.push('pub_rate', pub_rate_per_minute);
-        dash._spark_buffers.push('delivery_rate', delivery_rate);
-        dash._spark_buffers.push('depth', total_depth);
+        dashboard._spark_buffers.push('topics', topic_count);
+        dashboard._spark_buffers.push('publishers', total_publishers);
+        dashboard._spark_buffers.push('subscribers', total_subscribers);
+        dashboard._spark_buffers.push('pub_rate', pub_rate_per_minute);
+        dashboard._spark_buffers.push('delivery_rate', delivery_rate);
+        dashboard._spark_buffers.push('depth', total_depth);
 
         // Render sparklines for all tiles ..
         var spark_base = {height: 36, dot_radius: 3.5, dot_style: 'filled_halo'};
 
         var tile_specs = [
-            {selector: '#spark-topics',         key: 'topics',         options: $.extend({}, spark_base, {color: dash.theme.tile_topics,      dot_color: dash.theme.tile_topics})},
-            {selector: '#spark-publishers',     key: 'publishers',    options: $.extend({}, spark_base, {color: dash.theme.tile_topics,      dot_color: dash.theme.tile_topics})},
-            {selector: '#spark-subscribers',     key: 'subscribers',    options: $.extend({}, spark_base, {color: dash.theme.tile_topics,      dot_color: dash.theme.tile_topics})},
-            {selector: '#spark-pub-rate',        key: 'pub_rate',       options: $.extend({}, spark_base, {color: dash.theme.tile_pub_rate,   dot_color: dash.theme.tile_pub_rate})},
-            {selector: '#spark-delivery-rate',   key: 'delivery_rate',  options: $.extend({}, spark_base, {color: dash.theme.tile_delivery,   dot_color: dash.theme.tile_delivery})},
-            {selector: '#spark-depth',           key: 'depth',          options: $.extend({}, spark_base, {color: dash.theme.spark_warn,      dot_color: dash.theme.spark_warn})}
+            {selector: '#spark-topics',         key: 'topics',         options: $.extend({}, spark_base, {color: dashboard.theme.tile_topics,      dot_color: dashboard.theme.tile_topics})},
+            {selector: '#spark-publishers',     key: 'publishers',    options: $.extend({}, spark_base, {color: dashboard.theme.tile_topics,      dot_color: dashboard.theme.tile_topics})},
+            {selector: '#spark-subscribers',     key: 'subscribers',    options: $.extend({}, spark_base, {color: dashboard.theme.tile_topics,      dot_color: dashboard.theme.tile_topics})},
+            {selector: '#spark-pub-rate',        key: 'pub_rate',       options: $.extend({}, spark_base, {color: dashboard.theme.tile_pub_rate,   dot_color: dashboard.theme.tile_pub_rate})},
+            {selector: '#spark-delivery-rate',   key: 'delivery_rate',  options: $.extend({}, spark_base, {color: dashboard.theme.tile_delivery,   dot_color: dashboard.theme.tile_delivery})},
+            {selector: '#spark-depth',           key: 'depth',          options: $.extend({}, spark_base, {color: dashboard.theme.spark_warn,      dot_color: dashboard.theme.spark_warn})}
         ];
 
         for (var tileIdx = 0; tileIdx < tile_specs.length; tileIdx++) {
             var spec = tile_specs[tileIdx];
-            var values = dash._spark_buffers.values(spec.key);
+            var values = dashboard._spark_buffers.values(spec.key);
             kit.sparkline.render(spec.selector, values, spec.options);
         }
 
-        if (dash._stat_tile_handle) {
-            dash._stat_tile_handle.bind();
+        if (dashboard._stat_tile_handle) {
+            dashboard._stat_tile_handle.bind();
         }
 
         // Build the topic table ..
@@ -232,16 +232,16 @@ $.fn.zato.pubsub.dashboard.series_labels = {
         var deliveries = timeline.deliveries;
 
         for (var publishIdx = 0; publishIdx < publishes.length; publishIdx++) {
-            records.push({ts: publishes[publishIdx].ts, series: 'published', count: publishes[publishIdx].count});
+            records.push({timestamp: publishes[publishIdx].timestamp, series: 'published', count: publishes[publishIdx].count});
         }
 
         for (var deliveryIdx = 0; deliveryIdx < deliveries.length; deliveryIdx++) {
-            records.push({ts: deliveries[deliveryIdx].ts, series: 'delivered', count: deliveries[deliveryIdx].count});
+            records.push({timestamp: deliveries[deliveryIdx].timestamp, series: 'delivered', count: deliveries[deliveryIdx].count});
         }
 
 
-        if (dash._chart_handle) {
-            dash._chart_handle.render(records);
+        if (dashboard._chart_handle) {
+            dashboard._chart_handle.render(records);
         }
 
         // .. and lock table column widths.
@@ -253,9 +253,9 @@ $.fn.zato.pubsub.dashboard.series_labels = {
     // Poll
     // ////////////////////////////////////////////////////////////////////////
 
-    dash.poll = function() {
+    dashboard.poll = function() {
         $.ajax({
-            url: dash.config.base_url + 'poll/',
+            url: dashboard.config.base_url + 'poll/',
             type: 'POST',
             data: {},
             headers: {'X-CSRFToken': $.cookie('csrftoken')},
@@ -263,7 +263,7 @@ $.fn.zato.pubsub.dashboard.series_labels = {
                 if (typeof data === 'string') {
                     try { data = JSON.parse(data); } catch(parse_error) { return; }
                 }
-                dash.render(data);
+                dashboard.render(data);
             },
             error: function(xhr, status, error) {
             }
@@ -274,21 +274,21 @@ $.fn.zato.pubsub.dashboard.series_labels = {
     // Init
     // ////////////////////////////////////////////////////////////////////////
 
-    dash.init = function(initial_data) {
+    dashboard.init = function(initial_data) {
 
         // Main chart via kit
-        dash._chart_handle = kit.main_chart.init({
+        dashboard._chart_handle = kit.main_chart.init({
             container: '#dashboard-bar-chart',
             legend: '#dashboard-chart-legend',
             count_pill: '#dashboard-data-count',
             chart_type_toggle: '#dashboard-chart-type-toggle',
             series_keys: ['published', 'delivered'],
-            palette: dash.series_colors,
-            labels: dash.series_labels,
+            palette: dashboard.series_colors,
+            labels: dashboard.series_labels,
             item_noun_singular: 'message',
             item_noun_plural: 'messages',
             range_names: {5: '5 min', 15: '15 min', 30: '30 min', 60: '1 hour', 360: '6 hours', 1440: 'Today'},
-            bucket_ts: function(record) { return record.ts; },
+            bucket_ts: function(record) { return record.timestamp; },
             series_key: function(record) { return record.series; },
             hidden_storage_key: 'zato_pubsub_hidden_series',
             bars_storage_key: 'zato_pubsub_show_bars'
@@ -296,13 +296,13 @@ $.fn.zato.pubsub.dashboard.series_labels = {
 
         // Time range
         var stored_range = parseInt(kit.storage_get('zato_pubsub_time_range'), 10);
-        dash._time_range_minutes = isNaN(stored_range) ? dash.config.default_time_range : stored_range;
-        dash._chart_handle.set_time_range_minutes(dash._time_range_minutes);
+        dashboard._time_range_minutes = isNaN(stored_range) ? dashboard.config.default_time_range : stored_range;
+        dashboard._chart_handle.set_time_range_minutes(dashboard._time_range_minutes);
 
         var menu = $('#dashboard-time-range-menu');
         var pill = $('#dashboard-data-count');
         menu.find('.dashboard-time-range-option').removeClass('dashboard-time-range-active');
-        menu.find('.dashboard-time-range-option[data-minutes="' + dash._time_range_minutes + '"]').addClass('dashboard-time-range-active');
+        menu.find('.dashboard-time-range-option[data-minutes="' + dashboard._time_range_minutes + '"]').addClass('dashboard-time-range-active');
 
         pill.on('click', function(event) {
             event.stopPropagation();
@@ -312,13 +312,13 @@ $.fn.zato.pubsub.dashboard.series_labels = {
         menu.on('click', '.dashboard-time-range-option', function(event) {
             event.stopPropagation();
             var minutes = parseInt($(this).data('minutes'), 10);
-            dash._time_range_minutes = minutes;
+            dashboard._time_range_minutes = minutes;
             kit.storage_set('zato_pubsub_time_range', String(minutes));
-            dash._chart_handle.set_time_range_minutes(minutes);
+            dashboard._chart_handle.set_time_range_minutes(minutes);
             menu.find('.dashboard-time-range-option').removeClass('dashboard-time-range-active');
             $(this).addClass('dashboard-time-range-active');
             menu.removeClass('dashboard-time-range-menu-open');
-            dash._chart_handle.redraw();
+            dashboard._chart_handle.redraw();
         });
 
         $(document).on('click', function() {
@@ -326,37 +326,37 @@ $.fn.zato.pubsub.dashboard.series_labels = {
         });
 
         // Stat tile hover
-        dash._stat_tile_handle = kit.stat_tile.init({
+        dashboard._stat_tile_handle = kit.stat_tile.init({
             tiles: [
-                {sparkline_selector: '#spark-topics', buffer_key: 'topics', label: 'Topics', color: dash.theme.tile_topics},
-                {sparkline_selector: '#spark-publishers', buffer_key: 'publishers', label: 'Publishers', color: dash.theme.tile_topics},
-                {sparkline_selector: '#spark-subscribers', buffer_key: 'subscribers', label: 'Subscribers', color: dash.theme.tile_topics},
-                {sparkline_selector: '#spark-pub-rate', buffer_key: 'pub_rate', label: 'Publishes/m', color: dash.theme.tile_pub_rate},
-                {sparkline_selector: '#spark-delivery-rate', buffer_key: 'delivery_rate', label: 'Deliveries/m', color: dash.theme.tile_delivery},
-                {sparkline_selector: '#spark-depth', buffer_key: 'depth', label: 'Total depth', color: dash.theme.spark_warn}
+                {sparkline_selector: '#spark-topics', buffer_key: 'topics', label: 'Topics', color: dashboard.theme.tile_topics},
+                {sparkline_selector: '#spark-publishers', buffer_key: 'publishers', label: 'Publishers', color: dashboard.theme.tile_topics},
+                {sparkline_selector: '#spark-subscribers', buffer_key: 'subscribers', label: 'Subscribers', color: dashboard.theme.tile_topics},
+                {sparkline_selector: '#spark-pub-rate', buffer_key: 'pub_rate', label: 'Publishes/m', color: dashboard.theme.tile_pub_rate},
+                {sparkline_selector: '#spark-delivery-rate', buffer_key: 'delivery_rate', label: 'Deliveries/m', color: dashboard.theme.tile_delivery},
+                {sparkline_selector: '#spark-depth', buffer_key: 'depth', label: 'Total depth', color: dashboard.theme.spark_warn}
             ],
             get_buffer: function(key) {
-                return dash._spark_buffers.data(key);
+                return dashboard._spark_buffers.data(key);
             }
         });
 
-        dash.render(initial_data);
+        dashboard.render(initial_data);
         kit.countdown.start();
         kit.reveal();
 
-        dash._auto_refresh = kit.auto_refresh.init({
+        dashboard._auto_refresh = kit.auto_refresh.init({
             pill: '#dashboard-refresh-pill',
             menu: '#dashboard-refresh-menu',
             storage_key: 'zato_pubsub_refresh',
             url_param: 'refresh',
             default_seconds: 5,
-            on_tick: dash.poll
+            on_tick: dashboard.poll
         });
 
         kit.url_state.on_pop(function(params) {
             var refresh_val = parseInt(params.get('refresh'), 10);
             if (!isNaN(refresh_val)) {
-                dash._auto_refresh.set_seconds(refresh_val);
+                dashboard._auto_refresh.set_seconds(refresh_val);
             }
         });
     };

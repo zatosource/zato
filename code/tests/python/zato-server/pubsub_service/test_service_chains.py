@@ -20,8 +20,8 @@ from zato.common.test.config_pubsub_service import TestConfig
 # ################################################################################################################################
 # ################################################################################################################################
 
-_delivery_poll_timeout  = 45
-_delivery_poll_interval = 2.0
+_delivery_poll_timeout  = 15
+_delivery_poll_interval = 1.0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -125,7 +125,7 @@ class TestServiceChains(unittest.TestCase):
         _ = self._poll_chain_received('chain_count', 1)
 
         # .. give Redis a moment ..
-        time.sleep(1)
+        time.sleep(0.3)
 
         raw = self.client.invoke('test.pubsub.check-redis-topics')
         result = json.loads(raw) if isinstance(raw, str) else raw
@@ -150,7 +150,7 @@ class TestServiceChains(unittest.TestCase):
         _ = self._poll_chain_received('fanout_1_count', 1)
 
         # .. give Redis a moment ..
-        time.sleep(1)
+        time.sleep(0.3)
 
         raw = self.client.invoke('test.pubsub.check-redis-topics')
         result = json.loads(raw) if isinstance(raw, str) else raw

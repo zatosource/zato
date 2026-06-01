@@ -1,0 +1,38 @@
+security:
+
+  - name: test.unsub.atomic.publisher
+    type: basic_auth
+    username: test.unsub.atomic.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.unsub.atomic.subscriber
+    type: basic_auth
+    username: test.unsub.atomic.subscriber
+    password: "{{subscriber_password}}"
+
+pubsub_topic:
+
+  - name: unsub.atomic.concurrent
+  - name: unsub.atomic.burst
+
+pubsub_permission:
+
+  - security: test.unsub.atomic.publisher
+    pub:
+      - unsub.atomic.**
+
+  - security: test.unsub.atomic.subscriber
+    sub:
+      - unsub.atomic.**
+
+pubsub_subscription:
+
+  - security: test.unsub.atomic.subscriber
+    delivery_type: pull
+    topic_list:
+      - unsub.atomic.concurrent
+
+  - security: test.unsub.atomic.subscriber
+    delivery_type: pull
+    topic_list:
+      - unsub.atomic.burst

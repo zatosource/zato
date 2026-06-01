@@ -23,8 +23,8 @@ from zato.common.test.config_pubsub_service import TestConfig
 # ################################################################################################################################
 # ################################################################################################################################
 
-_delivery_poll_timeout  = 45
-_delivery_poll_interval = 2.0
+_delivery_poll_timeout  = 15
+_delivery_poll_interval = 1.0
 _pad = 5
 
 def _service_name(number:'int') -> 'str':
@@ -104,10 +104,10 @@ class TestServiceTopology(unittest.TestCase):
             name = _service_name(number)
             self.assertGreaterEqual(result[f'{name}_count'], 1, f'{name} should have received a message')
 
-        self.assertIn(f'broadcast-via-00006-via-00007', result[_service_name(7)][0])
-        self.assertIn(f'broadcast-via-00006-via-00008', result[_service_name(8)][0])
-        self.assertIn(f'broadcast-via-00006-via-00009', result[_service_name(9)][0])
-        self.assertIn(f'broadcast-via-00006-via-00010', result[_service_name(10)][0])
+        self.assertIn('broadcast-via-00006-via-00007', result[_service_name(7)][0])
+        self.assertIn('broadcast-via-00006-via-00008', result[_service_name(8)][0])
+        self.assertIn('broadcast-via-00006-via-00009', result[_service_name(9)][0])
+        self.assertIn('broadcast-via-00006-via-00010', result[_service_name(10)][0])
 
 # ################################################################################################################################
 
@@ -196,7 +196,7 @@ class TestServiceTopology(unittest.TestCase):
         for number in range(21, 321):
             name = _service_name(number)
             field = f'{name}_count'
-            result = self._poll_service_received(field, 1, timeout=90)
+            result = self._poll_service_received(field, 1, timeout=30)
             self.assertGreaterEqual(result[field], 1, f'{name} should have received at least one message')
 
         # .. verify data correctness for each ..
@@ -256,7 +256,7 @@ class TestServiceTopology(unittest.TestCase):
         _ = self._poll_service_received(f'{_service_name(19)}_count', 1)
         _ = self._poll_service_received(f'{_service_name(20)}_count', 1)
 
-        time.sleep(1)
+        time.sleep(0.3)
 
         raw = self.client.invoke('test.pubsub.check-redis-topics')
         result = json.loads(raw) if isinstance(raw, str) else raw

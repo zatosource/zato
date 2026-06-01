@@ -24,9 +24,9 @@ logger = getLogger(__name__)
 
 _depth_debug_logger = _depth_logging.getLogger('zato.depth_debug')
 _depth_debug_logger.setLevel(_depth_logging.DEBUG)
-_depth_fh = _depth_logging.FileHandler('/tmp/zato-depth-debug.log')
-_depth_fh.setFormatter(_depth_logging.Formatter('%(asctime)s %(message)s'))
-_depth_debug_logger.addHandler(_depth_fh)
+_depth_file_handler = _depth_logging.FileHandler('/tmp/zato-depth-debug.log')
+_depth_file_handler.setFormatter(_depth_logging.Formatter('%(asctime)s %(message)s'))
+_depth_debug_logger.addHandler(_depth_file_handler)
 from zato.common.api import PubSub, query_parameters
 from zato.common.odb.model import Cluster, HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 from zato.common.odb.query import pubsub_subscription_list
@@ -204,7 +204,7 @@ class GetList(AdminService):
         for sub_id, sub_dict in subscriptions_by_id.items():
 
             # Sort topics by name ..
-            sorted_topics = sorted(topics_by_id[sub_id], key=lambda x: x['topic_name'])
+            sorted_topics = sorted(topics_by_id[sub_id], key=lambda topic: topic['topic_name'])
 
             # .. create topic links from sorted topics ..
             topic_link_list:'anylist' = []
@@ -641,8 +641,8 @@ class Delete(AdminService):
         pubsub_msg = Bunch()
         pubsub_msg.cid = self.cid
         pubsub_msg.sub_key = sub.sub_key
-        pubsub_msg.username = sec_def_name
-        pubsub_msg.sec_name = sec_def_username
+        pubsub_msg.username = sec_def_username
+        pubsub_msg.sec_name = sec_def_name
         pubsub_msg.action = PUBSUB.SUBSCRIPTION_DELETE.value
 
         # .. our own consumer task (from the same process) we want to stop synchronously so we call the handler directly ..
@@ -935,7 +935,7 @@ class HandleDelivery(Service):
 
 # ################################################################################################################################
 
-    def build_rest_message(self, input:'strdict', outconn_config:'strdict') -> 'strdict':
+    def build_rest_message(self, input:'strdict', outgoing_connection_config:'strdict') -> 'strdict':
 
         # .. our message to produce ..
         out_msg = {}
@@ -1036,7 +1036,7 @@ _browse_default_page_number = 1
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _since_ts_to_cursor(stream_id:'str') -> 'str':
+def _since_timestamp_to_cursor(stream_id:'str') -> 'str':
     """ Increments the sequence part of a Redis stream ID by 1
     so that the cursor excludes the last-seen entry.
     """
@@ -1056,7 +1056,7 @@ class BrowseQueue(AdminService):
     """
 
     name  = 'zato.pubsub.subscription.browse-queue'
-    input = '-sub_key', '-id', Int('-page'), Int('-page_size'), '-state', '-since_ts'
+    input = '-sub_key', '-id', Int('-page'), Int('-page_size'), '-state', '-since_timestamp'
 
     def handle(self) -> 'None':
 
@@ -1067,13 +1067,13 @@ class BrowseQueue(AdminService):
         page_number = self.request.input.page or _browse_default_page_number
         state       = self.request.input.state or 'pending'
 
-        if since_ts := self.request.input.get('since_ts'):
-            cursor = _since_ts_to_cursor(since_ts)
+        if since_timestamp := self.request.input.get('since_timestamp'):
+            cursor = _since_timestamp_to_cursor(since_timestamp)
         else:
             cursor = _browse_cursor_start
 
-        logger.info('BrowseQueue -> sub_key:%s, state:%s, page:%s, page_size:%s, since_ts:%s, cursor:%s',
-            sub_key, state, page_number, page_size, since_ts, cursor)
+        logger.info('BrowseQueue -> sub_key:%s, state:%s, page:%s, page_size:%s, since_timestamp:%s, cursor:%s',
+            sub_key, state, page_number, page_size, since_timestamp, cursor)
 
         # .. get all topics this subscriber is subscribed to ..
         topic_names = self.server.pubsub_redis.get_subscribed_topics(sub_key)
@@ -1085,7 +1085,7 @@ class BrowseQueue(AdminService):
             logger.info('BrowseQueue total_count -> topic:%s, state:%s, count:%s', topic_name, state, count)
             total += count
 
-        if since_ts:
+        if since_timestamp:
 
             # Incremental poll - fetch only new rows since the given timestamp ..
             new_rows:'anylist' = []
@@ -1094,14 +1094,14 @@ class BrowseQueue(AdminService):
                 messages, next_cursor = self.server.pubsub_redis.browse_messages(
                     topic_name, sub_key=sub_key, state=state,
                     cursor=cursor, page_size=page_size, needs_data=False)
-                logger.info('BrowseQueue since_ts browse -> topic:%s, cursor:%s, got:%d, next_cursor:%s',
+                logger.info('BrowseQueue since_timestamp browse -> topic:%s, cursor:%s, got:%d, next_cursor:%s',
                     topic_name, cursor, len(messages), next_cursor)
                 new_rows.extend(messages)
 
             new_rows.sort(key=itemgetter('pub_time_iso'))
 
             if new_rows:
-                logger.info('BrowseQueue since_ts result -> rows:%d, first_id:%s, last_id:%s',
+                logger.info('BrowseQueue since_timestamp result -> rows:%d, first_id:%s, last_id:%s',
                     len(new_rows), new_rows[0]['redis_stream_id'], new_rows[-1]['redis_stream_id'])
 
             out = {

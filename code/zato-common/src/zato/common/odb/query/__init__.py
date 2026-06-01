@@ -978,6 +978,21 @@ def pubsub_subscriptions_by_sec_base(session:'SASession', sec_base_id:'int', clu
 
 # ################################################################################################################################
 
+def pubsub_subscriptions_by_rest_endpoint(
+    session:'SASession',
+    rest_endpoint_id:'int',
+    cluster_id:'int',
+) -> 'list_[PubSubSubscription]':
+    """ Returns all PubSubSubscription rows whose push endpoint is the given HTTPSOAP connection.
+    """
+    out = session.query(PubSubSubscription).\
+        filter(PubSubSubscription.rest_push_endpoint_id == rest_endpoint_id).\
+        filter(PubSubSubscription.cluster_id == cluster_id).\
+        all()
+    return out
+
+# ################################################################################################################################
+
 def pubsub_subscription_topic_names(session:'SASession', subscription_id:'int') -> 'strlist':
     """ Returns topic names for a subscription by joining PubSubSubscriptionTopic with PubSubTopic.
     """
