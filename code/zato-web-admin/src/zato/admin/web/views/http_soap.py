@@ -304,16 +304,16 @@ def index(req): # type: ignore
 def create(req): # type: ignore
     try:
         msg_data = _get_edit_create_message(req.POST)
-        logger.info('[DIAG] http_soap.create: POST keys=%s', list(req.POST.keys()))
-        logger.info('[DIAG] http_soap.create: msg_data=%s', msg_data)
+        logger.debug('[DIAG] http_soap.create: POST keys=%s', list(req.POST.keys()))
+        logger.debug('[DIAG] http_soap.create: msg_data=%s', msg_data)
         response = req.zato.client.invoke('zato.http-soap.create', msg_data)
-        logger.info('[DIAG] http_soap.create: response.ok=%s, response.has_data=%s', response.ok, response.has_data)
+        logger.debug('[DIAG] http_soap.create: response.ok=%s, response.has_data=%s', response.ok, response.has_data)
         if response.has_data:
-            logger.info('[DIAG] http_soap.create: response.data.id=%s', response.data.id)
+            logger.debug('[DIAG] http_soap.create: response.data.id=%s', response.data.id)
             return _edit_create_response(req, response.data.id, 'created',
                 req.POST['transport'], req.POST['connection'], req.POST['name'])
         else:
-            logger.error('[DIAG] http_soap.create: no data, details=%s', response.details)
+            logger.debug('[DIAG] http_soap.create: no data, details=%s', response.details)
             raise ZatoException(msg=response.details)
     except Exception:
         msg = 'Object could not be created, e:`{}`'.format(format_exc())

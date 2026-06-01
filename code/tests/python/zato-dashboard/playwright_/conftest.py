@@ -55,10 +55,12 @@ _Server_Wait_Timeout   = 60
 _Quickstart_Timeout    = 120
 _Ping_Poll_Interval    = 0.5
 
-_server_process    = None # type: ignore
-_dashboard_process = None # type: ignore
-_listener_process  = None # type: ignore
-_temporary_dir     = None # type: ignore
+_cleanup_refs = {
+    'server_process': None,
+    'dashboard_process': None,
+    'listener_process': None,
+    'temporary_dir': None,
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,25 +105,14 @@ def _kill_process(process:'subprocess.Popen | None') -> 'None':
 def _cleanup() -> 'None':
     """ Cleans up all test processes and the temporary directory.
     """
-    global _server_process, _dashboard_process, _listener_process, _temporary_dir
+    for key in ('listener_process', 'server_process', 'dashboard_process'):
+        _kill_process(_cleanup_refs[key])
+        _cleanup_refs[key] = None
 
-    # Kill the listener ..
-    _kill_process(_listener_process)
-    _listener_process = None
-
-    # .. kill the server ..
-    _kill_process(_server_process)
-    _server_process = None
-
-    # .. kill the dashboard ..
-    _kill_process(_dashboard_process)
-    _dashboard_process = None
-
-    # .. remove the temporary directory.
-    if _temporary_dir:
-        if os.path.isdir(_temporary_dir):
-            shutil.rmtree(_temporary_dir, ignore_errors=True)
-    _temporary_dir = None
+    tmp = _cleanup_refs['temporary_dir']
+    if tmp and os.path.isdir(tmp):
+        shutil.rmtree(tmp, ignore_errors=True)
+    _cleanup_refs['temporary_dir'] = None
 
 atexit.register(_cleanup)
 
@@ -177,8 +168,6 @@ def _stream_output(process:'subprocess.Popen', label:'str', time_reference:'floa
 def zato_dashboard() -> 'any_':
     """ Session-scoped fixture that creates a quickstart environment with server and dashboard.
     """
-    global _server_process, _dashboard_process, _temporary_dir
-
     time_start = time.monotonic()
 
     # Allocate dynamic ports ..
@@ -186,7 +175,8 @@ def zato_dashboard() -> 'any_':
     dashboard_port = _find_free_port()
     broker_port    = _find_free_port()
 
-    _temporary_dir = tempfile.mkdtemp(prefix='zato_pw_test_')
+    temporary_dir = tempfile.mkdtemp(prefix='zato_pw_test_')
+    _cleanup_refs['temporary_dir'] = temporary_dir
 
     # .. 1) create a quickstart environment with both server and dashboard ..
 
@@ -194,7 +184,7 @@ def zato_dashboard() -> 'any_':
     quickstart_env.pop('COVERAGE_PROCESS_START', None)
 
     quickstart_command = [
-        _Zato_Bin, 'quickstart', 'create', _temporary_dir,
+        _Zato_Bin, 'quickstart', 'create', temporary_dir,
         '--servers', '1',
         '--password', _Password,
         '--server-api-client-for-scheduler-password', _Password,
@@ -212,7 +202,7 @@ def zato_dashboard() -> 'any_':
 
     # .. 2) patch server.conf to bind on our dynamic port ..
 
-    server_dir = os.path.join(_temporary_dir, 'server1')
+    server_dir = os.path.join(temporary_dir, 'server1')
     server_config_path = os.path.join(server_dir, 'config', 'repo', 'server.conf')
 
     with open(server_config_path, 'r') as server_config_file:
@@ -230,7 +220,7 @@ def zato_dashboard() -> 'any_':
 
     # .. 3) patch web-admin.conf to use our dashboard port ..
 
-    dashboard_dir = os.path.join(_temporary_dir, 'web-admin')
+    dashboard_dir = os.path.join(temporary_dir, 'web-admin')
     dashboard_config_path = os.path.join(dashboard_dir, 'config', 'repo', 'web-admin.conf')
 
     with open(dashboard_config_path, 'r') as config_file:
@@ -252,17 +242,18 @@ def zato_dashboard() -> 'any_':
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
     server_env.pop('COVERAGE_PROCESS_START', None)
 
-    _server_process = subprocess.Popen(
+    server_process = subprocess.Popen(
         [_Zato_Bin, 'start', server_dir, '--fg'],
         env=server_env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
+    _cleanup_refs['server_process'] = server_process
 
     time_after_server_start = time.monotonic()
 
     server_thread = threading.Thread(
-        target=_stream_output, args=(_server_process, 'SERVER', time_after_server_start), daemon=True)
+        target=_stream_output, args=(server_process, 'SERVER', time_after_server_start), daemon=True)
     server_thread.start()
 
     # .. 5) start the dashboard ..
@@ -271,15 +262,16 @@ def zato_dashboard() -> 'any_':
     dashboard_env.pop('COVERAGE_PROCESS_START', None)
     dashboard_env['Zato_Server_Address'] = f'http://127.0.0.1:{server_port}'
 
-    _dashboard_process = subprocess.Popen(
+    dashboard_process = subprocess.Popen(
         [_Zato_Bin, 'start', dashboard_dir, '--fg'],
         env=dashboard_env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
+    _cleanup_refs['dashboard_process'] = dashboard_process
 
     dashboard_thread = threading.Thread(
-        target=_stream_output, args=(_dashboard_process, 'DASHBOARD', time_after_server_start), daemon=True)
+        target=_stream_output, args=(dashboard_process, 'DASHBOARD', time_after_server_start), daemon=True)
     dashboard_thread.start()
 
     # .. 6) wait for both to be ready ..
@@ -298,8 +290,8 @@ def zato_dashboard() -> 'any_':
 
     except Exception:
         logger.error('Components did not become ready, stdout was streamed above')
-        _kill_process(_server_process)
-        _kill_process(_dashboard_process)
+        _kill_process(server_process)
+        _kill_process(dashboard_process)
         raise
 
     # .. 7) start the file pickup listener so hot-deploy works for enmasse imports ..
@@ -310,19 +302,20 @@ def zato_dashboard() -> 'any_':
     listener_env['Zato_Server_Dir'] = server_dir
     listener_env.pop('COVERAGE_PROCESS_START', None)
 
-    _listener_process = subprocess.Popen(
+    listener_process = subprocess.Popen(
         ['make', 'listener'],
         cwd=_Zato_Base,
         env=listener_env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
+    _cleanup_refs['listener_process'] = listener_process
 
     listener_thread = threading.Thread(
-        target=_stream_output, args=(_listener_process, 'LISTENER', time_after_server_start), daemon=True)
+        target=_stream_output, args=(listener_process, 'LISTENER', time_after_server_start), daemon=True)
     listener_thread.start()
 
-    logger.info('[TIMING] file pickup listener started, pid=%s', _listener_process.pid)
+    logger.info('[TIMING] file pickup listener started, pid=%s', listener_process.pid)
 
     yield {
         'host': host,
@@ -332,26 +325,28 @@ def zato_dashboard() -> 'any_':
         'password': _Password,
         'server_dir': server_dir,
         'dashboard_dir': dashboard_dir,
-        'temporary_dir': _temporary_dir,
+        'temporary_dir': temporary_dir,
+        'server_process': server_process,
+        'dashboard_process': dashboard_process,
+        'listener_process': listener_process,
     }
 
     # .. teardown: stop listener ..
-    _kill_process(_listener_process)
-    _listener_process = None
+    _kill_process(listener_process)
+    _cleanup_refs['listener_process'] = None
 
     # .. stop server ..
-    _kill_process(_server_process)
-    _server_process = None
+    _kill_process(server_process)
+    _cleanup_refs['server_process'] = None
 
     # .. stop dashboard ..
-    _kill_process(_dashboard_process)
-    _dashboard_process = None
+    _kill_process(dashboard_process)
+    _cleanup_refs['dashboard_process'] = None
 
     # .. remove the temporary directory.
-    if _temporary_dir:
-        if os.path.isdir(_temporary_dir):
-            shutil.rmtree(_temporary_dir, ignore_errors=True)
-    _temporary_dir = None
+    if os.path.isdir(temporary_dir):
+        shutil.rmtree(temporary_dir, ignore_errors=True)
+    _cleanup_refs['temporary_dir'] = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -386,15 +381,18 @@ def logged_in_page(zato_dashboard:'anydict', playwright_browser:'any_', request:
     test_name = request.node.name
 
     # Capture process and browser state before doing anything ..
-    dashboard_poll = _dashboard_process.poll() if _dashboard_process else 'no-process'
-    server_poll = _server_process.poll() if _server_process else 'no-process'
+    dashboard_process = zato_dashboard['dashboard_process']
+    server_process = zato_dashboard['server_process']
+
+    dashboard_poll = dashboard_process.poll() if dashboard_process else 'no-process'
+    server_poll = server_process.poll() if server_process else 'no-process'
     browser_connected = playwright_browser.is_connected()
     browser_contexts = len(playwright_browser.contexts)
 
     logger.info(
         f'[FIXTURE-SETUP] {test_name}: '
-        f'dashboard_pid={getattr(_dashboard_process, "pid", None)} poll={dashboard_poll}, '
-        f'server_pid={getattr(_server_process, "pid", None)} poll={server_poll}, '
+        f'dashboard_pid={getattr(dashboard_process, "pid", None)} poll={dashboard_poll}, '
+        f'server_pid={getattr(server_process, "pid", None)} poll={server_poll}, '
         f'browser_connected={browser_connected} contexts={browser_contexts}'
     )
 
@@ -462,8 +460,8 @@ def logged_in_page(zato_dashboard:'anydict', playwright_browser:'any_', request:
             f'[FIXTURE-SETUP] {test_name}: LOGIN FAILED: {login_exc}, '
             f'page.is_closed={page.is_closed()}, '
             f'close_reasons={_close_reasons}, '
-            f'dashboard_poll={_dashboard_process.poll() if _dashboard_process else "no-process"}, '
-            f'server_poll={_server_process.poll() if _server_process else "no-process"}, '
+            f'dashboard_poll={dashboard_process.poll() if dashboard_process else "no-process"}, '
+            f'server_poll={server_process.poll() if server_process else "no-process"}, '
             f'browser_connected={playwright_browser.is_connected()}'
         )
         raise

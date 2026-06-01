@@ -2108,7 +2108,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         with closing(self.odb.session()) as session:
             query = f'SELECT 1 FROM {table_name} WHERE {where} LIMIT 1'
-            logger.info('[DIAG] check_attr_exists: entity_type=%s, table=%s, query=%s, params=%s',
+            logger.debug('[DIAG] check_attr_exists: entity_type=%s, table=%s, query=%s, params=%s',
                 entity_type, table_name, query, params)
             result = session.execute(
                 text(query),  # type: ignore[operator]
@@ -2116,7 +2116,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             )
             exists = result.fetchone() is not None
 
-        logger.info('[DIAG] check_attr_exists: entity_type=%s, value=%s, exists=%s', entity_type, value, exists)
+        logger.debug('[DIAG] check_attr_exists: entity_type=%s, value=%s, exists=%s', entity_type, value, exists)
 
         out = json.dumps({'exists': exists})
         return out
