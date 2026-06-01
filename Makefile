@@ -438,6 +438,7 @@ test-ui: ## Dashboard backend and Playwright tests.
 test-ui-pubsub:
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_topic_create.py \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_topic_lifecycle.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 

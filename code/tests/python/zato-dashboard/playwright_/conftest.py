@@ -441,13 +441,22 @@ def check_no_log_errors(zato_dashboard:'anydict', request:'any_') -> 'any_':
                 continue
 
             # .. skip known noise ..
-            is_noise = False
+            is_expected = False
             for noise_pattern in _Log_Noise_Patterns:
                 if noise_pattern in line:
-                    is_noise = True
+                    is_expected = True
                     break
 
-            if is_noise:
+            # .. skip patterns declared by the test via the expect_log_errors marker ..
+            if not is_expected:
+                marker = request.node.get_closest_marker('expect_log_errors')
+                if marker:
+                    for pattern in marker.args:
+                        if pattern in line:
+                            is_expected = True
+                            break
+
+            if is_expected:
                 continue
 
             problems.append(f'[{label}] {line.strip()}')
