@@ -8,7 +8,7 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener \
 	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-enmasse \
-	test-cli test-mcp test-graphql test-hl7 test-ui _test-ui test-common test-distlock \
+	test-cli test-mcp test-graphql test-hl7 test-ui test-ui-pubsub _test-ui test-common test-distlock \
 	test-all test \
 	health-ruff health-clippy \
 	format format-zato \
@@ -431,8 +431,15 @@ test-hl7: ## HL7v2 parsing and MLLP tests.
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-ui: ## Dashboard backend and Playwright tests.
+	$(MAKE) test-ui-pubsub 2>&1 | tee /tmp/logs-test-ui-pubsub.txt
 	$(MAKE) _test-ui 2>&1 | tee /tmp/logs-test-ui.txt
 	$(MAKE) -C $(CURDIR)/code/zato-web-admin test
+
+test-ui-pubsub:
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_topic_create.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
+		$(FAIL_FAST) $(PYTEST_ARGS)
 
 _test-ui:
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
