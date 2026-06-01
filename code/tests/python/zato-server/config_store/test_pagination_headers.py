@@ -55,7 +55,7 @@ class TestPaginationHeaders:
         """ Invoke get-list with paginate=True, assert body is a bare list
         and pagination headers are present.
         """
-        response, headers = client._invoke_raw(f'{SERVICE}.get-list', {
+        response, headers = client._invoke(f'{SERVICE}.get-list', {
             'cluster_id': 1,
             'paginate': True,
             'cur_page': 1,
@@ -79,7 +79,7 @@ class TestPaginationHeaders:
     def test_03_get_list_no_meta_in_body(self, client):
         """ Verify that the response body does NOT contain _meta or response wrapper keys.
         """
-        response, headers = client._invoke_raw(f'{SERVICE}.get-list', {
+        response, headers = client._invoke(f'{SERVICE}.get-list', {
             'cluster_id': 1,
             'paginate': True,
             'cur_page': 1,

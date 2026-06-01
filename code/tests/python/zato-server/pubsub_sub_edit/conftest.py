@@ -19,7 +19,7 @@ from zato.common.test.conftest_base_pubsub import create_zato_server_fixture, fi
 if 0:
     import logging
     from zato.common.test.conftest_base_pubsub import SessionState
-    from zato.common.typing_ import any_, anydict, strstrdict
+    from zato.common.typing_ import anydict, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################

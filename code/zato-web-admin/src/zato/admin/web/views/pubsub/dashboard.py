@@ -31,9 +31,9 @@ Poll JSON contract returned by _get_dashboard_data:
         }
     ],
     "history_timeline": {
-        "publishes": [{"ts": int (epoch ms), "count": int}],
-        "deliveries": [{"ts": int (epoch ms), "count": int}],
-        "depth": [{"ts": int (epoch ms), "value": int}]
+        "publishes": [{"timestamp": int (epoch ms), "count": int}],
+        "deliveries": [{"timestamp": int (epoch ms), "count": int}],
+        "depth": [{"timestamp": int (epoch ms), "value": int}]
     }
 }
 """

@@ -1,0 +1,25 @@
+security:
+
+  - name: test.subscribe.atomic.publisher
+    type: basic_auth
+    username: test.subscribe.atomic.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.subscribe.atomic.subscriber
+    type: basic_auth
+    username: test.subscribe.atomic.subscriber
+    password: "{{subscriber_password}}"
+
+pubsub_topic:
+
+  - name: subscribe.atomic.test.topic.1
+
+pubsub_permission:
+
+  - security: test.subscribe.atomic.publisher
+    pub:
+      - subscribe.atomic.**
+
+  - security: test.subscribe.atomic.subscriber
+    sub:
+      - subscribe.atomic.**

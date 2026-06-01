@@ -745,6 +745,22 @@ class ConfigManager(_ConfigManagerBase):
         wrapper.config['password'] = msg['password']
         wrapper.set_auth()
 
+    def _update_pubsub_security_rename(self, msg:'bunch_') -> 'None':
+        """ Updates pub/sub in-memory state when a security definition's username or name changes.
+        """
+        old_username = msg['old_username']
+        new_username = msg['username']
+
+        if old_username != new_username:
+            self.server.pubsub_subscriptions.update_username(old_username, new_username)
+            self.server.pubsub_pattern_matcher.change_client_id(old_username, new_username)
+
+        old_name = msg['old_name']
+        new_name = msg['name']
+
+        if old_name != new_name:
+            self.server.pubsub_subscriptions.update_sec_name(old_name, new_name)
+
 # ################################################################################################################################
 
     def init_generic_connections(self) -> 'None':
@@ -1164,9 +1180,12 @@ class ConfigManager(_ConfigManagerBase):
         # .. extract the newest information  ..
         sec_def = self.basic_auth_get_by_id(msg.id)
 
-        # .. update security groups.
+        # .. update security groups ..
         for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
             security_groups_ctx.set_current_basic_auth(msg.id, sec_def['username'], sec_def['password'])
+
+        # .. update pub/sub in-memory state if username or sec def name changed.
+        self._update_pubsub_security_rename(msg)
 
 # ################################################################################################################################
 
@@ -2020,11 +2039,9 @@ class ConfigManager(_ConfigManagerBase):
 
             self.server.pubsub_push_delivery.start_sub_key(sub_key)
 
-    def on_config_event_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'bunch_') -> 'None':
-
-        sub_key = msg.sub_key
-        username = msg.username
-
+    def cleanup_subscription(self, sub_key:'str', username:'str') -> 'None':
+        """ Cleans up all in-memory and Redis state for a single subscription.
+        """
         # .. collect topic names this sub_key belongs to before we remove them from memory ..
         topic_names = [
             topic_name for topic_name, sub_list in self.config_store.pubsub_subs.items()
@@ -2035,14 +2052,62 @@ class ConfigManager(_ConfigManagerBase):
         for topic_name in topic_names:
             self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
 
+        # .. remove in-memory subscription configs ..
         self._remove_pubsub_sub_configs_by_sub_key(sub_key)
+
+        # .. remove user from the subscriptions store ..
         self.server.pubsub_subscriptions.remove_user(username)
 
         # .. remove push delivery config ..
-        self._push_subs.pop(sub_key, None)
+        _ = self._push_subs.pop(sub_key, None)
 
         # .. stop the delivery greenlet for this sub_key ..
         self.server.pubsub_push_delivery.stop_sub_key(sub_key)
+
+# ################################################################################################################################
+
+    def cleanup_security_pubsub(self, session:'any_', sec_base_id:'int', username:'str') -> 'None':
+        """ Cleans up all pub/sub state for subscriptions and permissions tied to a security definition.
+        Called before the security definition is cascade-deleted from ODB.
+        """
+        from zato.common.odb.query import pubsub_subscriptions_by_sec_base
+
+        # .. find all subscriptions for this security definition ..
+        subscriptions = pubsub_subscriptions_by_sec_base(session, sec_base_id, self.server.cluster_id)
+
+        # .. clean up each subscription's in-memory and Redis state ..
+        for sub in subscriptions:
+            self.cleanup_subscription(sub.sub_key, username)
+
+        # .. remove the client from the pattern matcher ..
+        self.server.pubsub_pattern_matcher.remove_client(username)
+
+# ################################################################################################################################
+
+    def cleanup_rest_endpoint_pubsub(self, session:'any_', rest_endpoint_id:'int') -> 'None':
+        """ Cleans up all pub/sub state for subscriptions whose push endpoint is the given HTTPSOAP connection.
+        Called before the HTTPSOAP row is cascade-deleted from ODB.
+        """
+        from zato.common.odb.model import SecurityBase
+        from zato.common.odb.query import pubsub_subscriptions_by_rest_endpoint
+
+        # .. find all subscriptions pointing at this REST endpoint ..
+        subscriptions = pubsub_subscriptions_by_rest_endpoint(session, rest_endpoint_id, self.server.cluster_id)
+
+        # .. clean up each subscription's in-memory and Redis state ..
+        for sub in subscriptions:
+
+            # .. look up the username from the subscription's security definition ..
+            sec_def = session.query(SecurityBase).\
+                filter(SecurityBase.id == sub.sec_base_id).\
+                one()
+
+            self.cleanup_subscription(sub.sub_key, sec_def.username)
+
+# ################################################################################################################################
+
+    def on_config_event_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'bunch_') -> 'None':
+        self.cleanup_subscription(msg.sub_key, msg.username)
 
 # ################################################################################################################################
 
@@ -2082,21 +2147,8 @@ class ConfigManager(_ConfigManagerBase):
             # .. the topic name to use is the new name (which may be the same as old) ..
             topic_name = new_name
 
-            # .. remove subscription configs for this topic ..
-            sub_configs = self.config_store.pubsub_subs.pop(topic_name, None)
-
-            # .. stop push delivery greenlets and remove _push_subs entries for this topic ..
-            sub_keys_to_remove:'list' = []
-
-            for sub_key, config_list in self._push_subs.items():
-                for sub_config in config_list:
-                    if sub_config['topic_name'] == topic_name:
-                        sub_keys_to_remove.append(sub_key)
-                        break
-
-            for sub_key in sub_keys_to_remove:
-                _ = self._push_subs.pop(sub_key, None)
-                self.server.pubsub_push_delivery.stop_sub_key(sub_key)
+            # .. remove in-memory subscription and push delivery configs for this topic.
+            self._remove_topic_sub_configs(topic_name)
 
         elif is_active is True:
 
@@ -2169,6 +2221,9 @@ class ConfigManager(_ConfigManagerBase):
         # .. delete Redis keys, subscriber sets, and disk files ..
         self.server.pubsub_redis.delete_topic(topic_name)
 
+        # .. remove in-memory subscription and push delivery configs for this topic.
+        self._remove_topic_sub_configs(topic_name)
+
 # ################################################################################################################################
 
     def on_config_event_PUBSUB_PERMISSION_CREATE(self, msg:'bunch_') -> 'None':
@@ -2204,6 +2259,25 @@ class ConfigManager(_ConfigManagerBase):
                 empty_topics.append(topic_name)
         for topic_name in empty_topics:
             del self.config_store.pubsub_subs[topic_name]
+
+    def _remove_topic_sub_configs(self, topic_name:'str') -> 'None':
+        """ Removes in-memory subscription and push delivery configs for a topic.
+        """
+        # .. remove subscription configs for this topic ..
+        _ = self.config_store.pubsub_subs.pop(topic_name, None)
+
+        # .. stop push delivery greenlets referencing this topic ..
+        sub_keys_to_remove:'list' = []
+
+        for sub_key, config_list in self._push_subs.items():
+            for sub_config in config_list:
+                if sub_config['topic_name'] == topic_name:
+                    sub_keys_to_remove.append(sub_key)
+                    break
+
+        for sub_key in sub_keys_to_remove:
+            _ = self._push_subs.pop(sub_key, None)
+            self.server.pubsub_push_delivery.stop_sub_key(sub_key)
 
     def _update_pubsub_permissions(self, msg:'bunch_') -> 'None':
         if hasattr(msg, 'username') and msg.username:

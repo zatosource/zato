@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import json
-import logging as _depth_logging
 from logging import getLogger
 import os
 
@@ -39,12 +38,6 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
-
-_depth_debug_logger = _depth_logging.getLogger('zato.depth_debug')
-_depth_debug_logger.setLevel(_depth_logging.DEBUG)
-_depth_fh = _depth_logging.FileHandler('/tmp/zato-depth-debug.log')
-_depth_fh.setFormatter(_depth_logging.Formatter('%(asctime)s %(message)s'))
-_depth_debug_logger.addHandler(_depth_fh)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -87,12 +80,18 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_lua_unsub_script = """
+_lua_unsubscribe_and_clean_pending = """
 local sub_pending_key = KEYS[1]
 local expiry_key = KEYS[2]
+local topic_subs_key = KEYS[3]
 local sub_key = ARGV[1]
 local pending_prefix = ARGV[2]
 
+-- Remove subscriber from topic's set atomically before cleaning pending ..
+redis.call('SREM', topic_subs_key, sub_key)
+
+-- .. now clean pending - no publish Lua can add new entries for this sub_key
+-- .. because SMEMBERS topic_subs_key will no longer return sub_key ..
 local data_refs = redis.call('SMEMBERS', sub_pending_key)
 local deleted_refs = {}
 
@@ -107,6 +106,7 @@ for _, data_ref in ipairs(data_refs) do
     end
 end
 
+-- .. delete the subscriber's pending set.
 redis.call('DEL', sub_pending_key)
 return deleted_refs
 """
@@ -114,7 +114,123 @@ return deleted_refs
 # ################################################################################################################################
 # ################################################################################################################################
 
-_lua_pending_depths_script = """
+_lua_clean_up_after_ack = """
+local pending_key = KEYS[1]
+local sub_pending_key = KEYS[2]
+local expiry_key = KEYS[3]
+
+local sub_key = ARGV[1]
+local data_ref = ARGV[2]
+
+-- Remove this subscriber from the message's pending set ..
+redis.call('SREM', pending_key, sub_key)
+
+-- .. remove this message from the subscriber's reverse index ..
+redis.call('SREM', sub_pending_key, data_ref)
+
+-- .. check if any subscribers still need this message ..
+local remaining = redis.call('SCARD', pending_key)
+
+if remaining == 0 then
+
+    -- .. no one needs it, clean up the pending key and expiry entry.
+    redis.call('DEL', pending_key)
+    redis.call('ZREM', expiry_key, data_ref)
+    return {0, 1}
+end
+
+return {remaining, 0}
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_lua_subscribe = """
+local subs_key = KEYS[1]
+local topic_subs_key = KEYS[2]
+local stream_key = KEYS[3]
+
+local topic_name = ARGV[1]
+local sub_key = ARGV[2]
+
+-- Read entries-added from the stream before creating the group ..
+-- .. pcall in case the stream does not exist yet (MKSTREAM will create it) ..
+local entries_added_count = 0
+local info_ok, stream_info = pcall(redis.call, 'XINFO', 'STREAM', stream_key)
+
+if info_ok then
+    for field_index = 1, #stream_info, 2 do
+        if stream_info[field_index] == 'entries-added' then
+            entries_added_count = stream_info[field_index + 1]
+            break
+        end
+    end
+end
+
+-- .. create the consumer group before making the subscriber visible ..
+-- .. ENTRIESREAD ensures lag reports correctly even after XDELs ..
+-- .. pcall handles BUSYGROUP when the group already exists ..
+local ok, err = pcall(redis.call, 'XGROUP', 'CREATE', stream_key, sub_key, '$', 'MKSTREAM', 'ENTRIESREAD', entries_added_count)
+
+local group_created = 0
+
+if ok then
+    group_created = 1
+
+elseif not string.find(tostring(err), 'BUSYGROUP') then
+
+    -- .. unexpected error, propagate it.
+    return redis.error_reply(tostring(err))
+end
+
+-- .. now make the subscriber visible to publish Lua (SMEMBERS topic_subs_key) ..
+redis.call('SADD', topic_subs_key, sub_key)
+
+-- .. and record this topic in the subscriber's set.
+redis.call('SADD', subs_key, topic_name)
+
+return group_created
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_lua_populate_pending_and_publish = """
+local stream_key = KEYS[1]
+local topic_subs_key = KEYS[2]
+local pending_key = KEYS[3]
+local expiry_key = KEYS[4]
+
+local max_len = tonumber(ARGV[1])
+local data_ref = ARGV[2]
+local expiration_ts = tonumber(ARGV[3])
+local sub_pending_prefix = ARGV[4]
+local field_count = tonumber(ARGV[5])
+
+-- Get subscribers for this topic ..
+local subscriber_keys = redis.call('SMEMBERS', topic_subs_key)
+
+-- .. populate pending sets before the message becomes visible ..
+if #subscriber_keys > 0 then
+    redis.call('SADD', pending_key, unpack(subscriber_keys))
+    for _, sk in ipairs(subscriber_keys) do
+        local sub_pending_key = sub_pending_prefix .. sk
+        redis.call('SADD', sub_pending_key, data_ref)
+    end
+    redis.call('ZADD', expiry_key, expiration_ts, data_ref)
+end
+
+-- .. now add to stream (this is when XREADGROUP consumers can see it) ..
+local fields_start = 6
+local stream_id = redis.call('XADD', stream_key, 'MAXLEN', '~', max_len, '*', unpack(ARGV, fields_start, fields_start + field_count * 2 - 1))
+
+return {stream_id, #subscriber_keys}
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_lua_compute_pending_depths = """
 
 -- Extract a named field from a flat key-value array returned by XINFO ..
 local function get_field(info, field_name)
@@ -225,6 +341,103 @@ return result
 # ################################################################################################################################
 # ################################################################################################################################
 
+_lua_rename_topic = """
+local old_stream_key = KEYS[1]
+local new_stream_key = KEYS[2]
+local old_topic_subs_key = KEYS[3]
+local new_topic_subs_key = KEYS[4]
+local old_topic_name = ARGV[1]
+local new_topic_name = ARGV[2]
+local subs_prefix = ARGV[3]
+
+-- Get all subscribers before any mutation ..
+local subscriber_keys = redis.call('SMEMBERS', old_topic_subs_key)
+
+-- .. rename the stream (pcall - stream may not exist yet) ..
+pcall(redis.call, 'RENAME', old_stream_key, new_stream_key)
+
+-- .. rename the topic subscribers set ..
+pcall(redis.call, 'RENAME', old_topic_subs_key, new_topic_subs_key)
+
+-- .. update each subscriber's topic membership ..
+for _, sk in ipairs(subscriber_keys) do
+    local subs_key = subs_prefix .. sk
+    redis.call('SREM', subs_key, old_topic_name)
+    redis.call('SADD', subs_key, new_topic_name)
+end
+
+return #subscriber_keys
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_lua_delete_topic = """
+local stream_key = KEYS[1]
+local topic_subs_key = KEYS[2]
+local expiry_key = KEYS[3]
+local subs_prefix = ARGV[1]
+local topic_name = ARGV[2]
+local pending_prefix = ARGV[3]
+local sub_pending_prefix = ARGV[4]
+
+-- Atomically read and delete topic_subs_key so no new subscribe can add to it ..
+local subscriber_keys = redis.call('SMEMBERS', topic_subs_key)
+redis.call('DEL', topic_subs_key)
+
+-- .. collect all data_refs from this topic's stream ..
+local topic_data_refs = {}
+local stream_exists = redis.call('EXISTS', stream_key)
+
+if stream_exists == 1 then
+    local stream_entries = redis.call('XRANGE', stream_key, '-', '+')
+    for _, entry in ipairs(stream_entries) do
+        local fields = entry[2]
+        for fi = 1, #fields, 2 do
+            if fields[fi] == 'data_ref' then
+                table.insert(topic_data_refs, fields[fi + 1])
+                break
+            end
+        end
+    end
+end
+
+-- .. per subscriber: remove topic from subs set, clean pending for this topic only, destroy group ..
+for _, sk in ipairs(subscriber_keys) do
+    local subs_key = subs_prefix .. sk
+    redis.call('SREM', subs_key, topic_name)
+
+    local sub_pending_key = sub_pending_prefix .. sk
+    for _, data_ref in ipairs(topic_data_refs) do
+        redis.call('SREM', sub_pending_key, data_ref)
+
+        local pending_key = pending_prefix .. data_ref
+        redis.call('SREM', pending_key, sk)
+        local remaining = redis.call('SCARD', pending_key)
+        if remaining == 0 then
+            redis.call('DEL', pending_key)
+            redis.call('ZREM', expiry_key, data_ref)
+        end
+    end
+
+    -- .. if sub_pending is now empty, delete it ..
+    local sub_pending_remaining = redis.call('SCARD', sub_pending_key)
+    if sub_pending_remaining == 0 then
+        redis.call('DEL', sub_pending_key)
+    end
+
+    pcall(redis.call, 'XGROUP', 'DESTROY', stream_key, sk)
+end
+
+-- .. delete the stream last (after topic_subs_key is gone, publish Lua sees 0 subscribers).
+redis.call('DEL', stream_key)
+
+return #subscriber_keys
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class RedisPubSubBackend:
     """ Redis Streams-based pub/sub backend.
     """
@@ -233,8 +446,13 @@ class RedisPubSubBackend:
         self.redis = redis_client
         self.disk_store = disk_store
         self.server = server
-        self._lua_unsub_sha:'str' = cast_('str', self.redis.script_load(_lua_unsub_script))
-        self._lua_pending_depths_sha:'str' = cast_('str', self.redis.script_load(_lua_pending_depths_script))
+        self.lua_subscribe:'str'                     = cast_('str', self.redis.script_load(_lua_subscribe)) # noqa: E222
+        self.lua_unsubscribe_and_clean_pending:'str' = cast_('str', self.redis.script_load(_lua_unsubscribe_and_clean_pending))
+        self.lua_clean_up_after_ack:'str'            = cast_('str', self.redis.script_load(_lua_clean_up_after_ack)) # noqa: E222
+        self.lua_populate_pending_and_publish:'str'  = cast_('str', self.redis.script_load(_lua_populate_pending_and_publish))
+        self.lua_compute_pending_depths:'str'        = cast_('str', self.redis.script_load(_lua_compute_pending_depths))
+        self.lua_rename_topic:'str'                  = cast_('str', self.redis.script_load(_lua_rename_topic)) # noqa: E222
+        self.lua_delete_topic:'str'                  = cast_('str', self.redis.script_load(_lua_delete_topic)) # noqa: E222
 
 # ################################################################################################################################
 
@@ -332,7 +550,7 @@ class RedisPubSubBackend:
 
         # .. build the message with a reference to the disk file ..
         recv_time_iso = now.isoformat()
-        data_size = len(serialized_data)
+        data_size = str(len(serialized_data))
         data_preview = serialized_data[:_default_data_preview_len]
 
         message:'dict[FieldT, EncodableT]' = {
@@ -360,34 +578,56 @@ class RedisPubSubBackend:
         if publisher:
             message['publisher'] = publisher
 
-        # .. add to stream ..
+        # .. atomically populate pending sets and add to stream via Lua ..
         stream_key = self._get_stream_key(topic_name)
-        redis_stream_id = self.redis.xadd(stream_key, message, maxlen=_default_stream_max_len)
+        topic_subs_key = self._get_topic_subs_key(topic_name)
+        pending_key = self._get_pending_key(data_ref)
+        expiration_timestamp = expiration_time.timestamp()
+
+        # .. flatten message dict into key, value, key, value, ... for ARGV ..
+        message_fields:'list[str]' = []
+        for field_key, field_value in message.items():
+            field_key = cast_('str', field_key)
+            field_value = cast_('str', field_value)
+            message_fields.append(field_key)
+            message_fields.append(field_value)
+
+        field_count = len(message)
+
+        _publish_num_keys = 4
+
+        lua_result:'anylist' = cast_('anylist', self.redis.evalsha(
+            self.lua_populate_pending_and_publish,
+            _publish_num_keys,
+            stream_key,
+            topic_subs_key,
+            pending_key,
+            ModuleCtx.Pending_Expiry_Key,
+            str(_default_stream_max_len),
+            data_ref,
+            str(expiration_timestamp),
+            ModuleCtx.Sub_Pending_Prefix,
+            str(field_count),
+            *message_fields,
+        ))
+
+        _lua_result_stream_id_idx = 0
+        _lua_result_sub_count_idx = 1
+
+        redis_stream_id = lua_result[_lua_result_stream_id_idx]
+        subscriber_count = lua_result[_lua_result_sub_count_idx]
 
         logger.info('Published to stream -> message_id:%s, data_ref:%s, stream_key:%s, redis_stream_id:%s',
             message_id, data_ref, stream_key, redis_stream_id)
 
-        # .. populate the pending subscriber set and index by expiration time ..
-        topic_subs_key = self._get_topic_subs_key(topic_name)
-        subscriber_keys:'strset' = cast_('strset', self.redis.smembers(topic_subs_key))
-
-        # .. if there are any subscribers, record which ones still need this message ..
-        if subscriber_keys:
-            pending_key = self._get_pending_key(data_ref)
-            _ = self.redis.sadd(pending_key, *subscriber_keys)
-
-            # .. populate the reverse index for each subscriber ..
-            for sk in subscriber_keys:
-                sub_pending_key = self._get_sub_pending_key(sk)
-                _ = self.redis.sadd(sub_pending_key, data_ref)
-
-            # .. and index the message by its expiration time for the cleanup job ..
-            expiration_timestamp = expiration_time.timestamp()
-            _ = self.redis.zadd(ModuleCtx.Pending_Expiry_Key, {data_ref: expiration_timestamp})
-
-            subscriber_count = len(subscriber_keys)
+        if subscriber_count:
             logger.info('Populated pending set -> data_ref:%s, subscriber_count:%d, expiration_timestamp:%.1f',
                 data_ref, subscriber_count, expiration_timestamp)
+
+        # .. no subscribers exist - delete the disk file since nothing references it.
+        else:
+            self.disk_store.delete(data_ref)
+
         # .. update the publish counter and return the result.
         counter = zato_pubsub_messages_published_total.labels(topic_name=topic_name)
         _ = counter.inc()
@@ -411,23 +651,18 @@ class RedisPubSubBackend:
         topic_subs_key = self._get_topic_subs_key(topic_name)
         stream_key = self._get_stream_key(topic_name)
 
-        # .. add topic to subscriber's set ..
-        _ = self.redis.sadd(subs_key, topic_name)
+        # .. atomically create the consumer group and make the subscriber visible via Lua ..
+        _subscribe_num_keys = 3
 
-        # .. add subscriber to topic's set ..
-        _ = self.redis.sadd(topic_subs_key, sub_key)
-
-        # .. create consumer group starting from the stream's current tail ..
-        try:
-            _ = self.redis.xgroup_create(stream_key, sub_key, id='$', mkstream=True)
-        except ResponseError as error:
-            if 'BUSYGROUP' not in error.args[0]:
-                raise
-        else:
-            # .. the group was just created, so we need to seed entries-read
-            # .. to the current stream length so that XINFO GROUPS reports lag correctly.
-            stream_len = self.redis.xlen(stream_key)
-            _ = self.redis.xgroup_setid(stream_key, sub_key, id='$', entries_read=stream_len)
+        _ = self.redis.evalsha(
+            self.lua_subscribe,
+            _subscribe_num_keys,
+            subs_key,
+            topic_subs_key,
+            stream_key,
+            topic_name,
+            sub_key,
+        )
 
 # ################################################################################################################################
 
@@ -446,14 +681,11 @@ class RedisPubSubBackend:
         # .. remove topic from subscriber's set ..
         _ = self.redis.srem(subs_key, topic_name)
 
-        # .. remove subscriber from topic's set ..
-        _ = self.redis.srem(topic_subs_key, sub_key)
-
-        # .. eagerly clean up all pending messages for this subscriber via Lua script ..
+        # .. atomically remove subscriber from topic's set and clean up all pending messages via Lua ..
         sub_pending_key = self._get_sub_pending_key(sub_key)
         deleted_refs:'anylist' = cast_('anylist', self.redis.evalsha(
-            self._lua_unsub_sha, 2,
-            sub_pending_key, ModuleCtx.Pending_Expiry_Key,
+            self.lua_unsubscribe_and_clean_pending, 3,
+            sub_pending_key, ModuleCtx.Pending_Expiry_Key, topic_subs_key,
             sub_key, ModuleCtx.Pending_Prefix
         ))
 
@@ -545,7 +777,7 @@ class RedisPubSubBackend:
 
                 if now > expiration_time:
                     expired_data_ref = decoded['data_ref']
-                    self.ack_message(stream_name, sub_key, redis_message_id, expired_data_ref)
+                    _ = self.ack_message(stream_name, sub_key, redis_message_id, expired_data_ref)
                     continue
 
                 # .. check max_len constraint using data_size from metadata ..
@@ -564,7 +796,7 @@ class RedisPubSubBackend:
                 except FileNotFoundError:
                     logger.warning('Orphaned message -> sub_key:%s, data_ref:%s, redis_id:%s - acking and skipping',
                         sub_key, data_ref, redis_message_id)
-                    self.ack_message(stream_name, sub_key, redis_message_id, data_ref)
+                    _ = self.ack_message(stream_name, sub_key, redis_message_id, data_ref)
                     continue
 
                 decoded['data'] = load_result.data
@@ -596,8 +828,9 @@ class RedisPubSubBackend:
 
 # ################################################################################################################################
 
-    def ack_message(self, stream_name:'str', sub_key:'str', redis_message_id:'str', data_ref:'strnone'=None) -> 'None':
+    def ack_message(self, stream_name:'str', sub_key:'str', redis_message_id:'str', data_ref:'strnone'=None) -> 'bool':
         """ Acknowledge a single message after successful processing.
+        Returns True if no subscribers remain (the message was fully cleaned up).
         """
         # Acknowledge the message in the stream ..
         logger.info('ack_message -> sub_key:%s, stream_name:%s, redis_message_id:%s, data_ref:%s',
@@ -605,31 +838,73 @@ class RedisPubSubBackend:
 
         _ = self.redis.xack(stream_name, sub_key, redis_message_id)
 
-        # .. remove this subscriber from the message's pending set and the reverse index ..
+        # .. atomically remove this subscriber from the pending set and clean up if last ..
         if data_ref:
             pending_key = self._get_pending_key(data_ref)
-
-            _ = self.redis.srem(pending_key, sub_key)
-
             sub_pending_key = self._get_sub_pending_key(sub_key)
-            _ = self.redis.srem(sub_pending_key, data_ref)
 
-            # .. check if any subscribers still need this message ..
-            remaining = self.redis.scard(pending_key)
+            _ack_cleanup_num_keys = 3
 
-            if remaining == 0:
+            cleanup_result:'anylist' = cast_('anylist', self.redis.evalsha(
+                self.lua_clean_up_after_ack,
+                _ack_cleanup_num_keys,
+                pending_key,
+                sub_pending_key,
+                ModuleCtx.Pending_Expiry_Key,
+                sub_key,
+                data_ref,
+            ))
 
-                # .. no one needs this message anymore, delete everything.
-                _ = self.redis.delete(pending_key)
-                _ = self.redis.zrem(ModuleCtx.Pending_Expiry_Key, data_ref)
+            _cleanup_remaining_idx = 0
+            _cleanup_deleted_idx   = 1
+
+            remaining = cleanup_result[_cleanup_remaining_idx]
+            needs_disk_delete = cleanup_result[_cleanup_deleted_idx]
+
+            if needs_disk_delete:
                 self.disk_store.delete(data_ref)
-
                 logger.info('ack_message deleted file -> data_ref:%s, sub_key:%s',
                     data_ref, sub_key)
+
+                return True
 
             else:
                 logger.info('ack_message pending remaining -> data_ref:%s, sub_key:%s, remaining:%s',
                     data_ref, sub_key, remaining)
+
+        return False
+
+# ################################################################################################################################
+
+    def _run_ack_cleanup(self, sub_key:'str', data_ref:'str') -> 'bool':
+        """ Atomically removes a subscriber from a message's pending set, cleans up if last.
+        Returns True if no subscribers remain and the disk file was deleted.
+        Used by clear_queue for entries that do not need XACK (unread or already-acked entries).
+        """
+        pending_key = self._get_pending_key(data_ref)
+        sub_pending_key = self._get_sub_pending_key(sub_key)
+
+        _ack_cleanup_num_keys = 3
+
+        cleanup_result:'anylist' = cast_('anylist', self.redis.evalsha(
+            self.lua_clean_up_after_ack,
+            _ack_cleanup_num_keys,
+            pending_key,
+            sub_pending_key,
+            ModuleCtx.Pending_Expiry_Key,
+            sub_key,
+            data_ref,
+        ))
+
+        _cleanup_deleted_idx = 1
+
+        needs_disk_delete = cleanup_result[_cleanup_deleted_idx]
+
+        if needs_disk_delete:
+            self.disk_store.delete(data_ref)
+
+        out = bool(needs_disk_delete)
+        return out
 
 # ################################################################################################################################
 
@@ -701,7 +976,7 @@ class RedisPubSubBackend:
             })
 
             # .. acknowledge and clean up the disk file ..
-            self.ack_message(stream_name, sub_key, redis_message_id, data_ref)
+            _ = self.ack_message(stream_name, sub_key, redis_message_id, data_ref)
 
             # .. update the delivery counter.
             counter = zato_pubsub_messages_delivered_total.labels(topic_name=message['topic_name'])
@@ -870,8 +1145,6 @@ class RedisPubSubBackend:
         # .. find the group's last-delivered-id so we know where unread messages start ..
         last_delivered_id = self._get_last_delivered_id(stream_key, sub_key)
 
-        _depth_debug_logger.info('_browse_pending last_delivered_id=%s stream_key=%s sub_key=%s', last_delivered_id, stream_key, sub_key)
-
         if reverse:
             return self._browse_pending_reverse(
                 stream_key, sub_key, cursor, page_size, needs_data, last_delivered_id)
@@ -905,8 +1178,6 @@ class RedisPubSubBackend:
 
         unread_ids:'anylist' = [entry[0] for entry in unread_entries]
 
-        _depth_debug_logger.info('_browse_pending PEL=%d unread=%d stream_key=%s sub_key=%s', len(pending_ids), len(unread_ids), stream_key, sub_key)
-
         # .. merge and deduplicate the two sets of IDs ..
         seen:'set' = set()
         all_ids:'anylist' = []
@@ -923,7 +1194,6 @@ class RedisPubSubBackend:
 
         all_ids.sort()
 
-        _depth_debug_logger.info('_browse_pending merged=%d stream_key=%s sub_key=%s', len(all_ids), stream_key, sub_key)
         all_ids = all_ids[:page_size]
 
         if not all_ids:
@@ -1230,12 +1500,8 @@ class RedisPubSubBackend:
             argv.append(stream_key)
             argv.append(sub_key)
 
-        _depth_debug_logger.info('get_pending_depths INPUT pairs=%s argv=%s', sub_topic_pairs, argv)
-
         # .. call the Lua script ..
-        counts:'anylist' = cast_('anylist', self.redis.evalsha(self._lua_pending_depths_sha, 0, *argv))
-
-        _depth_debug_logger.info('get_pending_depths RAW counts=%s', counts)
+        counts:'anylist' = cast_('anylist', self.redis.evalsha(self.lua_compute_pending_depths, 0, *argv))
 
         # .. and sum the per-pair results into per-subscriber totals.
         out:'anydict' = {}
@@ -1248,8 +1514,6 @@ class RedisPubSubBackend:
                 out[sub_key] = out[sub_key] + count
             else:
                 out[sub_key] = count
-
-        _depth_debug_logger.info('get_pending_depths OUTPUT=%s', out)
 
         return out
 
@@ -1264,7 +1528,6 @@ class RedisPubSubBackend:
             # Reuse the existing Lua script (PEL + lag) for pending depth ..
             depths = self.get_pending_depths([(sub_key, topic_name)])
             out = depths[sub_key]
-            _depth_debug_logger.info('get_total_count PENDING sub_key=%s topic=%s depth=%s', sub_key, topic_name, out)
             return out
 
         elif state == 'all':
@@ -1274,6 +1537,7 @@ class RedisPubSubBackend:
 
             try:
                 out = self.redis.xlen(stream_key)
+                out = cast_('int', out)
             except ResponseError:
                 out = 0
 
@@ -1315,40 +1579,36 @@ class RedisPubSubBackend:
 # ################################################################################################################################
 
     def delete_topic(self, topic_name:'str') -> 'None':
-        """ Delete a topic and all its data.
+        """ Delete a topic and all its data atomically.
         """
         # Build the key names ..
         stream_key = self._get_stream_key(topic_name)
         topic_subs_key = self._get_topic_subs_key(topic_name)
 
-        # .. delete all payload files from disk before removing the stream ..
+        _delete_topic_num_keys = 3
+
+        # .. atomically remove all Redis state via Lua ..
+        _ = self.redis.evalsha(
+            self.lua_delete_topic,
+            _delete_topic_num_keys,
+            stream_key,
+            topic_subs_key,
+            ModuleCtx.Pending_Expiry_Key,
+            ModuleCtx.Subs_Prefix,
+            topic_name,
+            ModuleCtx.Pending_Prefix,
+            ModuleCtx.Sub_Pending_Prefix,
+        )
+
+        # .. delete disk files last - catches any files from in-flight publishes
+        # .. that wrote to disk before the Lua removed topic_subs_key.
         self.disk_store.delete_topic_dir(topic_name)
-
-        # .. get all subscribers to this topic ..
-        subscriptions = self.get_topic_subscribers(topic_name)
-
-        # .. remove topic from each subscriber's set ..
-        for sub_key in subscriptions:
-            subs_key = self._get_subs_key(sub_key)
-            _ = self.redis.srem(subs_key, topic_name)
-
-            # .. destroy consumer group ..
-            try:
-                _ = self.redis.xgroup_destroy(stream_key, sub_key)
-            except ResponseError:
-                logger.debug('Consumer group %s not found for stream %s during delete', sub_key, stream_key)
-
-        # .. delete the stream ..
-        _ = self.redis.delete(stream_key)
-
-        # .. delete the topic subscribers set.
-        _ = self.redis.delete(topic_subs_key)
 
 # ################################################################################################################################
 
     def get_publish_timeline(self, topic_names:'strlist', since_minutes:'int'=60) -> 'dictlist':
         """ Return a per-minute publish count timeline aggregated across the given topics.
-        Each entry is {'ts': <epoch_ms>, 'count': <int>}.
+        Each entry is {'timestamp': <epoch_ms>, 'count': <int>}.
         """
 
         # Compute the cutoff timestamp for the XRANGE query ..
@@ -1393,7 +1653,7 @@ class RedisPubSubBackend:
         out:'dictlist' = []
 
         for key_ms in sorted_keys:
-            entry = {'ts': key_ms, 'count': buckets[key_ms]}
+            entry = {'timestamp': key_ms, 'count': buckets[key_ms]}
             out.append(entry)
 
         return out
@@ -1479,12 +1739,9 @@ class RedisPubSubBackend:
                     data_ref = message_data['data_ref']
 
                     # .. ack and clean up pending indexes and disk ..
-                    self.ack_message(stream_key, sub_key, redis_stream_id, data_ref)
+                    no_subscribers_remain = self.ack_message(stream_key, sub_key, redis_stream_id, data_ref)
 
-                    # .. check if no other subscriber needs this entry ..
-                    pending_key = self._get_pending_key(data_ref)
-                    remaining = self.redis.scard(pending_key)
-                    if remaining == 0:
+                    if no_subscribers_remain:
                         ids_to_xdel.append(redis_stream_id)
 
                     cleared_count += 1
@@ -1496,6 +1753,7 @@ class RedisPubSubBackend:
             # Phase 2: handle unread entries beyond the consumer group cursor ..
             try:
                 stream_info = self.redis.xinfo_stream(stream_key)
+                stream_info = cast_('anydict', stream_info)
                 last_entry_id = stream_info['last-generated-id']
             except ResponseError:
                 continue
@@ -1519,19 +1777,10 @@ class RedisPubSubBackend:
                     for redis_stream_id, message_data in unread_entries:
                         data_ref = message_data['data_ref']
 
-                        # .. remove this subscriber from the message's pending set ..
-                        pending_key = self._get_pending_key(data_ref)
-                        _ = self.redis.srem(pending_key, sub_key)
+                        # .. atomically remove this subscriber and clean up if last ..
+                        no_subscribers_remain = self._run_ack_cleanup(sub_key, data_ref)
 
-                        sub_pending_key = self._get_sub_pending_key(sub_key)
-                        _ = self.redis.srem(sub_pending_key, data_ref)
-
-                        # .. if no subscribers remain, delete everything ..
-                        remaining = self.redis.scard(pending_key)
-                        if remaining == 0:
-                            _ = self.redis.delete(pending_key)
-                            _ = self.redis.zrem(ModuleCtx.Pending_Expiry_Key, data_ref)
-                            self.disk_store.delete(data_ref)
+                        if no_subscribers_remain:
                             ids_to_xdel.append(redis_stream_id)
 
                         cleared_count += 1
@@ -1560,25 +1809,11 @@ class RedisPubSubBackend:
                 for redis_stream_id, message_data in delivered_entries:
                     data_ref = message_data['data_ref']
 
-                    # .. remove this subscriber from the message's pending set ..
-                    pending_key = self._get_pending_key(data_ref)
-                    was_removed = self.redis.srem(pending_key, sub_key)
+                    # .. atomically remove this subscriber and clean up if last ..
+                    no_subscribers_remain = self._run_ack_cleanup(sub_key, data_ref)
 
-                    sub_pending_key = self._get_sub_pending_key(sub_key)
-                    _ = self.redis.srem(sub_pending_key, data_ref)
-
-                    # .. check if any other subscriber still needs this message ..
-                    remaining = self.redis.scard(pending_key)
-
-                    if remaining == 0:
-                        # .. no one needs it, remove the stream entry and disk file ..
-                        _ = self.redis.delete(pending_key)
-                        _ = self.redis.zrem(ModuleCtx.Pending_Expiry_Key, data_ref)
-                        self.disk_store.delete(data_ref)
+                    if no_subscribers_remain:
                         ids_to_xdel.append(redis_stream_id)
-
-                    if was_removed:
-                        cleared_count += 1
 
                 # .. advance the scan cursor ..
                 last_scanned_id = delivered_entries[-1][0]
@@ -1598,10 +1833,6 @@ class RedisPubSubBackend:
                 logger.warning('xgroup_setid failed -> stream_key:%s, sub_key:%s, error:%s',
                     stream_key, sub_key, error)
 
-        # .. clean out the sub_pending set entirely ..
-        sub_pending_key = self._get_sub_pending_key(sub_key)
-        _ = self.redis.delete(sub_pending_key)
-
         logger.info('clear_queue -> sub_key:%s, cleared_count:%d', sub_key, cleared_count)
 
         out:'anydict' = {
@@ -1613,7 +1844,7 @@ class RedisPubSubBackend:
 # ################################################################################################################################
 
     def rename_topic(self, old_topic_name:'str', new_topic_name:'str') -> 'None':
-        """ Rename a topic.
+        """ Rename a topic atomically via Lua to prevent races with concurrent publish/fetch.
         """
         # Build old and new key names ..
         old_stream_key = self._get_stream_key(old_topic_name)
@@ -1621,26 +1852,23 @@ class RedisPubSubBackend:
         old_topic_subs_key = self._get_topic_subs_key(old_topic_name)
         new_topic_subs_key = self._get_topic_subs_key(new_topic_name)
 
-        # .. get all subscribers ..
-        subscriptions = self.get_topic_subscribers(old_topic_name)
+        _rename_num_keys = 4
 
-        # .. rename stream ..
-        try:
-            _ = self.redis.rename(old_stream_key, new_stream_key)
-        except ResponseError:
-            logger.debug('Stream %s not found during rename', old_stream_key)
+        # .. execute the atomic rename Lua script ..
+        subscriber_count:'int' = cast_('int', self.redis.evalsha(
+            self.lua_rename_topic,
+            _rename_num_keys,
+            old_stream_key,
+            new_stream_key,
+            old_topic_subs_key,
+            new_topic_subs_key,
+            old_topic_name,
+            new_topic_name,
+            ModuleCtx.Subs_Prefix,
+        ))
 
-        # .. rename topic subscribers set ..
-        try:
-            _ = self.redis.rename(old_topic_subs_key, new_topic_subs_key)
-        except ResponseError:
-            logger.debug('Topic subscribers set %s not found during rename', old_topic_subs_key)
-
-        # .. update each subscriber's topic set.
-        for sub_key in subscriptions:
-            subs_key = self._get_subs_key(sub_key)
-            _ = self.redis.srem(subs_key, old_topic_name)
-            _ = self.redis.sadd(subs_key, new_topic_name)
+        logger.info('rename_topic -> old:%s, new:%s, subscribers_updated:%d',
+            old_topic_name, new_topic_name, subscriber_count)
 
         # Note: we do not rename the on-disk directory because Redis Streams
         # do not support in-place field updates, so existing data_ref values

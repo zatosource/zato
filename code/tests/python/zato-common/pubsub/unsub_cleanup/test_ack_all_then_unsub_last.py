@@ -53,9 +53,17 @@ class TestAckAllThenUnsubLastDeletes(BaseUnsubCleanupTestCase):
         messages_b = self.backend.fetch_messages(sub_key_b)
 
         for message in messages_b:
-            self.backend.ack_message(
-                message['_stream_name'], sub_key_b,
-                message['_redis_message_id'], message['_data_ref'])
+            stream_name = message['_stream_name']
+            redis_id = message['_redis_message_id']
+            msg_data_ref = message['_data_ref']
+
+            logger.info('ack_message input -> stream_name:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+                stream_name, sub_key_b, redis_id, msg_data_ref)
+
+            is_fully_cleaned = self.backend.ack_message(stream_name, sub_key_b, redis_id, msg_data_ref)
+
+            logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+            self.assertFalse(is_fully_cleaned)
 
         # .. after sub_b acks, pending sets still contain sub_a, files still exist ..
         for data_ref in data_refs:

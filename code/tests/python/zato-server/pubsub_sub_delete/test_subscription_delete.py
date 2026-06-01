@@ -14,6 +14,9 @@ import time
 # redis
 from redis import Redis
 
+# Zato
+from zato.common.api import PubSub
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -25,11 +28,11 @@ if 0:
 
 logger = logging.getLogger('zato.test.pubsub_sub_delete')
 
-_settle_time = 3.0
+_settle_time = 0.5
 
 _test_redis_host = 'localhost'
 _test_redis_port = 6379
-_test_redis_db   = 0
+_test_redis_db   = PubSub.Test_Redis_DB
 
 _Subs_Prefix        = 'zato:pubsub:subs:'
 _Topic_Subs_Prefix  = 'zato:pubsub:topic_subs:'
@@ -161,11 +164,11 @@ class TestSubscriptionDelete:
         redis = _get_redis()
 
         # .. find the pre-created single-topic subscription ..
-        sub_key = _get_sub_key_for_topics(admin, ['sd.topic.alpha'])
-        sub = _find_subscription_by_topics(admin, ['sd.topic.alpha'])
+        sub_key = _get_sub_key_for_topics(admin, ['sd.topic.single'])
+        sub = _find_subscription_by_topics(admin, ['sd.topic.single'])
 
         # .. verify Redis sets exist before delete ..
-        topic_name_lower = 'sd.topic.alpha'
+        topic_name_lower = 'sd.topic.single'
         subs_key = f'{_Subs_Prefix}{sub_key}'
         topic_subs_key = f'{_Topic_Subs_Prefix}{topic_name_lower}'
 
@@ -345,19 +348,19 @@ class TestSubscriptionDelete:
         admin = _get_admin()
         redis = _get_redis()
 
-        # .. find the pre-created multi-topic subscription (sd.topic.beta + sd.topic.gamma) ..
-        sub_key = _get_sub_key_for_topics(admin, ['sd.topic.beta', 'sd.topic.gamma'])
-        sub = _find_subscription_by_topics(admin, ['sd.topic.beta', 'sd.topic.gamma'])
+        # .. find the pre-created multi-topic subscription (sd.topic.multi.first + sd.topic.multi.second) ..
+        sub_key = _get_sub_key_for_topics(admin, ['sd.topic.multi.first', 'sd.topic.multi.second'])
+        sub = _find_subscription_by_topics(admin, ['sd.topic.multi.first', 'sd.topic.multi.second'])
 
         # .. verify Redis sets exist for both topics before delete ..
-        topic_beta_subs_key = f'{_Topic_Subs_Prefix}sd.topic.beta'
-        topic_gamma_subs_key = f'{_Topic_Subs_Prefix}sd.topic.gamma'
+        topic_first_subs_key  = f'{_Topic_Subs_Prefix}sd.topic.multi.first'
+        topic_second_subs_key = f'{_Topic_Subs_Prefix}sd.topic.multi.second'
         subs_key = f'{_Subs_Prefix}{sub_key}'
 
-        assert redis.sismember(topic_beta_subs_key, sub_key) == 1, \
-            'Expected sub_key in topic_subs for sd.topic.beta before delete'
-        assert redis.sismember(topic_gamma_subs_key, sub_key) == 1, \
-            'Expected sub_key in topic_subs for sd.topic.gamma before delete'
+        assert redis.sismember(topic_first_subs_key, sub_key) == 1, \
+            'Expected sub_key in topic_subs for sd.topic.multi.first before delete'
+        assert redis.sismember(topic_second_subs_key, sub_key) == 1, \
+            'Expected sub_key in topic_subs for sd.topic.multi.second before delete'
         assert redis.scard(subs_key) == 2, \
             'Expected 2 topics in subs set before delete'
 
@@ -366,10 +369,10 @@ class TestSubscriptionDelete:
         time.sleep(_settle_time)
 
         # .. verify both topics are cleaned from Redis ..
-        assert redis.sismember(topic_beta_subs_key, sub_key) == 0, \
-            'Expected sub_key removed from topic_subs for sd.topic.beta after delete'
-        assert redis.sismember(topic_gamma_subs_key, sub_key) == 0, \
-            'Expected sub_key removed from topic_subs for sd.topic.gamma after delete'
+        assert redis.sismember(topic_first_subs_key, sub_key) == 0, \
+            'Expected sub_key removed from topic_subs for sd.topic.multi.first after delete'
+        assert redis.sismember(topic_second_subs_key, sub_key) == 0, \
+            'Expected sub_key removed from topic_subs for sd.topic.multi.second after delete'
         assert redis.scard(subs_key) == 0, \
             'Expected subs set to be empty after multi-topic subscription delete'
 

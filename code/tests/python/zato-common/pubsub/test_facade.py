@@ -65,7 +65,7 @@ class TestPubSubFacadePublish(unittest.TestCase):
     def test_publish_to_service_calls_subscribe(self) -> 'None':
         """ Publishing to a known service name triggers subscribe with the correct sub_key and topic.
         """
-        self.facade.publish('my.api.customer.new', 'test data')
+        _ = self.facade.publish('my.api.customer.new', 'test data')
 
         expected_topic = _service_topic_prefix + 'my.api.customer.new'
         expected_sub_key = _service_sub_key_prefix + 'my.api.customer.new'
@@ -77,7 +77,7 @@ class TestPubSubFacadePublish(unittest.TestCase):
     def test_publish_to_service_publishes_to_computed_topic(self) -> 'None':
         """ The message is published to the computed service topic, not the raw service name.
         """
-        self.facade.publish('my.api.customer.new', 'test data')
+        _ = self.facade.publish('my.api.customer.new', 'test data')
 
         expected_topic = _service_topic_prefix + 'my.api.customer.new'
         call_args = self.server.pubsub_redis.publish.call_args
@@ -90,7 +90,7 @@ class TestPubSubFacadePublish(unittest.TestCase):
     def test_publish_to_unknown_name_uses_original_topic(self) -> 'None':
         """ Publishing to a name that is not a known service uses the original name as the topic.
         """
-        self.facade.publish('customer.events.new', 'test data')
+        _ = self.facade.publish('customer.events.new', 'test data')
 
         self.server.pubsub_redis.subscribe.assert_not_called()
 
@@ -103,8 +103,8 @@ class TestPubSubFacadePublish(unittest.TestCase):
     def test_second_publish_does_not_subscribe_again(self) -> 'None':
         """ The second publish to the same service name reuses the cached setup.
         """
-        self.facade.publish('my.api.customer.new', 'first message')
-        self.facade.publish('my.api.customer.new', 'second message')
+        _ = self.facade.publish('my.api.customer.new', 'first message')
+        _ = self.facade.publish('my.api.customer.new', 'second message')
 
         self.server.pubsub_redis.subscribe.assert_called_once()
 
@@ -116,7 +116,7 @@ class TestPubSubFacadePublish(unittest.TestCase):
     def test_push_subs_populated_after_first_publish(self) -> 'None':
         """ After first publish to a service, _push_subs contains the correct entry.
         """
-        self.facade.publish('my.api.customer.new', 'test data')
+        _ = self.facade.publish('my.api.customer.new', 'test data')
 
         expected_sub_key = _service_sub_key_prefix + 'my.api.customer.new'
         expected_topic = _service_topic_prefix + 'my.api.customer.new'
@@ -140,7 +140,7 @@ class TestPubSubFacadePublish(unittest.TestCase):
     def test_service_topic_cache_updated(self) -> 'None':
         """ The service topic cache contains the service name after publish.
         """
-        self.facade.publish('my.api.customer.new', 'test data')
+        _ = self.facade.publish('my.api.customer.new', 'test data')
 
         self.assertIn('my.api.customer.new', self.server.config_manager._service_topic_cache)
 
@@ -149,8 +149,8 @@ class TestPubSubFacadePublish(unittest.TestCase):
     def test_two_different_services_get_separate_subscriptions(self) -> 'None':
         """ Publishing to two different services creates separate subscriptions.
         """
-        self.facade.publish('my.api.customer.new', 'customer data')
-        self.facade.publish('my.api.order.create', 'order data')
+        _ = self.facade.publish('my.api.customer.new', 'customer data')
+        _ = self.facade.publish('my.api.order.create', 'order data')
 
         subscribe_call_count = self.server.pubsub_redis.subscribe.call_count
         self.assertEqual(subscribe_call_count, 2)
@@ -176,7 +176,7 @@ class TestPubSubFacadePublish(unittest.TestCase):
     def test_publish_passes_all_keyword_arguments(self) -> 'None':
         """ All optional keyword arguments are forwarded to the Redis backend.
         """
-        self.facade.publish(
+        _ = self.facade.publish(
             'customer.events',
             'test data',
             priority=9,
@@ -233,7 +233,7 @@ class TestPubSubFacadePublishInputModel(unittest.TestCase):
             'is_active': True,
         }
 
-        self.facade.publish('my.typed.service', input_data)
+        _ = self.facade.publish('my.typed.service', input_data)
 
         call_args = self.server.pubsub_redis.publish.call_args
 
@@ -244,7 +244,7 @@ class TestPubSubFacadePublishInputModel(unittest.TestCase):
     def test_string_data_passed_through_unchanged(self) -> 'None':
         """ A plain string payload is forwarded exactly as provided.
         """
-        self.facade.publish('my.typed.service', 'plain text message')
+        _ = self.facade.publish('my.typed.service', 'plain text message')
 
         call_args = self.server.pubsub_redis.publish.call_args
 
@@ -290,7 +290,7 @@ class TestServicePublishDelegatesToFacade(unittest.TestCase):
     def test_delegates_all_keyword_args(self) -> 'None':
         """ All optional keyword arguments are forwarded to self.pubsub.publish.
         """
-        self.publish(
+        _ = self.publish(
             self.service,
             'events.new',
             'payload',

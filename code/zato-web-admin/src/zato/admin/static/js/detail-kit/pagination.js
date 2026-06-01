@@ -187,7 +187,7 @@
             }
             if (!show_all && current_page !== 1) return;
 
-            var poll_extra = {since_ts: last_ts};
+            var poll_extra = {since_timestamp: last_ts};
             if (get_active_items) {
                 var active = get_active_items();
                 if (active.length > 0) {

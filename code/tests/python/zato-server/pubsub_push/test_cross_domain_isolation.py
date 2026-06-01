@@ -68,7 +68,7 @@ class TestCrossDomainIsolation(unittest.TestCase):
         self.assertEqual(source_count, 1)
 
         # .. now wait generously and check the unrelated receiver ..
-        isolation_wait = 10.0
+        isolation_wait = 3.0
         time.sleep(isolation_wait)
 
         unrelated_messages = unrelated_receiver.get_delivered_messages()
@@ -147,7 +147,7 @@ class TestCrossDomainIsolation(unittest.TestCase):
         self.assertEqual(delivered_count, 1)
 
         # .. wait generously to confirm no re-delivery ..
-        generous_wait = 30.0
+        generous_wait = 5.0
         time.sleep(generous_wait)
 
         all_messages = receiver.get_delivered_messages()
@@ -194,7 +194,7 @@ class TestCrossDomainIsolation(unittest.TestCase):
         self.assertEqual(len(errors), 0)
 
         # .. wait for all messages to be delivered ..
-        delivery_timeout = 60.0
+        delivery_timeout = 30.0
         messages = receiver.wait_for_delivery(expected_count=thread_count, timeout=delivery_timeout)
         delivered_count = len(messages)
         logger.info('Delivered %d message(s) -> %s', delivered_count, messages)

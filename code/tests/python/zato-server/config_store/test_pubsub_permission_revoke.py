@@ -19,7 +19,7 @@ from zato.common.test.client import AdminClient as ZatoClient
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist
+    from zato.common.typing_ import any_, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,8 +30,9 @@ _settle_time = 2.0
 # ################################################################################################################################
 
 @pytest.fixture(scope='module')
-def client(zato_server) -> 'ZatoClient':
-    return ZatoClient(zato_server['host'], zato_server['port'], zato_server['password'])
+def client(zato_server:'any_') -> 'ZatoClient':
+    base_url = f'http://{zato_server["host"]}:{zato_server["port"]}'
+    return ZatoClient(base_url, zato_server['password'])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,14 +40,14 @@ def client(zato_server) -> 'ZatoClient':
 def _create_sec_def(client:'ZatoClient', name:'str', username:'str') -> 'int':
     """ Creates a basic auth security definition and returns its ID.
     """
-    resp = client.create('zato.security.basic-auth.create',
+    response = client.create('zato.security.basic-auth.create',
         cluster_id=1,
         name=name,
         is_active=True,
         username=username,
         realm='testrealm',
     )
-    return resp['id']
+    return response['id']
 
 # ################################################################################################################################
 
@@ -64,20 +65,20 @@ def _create_topic(client:'ZatoClient', name:'str') -> 'None':
 def _create_permission(client:'ZatoClient', sec_base_id:'int', pattern:'str') -> 'int':
     """ Creates a pub/sub permission and returns its ID.
     """
-    resp = client.create('zato.pubsub.permission.create',
+    response = client.create('zato.pubsub.permission.create',
         cluster_id=1,
         sec_base_id=sec_base_id,
         pattern=pattern,
         access_type='publisher-subscriber',
     )
-    return resp['id']
+    return response['id']
 
 # ################################################################################################################################
 
 def _create_subscription(client:'ZatoClient', sec_base_id:'int', topic_names:'anylist') -> 'str':
     """ Creates a pull subscription and returns its sub_key.
     """
-    resp = client.create('zato.pubsub.subscription.create',
+    response = client.create('zato.pubsub.subscription.create',
         cluster_id=1,
         topic_name_list=topic_names,
         sec_base_id=sec_base_id,
@@ -85,7 +86,7 @@ def _create_subscription(client:'ZatoClient', sec_base_id:'int', topic_names:'an
         is_delivery_active=True,
         is_pub_active=True,
     )
-    return resp['sub_key']
+    return response['sub_key']
 
 # ################################################################################################################################
 
@@ -109,7 +110,7 @@ class TestPubSubPermissionRevoke:
     and preserves subscriptions still covered by remaining permissions.
     """
 
-    sec_id = None
+    sec_id:'int'
 
 # ################################################################################################################################
 
@@ -137,7 +138,7 @@ class TestPubSubPermissionRevoke:
         assert len(subs) == 1
 
         # .. delete the permission ..
-        client.delete('zato.pubsub.permission.delete', id=perm_id)
+        _ = client.delete('zato.pubsub.permission.delete', id=perm_id)
 
         time.sleep(_settle_time)
 
@@ -165,7 +166,7 @@ class TestPubSubPermissionRevoke:
         assert len(subs) == 1
 
         # .. delete only the crm permission ..
-        client.delete('zato.pubsub.permission.delete', id=perm_crm)
+        _ = client.delete('zato.pubsub.permission.delete', id=perm_crm)
 
         time.sleep(_settle_time)
 
@@ -174,7 +175,7 @@ class TestPubSubPermissionRevoke:
         assert len(subs) == 1
 
         # .. now delete the billing permission too ..
-        client.delete('zato.pubsub.permission.delete', id=perm_billing)
+        _ = client.delete('zato.pubsub.permission.delete', id=perm_billing)
 
         time.sleep(_settle_time)
 
@@ -194,7 +195,7 @@ class TestPubSubPermissionRevoke:
         time.sleep(_settle_time)
 
         # .. delete with no subscription present - must not raise ..
-        client.delete('zato.pubsub.permission.delete', id=perm_id)
+        _ = client.delete('zato.pubsub.permission.delete', id=perm_id)
 
         time.sleep(_settle_time)
 

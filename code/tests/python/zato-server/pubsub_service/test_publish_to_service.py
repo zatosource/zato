@@ -20,7 +20,7 @@ from zato.common.test.config_pubsub_service import TestConfig
 # ################################################################################################################################
 # ################################################################################################################################
 
-_delivery_poll_timeout  = 10
+_delivery_poll_timeout  = 5
 _delivery_poll_interval = 0.5
 
 # ################################################################################################################################
@@ -128,7 +128,7 @@ class TestPublishToService(unittest.TestCase):
         })
 
         # .. give Redis a moment to process ..
-        time.sleep(1)
+        time.sleep(0.3)
 
         raw = self.client.invoke('test.pubsub.check-redis-topics')
         result = json.loads(raw) if isinstance(raw, str) else raw

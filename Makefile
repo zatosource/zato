@@ -7,8 +7,8 @@
 	update cron-update stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener \
 	help install-deps \
-	test-server test-rest test-scheduler test-rate-limiting test-pubsub test-enmasse \
-	test-cli test-mcp test-graphql test-hl7 test-dashboard test-ui test-common test-distlock \
+	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-enmasse \
+	test-cli test-mcp test-graphql test-hl7 test-ui _test-ui test-common test-distlock \
 	test-all test \
 	health-ruff health-clippy \
 	format format-zato \
@@ -21,6 +21,8 @@
 	hl7-haproxy hl7-backend-mllp hl7-backend-rest hl7-send-message \
 	quickstart dashboard server listener haproxy dev
 
+SHELL := /bin/bash
+.SHELLFLAGS := -o pipefail -c
 MAKEFLAGS += --silent --no-print-directory
 
 CARGO_ENV := $(HOME)/.cargo/env
@@ -32,6 +34,7 @@ ZATO_HEALTH_RS := $(CURDIR)/code/zato-common/src/zato
 SITE_PACKAGES := $(shell $(CURDIR)/code/bin/python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])" 2>/dev/null)
 
 ZATO_PY := $(CURDIR)/code/bin/python
+TS := ts '%Y-%m-%d %H:%M:%S'
 
 # ----------------------------------------------------------------------------
 # Zato_Projects_Root - needed by health, test, and lint targets only.
@@ -286,7 +289,7 @@ restart-dashboard:
 COSMIC_RAY := $(CURDIR)/code/bin/cosmic-ray
 
 test-server: ## Server unit and integration tests.
-	$(ZATO_PY) -m pytest \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/zato-common/test/zato/common/marshall_/ \
 		$(CURDIR)/code/tests/python/zato-server/marshall/ \
 		$(CURDIR)/code/tests/python/zato-server/config_store/ \
@@ -341,20 +344,62 @@ test-rate-limiting: ## All rate limiting tests.
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-pubsub: ## All pub/sub tests.
-	$(ZATO_PY) -m unittest discover -s $(CURDIR)/code/tests/python/zato-common/pubsub -p 'test_*.py' -v
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+	$(MAKE) _test-pubsub 2>&1 | tee /tmp/logs-test-pubsub.txt
+
+_test-pubsub:
+	ruff check \
+		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_service/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_push/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_cleanup/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_combined/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_push/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_ack_atomicity/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_cli/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_new_sub/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_edit/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_delete_mismatch/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_perm_edit/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_unsub_atomic/ \
+		2>&1 | $(TS)
+	pyright \
+		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_service/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_push/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_cleanup/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_combined/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_push/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_ack_atomicity/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_cli/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_new_sub/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_edit/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_delete_mismatch/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_perm_edit/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_unsub_atomic/ \
+		2>&1 | $(TS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_service/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_push/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_cleanup/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_combined/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_push/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_ack_atomicity/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_cli/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_new_sub/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_edit/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_delete_mismatch/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_perm_edit/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_unsub_atomic/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS)
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		2>&1 | $(TS)
 
 test-enmasse: ## Enmasse round-trip tests.
 	$(ZATO_PY) -m unittest discover -s $(CURDIR)/code/zato-cli/test/zato/enmasse_ -p 'test_*.py' -v
@@ -379,20 +424,17 @@ test-graphql: ## GraphQL live tests.
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-hl7: ## HL7v2 parsing and MLLP tests.
-	$(ZATO_PY) -m pytest \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/mllp/ \
 		$(CURDIR)/code/tests/python/zato-server/mllp_integration/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7 -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-dashboard: ## Dashboard backend and Playwright tests.
+test-ui: ## Dashboard backend and Playwright tests.
+	$(MAKE) _test-ui 2>&1 | tee /tmp/logs-test-ui.txt
 	$(MAKE) -C $(CURDIR)/code/zato-web-admin test
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright \
-		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-ui: ## Dashboard Playwright tests (standalone).
+_test-ui:
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright \
@@ -405,7 +447,7 @@ test-distlock: ## Distlock tests.
 	$(MAKE) -C $(CURDIR)/code/zato-distlock test
 
 test-all: test-server test-rest test-scheduler test-rate-limiting test-pubsub test-enmasse \
-	test-cli test-mcp test-graphql test-hl7 test-dashboard test-common test-distlock ## Everything.
+	test-cli test-mcp test-graphql test-hl7 test-ui test-common test-distlock ## Everything.
 
 test: test-all ## Alias for test-all.
 

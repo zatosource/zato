@@ -103,7 +103,7 @@ $.fn.zato.pubsub.common.populateTopics = function(formType, selectedNamesOrIds, 
                 okButton.prop('disabled', true);
             }
         },
-        error: function(xhr, status, error) {
+        error: function(request, status, error) {
             selectContainer.find('.loading-spinner').remove();
 
             var errorElement = $('<span class="no-topics-message" style="font-style: italic; color: #d00;">Error loading topics</span>');

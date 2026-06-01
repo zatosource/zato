@@ -6,6 +6,15 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from dataclasses import dataclass
+
+# Zato
+from zato.server.service import Model, Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # This file is hot-deployed into a test Zato server by conftest.py.
 # It defines receiver and chain services used by the pubsub_service live tests.
 
@@ -16,13 +25,6 @@ _chain_received = []
 _fanout_1_received = []
 _fanout_2_received = []
 _typed_chain_received = []
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-from dataclasses import dataclass
-
-from zato.server.service import Model, Service
 
 # ################################################################################################################################
 # ################################################################################################################################

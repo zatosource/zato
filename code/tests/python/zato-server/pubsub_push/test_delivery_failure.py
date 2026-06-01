@@ -60,7 +60,7 @@ class TestDeliveryFailure(unittest.TestCase):
         logger.info('Published message to %s with %d rejections configured', topic_name, reject_count)
 
         # .. wait for delivery to eventually succeed after retries ..
-        delivery_timeout = 60.0
+        delivery_timeout = 30.0
         messages = receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
         delivered_count = len(messages)
         logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
@@ -93,7 +93,7 @@ class TestDeliveryFailure(unittest.TestCase):
         logger.info('Published message to %s while receiver is down', topic_name)
 
         # .. wait a few seconds for at least one failed delivery attempt ..
-        down_duration = 5.0
+        down_duration = 2.0
         time.sleep(down_duration)
 
         # .. restart the receiver on the same port ..
@@ -101,7 +101,7 @@ class TestDeliveryFailure(unittest.TestCase):
         logger.info('Restarted receiver for %s on port %d', topic_name, receiver.port)
 
         # .. wait for delivery to succeed after restart ..
-        delivery_timeout = 60.0
+        delivery_timeout = 30.0
         messages = receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
         delivered_count = len(messages)
         logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
@@ -131,7 +131,7 @@ class TestDeliveryFailure(unittest.TestCase):
         logger.info('Published message to %s with %s second hang configured', topic_name, hang_duration)
 
         # .. wait for delivery (longer than the hang duration) ..
-        delivery_timeout = 60.0
+        delivery_timeout = 30.0
         messages = receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
         delivered_count = len(messages)
         logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
@@ -161,7 +161,7 @@ class TestDeliveryFailure(unittest.TestCase):
         logger.info('Published message to %s with TTL=%d second(s), receiver rejecting', topic_name, ttl_seconds)
 
         # .. wait for the message to expire and the delivery task to give up ..
-        expiry_wait = 10.0
+        expiry_wait = 3.0
         time.sleep(expiry_wait)
 
         # .. now switch receiver to accept and clear output ..
@@ -170,7 +170,7 @@ class TestDeliveryFailure(unittest.TestCase):
         logger.info('Receiver switched to accept after expiry wait of %s seconds', expiry_wait)
 
         # .. wait generously to confirm no late delivery arrives ..
-        post_recovery_wait = 10.0
+        post_recovery_wait = 3.0
         time.sleep(post_recovery_wait)
 
         # .. check what arrived ..
@@ -243,7 +243,7 @@ class TestDeliveryFailure(unittest.TestCase):
         logger.info('Published message to %s with %d rejections configured', topic_name, reject_count)
 
         # .. wait for delivery to succeed ..
-        delivery_timeout = 60.0
+        delivery_timeout = 30.0
         messages = receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
         delivered_count = len(messages)
         logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
@@ -251,7 +251,7 @@ class TestDeliveryFailure(unittest.TestCase):
         self.assertEqual(delivered_count, 1)
 
         # .. now wait generously to confirm no second delivery arrives ..
-        generous_wait = 15.0
+        generous_wait = 5.0
         time.sleep(generous_wait)
 
         # .. re-check the total count ..
@@ -289,7 +289,7 @@ class TestDeliveryFailure(unittest.TestCase):
             burst_count, topic_name, initial_reject_count)
 
         # .. wait for all messages to be delivered ..
-        delivery_timeout = 120.0
+        delivery_timeout = 60.0
         messages = receiver.wait_for_delivery(expected_count=burst_count, timeout=delivery_timeout)
         delivered_count = len(messages)
         logger.info('Delivered %d message(s) -> %s', delivered_count, messages)

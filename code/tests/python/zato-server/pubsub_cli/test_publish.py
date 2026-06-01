@@ -17,7 +17,7 @@ if 0:
 # ################################################################################################################################
 
 _topic = 'cli.test.topic.1'
-_settle_time = 2.0
+_settle_time = 0.5
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -59,7 +59,7 @@ class TestPublish:
 
     def test_publish_via_cli(self, zato_server:'any_') -> 'None':
 
-        from zato.common.test.client import AdminClient, PublishClient
+        from zato.common.test.client import AdminClient
         from zato.common.test.config_pubsub_cli import TestConfig
 
         admin = AdminClient(TestConfig.base_url, TestConfig.invoke_password)

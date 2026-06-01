@@ -29,6 +29,8 @@ pubsub_topic:
   - name: td.pull.single
   - name: td.multi.first
   - name: td.multi.second
+  - name: td.push.multi.first
+  - name: td.push.multi.second
 
 pubsub_permission:
 
@@ -43,6 +45,8 @@ pubsub_permission:
   - security: test.td.push.subscriber
     sub:
       - td.push.single
+      - td.push.multi.first
+      - td.push.multi.second
 
 pubsub_subscription:
 
@@ -62,3 +66,10 @@ pubsub_subscription:
     topic_list:
       - td.multi.first
       - td.multi.second
+
+  - security: test.td.push.subscriber
+    delivery_type: push
+    push_rest_endpoint: test.td.out.push
+    topic_list:
+      - td.push.multi.first
+      - td.push.multi.second

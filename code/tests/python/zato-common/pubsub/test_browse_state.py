@@ -19,9 +19,6 @@ from test_fetch import BaseFetchTestCase
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
-    from zato.common.typing_ import anylist # noqa: F401
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -53,8 +50,16 @@ class TestBrowsePending(BaseFetchTestCase):
         # .. ack one message (removes from PEL) ..
         stream_key = f'{ModuleCtx.Stream_Prefix}{self.topic_name}'
         first_message = messages[0]
-        self.backend.ack_message(stream_key, sub_key, first_message['_redis_message_id'], first_message['_data_ref'])
-        logger.info('ack_message -> redis_id:%s', first_message['_redis_message_id'])
+        redis_id = first_message['_redis_message_id']
+        data_ref = first_message['_data_ref']
+
+        logger.info('ack_message input -> stream_key:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+            stream_key, sub_key, redis_id, data_ref)
+
+        is_fully_cleaned = self.backend.ack_message(stream_key, sub_key, redis_id, data_ref)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+        self.assertTrue(is_fully_cleaned)
 
         # .. browse pending should return only the 2 unacked messages.
         result, next_cursor = self.backend.browse_messages(self.topic_name, sub_key=sub_key, state='pending')
@@ -82,8 +87,16 @@ class TestBrowsePending(BaseFetchTestCase):
         # .. ack all messages ..
         stream_key = f'{ModuleCtx.Stream_Prefix}{self.topic_name}'
         for message in messages:
-            self.backend.ack_message(stream_key, sub_key, message['_redis_message_id'], message['_data_ref'])
-            logger.info('ack_message -> redis_id:%s', message['_redis_message_id'])
+            redis_id = message['_redis_message_id']
+            data_ref = message['_data_ref']
+
+            logger.info('ack_message input -> stream_key:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+                stream_key, sub_key, redis_id, data_ref)
+
+            is_fully_cleaned = self.backend.ack_message(stream_key, sub_key, redis_id, data_ref)
+
+            logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+            self.assertTrue(is_fully_cleaned)
 
         # .. browse pending should return 0.
         result, next_cursor = self.backend.browse_messages(self.topic_name, sub_key=sub_key, state='pending')
@@ -203,8 +216,16 @@ class TestBrowseAll(BaseFetchTestCase):
 
         stream_key = f'{ModuleCtx.Stream_Prefix}{self.topic_name}'
         first_message = messages[0]
-        self.backend.ack_message(stream_key, sub_key, first_message['_redis_message_id'], first_message['_data_ref'])
-        logger.info('ack_message -> redis_id:%s', first_message['_redis_message_id'])
+        redis_id = first_message['_redis_message_id']
+        data_ref = first_message['_data_ref']
+
+        logger.info('ack_message input -> stream_key:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+            stream_key, sub_key, redis_id, data_ref)
+
+        is_fully_cleaned = self.backend.ack_message(stream_key, sub_key, redis_id, data_ref)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+        self.assertTrue(is_fully_cleaned)
 
         # .. browse with state='all' should return all 3 regardless of ack status.
         result, next_cursor = self.backend.browse_messages(self.topic_name, sub_key=sub_key, state='all')
@@ -264,8 +285,16 @@ class TestBrowseDelivered(BaseFetchTestCase):
 
         stream_key = f'{ModuleCtx.Stream_Prefix}{self.topic_name}'
         first_message = messages[0]
-        self.backend.ack_message(stream_key, sub_key, first_message['_redis_message_id'], first_message['_data_ref'])
-        logger.info('ack_message -> redis_id:%s', first_message['_redis_message_id'])
+        redis_id = first_message['_redis_message_id']
+        data_ref = first_message['_data_ref']
+
+        logger.info('ack_message input -> stream_key:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+            stream_key, sub_key, redis_id, data_ref)
+
+        is_fully_cleaned = self.backend.ack_message(stream_key, sub_key, redis_id, data_ref)
+
+        logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+        self.assertTrue(is_fully_cleaned)
 
         # .. browse with state='delivered' should return only the acked entry.
         result, next_cursor = self.backend.browse_messages(self.topic_name, sub_key=sub_key, state='delivered')
@@ -313,7 +342,16 @@ class TestBrowseDelivered(BaseFetchTestCase):
 
         stream_key = f'{ModuleCtx.Stream_Prefix}{self.topic_name}'
         for message in messages:
-            self.backend.ack_message(stream_key, sub_key, message['_redis_message_id'], message['_data_ref'])
+            redis_id = message['_redis_message_id']
+            data_ref = message['_data_ref']
+
+            logger.info('ack_message input -> stream_key:%s, sub_key:%s, redis_id:%s, data_ref:%s',
+                stream_key, sub_key, redis_id, data_ref)
+
+            is_fully_cleaned = self.backend.ack_message(stream_key, sub_key, redis_id, data_ref)
+
+            logger.info('ack_message output -> is_fully_cleaned:%s', is_fully_cleaned)
+            self.assertTrue(is_fully_cleaned)
 
         # .. publish 2 more without fetching (unread) ..
         for idx in range(2):

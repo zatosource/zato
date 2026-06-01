@@ -40,7 +40,7 @@ class TestPublishRejection(unittest.TestCase):
         topic_name = 'iam.user.created'
 
         # Publish with wrong credentials ..
-        result = self.publisher.publish_raw(topic_name, 'rejected payload', username='wrong_user', password='wrong_pass')
+        result = self.publisher._publish(topic_name, 'rejected payload', username='wrong_user', password='wrong_pass')
         logger.info('Wrong credentials -> status_code:%d, body:%s', result.status_code, result.body)
 
         # .. must be rejected with 401.
@@ -55,7 +55,7 @@ class TestPublishRejection(unittest.TestCase):
         topic_name = 'nonexistent.topic.that.does.not.exist'
 
         # Publish to a topic that does not exist ..
-        result = self.publisher.publish_raw(
+        result = self.publisher._publish(
             topic_name, 'rejected payload',
             username=TestConfig.publisher_username, password=TestConfig.publisher_password)
 
@@ -73,7 +73,7 @@ class TestPublishRejection(unittest.TestCase):
         topic_name = 'iam.user.created'
 
         # Publish with empty data ..
-        result = self.publisher.publish_raw(
+        result = self.publisher._publish(
             topic_name, {},
             username=TestConfig.publisher_username, password=TestConfig.publisher_password)
 

@@ -22,17 +22,17 @@
     $.fn.zato.pubsub.queue._render_row = function(message) {
 
         var kit = $.fn.zato.dashboard_kit;
-        var ns = $.fn.zato.pubsub.queue;
-        var subKey = ns._subKey;
+        var queue = $.fn.zato.pubsub.queue;
+        var subKey = queue._subKey;
         var relativeTime = kit.relative_time_past(message.pub_time_iso);
         var localTime = kit.format_local_time(message.pub_time_iso);
         var topicName = message.topic_name;
 
-        var badgeKey = ns._badge_class;
+        var badgeKey = queue._badge_class;
 
         var messageLink = '/zato/pubsub/subscription/queue/message/?cluster=1' +
             '&sub_key=' + encodeURIComponent(subKey) +
-            '&queue_name=' + encodeURIComponent(ns._queueName) +
+            '&queue_name=' + encodeURIComponent(queue._queueName) +
             '&msg_id=' + encodeURIComponent(message.msg_id) +
             '&topic_name=' + encodeURIComponent(topicName) +
             '&redis_stream_id=' + encodeURIComponent(message.redis_stream_id);
@@ -99,9 +99,9 @@
             $body.append($.fn.zato.pubsub.queue._render_row(rows[rowIdx]));
         }
 
-        var ns = $.fn.zato.pubsub.queue;
-        var pag = ns._pagination;
-        var offset = pag ? (pag.current_page() - 1) * ns._page_size : 0;
+        var queue = $.fn.zato.pubsub.queue;
+        var pagination = queue._pagination;
+        var offset = pagination ? (pagination.current_page() - 1) * queue._page_size : 0;
         $body.find('.queue-row-num').each(function(idx) {
             $(this).text(kit.format_number_full(offset + idx + 1));
         });
@@ -124,9 +124,9 @@
             $body.children().last().remove();
         }
 
-        var ns = $.fn.zato.pubsub.queue;
-        var pag = ns._pagination;
-        var offset = pag ? (pag.current_page() - 1) * ns._page_size : 0;
+        var queue = $.fn.zato.pubsub.queue;
+        var pagination = queue._pagination;
+        var offset = pagination ? (pagination.current_page() - 1) * queue._page_size : 0;
         $body.find('.queue-row-num').each(function(idx) {
             $(this).text(kit.format_number_full(offset + idx + 1));
         });
@@ -138,7 +138,7 @@
 
     $.fn.zato.pubsub.queue._apply_recency_gradient = function() {
         var kit = $.fn.zato.dashboard_kit;
-        var max_a = $.fn.zato.pubsub.queue._recency_max_alpha;
+        var maxAlpha = $.fn.zato.pubsub.queue._recency_max_alpha;
         var steps = kit.recency.STEPS;
         var limit = Math.min($.fn.zato.pubsub.queue._new_row_count, steps);
         var rgb = '218, 165, 32';
@@ -148,7 +148,7 @@
         rows.each(function(idx) {
             var $row = $(this);
             if (idx < limit) {
-                var alpha = max_a * Math.pow(1 - idx / steps, 2.5);
+                var alpha = maxAlpha * Math.pow(1 - idx / steps, 2.5);
                 $row.css('background', 'rgba(' + rgb + ', ' + alpha.toFixed(4) + ')');
             } else {
                 $row.css('background', '');
@@ -184,10 +184,10 @@
             success: function() {
                 window.location.reload();
             },
-            error: function(xhr) {
+            error: function(request) {
                 var errorMessage = $.fn.zato.pubsub.queue._defaultErrorMessage;
-                if (xhr.responseJSON) {
-                    errorMessage = xhr.responseJSON.error;
+                if (request.responseJSON) {
+                    errorMessage = request.responseJSON.error;
                 }
                 alert('Error: ' + errorMessage);
             }
@@ -302,11 +302,11 @@
                 contentType: 'application/json',
                 headers: {'X-CSRFToken': $.cookie('csrftoken')},
                 dataType: 'json',
-                success: function(resp) {
-                    if (resp.has_data) {
+                success: function(response) {
+                    if (response.has_data) {
                         $.fn.zato.highlight_pane.open_overlay({
                             title: 'Data',
-                            text: resp.data,
+                            text: response.data,
                             editable: true,
                             buttons: [
                                 $.fn.zato.highlight_pane.buttons.copy(),
@@ -427,18 +427,18 @@
                 success: function() {
                     ctx.$row.remove();
 
-                    var ns = $.fn.zato.pubsub.queue;
-                    var pag = ns._pagination;
-                    var newTotal = pag.total() - 1;
-                    pag.set_total(newTotal);
+                    var queue = $.fn.zato.pubsub.queue;
+                    var pagination = queue._pagination;
+                    var newTotal = pagination.total() - 1;
+                    pagination.set_total(newTotal);
                     $('#stat-depth').text(newTotal.toLocaleString());
 
                     _close_delete_overlay();
                 },
-                error: function(xhr) {
+                error: function(request) {
                     var errorMessage = $.fn.zato.pubsub.queue._defaultErrorMessage;
-                    if (xhr.responseJSON) {
-                        errorMessage = xhr.responseJSON.error;
+                    if (request.responseJSON) {
+                        errorMessage = request.responseJSON.error;
                     }
                     alert('Error: ' + errorMessage);
                 }
@@ -466,8 +466,8 @@
                 contentType: 'application/json',
                 headers: {'X-CSRFToken': $.cookie('csrftoken')},
                 dataType: 'json',
-                success: function(resp) {
-                    var data = resp.data ? resp.data : previewText;
+                success: function(response) {
+                    var data = response.data ? response.data : previewText;
                     _open_delete_overlay(msgId, data, $row, topicName, streamId);
                 },
                 error: function() {

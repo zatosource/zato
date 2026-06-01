@@ -1,0 +1,34 @@
+security:
+
+  - name: test.secedit.publisher
+    type: basic_auth
+    username: test.secedit.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.secedit.subscriber
+    type: basic_auth
+    username: test.secedit.subscriber
+    password: "{{subscriber_password}}"
+
+pubsub_topic:
+
+  - name: secedit.topic.single
+  - name: secedit.topic.multi
+
+pubsub_permission:
+
+  - security: test.secedit.publisher
+    pub:
+      - secedit.**
+
+  - security: test.secedit.subscriber
+    sub:
+      - secedit.**
+
+pubsub_subscription:
+
+  - security: test.secedit.subscriber
+    delivery_type: pull
+    topic_list:
+      - secedit.topic.single
+      - secedit.topic.multi
