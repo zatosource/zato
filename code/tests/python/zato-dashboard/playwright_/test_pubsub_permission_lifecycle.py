@@ -618,7 +618,7 @@ class TestPubSubPermissionLifecycle:
         page.evaluate(f'$.fn.zato.pubsub.permission.edit("{item_id}")')
         page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
-        page.select_option('#id_edit-access_type', value='subscriber')
+        page.select_option('#id_edit-access_type', value='publisher-subscriber')
         time.sleep(0.2)
         page.fill('#edit-patterns-container .pattern-row:first-child .pattern-input', 'changed.pattern.*')
 
