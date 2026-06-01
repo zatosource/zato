@@ -2072,6 +2072,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         _entity_type_to_table = {
             'security': 'sec_base',
             'generic_connection': 'generic_conn',
+            'outgoing_rest': 'http_soap',
+            'outgoing_soap': 'http_soap',
+            'channel_rest': 'http_soap',
+            'channel_soap': 'http_soap',
+        }
+
+        # The http_soap table stores channels and outgoing connections together,
+        # so uniqueness must be scoped by the connection direction and transport ..
+        _entity_type_to_extra_where = {
+            'outgoing_rest': "connection = 'outgoing' AND transport = 'plain_http'",
+            'outgoing_soap': "connection = 'outgoing' AND transport = 'soap'",
+            'channel_rest':  "connection = 'channel' AND transport = 'plain_http'",
+            'channel_soap':  "connection = 'channel' AND transport = 'soap'",
         }
 
         table_name = _entity_type_to_table.get(entity_type, entity_type)
@@ -2082,6 +2095,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # .. start with the primary equality condition ..
         where = f'{attr_name} = :val'
 
+        # .. append any entity-specific scoping conditions ..
+        extra_where = _entity_type_to_extra_where.get(entity_type)
+        if extra_where:
+            where = f'{where} AND {extra_where}'
+
         # .. and, when a scoping filter is given, narrow the check down further so that
         # .. it matches the real ODB unique constraint (e.g. username is unique per sec_type) ..
         if filter_name:
@@ -2090,11 +2108,15 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         with closing(self.odb.session()) as session:
             query = f'SELECT 1 FROM {table_name} WHERE {where} LIMIT 1'
+            logger.info('[DIAG] check_attr_exists: entity_type=%s, table=%s, query=%s, params=%s',
+                entity_type, table_name, query, params)
             result = session.execute(
                 text(query),  # type: ignore[operator]
                 params
             )
             exists = result.fetchone() is not None
+
+        logger.info('[DIAG] check_attr_exists: entity_type=%s, value=%s, exists=%s', entity_type, value, exists)
 
         out = json.dumps({'exists': exists})
         return out

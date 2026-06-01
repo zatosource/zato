@@ -1140,35 +1140,58 @@ $.fn.zato.data_table.multirow.populate_field = function(field_name, source) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.data_table.on_submit = function(action) {
-    console.log('[DEBUG] on_submit: action=' + action + ', _submitting=' + $.fn.zato.data_table._submitting);
+    console.log('[DIAG-SUBMIT] on_submit ENTER action=' + action + ', _submitting=' + $.fn.zato.data_table._submitting);
 
     if($.fn.zato.data_table._submitting) {
-        console.log('[DEBUG] on_submit: blocked duplicate submission for action=' + action);
+        console.log('[DIAG-SUBMIT] BLOCKED: duplicate submission for action=' + action);
         return false;
     }
 
     var form = $('#' + action +'-form');
+    console.log('[DIAG-SUBMIT] form found=' + form.length + ', form_id=' + form.attr('id') + ', form_action=' + form.attr('action'));
+
     var callback = function(data, status) {
             return $.fn.zato.data_table.on_submit_complete(data, status, action);
         }
 
     if($.fn.zato.data_table.before_submit_hook) {
-        if(!$.fn.zato.data_table.before_submit_hook(form)) {
+        console.log('[DIAG-SUBMIT] before_submit_hook exists, type=' + typeof $.fn.zato.data_table.before_submit_hook);
+        var hook_result = $.fn.zato.data_table.before_submit_hook(form);
+        console.log('[DIAG-SUBMIT] before_submit_hook returned=' + hook_result);
+        if(!hook_result) {
+            console.log('[DIAG-SUBMIT] BLOCKED: before_submit_hook returned falsy');
             return false;
         }
     }
+    else {
+        console.log('[DIAG-SUBMIT] no before_submit_hook');
+    }
 
-    if($.fn.zato.is_form_valid(form)) {
+    var form_valid = $.fn.zato.is_form_valid(form);
+    console.log('[DIAG-SUBMIT] is_form_valid returned=' + form_valid);
 
-        // Block submission when any uniqueness-validated field already exists in the database ..
-        if(!$.fn.zato.validate_unique_on_submit(form)) {
+    if(form_valid) {
+
+        console.log('[DIAG-SUBMIT] calling validate_unique_on_submit');
+        var unique_ok = $.fn.zato.validate_unique_on_submit(form);
+        console.log('[DIAG-SUBMIT] validate_unique_on_submit returned=' + unique_ok);
+
+        if(!unique_ok) {
+            console.log('[DIAG-SUBMIT] BLOCKED: uniqueness check failed');
             return false;
         }
 
         var label = action === 'create' ? 'Creating ...' : 'Saving ...';
-        console.log('[DEBUG] on_submit: form valid, calling show_action_overlay for action=' + action);
+        console.log('[DIAG-SUBMIT] form valid + unique ok, proceeding to _on_submit');
         $.fn.zato.show_action_overlay(label);
         return $.fn.zato.data_table._on_submit(form, callback);
+    }
+    else {
+        console.log('[DIAG-SUBMIT] BLOCKED: form invalid, listing required fields status:');
+        form.find('[data-validate-required]').each(function() {
+            var $f = $(this);
+            console.log('[DIAG-SUBMIT]   field=' + $f.attr('name') + ', id=' + $f.attr('id') + ', val=' + JSON.stringify($f.val()) + ', visible=' + $f.is(':visible'));
+        });
     }
 }
 
@@ -1532,10 +1555,10 @@ $.fn.zato.show_native_tooltip = function(elem, msg) {
 
 $.fn.zato.is_form_valid = function(form) {
 
-    // Local variables
     var form = $(form);
 
-    // Assume the form is valid by default
+    console.log('[DIAG-VALID] is_form_valid ENTER, form_id=' + form.attr('id'));
+
     var is_valid = true;
 
     $.fn.zato.cleanup_form_css_attention("");
@@ -1569,15 +1592,21 @@ $.fn.zato.is_form_valid = function(form) {
         }
     });
 
-    // Confirm that all the required elements are provided
     var first_invalid = null;
+
+    var required_count = form.find($.fn.zato.jquery_pattern_required).length;
+    console.log('[DIAG-VALID] required fields count=' + required_count);
 
     form.find($.fn.zato.jquery_pattern_required).each(function(idx, elem) {
 
         var elem = $(elem)
         let elem_value = elem.val()
 
+        console.log('[DIAG-VALID] required field idx=' + idx + ', name=' + elem.attr('name') + ', id=' + elem.attr('id') + ', val=' + JSON.stringify(elem_value) + ', visible=' + elem.is(':visible'));
+
         if(!elem_value || !elem_value.trim()) {
+
+            console.log('[DIAG-VALID] INVALID: field ' + elem.attr('name') + ' (' + elem.attr('id') + ') is empty/blank');
 
             let msg = elem.attr($.fn.zato.validate_required_msg_attr);
             let chosen_elems = $.fn.zato.get_chosen_elems_by_elem(elem);
@@ -1625,7 +1654,7 @@ $.fn.zato.is_form_valid = function(form) {
         first_invalid.focus();
     }
 
-    // Now, we can return the result to our caller
+    console.log('[DIAG-VALID] is_form_valid RESULT=' + is_valid);
     return is_valid;
 }
 
@@ -2602,32 +2631,37 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name, filter) {
 // may be submitted and false when at least one field is taken.
 $.fn.zato.validate_unique_on_submit = function(form) {
 
+    console.log('[DIAG-UNIQUE] validate_unique_on_submit ENTER, registered checks=' + JSON.stringify(Object.keys($.fn.zato.data_table._unique_checks)));
+
     var is_valid = true;
     var first_taken = null;
 
-    // Walk every registered field and only act on the ones living inside the form being submitted ..
     for(var field_id in $.fn.zato.data_table._unique_checks) {
 
         var field = $(field_id);
         if(!field.length) {
+            console.log('[DIAG-UNIQUE] field_id=' + field_id + ' NOT IN DOM, skip');
             continue;
         }
         if(!$.contains(form.get(0), field.get(0))) {
+            console.log('[DIAG-UNIQUE] field_id=' + field_id + ' NOT IN FORM, skip');
             continue;
         }
 
         var check = $.fn.zato.data_table._unique_checks[field_id];
 
-        // .. skip empty fields and unchanged edit values, exactly like the live check does ..
         var value = $.fn.zato.get_unique_check_value(field, check.is_edit);
         if(!value) {
+            console.log('[DIAG-UNIQUE] field_id=' + field_id + ' empty value, skip');
             continue;
         }
 
+        console.log('[DIAG-UNIQUE] checking field_id=' + field_id + ', entity_type=' + check.entity_type + ', attr_name=' + check.attr_name + ', value=' + value);
+
         var data = $.fn.zato.build_unique_check_data(check.entity_type, check.attr_name, value, check.filter);
 
-        // .. a synchronous request is needed here because the submit decision depends on its result.
         var exists = false;
+        var ajax_error = null;
         $.ajax({
             type: 'POST',
             url: '/zato/check-attr-exists/',
@@ -2636,9 +2670,16 @@ $.fn.zato.validate_unique_on_submit = function(form) {
             dataType: 'json',
             async: false,
             success: function(response) {
+                console.log('[DIAG-UNIQUE] response for ' + field_id + ': ' + JSON.stringify(response));
                 exists = response.exists;
+            },
+            error: function(xhr, status, err) {
+                console.log('[DIAG-UNIQUE] ERROR for ' + field_id + ': status=' + status + ', err=' + err + ', responseText=' + xhr.responseText);
+                ajax_error = err;
             }
         });
+
+        console.log('[DIAG-UNIQUE] field_id=' + field_id + ', exists=' + exists + ', ajax_error=' + ajax_error);
 
         if(exists) {
             $.fn.zato.render_unique_indicator(field, value, true);
@@ -2650,6 +2691,8 @@ $.fn.zato.validate_unique_on_submit = function(form) {
             is_valid = false;
         }
     }
+
+    console.log('[DIAG-UNIQUE] validate_unique_on_submit RESULT=' + is_valid);
 
     if(first_taken) {
         first_taken.focus();

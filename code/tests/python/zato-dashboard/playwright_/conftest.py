@@ -57,6 +57,7 @@ _Ping_Poll_Interval    = 0.5
 
 _server_process    = None # type: ignore
 _dashboard_process = None # type: ignore
+_listener_process  = None # type: ignore
 _temporary_dir     = None # type: ignore
 
 # ################################################################################################################################
@@ -102,9 +103,13 @@ def _kill_process(process:'subprocess.Popen | None') -> 'None':
 def _cleanup() -> 'None':
     """ Cleans up all test processes and the temporary directory.
     """
-    global _server_process, _dashboard_process, _temporary_dir
+    global _server_process, _dashboard_process, _listener_process, _temporary_dir
 
-    # Kill the server ..
+    # Kill the listener ..
+    _kill_process(_listener_process)
+    _listener_process = None
+
+    # .. kill the server ..
     _kill_process(_server_process)
     _server_process = None
 
@@ -297,6 +302,28 @@ def zato_dashboard() -> 'any_':
         _kill_process(_dashboard_process)
         raise
 
+    # .. 7) start the file pickup listener so hot-deploy works for enmasse imports ..
+
+    listener_env = os.environ.copy()
+    listener_env['Zato_Config_Bind_Port'] = str(server_port)
+    listener_env['Zato_Web_Admin_Repo_Dir'] = os.path.join(dashboard_dir, 'config', 'repo')
+    listener_env['Zato_Server_Dir'] = server_dir
+    listener_env.pop('COVERAGE_PROCESS_START', None)
+
+    _listener_process = subprocess.Popen(
+        ['make', 'listener'],
+        cwd=_Zato_Base,
+        env=listener_env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+
+    listener_thread = threading.Thread(
+        target=_stream_output, args=(_listener_process, 'LISTENER', time_after_server_start), daemon=True)
+    listener_thread.start()
+
+    logger.info('[TIMING] file pickup listener started, pid=%s', _listener_process.pid)
+
     yield {
         'host': host,
         'server_port': server_port,
@@ -308,7 +335,11 @@ def zato_dashboard() -> 'any_':
         'temporary_dir': _temporary_dir,
     }
 
-    # .. teardown: stop server ..
+    # .. teardown: stop listener ..
+    _kill_process(_listener_process)
+    _listener_process = None
+
+    # .. stop server ..
     _kill_process(_server_process)
     _server_process = None
 
@@ -404,6 +435,14 @@ def logged_in_page(zato_dashboard:'anydict', playwright_browser:'any_', request:
     page.on('crash', _on_page_crash)
     page.on('close', _on_page_close)
     context.on('close', _on_context_close)
+
+    # .. capture browser console messages tagged with DIAG ..
+    def _on_console(msg:'any_') -> 'None':
+        text = msg.text
+        if 'DIAG' in text:
+            logger.info(f'[BROWSER] {test_name}: {text}')
+
+    page.on('console', _on_console)
 
     # .. also capture all response errors from the dashboard ..
     def _on_response(response:'any_') -> 'None':
@@ -529,7 +568,7 @@ def check_no_log_errors(zato_dashboard:'anydict', request:'any_') -> 'any_':
 
     if problems:
         joined = '\n'.join(problems)
-        pytest.fail(f'Log errors/warnings during {test_name}:\n{joined}')
+        pytest.fail(f'Log errors/warnings during {request.node.name}:\n{joined}')
 
 # ################################################################################################################################
 # ################################################################################################################################

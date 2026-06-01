@@ -412,7 +412,8 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
         url: '/zato/pubsub/subscription/get-rest-endpoints/',
         type: 'GET',
         data: {
-            cluster_id: '1'
+            cluster_id: '1',
+            form_type: form_type
         },
         success: function(response) {
             var responseJson = JSON.stringify(response);
