@@ -60,7 +60,7 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
-    row += String.format('<td>{0}</td>', item.description);
+    row += String.format('<td>{0}</td>', item.description || $.fn.zato.empty_value);
     row += String.format("<td class='ignore' style='text-align:center'>{0}</td>", item.publisher_count);
     row += String.format("<td class='ignore' style='text-align:center'>{0}</td>", item.subscriber_count);
     // row += String.format('<td><a href="/zato/pubsub/topic/{0}/?cluster=1">View</a></td>', encodeURIComponent(item.name));

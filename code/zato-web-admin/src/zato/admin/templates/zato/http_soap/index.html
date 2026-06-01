@@ -335,13 +335,7 @@
 
                         <!-- 5 -->
                         {% if connection == 'outgoing' %}
-                            <td>
-                            {% if item.host %}
-                                {{ item.host }}
-                            {% else %}
-                                <span class="form_hint">---</span>
-                            {% endif %}
-                            </td>
+                            <td>{{ item.host }}</td>
                         {% endif %}
 
                         <!-- 6 -->

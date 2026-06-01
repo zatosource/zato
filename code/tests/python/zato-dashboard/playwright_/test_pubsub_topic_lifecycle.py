@@ -329,6 +329,55 @@ class TestPubSubTopicLifecycle:
 
 # ################################################################################################################################
 
+    def test_edit_description_to_empty_shows_placeholder(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        # Navigate ..
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
+        page.wait_for_selector('#data-table', state='visible')
+
+        # .. create a topic with a description ..
+        topic = _create_topic(page, 'edit-desc-clear', 'Has a description')
+
+        # .. reload so the server renders the row ..
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={topic["name"]}')
+        page.wait_for_selector('#data-table', state='visible')
+
+        # .. verify the description is shown ..
+        row_selector = f'#data-table tbody tr:has(td:text-is("{topic["name"]}"))'
+        row = page.query_selector(row_selector)
+        cells = row.query_selector_all('td')
+        desc_text = cells[3].inner_text().strip()
+        assert desc_text == 'Has a description', \
+            f'Expected "Has a description", got: "{desc_text}"'
+
+        # .. open the edit dialog and clear the description ..
+        item_id = _get_item_id(page, topic['name'])
+        page.evaluate(f'$.fn.zato.pubsub.topic.edit("{item_id}")')
+        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+
+        page.fill('#id_edit-description', '')
+
+        page.click('#edit-div input[type="submit"]')
+        page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+        time.sleep(0.3)
+
+        # .. verify the description cell now shows the form_hint placeholder.
+        row = page.query_selector(row_selector)
+        cells = row.query_selector_all('td')
+        desc_text = cells[3].inner_text().strip()
+        desc_html = cells[3].inner_html()
+
+        assert desc_text == '---', \
+            f'Expected "---" for cleared description, got: "{desc_text}"'
+
+        assert 'class="form_hint"' in desc_html, \
+            f'Expected form_hint span in description cell, got: "{desc_html}"'
+
+# ################################################################################################################################
+
     def test_publish_a_message_link(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
 
         page = logged_in_page
