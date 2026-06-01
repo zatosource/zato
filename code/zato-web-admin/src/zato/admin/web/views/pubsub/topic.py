@@ -20,6 +20,7 @@ from zato.admin.web.forms.pubsub.topic import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.admin.web.views.http_soap import _build_invoke_response
 from zato.common.ext.bunch import Bunch
+from zato.common.pubsub.util import validate_topic_name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -179,6 +180,27 @@ def publish_message(request:'HttpRequest', id:'str') -> 'JsonResponse':
         }, status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
         return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def validate_name(req:'HttpRequest') -> 'JsonResponse':
+    """ Validates a topic name against pub/sub naming rules.
+    """
+    # Get the name from the request ..
+    name = req.POST['name']
+
+    # .. run the backend validation ..
+    try:
+        validate_topic_name(name)
+        out = JsonResponse({'valid': True})
+
+    # .. if it fails, return the error message.
+    except ValueError:
+        out = JsonResponse({'valid': False, 'message': 'Name cannot be used'})
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

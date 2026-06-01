@@ -550,7 +550,6 @@ class TestPubSubTopicLifecycle:
 
 # ################################################################################################################################
 
-    @pytest.mark.expect_log_errors('CreateEdit EXCEPTION', 'nDetails:')
     def test_topic_name_with_hash_rejected(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
 
         page = logged_in_page
@@ -562,24 +561,32 @@ class TestPubSubTopicLifecycle:
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
         page.wait_for_selector('#data-table', state='visible')
 
-        # .. try to create a topic with # in the name ..
+        # .. open the create dialog and type the invalid name character by character
+        # .. so the live validation fires ..
         page.click('#markup .page_prompt a')
         page.wait_for_selector('#create-div', state='visible')
 
-        page.fill('#id_name', bad_name)
+        name_field = page.locator('#id_name')
+        name_field.click()
+        name_field.press_sequentially(bad_name, delay=10)
 
+        # .. wait for the inline validation indicator ..
+        indicator = page.wait_for_selector(
+            '#create-form .zato-name-invalid', state='visible', timeout=10000)
+
+        indicator_text = indicator.inner_text()
+        assert 'Name cannot be used' in indicator_text, \
+            f'Expected "Name cannot be used", got: "{indicator_text}"'
+
+        # .. try to submit and verify the dialog stays open.
         page.click('#create-div input[type="submit"]')
+        time.sleep(0.5)
 
-        # .. wait briefly for potential error ..
-        time.sleep(1.0)
-
-        # .. verify the row was not created.
-        row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{bad_name}"))')
-        assert row is None, f'Topic with # in name should be rejected'
+        is_visible = page.evaluate('!!document.querySelector("#create-div").offsetParent')
+        assert is_visible, 'Create dialog should stay open when name is invalid'
 
 # ################################################################################################################################
 
-    @pytest.mark.expect_log_errors('CreateEdit EXCEPTION', 'nDetails:')
     def test_topic_name_max_length_rejected(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
 
         page = logged_in_page
@@ -591,24 +598,30 @@ class TestPubSubTopicLifecycle:
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
         page.wait_for_selector('#data-table', state='visible')
 
-        # .. try to create a topic with a name exceeding 200 chars ..
+        # .. open the create dialog and fill the overlong name ..
         page.click('#markup .page_prompt a')
         page.wait_for_selector('#create-div', state='visible')
 
         page.fill('#id_name', bad_name)
 
+        # .. try to submit - the before_submit_hook will call the backend and block it ..
         page.click('#create-div input[type="submit"]')
+        time.sleep(0.5)
 
-        # .. wait briefly for potential error ..
-        time.sleep(1.0)
+        # .. verify the inline indicator appeared ..
+        indicator = page.wait_for_selector(
+            '#create-form .zato-name-invalid', state='visible', timeout=10000)
 
-        # .. verify the row was not created.
-        row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{bad_name}"))')
-        assert row is None, f'Topic with name > 200 chars should be rejected'
+        indicator_text = indicator.inner_text()
+        assert 'Name cannot be used' in indicator_text, \
+            f'Expected "Name cannot be used", got: "{indicator_text}"'
+
+        # .. and the dialog stays open.
+        is_visible = page.evaluate('!!document.querySelector("#create-div").offsetParent')
+        assert is_visible, 'Create dialog should stay open when name is too long'
 
 # ################################################################################################################################
 
-    @pytest.mark.expect_log_errors('CreateEdit EXCEPTION', 'nDetails:')
     def test_topic_name_with_non_ascii_rejected(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
 
         page = logged_in_page
@@ -620,24 +633,30 @@ class TestPubSubTopicLifecycle:
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
         page.wait_for_selector('#data-table', state='visible')
 
-        # .. try to create a topic with non-ASCII characters ..
+        # .. open the create dialog and fill the non-ASCII name ..
         page.click('#markup .page_prompt a')
         page.wait_for_selector('#create-div', state='visible')
 
         page.fill('#id_name', bad_name)
 
+        # .. try to submit - the before_submit_hook will call the backend and block it ..
         page.click('#create-div input[type="submit"]')
+        time.sleep(0.5)
 
-        # .. wait briefly for potential error ..
-        time.sleep(1.0)
+        # .. verify the inline indicator appeared ..
+        indicator = page.wait_for_selector(
+            '#create-form .zato-name-invalid', state='visible', timeout=10000)
 
-        # .. verify the row was not created.
-        row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{bad_name}"))')
-        assert row is None, f'Topic with non-ASCII name should be rejected'
+        indicator_text = indicator.inner_text()
+        assert 'Name cannot be used' in indicator_text, \
+            f'Expected "Name cannot be used", got: "{indicator_text}"'
+
+        # .. and the dialog stays open.
+        is_visible = page.evaluate('!!document.querySelector("#create-div").offsetParent')
+        assert is_visible, 'Create dialog should stay open when name has non-ASCII characters'
 
 # ################################################################################################################################
 
-    @pytest.mark.expect_log_errors('CreateEdit EXCEPTION', 'nDetails:')
     def test_create_with_empty_name_rejected(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
 
         page = logged_in_page
@@ -647,25 +666,59 @@ class TestPubSubTopicLifecycle:
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
         page.wait_for_selector('#data-table', state='visible')
 
-        # .. count rows before ..
-        rows_before = page.query_selector_all('#data-table tbody tr:not(.ignore)')
-        count_before = len(rows_before)
-
-        # .. try to submit with empty name ..
+        # .. open the create dialog and try to submit with an empty name ..
         page.click('#markup .page_prompt a')
         page.wait_for_selector('#create-div', state='visible')
 
         page.click('#create-div input[type="submit"]')
+        time.sleep(0.5)
 
-        # .. wait briefly ..
-        time.sleep(1.0)
+        # .. verify the dialog stays open.
+        is_visible = page.evaluate('!!document.querySelector("#create-div").offsetParent')
+        assert is_visible, 'Create dialog should stay open when name is empty'
 
-        # .. verify no row was added.
-        rows_after = page.query_selector_all('#data-table tbody tr:not(.ignore)')
-        count_after = len(rows_after)
+# ################################################################################################################################
 
-        assert count_after == count_before, \
-            f'Expected no new row with empty name, got before={count_before}, after={count_after}'
+    def test_edit_topic_name_to_invalid_rejected(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        # Navigate ..
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
+        page.wait_for_selector('#data-table', state='visible')
+
+        # .. create a topic to edit ..
+        topic = _create_topic(page, 'edit-invalid')
+
+        # .. reload so the server knows about it ..
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={topic["name"]}')
+        page.wait_for_selector('#data-table', state='visible')
+
+        # .. open the edit dialog ..
+        item_id = _get_item_id(page, topic['name'])
+        page.evaluate(f'$.fn.zato.pubsub.topic.edit("{item_id}")')
+        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+
+        # .. clear the name and type an invalid one with # ..
+        name_field = page.locator('#id_edit-name')
+        name_field.fill('')
+        name_field.press_sequentially('invalid#name', delay=10)
+
+        # .. wait for the inline validation indicator ..
+        indicator = page.wait_for_selector(
+            '#edit-form .zato-name-invalid', state='visible', timeout=10000)
+
+        indicator_text = indicator.inner_text()
+        assert 'Name cannot be used' in indicator_text, \
+            f'Expected "Name cannot be used", got: "{indicator_text}"'
+
+        # .. try to submit and verify the dialog stays open.
+        page.click('#edit-div input[type="submit"]')
+        time.sleep(0.5)
+
+        is_visible = page.evaluate('!!document.querySelector("#edit-div").offsetParent')
+        assert is_visible, 'Edit dialog should stay open when name is invalid'
 
 # ################################################################################################################################
 
