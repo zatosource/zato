@@ -366,12 +366,16 @@ class TestPubSubTopicCreate:
         row_selector = f'#data-table tbody tr:has(td:text-is("{topic_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
-        # .. verify description cell shows the no-value indicator.
+        # .. verify description cell shows the form_hint placeholder.
         cells = row.query_selector_all('td')
         description_cell_text = cells[3].inner_text().strip()
+        description_cell_html = cells[3].inner_html()
 
-        assert description_cell_text == '' or description_cell_text == '-', \
-            f'Expected empty or dash placeholder for description, got: "{description_cell_text}"'
+        assert description_cell_text == '---', \
+            f'Expected "---" for empty description, got: "{description_cell_text}"'
+
+        assert 'class="form_hint"' in description_cell_html, \
+            f'Expected form_hint span in description cell, got: "{description_cell_html}"'
 
 # ################################################################################################################################
 # ################################################################################################################################

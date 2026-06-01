@@ -38,6 +38,9 @@ $(document).ready(function() {
     if(_is_channel) {
         _required_fields.splice(1, 0, 'url_path');
     }
+    if(!_is_channel) {
+        _required_fields.push('host');
+    }
     $.fn.zato.data_table.setup_forms(_required_fields);
 
     var unique_constraints = [
