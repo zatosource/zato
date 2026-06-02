@@ -565,7 +565,6 @@ class TestPubSubTopicLifecycle:
 
 # ################################################################################################################################
 
-    @pytest.mark.expect_log_errors('Timeout', 'waiting for service')
     def test_import_demo_config(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
 
         page = logged_in_page

@@ -318,7 +318,6 @@ class TestPubSubSubscriptionCreate:
 
 # ################################################################################################################################
 
-    @pytest.mark.expect_log_errors('outgoing_rest')
     def test_create_push_rest_subscription(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
 
         page = logged_in_page
@@ -467,6 +466,7 @@ class TestPubSubSubscriptionCreate:
         # .. reopen the dialog ..
         page.evaluate('$.fn.zato.pubsub.subscription.create()')
         page.wait_for_selector('#create-div', state='visible')
+
         time.sleep(0.5)
 
         # .. verify the topics area shows the placeholder message.

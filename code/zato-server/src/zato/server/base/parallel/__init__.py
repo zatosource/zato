@@ -1711,11 +1711,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         from zato.server.commands import CommandsFacade
 
         pubsub_dir = os.path.dirname(zato.server.service.internal.pubsub.__file__)
-
         config_path = os.path.join(pubsub_dir, 'demo-enmasse.yaml')
 
-        # Deploy the service file first so enmasse can find it
         full_path = os.path.join(self.hot_deploy_config.pickup_dir, 'demo_pubsub_services.py')
+
         with open_w(full_path) as f:
             f.write(Default_Demo_PubSub_Service_File_Data)
 
