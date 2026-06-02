@@ -10,6 +10,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import time
 
+# Zato
+from zato.common.test.playwright_pubsub import close_dialog_via_jquery, create_basic_auth, create_permission, \
+    create_topic, get_table_row_count, navigate_to_page, open_create_dialog, open_create_dialog_via_js, \
+    setup_alert_handler, submit_create_form, wait_for_sec_def_dropdown
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -21,119 +26,9 @@ if 0:
 # ################################################################################################################################
 
 _Permission_Page_Url = '/zato/pubsub/permission/?cluster=1'
-_Basic_Auth_Page_Url = '/zato/security/basic-auth/?cluster=1'
 _Topic_Page_Url = '/zato/pubsub/topic/?cluster=1'
 
 _Test_Name_Prefix = 'test.permission.' + os.urandom(4).hex() + '.'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _create_basic_auth(page:'Page', base_url:'str', suffix:'str') -> 'str':
-    """ Creates a Basic Auth security definition via the UI and returns its name.
-    """
-
-    name = _Test_Name_Prefix + 'auth.' + suffix
-    password = 'password.' + os.urandom(8).hex()
-
-    # Navigate to the Basic Auth page ..
-    _ = page.goto(f'{base_url}{_Basic_Auth_Page_Url}')
-    page.wait_for_selector('#data-table', state='visible')
-
-    # .. open the create dialog ..
-    page.click('#markup .page_prompt a')
-    page.wait_for_selector('#create-div', state='visible')
-
-    # .. fill in the form fields ..
-    page.fill('#id_name', name)
-    page.fill('#id_username', 'user.' + name)
-    page.fill('#id_realm', 'API')
-    page.fill('#id_password', password)
-
-    # .. submit and wait for the dialog to close ..
-    page.click('#create-div input[type="submit"]')
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
-
-    # .. wait for the row to appear.
-    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
-
-    return name
-
-# ################################################################################################################################
-
-def _create_topic(page:'Page', base_url:'str', suffix:'str') -> 'str':
-    """ Creates a pub/sub topic via the UI and returns its name.
-    """
-
-    name = _Test_Name_Prefix + 'topic.' + suffix
-
-    # Navigate to the topics page ..
-    _ = page.goto(f'{base_url}{_Topic_Page_Url}')
-    page.wait_for_selector('#data-table', state='visible')
-
-    # .. open the create dialog ..
-    page.click('#markup .page_prompt a')
-    page.wait_for_selector('#create-div', state='visible')
-
-    # .. fill in the name ..
-    page.fill('#id_name', name)
-
-    # .. submit and wait for the dialog to close ..
-    page.click('#create-div input[type="submit"]')
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
-
-    # .. wait for the row to appear.
-    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
-
-    return name
-
-# ################################################################################################################################
-
-def _create_permission(
-    page:'Page',
-    base_url:'str',
-    sec_name:'str',
-    access_type:'str',
-    pattern_type:'str',
-    pattern_value:'str',
-    ) -> 'None':
-    """ Creates a pub/sub permission via the UI.
-    """
-
-    # Navigate to the permissions page ..
-    _ = page.goto(f'{base_url}{_Permission_Page_Url}')
-    page.wait_for_selector('#data-table', state='visible')
-
-    # .. open the create dialog ..
-    page.evaluate('$.fn.zato.pubsub.permission.create()')
-    page.wait_for_selector('#create-div', state='visible')
-
-    # .. wait for the security definitions dropdown to be populated via AJAX ..
-    page.wait_for_function(
-        'document.querySelector("#id_sec_base_id") && document.querySelector("#id_sec_base_id").options.length > 1',
-        timeout=10000
-    )
-
-    # .. select the security definition by its visible text ..
-    page.select_option('#id_sec_base_id', label=sec_name)
-
-    # .. set the access type ..
-    page.select_option('#id_access_type', value=access_type)
-    time.sleep(0.3)
-
-    # .. set the pattern type ..
-    page.select_option('#create-patterns-container .pattern-row:first-child .pattern-type-select', value=pattern_type)
-
-    # .. fill in the pattern value ..
-    page.fill('#create-patterns-container .pattern-row:first-child .pattern-input', pattern_value)
-
-    # .. submit the form ..
-    page.click('#create-div input[type="submit"]')
-
-    # .. wait for the dialog to close.
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -148,8 +43,7 @@ class TestPubSubPermissionCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Navigate to the permissions page ..
-        _ = page.goto(f'{base_url}{_Permission_Page_Url}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Permission_Page_Url)
 
         # .. verify the page heading ..
         heading = page.query_selector('h2.zato')
@@ -184,13 +78,13 @@ class TestPubSubPermissionCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Create prerequisites via the UI ..
-        sec_name = _create_basic_auth(page, base_url, 'pub1')
-        _ = _create_topic(page, base_url, 'pub1')
+        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'pub1')
+        _ = create_topic(page, base_url, _Test_Name_Prefix + 'topic.', 'pub1')
 
         pattern_value = 'test.pub1.*'
 
         # .. create the permission ..
-        _create_permission(page, base_url, sec_name, 'publisher', 'pub', pattern_value)
+        _ = create_permission(page, base_url, sec_name, 'publisher', 'pub', pattern_value)
 
         # .. verify the new row appears with correct values.
         row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
@@ -208,13 +102,13 @@ class TestPubSubPermissionCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Create prerequisites via the UI ..
-        sec_name = _create_basic_auth(page, base_url, 'sub1')
-        _ = _create_topic(page, base_url, 'sub1')
+        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'sub1')
+        _ = create_topic(page, base_url, _Test_Name_Prefix + 'topic.', 'sub1')
 
         pattern_value = 'test.sub1.*'
 
         # .. create the permission ..
-        _create_permission(page, base_url, sec_name, 'subscriber', 'sub', pattern_value)
+        _ = create_permission(page, base_url, sec_name, 'subscriber', 'sub', pattern_value)
 
         # .. verify the new row appears with correct values.
         row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
@@ -232,25 +126,20 @@ class TestPubSubPermissionCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Create prerequisites via the UI ..
-        sec_name = _create_basic_auth(page, base_url, 'pubsub1')
-        _ = _create_topic(page, base_url, 'pubsub1')
+        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'pubsub1')
+        _ = create_topic(page, base_url, _Test_Name_Prefix + 'topic.', 'pubsub1')
 
         pub_pattern = 'test.pubsub1.pub.*'
         sub_pattern = 'test.pubsub1.sub.*'
 
         # Navigate to the permissions page ..
-        _ = page.goto(f'{base_url}{_Permission_Page_Url}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Permission_Page_Url)
 
         # .. open the create dialog ..
-        page.evaluate('$.fn.zato.pubsub.permission.create()')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog_via_js(page, 'permission')
 
         # .. wait for the security definitions dropdown ..
-        page.wait_for_function(
-            'document.querySelector("#id_sec_base_id") && document.querySelector("#id_sec_base_id").options.length > 1',
-            timeout=10000
-        )
+        wait_for_sec_def_dropdown(page)
 
         # .. select the security definition ..
         page.select_option('#id_sec_base_id', label=sec_name)
@@ -272,8 +161,7 @@ class TestPubSubPermissionCreate:
         page.fill('#create-patterns-container .pattern-row:first-child .pattern-input', sub_pattern)
 
         # .. submit the form ..
-        page.click('#create-div input[type="submit"]')
-        page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+        submit_create_form(page)
 
         # .. verify the new row appears with correct values.
         row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
@@ -293,21 +181,16 @@ class TestPubSubPermissionCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Create a sec def so the dropdown has something to select ..
-        sec_name = _create_basic_auth(page, base_url, 'cancel-reopen')
+        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'cancel-reopen')
 
         # Navigate to the permissions page ..
-        _ = page.goto(f'{base_url}{_Permission_Page_Url}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Permission_Page_Url)
 
         # .. open the create dialog ..
-        page.evaluate('$.fn.zato.pubsub.permission.create()')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog_via_js(page, 'permission')
 
         # .. wait for the security definitions dropdown ..
-        page.wait_for_function(
-            'document.querySelector("#id_sec_base_id") && document.querySelector("#id_sec_base_id").options.length > 1',
-            timeout=10000
-        )
+        wait_for_sec_def_dropdown(page)
 
         # .. fill in the form fields ..
         page.select_option('#id_sec_base_id', label=sec_name)
@@ -316,12 +199,10 @@ class TestPubSubPermissionCreate:
         page.fill('#create-patterns-container .pattern-row:first-child .pattern-input', 'test.cancel.*')
 
         # .. close the dialog ..
-        page.evaluate('$("#create-div").dialog("close")')
-        page.wait_for_function('!document.querySelector("#create-div").offsetParent')
+        close_dialog_via_jquery(page, 'create-div')
 
         # .. reopen the dialog ..
-        page.evaluate('$.fn.zato.pubsub.permission.create()')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog_via_js(page, 'permission')
         time.sleep(0.5)
 
         # .. verify the pattern input is empty.
@@ -336,25 +217,19 @@ class TestPubSubPermissionCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Create a sec def ..
-        sec_name = _create_basic_auth(page, base_url, 'cancel-norow')
+        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'cancel-norow')
 
         # Navigate to the permissions page ..
-        _ = page.goto(f'{base_url}{_Permission_Page_Url}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Permission_Page_Url)
 
         # .. count rows before ..
-        rows_before = page.query_selector_all('#data-table tbody tr:not(.ignore)')
-        count_before = len(rows_before)
+        count_before = get_table_row_count(page)
 
         # .. open the create dialog ..
-        page.evaluate('$.fn.zato.pubsub.permission.create()')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog_via_js(page, 'permission')
 
         # .. wait for dropdown ..
-        page.wait_for_function(
-            'document.querySelector("#id_sec_base_id") && document.querySelector("#id_sec_base_id").options.length > 1',
-            timeout=10000
-        )
+        wait_for_sec_def_dropdown(page)
 
         # .. fill in fields ..
         page.select_option('#id_sec_base_id', label=sec_name)
@@ -363,12 +238,10 @@ class TestPubSubPermissionCreate:
         page.fill('#create-patterns-container .pattern-row:first-child .pattern-input', 'test.norow.*')
 
         # .. close the dialog without submitting ..
-        page.evaluate('$("#create-div").dialog("close")')
-        page.wait_for_function('!document.querySelector("#create-div").offsetParent')
+        close_dialog_via_jquery(page, 'create-div')
 
         # .. verify row count is unchanged.
-        rows_after = page.query_selector_all('#data-table tbody tr:not(.ignore)')
-        count_after = len(rows_after)
+        count_after = get_table_row_count(page)
 
         assert count_after == count_before, \
             f'Expected {count_before} rows after cancel, got: {count_after}'
@@ -381,12 +254,10 @@ class TestPubSubPermissionCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Navigate to the permissions page ..
-        _ = page.goto(f'{base_url}{_Permission_Page_Url}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Permission_Page_Url)
 
         # .. open the create dialog ..
-        page.evaluate('$.fn.zato.pubsub.permission.create()')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog_via_js(page, 'permission')
         time.sleep(0.3)
 
         # .. set access type so pattern options are available ..
@@ -426,21 +297,16 @@ class TestPubSubPermissionCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Create a sec def ..
-        sec_name = _create_basic_auth(page, base_url, 'empty-pat')
+        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'empty-pat')
 
         # Navigate to the permissions page ..
-        _ = page.goto(f'{base_url}{_Permission_Page_Url}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Permission_Page_Url)
 
         # .. open the create dialog ..
-        page.evaluate('$.fn.zato.pubsub.permission.create()')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog_via_js(page, 'permission')
 
         # .. wait for the security definitions dropdown ..
-        page.wait_for_function(
-            'document.querySelector("#id_sec_base_id") && document.querySelector("#id_sec_base_id").options.length > 1',
-            timeout=10000
-        )
+        wait_for_sec_def_dropdown(page)
 
         # .. select the sec def and access type, but leave pattern empty ..
         page.select_option('#id_sec_base_id', label=sec_name)
@@ -448,13 +314,7 @@ class TestPubSubPermissionCreate:
         time.sleep(0.2)
 
         # .. set up a listener for the alert dialog ..
-        alert_messages = [] # type: list
-
-        def handle_dialog(dialog:'any_') -> 'None':
-            alert_messages.append(dialog.message)
-            dialog.accept()
-
-        page.on('dialog', handle_dialog)
+        alert_messages = setup_alert_handler(page)
 
         # .. try to submit ..
         page.click('#create-div input[type="submit"]')
@@ -468,8 +328,6 @@ class TestPubSubPermissionCreate:
         # .. verify the dialog is still open (submission was prevented).
         is_visible = page.is_visible('#create-div')
         assert is_visible, 'Expected create dialog to still be open after rejection'
-
-        page.remove_listener('dialog', handle_dialog)
 
 # ################################################################################################################################
 
@@ -488,28 +346,24 @@ class TestPubSubPermissionCreate:
 
         for topic_name in (topic_name_1, topic_name_2, topic_name_3):
 
-            _ = page.goto(f'{base_url}{_Topic_Page_Url}')
-            page.wait_for_selector('#data-table', state='visible')
+            navigate_to_page(page, base_url, _Topic_Page_Url)
 
-            page.click('#markup .page_prompt a')
-            page.wait_for_selector('#create-div', state='visible')
+            open_create_dialog(page)
 
             page.fill('#id_name', topic_name)
-            page.click('#create-div input[type="submit"]')
-            page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+            submit_create_form(page)
 
         # .. create a sec def ..
-        sec_name = _create_basic_auth(page, base_url, 'wc.' + suffix)
+        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'wc.' + suffix)
 
         # .. use a wildcard pattern that should match all 3 topics ..
         pattern_value = topic_prefix + '.*'
 
         # .. create the permission ..
-        _create_permission(page, base_url, sec_name, 'publisher', 'pub', pattern_value)
+        _ = create_permission(page, base_url, sec_name, 'publisher', 'pub', pattern_value)
 
         # .. reload the page so pattern tables are rendered ..
-        _ = page.goto(f'{base_url}{_Permission_Page_Url}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Permission_Page_Url)
         time.sleep(0.5)
 
         # .. find the "Show matches" link for our pattern ..
@@ -556,15 +410,14 @@ class TestPubSubPermissionCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Create a sec def ..
-        sec_name = _create_basic_auth(page, base_url, 'no-match')
+        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'no-match')
 
         # .. create a permission with a pattern that matches nothing ..
         pattern_value = 'nonexistent.topic.that.will.never.match'
-        _create_permission(page, base_url, sec_name, 'publisher', 'pub', pattern_value)
+        _ = create_permission(page, base_url, sec_name, 'publisher', 'pub', pattern_value)
 
         # .. reload the page ..
-        _ = page.goto(f'{base_url}{_Permission_Page_Url}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Permission_Page_Url)
         time.sleep(0.5)
 
         # .. find the "Show matches" link ..

@@ -9,6 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 
+# Zato
+from zato.common.test.playwright_pubsub import close_dialog_via_jquery, get_table_row_count, navigate_to_page, \
+    open_create_dialog, submit_create_form
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -36,8 +40,7 @@ class TestPubSubTopicCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Navigate to the topics page ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. verify the page heading ..
         heading = page.query_selector('h2.zato')
@@ -74,22 +77,17 @@ class TestPubSubTopicCreate:
         topic_description = 'Description for ' + topic_name
 
         # Navigate to the topics page ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. open the create dialog ..
-        page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog(page)
 
         # .. fill in the form fields ..
         page.fill('#id_name', topic_name)
         page.fill('#id_description', topic_description)
 
         # .. submit the form ..
-        page.click('#create-div input[type="submit"]')
-
-        # .. wait for the dialog to close ..
-        page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+        submit_create_form(page)
 
         # .. verify the new row appears in the table ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{topic_name}"))'
@@ -124,23 +122,20 @@ class TestPubSubTopicCreate:
             topics.append((name, description))
 
         # Navigate to the topics page ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. create each topic ..
         for name, description in topics:
 
             # .. open the create dialog ..
-            page.click('#markup .page_prompt a')
-            page.wait_for_selector('#create-div', state='visible')
+            open_create_dialog(page)
 
             # .. fill in the form fields ..
             page.fill('#id_name', name)
             page.fill('#id_description', description)
 
-            # .. submit and wait for the dialog to close ..
-            page.click('#create-div input[type="submit"]')
-            page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+            # .. submit and wait for the dialog to close.
+            submit_create_form(page)
 
         # .. verify all 3 rows are present with correct values.
         for name, description in topics:
@@ -169,22 +164,18 @@ class TestPubSubTopicCreate:
         topic_name = _Test_Name_Prefix + 'reopen-empty'
 
         # Navigate to the topics page ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. create a topic first ..
-        page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog(page)
 
         page.fill('#id_name', topic_name)
         page.fill('#id_description', 'Some description')
 
-        page.click('#create-div input[type="submit"]')
-        page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+        submit_create_form(page)
 
         # .. reopen the create dialog ..
-        page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog(page)
 
         # .. verify all fields are empty.
         name_value = page.input_value('#id_name')
@@ -201,23 +192,19 @@ class TestPubSubTopicCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Navigate to the topics page ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. open the create dialog and fill fields ..
-        page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog(page)
 
         page.fill('#id_name', _Test_Name_Prefix + 'cancel-test')
         page.fill('#id_description', 'Cancel description')
 
         # .. close the dialog via jQuery UI ..
-        page.evaluate('$("#create-div").dialog("close")')
-        page.wait_for_function('!document.querySelector("#create-div").offsetParent')
+        close_dialog_via_jquery(page, 'create-div')
 
         # .. reopen the dialog ..
-        page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog(page)
 
         # .. verify all fields are empty.
         name_value = page.input_value('#id_name')
@@ -236,27 +223,22 @@ class TestPubSubTopicCreate:
         cancelled_name = _Test_Name_Prefix + 'should-not-exist'
 
         # Navigate to the topics page ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. count rows before ..
-        rows_before = page.query_selector_all('#data-table tbody tr:not(.ignore)')
-        count_before = len(rows_before)
+        count_before = get_table_row_count(page)
 
         # .. open the create dialog and fill fields ..
-        page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog(page)
 
         page.fill('#id_name', cancelled_name)
         page.fill('#id_description', 'Should not be saved')
 
         # .. close the dialog via jQuery UI ..
-        page.evaluate('$("#create-div").dialog("close")')
-        page.wait_for_function('!document.querySelector("#create-div").offsetParent')
+        close_dialog_via_jquery(page, 'create-div')
 
         # .. verify row count is unchanged ..
-        rows_after = page.query_selector_all('#data-table tbody tr:not(.ignore)')
-        count_after = len(rows_after)
+        count_after = get_table_row_count(page)
 
         assert count_after == count_before, \
             f'Expected {count_before} rows after cancel, got: {count_after}'
@@ -276,25 +258,20 @@ class TestPubSubTopicCreate:
         existing_name = _Test_Name_Prefix + 'duplicate-check'
 
         # Navigate and create a topic to have a known name ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog(page)
 
         page.fill('#id_name', existing_name)
 
-        page.click('#create-div input[type="submit"]')
-        page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+        submit_create_form(page)
 
         # .. reload the page so the server's check_attr_exists picks up the new topic ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. reopen the create dialog and type the same name character by character
         # .. so that the input event handler triggers the uniqueness check ..
-        page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog(page)
 
         name_field = page.locator('#id_name')
         name_field.click()
@@ -318,13 +295,11 @@ class TestPubSubTopicCreate:
         unique_name = _Test_Name_Prefix + 'unique-check-' + os.urandom(4).hex()
 
         # Navigate to the topics page ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. open the create dialog and type a unique name character by character
         # .. so that the input event handler triggers the uniqueness check ..
-        page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog(page)
 
         name_field = page.locator('#id_name')
         name_field.click()
@@ -348,19 +323,16 @@ class TestPubSubTopicCreate:
         topic_name = _Test_Name_Prefix + 'no-desc'
 
         # Navigate to the topics page ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. open the create dialog ..
-        page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog(page)
 
         # .. fill in name only, leave description empty ..
         page.fill('#id_name', topic_name)
 
         # .. submit the form ..
-        page.click('#create-div input[type="submit"]')
-        page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+        submit_create_form(page)
 
         # .. verify the new row appears ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{topic_name}"))'
