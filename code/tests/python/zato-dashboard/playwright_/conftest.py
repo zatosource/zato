@@ -110,11 +110,20 @@ def _cleanup() -> 'None':
         _cleanup_refs[key] = None
 
     tmp = _cleanup_refs['temporary_dir']
-    if tmp and os.path.isdir(tmp):
+    if tmp and os.path.isdir(tmp) and not _cleanup_refs.get('has_failures'):
         shutil.rmtree(tmp, ignore_errors=True)
     _cleanup_refs['temporary_dir'] = None
 
 atexit.register(_cleanup)
+
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item:'any_', call:'any_') -> 'any_':
+    """ Track test failures so we can skip temp dir cleanup for debugging.
+    """
+    outcome = yield
+    report = outcome.get_result()
+    if report.failed:
+        _cleanup_refs['has_failures'] = True
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -343,8 +352,10 @@ def zato_dashboard() -> 'any_':
     _kill_process(dashboard_process)
     _cleanup_refs['dashboard_process'] = None
 
-    # .. remove the temporary directory.
-    if os.path.isdir(temporary_dir):
+    # .. remove the temporary directory only if all tests passed.
+    if _cleanup_refs.get('has_failures'):
+        logger.info('[TEARDOWN] Keeping temporary directory for debugging: %s', temporary_dir)
+    elif os.path.isdir(temporary_dir):
         shutil.rmtree(temporary_dir, ignore_errors=True)
     _cleanup_refs['temporary_dir'] = None
 
