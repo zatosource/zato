@@ -10,8 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import time
 
-# pytest
-import pytest
+# Zato
+from zato.common.test.playwright_pubsub import collect_console_errors, collect_http_errors, confirm_delete, create_topic, \
+    filter_console_noise, get_item_id, get_table_row_count, navigate_to_page, open_create_dialog, open_edit_dialog, \
+    open_publish_overlay, submit_create_form, submit_edit_form, trigger_delete
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,80 +41,29 @@ _Console_Noise_Patterns = [
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _create_topic(page:'Page', suffix:'str', description:'str'='') -> 'dict':
-    """ Creates a pub/sub topic via the UI and returns its details.
-    """
-
-    name = _Test_Name_Prefix + suffix
-
-    # Open the create dialog ..
-    page.click('#markup .page_prompt a')
-    page.wait_for_selector('#create-div', state='visible')
-
-    # .. fill in the fields ..
-    page.fill('#id_name', name)
-    if description:
-        page.fill('#id_description', description)
-
-    # .. submit and wait for the dialog to close ..
-    page.click('#create-div input[type="submit"]')
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
-
-    # .. wait for the row to appear.
-    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
-
-    out = {
-        'name': name,
-        'description': description,
-    }
-
-    return out
-
-# ################################################################################################################################
-
-def _get_item_id(page:'Page', name:'str') -> 'str':
-    """ Extracts the server-side ID of a row by its name.
-    """
-
-    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    row = page.query_selector(row_selector)
-    id_cell = row.query_selector('td[class*="item_id_"]')
-    out = id_cell.inner_text().strip()
-
-    return out
-
-# ################################################################################################################################
-
 def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
     """ Performs a full CRUD cycle: create, edit, delete.
     """
 
     # Navigate ..
-    _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-    page.wait_for_selector('#data-table', state='visible')
+    navigate_to_page(page, base_url, _Page_Url_Pattern)
 
     # .. create ..
-    topic = _create_topic(page, suffix, 'Description for ' + suffix)
+    topic = create_topic(page, base_url, _Test_Name_Prefix, suffix, 'Description for ' + suffix)
 
     # .. edit ..
-    item_id = _get_item_id(page, topic['name'])
-    page.evaluate(f'$.fn.zato.pubsub.topic.edit("{item_id}")')
-    page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+    open_edit_dialog(page, 'topic', topic['item_id'])
 
     edited_name = topic['name'] + '-edited'
     page.fill('#id_edit-name', '')
     page.fill('#id_edit-name', edited_name)
 
-    page.click('#edit-div input[type="submit"]')
-    page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+    submit_edit_form(page)
     time.sleep(0.3)
 
     # .. delete.
-    page.evaluate(f'$.fn.zato.pubsub.topic.delete_("{item_id}")')
-    page.wait_for_selector('#popup_container', state='visible', timeout=5000)
-    page.click('#popup_ok')
-    time.sleep(0.5)
+    trigger_delete(page, 'topic', topic['item_id'])
+    confirm_delete(page)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -128,30 +79,13 @@ class TestPubSubTopicLifecycle:
 
         # Collect console errors ..
         console_errors = [] # type: list
-
-        def _on_console(msg:'object') -> 'None':
-            if msg.type == 'error':
-                console_errors.append(msg.text)
-
-        page.on('console', _on_console)
+        collect_console_errors(page, console_errors)
 
         # .. perform the full CRUD cycle ..
         _do_full_crud(page, base_url, 'console-check')
 
-        # .. filter known noise ..
-        real_errors = [] # type: list
-
-        for error_text in console_errors:
-            is_noise = False
-            for noise_pattern in _Console_Noise_Patterns:
-                if noise_pattern in error_text:
-                    is_noise = True
-                    break
-
-            if not is_noise:
-                real_errors.append(error_text)
-
-        # .. assert no real errors.
+        # .. filter known noise and assert no real errors.
+        real_errors = filter_console_noise(console_errors, _Console_Noise_Patterns)
         assert not real_errors, f'Console errors during CRUD:\n' + '\n'.join(real_errors)
 
 # ################################################################################################################################
@@ -163,12 +97,7 @@ class TestPubSubTopicLifecycle:
 
         # Collect server errors ..
         server_errors = [] # type: list
-
-        def _on_response(response:'object') -> 'None':
-            if response.status >= 500:
-                server_errors.append(f'{response.status} {response.url}')
-
-        page.on('response', _on_response)
+        collect_http_errors(page, server_errors)
 
         # .. perform the full CRUD cycle ..
         _do_full_crud(page, base_url, 'http500-check')
@@ -184,20 +113,17 @@ class TestPubSubTopicLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Navigate ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. create ..
-        topic = _create_topic(page, 'crud', 'Original description')
+        topic = create_topic(page, base_url, _Test_Name_Prefix, 'crud', 'Original description')
 
         # .. verify row exists ..
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{topic["name"]}"))')
         assert row is not None, f'Row "{topic["name"]}" should exist after create'
 
         # .. edit the name and description ..
-        item_id = _get_item_id(page, topic['name'])
-        page.evaluate(f'$.fn.zato.pubsub.topic.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        open_edit_dialog(page, 'topic', topic['item_id'])
 
         edited_name = topic['name'] + '-edited'
         page.fill('#id_edit-name', '')
@@ -205,8 +131,7 @@ class TestPubSubTopicLifecycle:
         page.fill('#id_edit-description', '')
         page.fill('#id_edit-description', 'Edited description')
 
-        page.click('#edit-div input[type="submit"]')
-        page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+        submit_edit_form(page)
         time.sleep(0.3)
 
         # .. verify old name gone, new name present ..
@@ -217,10 +142,8 @@ class TestPubSubTopicLifecycle:
         assert new_row is not None, f'Edited name "{edited_name}" should be present'
 
         # .. delete ..
-        page.evaluate(f'$.fn.zato.pubsub.topic.delete_("{item_id}")')
-        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
-        page.click('#popup_ok')
-        time.sleep(0.5)
+        trigger_delete(page, 'topic', topic['item_id'])
+        confirm_delete(page)
 
         # .. verify gone.
         row_after_delete = page.query_selector(f'#data-table tbody tr:has(td:text-is("{edited_name}"))')
@@ -234,20 +157,18 @@ class TestPubSubTopicLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Navigate ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. create three topics in non-alphabetical order ..
-        name_b = _create_topic(page, 'sort-b')['name']
-        name_a = _create_topic(page, 'sort-a')['name']
-        name_c = _create_topic(page, 'sort-c')['name']
+        name_b = create_topic(page, base_url, _Test_Name_Prefix, 'sort-b')['name']
+        name_a = create_topic(page, base_url, _Test_Name_Prefix, 'sort-a')['name']
+        name_c = create_topic(page, base_url, _Test_Name_Prefix, 'sort-c')['name']
 
         sorted_asc = [name_a, name_b, name_c]
         sorted_desc = [name_c, name_b, name_a]
 
         # .. reload with query filter so our test rows are visible ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={_Test_Name_Prefix}sort')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, f'{_Page_Url_Pattern}&query={_Test_Name_Prefix}sort')
 
         # .. click the Name column header to trigger a sort ..
         page.click('#data-table thead th:nth-child(3)')
@@ -292,15 +213,13 @@ class TestPubSubTopicLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Navigate ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. create a topic with no description ..
-        topic = _create_topic(page, 'edit-desc')
+        topic = create_topic(page, base_url, _Test_Name_Prefix, 'edit-desc')
 
         # .. reload so the server renders the no-value indicator ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={topic["name"]}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, f'{_Page_Url_Pattern}&query={topic["name"]}')
 
         # .. verify the description cell shows the placeholder ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{topic["name"]}"))'
@@ -310,14 +229,11 @@ class TestPubSubTopicLifecycle:
         assert desc_text == '---', f'Expected "---" for empty description, got: "{desc_text}"'
 
         # .. edit to add a description ..
-        item_id = _get_item_id(page, topic['name'])
-        page.evaluate(f'$.fn.zato.pubsub.topic.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        open_edit_dialog(page, 'topic', topic['item_id'])
 
         page.fill('#id_edit-description', 'Added description')
 
-        page.click('#edit-div input[type="submit"]')
-        page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+        submit_edit_form(page)
         time.sleep(0.3)
 
         # .. verify the description cell is updated.
@@ -335,15 +251,13 @@ class TestPubSubTopicLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Navigate ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. create a topic with a description ..
-        topic = _create_topic(page, 'edit-desc-clear', 'Has a description')
+        topic = create_topic(page, base_url, _Test_Name_Prefix, 'edit-desc-clear', 'Has a description')
 
         # .. reload so the server renders the row ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={topic["name"]}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, f'{_Page_Url_Pattern}&query={topic["name"]}')
 
         # .. verify the description is shown ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{topic["name"]}"))'
@@ -354,14 +268,11 @@ class TestPubSubTopicLifecycle:
             f'Expected "Has a description", got: "{desc_text}"'
 
         # .. open the edit dialog and clear the description ..
-        item_id = _get_item_id(page, topic['name'])
-        page.evaluate(f'$.fn.zato.pubsub.topic.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        open_edit_dialog(page, 'topic', topic['item_id'])
 
         page.fill('#id_edit-description', '')
 
-        page.click('#edit-div input[type="submit"]')
-        page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+        submit_edit_form(page)
         time.sleep(0.3)
 
         # .. verify the description cell now shows the form_hint placeholder.
@@ -384,18 +295,13 @@ class TestPubSubTopicLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Navigate ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. create a topic ..
-        topic = _create_topic(page, 'publish-link')
+        topic = create_topic(page, base_url, _Test_Name_Prefix, 'publish-link')
 
         # .. click "Publish a message" ..
-        item_id = _get_item_id(page, topic['name'])
-        page.evaluate(f'$.fn.zato.pubsub.topic.publishMessage("{item_id}")')
-
-        # .. verify the invoker overlay opens ..
-        page.wait_for_selector('#invoker-modal-overlay', state='visible', timeout=5000)
+        open_publish_overlay(page, topic['item_id'])
 
         # .. verify the title contains the topic name.
         title_elem = page.query_selector('#invoker-modal-title')
@@ -411,21 +317,18 @@ class TestPubSubTopicLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Navigate ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. count existing rows to determine how many more we need ..
-        existing_rows = page.query_selector_all('#data-table tbody tr:not(.ignore)')
-        existing_count = len(existing_rows)
+        existing_count = get_table_row_count(page)
         needed = max(0, _Page_Size + 1 - existing_count)
 
         # .. create enough topics to exceed the page size ..
         for idx in range(needed):
-            _ = _create_topic(page, f'pag-{idx:02d}')
+            _ = create_topic(page, base_url, _Test_Name_Prefix, f'pag-{idx:02d}')
 
         # .. reload so pagination kicks in ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. verify pagination controls exist ..
         action_panel = page.query_selector('.action-panel')
@@ -448,21 +351,18 @@ class TestPubSubTopicLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Navigate ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. count existing rows to determine how many more we need for 3 pages ..
-        existing_rows = page.query_selector_all('#data-table tbody tr:not(.ignore)')
-        existing_count = len(existing_rows)
+        existing_count = get_table_row_count(page)
         needed = max(0, (_Page_Size * 2) + 1 - existing_count)
 
         # .. create enough topics ..
         for idx in range(needed):
-            _ = _create_topic(page, f'nav-{idx:02d}')
+            _ = create_topic(page, base_url, _Test_Name_Prefix, f'nav-{idx:02d}')
 
         # .. reload ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. collect page 1 names ..
         cells_p1 = page.query_selector_all('#data-table tbody tr:not(.ignore) td:nth-child(3)')
@@ -511,18 +411,16 @@ class TestPubSubTopicLifecycle:
         filter_prefix = _Test_Name_Prefix + 'srch'
 
         # Navigate ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. create 3 topics with the filter prefix ..
         created_names = []
         for idx in range(3):
-            topic = _create_topic(page, f'srch-{idx}')
+            topic = create_topic(page, base_url, _Test_Name_Prefix, f'srch-{idx}')
             created_names.append(topic['name'])
 
         # .. navigate with query filter ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={filter_prefix}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, f'{_Page_Url_Pattern}&query={filter_prefix}')
 
         # .. collect all visible names ..
         cells = page.query_selector_all('#data-table tbody tr:not(.ignore) td:nth-child(3)')
@@ -540,21 +438,18 @@ class TestPubSubTopicLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Navigate ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. count existing rows to determine how many more we need ..
-        existing_rows = page.query_selector_all('#data-table tbody tr:not(.ignore)')
-        existing_count = len(existing_rows)
+        existing_count = get_table_row_count(page)
         needed = max(0, _Page_Size + 1 - existing_count)
 
         # .. create enough topics ..
         for idx in range(needed):
-            _ = _create_topic(page, f'info-{idx:02d}')
+            _ = create_topic(page, base_url, _Test_Name_Prefix, f'info-{idx:02d}')
 
         # .. reload ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. verify info text ..
         action_panel = page.query_selector('.action-panel')
@@ -571,12 +466,10 @@ class TestPubSubTopicLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Navigate ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. count rows before ..
-        rows_before = page.query_selector_all('#data-table tbody tr:not(.ignore)')
-        count_before = len(rows_before)
+        count_before = get_table_row_count(page)
 
         # .. click "Import demo config" ..
         page.click('a:has-text("Import demo config")')
@@ -585,15 +478,12 @@ class TestPubSubTopicLifecycle:
         page.wait_for_load_state('networkidle', timeout=30000)
         page.wait_for_selector('#data-table', state='visible')
 
-        # .. verify topics appeared (row count increased or stayed the same if paginated,
-        # .. but we know a fresh server has no topics before this test runs the import).
-        rows_after = page.query_selector_all('#data-table tbody tr:not(.ignore)')
-        count_after = len(rows_after)
+        # .. verify topics appeared.
+        count_after = get_table_row_count(page)
 
         assert count_after >= count_before, \
             f'Expected at least as many rows after import, got before={count_before}, after={count_after}'
 
-        # .. verify there is at least one row in the table now.
         assert count_after > 0, 'Expected at least one topic after demo config import'
 
 # ################################################################################################################################
@@ -606,13 +496,11 @@ class TestPubSubTopicLifecycle:
         bad_name = _Test_Name_Prefix + 'has#hash'
 
         # Navigate ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. open the create dialog and type the invalid name character by character
         # .. so the live validation fires ..
-        page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog(page)
 
         name_field = page.locator('#id_name')
         name_field.click()
@@ -643,12 +531,10 @@ class TestPubSubTopicLifecycle:
         bad_name = 'a' * 201
 
         # Navigate ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. open the create dialog and fill the overlong name ..
-        page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog(page)
 
         page.fill('#id_name', bad_name)
 
@@ -678,12 +564,10 @@ class TestPubSubTopicLifecycle:
         bad_name = _Test_Name_Prefix + '\u017e\u0161\u010d'
 
         # Navigate ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. open the create dialog and fill the non-ASCII name ..
-        page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog(page)
 
         page.fill('#id_name', bad_name)
 
@@ -711,12 +595,10 @@ class TestPubSubTopicLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Navigate ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. open the create dialog and try to submit with an empty name ..
-        page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        open_create_dialog(page)
 
         page.click('#create-div input[type="submit"]')
         time.sleep(0.5)
@@ -733,20 +615,16 @@ class TestPubSubTopicLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Navigate ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. create a topic to edit ..
-        topic = _create_topic(page, 'edit-invalid')
+        topic = create_topic(page, base_url, _Test_Name_Prefix, 'edit-invalid')
 
         # .. reload so the server knows about it ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={topic["name"]}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, f'{_Page_Url_Pattern}&query={topic["name"]}')
 
         # .. open the edit dialog ..
-        item_id = _get_item_id(page, topic['name'])
-        page.evaluate(f'$.fn.zato.pubsub.topic.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        open_edit_dialog(page, 'topic', topic['item_id'])
 
         # .. clear the name and type an invalid one with # ..
         name_field = page.locator('#id_edit-name')
@@ -776,21 +654,18 @@ class TestPubSubTopicLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Navigate ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. create two topics ..
-        topic_a = _create_topic(page, 'dup-a')
-        topic_b = _create_topic(page, 'dup-b')
+        topic_a = create_topic(page, base_url, _Test_Name_Prefix, 'dup-a')
+        topic_b = create_topic(page, base_url, _Test_Name_Prefix, 'dup-b')
 
         # .. reload so the server knows about both ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={_Test_Name_Prefix}dup')
-        page.wait_for_selector('#data-table', state='visible')
+        navigate_to_page(page, base_url, f'{_Page_Url_Pattern}&query={_Test_Name_Prefix}dup')
 
         # .. edit topic_b to have topic_a's name ..
-        item_id = _get_item_id(page, topic_b['name'])
-        page.evaluate(f'$.fn.zato.pubsub.topic.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        item_id = get_item_id(page, topic_b['name'])
+        open_edit_dialog(page, 'topic', item_id)
 
         name_field = page.locator('#id_edit-name')
         name_field.fill('')
