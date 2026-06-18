@@ -92,7 +92,7 @@ def _make_handler(registry=None, invoke_func=None): # type: ignore
 
     session_manager = MCPSessionManager()
 
-    out = MCPHandler(registry, invoke_func, session_manager)
+    out = MCPHandler(registry, invoke_func, session_manager) # pyright: ignore[reportArgumentType]
     return out
 
 # ################################################################################################################################
@@ -214,7 +214,7 @@ class HandleToolsListPagination(TestCase):
 
         request = _make_request('tools/list', params={'cursor': '42'})
         raw = dumps(request)
-        handler.handle_raw_request(raw)
+        _ = handler.handle_raw_request(raw)
 
         self.assertEqual(captured_cursors, ['42'])
 
@@ -334,7 +334,7 @@ class HandleToolsCall(TestCase):
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        handler.handle_raw_request(raw)
+        _ = handler.handle_raw_request(raw)
 
         self.assertEqual(received_payloads[0], {})
 

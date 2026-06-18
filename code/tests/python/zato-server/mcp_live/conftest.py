@@ -17,6 +17,7 @@ import tempfile
 import threading
 import time
 from http.client import OK
+from typing import NamedTuple
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
@@ -32,7 +33,6 @@ from zato.common.util.config import get_config_object, update_config_file
 # ################################################################################################################################
 
 if 0:
-    from typing import NamedTuple
     from zato.common.typing_ import any_
 
 # ################################################################################################################################
@@ -48,6 +48,10 @@ class _CoverageConfig(NamedTuple): # type: ignore
 _zato_base = os.environ['ZATO_TEST_BASE_DIR']
 _zato_bin  = os.path.join(_zato_base, 'code', 'bin', 'zato')
 _zato_py   = os.path.join(_zato_base, 'code', 'bin', 'python')
+
+# The file-transfer listener that watches the pickup directory for runtime hot-deploy
+_listener_path = os.path.join(
+    _zato_base, 'code', 'zato-common', 'src', 'zato', 'common', 'file_transfer', 'listener.py')
 
 _password = 'test.invoke.' + os.urandom(8).hex()
 
@@ -66,8 +70,11 @@ _coverage_teardown_wait   = 2
 _error_text_max_length    = 80
 _ping_poll_interval       = 0.5
 
-_server_process = None
-_temp_directory  = None
+_listener_settle_seconds = 2
+
+_server_process   = None
+_listener_process = None
+_temp_directory   = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -85,25 +92,38 @@ def _find_free_port() -> 'int':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _kill_server() -> 'None':
-    """ Terminates the server subprocess if it is still running.
+def _kill_process(process:'any_') -> 'None':
+    """ Terminates a subprocess if it is still running, force-killing on timeout.
     """
-    global _server_process
 
-    if _server_process:
-        if _server_process.poll() is None:
+    if process:
+        if process.poll() is None:
 
             # Try graceful termination first ..
-            _server_process.terminate()
+            process.terminate()
 
             try:
-                _ = _server_process.wait(timeout=_process_kill_timeout)
+                _ = process.wait(timeout=_process_kill_timeout)
 
             # .. if it does not stop in time, force kill it.
             except subprocess.TimeoutExpired:
-                _server_process.kill()
-                _ = _server_process.wait(timeout=_process_kill_timeout)
+                process.kill()
+                _ = process.wait(timeout=_process_kill_timeout)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _kill_server() -> 'None':
+    """ Terminates the server and file-listener subprocesses if they are still running.
+    """
+    global _server_process, _listener_process
+
+    # Stop the file listener first so it does not race the server shutdown ..
+    _kill_process(_listener_process)
+    _listener_process = None
+
+    # .. then stop the server.
+    _kill_process(_server_process)
     _server_process = None
 
 # ################################################################################################################################
@@ -315,14 +335,24 @@ def zato_server(request:'any_') -> 'any_':
     popen_time = time.monotonic()
     print(f'[TIMING] Popen started: {popen_time - config_time:.1f}s')
 
-    # .. stream server stdout in a background thread so we can see startup logs ..
+    # .. persist the server output to a file outside the temp dir so it survives teardown ..
+    server_log_path = os.path.join(tempfile.gettempdir(), 'zato_mcp_live_server.log')
+    server_log_file = open(server_log_path, 'w')
+    print(f'[TIMING] server log: {server_log_path}')
+
+    # .. stream server stdout in a background thread, printing each line and writing it to the log file ..
     def _stream_server_output() -> 'None':
-        """ Reads server stdout line by line and prints each with a timestamp prefix.
+        """ Reads server stdout line by line, prints each with a timestamp prefix,
+        and writes it to the persistent log file.
         """
         for line in iter(_server_process.stdout.readline, b''):  # type: ignore
             text = line.decode('utf-8', errors='replace').rstrip()
             elapsed = time.monotonic() - popen_time
             print(f'[SERVER {elapsed:6.1f}s] {text}')
+
+            # .. mirror to the persistent log file and flush so it is readable on timeout ..
+            _ = server_log_file.write(f'[SERVER {elapsed:6.1f}s] {text}\n')
+            server_log_file.flush()
 
     stdout_thread = threading.Thread(target=_stream_server_output, daemon=True)
     stdout_thread.start()
@@ -337,9 +367,42 @@ def zato_server(request:'any_') -> 'any_':
         print(f'[TIMING] total setup: {ready_time - start_time:.1f}s')
 
     except (ConnectionRefusedError, OSError, RuntimeError):
-        print('\n--- Server did not become ready, stdout was streamed above ---\n')
+
+        # .. give the streaming thread a moment to flush any final lines ..
+        time.sleep(1)
+
+        # .. dump the full captured server output so the real startup failure is visible ..
+        print('\n--- Server did not become ready, full server output follows ---\n')
+
+        if os.path.isfile(server_log_path):
+            with open(server_log_path) as captured_log:
+                print(captured_log.read())
+
+        print(f'\n--- End of server output (also saved at {server_log_path}) ---\n')
+
         _kill_server()
         raise
+
+    # .. start the file-transfer listener that watches the pickup directory, so that
+    # files dropped at runtime trigger hot-deploy (and the MCP tools/list_changed
+    # notification). The server's own boot scan only covers files present at startup ..
+    global _listener_process
+
+    pickup_directory = os.path.join(server_directory, 'pickup', 'incoming', 'services')
+
+    listener_env = os.environ.copy()
+    listener_env['Zato_Config_Bind_Port'] = str(port)
+    _ = listener_env.pop('COVERAGE_PROCESS_START', None)
+
+    _listener_process = subprocess.Popen(
+        [_zato_py, _listener_path, pickup_directory],
+        env=listener_env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+
+    # .. give the listener a moment to initialize its directory watch ..
+    time.sleep(_listener_settle_seconds)
 
     # .. the default MCP channel auto-creates on /mcp/demo during server startup,
     # but demo.echo is hot-deployed a moment later, so we give it a few seconds

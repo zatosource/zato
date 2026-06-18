@@ -45,7 +45,7 @@ class ChannelMCPWrapperInit(TestCase):
         config = Bunch(name='test-mcp-channel')
         server = Bunch()
 
-        wrapper = ChannelMCPWrapper(config, server)
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
 
         self.assertIs(wrapper.config, config)
         self.assertIs(wrapper.server, server)
@@ -57,7 +57,7 @@ class ChannelMCPWrapperInit(TestCase):
         config = Bunch(name='test-mcp-channel')
         server = Bunch(service_store=service_store)
 
-        wrapper = ChannelMCPWrapper(config, server)
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
 # ################################################################################################################################
@@ -66,7 +66,7 @@ class ChannelMCPWrapperInit(TestCase):
         config = Bunch(name='test-mcp-channel')
         server = Bunch()
 
-        wrapper = ChannelMCPWrapper(config, server)
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.delete()
 
 # ################################################################################################################################

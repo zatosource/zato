@@ -8,7 +8,7 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener \
 	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-enmasse \
-	test-cli test-mcp test-graphql test-hl7 test-ui test-ui-pubsub _test-ui test-common test-distlock \
+	test-cli test-mcp _test-mcp test-graphql test-hl7 test-ui test-ui-pubsub _test-ui test-common test-distlock \
 	test-all test \
 	health-ruff health-clippy \
 	format format-zato \
@@ -412,12 +412,24 @@ test-cli: ## CLI tests.
 		$(FAIL_FAST) $(PYTEST_ARGS)
 	$(MAKE) -C $(CURDIR)/code/zato-cli test
 
-test-mcp: ## MCP unit and live tests.
-	$(ZATO_PY) -m pytest \
+test-mcp: ## All MCP tests.
+	$(MAKE) _test-mcp 2>&1 | tee /tmp/logs-test-mcp.txt
+
+_test-mcp:
+	ruff check \
+		$(CURDIR)/code/tests/python/zato-server/mcp/ \
+		$(CURDIR)/code/tests/python/zato-server/mcp_live/ \
+		2>&1 | $(TS)
+	pyright \
+		$(CURDIR)/code/tests/python/zato-server/mcp/ \
+		$(CURDIR)/code/tests/python/zato-server/mcp_live/ \
+		2>&1 | $(TS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/mcp/ \
 		$(CURDIR)/code/tests/python/zato-server/mcp_live/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mcp -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS)
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		2>&1 | $(TS)
 
 test-graphql: ## GraphQL live tests.
 	$(ZATO_PY) -m pytest \

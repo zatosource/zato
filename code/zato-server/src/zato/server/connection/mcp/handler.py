@@ -136,7 +136,7 @@ class MCPHandler:
         try:
             parsed = loads(raw_data)
         except Exception:
-            logger.warning('MCP: Failed to parse JSON body', exc_info=True)
+            logger.debug('MCP: Failed to parse JSON body', exc_info=True)
 
             out.body = _make_error_response(None, _error_parse, 'Parse error')
             out.status_code = OK
@@ -225,7 +225,6 @@ class MCPHandler:
         method = message.get('method')
 
         if not method:
-            logger.info('MCP: Received notification without a method, ignoring')
             return
 
         # notifications/initialized is a no-op acknowledgment
@@ -364,7 +363,7 @@ class MCPHandler:
         try:
             service_response = self.invoke_func(tool_name, arguments)
         except Exception as error:
-            logger.warning('MCP: Service `%s` raised an exception', tool_name, exc_info=True)
+            logger.debug('MCP: Service `%s` raised an exception', tool_name, exc_info=True)
 
             result:'stranydict' = {
                 'content': [
@@ -423,7 +422,7 @@ class MCPHandler:
         try:
             service_response = self.invoke_func(tool_name, arguments)
         except Exception as error:
-            logger.warning('MCP: Service `%s` raised an exception during streaming', tool_name, exc_info=True)
+            logger.debug('MCP: Service `%s` raised an exception during streaming', tool_name, exc_info=True)
             result:'stranydict' = {
                 'content': [{'type': 'text', 'text': str(error)}],
                 'isError': True,

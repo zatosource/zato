@@ -24,6 +24,12 @@ from zato.server.connection.mcp.session import MCPSessionManager
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_, anydict, anylist, strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _MockToolRegistry:
 
     def __init__(self, tools=None, allowed_tools=None): # type: ignore
@@ -48,8 +54,11 @@ class _MockToolRegistry:
 def _make_handler(allowed_tools=None): # type: ignore
     registry = _MockToolRegistry(allowed_tools=allowed_tools or set())
     session_manager = MCPSessionManager()
-    invoke_func = lambda name, payload: {'echoed': payload}
-    handler = MCPHandler(registry, invoke_func, session_manager)
+
+    def invoke_func(name, payload): # type: ignore
+        return {'echoed': payload}
+
+    handler = MCPHandler(registry, invoke_func, session_manager) # pyright: ignore[reportArgumentType]
     return handler
 
 # ################################################################################################################################
@@ -64,7 +73,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
 
     @given(st.binary())
     @settings(max_examples=200)
-    def test_arbitrary_bytes_never_crash(self, raw_data):
+    def test_arbitrary_bytes_never_crash(self, raw_data:'bytes') -> 'None':
         """ Any byte sequence must produce a valid MCPResponse, never an unhandled exception.
         """
         handler = _make_handler()
@@ -77,7 +86,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
 
     @given(st.text())
     @settings(max_examples=200)
-    def test_arbitrary_text_never_crash(self, text):
+    def test_arbitrary_text_never_crash(self, text:'str') -> 'None':
         """ Any text string must produce a valid MCPResponse.
         """
         handler = _make_handler()
@@ -90,11 +99,11 @@ class JSONRPCEnvelopeFuzzing(TestCase):
 
     @given(st.text())
     @settings(max_examples=200)
-    def test_non_json_returns_error(self, text):
+    def test_non_json_returns_error(self, text:'str') -> 'None':
         """ Non-JSON or non-object/array JSON text must return an error, never a success result.
         """
-        assume(not text.strip().startswith('{'))
-        assume(not text.strip().startswith('['))
+        _ = assume(not text.strip().startswith('{'))
+        _ = assume(not text.strip().startswith('['))
 
         handler = _make_handler()
         response = handler.handle_raw_request(text.encode('utf8'))
@@ -115,7 +124,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
         max_size=10,
     ))
     @settings(max_examples=200)
-    def test_arbitrary_json_object_never_crash(self, obj):
+    def test_arbitrary_json_object_never_crash(self, obj:'anydict') -> 'None':
         """ Any JSON object must produce a response without crashing.
         """
         handler = _make_handler()
@@ -136,7 +145,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
         max_size=5,
     ))
     @settings(max_examples=200)
-    def test_arbitrary_json_array_never_crash(self, arr):
+    def test_arbitrary_json_array_never_crash(self, arr:'anylist') -> 'None':
         """ Any JSON array (batch) must produce a response without crashing.
         """
         handler = _make_handler()
@@ -149,11 +158,11 @@ class JSONRPCEnvelopeFuzzing(TestCase):
 
     @given(st.text(min_size=1, max_size=100))
     @settings(max_examples=200)
-    def test_unknown_method_returns_method_not_found(self, method):
+    def test_unknown_method_returns_method_not_found(self, method:'str') -> 'None':
         """ Any method name not in the known set must return -32601.
         """
         known_methods = {'initialize', 'tools/list', 'tools/call', 'ping'}
-        assume(method not in known_methods)
+        _ = assume(method not in known_methods)
 
         handler = _make_handler()
         msg = {'jsonrpc': _jsonrpc_version, 'method': method, 'id': 1}
@@ -167,10 +176,10 @@ class JSONRPCEnvelopeFuzzing(TestCase):
 
     @given(st.one_of(st.none(), st.text(max_size=50), st.integers(), st.booleans()))
     @settings(max_examples=100)
-    def test_wrong_jsonrpc_version_returns_invalid_request(self, version):
+    def test_wrong_jsonrpc_version_returns_invalid_request(self, version:'any_') -> 'None':
         """ Any jsonrpc value other than "2.0" must return -32600.
         """
-        assume(version != '2.0')
+        _ = assume(version != '2.0')
 
         handler = _make_handler()
         msg = {'jsonrpc': version, 'method': 'ping', 'id': 1}
@@ -199,7 +208,7 @@ class BatchFuzzing(TestCase):
         max_size=20,
     ))
     @settings(max_examples=100)
-    def test_batch_of_valid_requests_returns_same_count(self, messages):
+    def test_batch_of_valid_requests_returns_same_count(self, messages:'anylist') -> 'None':
         """ A batch of N valid requests must return exactly N responses.
         """
         handler = _make_handler()
@@ -221,7 +230,7 @@ class BatchFuzzing(TestCase):
         max_size=10,
     ))
     @settings(max_examples=50)
-    def test_batch_of_only_notifications_returns_204(self, messages):
+    def test_batch_of_only_notifications_returns_204(self, messages:'anylist') -> 'None':
         """ A batch containing only notifications (no id) must return 204 No Content.
         """
         from http.client import NO_CONTENT
@@ -244,7 +253,7 @@ class AllowlistEnforcement(TestCase):
 
     @given(st.text(min_size=1, max_size=100))
     @settings(max_examples=200)
-    def test_unlisted_service_always_rejected(self, service_name):
+    def test_unlisted_service_always_rejected(self, service_name:'str') -> 'None':
         """ Any service not in the allowlist must be rejected by tools/call.
         """
         handler = _make_handler(allowed_tools=set())
@@ -265,12 +274,12 @@ class AllowlistEnforcement(TestCase):
 
     @given(st.text(min_size=1, max_size=100).map(lambda s: 'zato.' + s))
     @settings(max_examples=100)
-    def test_internal_service_always_rejected_by_registry(self, service_name):
+    def test_internal_service_always_rejected_by_registry(self, service_name:'str') -> 'None':
         """ Any service starting with zato. must be rejected by is_tool_allowed,
         even if it were somehow in the allowlist.
         """
         store = _MockServiceStore({})
-        registry = ToolRegistry(store, [service_name])
+        registry = ToolRegistry(store, [service_name]) # pyright: ignore[reportArgumentType]
         registry.rebuild()
 
         self.assertFalse(registry.is_tool_allowed(service_name))
@@ -279,11 +288,11 @@ class AllowlistEnforcement(TestCase):
 
     @given(st.text(min_size=1, max_size=100).filter(lambda s: not s.startswith('zato.')))
     @settings(max_examples=200)
-    def test_non_internal_unlisted_service_rejected_by_registry(self, service_name):
+    def test_non_internal_unlisted_service_rejected_by_registry(self, service_name:'str') -> 'None':
         """ Any non-internal service not in the allowlist must be rejected.
         """
         store = _MockServiceStore({})
-        registry = ToolRegistry(store, [])
+        registry = ToolRegistry(store, []) # pyright: ignore[reportArgumentType]
         registry.rebuild()
 
         self.assertFalse(registry.is_tool_allowed(service_name))
@@ -292,11 +301,11 @@ class AllowlistEnforcement(TestCase):
 
     @given(st.text(min_size=1, max_size=100).filter(lambda s: not s.startswith('zato.')))
     @settings(max_examples=200)
-    def test_listed_non_internal_service_accepted_by_registry(self, service_name):
+    def test_listed_non_internal_service_accepted_by_registry(self, service_name:'str') -> 'None':
         """ A non-internal service in the allowlist must be accepted.
         """
         store = _MockServiceStore({})
-        registry = ToolRegistry(store, [service_name])
+        registry = ToolRegistry(store, [service_name]) # pyright: ignore[reportArgumentType]
         registry.rebuild()
 
         self.assertTrue(registry.is_tool_allowed(service_name))
@@ -312,7 +321,7 @@ class SchemaExtractionProperties(TestCase):
 
     @given(st.lists(st.text(min_size=1, max_size=50).filter(lambda s: not s.startswith('zato.')), min_size=0, max_size=20, unique=True))
     @settings(max_examples=100)
-    def test_rebuild_produces_at_most_allowlist_count(self, service_names):
+    def test_rebuild_produces_at_most_allowlist_count(self, service_names:'strlist') -> 'None':
         """ The number of tools after rebuild is at most the number of allowed services.
         """
         service_dict = {}
@@ -320,7 +329,7 @@ class SchemaExtractionProperties(TestCase):
             service_dict[name] = _MockServiceClass(name)
 
         store = _MockServiceStore(service_dict)
-        registry = ToolRegistry(store, service_names)
+        registry = ToolRegistry(store, service_names) # pyright: ignore[reportArgumentType]
         registry.rebuild()
 
         tools = registry.get_tools()
@@ -330,7 +339,7 @@ class SchemaExtractionProperties(TestCase):
 
     @given(st.lists(st.text(min_size=1, max_size=50).filter(lambda s: not s.startswith('zato.')), min_size=1, max_size=20, unique=True))
     @settings(max_examples=100)
-    def test_all_tools_have_required_fields(self, service_names):
+    def test_all_tools_have_required_fields(self, service_names:'strlist') -> 'None':
         """ Every tool in the list must have name, description, and inputSchema.
         """
         service_dict = {}
@@ -338,7 +347,7 @@ class SchemaExtractionProperties(TestCase):
             service_dict[name] = _MockServiceClass(name)
 
         store = _MockServiceStore(service_dict)
-        registry = ToolRegistry(store, service_names)
+        registry = ToolRegistry(store, service_names) # pyright: ignore[reportArgumentType]
         registry.rebuild()
 
         for tool in registry.get_tools():
@@ -350,7 +359,7 @@ class SchemaExtractionProperties(TestCase):
 
     @given(st.lists(st.text(min_size=1, max_size=50).filter(lambda s: not s.startswith('zato.')), min_size=1, max_size=20, unique=True))
     @settings(max_examples=100)
-    def test_tool_names_match_service_names(self, service_names):
+    def test_tool_names_match_service_names(self, service_names:'strlist') -> 'None':
         """ Every tool name must be one of the allowed service names.
         """
         service_dict = {}
@@ -358,7 +367,7 @@ class SchemaExtractionProperties(TestCase):
             service_dict[name] = _MockServiceClass(name)
 
         store = _MockServiceStore(service_dict)
-        registry = ToolRegistry(store, service_names)
+        registry = ToolRegistry(store, service_names) # pyright: ignore[reportArgumentType]
         registry.rebuild()
 
         tool_names = {tool['name'] for tool in registry.get_tools()}
@@ -368,7 +377,7 @@ class SchemaExtractionProperties(TestCase):
 
     @given(st.lists(st.text(min_size=1, max_size=50), min_size=1, max_size=20, unique=True))
     @settings(max_examples=100)
-    def test_no_internal_services_in_tools(self, service_names):
+    def test_no_internal_services_in_tools(self, service_names:'strlist') -> 'None':
         """ No tool returned by the registry must start with the internal prefix.
         """
         service_dict = {}
@@ -376,7 +385,7 @@ class SchemaExtractionProperties(TestCase):
             service_dict[name] = _MockServiceClass(name)
 
         store = _MockServiceStore(service_dict)
-        registry = ToolRegistry(store, service_names)
+        registry = ToolRegistry(store, service_names) # pyright: ignore[reportArgumentType]
         registry.rebuild()
 
         for tool in registry.get_tools():
@@ -393,7 +402,7 @@ class SessionFuzzing(TestCase):
 
     @given(st.text(min_size=1, max_size=200))
     @settings(max_examples=200)
-    def test_random_session_id_rejected(self, session_id):
+    def test_random_session_id_rejected(self, session_id:'str') -> 'None':
         """ A random string as session ID must be rejected.
         """
         handler = _make_handler()
@@ -408,7 +417,7 @@ class SessionFuzzing(TestCase):
 
     @given(st.text(min_size=1, max_size=200))
     @settings(max_examples=100)
-    def test_random_session_id_delete_rejected(self, session_id):
+    def test_random_session_id_delete_rejected(self, session_id:'str') -> 'None':
         """ Deleting a random session ID must return not found.
         """
         handler = _make_handler()
@@ -425,14 +434,14 @@ class SessionFuzzing(TestCase):
 class _MockServiceClass:
     """ A minimal mock of a Zato service class for schema extraction.
     """
-    def __init__(self, name):
+    def __init__(self, name:'str') -> 'None':
         self.__doc__ = 'Mock service: ' + name
         self._io = None
 
 class _MockServiceStore:
     """ A minimal mock of ServiceStore with name_to_impl_name and services dicts.
     """
-    def __init__(self, services_by_name):
+    def __init__(self, services_by_name:'anydict') -> 'None':
         self.name_to_impl_name = {}
         self.services = {}
 

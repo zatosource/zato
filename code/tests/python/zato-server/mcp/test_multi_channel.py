@@ -12,7 +12,13 @@ from unittest import TestCase, main
 # Zato
 from zato.common.api import GENERIC as COMMON_GENERIC
 from zato.server.service.internal.generic import connection as conn_module
-from zato.common.util.channel import on_mcp_channel_create_edit, on_mcp_channel_delete
+from zato.common.util.channel import on_mcp_channel_create_edit
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,7 +62,7 @@ class InstanceHookDispatch(TestCase):
         calls = []
         original = conn_module.on_mcp_channel_delete
 
-        def _mock_delete(session, channel_name, cluster_id):
+        def _mock_delete(session:'any_', channel_name:'str', cluster_id:'int') -> 'None':
             calls.append((session, channel_name, cluster_id))
 
         conn_module.on_mcp_channel_delete = _mock_delete
@@ -95,7 +101,7 @@ class InstanceHookDispatch(TestCase):
         # .. patch the delete function temporarily ..
         original = conn_module.on_mcp_channel_delete
 
-        def _mock_delete(session, channel_name, cluster_id):
+        def _mock_delete(session:'any_', channel_name:'str', cluster_id:'int') -> 'None':
             calls.append((session, channel_name, cluster_id))
 
         conn_module.on_mcp_channel_delete = _mock_delete

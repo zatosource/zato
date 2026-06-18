@@ -50,7 +50,7 @@ def _make_handler(session_manager=None): # type: ignore
     if session_manager is None:
         session_manager = MCPSessionManager()
 
-    out = MCPHandler(registry, _invoke_noop, session_manager)
+    out = MCPHandler(registry, _invoke_noop, session_manager) # pyright: ignore[reportArgumentType]
     return out
 
 # ################################################################################################################################
@@ -72,10 +72,10 @@ class SessionManagerCreate(TestCase):
 
         self.assertEqual(manager.session_count, 0)
 
-        manager.create(_mcp_protocol_version)
+        _ = manager.create(_mcp_protocol_version)
         self.assertEqual(manager.session_count, 1)
 
-        manager.create(_mcp_protocol_version)
+        _ = manager.create(_mcp_protocol_version)
         self.assertEqual(manager.session_count, 2)
 
     def test_each_session_has_unique_id(self): # type: ignore
@@ -141,8 +141,8 @@ class SessionManagerCleanup(TestCase):
     def test_cleanup_removes_expired(self): # type: ignore
 
         manager = MCPSessionManager(ttl=0)
-        manager.create(_mcp_protocol_version)
-        manager.create(_mcp_protocol_version)
+        _ = manager.create(_mcp_protocol_version)
+        _ = manager.create(_mcp_protocol_version)
 
         removed = manager.cleanup_expired()
 
@@ -152,7 +152,7 @@ class SessionManagerCleanup(TestCase):
     def test_cleanup_keeps_fresh_sessions(self): # type: ignore
 
         manager = MCPSessionManager(ttl=9999)
-        manager.create(_mcp_protocol_version)
+        _ = manager.create(_mcp_protocol_version)
 
         removed = manager.cleanup_expired()
 
@@ -291,7 +291,7 @@ class HandlerDeleteSession(TestCase):
         init_response = handler.handle_raw_request(init_request)
         session_id = init_response.session_id
 
-        handler.handle_delete_session(session_id)
+        _ = handler.handle_delete_session(session_id)
 
         # .. using the deleted session ID must fail.
         ping_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 2})
@@ -338,7 +338,7 @@ class SessionManagerNotifications(TestCase):
         sid = manager.create(_mcp_protocol_version)
 
         notification = {'jsonrpc': '2.0', 'method': 'notifications/tools/list_changed'}
-        manager.queue_notification_for_all(notification)
+        _ = manager.queue_notification_for_all(notification)
 
         # First drain returns the notification
         n1 = manager.drain_notifications(sid)
@@ -364,8 +364,8 @@ class SessionManagerNotifications(TestCase):
         n1 = {'jsonrpc': '2.0', 'method': 'notifications/tools/list_changed'}
         n2 = {'jsonrpc': '2.0', 'method': 'notifications/tools/list_changed'}
 
-        manager.queue_notification_for_all(n1)
-        manager.queue_notification_for_all(n2)
+        _ = manager.queue_notification_for_all(n1)
+        _ = manager.queue_notification_for_all(n2)
 
         result = manager.drain_notifications(sid)
 
@@ -415,7 +415,7 @@ class HandlerGetPendingNotifications(TestCase):
         handler = _make_handler(session_manager=session_manager)
 
         sid = session_manager.create(_mcp_protocol_version)
-        handler.notify_tools_changed()
+        _ = handler.notify_tools_changed()
 
         response = handler.get_pending_notifications(sid)
 
@@ -458,7 +458,7 @@ class HandlerGetPendingNotifications(TestCase):
         handler = _make_handler(session_manager=session_manager)
 
         sid = session_manager.create(_mcp_protocol_version)
-        handler.notify_tools_changed()
+        _ = handler.notify_tools_changed()
 
         # First GET drains
         response1 = handler.get_pending_notifications(sid)
