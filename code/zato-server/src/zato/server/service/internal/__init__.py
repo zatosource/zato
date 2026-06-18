@@ -96,6 +96,9 @@ class AdminService(Service):
             if not data:
                 return
 
+            if not isinstance(data, dict):
+                return
+
             to_copy = {}
             for k, v in data.items():
                 to_copy[k] = v

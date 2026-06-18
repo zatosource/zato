@@ -1100,18 +1100,16 @@ _default_sleep_jitter = 1.5
 
 class Echo(Service):
     \"\"\" Echoes back any JSON payload sent to it. Accepts arbitrary key-value pairs
-    and returns them unchanged under the 'echo' key. Use this service to verify
-    connectivity and to inspect how Zato processes and returns request data.
+    and returns them unchanged. Use this service to verify connectivity and to
+    inspect how Zato processes and returns request data.
     \"\"\"
 
     name = 'demo.echo'
 
-    output = 'echo'
-
     def handle(self):
         payload = self.request.payload
         self.logger.info(f'Received request: `{{payload}}`')
-        self.response.payload.echo = payload
+        self.response.payload = payload
 
 # ################################################################################################################################
 # ################################################################################################################################

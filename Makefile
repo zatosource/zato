@@ -427,7 +427,7 @@ _test-mcp:
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/mcp/ \
 		$(CURDIR)/code/tests/python/zato-server/mcp_live/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mcp -W ignore::DeprecationWarning \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mcp -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		2>&1 | $(TS)
 
