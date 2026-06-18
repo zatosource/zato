@@ -56,7 +56,8 @@ class TestToolsCall:
         text = first_content['text']
         parsed = loads(text)
 
-        assert parsed['hello'] == 'world'
+        # .. demo.echo returns the request payload unchanged under the 'echo' key.
+        assert parsed['echo']['hello'] == 'world'
 
 # ################################################################################################################################
 

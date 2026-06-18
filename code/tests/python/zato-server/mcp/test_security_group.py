@@ -15,6 +15,12 @@ from zato.common.api import Groups
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class SecurityGroupNaming(TestCase):
     """ Tests for the auto-created security group naming convention.
     """
@@ -103,7 +109,7 @@ class HookSecurityGroupsPropagation(TestCase):
         """ When updating an existing channel, security_groups must be merged
         into the existing opaque data without losing other keys.
         """
-        current_opaque = {'some_other_key': 'value'}
+        current_opaque:'anydict' = {'some_other_key': 'value'}
         security_groups = [7]
 
         current_opaque['security_groups'] = security_groups

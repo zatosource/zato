@@ -12,6 +12,9 @@ from http.client import OK
 # pytest
 import pytest
 
+# requests
+import requests
+
 # local
 from _client import MCPClient
 from _constants import _error_method_not_found, _jsonrpc_version
@@ -99,14 +102,29 @@ class TestJSONRPCInjection:
 # ################################################################################################################################
 
     def test_oversized_payload_rejected(self, client:'MCPClient') -> 'None':
-        """ A payload larger than 1MB must be rejected.
+        """ A payload larger than the 1 MiB server limit must be rejected, not crash.
+
+        The Rust HTTP layer caps reads at MAX_REQUEST_SIZE (1 MiB), so an oversized
+        body is truncated and never parses as valid JSON. The server may either drop
+        the connection (request too large) or return a JSON-RPC parse error over
+        HTTP 200. Both are valid rejections - what matters is that the server stays up.
         """
 
         large_data = b'x' * _oversized_payload_bytes
-        response = client.jsonrpc_raw(large_data)
 
-        # .. the server should reject it, not crash.
-        assert response.status_code >= 400
+        # .. a dropped connection is itself a valid rejection of an oversized body ..
+        try:
+            response = client.jsonrpc_raw(large_data)
+        except requests.exceptions.ConnectionError:
+            return
+
+        # .. otherwise the server must not have processed it as a successful request ..
+        if response.status_code >= 400:
+            return
+
+        # .. at HTTP 200 the truncated body must surface as a JSON-RPC error, never a result.
+        data = response.json()
+        assert 'error' in data
 
 # ################################################################################################################################
 

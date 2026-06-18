@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from json import dumps
+from typing import NamedTuple
 
 # requests
 import requests
@@ -16,7 +17,6 @@ import requests
 # ################################################################################################################################
 
 if 0:
-    from typing import NamedTuple
     from zato.common.typing_ import any_, anydict, anydictnone, strdictlist, strnone
 
 # ################################################################################################################################

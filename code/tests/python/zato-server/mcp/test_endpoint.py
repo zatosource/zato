@@ -50,36 +50,6 @@ class _MockBunch(dict):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _MockChannel:
-    """ Mock channel info object.
-    """
-    def __init__(self, name): # type: ignore
-        self.name = name
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class _MockRequest:
-    """ Mock request object with raw_request.
-    """
-    def __init__(self, raw_request): # type: ignore
-        self.raw_request = raw_request
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class _MockResponse:
-    """ Mock response object.
-    """
-    def __init__(self): # type: ignore
-        self.payload = ''
-        self.status_code = OK
-        self.data_format = ''
-        self.headers = {}
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class ChannelMCPWrapperBuild(TestCase):
 
     def test_build_wrapper_creates_handler(self): # type: ignore
@@ -91,7 +61,7 @@ class ChannelMCPWrapperBuild(TestCase):
             'services': ['crm.get-customer'],
         })
 
-        wrapper = ChannelMCPWrapper(config, server)
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
         self.assertIsNotNone(wrapper.handler)
@@ -105,7 +75,7 @@ class ChannelMCPWrapperBuild(TestCase):
             'name': 'empty-channel',
         })
 
-        wrapper = ChannelMCPWrapper(config, server)
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
         self.assertIsNotNone(wrapper.handler)
@@ -119,10 +89,11 @@ class ChannelMCPWrapperBuild(TestCase):
             'services': [],
         })
 
-        wrapper = ChannelMCPWrapper(config, server)
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
         self.assertIsNotNone(wrapper.handler)
+        assert wrapper.handler is not None
 
         tools = wrapper.handler.tool_registry.get_tools()
         self.assertEqual(len(tools), 0)
@@ -136,7 +107,7 @@ class ChannelMCPWrapperBuild(TestCase):
             'services': [],
         })
 
-        wrapper = ChannelMCPWrapper(config, server)
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
         self.assertIsNotNone(wrapper.handler)
@@ -160,7 +131,7 @@ class ChannelMCPWrapperInvoke(TestCase):
             'services': ['crm.get-customer'],
         })
 
-        wrapper = ChannelMCPWrapper(config, server)
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
         # Build a tools/call request
@@ -175,6 +146,7 @@ class ChannelMCPWrapperInvoke(TestCase):
         }
         raw = dumps(request)
 
+        assert wrapper.handler is not None
         mcp_response = wrapper.handler.handle_raw_request(raw)
 
         self.assertEqual(mcp_response.status_code, OK)
@@ -204,7 +176,7 @@ class MCPEndpointServiceDispatch(TestCase):
             'services': [],
         })
 
-        wrapper = ChannelMCPWrapper(config, server)
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
         request = {
@@ -214,6 +186,7 @@ class MCPEndpointServiceDispatch(TestCase):
         }
         raw = dumps(request)
 
+        assert wrapper.handler is not None
         mcp_response = wrapper.handler.handle_raw_request(raw)
 
         self.assertEqual(mcp_response.status_code, OK)
@@ -228,7 +201,7 @@ class MCPEndpointServiceDispatch(TestCase):
             'services': [],
         })
 
-        wrapper = ChannelMCPWrapper(config, server)
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
         batch = [
@@ -236,6 +209,7 @@ class MCPEndpointServiceDispatch(TestCase):
         ]
         raw = dumps(batch)
 
+        assert wrapper.handler is not None
         mcp_response = wrapper.handler.handle_raw_request(raw)
 
         self.assertEqual(mcp_response.status_code, NO_CONTENT)
