@@ -143,7 +143,7 @@ def ensure_mcp_channel_exists(session, cluster_id):
 # ################################################################################################################################
 
 def ensure_mcp_rest_channel(session, channel_name, url_path, cluster_id, is_active=True,
-                            security_item=None, security_groups=None, old_name=None):
+                            security_groups=None, old_name=None):
     """ Creates or updates the REST channel that makes an MCP channel reachable over HTTP.
     Called from both the server-side hook (on_mcp_channel_create_edit) and the enmasse importer.
     Does NOT commit - the caller is responsible for committing the session.
@@ -175,8 +175,6 @@ def ensure_mcp_rest_channel(session, channel_name, url_path, cluster_id, is_acti
     if existing_http:
         existing_http.url_path = url_path
         existing_http.is_active = is_active
-        if security_item:
-            existing_http.security = security_item
         set_instance_opaque_attrs(existing_http, {'security_groups': security_groups})
 
     # .. otherwise, create a new one.
@@ -196,7 +194,7 @@ def ensure_mcp_rest_channel(session, channel_name, url_path, cluster_id, is_acti
         http_channel = HTTPSOAP(
             None, channel_name, True, is_active, CONNECTION.CHANNEL,
             URL_TYPE.PLAIN_HTTP, None, url_path, None, '', None, DATA_FORMAT.JSON,
-            service=mcp_service, cluster=cluster, security=security_item)
+            service=mcp_service, cluster=cluster, security=None)
         set_instance_opaque_attrs(http_channel, {'security_groups': security_groups})
         session.add(http_channel)
 
