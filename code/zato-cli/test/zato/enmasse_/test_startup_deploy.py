@@ -211,6 +211,9 @@ class TestDockerPostStartEnmasseImport(TestCase):
         if not os.path.isfile(_ZATO_BIN):
             raise SkipTest('ZATO STARTUP DEPLOY TESTS SKIPPED - zato binary not found')
 
+        # Undo any pollution from earlier test modules that disable config reload
+        os.environ.pop('Zato_Needs_Config_Reload', None)
+
         cls._tmpdir = tempfile.mkdtemp(prefix='zato_docker_enmasse_test_')
         cls.port = _find_free_port()
         cls.broker_port = _find_free_port()
