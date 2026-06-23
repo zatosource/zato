@@ -50,6 +50,9 @@ _SEC_DEF_PASSWORD = 'test-mcp-password-' + os.urandom(4).hex()
 _NON_MEMBER_USERNAME = 'test.mcp.non.member'
 _NON_MEMBER_PASSWORD = 'test-mcp-outsider-' + os.urandom(4).hex()
 
+_GROUP2_MEMBER_USERNAME = 'test.mcp.group2.member'
+_GROUP2_MEMBER_PASSWORD = 'test-mcp-group2-' + os.urandom(4).hex()
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -165,10 +168,18 @@ class TestMCPAuth(TestCase):
         cls._channel_name = f'test.mcp.auth-channel.{token}'
         cls._url_path = f'/mcp/test-auth/{token}'
 
-        # .. a second sec def that is NOT in the group ..
+        # .. a second sec def that is NOT in any group ..
         cls._non_member_sec_def_name = f'test.mcp.outsider.{token}'
 
-        # .. a second channel with no security groups at all ..
+        # .. a third sec def in a second group ..
+        cls._group2_sec_def_name = f'test.mcp.group2member.{token}'
+        cls._group2_name = f'mcp.test-auth-group2.{token}'
+
+        # .. a channel with two security groups ..
+        cls._multi_group_channel_name = f'test.mcp.multi-group.{token}'
+        cls._multi_group_url_path = f'/mcp/test-multi-group/{token}'
+
+        # .. a channel with no security groups at all ..
         cls._no_group_channel_name = f'test.mcp.no-group.{token}'
         cls._no_group_url_path = f'/mcp/test-no-group/{token}'
 
@@ -184,10 +195,19 @@ security:
     username: {_NON_MEMBER_USERNAME}
     password: "{_NON_MEMBER_PASSWORD}"
 
+  - name: {cls._group2_sec_def_name}
+    type: basic_auth
+    username: {_GROUP2_MEMBER_USERNAME}
+    password: "{_GROUP2_MEMBER_PASSWORD}"
+
 groups:
   - name: {cls._group_name}
     members:
       - {cls._sec_def_name}
+
+  - name: {cls._group2_name}
+    members:
+      - {cls._group2_sec_def_name}
 
 channel_mcp:
   - name: {cls._channel_name}
@@ -195,6 +215,13 @@ channel_mcp:
     url_path: {cls._url_path}
     security_groups:
       - {cls._group_name}
+
+  - name: {cls._multi_group_channel_name}
+    is_active: true
+    url_path: {cls._multi_group_url_path}
+    security_groups:
+      - {cls._group_name}
+      - {cls._group2_name}
 
   - name: {cls._no_group_channel_name}
     is_active: true
@@ -227,9 +254,12 @@ channel_mcp:
 
         logger.info('[MCP-AUTH setUpClass] Enmasse import complete, waiting for channels')
 
-        # .. wait until both channels respond.
+        # .. wait until all channels respond.
         wait_for_mcp_channel(cls._port, cls._url_path)
         logger.info('[MCP-AUTH setUpClass] Secured channel is ready at %s', cls._url_path)
+
+        wait_for_mcp_channel(cls._port, cls._multi_group_url_path)
+        logger.info('[MCP-AUTH setUpClass] Multi-group channel is ready at %s', cls._multi_group_url_path)
 
         wait_for_mcp_channel(cls._port, cls._no_group_url_path)
         logger.info('[MCP-AUTH setUpClass] No-group channel is ready at %s', cls._no_group_url_path)
@@ -307,6 +337,45 @@ channel_mcp:
         response = requests.post(url, data=data, headers=headers, auth=creds, timeout=10)
 
         logger.info('[test_07] POST %s -> status=%d body=%s', url, response.status_code, response.text)
+
+        self.assertEqual(response.status_code, FORBIDDEN,
+            f'Expected FORBIDDEN for non-member, got {response.status_code}: {response.text}')
+
+# ################################################################################################################################
+
+    def test_08_multiple_groups(self) -> 'None':
+        """ Channel with two security groups - member of either group can access.
+        """
+
+        url = f'http://127.0.0.1:{self._port}{self._multi_group_url_path}'
+        data = make_jsonrpc_initialize()
+        headers = {'Content-Type': 'application/json'}
+
+        # .. member of group 1 should get through ..
+        response = requests.post(url, data=data, headers=headers,
+            auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD), timeout=10)
+
+        logger.info('[test_08] group1 member -> status=%d', response.status_code)
+
+        self.assertEqual(response.status_code, OK,
+            f'Expected OK for group1 member, got {response.status_code}: {response.text}')
+
+        # .. member of group 2 should also get through ..
+        response = requests.post(url, data=data, headers=headers,
+            auth=(_GROUP2_MEMBER_USERNAME, _GROUP2_MEMBER_PASSWORD), timeout=10)
+
+        logger.info('[test_08] group2 member -> status=%d', response.status_code)
+
+        self.assertEqual(response.status_code, OK,
+            f'Expected OK for group2 member, got {response.status_code}: {response.text}')
+
+        # .. non-member should be rejected ..
+        from http.client import FORBIDDEN
+
+        response = requests.post(url, data=data, headers=headers,
+            auth=(_NON_MEMBER_USERNAME, _NON_MEMBER_PASSWORD), timeout=10)
+
+        logger.info('[test_08] non-member -> status=%d', response.status_code)
 
         self.assertEqual(response.status_code, FORBIDDEN,
             f'Expected FORBIDDEN for non-member, got {response.status_code}: {response.text}')
