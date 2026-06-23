@@ -7,8 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import NOT_FOUND, OK
-from unittest import TestCase, main
+from http.client import NO_CONTENT, NOT_FOUND, OK
+from unittest import TestCase
 
 # Hypothesis
 from hypothesis import given, settings, assume
@@ -32,30 +32,34 @@ if 0:
 
 class _MockToolRegistry:
 
-    def __init__(self, tools=None, allowed_tools=None): # type: ignore
+    def __init__(self, tools:'any_' = None, allowed_tools:'any_' = None) -> 'None':
         self.tools = tools if tools is not None else []
         self.allowed_tools = allowed_tools if allowed_tools is not None else set()
 
-    def get_tools(self): # type: ignore
+    def get_tools(self) -> 'any_':
         return self.tools
 
-    def get_tools_page(self, cursor=None): # type: ignore
+    def get_tools_page(self, cursor:'any_' = None) -> 'any_':
         return self.tools, None
 
-    def is_tool_allowed(self, service_name): # type: ignore
+    def is_tool_allowed(self, service_name:'str') -> 'bool':
         return service_name in self.allowed_tools
 
-    def rebuild(self): # type: ignore
+    def rebuild(self) -> 'None':
         pass
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_handler(allowed_tools=None): # type: ignore
-    registry = _MockToolRegistry(allowed_tools=allowed_tools or set())
+def _make_handler(allowed_tools:'any_' = None) -> 'any_':
+
+    if allowed_tools is None:
+        allowed_tools = set()
+
+    registry = _MockToolRegistry(allowed_tools=allowed_tools)
     session_manager = MCPSessionManager()
 
-    def invoke_func(name, payload): # type: ignore
+    def invoke_func(name:'str', payload:'any_') -> 'anydict':
         return {'echoed': payload}
 
     handler = MCPHandler(registry, invoke_func, session_manager) # pyright: ignore[reportArgumentType]
@@ -76,6 +80,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
     def test_arbitrary_bytes_never_crash(self, raw_data:'bytes') -> 'None':
         """ Any byte sequence must produce a valid MCPResponse, never an unhandled exception.
         """
+
         handler = _make_handler()
         response = handler.handle_raw_request(raw_data)
 
@@ -89,6 +94,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
     def test_arbitrary_text_never_crash(self, text:'str') -> 'None':
         """ Any text string must produce a valid MCPResponse.
         """
+
         handler = _make_handler()
         response = handler.handle_raw_request(text.encode('utf8'))
 
@@ -102,6 +108,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
     def test_non_json_returns_error(self, text:'str') -> 'None':
         """ Non-JSON or non-object/array JSON text must return an error, never a success result.
         """
+
         _ = assume(not text.strip().startswith('{'))
         _ = assume(not text.strip().startswith('['))
 
@@ -127,6 +134,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
     def test_arbitrary_json_object_never_crash(self, obj:'anydict') -> 'None':
         """ Any JSON object must produce a response without crashing.
         """
+
         handler = _make_handler()
         raw = dumps(obj).encode('utf8')
         response = handler.handle_raw_request(raw)
@@ -148,6 +156,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
     def test_arbitrary_json_array_never_crash(self, arr:'anylist') -> 'None':
         """ Any JSON array (batch) must produce a response without crashing.
         """
+
         handler = _make_handler()
         raw = dumps(arr).encode('utf8')
         response = handler.handle_raw_request(raw)
@@ -161,6 +170,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
     def test_unknown_method_returns_method_not_found(self, method:'str') -> 'None':
         """ Any method name not in the known set must return -32601.
         """
+
         known_methods = {'initialize', 'tools/list', 'tools/call', 'ping'}
         _ = assume(method not in known_methods)
 
@@ -179,6 +189,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
     def test_wrong_jsonrpc_version_returns_invalid_request(self, version:'any_') -> 'None':
         """ Any jsonrpc value other than "2.0" must return -32600.
         """
+
         _ = assume(version != '2.0')
 
         handler = _make_handler()
@@ -211,6 +222,7 @@ class BatchFuzzing(TestCase):
     def test_batch_of_valid_requests_returns_same_count(self, messages:'anylist') -> 'None':
         """ A batch of N valid requests must return exactly N responses.
         """
+
         handler = _make_handler()
         raw = dumps(messages).encode('utf8')
         response = handler.handle_raw_request(raw)
@@ -233,7 +245,6 @@ class BatchFuzzing(TestCase):
     def test_batch_of_only_notifications_returns_204(self, messages:'anylist') -> 'None':
         """ A batch containing only notifications (no id) must return 204 No Content.
         """
-        from http.client import NO_CONTENT
 
         handler = _make_handler()
         raw = dumps(messages).encode('utf8')
@@ -256,6 +267,7 @@ class AllowlistEnforcement(TestCase):
     def test_unlisted_service_always_rejected(self, service_name:'str') -> 'None':
         """ Any service not in the allowlist must be rejected by tools/call.
         """
+
         handler = _make_handler(allowed_tools=set())
 
         msg = {
@@ -278,6 +290,7 @@ class AllowlistEnforcement(TestCase):
         """ Any service starting with zato. must be rejected by is_tool_allowed,
         even if it were somehow in the allowlist.
         """
+
         store = _MockServiceStore({})
         registry = ToolRegistry(store, [service_name]) # pyright: ignore[reportArgumentType]
         registry.rebuild()
@@ -291,6 +304,7 @@ class AllowlistEnforcement(TestCase):
     def test_non_internal_unlisted_service_rejected_by_registry(self, service_name:'str') -> 'None':
         """ Any non-internal service not in the allowlist must be rejected.
         """
+
         store = _MockServiceStore({})
         registry = ToolRegistry(store, []) # pyright: ignore[reportArgumentType]
         registry.rebuild()
@@ -304,6 +318,7 @@ class AllowlistEnforcement(TestCase):
     def test_listed_non_internal_service_accepted_by_registry(self, service_name:'str') -> 'None':
         """ A non-internal service in the allowlist must be accepted.
         """
+
         store = _MockServiceStore({})
         registry = ToolRegistry(store, [service_name]) # pyright: ignore[reportArgumentType]
         registry.rebuild()
@@ -324,6 +339,7 @@ class SchemaExtractionProperties(TestCase):
     def test_rebuild_produces_at_most_allowlist_count(self, service_names:'strlist') -> 'None':
         """ The number of tools after rebuild is at most the number of allowed services.
         """
+
         service_dict = {}
         for name in service_names:
             service_dict[name] = _MockServiceClass(name)
@@ -342,6 +358,7 @@ class SchemaExtractionProperties(TestCase):
     def test_all_tools_have_required_fields(self, service_names:'strlist') -> 'None':
         """ Every tool in the list must have name, description, and inputSchema.
         """
+
         service_dict = {}
         for name in service_names:
             service_dict[name] = _MockServiceClass(name)
@@ -362,6 +379,7 @@ class SchemaExtractionProperties(TestCase):
     def test_tool_names_match_service_names(self, service_names:'strlist') -> 'None':
         """ Every tool name must be one of the allowed service names.
         """
+
         service_dict = {}
         for name in service_names:
             service_dict[name] = _MockServiceClass(name)
@@ -380,6 +398,7 @@ class SchemaExtractionProperties(TestCase):
     def test_no_internal_services_in_tools(self, service_names:'strlist') -> 'None':
         """ No tool returned by the registry must start with the internal prefix.
         """
+
         service_dict = {}
         for name in service_names:
             service_dict[name] = _MockServiceClass(name)
@@ -405,6 +424,7 @@ class SessionFuzzing(TestCase):
     def test_random_session_id_rejected(self, session_id:'str') -> 'None':
         """ A random string as session ID must be rejected.
         """
+
         handler = _make_handler()
         msg = {'jsonrpc': _jsonrpc_version, 'method': 'ping', 'id': 1}
         raw = dumps(msg).encode('utf8')
@@ -420,6 +440,7 @@ class SessionFuzzing(TestCase):
     def test_random_session_id_delete_rejected(self, session_id:'str') -> 'None':
         """ Deleting a random session ID must return not found.
         """
+
         handler = _make_handler()
         response = handler.handle_delete_session(session_id)
 
@@ -452,6 +473,3 @@ class _MockServiceStore:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-if __name__ == '__main__':
-    _ = main()

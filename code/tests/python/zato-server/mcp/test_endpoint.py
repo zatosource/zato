@@ -18,10 +18,16 @@ from zato.server.generic.api.channel_mcp import ChannelMCPWrapper
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _MockServiceStore:
     """ Mock service store for ToolRegistry.
     """
-    def __init__(self): # type: ignore
+    def __init__(self) -> 'None':
         self.services = {}
         self.name_to_impl_name = {}
 
@@ -31,12 +37,12 @@ class _MockServiceStore:
 class _MockServer:
     """ Mock server with service_store and invoke method.
     """
-    def __init__(self): # type: ignore
+    def __init__(self) -> 'None':
         self.service_store = _MockServiceStore()
         self._invoke_responses = {}
 
-    def invoke(self, service_name, payload): # type: ignore
-        return self._invoke_responses.get(service_name, {'status': 'ok'})
+    def invoke(self, service_name:'str', payload:'anydict') -> 'anydict':
+        return self._invoke_responses[service_name]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,7 +50,7 @@ class _MockServer:
 class _MockBunch(dict):
     """ Dict-like object that also supports attribute access.
     """
-    def __getattr__(self, name): # type: ignore
+    def __getattr__(self, name:'str') -> 'str':
         return self[name]
 
 # ################################################################################################################################
@@ -52,7 +58,7 @@ class _MockBunch(dict):
 
 class ChannelMCPWrapperBuild(TestCase):
 
-    def test_build_wrapper_creates_handler(self): # type: ignore
+    def test_build_wrapper_creates_handler(self) -> 'None':
 
         server = _MockServer()
 
@@ -67,7 +73,7 @@ class ChannelMCPWrapperBuild(TestCase):
         self.assertIsNotNone(wrapper.handler)
         self.assertIsInstance(wrapper.handler, MCPHandler)
 
-    def test_build_wrapper_no_opaque(self): # type: ignore
+    def test_build_wrapper_no_opaque(self) -> 'None':
 
         server = _MockServer()
 
@@ -80,7 +86,7 @@ class ChannelMCPWrapperBuild(TestCase):
 
         self.assertIsNotNone(wrapper.handler)
 
-    def test_build_wrapper_empty_services(self): # type: ignore
+    def test_build_wrapper_empty_services(self) -> 'None':
 
         server = _MockServer()
 
@@ -98,7 +104,7 @@ class ChannelMCPWrapperBuild(TestCase):
         tools = wrapper.handler.tool_registry.get_tools()
         self.assertEqual(len(tools), 0)
 
-    def test_delete_clears_handler(self): # type: ignore
+    def test_delete_clears_handler(self) -> 'None':
 
         server = _MockServer()
 
@@ -121,7 +127,7 @@ class ChannelMCPWrapperBuild(TestCase):
 
 class ChannelMCPWrapperInvoke(TestCase):
 
-    def test_invoke_service_through_wrapper(self): # type: ignore
+    def test_invoke_service_through_wrapper(self) -> 'None':
 
         server = _MockServer()
         server._invoke_responses['crm.get-customer'] = {'name': 'Test Customer'}
@@ -167,7 +173,7 @@ class MCPEndpointServiceDispatch(TestCase):
     We simulate the service's handle() method by creating the same objects it uses.
     """
 
-    def test_dispatch_ping(self): # type: ignore
+    def test_dispatch_ping(self) -> 'None':
 
         server = _MockServer()
 
@@ -192,7 +198,7 @@ class MCPEndpointServiceDispatch(TestCase):
         self.assertEqual(mcp_response.status_code, OK)
         self.assertEqual(mcp_response.body['result'], {})
 
-    def test_dispatch_batch_all_notifications_returns_204(self): # type: ignore
+    def test_dispatch_batch_all_notifications_returns_204(self) -> 'None':
 
         server = _MockServer()
 

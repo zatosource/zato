@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from unittest import TestCase, main
+from unittest import TestCase
 
 # Zato
 from zato.common.api import GENERIC as COMMON_GENERIC
@@ -29,7 +29,7 @@ class HookRegistration(TestCase):
 
 # ################################################################################################################################
 
-    def test_hook_registered_for_channel_mcp(self):
+    def test_hook_registered_for_channel_mcp(self) -> 'None':
 
         # The hook dict must contain our type ..
         hook = conn_module.hook
@@ -41,7 +41,7 @@ class HookRegistration(TestCase):
 
 # ################################################################################################################################
 
-    def test_instance_hook_exists(self):
+    def test_instance_hook_exists(self) -> 'None':
 
         # The module must define instance_hook for delete support.
         self.assertTrue(hasattr(conn_module, 'instance_hook'))
@@ -56,7 +56,7 @@ class InstanceHookDispatch(TestCase):
 
 # ################################################################################################################################
 
-    def test_instance_hook_skips_non_mcp(self):
+    def test_instance_hook_skips_non_mcp(self) -> 'None':
 
         # Track whether on_mcp_channel_delete was called ..
         calls = []
@@ -85,7 +85,7 @@ class InstanceHookDispatch(TestCase):
 
 # ################################################################################################################################
 
-    def test_instance_hook_calls_delete_for_mcp(self):
+    def test_instance_hook_calls_delete_for_mcp(self) -> 'None':
 
         # Track whether on_mcp_channel_delete was called ..
         calls = []
@@ -117,6 +117,3 @@ class InstanceHookDispatch(TestCase):
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-if __name__ == '__main__':
-    _ = main()
