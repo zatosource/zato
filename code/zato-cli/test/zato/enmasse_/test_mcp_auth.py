@@ -183,9 +183,15 @@ class TestMCPAuth(TestCase):
         cls._no_group_channel_name = f'test.mcp.no-group.{token}'
         cls._no_group_url_path = f'/mcp/test-no-group/{token}'
 
-        # .. a deactivated channel ..
+        # .. a channel dedicated to the membership update test ..
+        cls._update_channel_name = f'test.mcp.update.{token}'
+        cls._update_url_path = f'/mcp/test-update/{token}'
+        cls._update_group_name = f'mcp.test-update-group.{token}'
+
+        # .. a deactivated channel with its own group ..
         cls._inactive_channel_name = f'test.mcp.inactive.{token}'
         cls._inactive_url_path = f'/mcp/test-inactive/{token}'
+        cls._inactive_group_name = f'mcp.test-inactive-group.{token}'
 
         # .. a path that does not correspond to any channel ..
         cls._nonexistent_url_path = f'/mcp/test-nonexistent/{token}'
@@ -216,6 +222,14 @@ groups:
     members:
       - {cls._group2_sec_def_name}
 
+  - name: {cls._inactive_group_name}
+    members:
+      - {cls._sec_def_name}
+
+  - name: {cls._update_group_name}
+    members:
+      - {cls._sec_def_name}
+
 channel_mcp:
   - name: {cls._channel_name}
     is_active: true
@@ -234,11 +248,17 @@ channel_mcp:
     is_active: true
     url_path: {cls._no_group_url_path}
 
+  - name: {cls._update_channel_name}
+    is_active: true
+    url_path: {cls._update_url_path}
+    security_groups:
+      - {cls._update_group_name}
+
   - name: {cls._inactive_channel_name}
     is_active: false
     url_path: {cls._inactive_url_path}
     security_groups:
-      - {cls._group_name}
+      - {cls._inactive_group_name}
 '''
 
         tmp_yaml = os.path.join(tempfile.gettempdir(), f'zato-mcp-auth-{os.getpid()}.yaml')
@@ -276,6 +296,9 @@ channel_mcp:
 
         wait_for_mcp_channel(cls._port, cls._no_group_url_path)
         logger.info('[MCP-AUTH setUpClass] No-group channel is ready at %s', cls._no_group_url_path)
+
+        wait_for_mcp_channel(cls._port, cls._update_url_path)
+        logger.info('[MCP-AUTH setUpClass] Update channel is ready at %s', cls._update_url_path)
 
 # ################################################################################################################################
 
@@ -420,12 +443,11 @@ channel_mcp:
         """ Remove sec def A from group, add sec def B. Old creds (A) -> 403, new creds (B) -> 200.
         """
 
-        # .. first confirm group1 member (A) can access ..
-        response = self._post_mcp(self._url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
+        # .. first confirm member A can access the dedicated update channel ..
+        response = self._post_mcp(self._update_url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
         self.assertEqual(response.status_code, OK)
 
-        # .. now update the group: remove A, add the non-member (B) ..
-        # .. (channel must be re-imported so its security_groups IDs are refreshed) ..
+        # .. now update the group: remove A, add B ..
         updated_yaml = f'''\
 security:
   - name: {self._sec_def_name}
@@ -439,16 +461,16 @@ security:
     password: "{_NON_MEMBER_PASSWORD}"
 
 groups:
-  - name: {self._group_name}
+  - name: {self._update_group_name}
     members:
       - {self._non_member_sec_def_name}
 
 channel_mcp:
-  - name: {self._channel_name}
+  - name: {self._update_channel_name}
     is_active: true
-    url_path: {self._url_path}
+    url_path: {self._update_url_path}
     security_groups:
-      - {self._group_name}
+      - {self._update_group_name}
 '''
         self._run_enmasse(updated_yaml)
 
@@ -456,12 +478,12 @@ channel_mcp:
         time.sleep(5)
 
         # .. old member A should now be rejected ..
-        response = self._post_mcp(self._url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
+        response = self._post_mcp(self._update_url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
         self.assertEqual(response.status_code, FORBIDDEN,
             f'Expected FORBIDDEN for removed member, got {response.status_code}: {response.text}')
 
         # .. new member B should now be allowed ..
-        response = self._post_mcp(self._url_path, auth=(_NON_MEMBER_USERNAME, _NON_MEMBER_PASSWORD))
+        response = self._post_mcp(self._update_url_path, auth=(_NON_MEMBER_USERNAME, _NON_MEMBER_PASSWORD))
         self.assertEqual(response.status_code, OK,
             f'Expected OK for new member, got {response.status_code}: {response.text}')
 
@@ -484,6 +506,45 @@ channel_mcp:
         self.assertEqual(response_inactive.status_code, expected_status,
             f'Deactivated channel status ({response_inactive.status_code}) differs from '
             f'non-existent path status ({expected_status}) - information leakage')
+
+# ################################################################################################################################
+
+    def test_reactivate_channel(self) -> 'None':
+        """ Deactivate a channel then reactivate it, verify it serves again with group member creds.
+        """
+        from http.client import NOT_FOUND
+
+        # .. first confirm the inactive channel is indeed not reachable ..
+        response = self._post_mcp(self._inactive_url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
+        self.assertEqual(response.status_code, NOT_FOUND)
+
+        # .. reactivate it via enmasse using the inactive channel's own dedicated group ..
+        reactivate_yaml = f'''\
+security:
+  - name: {self._sec_def_name}
+    type: basic_auth
+    username: {_SEC_DEF_USERNAME}
+    password: "{_SEC_DEF_PASSWORD}"
+
+groups:
+  - name: {self._inactive_group_name}
+    members:
+      - {self._sec_def_name}
+
+channel_mcp:
+  - name: {self._inactive_channel_name}
+    is_active: true
+    url_path: {self._inactive_url_path}
+    security_groups:
+      - {self._inactive_group_name}
+'''
+        self._run_enmasse(reactivate_yaml)
+        time.sleep(5)
+
+        # .. now the channel should serve requests with valid creds ..
+        response = self._post_mcp(self._inactive_url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
+        self.assertEqual(response.status_code, OK,
+            f'Expected OK after reactivation, got {response.status_code}: {response.text}')
 
 # ################################################################################################################################
 # ################################################################################################################################
