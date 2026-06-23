@@ -7,13 +7,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from unittest import TestCase, main
+from unittest import TestCase
 
 # Zato
 import zato.server.base.config_manager as config_manager_module
 from zato.common.ext.bunch import Bunch
 from zato.common.api import GENERIC as COMMON_GENERIC
-from zato.server.generic.api.channel_mcp import ChannelMCPWrapper
+from zato.server.generic.api.channel_mcp import ChannelMCPWrapper, ChannelMCPWrapper as Imported
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -24,12 +24,12 @@ class ChannelMCPConstant(TestCase):
 
 # ################################################################################################################################
 
-    def test_constant_value(self):
+    def test_constant_value(self) -> 'None':
         self.assertEqual(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP, 'channel-mcp')
 
 # ################################################################################################################################
 
-    def test_constant_is_string(self):
+    def test_constant_is_string(self) -> 'None':
         self.assertIsInstance(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP, str)
 
 # ################################################################################################################################
@@ -41,7 +41,7 @@ class ChannelMCPWrapperInit(TestCase):
 
 # ################################################################################################################################
 
-    def test_wrapper_stores_config_and_server(self):
+    def test_wrapper_stores_config_and_server(self) -> 'None':
         config = Bunch(name='test-mcp-channel')
         server = Bunch()
 
@@ -52,7 +52,7 @@ class ChannelMCPWrapperInit(TestCase):
 
 # ################################################################################################################################
 
-    def test_build_wrapper_callable(self):
+    def test_build_wrapper_callable(self) -> 'None':
         service_store = Bunch(services={}, name_to_impl_name={})
         config = Bunch(name='test-mcp-channel')
         server = Bunch(service_store=service_store)
@@ -62,7 +62,7 @@ class ChannelMCPWrapperInit(TestCase):
 
 # ################################################################################################################################
 
-    def test_delete_callable(self):
+    def test_delete_callable(self) -> 'None':
         config = Bunch(name='test-mcp-channel')
         server = Bunch()
 
@@ -78,7 +78,7 @@ class ConfigManagerGenericConnWiring(TestCase):
 
 # ################################################################################################################################
 
-    def test_generic_conn_api_has_mcp(self):
+    def test_generic_conn_api_has_mcp(self) -> 'None':
 
         source = config_manager_module.__file__
 
@@ -91,12 +91,8 @@ class ConfigManagerGenericConnWiring(TestCase):
 
 # ################################################################################################################################
 
-    def test_wrapper_import(self):
-        from zato.server.generic.api.channel_mcp import ChannelMCPWrapper as Imported
+    def test_wrapper_import(self) -> 'None':
         self.assertIs(Imported, ChannelMCPWrapper)
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-if __name__ == '__main__':
-    _ = main()

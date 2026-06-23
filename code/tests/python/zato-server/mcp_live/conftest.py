@@ -116,6 +116,7 @@ def _kill_process(process:'any_') -> 'None':
 def _kill_server() -> 'None':
     """ Terminates the server and file-listener subprocesses if they are still running.
     """
+
     global _server_process, _listener_process
 
     # Stop the file listener first so it does not race the server shutdown ..
@@ -150,7 +151,7 @@ _ = atexit.register(_cleanup)
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _wait_for_server(host:'str', port:'int', timeout:'int'=_server_wait_timeout) -> 'None':
+def _wait_for_server(host:'str', port:'int', timeout:'int' = _server_wait_timeout) -> 'None':
     """ Polls the server's /zato/ping endpoint until it returns 200 or the timeout expires.
     """
 
@@ -250,6 +251,7 @@ def _generate_coverage_report(coverage_data_directory:'str', coveragerc_path:'st
 def pytest_addoption(parser:'any_') -> 'None':
     """ Registers the --with-coverage command-line option.
     """
+
     parser.addoption('--with-coverage', action='store_true', default=False,
                      help='Enable coverage collection on the Zato server subprocess')
 
@@ -345,6 +347,7 @@ def zato_server(request:'any_') -> 'any_':
         """ Reads server stdout line by line, prints each with a timestamp prefix,
         and writes it to the persistent log file.
         """
+
         for line in iter(_server_process.stdout.readline, b''):  # type: ignore
             text = line.decode('utf-8', errors='replace').rstrip()
             elapsed = time.monotonic() - popen_time

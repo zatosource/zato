@@ -50,11 +50,12 @@ class MCPClient:
     def __init__(self, mcp_url:'str') -> 'None':
         """ Stores the MCP endpoint URL for all subsequent requests.
         """
+
         self.mcp_url = mcp_url
 
 # ################################################################################################################################
 
-    def _build_headers(self, session_id:'strnone'=None) -> 'anydict':
+    def _build_headers(self, session_id:'strnone' = None) -> 'anydict':
         """ Builds request headers, including the session ID header if provided.
         """
 
@@ -72,9 +73,9 @@ class MCPClient:
     def jsonrpc(
         self,
         method:'str',
-        params:'anydictnone'=None,
-        request_id:'any_'=1,
-        session_id:'strnone'=None,
+        params:'anydictnone' = None,
+        request_id:'any_' = 1,
+        session_id:'strnone' = None,
         ) -> 'requests.Response':
         """ Sends a single JSON-RPC request and returns the raw response.
         """
@@ -100,7 +101,7 @@ class MCPClient:
     def jsonrpc_batch(
         self,
         messages:'strdictlist',
-        session_id:'strnone'=None,
+        session_id:'strnone' = None,
         ) -> 'requests.Response':
         """ Sends a JSON-RPC batch request (array of messages) and returns the raw response.
         """
@@ -112,7 +113,7 @@ class MCPClient:
 
 # ################################################################################################################################
 
-    def jsonrpc_raw(self, raw_bytes:'bytes', session_id:'strnone'=None) -> 'requests.Response':
+    def jsonrpc_raw(self, raw_bytes:'bytes', session_id:'strnone' = None) -> 'requests.Response':
         """ Sends raw bytes as the request body for error path testing.
         """
 
@@ -123,7 +124,7 @@ class MCPClient:
 
 # ################################################################################################################################
 
-    def get_notifications(self, session_id:'strnone'=None) -> 'requests.Response':
+    def get_notifications(self, session_id:'strnone' = None) -> 'requests.Response':
         """ Sends a GET request to poll for server-to-client notifications.
         """
 
@@ -134,7 +135,7 @@ class MCPClient:
 
 # ################################################################################################################################
 
-    def delete_session(self, session_id:'strnone'=None) -> 'requests.Response':
+    def delete_session(self, session_id:'strnone' = None) -> 'requests.Response':
         """ Sends a DELETE request to terminate an MCP session.
         """
 
