@@ -78,7 +78,8 @@ class TestPubSubPermissionCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Create prerequisites via the UI ..
-        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'pub1')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'pub1')
+        sec_name = sec_info['name']
         _ = create_topic(page, base_url, _Test_Name_Prefix + 'topic.', 'pub1')
 
         pattern_value = 'test.pub1.*'
@@ -102,7 +103,8 @@ class TestPubSubPermissionCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Create prerequisites via the UI ..
-        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'sub1')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'sub1')
+        sec_name = sec_info['name']
         _ = create_topic(page, base_url, _Test_Name_Prefix + 'topic.', 'sub1')
 
         pattern_value = 'test.sub1.*'
@@ -126,7 +128,8 @@ class TestPubSubPermissionCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Create prerequisites via the UI ..
-        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'pubsub1')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'pubsub1')
+        sec_name = sec_info['name']
         _ = create_topic(page, base_url, _Test_Name_Prefix + 'topic.', 'pubsub1')
 
         pub_pattern = 'test.pubsub1.pub.*'
@@ -181,7 +184,8 @@ class TestPubSubPermissionCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Create a sec def so the dropdown has something to select ..
-        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'cancel-reopen')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'cancel-reopen')
+        sec_name = sec_info['name']
 
         # Navigate to the permissions page ..
         navigate_to_page(page, base_url, _Permission_Page_Url)
@@ -217,7 +221,8 @@ class TestPubSubPermissionCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Create a sec def ..
-        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'cancel-norow')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'cancel-norow')
+        sec_name = sec_info['name']
 
         # Navigate to the permissions page ..
         navigate_to_page(page, base_url, _Permission_Page_Url)
@@ -297,7 +302,8 @@ class TestPubSubPermissionCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Create a sec def ..
-        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'empty-pat')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'empty-pat')
+        sec_name = sec_info['name']
 
         # Navigate to the permissions page ..
         navigate_to_page(page, base_url, _Permission_Page_Url)
@@ -354,7 +360,8 @@ class TestPubSubPermissionCreate:
             submit_create_form(page)
 
         # .. create a sec def ..
-        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'wc.' + suffix)
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'wc.' + suffix)
+        sec_name = sec_info['name']
 
         # .. use a wildcard pattern that should match all 3 topics ..
         pattern_value = topic_prefix + '.*'
@@ -410,7 +417,8 @@ class TestPubSubPermissionCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Create a sec def ..
-        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'no-match')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'no-match')
+        sec_name = sec_info['name']
 
         # .. create a permission with a pattern that matches nothing ..
         pattern_value = 'nonexistent.topic.that.will.never.match'

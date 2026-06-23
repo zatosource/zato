@@ -506,6 +506,7 @@ _Log_Noise_Patterns = [
     'check_latest_version',
     'favicon.ico',
     'Could not determine version',
+    'Invalid Basic Auth credentials (groups)',
 ]
 
 @pytest.fixture(autouse=True)
