@@ -201,6 +201,40 @@ def ensure_mcp_rest_channel(session, channel_name, url_path, cluster_id, is_acti
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _resolve_security_group_names_to_ids(session, group_names, cluster_id):
+    """ Converts a list of security group names to their database IDs.
+    Needed because GenericConn stores group names but HTTPSOAP needs group IDs
+    for the server's security_groups_ctx_builder to work.
+    """
+    from zato.common.api import Groups
+    from zato.common.odb.model import GenericObject
+
+    if not group_names:
+        return []
+
+    out = []
+
+    for name in group_names:
+
+        # .. skip entries that are already numeric IDs ..
+        if isinstance(name, int):
+            out.append(name)
+            continue
+
+        group = session.query(GenericObject).filter(
+            GenericObject.name == name,
+            GenericObject.type_ == Groups.Type.Group_Parent,
+            GenericObject.cluster_id == cluster_id,
+        ).first()
+
+        if group:
+            out.append(group.id)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def on_mcp_channel_create_edit(service, data, model, old_name):
     """ Hook called by zato.generic.connection create/edit for channel-mcp type.
     """
@@ -208,13 +242,16 @@ def on_mcp_channel_create_edit(service, data, model, old_name):
 
     with closing(service.server.odb.session()) as session:
 
+        security_groups = data.get('security_groups', [])
+        security_groups = _resolve_security_group_names_to_ids(session, security_groups, model.cluster_id)
+
         ensure_mcp_rest_channel(
             session=session,
             channel_name=data['name'],
             url_path=data['url_path'],
             cluster_id=model.cluster_id,
             is_active=data.get('is_active', True),
-            security_groups=data.get('security_groups', []),
+            security_groups=security_groups,
             old_name=old_name,
         )
 

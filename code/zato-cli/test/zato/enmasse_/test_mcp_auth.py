@@ -193,6 +193,17 @@ class TestMCPAuth(TestCase):
         cls._inactive_url_path = f'/mcp/test-inactive/{token}'
         cls._inactive_group_name = f'mcp.test-inactive-group.{token}'
 
+        # .. a channel dedicated to the rename test ..
+        cls._rename_channel_name = f'test.mcp.rename.{token}'
+        cls._rename_url_path = f'/mcp/test-rename/{token}'
+        cls._rename_new_url_path = f'/mcp/test-rename-new/{token}'
+        cls._rename_group_name = f'mcp.test-rename-group.{token}'
+
+        # .. a channel dedicated to the delete test ..
+        cls._delete_channel_name = f'test.mcp.delete.{token}'
+        cls._delete_url_path = f'/mcp/test-delete/{token}'
+        cls._delete_group_name = f'mcp.test-delete-group.{token}'
+
         # .. a path that does not correspond to any channel ..
         cls._nonexistent_url_path = f'/mcp/test-nonexistent/{token}'
 
@@ -230,6 +241,14 @@ groups:
     members:
       - {cls._sec_def_name}
 
+  - name: {cls._rename_group_name}
+    members:
+      - {cls._sec_def_name}
+
+  - name: {cls._delete_group_name}
+    members:
+      - {cls._sec_def_name}
+
 channel_mcp:
   - name: {cls._channel_name}
     is_active: true
@@ -253,6 +272,18 @@ channel_mcp:
     url_path: {cls._update_url_path}
     security_groups:
       - {cls._update_group_name}
+
+  - name: {cls._rename_channel_name}
+    is_active: true
+    url_path: {cls._rename_url_path}
+    security_groups:
+      - {cls._rename_group_name}
+
+  - name: {cls._delete_channel_name}
+    is_active: true
+    url_path: {cls._delete_url_path}
+    security_groups:
+      - {cls._delete_group_name}
 
   - name: {cls._inactive_channel_name}
     is_active: false
@@ -299,6 +330,12 @@ channel_mcp:
 
         wait_for_mcp_channel(cls._port, cls._update_url_path)
         logger.info('[MCP-AUTH setUpClass] Update channel is ready at %s', cls._update_url_path)
+
+        wait_for_mcp_channel(cls._port, cls._rename_url_path)
+        logger.info('[MCP-AUTH setUpClass] Rename channel is ready at %s', cls._rename_url_path)
+
+        wait_for_mcp_channel(cls._port, cls._delete_url_path)
+        logger.info('[MCP-AUTH setUpClass] Delete channel is ready at %s', cls._delete_url_path)
 
 # ################################################################################################################################
 
@@ -377,6 +414,53 @@ channel_mcp:
         finally:
             if os.path.exists(tmp_yaml):
                 os.remove(tmp_yaml)
+
+# ################################################################################################################################
+
+    def _invoke_service(self, service_name:'str', payload:'dict') -> 'any_':
+        """ Invokes a Zato service via the admin API and returns the response data.
+        """
+        import json
+
+        url = f'http://127.0.0.1:{self._port}/zato/api/invoke/{service_name}'
+        auth = ('admin.invoke', self._password)
+        headers = {'Content-Type': 'application/json'}
+        data = json.dumps(payload)
+
+        response = requests.post(url, data=data, headers=headers, auth=auth, timeout=10)
+
+        logger.info('[_invoke_service] %s -> status=%d body_len=%d', service_name, response.status_code,
+            len(response.content))
+
+        self.assertEqual(response.status_code, OK,
+            f'Service {service_name} failed: {response.status_code} {response.text}')
+
+        if response.content:
+            try:
+                return response.json()
+            except Exception:
+                return response.text
+
+        return None
+
+# ################################################################################################################################
+
+    def _get_generic_conn(self, channel_name:'str') -> 'dict':
+        """ Looks up a GenericConn by name via the API, returns the full item dict.
+        """
+        from zato.common.api import GENERIC
+
+        response_data = self._invoke_service('zato.generic.connection.get-list', {
+            'cluster_id': 1,
+            'type_': GENERIC.CONNECTION.TYPE.CHANNEL_MCP,
+            'query': channel_name,
+        })
+
+        for item in response_data:
+            if item['name'] == channel_name:
+                return item
+
+        self.fail(f'GenericConn not found: {channel_name}')
 
 # ################################################################################################################################
 
@@ -545,6 +629,84 @@ channel_mcp:
         response = self._post_mcp(self._inactive_url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
         self.assertEqual(response.status_code, OK,
             f'Expected OK after reactivation, got {response.status_code}: {response.text}')
+
+# ################################################################################################################################
+
+    def test_channel_rename_preserves_group(self) -> 'None':
+        """ Rename a channel via API edit, new URL enforces same group, old URL -> 404.
+        """
+        from http.client import NOT_FOUND
+        from zato.common.api import GENERIC
+
+        # .. confirm channel works at old URL ..
+        response = self._post_mcp(self._rename_url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
+        self.assertEqual(response.status_code, OK)
+
+        # .. get the GenericConn details ..
+        conn = self._get_generic_conn(self._rename_channel_name)
+
+        # .. rename the channel (new name and new URL path), preserving security_groups ..
+        new_name = self._rename_channel_name + '.renamed'
+
+        self._invoke_service('zato.generic.connection.edit', {
+            'id': conn['id'],
+            'cluster_id': 1,
+            'name': new_name,
+            'type_': GENERIC.CONNECTION.TYPE.CHANNEL_MCP,
+            'is_active': True,
+            'is_internal': False,
+            'is_channel': True,
+            'is_outconn': False,
+            'url_path': self._rename_new_url_path,
+            'security_groups': conn['security_groups'],
+        })
+
+        # .. trigger a config reload so HTTP routing picks up the HTTPSOAP changes ..
+        self._invoke_service('zato.server.invoker', {'func_name': 'reload_config'})
+        time.sleep(5)
+
+        # .. old URL should return 404 ..
+        response = self._post_mcp(self._rename_url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
+        self.assertEqual(response.status_code, NOT_FOUND,
+            f'Expected NOT_FOUND at old URL after rename, got {response.status_code}: {response.text}')
+
+        # .. new URL should work with the same group member creds ..
+        response = self._post_mcp(self._rename_new_url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
+        self.assertEqual(response.status_code, OK,
+            f'Expected OK at new URL after rename, got {response.status_code}: {response.text}')
+
+        # .. non-member should still be rejected at new URL ..
+        response = self._post_mcp(self._rename_new_url_path, auth=(_NON_MEMBER_USERNAME, _NON_MEMBER_PASSWORD))
+        self.assertEqual(response.status_code, FORBIDDEN,
+            f'Expected FORBIDDEN for non-member at new URL, got {response.status_code}: {response.text}')
+
+# ################################################################################################################################
+
+    def test_delete_channel_cleans_up(self) -> 'None':
+        """ Delete a channel via API, URL -> 404.
+        """
+        from http.client import NOT_FOUND
+
+        # .. confirm channel works before deletion ..
+        response = self._post_mcp(self._delete_url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
+        self.assertEqual(response.status_code, OK)
+
+        # .. get the GenericConn details ..
+        conn = self._get_generic_conn(self._delete_channel_name)
+
+        # .. delete it ..
+        self._invoke_service('zato.generic.connection.delete', {
+            'id': conn['id'],
+        })
+
+        # .. trigger a config reload so HTTP routing picks up the HTTPSOAP removal ..
+        self._invoke_service('zato.server.invoker', {'func_name': 'reload_config'})
+        time.sleep(5)
+
+        # .. URL should now return 404 ..
+        response = self._post_mcp(self._delete_url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
+        self.assertEqual(response.status_code, NOT_FOUND,
+            f'Expected NOT_FOUND after deletion, got {response.status_code}: {response.text}')
 
 # ################################################################################################################################
 # ################################################################################################################################
