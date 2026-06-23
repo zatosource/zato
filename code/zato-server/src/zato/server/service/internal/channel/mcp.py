@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from http.client import NO_CONTENT, UNAUTHORIZED
+from http.client import FORBIDDEN, NO_CONTENT
 
 # Zato
 from zato.common.json_internal import dumps
@@ -62,7 +62,7 @@ class MCPEndpoint(AdminService):
         # .. if the HTTP layer did not authenticate the caller, reject immediately.
         if not self.channel.security.id:
             logger.info('MCP channel `%s` rejected unauthenticated request', self.channel.name)
-            self.response.status_code = UNAUTHORIZED
+            self.response.status_code = FORBIDDEN
             self.response.payload = ''
             return
 

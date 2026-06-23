@@ -382,10 +382,37 @@ channel_mcp:
 
 # ################################################################################################################################
 
-    def test_09_no_group_rejects_all(self) -> 'None':
-        """ POST JSON-RPC initialize to a channel with no security groups -> 401.
+    def _run_enmasse(self, yaml_content:'str') -> 'None':
+        """ Runs enmasse --import with the given YAML content against the test server.
         """
-        from http.client import UNAUTHORIZED
+        tmp_yaml = os.path.join(tempfile.gettempdir(), f'zato-mcp-auth-mid-{os.getpid()}-{os.urandom(4).hex()}.yaml')
+
+        try:
+            with open(tmp_yaml, 'w') as yaml_file:
+                yaml_file.write(yaml_content)
+
+            result = subprocess.run(
+                [_ZATO_BIN, 'enmasse', self._server_dir, '--verbose', '--import', '--input', tmp_yaml,
+                 '--missing-wait-time', '15'],
+                capture_output=True, text=True, timeout=60,
+            )
+            logger.info('[_run_enmasse] exit_code=%d', result.returncode)
+
+            if result.returncode != 0:
+                logger.info('[_run_enmasse] stdout:\n%s', result.stdout)
+                logger.info('[_run_enmasse] stderr:\n%s', result.stderr)
+                self.fail(f'Enmasse import failed (exit {result.returncode})')
+
+        finally:
+            if os.path.exists(tmp_yaml):
+                os.remove(tmp_yaml)
+
+# ################################################################################################################################
+
+    def test_09_no_group_rejects_all(self) -> 'None':
+        """ POST JSON-RPC initialize to a channel with no security groups -> 403.
+        """
+        from http.client import FORBIDDEN
 
         url = f'http://127.0.0.1:{self._port}{self._no_group_url_path}'
         data = make_jsonrpc_initialize()
@@ -396,8 +423,74 @@ channel_mcp:
 
         logger.info('[test_09] POST %s (no creds) -> status=%d body=%s', url, response.status_code, response.text)
 
-        self.assertEqual(response.status_code, UNAUTHORIZED,
-            f'Expected UNAUTHORIZED for no-group channel, got {response.status_code}: {response.text}')
+        self.assertEqual(response.status_code, FORBIDDEN,
+            f'Expected FORBIDDEN for no-group channel, got {response.status_code}: {response.text}')
+
+# ################################################################################################################################
+
+    def test_10_update_group_membership(self) -> 'None':
+        """ Remove sec def A from group, add sec def B. Old creds (A) -> 403, new creds (B) -> 200.
+        """
+        from http.client import FORBIDDEN
+
+        url = f'http://127.0.0.1:{self._port}{self._url_path}'
+        data = make_jsonrpc_initialize()
+        headers = {'Content-Type': 'application/json'}
+
+        # .. first confirm group1 member (A) can access ..
+        response = requests.post(url, data=data, headers=headers,
+            auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD), timeout=10)
+
+        logger.info('[test_10] before change, member A -> status=%d', response.status_code)
+        self.assertEqual(response.status_code, OK)
+
+        # .. now update the group: remove A, add the non-member (B) ..
+        # .. include security defs, the group with new membership, and the channel ..
+        # .. (channel must be re-imported so its security_groups IDs are refreshed) ..
+        updated_yaml = f'''\
+security:
+  - name: {self._sec_def_name}
+    type: basic_auth
+    username: {_SEC_DEF_USERNAME}
+    password: "{_SEC_DEF_PASSWORD}"
+
+  - name: {self._non_member_sec_def_name}
+    type: basic_auth
+    username: {_NON_MEMBER_USERNAME}
+    password: "{_NON_MEMBER_PASSWORD}"
+
+groups:
+  - name: {self._group_name}
+    members:
+      - {self._non_member_sec_def_name}
+
+channel_mcp:
+  - name: {self._channel_name}
+    is_active: true
+    url_path: {self._url_path}
+    security_groups:
+      - {self._group_name}
+'''
+        self._run_enmasse(updated_yaml)
+
+        # .. give the server time to pick up the config change after reload_config ..
+        time.sleep(5)
+
+        # .. old member A should now be rejected ..
+        response = requests.post(url, data=data, headers=headers,
+            auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD), timeout=10)
+
+        logger.info('[test_10] after change, old member A -> status=%d', response.status_code)
+        self.assertEqual(response.status_code, FORBIDDEN,
+            f'Expected FORBIDDEN for removed member, got {response.status_code}: {response.text}')
+
+        # .. new member B should now be allowed ..
+        response = requests.post(url, data=data, headers=headers,
+            auth=(_NON_MEMBER_USERNAME, _NON_MEMBER_PASSWORD), timeout=10)
+
+        logger.info('[test_10] after change, new member B -> status=%d', response.status_code)
+        self.assertEqual(response.status_code, OK,
+            f'Expected OK for new member, got {response.status_code}: {response.text}')
 
 # ################################################################################################################################
 # ################################################################################################################################
