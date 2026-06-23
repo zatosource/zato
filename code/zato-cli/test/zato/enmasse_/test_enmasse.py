@@ -97,6 +97,9 @@ class EnmasseTestCase(BaseEnmasseTestCase):
         # PyYAML
         import yaml
 
+        # We don't want to require a server
+        os.environ['Zato_Needs_Config_Reload'] = 'False'
+
         tmp_dir = gettempdir()
         test_suffix = rand_unicode() + '.' + rand_string()
 
@@ -199,6 +202,9 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
         # sh
         from sh import ErrorReturnCode
+
+        # We don't want to require a server
+        os.environ['Zato_Needs_Config_Reload'] = 'False'
 
         tmp_dir = gettempdir()
         test_suffix = rand_unicode() + '.' + rand_string()

@@ -251,6 +251,37 @@ def get_object_order(object_type:'str') -> 'strlist':
 # ################################################################################################################################
 # ################################################################################################################################
 
+_yaml_unsafe_chars = frozenset(',:[]{}&*#?|->!%@`')
+
+def _yaml_quote(value:'any_') -> 'str':
+    """ Wraps a scalar value in single quotes if it contains characters
+    that would make the YAML parser misinterpret it.
+    """
+    text = str(value)
+
+    needs_quoting = False
+
+    if not text:
+        needs_quoting = True
+    elif text[0] in _yaml_unsafe_chars:
+        needs_quoting = True
+    else:
+        for character in text:
+            if character in _yaml_unsafe_chars:
+                needs_quoting = True
+                break
+
+    if needs_quoting:
+        escaped = text.replace("'", "''")
+        out = f"'{escaped}'"
+        return out
+
+    out = text
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _write_dict_list_item(file_handle:'any_', item:'anydict', indent:'int'=6) -> 'None':
     """ Writes a dict as a YAML list item with nested keys.
     """
@@ -275,9 +306,11 @@ def _write_dict_list_item(file_handle:'any_', item:'anydict', indent:'int'=6) ->
                 if isinstance(sub_item, dict):
                     _write_dict_list_item(file_handle, sub_item, indent + 4)
                 else:
-                    _ = file_handle.write(f'{prefix}    - {sub_item}\n')
+                    quoted_sub_item = _yaml_quote(sub_item)
+                    _ = file_handle.write(f'{prefix}    - {quoted_sub_item}\n')
         else:
-            _ = file_handle.write(f'{line_prefix}{key}: {value}\n')
+            quoted_value = _yaml_quote(value)
+            _ = file_handle.write(f'{line_prefix}{key}: {quoted_value}\n')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -318,7 +351,8 @@ class FileWriter:
                         first_field = fields[0]
 
                         if first_field in item:
-                            _ = f.write(f'  - {first_field}: {item[first_field]}\n')
+                            quoted_first = _yaml_quote(item[first_field])
+                            _ = f.write(f'  - {first_field}: {quoted_first}\n')
 
                         # .. write remaining fields with indentation but no dash ..
                         for field in fields[1:]:
@@ -351,9 +385,11 @@ class FileWriter:
                                                         if cleaned_item.startswith(prefix):
                                                             cleaned_item = cleaned_item[len(prefix):]
                                                             break
-                                                _ = f.write(f'      - {cleaned_item}\n')
+                                                quoted_cleaned = _yaml_quote(cleaned_item)
+                                                _ = f.write(f'      - {quoted_cleaned}\n')
                                     else:
-                                        _ = f.write(f'    {actual_field}: {field_value}\n')
+                                        quoted_field_value = _yaml_quote(field_value)
+                                        _ = f.write(f'    {actual_field}: {quoted_field_value}\n')
 
                             # For regular fields
                             elif field in item:
@@ -367,9 +403,11 @@ class FileWriter:
                                                 if cleaned_item.startswith(prefix):
                                                     cleaned_item = cleaned_item[len(prefix):]
                                                     break
-                                        _ = f.write(f'      - {cleaned_item}\n')
+                                        quoted_cleaned = _yaml_quote(cleaned_item)
+                                        _ = f.write(f'      - {quoted_cleaned}\n')
                                 else:
-                                    _ = f.write(f'    {field}: {field_value}\n')
+                                    quoted_field_value = _yaml_quote(field_value)
+                                    _ = f.write(f'    {field}: {quoted_field_value}\n')
 
                 else:
                     # Write the element header for empty sections

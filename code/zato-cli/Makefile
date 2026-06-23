@@ -1,10 +1,10 @@
 
-.PHONY: ruff test-enmasse
+.PHONY: ruff test
 
 Zato_Python_Dir=$(CURDIR)/../bin
 Zato_Package_Name=zato-cli
 
-test-enmasse:
+test:
 	$(Zato_Python_Dir)/py -m unittest discover -s $(CURDIR)/test/zato/enmasse_ -p 'test_*.py' -v
 
 ruff:
