@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import NO_CONTENT
+from http.client import NO_CONTENT, UNAUTHORIZED
 
 # Zato
 from zato.common.json_internal import dumps
@@ -51,6 +51,13 @@ class MCPEndpoint(AdminService):
     def handle(self) -> 'None':
         """ Processes an incoming MCP request.
         """
+
+        # MCP channels require authentication via security groups ..
+        # .. if the HTTP layer did not authenticate the caller, reject immediately.
+        if not self.channel.security.id:
+            self.response.status_code = UNAUTHORIZED
+            self.response.payload = ''
+            return
 
         # Look up the MCP channel config from the config manager,
         # then reach the ChannelMCPWrapper through its .conn attribute ..

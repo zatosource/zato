@@ -53,10 +53,27 @@ class ChannelMCPImporter(GenericConnectionImporter):
 
 # ################################################################################################################################
 
+    def _resolve_security_groups(self, connection_def:'anydict') -> 'list':
+        """ Converts security group names from YAML to their database IDs.
+        """
+        out:'list' = []
+
+        if group_names := connection_def.get('security_groups'):
+            for group_name in group_names:
+                if group_name not in self.importer.group_defs:
+                    raise Exception(f'Security group "{group_name}" not found for MCP channel "{connection_def["name"]}"')
+                group_id = self.importer.group_defs[group_name]['id']
+                out.append(group_id)
+
+        return out
+
+# ################################################################################################################################
+
     def _ensure_rest_channel(self, connection_def:'anydict', session:'SASession') -> 'None':
 
         channel_name = connection_def['name']
         cluster = self.importer.get_cluster(session)
+        security_groups = self._resolve_security_groups(connection_def)
 
         ensure_mcp_rest_channel(
             session=session,
@@ -64,7 +81,7 @@ class ChannelMCPImporter(GenericConnectionImporter):
             url_path=connection_def.get('url_path', '/mcp'),
             cluster_id=cluster.id,
             is_active=connection_def.get('is_active', True),
-            security_groups=connection_def.get('security_groups', []),
+            security_groups=security_groups,
         )
 
 # ################################################################################################################################
