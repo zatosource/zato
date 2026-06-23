@@ -234,7 +234,7 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['confluence'] = 'name', 'is_active', 'address', 'username',
     order['jira'] = 'name', 'is_active', 'address', 'username',
     order['channel_kafka'] = 'name', 'is_active', 'address', 'topic', 'group_id', 'service',
-    order['channel_mcp'] = 'name', 'is_active', 'url_path', 'services', 'security',
+    order['channel_mcp'] = 'name', 'is_active', 'url_path', 'services', 'security', 'security_groups:list',
     order['outgoing_graphql'] = 'name', 'is_active', 'address', 'security', 'default_query_timeout',
     order['outgoing_kafka'] = 'name', 'is_active', 'address', 'topic',
     order['channel_hl7_mllp'] = 'name', 'is_active', 'service', 'msh9_message_type', 'msh9_trigger_event', 'should_validate', \

@@ -31,11 +31,11 @@ if 0:
 logger = logging.getLogger(__name__)
 
 CHANNEL_OPTIONAL_FIELDS = [
-    'url_path', 'services', 'security',
+    'url_path', 'services', 'security', 'security_groups',
 ]
 
 CHANNEL_OPAQUE_FIELDS = [
-    'url_path', 'services', 'security',
+    'url_path', 'services', 'security', 'security_groups',
 ]
 
 # ################################################################################################################################
