@@ -13,6 +13,7 @@ import subprocess
 import tempfile
 import threading
 import time
+from http.client import OK
 from logging import basicConfig, getLogger, INFO
 from unittest import main, TestCase
 
@@ -261,8 +262,8 @@ channel_mcp:
 
         logger.info('[test_06] POST %s -> status=%d body=%s', url, response.status_code, response.text)
 
-        self.assertEqual(response.status_code, 200,
-            f'Expected 200 for group member, got {response.status_code}: {response.text}')
+        self.assertEqual(response.status_code, OK,
+            f'Expected OK for group member, got {response.status_code}: {response.text}')
 
         body = response.json()
         self.assertEqual(body['jsonrpc'], '2.0')
