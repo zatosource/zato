@@ -7,11 +7,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 from http.client import NO_CONTENT, UNAUTHORIZED
 
 # Zato
 from zato.common.json_internal import dumps
 from zato.server.service.internal import AdminService
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,9 +61,13 @@ class MCPEndpoint(AdminService):
         # MCP channels require authentication via security groups ..
         # .. if the HTTP layer did not authenticate the caller, reject immediately.
         if not self.channel.security.id:
+            logger.info('MCP channel `%s` rejected unauthenticated request', self.channel.name)
             self.response.status_code = UNAUTHORIZED
             self.response.payload = ''
             return
+
+        logger.info('MCP channel `%s` authenticated sec_def id=`%s` username=`%s`',
+            self.channel.name, self.channel.security.id, self.channel.security.username)
 
         # Look up the MCP channel config from the config manager,
         # then reach the ChannelMCPWrapper through its .conn attribute ..
