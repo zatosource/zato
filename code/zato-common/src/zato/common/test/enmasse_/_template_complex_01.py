@@ -214,6 +214,18 @@ channel_kafka:
     ssl_cert_file: /path/to/cert.pem
     ssl_key_file: /path/to/key.pem
 
+channel_mcp:
+
+  - name: enmasse.mcp.channel.1
+    is_active: true
+    url_path: /mcp/enmasse-1
+    services: crm.get-customer,crm.update-customer
+
+  - name: enmasse.mcp.channel.2
+    is_active: true
+    url_path: /mcp/enmasse-2
+    services: billing.get-invoice
+
 channel_hl7_mllp:
 
   - name: enmasse.hl7.mllp.1
