@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 import logging
 import os
-import time
 from http.client import FORBIDDEN, OK
 
 # requests
@@ -26,7 +25,6 @@ from zato.common.test.playwright_pubsub import navigate_to_page, open_create_dia
 if 0:
     from playwright.sync_api import Page
     from zato.common.typing_ import anydict
-    from tests.python.zato_dashboard.playwright_.lib.client import ZatoClient
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,17 +35,7 @@ _Page_Url_Pattern = '/zato/channel/mcp/?cluster=1'
 
 _Test_Name_Prefix = 'test.mcp.pw.' + os.urandom(4).hex() + '.'
 
-_Reload_Wait = 2
-
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _reload_server_config(api_client:'ZatoClient') -> 'None':
-    """ Forces the server to reload its HTTP dispatcher configuration.
-    """
-    api_client.invoke('zato.server.invoker', {'func_name': 'reload_config'})
-    time.sleep(_Reload_Wait)
-
 # ################################################################################################################################
 
 def _post_mcp(server_port:'int', url_path:'str', auth:'tuple | None'=None) -> 'requests.Response':
@@ -109,7 +97,7 @@ class TestMCPChannelCreate:
 
 # ################################################################################################################################
 
-    def test_create_minimal(self, logged_in_page:'Page', zato_dashboard:'anydict', api_client:'ZatoClient') -> 'None':
+    def test_create_minimal(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates an MCP channel with only name and url_path via the UI, verifies the row
         appears correctly, then confirms the channel is live on the server (returns 403 because
         no security groups are configured - default deny).
@@ -158,9 +146,6 @@ class TestMCPChannelCreate:
         assert url_path_text == url_path, \
             f'Expected url_path "{url_path}", got: "{url_path_text}"'
 
-        # .. reload the server config so the new HTTPSOAP channel is routable ..
-        _reload_server_config(api_client)
-
         # .. POST an MCP request - should get 403 (no security groups = default deny) ..
         response = _post_mcp(server_port, url_path)
 
@@ -169,7 +154,7 @@ class TestMCPChannelCreate:
 
 # ################################################################################################################################
 
-    def test_create_with_services(self, logged_in_page:'Page', zato_dashboard:'anydict', api_client:'ZatoClient') -> 'None':
+    def test_create_with_services(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates an MCP channel with two services assigned via the badge picker.
         Verifies the row shows service count = 2, reopens edit to confirm both are pre-selected,
         then confirms the channel is live on the server.
@@ -255,9 +240,6 @@ class TestMCPChannelCreate:
 
         assert service_name_2 in assigned_names, \
             f'Expected "{service_name_2}" in assigned, got: {assigned_names}'
-
-        # .. reload the server config so the new HTTPSOAP channel is routable ..
-        _reload_server_config(api_client)
 
         # .. POST an MCP request - should get 403 (no security groups = default deny) ..
         response = _post_mcp(server_port, url_path)
