@@ -24,7 +24,7 @@ from zato.common.test.playwright_pubsub import create_basic_auth, navigate_to_pa
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import anydict, anynone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,7 +38,7 @@ _Test_Name_Prefix = 'test.mcp.pw.' + os.urandom(4).hex() + '.'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _post_mcp(server_port:'int', url_path:'str', auth:'tuple | None' = None) -> 'requests.Response':
+def _post_mcp(server_port:'int', url_path:'str', auth:'anynone' = None) -> 'requests.Response':
     """ Posts a JSON-RPC initialize request to the given MCP URL path.
     """
 
@@ -258,7 +258,7 @@ class TestMCPChannelCreate:
         assert odb_response.status_code == OK, f'API call failed: {odb_response.status_code} {odb_response.text}'
 
         items = odb_response.json()
-        channel_data = None
+        channel_data:'anynone' = None
 
         for item in items:
             if item['name'] == channel_name:
@@ -267,7 +267,11 @@ class TestMCPChannelCreate:
 
         assert channel_data is not None, f'Channel "{channel_name}" not found in ODB'
 
-        stored_services = set(channel_data.get('services') or [])
+        services = channel_data.get('services')
+        if services is None:
+            services = []
+
+        stored_services = set(services)
         logger.info('[test_create_with_services] stored_services=%s', stored_services)
 
         assert service_name_1 in stored_services, \
