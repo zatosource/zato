@@ -17,7 +17,7 @@ import requests
 
 # Zato
 from zato.common.test.mcp_ import make_jsonrpc_initialize
-from zato.common.test.playwright_pubsub import navigate_to_page, open_create_dialog, submit_create_form
+from zato.common.test.playwright_pubsub import create_basic_auth, navigate_to_page, open_create_dialog, submit_create_form
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,9 +38,10 @@ _Test_Name_Prefix = 'test.mcp.pw.' + os.urandom(4).hex() + '.'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _post_mcp(server_port:'int', url_path:'str', auth:'tuple | None'=None) -> 'requests.Response':
+def _post_mcp(server_port:'int', url_path:'str', auth:'tuple | None' = None) -> 'requests.Response':
     """ Posts a JSON-RPC initialize request to the given MCP URL path.
     """
+
     url = f'http://127.0.0.1:{server_port}{url_path}'
     data = make_jsonrpc_initialize()
     headers = {'Content-Type': 'application/json'}
@@ -274,6 +275,166 @@ class TestMCPChannelCreate:
 
         assert service_name_2 in stored_services, \
             f'Expected "{service_name_2}" in stored services, got: {stored_services}'
+
+# ################################################################################################################################
+
+    def test_create_with_security(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates a basic auth definition via the UI, then creates an MCP channel
+        with that sec def assigned via the security badge picker.
+        Verifies the row shows security count = 1, then POSTs with valid and invalid creds.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'with-security'
+        url_path = '/mcp/pw-test-sec/' + os.urandom(4).hex()
+
+        # Create a basic auth definition via the UI so we know the credentials ..
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'mcp-sec')
+        sec_name = sec_info['name']
+        sec_username = sec_info['username']
+        sec_password = sec_info['password']
+
+        logger.info('[test_create_with_security] created sec def: name=%s username=%s', sec_name, sec_username)
+
+        # .. navigate to the MCP channels page ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. open the create dialog ..
+        open_create_dialog(page)
+
+        # .. fill in the fields ..
+        page.fill('#id_name', channel_name)
+        page.fill('#id_url_path', url_path)
+
+        # .. wait for the security badge picker to load ..
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
+            timeout=10000
+        )
+
+        # .. pick the badge matching our newly created sec def ..
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name}"]'
+        sec_badge = page.query_selector(badge_selector)
+        assert sec_badge is not None, f'Could not find badge for sec def "{sec_name}"'
+
+        sec_badge.click()
+
+        # .. verify assigned count shows 1 ..
+        assigned_count_text = page.inner_text('#badge-zone-assigned-sec-create .badge-zone-count')
+        assert assigned_count_text == '1', f'Expected assigned count "1", got: "{assigned_count_text}"'
+
+        # .. submit and wait for dialog to close ..
+        submit_create_form(page)
+
+        # .. verify the new row appears with security count = 1 ..
+        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        cells = row.query_selector_all('td')
+
+        # Column index 6 is the security members count
+        security_count_text = cells[6].inner_text().strip()
+        logger.info('[test_create_with_security] security_count_text=%s', security_count_text)
+
+        assert security_count_text == '1', f'Expected security count "1", got: "{security_count_text}"'
+
+        # .. POST with valid creds - should get OK (MCP initialize response) ..
+        response = _post_mcp(server_port, url_path, auth=(sec_username, sec_password))
+        assert response.status_code == OK, f'Expected OK with valid creds, got {response.status_code}: {response.text}'
+
+        # .. POST with invalid creds - should get FORBIDDEN ..
+        response = _post_mcp(server_port, url_path, auth=('bogus_user', 'bogus_pass'))
+        assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN with invalid creds, got {response.status_code}: {response.text}'
+
+# ################################################################################################################################
+
+    def test_create_duplicate_name(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates a channel, then tries to create another with the same name.
+        Asserts the UI blocks submission (dialog stays open, field gets attention indicator).
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        channel_name = _Test_Name_Prefix + 'dup-name'
+        url_path_1 = '/mcp/pw-dup1/' + os.urandom(4).hex()
+        url_path_2 = '/mcp/pw-dup2/' + os.urandom(4).hex()
+
+        # Navigate to the MCP channels page ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create the first channel ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name)
+        page.fill('#id_url_path', url_path_1)
+        submit_create_form(page)
+
+        # .. verify it appears ..
+        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        # .. try to create a second channel with the same name ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name)
+        page.fill('#id_url_path', url_path_2)
+
+        # .. click submit ..
+        page.click('#create-div input[type="submit"]')
+
+        # .. the dialog should stay open because the name is taken ..
+        page.wait_for_selector('.zato-unique-taken', state='visible', timeout=5000)
+
+        # .. verify the dialog is still visible ..
+        dialog_visible = page.is_visible('#create-div')
+        assert dialog_visible, 'Expected create dialog to remain open for duplicate name'
+
+        logger.info('[test_create_duplicate_name] duplicate name correctly blocked')
+
+# ################################################################################################################################
+
+    def test_create_duplicate_url_path(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates a channel with a URL path, then tries to create another with the same path.
+        Asserts the UI blocks submission (dialog stays open, field gets attention indicator).
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        channel_name_1 = _Test_Name_Prefix + 'dup-path-1'
+        channel_name_2 = _Test_Name_Prefix + 'dup-path-2'
+        url_path = '/mcp/pw-dup-path/' + os.urandom(4).hex()
+
+        # Navigate to the MCP channels page ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create the first channel ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name_1)
+        page.fill('#id_url_path', url_path)
+        submit_create_form(page)
+
+        # .. verify it appears ..
+        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name_1}"))'
+        page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        # .. try to create a second channel with the same url_path ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name_2)
+        page.fill('#id_url_path', url_path)
+
+        # .. click submit ..
+        page.click('#create-div input[type="submit"]')
+
+        # .. the dialog should stay open because the url_path is taken ..
+        page.wait_for_selector('.zato-unique-taken', state='visible', timeout=5000)
+
+        # .. verify the dialog is still visible ..
+        dialog_visible = page.is_visible('#create-div')
+        assert dialog_visible, 'Expected create dialog to remain open for duplicate url_path'
+
+        logger.info('[test_create_duplicate_url_path] duplicate url_path correctly blocked')
 
 # ################################################################################################################################
 # ################################################################################################################################

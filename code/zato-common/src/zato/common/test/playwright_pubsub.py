@@ -348,11 +348,12 @@ def publish_via_overlay(page:'Page', payload:'str') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def create_basic_auth(page:'Page', base_url:'str', name_prefix:'str', suffix:'str') -> 'str':
-    """ Creates a Basic Auth security definition via the UI and returns its name.
+def create_basic_auth(page:'Page', base_url:'str', name_prefix:'str', suffix:'str') -> 'dict':
+    """ Creates a Basic Auth security definition via the UI and returns a dict with name, username, and password.
     """
 
     name = name_prefix + 'auth.' + suffix
+    username = 'user.' + name
     password = 'password.' + os.urandom(8).hex()
 
     # Navigate to the Basic Auth page ..
@@ -363,7 +364,7 @@ def create_basic_auth(page:'Page', base_url:'str', name_prefix:'str', suffix:'st
 
     # .. fill in the form fields ..
     page.fill('#id_name', name)
-    page.fill('#id_username', 'user.' + name)
+    page.fill('#id_username', username)
     page.fill('#id_realm', 'API')
     page.fill('#id_password', password)
 
@@ -374,7 +375,13 @@ def create_basic_auth(page:'Page', base_url:'str', name_prefix:'str', suffix:'st
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
     page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
-    return name
+    out = {
+        'name': name,
+        'username': username,
+        'password': password,
+    }
+
+    return out
 
 # ################################################################################################################################
 
@@ -504,7 +511,8 @@ def create_all_subscription_prerequisites(page:'Page', base_url:'str', name_pref
     """
 
     # Create the security definition ..
-    sec_name = create_basic_auth(page, base_url, name_prefix, suffix)
+    sec_info = create_basic_auth(page, base_url, name_prefix, suffix)
+    sec_name = sec_info['name']
 
     # .. create the topic ..
     topic_info = create_topic(page, base_url, name_prefix + 'topic.', suffix)

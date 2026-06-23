@@ -44,7 +44,8 @@ def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
     """
 
     # Create prerequisites ..
-    sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, suffix)
+    sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, suffix)
+    sec_name = sec_info['name']
     _ = create_topic(page, base_url, _Test_Name_Prefix + 'topic.', suffix)
 
     pattern_value = _Test_Name_Prefix + 'topic.' + suffix
@@ -113,7 +114,8 @@ class TestPubSubPermissionLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Create prerequisites ..
-        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'crud')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'crud')
+        sec_name = sec_info['name']
         _ = create_topic(page, base_url, _Test_Name_Prefix + 'topic.', 'crud')
 
         pattern_value = _Test_Name_Prefix + 'topic.crud'
@@ -159,7 +161,8 @@ class TestPubSubPermissionLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Create prerequisites ..
-        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'edit-access')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'edit-access')
+        sec_name = sec_info['name']
         _ = create_topic(page, base_url, _Test_Name_Prefix + 'topic.', 'edit-access')
 
         pattern_value = _Test_Name_Prefix + 'topic.edit-access'
@@ -196,7 +199,8 @@ class TestPubSubPermissionLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Create prerequisites ..
-        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'edit-pattern')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'edit-pattern')
+        sec_name = sec_info['name']
         _ = create_topic(page, base_url, _Test_Name_Prefix + 'topic.', 'edit-pattern')
 
         original_pattern = 'original.pattern.*'
@@ -306,7 +310,8 @@ class TestPubSubPermissionLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Create prerequisites ..
-        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'add-pat')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'add-pat')
+        sec_name = sec_info['name']
         _ = create_topic(page, base_url, _Test_Name_Prefix + 'topic.', 'add-pat')
 
         first_pattern = 'first.pattern.*'
@@ -351,7 +356,8 @@ class TestPubSubPermissionLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Create prerequisites ..
-        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rm-pat')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rm-pat')
+        sec_name = sec_info['name']
         _ = create_topic(page, base_url, _Test_Name_Prefix + 'topic.', 'rm-pat')
 
         pub_pattern = 'remove.pub.*'
@@ -407,7 +413,8 @@ class TestPubSubPermissionLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Create prerequisites ..
-        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'cancel-edit')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'cancel-edit')
+        sec_name = sec_info['name']
         _ = create_topic(page, base_url, _Test_Name_Prefix + 'topic.', 'cancel-edit')
 
         pattern_value = 'cancel.edit.pattern.*'
@@ -449,7 +456,8 @@ class TestPubSubPermissionLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Create prerequisites ..
-        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'cancel-del')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'cancel-del')
+        sec_name = sec_info['name']
         _ = create_topic(page, base_url, _Test_Name_Prefix + 'topic.', 'cancel-del')
 
         pattern_value = 'cancel.delete.pattern.*'
@@ -477,7 +485,8 @@ class TestPubSubPermissionLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Create prerequisites ..
-        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'prepop')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'prepop')
+        sec_name = sec_info['name']
         _ = create_topic(page, base_url, _Test_Name_Prefix + 'topic.', 'prepop')
 
         pattern_value = 'prepopulated.pattern.*'
@@ -508,7 +517,8 @@ class TestPubSubPermissionLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Create prerequisites ..
-        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'readonly-sec')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'readonly-sec')
+        sec_name = sec_info['name']
         _ = create_topic(page, base_url, _Test_Name_Prefix + 'topic.', 'readonly-sec')
 
         pattern_value = 'readonly.sec.pattern.*'
@@ -543,7 +553,8 @@ class TestPubSubPermissionLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Create prerequisites ..
-        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'grey-pat')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'grey-pat')
+        sec_name = sec_info['name']
         _ = create_topic(page, base_url, _Test_Name_Prefix + 'topic.', 'grey-pat')
 
         pub_pattern = 'grey.pub.pattern.*'
@@ -585,7 +596,8 @@ class TestPubSubPermissionLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Create prerequisites ..
-        sec_name = create_basic_auth(page, base_url, _Test_Name_Prefix, 'link-row')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'link-row')
+        sec_name = sec_info['name']
         _ = create_topic(page, base_url, _Test_Name_Prefix + 'topic.', 'link-row')
 
         pattern_value = 'link.row.pattern.*'
