@@ -220,6 +220,8 @@ channel_mcp:
     is_active: true
     url_path: /mcp/enmasse-1
     services: crm.get-customer,crm.update-customer
+    security_groups:
+      - enmasse.group.1
 
   - name: enmasse.mcp.channel.2
     is_active: true
