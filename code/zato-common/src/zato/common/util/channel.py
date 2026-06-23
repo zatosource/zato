@@ -192,7 +192,7 @@ def ensure_mcp_rest_channel(session, channel_name, url_path, cluster_id, is_acti
             session.flush()
 
         http_channel = HTTPSOAP(
-            None, channel_name, True, is_active, CONNECTION.CHANNEL,
+            None, channel_name, is_active, True, CONNECTION.CHANNEL,
             URL_TYPE.PLAIN_HTTP, None, url_path, None, '', None, DATA_FORMAT.JSON,
             service=mcp_service, cluster=cluster, security=None)
         set_instance_opaque_attrs(http_channel, {'security_groups': security_groups})

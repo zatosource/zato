@@ -13,7 +13,7 @@ import subprocess
 import tempfile
 import threading
 import time
-from http.client import OK
+from http.client import FORBIDDEN, OK
 from logging import basicConfig, getLogger, INFO
 from unittest import main, TestCase
 
@@ -183,6 +183,13 @@ class TestMCPAuth(TestCase):
         cls._no_group_channel_name = f'test.mcp.no-group.{token}'
         cls._no_group_url_path = f'/mcp/test-no-group/{token}'
 
+        # .. a deactivated channel ..
+        cls._inactive_channel_name = f'test.mcp.inactive.{token}'
+        cls._inactive_url_path = f'/mcp/test-inactive/{token}'
+
+        # .. a path that does not correspond to any channel ..
+        cls._nonexistent_url_path = f'/mcp/test-nonexistent/{token}'
+
         enmasse_yaml = f'''\
 security:
   - name: {cls._sec_def_name}
@@ -226,6 +233,12 @@ channel_mcp:
   - name: {cls._no_group_channel_name}
     is_active: true
     url_path: {cls._no_group_url_path}
+
+  - name: {cls._inactive_channel_name}
+    is_active: false
+    url_path: {cls._inactive_url_path}
+    security_groups:
+      - {cls._group_name}
 '''
 
         tmp_yaml = os.path.join(tempfile.gettempdir(), f'zato-mcp-auth-{os.getpid()}.yaml')
@@ -301,84 +314,19 @@ channel_mcp:
 
 # ################################################################################################################################
 
-    def test_06_group_member_allowed(self) -> 'None':
-        """ POST JSON-RPC initialize with credentials of a sec def that IS in the channel's security group -> 200.
+    def _post_mcp(self, url_path:'str', auth:'tuple | None'=None) -> 'requests.Response':
+        """ Posts a JSON-RPC initialize request to the given MCP URL path.
         """
-
-        url = f'http://127.0.0.1:{self._port}{self._url_path}'
-        creds = (_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD)
+        url = f'http://127.0.0.1:{self._port}{url_path}'
         data = make_jsonrpc_initialize()
         headers = {'Content-Type': 'application/json'}
 
-        response = requests.post(url, data=data, headers=headers, auth=creds, timeout=10)
+        response = requests.post(url, data=data, headers=headers, auth=auth, timeout=10)
 
-        logger.info('[test_06] POST %s -> status=%d body=%s', url, response.status_code, response.text)
+        logger.info('[_post_mcp] POST %s auth=%s -> status=%d', url_path, auth[0] if auth else None,
+            response.status_code)
 
-        self.assertEqual(response.status_code, OK,
-            f'Expected OK for group member, got {response.status_code}: {response.text}')
-
-        body = response.json()
-        self.assertEqual(body['jsonrpc'], '2.0')
-        self.assertIn('result', body)
-        self.assertIn('serverInfo', body['result'])
-
-# ################################################################################################################################
-
-    def test_07_non_member_rejected(self) -> 'None':
-        """ POST JSON-RPC initialize with creds of a sec def NOT in the channel's group -> 403.
-        """
-        from http.client import FORBIDDEN
-
-        url = f'http://127.0.0.1:{self._port}{self._url_path}'
-        creds = (_NON_MEMBER_USERNAME, _NON_MEMBER_PASSWORD)
-        data = make_jsonrpc_initialize()
-        headers = {'Content-Type': 'application/json'}
-
-        response = requests.post(url, data=data, headers=headers, auth=creds, timeout=10)
-
-        logger.info('[test_07] POST %s -> status=%d body=%s', url, response.status_code, response.text)
-
-        self.assertEqual(response.status_code, FORBIDDEN,
-            f'Expected FORBIDDEN for non-member, got {response.status_code}: {response.text}')
-
-# ################################################################################################################################
-
-    def test_08_multiple_groups(self) -> 'None':
-        """ Channel with two security groups - member of either group can access.
-        """
-
-        url = f'http://127.0.0.1:{self._port}{self._multi_group_url_path}'
-        data = make_jsonrpc_initialize()
-        headers = {'Content-Type': 'application/json'}
-
-        # .. member of group 1 should get through ..
-        response = requests.post(url, data=data, headers=headers,
-            auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD), timeout=10)
-
-        logger.info('[test_08] group1 member -> status=%d', response.status_code)
-
-        self.assertEqual(response.status_code, OK,
-            f'Expected OK for group1 member, got {response.status_code}: {response.text}')
-
-        # .. member of group 2 should also get through ..
-        response = requests.post(url, data=data, headers=headers,
-            auth=(_GROUP2_MEMBER_USERNAME, _GROUP2_MEMBER_PASSWORD), timeout=10)
-
-        logger.info('[test_08] group2 member -> status=%d', response.status_code)
-
-        self.assertEqual(response.status_code, OK,
-            f'Expected OK for group2 member, got {response.status_code}: {response.text}')
-
-        # .. non-member should be rejected ..
-        from http.client import FORBIDDEN
-
-        response = requests.post(url, data=data, headers=headers,
-            auth=(_NON_MEMBER_USERNAME, _NON_MEMBER_PASSWORD), timeout=10)
-
-        logger.info('[test_08] non-member -> status=%d', response.status_code)
-
-        self.assertEqual(response.status_code, FORBIDDEN,
-            f'Expected FORBIDDEN for non-member, got {response.status_code}: {response.text}')
+        return response
 
 # ################################################################################################################################
 
@@ -409,43 +357,74 @@ channel_mcp:
 
 # ################################################################################################################################
 
-    def test_09_no_group_rejects_all(self) -> 'None':
+    def test_group_member_allowed(self) -> 'None':
+        """ POST JSON-RPC initialize with credentials of a sec def that IS in the channel's security group -> 200.
+        """
+        response = self._post_mcp(self._url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
+
+        self.assertEqual(response.status_code, OK,
+            f'Expected OK for group member, got {response.status_code}: {response.text}')
+
+        body = response.json()
+        self.assertEqual(body['jsonrpc'], '2.0')
+        self.assertIn('result', body)
+        self.assertIn('serverInfo', body['result'])
+
+# ################################################################################################################################
+
+    def test_non_member_rejected(self) -> 'None':
+        """ POST JSON-RPC initialize with creds of a sec def NOT in the channel's group -> 403.
+        """
+        response = self._post_mcp(self._url_path, auth=(_NON_MEMBER_USERNAME, _NON_MEMBER_PASSWORD))
+
+        self.assertEqual(response.status_code, FORBIDDEN,
+            f'Expected FORBIDDEN for non-member, got {response.status_code}: {response.text}')
+
+# ################################################################################################################################
+
+    def test_multiple_groups(self) -> 'None':
+        """ Channel with two security groups - member of either group can access.
+        """
+
+        # .. member of group 1 should get through ..
+        response = self._post_mcp(self._multi_group_url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
+
+        self.assertEqual(response.status_code, OK,
+            f'Expected OK for group1 member, got {response.status_code}: {response.text}')
+
+        # .. member of group 2 should also get through ..
+        response = self._post_mcp(self._multi_group_url_path, auth=(_GROUP2_MEMBER_USERNAME, _GROUP2_MEMBER_PASSWORD))
+
+        self.assertEqual(response.status_code, OK,
+            f'Expected OK for group2 member, got {response.status_code}: {response.text}')
+
+        # .. non-member should be rejected ..
+        response = self._post_mcp(self._multi_group_url_path, auth=(_NON_MEMBER_USERNAME, _NON_MEMBER_PASSWORD))
+
+        self.assertEqual(response.status_code, FORBIDDEN,
+            f'Expected FORBIDDEN for non-member, got {response.status_code}: {response.text}')
+
+# ################################################################################################################################
+
+    def test_no_group_rejects_all(self) -> 'None':
         """ POST JSON-RPC initialize to a channel with no security groups -> 403.
         """
-        from http.client import FORBIDDEN
-
-        url = f'http://127.0.0.1:{self._port}{self._no_group_url_path}'
-        data = make_jsonrpc_initialize()
-        headers = {'Content-Type': 'application/json'}
-
-        # .. try without any credentials ..
-        response = requests.post(url, data=data, headers=headers, timeout=10)
-
-        logger.info('[test_09] POST %s (no creds) -> status=%d body=%s', url, response.status_code, response.text)
+        response = self._post_mcp(self._no_group_url_path)
 
         self.assertEqual(response.status_code, FORBIDDEN,
             f'Expected FORBIDDEN for no-group channel, got {response.status_code}: {response.text}')
 
 # ################################################################################################################################
 
-    def test_10_update_group_membership(self) -> 'None':
+    def test_update_group_membership(self) -> 'None':
         """ Remove sec def A from group, add sec def B. Old creds (A) -> 403, new creds (B) -> 200.
         """
-        from http.client import FORBIDDEN
-
-        url = f'http://127.0.0.1:{self._port}{self._url_path}'
-        data = make_jsonrpc_initialize()
-        headers = {'Content-Type': 'application/json'}
 
         # .. first confirm group1 member (A) can access ..
-        response = requests.post(url, data=data, headers=headers,
-            auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD), timeout=10)
-
-        logger.info('[test_10] before change, member A -> status=%d', response.status_code)
+        response = self._post_mcp(self._url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
         self.assertEqual(response.status_code, OK)
 
         # .. now update the group: remove A, add the non-member (B) ..
-        # .. include security defs, the group with new membership, and the channel ..
         # .. (channel must be re-imported so its security_groups IDs are refreshed) ..
         updated_yaml = f'''\
 security:
@@ -477,20 +456,34 @@ channel_mcp:
         time.sleep(5)
 
         # .. old member A should now be rejected ..
-        response = requests.post(url, data=data, headers=headers,
-            auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD), timeout=10)
-
-        logger.info('[test_10] after change, old member A -> status=%d', response.status_code)
+        response = self._post_mcp(self._url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
         self.assertEqual(response.status_code, FORBIDDEN,
             f'Expected FORBIDDEN for removed member, got {response.status_code}: {response.text}')
 
         # .. new member B should now be allowed ..
-        response = requests.post(url, data=data, headers=headers,
-            auth=(_NON_MEMBER_USERNAME, _NON_MEMBER_PASSWORD), timeout=10)
-
-        logger.info('[test_10] after change, new member B -> status=%d', response.status_code)
+        response = self._post_mcp(self._url_path, auth=(_NON_MEMBER_USERNAME, _NON_MEMBER_PASSWORD))
         self.assertEqual(response.status_code, OK,
             f'Expected OK for new member, got {response.status_code}: {response.text}')
+
+# ################################################################################################################################
+
+    def test_deactivated_channel_rejects_all(self) -> 'None':
+        """ POST to a deactivated channel and a non-existent path both return the same status,
+        ensuring no information leakage between inactive and non-existent channels.
+        """
+
+        # .. POST to the deactivated channel with valid credentials ..
+        response_inactive = self._post_mcp(self._inactive_url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
+
+        # .. POST to a completely non-existent path ..
+        response_nonexistent = self._post_mcp(self._nonexistent_url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
+
+        # .. both must return the same status code ..
+        expected_status = response_nonexistent.status_code
+
+        self.assertEqual(response_inactive.status_code, expected_status,
+            f'Deactivated channel status ({response_inactive.status_code}) differs from '
+            f'non-existent path status ({expected_status}) - information leakage')
 
 # ################################################################################################################################
 # ################################################################################################################################
