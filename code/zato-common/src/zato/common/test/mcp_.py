@@ -11,6 +11,16 @@ import json
 import logging
 import time
 
+# requests
+import requests
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -19,8 +29,11 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-def make_jsonrpc_initialize():
-    return json.dumps({
+def make_jsonrpc_initialize() -> 'str':
+    """ Builds a JSON-RPC 2.0 initialize request body for MCP protocol negotiation.
+    """
+
+    out = json.dumps({
         'jsonrpc': '2.0',
         'id': 1,
         'method': 'initialize',
@@ -34,12 +47,14 @@ def make_jsonrpc_initialize():
         },
     })
 
+    return out
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-def wait_for_mcp_channel(port, url_path, timeout=45):
-    """ Polls an MCP channel until it responds with something other than 404. """
-    import requests as req_lib
+def wait_for_mcp_channel(port:'int', url_path:'str', timeout:'int'=45) -> 'None':
+    """ Polls an MCP channel until it responds with something other than 404.
+    """
 
     url = f'http://127.0.0.1:{port}{url_path}'
     deadline = time.monotonic() + timeout
@@ -48,15 +63,22 @@ def wait_for_mcp_channel(port, url_path, timeout=45):
     while time.monotonic() < deadline:
         attempt += 1
         try:
-            resp = req_lib.post(url, data=make_jsonrpc_initialize(),
-                headers={'Content-Type': 'application/json'}, timeout=5)
-            if attempt <= 3 or attempt % 10 == 0:
-                logger.warning('[wait_for_mcp_channel] attempt=%d POST %s -> %d', attempt, url, resp.status_code)
-            if resp.status_code != 404:
+            headers = {'Content-Type': 'application/json'}
+            data = make_jsonrpc_initialize()
+            response = requests.post(url, data=data, headers=headers, timeout=5)
+
+            if attempt <= 3:
+                logger.info('[wait_for_mcp_channel] attempt=%d POST %s -> %d', attempt, url, response.status_code)
+            elif attempt % 10 == 0:
+                logger.info('[wait_for_mcp_channel] attempt=%d POST %s -> %d', attempt, url, response.status_code)
+
+            if response.status_code != 404:
                 return
+
         except Exception as e:
             if attempt <= 3:
-                logger.warning('[wait_for_mcp_channel] attempt=%d exception: %s', attempt, e)
+                logger.info('[wait_for_mcp_channel] attempt=%d exception: %s', attempt, e)
+
         time.sleep(1)
 
     raise Exception(f'MCP channel at {url} not available within {timeout}s')
