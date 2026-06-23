@@ -155,12 +155,16 @@ class TestMCPAuth(TestCase):
 
         logger.info('[MCP-AUTH setUpClass] Server is ready')
 
-        # .. deploy the MCP channel with security group via enmasse ..
+        # .. deploy MCP channels via enmasse ..
         token = os.urandom(4).hex()
         cls._sec_def_name = f'test.mcp.auth.{token}'
         cls._group_name = f'mcp.test-auth-group.{token}'
         cls._channel_name = f'test.mcp.auth-channel.{token}'
         cls._url_path = f'/mcp/test-auth/{token}'
+
+        # .. a second channel with no security groups at all ..
+        cls._no_group_channel_name = f'test.mcp.no-group.{token}'
+        cls._no_group_url_path = f'/mcp/test-no-group/{token}'
 
         enmasse_yaml = f'''\
 security:
@@ -180,6 +184,10 @@ channel_mcp:
     url_path: {cls._url_path}
     security_groups:
       - {cls._group_name}
+
+  - name: {cls._no_group_channel_name}
+    is_active: true
+    url_path: {cls._no_group_url_path}
 '''
 
         tmp_yaml = os.path.join(tempfile.gettempdir(), f'zato-mcp-auth-{os.getpid()}.yaml')
@@ -206,11 +214,14 @@ channel_mcp:
             if os.path.exists(tmp_yaml):
                 os.remove(tmp_yaml)
 
-        logger.info('[MCP-AUTH setUpClass] Enmasse import complete, waiting for channel')
+        logger.info('[MCP-AUTH setUpClass] Enmasse import complete, waiting for channels')
 
-        # .. wait until the channel responds.
+        # .. wait until both channels respond.
         wait_for_mcp_channel(cls._port, cls._url_path)
-        logger.info('[MCP-AUTH setUpClass] Channel is ready at %s', cls._url_path)
+        logger.info('[MCP-AUTH setUpClass] Secured channel is ready at %s', cls._url_path)
+
+        wait_for_mcp_channel(cls._port, cls._no_group_url_path)
+        logger.info('[MCP-AUTH setUpClass] No-group channel is ready at %s', cls._no_group_url_path)
 
 # ################################################################################################################################
 
@@ -269,6 +280,25 @@ channel_mcp:
         self.assertEqual(body['jsonrpc'], '2.0')
         self.assertIn('result', body)
         self.assertIn('serverInfo', body['result'])
+
+# ################################################################################################################################
+
+    def test_09_no_group_rejects_all(self) -> 'None':
+        """ POST JSON-RPC initialize to a channel with no security groups -> 401.
+        """
+        from http.client import UNAUTHORIZED
+
+        url = f'http://127.0.0.1:{self._port}{self._no_group_url_path}'
+        data = make_jsonrpc_initialize()
+        headers = {'Content-Type': 'application/json'}
+
+        # .. try without any credentials ..
+        response = requests.post(url, data=data, headers=headers, timeout=10)
+
+        logger.info('[test_09] POST %s (no creds) -> status=%d body=%s', url, response.status_code, response.text)
+
+        self.assertEqual(response.status_code, UNAUTHORIZED,
+            f'Expected UNAUTHORIZED for no-group channel, got {response.status_code}: {response.text}')
 
 # ################################################################################################################################
 # ################################################################################################################################
