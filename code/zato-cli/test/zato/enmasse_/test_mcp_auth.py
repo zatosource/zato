@@ -47,6 +47,9 @@ _ZATO_BIN = os.path.join(_ZATO_BASE, 'bin', 'zato')
 _SEC_DEF_USERNAME = 'test.mcp.group.member'
 _SEC_DEF_PASSWORD = 'test-mcp-password-' + os.urandom(4).hex()
 
+_NON_MEMBER_USERNAME = 'test.mcp.non.member'
+_NON_MEMBER_PASSWORD = 'test-mcp-outsider-' + os.urandom(4).hex()
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -162,6 +165,9 @@ class TestMCPAuth(TestCase):
         cls._channel_name = f'test.mcp.auth-channel.{token}'
         cls._url_path = f'/mcp/test-auth/{token}'
 
+        # .. a second sec def that is NOT in the group ..
+        cls._non_member_sec_def_name = f'test.mcp.outsider.{token}'
+
         # .. a second channel with no security groups at all ..
         cls._no_group_channel_name = f'test.mcp.no-group.{token}'
         cls._no_group_url_path = f'/mcp/test-no-group/{token}'
@@ -172,6 +178,11 @@ security:
     type: basic_auth
     username: {_SEC_DEF_USERNAME}
     password: "{_SEC_DEF_PASSWORD}"
+
+  - name: {cls._non_member_sec_def_name}
+    type: basic_auth
+    username: {_NON_MEMBER_USERNAME}
+    password: "{_NON_MEMBER_PASSWORD}"
 
 groups:
   - name: {cls._group_name}
@@ -280,6 +291,25 @@ channel_mcp:
         self.assertEqual(body['jsonrpc'], '2.0')
         self.assertIn('result', body)
         self.assertIn('serverInfo', body['result'])
+
+# ################################################################################################################################
+
+    def test_07_non_member_rejected(self) -> 'None':
+        """ POST JSON-RPC initialize with creds of a sec def NOT in the channel's group -> 403.
+        """
+        from http.client import FORBIDDEN
+
+        url = f'http://127.0.0.1:{self._port}{self._url_path}'
+        creds = (_NON_MEMBER_USERNAME, _NON_MEMBER_PASSWORD)
+        data = make_jsonrpc_initialize()
+        headers = {'Content-Type': 'application/json'}
+
+        response = requests.post(url, data=data, headers=headers, auth=creds, timeout=10)
+
+        logger.info('[test_07] POST %s -> status=%d body=%s', url, response.status_code, response.text)
+
+        self.assertEqual(response.status_code, FORBIDDEN,
+            f'Expected FORBIDDEN for non-member, got {response.status_code}: {response.text}')
 
 # ################################################################################################################################
 
