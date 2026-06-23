@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 import logging
 import time
+from http.client import NOT_FOUND
 
 # requests
 import requests
@@ -53,7 +54,7 @@ def make_jsonrpc_initialize() -> 'str':
 # ################################################################################################################################
 
 def wait_for_mcp_channel(port:'int', url_path:'str', timeout:'int'=45) -> 'None':
-    """ Polls an MCP channel until it responds with something other than 404.
+    """ Polls an MCP channel until it responds with something other than NOT_FOUND.
     """
 
     url = f'http://127.0.0.1:{port}{url_path}'
@@ -72,7 +73,7 @@ def wait_for_mcp_channel(port:'int', url_path:'str', timeout:'int'=45) -> 'None'
             elif attempt % 10 == 0:
                 logger.info('[wait_for_mcp_channel] attempt=%d POST %s -> %d', attempt, url, response.status_code)
 
-            if response.status_code != 404:
+            if response.status_code != NOT_FOUND:
                 return
 
         except Exception as e:
