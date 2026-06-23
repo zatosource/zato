@@ -237,25 +237,58 @@ def _resolve_security_group_names_to_ids(session, group_names, cluster_id):
 
 def on_mcp_channel_create_edit(service, data, model, old_name):
     """ Hook called by zato.generic.connection create/edit for channel-mcp type.
+    Creates or updates the HTTPSOAP channel by invoking the standard http-soap services,
+    which handle ODB persistence, uniqueness checks, and broker notification.
     """
+    import logging
     from contextlib import closing
+
+    from zato.common.api import CONNECTION, DATA_FORMAT, URL_TYPE
+    from zato.common.odb.model import HTTPSOAP
+
+    logger = logging.getLogger(__name__)
+
+    channel_name = data['name']
+    url_path = data['url_path']
+    is_active = data.get('is_active', True)
+    cluster_id = model.cluster_id
 
     with closing(service.server.odb.session()) as session:
 
         security_groups = data.get('security_groups', [])
-        security_groups = _resolve_security_group_names_to_ids(session, security_groups, model.cluster_id)
+        security_groups = _resolve_security_group_names_to_ids(session, security_groups, cluster_id)
 
-        ensure_mcp_rest_channel(
-            session=session,
-            channel_name=data['name'],
-            url_path=data['url_path'],
-            cluster_id=model.cluster_id,
-            is_active=data.get('is_active', True),
-            security_groups=security_groups,
-            old_name=old_name,
-        )
+        # Check if the HTTPSOAP channel already exists (use old_name for renames) ..
+        lookup_name = old_name if (old_name and old_name != channel_name) else channel_name
+        existing = session.query(HTTPSOAP).filter(
+            HTTPSOAP.name == lookup_name,
+            HTTPSOAP.cluster_id == cluster_id,
+            HTTPSOAP.connection == CONNECTION.CHANNEL,
+        ).first()
 
-        session.commit()
+    # Build the payload common to both create and edit ..
+    payload = {
+        'name': channel_name,
+        'url_path': url_path,
+        'connection': CONNECTION.CHANNEL,
+        'transport': URL_TYPE.PLAIN_HTTP,
+        'is_active': is_active,
+        'is_internal': True,
+        'data_format': DATA_FORMAT.JSON,
+        'service': mcp_service_name,
+        'security_groups': security_groups,
+        'cluster_id': cluster_id,
+    }
+
+    if existing:
+        payload['id'] = existing.id
+        service_name = 'zato.http-soap.edit'
+        logger.info('on_mcp_channel_create_edit: editing HTTPSOAP id=%s name=%s -> %s', existing.id, lookup_name, channel_name)
+    else:
+        service_name = 'zato.http-soap.create'
+        logger.info('on_mcp_channel_create_edit: creating HTTPSOAP name=%s url_path=%s', channel_name, url_path)
+
+    service.invoke(service_name, payload)
 
 # ################################################################################################################################
 # ################################################################################################################################
