@@ -1893,4 +1893,162 @@ class MCPTestAllowListB(Service):
         assert response.status_code == OK, f'Expected OK after cancel, got {response.status_code}'
 
 # ################################################################################################################################
+
+    def test_mcp_list_pagination(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates 45 MCP channels via UI to span 3 pages (page size = 20).
+        Navigates forward through all pages using Next, then backward using Previous,
+        verifying each page displays rows and correct pagination info.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        _channel_count = 45
+        _page_size = 20
+
+        # .. navigate to MCP channels ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create 45 channels ..
+        for idx in range(_channel_count):
+            channel_name = _Test_Name_Prefix + f'pag-{idx:02d}'
+            url_path = f'/mcp/pagination-{idx:02d}/' + rand_string()
+
+            open_create_dialog(page)
+            page.fill('#id_name', channel_name)
+            page.fill('#id_url_path', url_path)
+            submit_create_form(page)
+
+            row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+            page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        logger.info('[test_mcp_list_pagination] created %d channels', _channel_count)
+
+        # .. reload to get a fresh paginated view ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+        page.wait_for_selector('#data-table', state='visible', timeout=5000)
+
+        # .. verify page 1 ..
+        action_panel = page.query_selector('.action-panel')
+        assert action_panel is not None, 'Pagination action-panel should be visible on page 1'
+
+        panel_text = action_panel.inner_text()
+        assert 'Page 1' in panel_text, f'Should be on page 1, got: {panel_text}'
+
+        rows_page_1 = page.query_selector_all('#data-table tbody tr:not(.ignore)')
+        assert len(rows_page_1) == _page_size, f'Page 1 should have {_page_size} rows, got {len(rows_page_1)}'
+
+        next_link = page.query_selector('.action-panel a:has-text("Next")')
+        assert next_link is not None, 'Next link should be present on page 1'
+
+        # .. navigate to page 2 ..
+        next_link.click()
+        page.wait_for_selector('#data-table', state='visible', timeout=5000)
+
+        action_panel = page.query_selector('.action-panel')
+        panel_text = action_panel.inner_text()
+        assert 'Page 2' in panel_text, f'Should be on page 2, got: {panel_text}'
+
+        rows_page_2 = page.query_selector_all('#data-table tbody tr:not(.ignore)')
+        assert len(rows_page_2) == _page_size, f'Page 2 should have {_page_size} rows, got {len(rows_page_2)}'
+
+        next_link = page.query_selector('.action-panel a:has-text("Next")')
+        assert next_link is not None, 'Next link should be present on page 2'
+
+        prev_link = page.query_selector('.action-panel a:has-text("Prev")')
+        assert prev_link is not None, 'Previous link should be present on page 2'
+
+        # .. navigate to page 3 ..
+        next_link.click()
+        page.wait_for_selector('#data-table', state='visible', timeout=5000)
+
+        action_panel = page.query_selector('.action-panel')
+        panel_text = action_panel.inner_text()
+        assert 'Page 3' in panel_text, f'Should be on page 3, got: {panel_text}'
+
+        rows_page_3 = page.query_selector_all('#data-table tbody tr:not(.ignore)')
+        assert len(rows_page_3) >= 1, f'Page 3 should have at least 1 row, got {len(rows_page_3)}'
+
+        # .. no Next link on the last page ..
+        next_link = page.query_selector('.action-panel a:has-text("Next")')
+        assert next_link is None, 'Next link should NOT be present on the last page'
+
+        prev_link = page.query_selector('.action-panel a:has-text("Prev")')
+        assert prev_link is not None, 'Previous link should be present on page 3'
+
+        # .. navigate back to page 2 ..
+        prev_link.click()
+        page.wait_for_selector('#data-table', state='visible', timeout=5000)
+
+        action_panel = page.query_selector('.action-panel')
+        panel_text = action_panel.inner_text()
+        assert 'Page 2' in panel_text, f'Should be back on page 2, got: {panel_text}'
+
+        prev_link = page.query_selector('.action-panel a:has-text("Prev")')
+        assert prev_link is not None, 'Previous link should be present on page 2'
+
+        # .. navigate back to page 1 ..
+        prev_link.click()
+        page.wait_for_selector('#data-table', state='visible', timeout=5000)
+
+        action_panel = page.query_selector('.action-panel')
+        panel_text = action_panel.inner_text()
+        assert 'Page 1' in panel_text, f'Should be back on page 1, got: {panel_text}'
+
+        # .. no Previous link on page 1 ..
+        prev_link = page.query_selector('.action-panel a:has-text("Prev")')
+        assert prev_link is None, 'Previous link should NOT be present on page 1'
+
+# ################################################################################################################################
+
+    def test_mcp_list_search(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates channels with distinct name suffixes, uses the search box to filter,
+        and verifies only matching rows appear in the table.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        unique_token = rand_string()
+        channel_name_match = _Test_Name_Prefix + 'srch-' + unique_token
+        channel_name_other = _Test_Name_Prefix + 'srch-other'
+
+        # .. navigate to MCP channels ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create a channel with the unique token in its name ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name_match)
+        page.fill('#id_url_path', '/mcp/search-match/' + rand_string())
+        submit_create_form(page)
+
+        row_selector_match = f'#data-table tbody tr:has(td:text-is("{channel_name_match}"))'
+        page.wait_for_selector(row_selector_match, state='visible', timeout=5000)
+
+        # .. create another channel without the token ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name_other)
+        page.fill('#id_url_path', '/mcp/search-other/' + rand_string())
+        submit_create_form(page)
+
+        row_selector_other = f'#data-table tbody tr:has(td:text-is("{channel_name_other}"))'
+        page.wait_for_selector(row_selector_other, state='visible', timeout=5000)
+
+        # .. search for the unique token ..
+        search_input = page.query_selector('input[name="query"]')
+        assert search_input is not None, 'Search input should exist'
+
+        search_input.fill(unique_token)
+        page.click('input[type="submit"][value="Show channels"]')
+        page.wait_for_selector('#data-table', state='visible', timeout=5000)
+
+        # .. the matching channel should appear ..
+        row_match = page.query_selector(row_selector_match)
+        assert row_match is not None, f'Channel "{channel_name_match}" should appear in search results'
+
+        # .. the other channel should not ..
+        row_other = page.query_selector(row_selector_other)
+        assert row_other is None, f'Channel "{channel_name_other}" should NOT appear when searching for "{unique_token}"'
+
+# ################################################################################################################################
 # ################################################################################################################################
