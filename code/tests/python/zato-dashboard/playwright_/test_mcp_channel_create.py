@@ -10,14 +10,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 import logging
 import os
-from http.client import FORBIDDEN, OK
+from http.client import FORBIDDEN, NOT_FOUND, OK
 
 # requests
 import requests
 
 # Zato
 from zato.common.test.mcp_ import make_jsonrpc_initialize
-from zato.common.test.playwright_pubsub import create_basic_auth, navigate_to_page, open_create_dialog, submit_create_form
+from zato.common.test.playwright_pubsub import create_basic_auth, navigate_to_page, open_create_dialog, \
+    submit_create_form, submit_edit_form
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -351,6 +352,457 @@ class TestMCPChannelCreate:
         # .. POST with invalid creds - should get FORBIDDEN ..
         response = _post_mcp(server_port, url_path, auth=('bogus_user', 'bogus_pass'))
         assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN with invalid creds, got {response.status_code}: {response.text}'
+
+# ################################################################################################################################
+
+    def test_edit_rename(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates an MCP channel, then edits it to change both name and url_path.
+        Asserts the old URL returns 404 and the new URL is routable (403 = no security, but routable).
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        old_name = _Test_Name_Prefix + 'rename-old'
+        old_url_path = '/mcp/pw-rename-old/' + os.urandom(4).hex()
+        new_name = _Test_Name_Prefix + 'rename-new'
+        new_url_path = '/mcp/pw-rename-new/' + os.urandom(4).hex()
+
+        # Navigate to the MCP channels page ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create the initial channel ..
+        open_create_dialog(page)
+        page.fill('#id_name', old_name)
+        page.fill('#id_url_path', old_url_path)
+        submit_create_form(page)
+
+        # .. verify it appears ..
+        row_selector = f'#data-table tbody tr:has(td:text-is("{old_name}"))'
+        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        # .. confirm old URL is routable (403 = no security but channel exists) ..
+        response = _post_mcp(server_port, old_url_path)
+        assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN on old URL, got {response.status_code}'
+
+        # .. open the edit dialog ..
+        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id = item_id_cell.inner_text().strip()
+
+        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+
+        # .. change name and url_path ..
+        page.fill('#edit-div #id_edit-name', new_name)
+        page.fill('#edit-div #id_edit-url_path', new_url_path)
+
+        # .. submit the edit form ..
+        submit_edit_form(page)
+
+        # .. verify the row now shows the new name ..
+        new_row_selector = f'#data-table tbody tr:has(td:text-is("{new_name}"))'
+        page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
+
+        logger.info('[test_edit_rename] renamed %s -> %s, %s -> %s', old_name, new_name, old_url_path, new_url_path)
+
+        # .. old URL should now return 404 ..
+        response = _post_mcp(server_port, old_url_path)
+        assert response.status_code == NOT_FOUND, f'Expected NOT_FOUND on old URL after rename, got {response.status_code}'
+
+        # .. new URL should be routable (403 = no security) ..
+        response = _post_mcp(server_port, new_url_path)
+        assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN on new URL, got {response.status_code}'
+
+# ################################################################################################################################
+
+    def test_edit_rename_preserves_security(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates an MCP channel with a security member, renames it (changes url_path),
+        and asserts that security group enforcement still works at the new URL.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'rename-sec'
+        old_url_path = '/mcp/pw-rensec-old/' + os.urandom(4).hex()
+        new_url_path = '/mcp/pw-rensec-new/' + os.urandom(4).hex()
+
+        # Create a basic auth definition via the UI ..
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rename-sec')
+        sec_name = sec_info['name']
+        sec_username = sec_info['username']
+        sec_password = sec_info['password']
+
+        # .. navigate to MCP channels ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create the channel with security ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name)
+        page.fill('#id_url_path', old_url_path)
+
+        # .. wait for the security badge picker ..
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
+            timeout=10000
+        )
+
+        # .. select our sec def ..
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name}"]'
+        sec_badge = page.query_selector(badge_selector)
+        assert sec_badge is not None, f'Could not find badge for sec def "{sec_name}"'
+        sec_badge.click()
+
+        submit_create_form(page)
+
+        # .. verify the channel works with valid creds at old URL ..
+        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        response = _post_mcp(server_port, old_url_path, auth=(sec_username, sec_password))
+        assert response.status_code == OK, f'Expected OK at old URL with valid creds, got {response.status_code}'
+
+        # .. open edit dialog ..
+        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id = item_id_cell.inner_text().strip()
+
+        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+
+        # .. change only the url_path ..
+        page.fill('#edit-div #id_edit-url_path', new_url_path)
+
+        # .. submit ..
+        submit_edit_form(page)
+
+        # .. wait for the table to refresh ..
+        page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+
+        logger.info('[test_edit_rename_preserves_security] renamed url_path %s -> %s', old_url_path, new_url_path)
+
+        # .. old URL should be gone ..
+        response = _post_mcp(server_port, old_url_path)
+        assert response.status_code == NOT_FOUND, f'Expected NOT_FOUND on old URL, got {response.status_code}'
+
+        # .. new URL with valid creds should still work ..
+        response = _post_mcp(server_port, new_url_path, auth=(sec_username, sec_password))
+        assert response.status_code == OK, f'Expected OK at new URL with valid creds, got {response.status_code}'
+
+        # .. new URL with invalid creds should be forbidden ..
+        response = _post_mcp(server_port, new_url_path, auth=('bogus_user', 'bogus_pass'))
+        assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN at new URL with bad creds, got {response.status_code}'
+
+# ################################################################################################################################
+
+    def test_edit_deactivate(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates an MCP channel, then edits it to uncheck is_active.
+        Asserts the URL returns 404 after deactivation.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'deactivate'
+        url_path = '/mcp/pw-deact/' + os.urandom(4).hex()
+
+        # Navigate to the MCP channels page ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create the channel ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name)
+        page.fill('#id_url_path', url_path)
+        submit_create_form(page)
+
+        # .. verify it appears and is active ..
+        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        # .. confirm URL is routable while active ..
+        response = _post_mcp(server_port, url_path)
+        assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN (active, no sec), got {response.status_code}'
+
+        # .. open the edit dialog ..
+        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id = item_id_cell.inner_text().strip()
+
+        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+
+        # .. uncheck is_active ..
+        page.uncheck('#edit-div #id_edit-is_active')
+
+        # .. submit ..
+        submit_edit_form(page)
+
+        logger.info('[test_edit_deactivate] deactivated channel %s', channel_name)
+
+        # .. URL should now return 404 ..
+        response = _post_mcp(server_port, url_path)
+        assert response.status_code == NOT_FOUND, f'Expected NOT_FOUND after deactivation, got {response.status_code}'
+
+# ################################################################################################################################
+
+    def test_edit_reactivate(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates an MCP channel, deactivates it, then reactivates it.
+        Asserts the URL returns 404 when inactive and is routable again after reactivation.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'reactivate'
+        url_path = '/mcp/pw-react/' + os.urandom(4).hex()
+
+        # Navigate to the MCP channels page ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create the channel ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name)
+        page.fill('#id_url_path', url_path)
+        submit_create_form(page)
+
+        # .. verify it appears ..
+        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        # .. open edit and deactivate ..
+        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id = item_id_cell.inner_text().strip()
+
+        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        page.uncheck('#edit-div #id_edit-is_active')
+        submit_edit_form(page)
+
+        # .. confirm URL is now 404 ..
+        response = _post_mcp(server_port, url_path)
+        assert response.status_code == NOT_FOUND, f'Expected NOT_FOUND when inactive, got {response.status_code}'
+
+        # .. reopen edit and reactivate ..
+        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        page.check('#edit-div #id_edit-is_active')
+        submit_edit_form(page)
+
+        logger.info('[test_edit_reactivate] reactivated channel %s', channel_name)
+
+        # .. URL should be routable again (403 = no security, but exists) ..
+        response = _post_mcp(server_port, url_path)
+        assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN after reactivation, got {response.status_code}'
+
+# ################################################################################################################################
+
+    def test_edit_add_service(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates an MCP channel with 1 service and security, edits it to add a second service.
+        Asserts tools/list returns both services.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'add-svc'
+        url_path = '/mcp/pw-addsvc/' + os.urandom(4).hex()
+
+        # Create a sec def so we can authenticate ..
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'add-svc')
+        sec_name = sec_info['name']
+        sec_username = sec_info['username']
+        sec_password = sec_info['password']
+
+        # .. navigate to MCP channels ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create the channel with 1 service and security ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name)
+        page.fill('#id_url_path', url_path)
+
+        # .. wait for service badges ..
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-create .badge-zone-body .security-badge").length >= 2',
+            timeout=10000
+        )
+
+        # .. pick only the first service ..
+        available_svc = page.query_selector_all('#badge-zone-available-create .badge-zone-body .security-badge')
+        service_name_1 = available_svc[0].get_attribute('data-name')
+        available_svc[0].click()
+
+        # .. assign security ..
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
+            timeout=10000
+        )
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name}"]'
+        sec_badge = page.query_selector(badge_selector)
+        sec_badge.click()
+
+        submit_create_form(page)
+
+        # .. verify row appears ..
+        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        # .. initialize to confirm channel is live ..
+        response = _post_mcp(server_port, url_path, auth=(sec_username, sec_password))
+        assert response.status_code == OK, f'Expected OK, got {response.status_code}: {response.text}'
+
+        # .. open edit dialog ..
+        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id = item_id_cell.inner_text().strip()
+
+        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+
+        # .. wait for service badges in edit mode ..
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-edit .badge-zone-body .security-badge").length >= 1',
+            timeout=10000
+        )
+
+        # .. pick a second service ..
+        available_svc_edit = page.query_selector_all('#badge-zone-available-edit .badge-zone-body .security-badge')
+        service_name_2 = available_svc_edit[0].get_attribute('data-name')
+        available_svc_edit[0].click()
+
+        logger.info('[test_edit_add_service] adding service: %s (already has: %s)', service_name_2, service_name_1)
+
+        # .. submit edit ..
+        submit_edit_form(page)
+
+        # .. initialize a session, then send tools/list with the session ID ..
+        url = f'http://127.0.0.1:{server_port}{url_path}'
+        auth = (sec_username, sec_password)
+        headers = {'Content-Type': 'application/json'}
+
+        init_response = requests.post(url, data=json.dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1}),
+            headers=headers, auth=auth, timeout=10)
+        assert init_response.status_code == OK, f'initialize failed: {init_response.status_code}'
+
+        session_id = init_response.headers['Mcp-Session-Id']
+
+        headers['Mcp-Session-Id'] = session_id
+        tl_response = requests.post(url, data=json.dumps({'jsonrpc': '2.0', 'method': 'tools/list', 'id': 2}),
+            headers=headers, auth=auth, timeout=10)
+        assert tl_response.status_code == OK, f'tools/list failed: {tl_response.status_code}'
+
+        tool_names = {t['name'] for t in tl_response.json()['result']['tools']}
+
+        logger.info('[test_edit_add_service] tool_names=%s', tool_names)
+
+        assert service_name_1 in tool_names, f'Expected "{service_name_1}" in tools, got: {tool_names}'
+        assert service_name_2 in tool_names, f'Expected "{service_name_2}" in tools, got: {tool_names}'
+
+# ################################################################################################################################
+
+    def test_edit_remove_service(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates an MCP channel with 2 services and security, edits it to remove one.
+        Asserts tools/list returns only the remaining service.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'rm-svc'
+        url_path = '/mcp/pw-rmsvc/' + os.urandom(4).hex()
+
+        # Create a sec def ..
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rm-svc')
+        sec_name = sec_info['name']
+        sec_username = sec_info['username']
+        sec_password = sec_info['password']
+
+        # .. navigate to MCP channels ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create the channel with 2 services and security ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name)
+        page.fill('#id_url_path', url_path)
+
+        # .. wait for service badges ..
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-create .badge-zone-body .security-badge").length >= 2',
+            timeout=10000
+        )
+
+        # .. pick two services ..
+        available_svc = page.query_selector_all('#badge-zone-available-create .badge-zone-body .security-badge')
+        service_name_1 = available_svc[0].get_attribute('data-name')
+        service_name_2 = available_svc[1].get_attribute('data-name')
+        available_svc[0].click()
+        available_svc[1].click()
+
+        # .. assign security ..
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
+            timeout=10000
+        )
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name}"]'
+        sec_badge = page.query_selector(badge_selector)
+        sec_badge.click()
+
+        submit_create_form(page)
+
+        # .. verify row appears ..
+        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        # .. open edit dialog ..
+        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id = item_id_cell.inner_text().strip()
+
+        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+
+        # .. wait for assigned badges in edit mode ..
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-assigned-edit .badge-zone-body .security-badge").length === 2',
+            timeout=10000
+        )
+
+        # .. remove the first service by clicking it in the assigned zone ..
+        remove_selector = f'#badge-zone-assigned-edit .badge-zone-body .security-badge[data-name="{service_name_1}"]'
+        badge_to_remove = page.query_selector(remove_selector)
+        assert badge_to_remove is not None, f'Could not find badge "{service_name_1}" in assigned zone'
+        badge_to_remove.click()
+
+        logger.info('[test_edit_remove_service] removing service: %s (keeping: %s)', service_name_1, service_name_2)
+
+        # .. submit edit ..
+        submit_edit_form(page)
+
+        # .. initialize a session, then send tools/list with the session ID ..
+        url = f'http://127.0.0.1:{server_port}{url_path}'
+        auth = (sec_username, sec_password)
+        headers = {'Content-Type': 'application/json'}
+
+        init_response = requests.post(url, data=json.dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1}),
+            headers=headers, auth=auth, timeout=10)
+        assert init_response.status_code == OK, f'initialize failed: {init_response.status_code}'
+
+        session_id = init_response.headers['Mcp-Session-Id']
+
+        headers['Mcp-Session-Id'] = session_id
+        tl_response = requests.post(url, data=json.dumps({'jsonrpc': '2.0', 'method': 'tools/list', 'id': 2}),
+            headers=headers, auth=auth, timeout=10)
+        assert tl_response.status_code == OK, f'tools/list failed: {tl_response.status_code}'
+
+        tool_names = {t['name'] for t in tl_response.json()['result']['tools']}
+
+        logger.info('[test_edit_remove_service] tool_names=%s', tool_names)
+
+        assert service_name_2 in tool_names, f'Expected "{service_name_2}" in tools, got: {tool_names}'
+        assert service_name_1 not in tool_names, f'Expected "{service_name_1}" NOT in tools, got: {tool_names}'
 
 # ################################################################################################################################
 

@@ -507,6 +507,8 @@ _Log_Noise_Patterns = [
     'favicon.ico',
     'Could not determine version',
     'Invalid Basic Auth credentials (groups)',
+    'URL not found',
+    'is not active, raising NotFound',
 ]
 
 @pytest.fixture(autouse=True)
