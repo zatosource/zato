@@ -316,6 +316,30 @@ impl IOProcessor {
         self.input_elems.iter().map(|elem| elem.name.clone()).collect()
     }
 
+    /// Returns typed Elem instances for all required input elements.
+    fn get_input_required<'py>(&self, py: Python<'py>) -> PyResult<Vec<Bound<'py, PyAny>>> {
+        let mut out = Vec::new();
+        for elem in &self.input_elems {
+            if elem.is_required {
+                let instance = self.convert_to_elem_instance(py, elem.name.clone(), true)?;
+                out.push(instance);
+            }
+        }
+        Ok(out)
+    }
+
+    /// Returns typed Elem instances for all optional input elements.
+    fn get_input_optional<'py>(&self, py: Python<'py>) -> PyResult<Vec<Bound<'py, PyAny>>> {
+        let mut out = Vec::new();
+        for elem in &self.input_elems {
+            if !elem.is_required {
+                let instance = self.convert_to_elem_instance(py, elem.name.clone(), false)?;
+                out.push(instance);
+            }
+        }
+        Ok(out)
+    }
+
     /// Evaluates and coerces a single element value according to its inferred
     /// type, optionally encrypting secrets via a caller-supplied function.
     #[pyo3(signature = (elem_name, value, encrypt_func=None))]

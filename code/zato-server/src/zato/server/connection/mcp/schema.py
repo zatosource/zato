@@ -289,12 +289,8 @@ def io_to_json_schema(service_class:'any_') -> 'stranydict':
         return out
 
     if isinstance(io, IOProcessor):
-        if hasattr(io, 'get_input_required'):
-            out = io_definition_to_schema(io)
-            return out
-        else:
-            out:'stranydict' = {'type': 'object'}
-            return out
+        out = io_definition_to_schema(io)
+        return out
 
     out:'stranydict' = {'type': 'object'}
     return out
