@@ -81,6 +81,23 @@ class TestToolsList:
 
 # ################################################################################################################################
 
+    def test_tools_list_returns_valid_schema(self, client:'MCPClient') -> 'None':
+        """ Every tool's inputSchema must be a valid JSON Schema object with a type field.
+        """
+
+        response = client.jsonrpc('tools/list')
+        tools = response.json()['result']['tools']
+
+        for tool in tools:
+            schema = tool['inputSchema']
+
+            # Each inputSchema must be a dict with at least a 'type' key ..
+            assert isinstance(schema, dict), f'Tool "{tool["name"]}" inputSchema is not a dict'
+            assert 'type' in schema, f'Tool "{tool["name"]}" inputSchema missing "type"'
+            assert schema['type'] == 'object', f'Tool "{tool["name"]}" inputSchema type is not "object"'
+
+# ################################################################################################################################
+
     def test_pagination_with_cursor_zero(self, client:'MCPClient') -> 'None':
         """ Requesting tools/list with cursor 0 returns a valid page.
         """
