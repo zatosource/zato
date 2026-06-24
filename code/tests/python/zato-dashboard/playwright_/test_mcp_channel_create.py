@@ -167,7 +167,7 @@ class TestMCPChannelCreate:
         server_port = zato_dashboard['server_port']
 
         channel_name = _Test_Name_Prefix + 'with-services'
-        url_path = '/mcp/pw-test-svc/' + os.urandom(4).hex()
+        url_path = '/mcp/pw-test-service/' + os.urandom(4).hex()
 
         # Navigate to the MCP channels page ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
@@ -608,11 +608,11 @@ class TestMCPChannelCreate:
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'add-svc'
-        url_path = '/mcp/pw-addsvc/' + os.urandom(4).hex()
+        channel_name = _Test_Name_Prefix + 'add-service'
+        url_path = '/mcp/pw-addservice/' + os.urandom(4).hex()
 
         # Create a sec def so we can authenticate ..
-        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'add-svc')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'add-service')
         sec_name = sec_info['name']
         sec_username = sec_info['username']
         sec_password = sec_info['password']
@@ -632,9 +632,9 @@ class TestMCPChannelCreate:
         )
 
         # .. pick only the first service ..
-        available_svc = page.query_selector_all('#badge-zone-available-create .badge-zone-body .security-badge')
-        service_name_1 = available_svc[0].get_attribute('data-name')
-        available_svc[0].click()
+        available_services = page.query_selector_all('#badge-zone-available-create .badge-zone-body .security-badge')
+        service_name_1 = available_services[0].get_attribute('data-name')
+        available_services[0].click()
 
         # .. assign security ..
         page.wait_for_function(
@@ -669,9 +669,9 @@ class TestMCPChannelCreate:
         )
 
         # .. pick a second service ..
-        available_svc_edit = page.query_selector_all('#badge-zone-available-edit .badge-zone-body .security-badge')
-        service_name_2 = available_svc_edit[0].get_attribute('data-name')
-        available_svc_edit[0].click()
+        available_services_edit = page.query_selector_all('#badge-zone-available-edit .badge-zone-body .security-badge')
+        service_name_2 = available_services_edit[0].get_attribute('data-name')
+        available_services_edit[0].click()
 
         logger.info('[test_edit_add_service] adding service: %s (already has: %s)', service_name_2, service_name_1)
 
@@ -712,11 +712,11 @@ class TestMCPChannelCreate:
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'rm-svc'
-        url_path = '/mcp/pw-rmsvc/' + os.urandom(4).hex()
+        channel_name = _Test_Name_Prefix + 'rm-service'
+        url_path = '/mcp/pw-rmservice/' + os.urandom(4).hex()
 
         # Create a sec def ..
-        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rm-svc')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rm-service')
         sec_name = sec_info['name']
         sec_username = sec_info['username']
         sec_password = sec_info['password']
@@ -736,11 +736,11 @@ class TestMCPChannelCreate:
         )
 
         # .. pick two services ..
-        available_svc = page.query_selector_all('#badge-zone-available-create .badge-zone-body .security-badge')
-        service_name_1 = available_svc[0].get_attribute('data-name')
-        service_name_2 = available_svc[1].get_attribute('data-name')
-        available_svc[0].click()
-        available_svc[1].click()
+        available_services = page.query_selector_all('#badge-zone-available-create .badge-zone-body .security-badge')
+        service_name_1 = available_services[0].get_attribute('data-name')
+        service_name_2 = available_services[1].get_attribute('data-name')
+        available_services[0].click()
+        available_services[1].click()
 
         # .. assign security ..
         page.wait_for_function(
@@ -1185,10 +1185,10 @@ class TestMCPChannelCreate:
         )
 
         # .. pick demo.echo ..
-        svc_badge_selector = '#badge-zone-available-create .badge-zone-body .security-badge[data-name="demo.echo"]'
-        svc_badge = page.query_selector(svc_badge_selector)
-        assert svc_badge is not None, 'Could not find badge for "demo.echo"'
-        svc_badge.click()
+        service_badge_selector = '#badge-zone-available-create .badge-zone-body .security-badge[data-name="demo.echo"]'
+        service_badge = page.query_selector(service_badge_selector)
+        assert service_badge is not None, 'Could not find badge for "demo.echo"'
+        service_badge.click()
 
         # .. assign security ..
         page.wait_for_function(
