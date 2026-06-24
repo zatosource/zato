@@ -41,7 +41,7 @@ _sse_request_timeout = 30
 
 @pytest.fixture(scope='module')
 def client(zato_server:'any_') -> 'MCPClient':
-    out = MCPClient(zato_server['mcp_url'])
+    out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
     return out
 
 # ################################################################################################################################
@@ -78,6 +78,7 @@ class TestSSESecurity:
             client.mcp_url,
             json=body,
             headers=headers,
+            auth=client.auth,
             timeout=_sse_request_timeout,
         )
 

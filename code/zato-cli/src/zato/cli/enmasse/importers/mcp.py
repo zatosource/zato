@@ -72,14 +72,13 @@ class ChannelMCPImporter(GenericConnectionImporter):
     def _ensure_rest_channel(self, connection_def:'anydict', session:'SASession') -> 'None':
 
         channel_name = connection_def['name']
-        cluster = self.importer.get_cluster(session)
         security_groups = self._resolve_security_groups(connection_def)
 
         ensure_mcp_rest_channel(
             session=session,
             channel_name=channel_name,
             url_path=connection_def.get('url_path', '/mcp'),
-            cluster_id=cluster.id,
+            cluster_id=self.importer.cluster_id,
             is_active=connection_def.get('is_active', True),
             security_groups=security_groups,
         )

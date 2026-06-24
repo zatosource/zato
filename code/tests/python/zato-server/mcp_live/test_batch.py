@@ -21,7 +21,7 @@ from _constants import _error_invalid_request, _jsonrpc_version
 
 @pytest.fixture(scope='module')
 def client(zato_server:'dict') -> 'MCPClient':
-    out = MCPClient(zato_server['mcp_url'])
+    out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
     return out
 
 # ################################################################################################################################

@@ -26,7 +26,7 @@ if 0:
 
 @pytest.fixture(scope='module')
 def client(zato_server:'any_') -> 'MCPClient':
-    out = MCPClient(zato_server['mcp_url'])
+    out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
     return out
 
 # ################################################################################################################################

@@ -55,6 +55,11 @@ _listener_path = os.path.join(
 
 _password = 'test.invoke.' + os.urandom(8).hex()
 
+_mcp_username = 'test.mcp.live.user'
+_mcp_password = 'test.mcp.live.' + os.urandom(8).hex()
+_mcp_sec_def_name = 'test.mcp.live.auth'
+_mcp_group_name = 'mcp.test-live-group'
+
 _reports_directory = os.path.join(_zato_base, 'code', 'tests', 'python', 'zato-server', 'mcp_live', 'reports')
 
 _coverage_source = os.path.join(
@@ -65,6 +70,7 @@ _server_wait_timeout      = 120
 _coverage_combine_timeout = 30
 _coverage_html_timeout    = 60
 _quickstart_timeout       = 180
+_enmasse_timeout          = 60
 _hot_deploy_settle_seconds = 3
 _coverage_teardown_wait   = 2
 _error_text_max_length    = 80
@@ -180,6 +186,63 @@ def _wait_for_server(host:'str', port:'int', timeout:'int' = _server_wait_timeou
         time.sleep(_ping_poll_interval)
 
     raise RuntimeError(f'Server at {host}:{port} did not respond within {timeout}s')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _deploy_mcp_security(server_directory:'str') -> 'None':
+    """ Deploys a basic auth definition and security group for the default MCP channel
+    via enmasse so that live tests can authenticate.
+    """
+
+    from zato.common.util.channel import mcp_channel_name
+
+    enmasse_yaml = f'''\
+security:
+  - name: {_mcp_sec_def_name}
+    type: basic_auth
+    username: {_mcp_username}
+    password: "{_mcp_password}"
+
+groups:
+  - name: {_mcp_group_name}
+    members:
+      - {_mcp_sec_def_name}
+
+channel_mcp:
+  - name: {mcp_channel_name}
+    is_active: true
+    url_path: /mcp/demo
+    services:
+      - demo.echo
+    security_groups:
+      - {_mcp_group_name}
+'''
+
+    tmp_yaml = os.path.join(tempfile.gettempdir(), f'zato-mcp-live-security-{os.getpid()}.yaml')
+
+    try:
+        with open(tmp_yaml, 'w') as yaml_file:
+            _ = yaml_file.write(enmasse_yaml)
+
+        print(f'[TIMING] running enmasse --import for MCP security ({tmp_yaml})')
+
+        result = subprocess.run(
+            [_zato_bin, 'enmasse', server_directory, '--verbose', '--import', '--input', tmp_yaml],
+            capture_output=True, text=True, timeout=_enmasse_timeout,
+        )
+
+        if result.returncode != 0:
+            print(f'[ERROR] enmasse --import failed (exit {result.returncode}):')
+            print(f'  stdout: {result.stdout}')
+            print(f'  stderr: {result.stderr}')
+            raise RuntimeError(f'enmasse --import failed: {result.stderr}')
+
+        print('[TIMING] enmasse --import OK')
+
+    finally:
+        if os.path.isfile(tmp_yaml):
+            os.unlink(tmp_yaml)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -302,6 +365,7 @@ def zato_server(request:'any_') -> 'any_':
     repo_location = os.path.join(server_directory, 'config', 'repo')
     config = get_config_object(repo_location, 'server.conf')
     config['main']['port'] = str(port) # pyright: ignore[reportIndexIssue, reportCallIssue, reportArgumentType]
+    config['main']['bind'] = f'0.0.0.0:{port}' # pyright: ignore[reportIndexIssue, reportCallIssue, reportArgumentType]
     update_config_file(config, repo_location, 'server.conf') # pyright: ignore[reportArgumentType]
 
     config_time = time.monotonic()
@@ -386,6 +450,9 @@ def zato_server(request:'any_') -> 'any_':
         _kill_server()
         raise
 
+    # .. deploy security configuration for the default MCP channel via enmasse ..
+    _deploy_mcp_security(server_directory)
+
     # .. start the file-transfer listener that watches the pickup directory, so that
     # files dropped at runtime trigger hot-deploy (and the MCP tools/list_changed
     # notification). The server's own boot scan only covers files present at startup ..
@@ -420,6 +487,7 @@ def zato_server(request:'any_') -> 'any_':
         'port': port,
         'password': _password,
         'mcp_url': mcp_url,
+        'mcp_auth': (_mcp_username, _mcp_password),
         'server_directory': server_directory,
         'temp_directory': _temp_directory,
     }
