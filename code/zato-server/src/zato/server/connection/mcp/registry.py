@@ -68,7 +68,7 @@ class ToolRegistry:
 
             # Never expose internal services regardless of allowlist contents
             if service_name.startswith(_internal_prefix):
-                logger.warning('Skipping internal service `%s` from MCP tool exposure', service_name)
+                logger.info('Skipping internal service `%s` from MCP tool exposure', service_name)
                 continue
 
             # Look up the service in the store ..
