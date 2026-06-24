@@ -181,8 +181,14 @@ class TestPythonAnnotationToSchema(TestCase):
         result = _python_annotation_to_schema(_NestedModel)
 
         self.assertEqual(result['type'], 'object')
-        self.assertEqual(sorted(result['properties'].keys()), ['city', 'zip_code'])
-        self.assertEqual(sorted(result['required']), ['city', 'zip_code'])
+
+        properties = result['properties']
+        property_keys = sorted(properties.keys())
+        self.assertEqual(property_keys, ['city', 'zip_code'])
+
+        required = result['required']
+        sorted_required = sorted(required)
+        self.assertEqual(sorted_required, ['city', 'zip_code'])
 
 # ################################################################################################################################
 

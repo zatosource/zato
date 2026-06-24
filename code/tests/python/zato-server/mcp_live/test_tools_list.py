@@ -16,9 +16,16 @@ from _constants import _demo_echo_service
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @pytest.fixture(scope='module')
-def client(zato_server:'dict') -> 'MCPClient':
+def client(zato_server:'anydict') -> 'MCPClient':
     out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
+
     return out
 
 # ################################################################################################################################
@@ -33,7 +40,8 @@ class TestToolsList:
         """
 
         response = client.jsonrpc('tools/list')
-        result = response.json()['result']
+        json_body = response.json()
+        result = json_body['result']
         tools = result['tools']
 
         # Collect all tool names ..
@@ -52,7 +60,9 @@ class TestToolsList:
         """
 
         response = client.jsonrpc('tools/list')
-        tools = response.json()['result']['tools']
+        json_body = response.json()
+        result = json_body['result']
+        tools = result['tools']
 
         # Each tool must expose the three mandatory MCP fields ..
         for tool in tools:
@@ -67,7 +77,9 @@ class TestToolsList:
         """
 
         response = client.jsonrpc('tools/list')
-        tools = response.json()['result']['tools']
+        json_body = response.json()
+        result = json_body['result']
+        tools = result['tools']
 
         # Find demo.echo in the tool list ..
         for tool in tools:
@@ -86,7 +98,9 @@ class TestToolsList:
         """
 
         response = client.jsonrpc('tools/list')
-        tools = response.json()['result']['tools']
+        json_body = response.json()
+        result = json_body['result']
+        tools = result['tools']
 
         for tool in tools:
             schema = tool['inputSchema']
@@ -103,7 +117,8 @@ class TestToolsList:
         """
 
         response = client.jsonrpc('tools/list', params={'cursor': '0'})
-        result = response.json()['result']
+        json_body = response.json()
+        result = json_body['result']
 
         # The response must contain a tools array.
         assert 'tools' in result
@@ -115,7 +130,8 @@ class TestToolsList:
         """
 
         response = client.jsonrpc('tools/list', params={'cursor': '99999'})
-        result = response.json()['result']
+        json_body = response.json()
+        result = json_body['result']
 
         # Beyond the end, the tools list must be empty
         # and there must be no nextCursor.

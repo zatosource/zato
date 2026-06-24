@@ -461,8 +461,8 @@ class ServiceInvoker(Service):
 # ################################################################################################################################
 
     def _check_gateway_allowed(self, service_name):
-        """ Checks whether the service is allowed for the current channel's gateway allowlist.
-        If the allowlist is empty, all services are allowed.
+        """ Checks whether the service is allowed for the current channel's gateway allow list.
+        If the allow list is empty, all services are allowed.
         """
         channel_id = self.channel.id
 
@@ -495,7 +495,7 @@ class ServiceInvoker(Service):
                 self.response.data_format = 'text/plain'
                 raise BadRequest(self.cid, 'No such service `{}`'.format(service_name))
 
-        # Per-channel service allowlist enforcement
+        # Per-channel service allow list enforcement
         self._check_gateway_allowed(service_name)
 
         # Make sure the service exists

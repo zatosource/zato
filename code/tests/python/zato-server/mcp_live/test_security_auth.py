@@ -27,6 +27,7 @@ if 0:
 @pytest.fixture(scope='module')
 def client(zato_server:'any_') -> 'MCPClient':
     out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
+
     return out
 
 # ################################################################################################################################
@@ -41,8 +42,8 @@ class TestAuthBypass:
         """
 
         # Initialize a session first ..
-        init_result = client.initialize()
-        session_id = init_result.session_id
+        initialize_result = client.initialize()
+        session_id = initialize_result.session_id
 
         # .. send a tools/call with Accept: text/event-stream using the session ..
         response = client.jsonrpc(

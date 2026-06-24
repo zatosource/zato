@@ -31,13 +31,14 @@ _max_service_name_length = 10000
 @pytest.fixture(scope='module')
 def client(zato_server:'any_') -> 'MCPClient':
     out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
+
     return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TestACLEscape:
-    """ Tests that service name manipulation cannot bypass the allowlist.
+    """ Tests that service name manipulation cannot bypass the allow list.
     """
 
     def test_path_traversal_in_service_name(self, client:'MCPClient') -> 'None':
@@ -49,7 +50,9 @@ class TestACLEscape:
         data = response.json()
 
         assert 'error' in data
-        assert data['error']['code'] == _error_method_not_found
+
+        error = data['error']
+        assert error['code'] == _error_method_not_found
 
 # ################################################################################################################################
 
@@ -62,7 +65,9 @@ class TestACLEscape:
         data = response.json()
 
         assert 'error' in data
-        assert data['error']['code'] == _error_method_not_found
+
+        error = data['error']
+        assert error['code'] == _error_method_not_found
 
 # ################################################################################################################################
 
@@ -76,7 +81,9 @@ class TestACLEscape:
         data = response.json()
 
         assert 'error' in data
-        assert data['error']['code'] == _error_method_not_found
+
+        error = data['error']
+        assert error['code'] == _error_method_not_found
 
 # ################################################################################################################################
 
@@ -92,7 +99,9 @@ class TestACLEscape:
             data = response.json()
 
             assert 'error' in data, f'Case variant {variant} was not rejected'
-            assert data['error']['code'] == _error_method_not_found
+
+            error = data['error']
+            assert error['code'] == _error_method_not_found
 
 # ################################################################################################################################
 
@@ -107,7 +116,9 @@ class TestACLEscape:
         data = response.json()
 
         assert 'error' in data
-        assert data['error']['code'] == _error_method_not_found
+
+        error = data['error']
+        assert error['code'] == _error_method_not_found
 
 # ################################################################################################################################
 # ################################################################################################################################

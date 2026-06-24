@@ -16,9 +16,16 @@ from _constants import _demo_echo_service, _error_method_not_found, _zato_intern
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @pytest.fixture(scope='module')
-def client(zato_server:'dict') -> 'MCPClient':
+def client(zato_server:'anydict') -> 'MCPClient':
     out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
+
     return out
 
 # ################################################################################################################################
@@ -37,12 +44,14 @@ class TestACL:
         data = response.json()
 
         assert 'error' in data
-        assert data['error']['code'] == _error_method_not_found
+
+        error = data['error']
+        assert error['code'] == _error_method_not_found
 
 # ################################################################################################################################
 
     def test_unlisted_service_rejected(self, client:'MCPClient') -> 'None':
-        """ Calling a service not in the channel's allowlist returns tool-not-found.
+        """ Calling a service not in the channel's allow list returns tool-not-found.
         """
 
         params = {'name': 'my.private.service', 'arguments': {}}
@@ -50,7 +59,9 @@ class TestACL:
         data = response.json()
 
         assert 'error' in data
-        assert data['error']['code'] == _error_method_not_found
+
+        error = data['error']
+        assert error['code'] == _error_method_not_found
 
 # ################################################################################################################################
 
@@ -59,7 +70,9 @@ class TestACL:
         """
 
         response = client.jsonrpc('tools/list')
-        tools = response.json()['result']['tools']
+        json_body = response.json()
+        result = json_body['result']
+        tools = result['tools']
 
         # No tool name should start with the zato. prefix.
         for tool in tools:
@@ -69,12 +82,14 @@ class TestACL:
 
 # ################################################################################################################################
 
-    def test_tools_list_only_shows_allowlisted_services(self, client:'MCPClient') -> 'None':
-        """ The tools/list response must only show services from the channel's allowlist.
+    def test_tools_list_only_shows_allow_listed_services(self, client:'MCPClient') -> 'None':
+        """ The tools/list response must only show services from the channel's allow list.
         """
 
         response = client.jsonrpc('tools/list')
-        tools = response.json()['result']['tools']
+        json_body = response.json()
+        result = json_body['result']
+        tools = result['tools']
 
         # The default channel allows only demo.echo ..
         tool_names = []

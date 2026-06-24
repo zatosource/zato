@@ -139,10 +139,15 @@ class TestIOProcessorSchema(TestCase):
         result = io_to_json_schema(_ServiceIOProcessorMixed)
 
         self.assertEqual(result['type'], 'object')
-        self.assertIn('name', result['properties'])
-        self.assertIn('age', result['properties'])
-        self.assertIn('email', result['properties'])
-        self.assertEqual(sorted(result['required']), ['age', 'name'])
+
+        properties = result['properties']
+        self.assertIn('name', properties)
+        self.assertIn('age', properties)
+        self.assertIn('email', properties)
+
+        required = result['required']
+        sorted_required = sorted(required)
+        self.assertEqual(sorted_required, ['age', 'name'])
 
 # ################################################################################################################################
 
@@ -153,8 +158,14 @@ class TestIOProcessorSchema(TestCase):
         result = io_to_json_schema(_ServiceIOProcessorRequiredOnly)
 
         self.assertEqual(result['type'], 'object')
-        self.assertEqual(sorted(result['properties'].keys()), ['name', 'user_id'])
-        self.assertEqual(sorted(result['required']), ['name', 'user_id'])
+
+        properties = result['properties']
+        property_keys = sorted(properties.keys())
+        self.assertEqual(property_keys, ['name', 'user_id'])
+
+        required = result['required']
+        sorted_required = sorted(required)
+        self.assertEqual(sorted_required, ['name', 'user_id'])
 
 # ################################################################################################################################
 
@@ -165,7 +176,10 @@ class TestIOProcessorSchema(TestCase):
         result = io_to_json_schema(_ServiceIOProcessorOptionalOnly)
 
         self.assertEqual(result['type'], 'object')
-        self.assertEqual(sorted(result['properties'].keys()), ['bio', 'nickname'])
+
+        properties = result['properties']
+        property_keys = sorted(properties.keys())
+        self.assertEqual(property_keys, ['bio', 'nickname'])
         self.assertNotIn('required', result)
 
 # ################################################################################################################################
@@ -177,13 +191,22 @@ class TestIOProcessorSchema(TestCase):
         result = io_to_json_schema(_ServiceIOProcessorMixed)
 
         self.assertEqual(result['type'], 'object')
-        self.assertEqual(sorted(result['properties'].keys()), ['age', 'email', 'name'])
-        self.assertEqual(sorted(result['required']), ['age', 'name'])
+
+        properties = result['properties']
+        property_keys = sorted(properties.keys())
+        self.assertEqual(property_keys, ['age', 'email', 'name'])
+
+        required = result['required']
+        sorted_required = sorted(required)
+        self.assertEqual(sorted_required, ['age', 'name'])
 
         # Verify types are correctly mapped
-        self.assertEqual(result['properties']['name'], {'type': 'string'})
-        self.assertEqual(result['properties']['age'], {'type': 'string'})
-        self.assertEqual(result['properties']['email'], {'type': 'string'})
+        name_schema = properties['name']
+        age_schema = properties['age']
+        email_schema = properties['email']
+        self.assertEqual(name_schema, {'type': 'string'})
+        self.assertEqual(age_schema, {'type': 'string'})
+        self.assertEqual(email_schema, {'type': 'string'})
 
 # ################################################################################################################################
 # ################################################################################################################################

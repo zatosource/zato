@@ -20,6 +20,12 @@ from _client import MCPClient
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _notification_poll_timeout  = 15
 _notification_poll_interval = 1
 
@@ -27,8 +33,9 @@ _notification_poll_interval = 1
 # ################################################################################################################################
 
 @pytest.fixture(scope='module')
-def client(zato_server:'dict') -> 'MCPClient':
+def client(zato_server:'anydict') -> 'MCPClient':
     out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
+
     return out
 
 # ################################################################################################################################
@@ -72,7 +79,7 @@ class TestNotifications:
 
 # ################################################################################################################################
 
-    def test_hot_deploy_triggers_notification(self, client:'MCPClient', zato_server:'dict') -> 'None':
+    def test_hot_deploy_triggers_notification(self, client:'MCPClient', zato_server:'anydict') -> 'None':
         """ Dropping a .py file into the pickup directory triggers a tools/list_changed notification.
         """
 

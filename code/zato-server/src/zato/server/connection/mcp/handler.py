@@ -338,7 +338,7 @@ class MCPHandler:
 
     def _handle_tools_call(self, request_id:'any_', params:'anydict') -> 'stranydict':
         """ Handles the MCP tools/call request.
-        Validates the tool name against the allowlist, invokes the service,
+        Validates the tool name against the allow list, invokes the service,
         and wraps the response in MCP content format.
         """
 

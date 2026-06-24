@@ -19,9 +19,16 @@ from _constants import _error_invalid_params, _error_invalid_request, _error_met
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @pytest.fixture(scope='module')
-def client(zato_server:'dict') -> 'MCPClient':
+def client(zato_server:'anydict') -> 'MCPClient':
     out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
+
     return out
 
 # ################################################################################################################################
@@ -39,7 +46,9 @@ class TestErrors:
         data = response.json()
 
         assert 'error' in data
-        assert data['error']['code'] == _error_parse
+
+        error = data['error']
+        assert error['code'] == _error_parse
 
 # ################################################################################################################################
 
@@ -51,7 +60,9 @@ class TestErrors:
         data = response.json()
 
         assert 'error' in data
-        assert data['error']['code'] == _error_invalid_request
+
+        error = data['error']
+        assert error['code'] == _error_invalid_request
 
 # ################################################################################################################################
 
@@ -63,7 +74,9 @@ class TestErrors:
         data = response.json()
 
         assert 'error' in data
-        assert data['error']['code'] == _error_invalid_request
+
+        error = data['error']
+        assert error['code'] == _error_invalid_request
 
 # ################################################################################################################################
 
@@ -75,7 +88,9 @@ class TestErrors:
         data = response.json()
 
         assert 'error' in data
-        assert data['error']['code'] == _error_invalid_request
+
+        error = data['error']
+        assert error['code'] == _error_invalid_request
 
 # ################################################################################################################################
 
@@ -87,7 +102,9 @@ class TestErrors:
         data = response.json()
 
         assert 'error' in data
-        assert data['error']['code'] == _error_method_not_found
+
+        error = data['error']
+        assert error['code'] == _error_method_not_found
 
 # ################################################################################################################################
 
@@ -99,7 +116,9 @@ class TestErrors:
         data = response.json()
 
         assert 'error' in data
-        assert data['error']['code'] == _error_invalid_params
+
+        error = data['error']
+        assert error['code'] == _error_invalid_params
 
 # ################################################################################################################################
 

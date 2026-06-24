@@ -19,8 +19,8 @@ class _MockServiceStore:
     """ Minimal mock of ServiceStore with name_to_impl_name and services dicts.
     """
     def __init__(self) -> 'None':
-        self.name_to_impl_name:'dict' = {}
-        self.services:'dict' = {}
+        self.name_to_impl_name:'anydict' = {}
+        self.services:'anydict' = {}
 
     def add_service(self, name:'str', service_class:'type', impl_name:'str | None' = None) -> 'None':
         """ Helper to register a mock service.
@@ -35,6 +35,12 @@ class _MockServiceStore:
             'service_class': service_class,
             'is_active': True,
         }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,6 +62,9 @@ class ToolRegistryBuild(TestCase):
 # ################################################################################################################################
 
     def test_single_service(self) -> 'None':
+        """ Verifies that a single allowed service produces one tool entry.
+        """
+
         store = _MockServiceStore()
         store.add_service('crm.get-customer', _ServiceWithDoc)
 
@@ -64,13 +73,21 @@ class ToolRegistryBuild(TestCase):
         tools = registry.get_tools()
 
         self.assertEqual(len(tools), 1)
-        self.assertEqual(tools[0]['name'], 'crm.get-customer')
-        self.assertEqual(tools[0]['description'], 'Returns customer details by ID.')
-        self.assertEqual(tools[0]['inputSchema'], {'type': 'object'})
+
+        first_tool = tools[0]
+        tool_name = first_tool['name']
+        tool_description = first_tool['description']
+        tool_input_schema = first_tool['inputSchema']
+        self.assertEqual(tool_name, 'crm.get-customer')
+        self.assertEqual(tool_description, 'Returns customer details by ID.')
+        self.assertEqual(tool_input_schema, {'type': 'object'})
 
 # ################################################################################################################################
 
     def test_multiple_services(self) -> 'None':
+        """ Verifies that multiple allowed services produce multiple tool entries.
+        """
+
         store = _MockServiceStore()
         store.add_service('crm.get-customer', _ServiceWithDoc)
         store.add_service('billing.create-invoice', _ServiceNoDoc)
@@ -92,6 +109,9 @@ class ToolRegistryBuild(TestCase):
 # ################################################################################################################################
 
     def test_service_without_docstring(self) -> 'None':
+        """ Verifies that a service without a docstring gets an empty description.
+        """
+
         store = _MockServiceStore()
         store.add_service('my.service', _ServiceNoDoc)
 
@@ -99,11 +119,15 @@ class ToolRegistryBuild(TestCase):
         registry.rebuild()
         tools = registry.get_tools()
 
-        self.assertEqual(tools[0]['description'], '')
+        first_tool = tools[0]
+        self.assertEqual(first_tool['description'], '')
 
 # ################################################################################################################################
 
     def test_internal_service_excluded(self) -> 'None':
+        """ Verifies that services with the zato. prefix are excluded.
+        """
+
         store = _MockServiceStore()
         store.add_service('zato.server.info', _ServiceWithDoc)
         store.add_service('crm.get-customer', _ServiceWithDoc)
@@ -113,11 +137,16 @@ class ToolRegistryBuild(TestCase):
         tools = registry.get_tools()
 
         self.assertEqual(len(tools), 1)
-        self.assertEqual(tools[0]['name'], 'crm.get-customer')
+
+        first_tool = tools[0]
+        self.assertEqual(first_tool['name'], 'crm.get-customer')
 
 # ################################################################################################################################
 
     def test_unknown_service_skipped(self) -> 'None':
+        """ Verifies that a service not in the store is silently skipped.
+        """
+
         store = _MockServiceStore()
         store.add_service('crm.get-customer', _ServiceWithDoc)
 
@@ -126,11 +155,16 @@ class ToolRegistryBuild(TestCase):
         tools = registry.get_tools()
 
         self.assertEqual(len(tools), 1)
-        self.assertEqual(tools[0]['name'], 'crm.get-customer')
+
+        first_tool = tools[0]
+        self.assertEqual(first_tool['name'], 'crm.get-customer')
 
 # ################################################################################################################################
 
-    def test_empty_allowlist(self) -> 'None':
+    def test_empty_allow_list(self) -> 'None':
+        """ Verifies that an empty allow list produces no tools.
+        """
+
         store = _MockServiceStore()
         store.add_service('crm.get-customer', _ServiceWithDoc)
 
@@ -142,7 +176,10 @@ class ToolRegistryBuild(TestCase):
 
 # ################################################################################################################################
 
-    def test_only_internal_services_in_allowlist(self) -> 'None':
+    def test_only_internal_services_in_allow_list(self) -> 'None':
+        """ Verifies that an allow list with only internal services produces no tools.
+        """
+
         store = _MockServiceStore()
         store.add_service('zato.ping', _ServiceWithDoc)
         store.add_service('zato.server.info', _ServiceWithDoc)
@@ -162,7 +199,9 @@ class ToolRegistryCache(TestCase):
 
 # ################################################################################################################################
 
-    def test_not_built_until_rebuild_called(self) -> 'None': # type: ignore
+    def test_not_built_until_rebuild_called(self) -> 'None':
+        """ Verifies that the cache is empty until rebuild is called explicitly.
+        """
 
         store = _MockServiceStore()
         store.add_service('crm.get-customer', _ServiceWithDoc)
@@ -178,6 +217,9 @@ class ToolRegistryCache(TestCase):
 # ################################################################################################################################
 
     def test_cached_result_returned(self) -> 'None':
+        """ Verifies that get_tools returns the same cached list object.
+        """
+
         store = _MockServiceStore()
         store.add_service('crm.get-customer', _ServiceWithDoc)
 
@@ -193,6 +235,9 @@ class ToolRegistryCache(TestCase):
 # ################################################################################################################################
 
     def test_rebuild_updates_cache(self) -> 'None':
+        """ Verifies that rebuild refreshes the cached tools list.
+        """
+
         store = _MockServiceStore()
         store.add_service('crm.get-customer', _ServiceWithDoc)
 
@@ -202,7 +247,7 @@ class ToolRegistryCache(TestCase):
 
         self.assertEqual(len(tools_before), 1)
 
-        # Add a new service to the store and allowlist
+        # Add a new service to the store and allow list
         store.add_service('billing.create-invoice', _ServiceNoDoc)
         registry.allowed_services = ['crm.get-customer', 'billing.create-invoice']
         registry.rebuild()
@@ -214,6 +259,9 @@ class ToolRegistryCache(TestCase):
 # ################################################################################################################################
 
     def test_rebuild_after_service_removed_from_store(self) -> 'None':
+        """ Verifies that rebuild reflects service removal from the store.
+        """
+
         store = _MockServiceStore()
         store.add_service('crm.get-customer', _ServiceWithDoc)
         store.add_service('billing.create-invoice', _ServiceNoDoc)
@@ -232,7 +280,9 @@ class ToolRegistryCache(TestCase):
         tools_after = registry.get_tools()
 
         self.assertEqual(len(tools_after), 1)
-        self.assertEqual(tools_after[0]['name'], 'crm.get-customer')
+
+        first_tool = tools_after[0]
+        self.assertEqual(first_tool['name'], 'crm.get-customer')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -244,6 +294,9 @@ class ToolRegistryPagination(TestCase):
 # ################################################################################################################################
 
     def test_no_cursor_returns_all_when_under_page_size(self) -> 'None':
+        """ Verifies that all tools are returned in one page when under page size.
+        """
+
         store = _MockServiceStore()
         store.add_service('crm.get-customer', _ServiceWithDoc)
         store.add_service('billing.create-invoice', _ServiceNoDoc)
@@ -259,6 +312,9 @@ class ToolRegistryPagination(TestCase):
 # ################################################################################################################################
 
     def test_no_cursor_with_empty_registry(self) -> 'None':
+        """ Verifies that an empty registry returns an empty page.
+        """
+
         store = _MockServiceStore()
 
         registry = ToolRegistry(store, []) # pyright: ignore[reportArgumentType]
@@ -272,6 +328,9 @@ class ToolRegistryPagination(TestCase):
 # ################################################################################################################################
 
     def test_cursor_zero_same_as_no_cursor(self) -> 'None':
+        """ Verifies that cursor '0' produces the same result as no cursor.
+        """
+
         store = _MockServiceStore()
         store.add_service('crm.get-customer', _ServiceWithDoc)
 
@@ -286,6 +345,9 @@ class ToolRegistryPagination(TestCase):
 # ################################################################################################################################
 
     def test_pagination_splits_tools(self) -> 'None':
+        """ Verifies that tools are split across pages when exceeding page size.
+        """
+
         store = _MockServiceStore()
 
         # Create more services than the default page size
@@ -293,8 +355,8 @@ class ToolRegistryPagination(TestCase):
 
         service_names = []
 
-        for i in range(total_services):
-            name = f'svc.service-{i:04d}'
+        for _ in range(total_services):
+            name = f'svc.service-{len(service_names):04d}'
             store.add_service(name, _ServiceWithDoc)
             service_names.append(name)
 
@@ -317,6 +379,9 @@ class ToolRegistryPagination(TestCase):
 # ################################################################################################################################
 
     def test_cursor_beyond_end_returns_empty(self) -> 'None':
+        """ Verifies that a cursor beyond the end returns an empty page.
+        """
+
         store = _MockServiceStore()
         store.add_service('crm.get-customer', _ServiceWithDoc)
 
@@ -331,14 +396,17 @@ class ToolRegistryPagination(TestCase):
 # ################################################################################################################################
 
     def test_all_tools_reachable_via_pagination(self) -> 'None':
+        """ Verifies that paginating through all pages collects all tools.
+        """
+
         store = _MockServiceStore()
 
         total_services = _default_page_size * 3 + 7
 
         service_names = []
 
-        for i in range(total_services):
-            name = f'svc.service-{i:04d}'
+        for _ in range(total_services):
+            name = f'svc.service-{len(service_names):04d}'
             store.add_service(name, _ServiceWithDoc)
             service_names.append(name)
 
@@ -368,6 +436,9 @@ class ToolRegistryAllowlistCheck(TestCase):
 # ################################################################################################################################
 
     def test_allowed_service(self) -> 'None':
+        """ Verifies that an allowed service passes the check.
+        """
+
         store = _MockServiceStore()
         registry = ToolRegistry(store, ['crm.get-customer']) # pyright: ignore[reportArgumentType]
 
@@ -376,6 +447,9 @@ class ToolRegistryAllowlistCheck(TestCase):
 # ################################################################################################################################
 
     def test_disallowed_service(self) -> 'None':
+        """ Verifies that a non-listed service fails the check.
+        """
+
         store = _MockServiceStore()
         registry = ToolRegistry(store, ['crm.get-customer']) # pyright: ignore[reportArgumentType]
 
@@ -384,6 +458,9 @@ class ToolRegistryAllowlistCheck(TestCase):
 # ################################################################################################################################
 
     def test_internal_service_always_disallowed(self) -> 'None':
+        """ Verifies that internal services are always disallowed.
+        """
+
         store = _MockServiceStore()
         registry = ToolRegistry(store, ['zato.server.info']) # pyright: ignore[reportArgumentType]
 
@@ -392,6 +469,9 @@ class ToolRegistryAllowlistCheck(TestCase):
 # ################################################################################################################################
 
     def test_internal_prefix_checked(self) -> 'None':
+        """ Verifies that the zato. prefix is checked for rejection.
+        """
+
         store = _MockServiceStore()
         registry = ToolRegistry(store, ['zato.ping']) # pyright: ignore[reportArgumentType]
 

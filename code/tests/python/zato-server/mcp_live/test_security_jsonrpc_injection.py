@@ -40,6 +40,7 @@ _oversized_payload_bytes = 1_100_000
 @pytest.fixture(scope='module')
 def client(zato_server:'any_') -> 'MCPClient':
     out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
+
     return out
 
 # ################################################################################################################################
@@ -72,7 +73,9 @@ class TestJSONRPCInjection:
         # .. ping should succeed, nonexistent should error.
         assert 'result' in response_by_id[1]
         assert 'error' in response_by_id[2]
-        assert response_by_id[2]['error']['code'] == _error_method_not_found
+
+        error = response_by_id[2]['error']
+        assert error['code'] == _error_method_not_found
 
 # ################################################################################################################################
 

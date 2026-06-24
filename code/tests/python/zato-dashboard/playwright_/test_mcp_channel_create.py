@@ -10,12 +10,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 import logging
 import os
+import time
 from http.client import FORBIDDEN, NOT_FOUND, OK
 
 # requests
 import requests
 
 # Zato
+from zato.common.test import rand_string
 from zato.common.test.mcp_ import make_jsonrpc_initialize
 from zato.common.test.playwright_pubsub import create_basic_auth, navigate_to_page, open_create_dialog, \
     submit_create_form, submit_edit_form
@@ -25,7 +27,7 @@ from zato.common.test.playwright_pubsub import create_basic_auth, navigate_to_pa
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import anydict, anynone
+    from zato.common.typing_ import anydict, anylist, anynone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 _Page_Url_Pattern = '/zato/channel/mcp/?cluster=1'
 
-_Test_Name_Prefix = 'test.mcp.pw.' + os.urandom(4).hex() + '.'
+_Test_Name_Prefix = 'test.mcp.playwright.' + rand_string() + '.'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,7 +88,7 @@ class TestMCPChannelCreate:
         # .. verify table headers.
         headers = page.query_selector_all('#data-table thead th a')
 
-        header_texts = []  # type: list
+        header_texts:'anylist' = []
 
         for header in headers:
             raw_text = header.inner_text()
@@ -110,7 +112,7 @@ class TestMCPChannelCreate:
         server_port = zato_dashboard['server_port']
 
         channel_name = _Test_Name_Prefix + 'minimal'
-        url_path = '/mcp/pw-test/' + os.urandom(4).hex()
+        url_path = '/mcp/test/' + rand_string()
 
         # Navigate to the MCP channels page ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
@@ -167,7 +169,7 @@ class TestMCPChannelCreate:
         server_port = zato_dashboard['server_port']
 
         channel_name = _Test_Name_Prefix + 'with-services'
-        url_path = '/mcp/pw-test-service/' + os.urandom(4).hex()
+        url_path = '/mcp/test-service/' + rand_string()
 
         # Navigate to the MCP channels page ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
@@ -294,15 +296,15 @@ class TestMCPChannelCreate:
         server_port = zato_dashboard['server_port']
 
         channel_name = _Test_Name_Prefix + 'with-security'
-        url_path = '/mcp/pw-test-sec/' + os.urandom(4).hex()
+        url_path = '/mcp/test-security/' + rand_string()
 
         # Create a basic auth definition via the UI so we know the credentials ..
-        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'mcp-sec')
-        sec_name = sec_info['name']
-        sec_username = sec_info['username']
-        sec_password = sec_info['password']
+        security_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'mcp-sec')
+        security_name = security_info['name']
+        security_username = security_info['username']
+        security_password = security_info['password']
 
-        logger.info('[test_create_with_security] created sec def: name=%s username=%s', sec_name, sec_username)
+        logger.info('[test_create_with_security] created sec def: name=%s username=%s', security_name, security_username)
 
         # .. navigate to the MCP channels page ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
@@ -321,11 +323,11 @@ class TestMCPChannelCreate:
         )
 
         # .. pick the badge matching our newly created sec def ..
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name}"]'
-        sec_badge = page.query_selector(badge_selector)
-        assert sec_badge is not None, f'Could not find badge for sec def "{sec_name}"'
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
+        security_badge = page.query_selector(badge_selector)
+        assert security_badge is not None, f'Could not find badge for sec def "{security_name}"'
 
-        sec_badge.click()
+        security_badge.click()
 
         # .. verify assigned count shows 1 ..
         assigned_count_text = page.inner_text('#badge-zone-assigned-sec-create .badge-zone-count')
@@ -346,7 +348,7 @@ class TestMCPChannelCreate:
         assert security_count_text == '1', f'Expected security count "1", got: "{security_count_text}"'
 
         # .. POST with valid creds - should get OK (MCP initialize response) ..
-        response = _post_mcp(server_port, url_path, auth=(sec_username, sec_password))
+        response = _post_mcp(server_port, url_path, auth=(security_username, security_password))
         assert response.status_code == OK, f'Expected OK with valid creds, got {response.status_code}: {response.text}'
 
         # .. POST with invalid creds - should get FORBIDDEN ..
@@ -365,9 +367,9 @@ class TestMCPChannelCreate:
         server_port = zato_dashboard['server_port']
 
         old_name = _Test_Name_Prefix + 'rename-old'
-        old_url_path = '/mcp/pw-rename-old/' + os.urandom(4).hex()
+        old_url_path = '/mcp/rename-old/' + rand_string()
         new_name = _Test_Name_Prefix + 'rename-new'
-        new_url_path = '/mcp/pw-rename-new/' + os.urandom(4).hex()
+        new_url_path = '/mcp/rename-new/' + rand_string()
 
         # Navigate to the MCP channels page ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
@@ -426,14 +428,14 @@ class TestMCPChannelCreate:
         server_port = zato_dashboard['server_port']
 
         channel_name = _Test_Name_Prefix + 'rename-sec'
-        old_url_path = '/mcp/pw-rensec-old/' + os.urandom(4).hex()
-        new_url_path = '/mcp/pw-rensec-new/' + os.urandom(4).hex()
+        old_url_path = '/mcp/rename-security-old/' + rand_string()
+        new_url_path = '/mcp/rename-security-new/' + rand_string()
 
         # Create a basic auth definition via the UI ..
-        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rename-sec')
-        sec_name = sec_info['name']
-        sec_username = sec_info['username']
-        sec_password = sec_info['password']
+        security_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rename-sec')
+        security_name = security_info['name']
+        security_username = security_info['username']
+        security_password = security_info['password']
 
         # .. navigate to MCP channels ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
@@ -450,10 +452,10 @@ class TestMCPChannelCreate:
         )
 
         # .. select our sec def ..
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name}"]'
-        sec_badge = page.query_selector(badge_selector)
-        assert sec_badge is not None, f'Could not find badge for sec def "{sec_name}"'
-        sec_badge.click()
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
+        security_badge = page.query_selector(badge_selector)
+        assert security_badge is not None, f'Could not find badge for sec def "{security_name}"'
+        security_badge.click()
 
         submit_create_form(page)
 
@@ -461,7 +463,7 @@ class TestMCPChannelCreate:
         row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
-        response = _post_mcp(server_port, old_url_path, auth=(sec_username, sec_password))
+        response = _post_mcp(server_port, old_url_path, auth=(security_username, security_password))
         assert response.status_code == OK, f'Expected OK at old URL with valid creds, got {response.status_code}'
 
         # .. open edit dialog ..
@@ -487,7 +489,7 @@ class TestMCPChannelCreate:
         assert response.status_code == NOT_FOUND, f'Expected NOT_FOUND on old URL, got {response.status_code}'
 
         # .. new URL with valid creds should still work ..
-        response = _post_mcp(server_port, new_url_path, auth=(sec_username, sec_password))
+        response = _post_mcp(server_port, new_url_path, auth=(security_username, security_password))
         assert response.status_code == OK, f'Expected OK at new URL with valid creds, got {response.status_code}'
 
         # .. new URL with invalid creds should be forbidden ..
@@ -506,7 +508,7 @@ class TestMCPChannelCreate:
         server_port = zato_dashboard['server_port']
 
         channel_name = _Test_Name_Prefix + 'deactivate'
-        url_path = '/mcp/pw-deact/' + os.urandom(4).hex()
+        url_path = '/mcp/deactivate/' + rand_string()
 
         # Navigate to the MCP channels page ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
@@ -556,7 +558,7 @@ class TestMCPChannelCreate:
         server_port = zato_dashboard['server_port']
 
         channel_name = _Test_Name_Prefix + 'reactivate'
-        url_path = '/mcp/pw-react/' + os.urandom(4).hex()
+        url_path = '/mcp/reactivate/' + rand_string()
 
         # Navigate to the MCP channels page ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
@@ -609,13 +611,13 @@ class TestMCPChannelCreate:
         server_port = zato_dashboard['server_port']
 
         channel_name = _Test_Name_Prefix + 'add-service'
-        url_path = '/mcp/pw-addservice/' + os.urandom(4).hex()
+        url_path = '/mcp/add-service/' + rand_string()
 
         # Create a sec def so we can authenticate ..
-        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'add-service')
-        sec_name = sec_info['name']
-        sec_username = sec_info['username']
-        sec_password = sec_info['password']
+        security_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'add-service')
+        security_name = security_info['name']
+        security_username = security_info['username']
+        security_password = security_info['password']
 
         # .. navigate to MCP channels ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
@@ -641,9 +643,9 @@ class TestMCPChannelCreate:
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name}"]'
-        sec_badge = page.query_selector(badge_selector)
-        sec_badge.click()
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
+        security_badge = page.query_selector(badge_selector)
+        security_badge.click()
 
         submit_create_form(page)
 
@@ -652,7 +654,7 @@ class TestMCPChannelCreate:
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. initialize to confirm channel is live ..
-        response = _post_mcp(server_port, url_path, auth=(sec_username, sec_password))
+        response = _post_mcp(server_port, url_path, auth=(security_username, security_password))
         assert response.status_code == OK, f'Expected OK, got {response.status_code}: {response.text}'
 
         # .. open edit dialog ..
@@ -680,21 +682,28 @@ class TestMCPChannelCreate:
 
         # .. initialize a session, then send tools/list with the session ID ..
         url = f'http://127.0.0.1:{server_port}{url_path}'
-        auth = (sec_username, sec_password)
+        auth = (security_username, security_password)
         headers = {'Content-Type': 'application/json'}
 
-        init_response = requests.post(url, data=json.dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1}),
-            headers=headers, auth=auth, timeout=10)
-        assert init_response.status_code == OK, f'initialize failed: {init_response.status_code}'
+        request_body = json.dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1})
+        initialize_response = requests.post(url, data=request_body, headers=headers, auth=auth, timeout=10)
+        assert initialize_response.status_code == OK, f'initialize failed: {initialize_response.status_code}'
 
-        session_id = init_response.headers['Mcp-Session-Id']
+        session_id = initialize_response.headers['Mcp-Session-Id']
 
         headers['Mcp-Session-Id'] = session_id
-        tl_response = requests.post(url, data=json.dumps({'jsonrpc': '2.0', 'method': 'tools/list', 'id': 2}),
-            headers=headers, auth=auth, timeout=10)
-        assert tl_response.status_code == OK, f'tools/list failed: {tl_response.status_code}'
+        request_body = json.dumps({'jsonrpc': '2.0', 'method': 'tools/list', 'id': 2})
+        tools_list_response = requests.post(url, data=request_body, headers=headers, auth=auth, timeout=10)
+        assert tools_list_response.status_code == OK, f'tools/list failed: {tools_list_response.status_code}'
 
-        tool_names = {t['name'] for t in tl_response.json()['result']['tools']}
+        json_body = tools_list_response.json()
+        result = json_body['result']
+        tools = result['tools']
+
+        tool_names = set()
+
+        for tool in tools:
+            tool_names.add(tool['name'])
 
         logger.info('[test_edit_add_service] tool_names=%s', tool_names)
 
@@ -713,13 +722,13 @@ class TestMCPChannelCreate:
         server_port = zato_dashboard['server_port']
 
         channel_name = _Test_Name_Prefix + 'rm-service'
-        url_path = '/mcp/pw-rmservice/' + os.urandom(4).hex()
+        url_path = '/mcp/remove-service/' + rand_string()
 
         # Create a sec def ..
-        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rm-service')
-        sec_name = sec_info['name']
-        sec_username = sec_info['username']
-        sec_password = sec_info['password']
+        security_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rm-service')
+        security_name = security_info['name']
+        security_username = security_info['username']
+        security_password = security_info['password']
 
         # .. navigate to MCP channels ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
@@ -747,9 +756,9 @@ class TestMCPChannelCreate:
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name}"]'
-        sec_badge = page.query_selector(badge_selector)
-        sec_badge.click()
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
+        security_badge = page.query_selector(badge_selector)
+        security_badge.click()
 
         submit_create_form(page)
 
@@ -783,21 +792,28 @@ class TestMCPChannelCreate:
 
         # .. initialize a session, then send tools/list with the session ID ..
         url = f'http://127.0.0.1:{server_port}{url_path}'
-        auth = (sec_username, sec_password)
+        auth = (security_username, security_password)
         headers = {'Content-Type': 'application/json'}
 
-        init_response = requests.post(url, data=json.dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1}),
-            headers=headers, auth=auth, timeout=10)
-        assert init_response.status_code == OK, f'initialize failed: {init_response.status_code}'
+        request_body = json.dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1})
+        initialize_response = requests.post(url, data=request_body, headers=headers, auth=auth, timeout=10)
+        assert initialize_response.status_code == OK, f'initialize failed: {initialize_response.status_code}'
 
-        session_id = init_response.headers['Mcp-Session-Id']
+        session_id = initialize_response.headers['Mcp-Session-Id']
 
         headers['Mcp-Session-Id'] = session_id
-        tl_response = requests.post(url, data=json.dumps({'jsonrpc': '2.0', 'method': 'tools/list', 'id': 2}),
-            headers=headers, auth=auth, timeout=10)
-        assert tl_response.status_code == OK, f'tools/list failed: {tl_response.status_code}'
+        request_body = json.dumps({'jsonrpc': '2.0', 'method': 'tools/list', 'id': 2})
+        tools_list_response = requests.post(url, data=request_body, headers=headers, auth=auth, timeout=10)
+        assert tools_list_response.status_code == OK, f'tools/list failed: {tools_list_response.status_code}'
 
-        tool_names = {t['name'] for t in tl_response.json()['result']['tools']}
+        json_body = tools_list_response.json()
+        result = json_body['result']
+        tools = result['tools']
+
+        tool_names = set()
+
+        for tool in tools:
+            tool_names.add(tool['name'])
 
         logger.info('[test_edit_remove_service] tool_names=%s', tool_names)
 
@@ -816,18 +832,18 @@ class TestMCPChannelCreate:
         server_port = zato_dashboard['server_port']
 
         channel_name = _Test_Name_Prefix + 'add-sec'
-        url_path = '/mcp/pw-addsec/' + os.urandom(4).hex()
+        url_path = '/mcp/add-security/' + rand_string()
 
         # Create two basic auth definitions ..
-        sec_info_1 = create_basic_auth(page, base_url, _Test_Name_Prefix, 'add-sec-1')
-        sec_name_1 = sec_info_1['name']
-        sec_username_1 = sec_info_1['username']
-        sec_password_1 = sec_info_1['password']
+        security_info_1 = create_basic_auth(page, base_url, _Test_Name_Prefix, 'add-sec-1')
+        security_name_1 = security_info_1['name']
+        security_username_1 = security_info_1['username']
+        security_password_1 = security_info_1['password']
 
-        sec_info_2 = create_basic_auth(page, base_url, _Test_Name_Prefix, 'add-sec-2')
-        sec_name_2 = sec_info_2['name']
-        sec_username_2 = sec_info_2['username']
-        sec_password_2 = sec_info_2['password']
+        security_info_2 = create_basic_auth(page, base_url, _Test_Name_Prefix, 'add-sec-2')
+        security_name_2 = security_info_2['name']
+        security_username_2 = security_info_2['username']
+        security_password_2 = security_info_2['password']
 
         # .. navigate to MCP channels ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
@@ -842,10 +858,10 @@ class TestMCPChannelCreate:
             timeout=10000
         )
 
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name_1}"]'
-        sec_badge = page.query_selector(badge_selector)
-        assert sec_badge is not None, f'Could not find badge for "{sec_name_1}"'
-        sec_badge.click()
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name_1}"]'
+        security_badge = page.query_selector(badge_selector)
+        assert security_badge is not None, f'Could not find badge for "{security_name_1}"'
+        security_badge.click()
 
         submit_create_form(page)
 
@@ -854,10 +870,10 @@ class TestMCPChannelCreate:
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. confirm first creds work, second does not ..
-        response = _post_mcp(server_port, url_path, auth=(sec_username_1, sec_password_1))
+        response = _post_mcp(server_port, url_path, auth=(security_username_1, security_password_1))
         assert response.status_code == OK, f'Expected OK for sec_1, got {response.status_code}'
 
-        response = _post_mcp(server_port, url_path, auth=(sec_username_2, sec_password_2))
+        response = _post_mcp(server_port, url_path, auth=(security_username_2, security_password_2))
         assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN for sec_2 before edit, got {response.status_code}'
 
         # .. open edit dialog ..
@@ -874,20 +890,20 @@ class TestMCPChannelCreate:
         )
 
         # .. add the second sec def ..
-        badge_selector = f'#badge-zone-available-sec-edit .badge-zone-body .security-badge[data-name="{sec_name_2}"]'
-        sec_badge_2 = page.query_selector(badge_selector)
-        assert sec_badge_2 is not None, f'Could not find badge for "{sec_name_2}" in edit available zone'
-        sec_badge_2.click()
+        badge_selector = f'#badge-zone-available-sec-edit .badge-zone-body .security-badge[data-name="{security_name_2}"]'
+        security_badge_2 = page.query_selector(badge_selector)
+        assert security_badge_2 is not None, f'Could not find badge for "{security_name_2}" in edit available zone'
+        security_badge_2.click()
 
         submit_edit_form(page)
 
-        logger.info('[test_edit_add_security_member] added sec def %s to channel %s', sec_name_2, channel_name)
+        logger.info('[test_edit_add_security_member] added sec def %s to channel %s', security_name_2, channel_name)
 
         # .. both should now authenticate ..
-        response = _post_mcp(server_port, url_path, auth=(sec_username_1, sec_password_1))
+        response = _post_mcp(server_port, url_path, auth=(security_username_1, security_password_1))
         assert response.status_code == OK, f'Expected OK for sec_1 after edit, got {response.status_code}'
 
-        response = _post_mcp(server_port, url_path, auth=(sec_username_2, sec_password_2))
+        response = _post_mcp(server_port, url_path, auth=(security_username_2, security_password_2))
         assert response.status_code == OK, f'Expected OK for sec_2 after edit, got {response.status_code}'
 
 # ################################################################################################################################
@@ -902,18 +918,18 @@ class TestMCPChannelCreate:
         server_port = zato_dashboard['server_port']
 
         channel_name = _Test_Name_Prefix + 'rm-sec'
-        url_path = '/mcp/pw-rmsec/' + os.urandom(4).hex()
+        url_path = '/mcp/remove-security/' + rand_string()
 
         # Create two basic auth definitions ..
-        sec_info_1 = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rm-sec-1')
-        sec_name_1 = sec_info_1['name']
-        sec_username_1 = sec_info_1['username']
-        sec_password_1 = sec_info_1['password']
+        security_info_1 = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rm-sec-1')
+        security_name_1 = security_info_1['name']
+        security_username_1 = security_info_1['username']
+        security_password_1 = security_info_1['password']
 
-        sec_info_2 = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rm-sec-2')
-        sec_name_2 = sec_info_2['name']
-        sec_username_2 = sec_info_2['username']
-        sec_password_2 = sec_info_2['password']
+        security_info_2 = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rm-sec-2')
+        security_name_2 = security_info_2['name']
+        security_username_2 = security_info_2['username']
+        security_password_2 = security_info_2['password']
 
         # .. navigate to MCP channels ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
@@ -929,11 +945,11 @@ class TestMCPChannelCreate:
         )
 
         badge_1 = page.query_selector(
-            f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name_1}"]')
+            f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name_1}"]')
         badge_2 = page.query_selector(
-            f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name_2}"]')
-        assert badge_1 is not None, f'Could not find badge for "{sec_name_1}"'
-        assert badge_2 is not None, f'Could not find badge for "{sec_name_2}"'
+            f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name_2}"]')
+        assert badge_1 is not None, f'Could not find badge for "{security_name_1}"'
+        assert badge_2 is not None, f'Could not find badge for "{security_name_2}"'
         badge_1.click()
         badge_2.click()
 
@@ -944,10 +960,10 @@ class TestMCPChannelCreate:
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. confirm both work ..
-        response = _post_mcp(server_port, url_path, auth=(sec_username_1, sec_password_1))
+        response = _post_mcp(server_port, url_path, auth=(security_username_1, security_password_1))
         assert response.status_code == OK, f'Expected OK for sec_1 before edit, got {response.status_code}'
 
-        response = _post_mcp(server_port, url_path, auth=(sec_username_2, sec_password_2))
+        response = _post_mcp(server_port, url_path, auth=(security_username_2, security_password_2))
         assert response.status_code == OK, f'Expected OK for sec_2 before edit, got {response.status_code}'
 
         # .. open edit dialog ..
@@ -964,20 +980,20 @@ class TestMCPChannelCreate:
         )
 
         # .. remove the first sec def by clicking it in the assigned zone ..
-        remove_selector = f'#badge-zone-assigned-sec-edit .badge-zone-body .security-badge[data-name="{sec_name_1}"]'
+        remove_selector = f'#badge-zone-assigned-sec-edit .badge-zone-body .security-badge[data-name="{security_name_1}"]'
         badge_to_remove = page.query_selector(remove_selector)
-        assert badge_to_remove is not None, f'Could not find badge "{sec_name_1}" in assigned sec zone'
+        assert badge_to_remove is not None, f'Could not find badge "{security_name_1}" in assigned sec zone'
         badge_to_remove.click()
 
         submit_edit_form(page)
 
-        logger.info('[test_edit_remove_security_member] removed sec def %s from channel %s', sec_name_1, channel_name)
+        logger.info('[test_edit_remove_security_member] removed sec def %s from channel %s', security_name_1, channel_name)
 
         # .. removed member should get 403, remaining should get 200 ..
-        response = _post_mcp(server_port, url_path, auth=(sec_username_1, sec_password_1))
+        response = _post_mcp(server_port, url_path, auth=(security_username_1, security_password_1))
         assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN for removed sec_1, got {response.status_code}'
 
-        response = _post_mcp(server_port, url_path, auth=(sec_username_2, sec_password_2))
+        response = _post_mcp(server_port, url_path, auth=(security_username_2, security_password_2))
         assert response.status_code == OK, f'Expected OK for remaining sec_2, got {response.status_code}'
 
 # ################################################################################################################################
@@ -992,13 +1008,13 @@ class TestMCPChannelCreate:
         server_port = zato_dashboard['server_port']
 
         channel_name = _Test_Name_Prefix + 'rm-all-sec'
-        url_path = '/mcp/pw-rmallsec/' + os.urandom(4).hex()
+        url_path = '/mcp/remove-all-security/' + rand_string()
 
         # Create a basic auth definition ..
-        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rm-all-sec')
-        sec_name = sec_info['name']
-        sec_username = sec_info['username']
-        sec_password = sec_info['password']
+        security_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rm-all-sec')
+        security_name = security_info['name']
+        security_username = security_info['username']
+        security_password = security_info['password']
 
         # .. navigate to MCP channels ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
@@ -1013,10 +1029,10 @@ class TestMCPChannelCreate:
             timeout=10000
         )
 
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name}"]'
-        sec_badge = page.query_selector(badge_selector)
-        assert sec_badge is not None, f'Could not find badge for "{sec_name}"'
-        sec_badge.click()
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
+        security_badge = page.query_selector(badge_selector)
+        assert security_badge is not None, f'Could not find badge for "{security_name}"'
+        security_badge.click()
 
         submit_create_form(page)
 
@@ -1025,7 +1041,7 @@ class TestMCPChannelCreate:
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. confirm creds work ..
-        response = _post_mcp(server_port, url_path, auth=(sec_username, sec_password))
+        response = _post_mcp(server_port, url_path, auth=(security_username, security_password))
         assert response.status_code == OK, f'Expected OK before edit, got {response.status_code}'
 
         # .. open edit dialog ..
@@ -1042,17 +1058,20 @@ class TestMCPChannelCreate:
         )
 
         # .. remove all sec defs by clicking the one assigned badge ..
-        remove_selector = f'#badge-zone-assigned-sec-edit .badge-zone-body .security-badge[data-name="{sec_name}"]'
+        remove_selector = f'#badge-zone-assigned-sec-edit .badge-zone-body .security-badge[data-name="{security_name}"]'
         badge_to_remove = page.query_selector(remove_selector)
-        assert badge_to_remove is not None, f'Could not find badge "{sec_name}" in assigned sec zone'
+        assert badge_to_remove is not None, f'Could not find badge "{security_name}" in assigned sec zone'
         badge_to_remove.click()
 
         submit_edit_form(page)
 
         logger.info('[test_edit_remove_all_security] removed all security from channel %s', channel_name)
 
+        # .. wait for security change to propagate ..
+        page.wait_for_timeout(2000)
+
         # .. with valid creds should get 403 (no group = default deny) ..
-        response = _post_mcp(server_port, url_path, auth=(sec_username, sec_password))
+        response = _post_mcp(server_port, url_path, auth=(security_username, security_password))
         assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN with creds after removing all security, got {response.status_code}'
 
         # .. without creds should also get 403 ..
@@ -1070,8 +1089,8 @@ class TestMCPChannelCreate:
         base_url = zato_dashboard['dashboard_url']
 
         channel_name = _Test_Name_Prefix + 'dup-name'
-        url_path_1 = '/mcp/pw-dup1/' + os.urandom(4).hex()
-        url_path_2 = '/mcp/pw-dup2/' + os.urandom(4).hex()
+        url_path_1 = '/mcp/duplicate-1/' + rand_string()
+        url_path_2 = '/mcp/duplicate-2/' + rand_string()
 
         # Navigate to the MCP channels page ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
@@ -1115,7 +1134,7 @@ class TestMCPChannelCreate:
 
         channel_name_1 = _Test_Name_Prefix + 'dup-path-1'
         channel_name_2 = _Test_Name_Prefix + 'dup-path-2'
-        url_path = '/mcp/pw-dup-path/' + os.urandom(4).hex()
+        url_path = '/mcp/duplicate-path/' + rand_string()
 
         # Navigate to the MCP channels page ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
@@ -1154,22 +1173,20 @@ class TestMCPChannelCreate:
         then verifies tools/list returns the new service.
         """
 
-        import time
-
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
         server_dir = zato_dashboard['server_dir']
 
         channel_name = _Test_Name_Prefix + 'hotdep'
-        url_path = '/mcp/pw-hotdep/' + os.urandom(4).hex()
-        hot_deploy_service_name = 'mcp-test.hot-deploy-tools.' + os.urandom(4).hex()
+        url_path = '/mcp/hot-deploy/' + rand_string()
+        hot_deploy_service_name = 'mcp-test.hot-deploy-tools.' + rand_string()
 
         # Create a sec def so we can authenticate ..
-        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'hotdep')
-        sec_name = sec_info['name']
-        sec_username = sec_info['username']
-        sec_password = sec_info['password']
+        security_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'hotdep')
+        security_name = security_info['name']
+        security_username = security_info['username']
+        security_password = security_info['password']
 
         # .. navigate to MCP channels ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
@@ -1195,9 +1212,9 @@ class TestMCPChannelCreate:
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name}"]'
-        sec_badge = page.query_selector(badge_selector)
-        sec_badge.click()
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
+        security_badge = page.query_selector(badge_selector)
+        security_badge.click()
 
         submit_create_form(page)
 
@@ -1219,8 +1236,8 @@ class MCPTestHotDeployTools(Service):
         self.response.payload = '{{"status": "ok"}}'
 '''
 
-        with open(service_file_path, 'w') as f:
-            _ = f.write(service_code)
+        with open(service_file_path, 'w') as service_file:
+            _ = service_file.write(service_code)
 
         logger.info('[test_service_hot_deploy_updates_tools_list] deployed %s', hot_deploy_service_name)
 
@@ -1260,21 +1277,28 @@ class MCPTestHotDeployTools(Service):
 
         # .. verify tools/list now includes the hot-deployed service ..
         url = f'http://127.0.0.1:{server_port}{url_path}'
-        auth = (sec_username, sec_password)
+        auth = (security_username, security_password)
         headers = {'Content-Type': 'application/json'}
 
-        init_response = requests.post(url, data=json.dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1}),
-            headers=headers, auth=auth, timeout=10)
-        assert init_response.status_code == OK, f'initialize failed: {init_response.status_code}'
+        request_body = json.dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1})
+        initialize_response = requests.post(url, data=request_body, headers=headers, auth=auth, timeout=10)
+        assert initialize_response.status_code == OK, f'initialize failed: {initialize_response.status_code}'
 
-        session_id = init_response.headers['Mcp-Session-Id']
+        session_id = initialize_response.headers['Mcp-Session-Id']
         headers['Mcp-Session-Id'] = session_id
 
-        tl_response = requests.post(url, data=json.dumps({'jsonrpc': '2.0', 'method': 'tools/list', 'id': 2}),
-            headers=headers, auth=auth, timeout=10)
-        assert tl_response.status_code == OK, f'tools/list failed: {tl_response.status_code}'
+        request_body = json.dumps({'jsonrpc': '2.0', 'method': 'tools/list', 'id': 2})
+        tools_list_response = requests.post(url, data=request_body, headers=headers, auth=auth, timeout=10)
+        assert tools_list_response.status_code == OK, f'tools/list failed: {tools_list_response.status_code}'
 
-        tool_names = {t['name'] for t in tl_response.json()['result']['tools']}
+        json_body = tools_list_response.json()
+        result = json_body['result']
+        tools = result['tools']
+
+        tool_names = set()
+
+        for tool in tools:
+            tool_names.add(tool['name'])
 
         logger.info('[test_service_hot_deploy_updates_tools_list] tool_names=%s', tool_names)
 
@@ -1297,13 +1321,13 @@ class MCPTestHotDeployTools(Service):
         server_port = zato_dashboard['server_port']
 
         channel_name = _Test_Name_Prefix + 'pwd-chg'
-        url_path = '/mcp/pw-chg/' + os.urandom(4).hex()
+        url_path = '/mcp/password-change/' + rand_string()
 
         # Create a basic auth definition ..
-        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'pwd-chg')
-        sec_name = sec_info['name']
-        sec_username = sec_info['username']
-        old_password = sec_info['password']
+        security_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'pwd-chg')
+        security_name = security_info['name']
+        security_username = security_info['username']
+        old_password = security_info['password']
 
         # .. navigate to MCP channels and create a channel with this sec def ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
@@ -1316,10 +1340,10 @@ class MCPTestHotDeployTools(Service):
             timeout=10000
         )
 
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name}"]'
-        sec_badge = page.query_selector(badge_selector)
-        assert sec_badge is not None, f'Could not find badge for "{sec_name}"'
-        sec_badge.click()
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
+        security_badge = page.query_selector(badge_selector)
+        assert security_badge is not None, f'Could not find badge for "{security_name}"'
+        security_badge.click()
 
         submit_create_form(page)
 
@@ -1327,17 +1351,17 @@ class MCPTestHotDeployTools(Service):
         page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. verify the original password works ..
-        response = _post_mcp(server_port, url_path, auth=(sec_username, old_password))
+        response = _post_mcp(server_port, url_path, auth=(security_username, old_password))
         assert response.status_code == OK, f'Expected OK with original password, got {response.status_code}'
 
         # .. navigate to the basic auth page and change the password ..
-        new_password = 'changed.' + os.urandom(8).hex()
+        new_password = 'changed.' + rand_string()
         basic_auth_page_url = '/zato/security/basic-auth/?cluster=1'
 
         navigate_to_page(page, base_url, basic_auth_page_url)
 
-        row_selector_ba = f'#data-table tbody tr:has(td:text-is("{sec_name}"))'
-        row = page.wait_for_selector(row_selector_ba, state='visible', timeout=5000)
+        row_selector_basic_auth = f'#data-table tbody tr:has(td:text-is("{security_name}"))'
+        row = page.wait_for_selector(row_selector_basic_auth, state='visible', timeout=5000)
 
         id_cell = row.query_selector('td[class*="item_id_"]')
         item_id = id_cell.inner_text().strip()
@@ -1349,19 +1373,306 @@ class MCPTestHotDeployTools(Service):
         page.click('#change_password-div input[type="submit"]')
         page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
 
-        logger.info('[test_sec_def_password_change] password changed for %s', sec_name)
+        logger.info('[test_sec_def_password_change] password changed for %s', security_name)
 
         # .. wait for the password change to propagate to the security cache ..
         page.wait_for_timeout(2000)
 
         # .. old password should be rejected ..
-        response = _post_mcp(server_port, url_path, auth=(sec_username, old_password))
+        response = _post_mcp(server_port, url_path, auth=(security_username, old_password))
         assert response.status_code == FORBIDDEN, \
             f'Expected FORBIDDEN with old password after change, got {response.status_code}'
 
         # .. new password should work ..
-        response = _post_mcp(server_port, url_path, auth=(sec_username, new_password))
+        response = _post_mcp(server_port, url_path, auth=(security_username, new_password))
         assert response.status_code == OK, f'Expected OK with new password, got {response.status_code}'
+
+# ################################################################################################################################
+
+    def test_two_channels_different_groups(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates two MCP channels, each with a different security group member.
+        Verifies cross-group access is denied: A with Y-creds -> 403, B with X-creds -> 403.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name_a = _Test_Name_Prefix + 'iso-a'
+        channel_name_b = _Test_Name_Prefix + 'iso-b'
+        url_path_a = '/mcp/isolation-a/' + rand_string()
+        url_path_b = '/mcp/isolation-b/' + rand_string()
+
+        # Create two separate basic auth definitions ..
+        security_info_a = create_basic_auth(page, base_url, _Test_Name_Prefix, 'iso-a')
+        security_name_a = security_info_a['name']
+        security_username_a = security_info_a['username']
+        security_password_a = security_info_a['password']
+
+        security_info_b = create_basic_auth(page, base_url, _Test_Name_Prefix, 'iso-b')
+        security_name_b = security_info_b['name']
+        security_username_b = security_info_b['username']
+        security_password_b = security_info_b['password']
+
+        # .. navigate to MCP channels ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create channel A with security A ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name_a)
+        page.fill('#id_url_path', url_path_a)
+
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 2',
+            timeout=10000
+        )
+
+        badge_selector_a = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name_a}"]'
+        security_badge_a = page.query_selector(badge_selector_a)
+        assert security_badge_a is not None, f'Could not find badge for "{security_name_a}"'
+        security_badge_a.click()
+
+        submit_create_form(page)
+
+        row_selector_a = f'#data-table tbody tr:has(td:text-is("{channel_name_a}"))'
+        page.wait_for_selector(row_selector_a, state='visible', timeout=5000)
+
+        # .. create channel B with security B ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name_b)
+        page.fill('#id_url_path', url_path_b)
+
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
+            timeout=10000
+        )
+
+        badge_selector_b = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name_b}"]'
+        security_badge_b = page.query_selector(badge_selector_b)
+        assert security_badge_b is not None, f'Could not find badge for "{security_name_b}"'
+        security_badge_b.click()
+
+        submit_create_form(page)
+
+        row_selector_b = f'#data-table tbody tr:has(td:text-is("{channel_name_b}"))'
+        page.wait_for_selector(row_selector_b, state='visible', timeout=5000)
+
+        # .. verify own creds work on own channel ..
+        response = _post_mcp(server_port, url_path_a, auth=(security_username_a, security_password_a))
+        assert response.status_code == OK, f'Expected OK for A with A-creds, got {response.status_code}'
+
+        response = _post_mcp(server_port, url_path_b, auth=(security_username_b, security_password_b))
+        assert response.status_code == OK, f'Expected OK for B with B-creds, got {response.status_code}'
+
+        # .. verify cross-group access is denied ..
+        response = _post_mcp(server_port, url_path_a, auth=(security_username_b, security_password_b))
+        assert response.status_code == FORBIDDEN, \
+            f'Expected FORBIDDEN for A with B-creds, got {response.status_code}'
+
+        response = _post_mcp(server_port, url_path_b, auth=(security_username_a, security_password_a))
+        assert response.status_code == FORBIDDEN, \
+            f'Expected FORBIDDEN for B with A-creds, got {response.status_code}'
+
+# ################################################################################################################################
+
+    def test_two_channels_different_allow_lists(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates two MCP channels with different service allow lists.
+        Channel A allows svc-a only, channel B allows svc-b only.
+        Verifies each channel's tools/list only exposes its own allowed service.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+        server_dir = zato_dashboard['server_dir']
+
+        suffix_a = rand_string()
+        suffix_b = rand_string()
+
+        channel_name_a = _Test_Name_Prefix + 'allow-a'
+        channel_name_b = _Test_Name_Prefix + 'allow-b'
+        url_path_a = '/mcp/allow-list-a/' + suffix_a
+        url_path_b = '/mcp/allow-list-b/' + suffix_b
+
+        service_name_a = 'mcp-test.allow-list-a.' + suffix_a
+        service_name_b = 'mcp-test.allow-list-b.' + suffix_b
+
+        # Hot-deploy two distinct services ..
+        pickup_directory = os.path.join(server_dir, 'pickup', 'incoming', 'services')
+
+        service_file_name_a = '_mcp_test_allow_list_a.py'
+        service_file_path_a = os.path.join(pickup_directory, service_file_name_a)
+
+        service_code_a = f'''\
+from zato.server.service import Service
+
+class MCPTestAllowListA(Service):
+    name = '{service_name_a}'
+
+    def handle(self):
+        self.response.payload = '{{"status": "a"}}'
+'''
+
+        with open(service_file_path_a, 'w') as service_file:
+            _ = service_file.write(service_code_a)
+
+        service_file_name_b = '_mcp_test_allow_list_b.py'
+        service_file_path_b = os.path.join(pickup_directory, service_file_name_b)
+
+        service_code_b = f'''\
+from zato.server.service import Service
+
+class MCPTestAllowListB(Service):
+    name = '{service_name_b}'
+
+    def handle(self):
+        self.response.payload = '{{"status": "b"}}'
+'''
+
+        with open(service_file_path_b, 'w') as service_file:
+            _ = service_file.write(service_code_b)
+
+        logger.info('[test_two_channels_different_allow_lists] deployed %s and %s', service_name_a, service_name_b)
+
+        # .. wait for both services to be picked up ..
+        time.sleep(5)
+
+        # .. create a basic auth for both channels to share ..
+        security_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'allow-list')
+        security_name = security_info['name']
+        security_username = security_info['username']
+        security_password = security_info['password']
+
+        # .. navigate to MCP channels ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create channel A restricted to service A ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name_a)
+        page.fill('#id_url_path', url_path_a)
+
+        # .. wait for service badges to load ..
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-create .badge-zone-body .security-badge").length >= 1',
+            timeout=10000
+        )
+
+        # .. select service A ..
+        service_badge_selector_a = f'#badge-zone-available-create .badge-zone-body .security-badge[data-name="{service_name_a}"]'
+        service_badge_a = page.query_selector(service_badge_selector_a)
+        assert service_badge_a is not None, f'Could not find service badge for "{service_name_a}"'
+        service_badge_a.click()
+
+        # .. assign security ..
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
+            timeout=10000
+        )
+
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
+        security_badge = page.query_selector(badge_selector)
+        assert security_badge is not None, f'Could not find security badge for "{security_name}"'
+        security_badge.click()
+
+        submit_create_form(page)
+
+        row_selector_a = f'#data-table tbody tr:has(td:text-is("{channel_name_a}"))'
+        page.wait_for_selector(row_selector_a, state='visible', timeout=5000)
+
+        # .. create channel B restricted to service B ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name_b)
+        page.fill('#id_url_path', url_path_b)
+
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-create .badge-zone-body .security-badge").length >= 1',
+            timeout=10000
+        )
+
+        # .. select service B ..
+        service_badge_selector_b = f'#badge-zone-available-create .badge-zone-body .security-badge[data-name="{service_name_b}"]'
+        service_badge_b = page.query_selector(service_badge_selector_b)
+        assert service_badge_b is not None, f'Could not find service badge for "{service_name_b}"'
+        service_badge_b.click()
+
+        # .. assign the same security ..
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
+            timeout=10000
+        )
+
+        security_badge = page.query_selector(badge_selector)
+        assert security_badge is not None, f'Could not find security badge for "{security_name}" (channel B)'
+        security_badge.click()
+
+        submit_create_form(page)
+
+        row_selector_b = f'#data-table tbody tr:has(td:text-is("{channel_name_b}"))'
+        page.wait_for_selector(row_selector_b, state='visible', timeout=5000)
+
+        # .. verify channel A only exposes service A ..
+        url_a = f'http://127.0.0.1:{server_port}{url_path_a}'
+        auth = (security_username, security_password)
+        headers = {'Content-Type': 'application/json'}
+
+        request_body = json.dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1})
+        initialize_response = requests.post(url_a, data=request_body, headers=headers, auth=auth, timeout=10)
+        assert initialize_response.status_code == OK, f'Channel A initialize failed: {initialize_response.status_code}'
+
+        session_id_a = initialize_response.headers['Mcp-Session-Id']
+        headers_a = {'Content-Type': 'application/json', 'Mcp-Session-Id': session_id_a}
+
+        request_body = json.dumps({'jsonrpc': '2.0', 'method': 'tools/list', 'id': 2})
+        tools_response_a = requests.post(url_a, data=request_body, headers=headers_a, auth=auth, timeout=10)
+        assert tools_response_a.status_code == OK, f'Channel A tools/list failed: {tools_response_a.status_code}'
+
+        json_body_a = tools_response_a.json()
+        result_a = json_body_a['result']
+        tools_a = result_a['tools']
+
+        tool_names_a = set()
+        for tool in tools_a:
+            tool_names_a.add(tool['name'])
+
+        logger.info('[test_two_channels_different_allow_lists] channel A tools: %s', tool_names_a)
+
+        assert service_name_a in tool_names_a, \
+            f'Expected "{service_name_a}" in channel A tools, got: {tool_names_a}'
+        assert service_name_b not in tool_names_a, \
+            f'Channel A should NOT expose "{service_name_b}", got: {tool_names_a}'
+
+        # .. verify channel B only exposes service B ..
+        url_b = f'http://127.0.0.1:{server_port}{url_path_b}'
+
+        request_body = json.dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1})
+        initialize_response = requests.post(url_b, data=request_body, headers=headers, auth=auth, timeout=10)
+        assert initialize_response.status_code == OK, f'Channel B initialize failed: {initialize_response.status_code}'
+
+        session_id_b = initialize_response.headers['Mcp-Session-Id']
+        headers_b = {'Content-Type': 'application/json', 'Mcp-Session-Id': session_id_b}
+
+        request_body = json.dumps({'jsonrpc': '2.0', 'method': 'tools/list', 'id': 2})
+        tools_response_b = requests.post(url_b, data=request_body, headers=headers_b, auth=auth, timeout=10)
+        assert tools_response_b.status_code == OK, f'Channel B tools/list failed: {tools_response_b.status_code}'
+
+        json_body_b = tools_response_b.json()
+        result_b = json_body_b['result']
+        tools_b = result_b['tools']
+
+        tool_names_b = set()
+        for tool in tools_b:
+            tool_names_b.add(tool['name'])
+
+        logger.info('[test_two_channels_different_allow_lists] channel B tools: %s', tool_names_b)
+
+        assert service_name_b in tool_names_b, \
+            f'Expected "{service_name_b}" in channel B tools, got: {tool_names_b}'
+        assert service_name_a not in tool_names_b, \
+            f'Channel B should NOT expose "{service_name_a}", got: {tool_names_b}'
+
+        # .. clean up deployed files ..
+        os.remove(service_file_path_a)
+        os.remove(service_file_path_b)
 
 # ################################################################################################################################
 # ################################################################################################################################
