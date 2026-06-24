@@ -1149,6 +1149,143 @@ class TestMCPChannelCreate:
 
 # ################################################################################################################################
 
+    def test_service_hot_deploy_updates_tools_list(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Hot-deploys a new service, edits an MCP channel via UI to include it,
+        then verifies tools/list returns the new service.
+        """
+
+        import time
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+        server_dir = zato_dashboard['server_dir']
+
+        channel_name = _Test_Name_Prefix + 'hotdep'
+        url_path = '/mcp/pw-hotdep/' + os.urandom(4).hex()
+        hot_deploy_service_name = 'mcp-test.hot-deploy-tools.' + os.urandom(4).hex()
+
+        # Create a sec def so we can authenticate ..
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'hotdep')
+        sec_name = sec_info['name']
+        sec_username = sec_info['username']
+        sec_password = sec_info['password']
+
+        # .. navigate to MCP channels ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create a channel with demo.echo and security ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name)
+        page.fill('#id_url_path', url_path)
+
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-create .badge-zone-body .security-badge").length >= 1',
+            timeout=10000
+        )
+
+        # .. pick demo.echo ..
+        svc_badge_selector = '#badge-zone-available-create .badge-zone-body .security-badge[data-name="demo.echo"]'
+        svc_badge = page.query_selector(svc_badge_selector)
+        assert svc_badge is not None, 'Could not find badge for "demo.echo"'
+        svc_badge.click()
+
+        # .. assign security ..
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
+            timeout=10000
+        )
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name}"]'
+        sec_badge = page.query_selector(badge_selector)
+        sec_badge.click()
+
+        submit_create_form(page)
+
+        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        # .. hot-deploy a new service ..
+        pickup_directory = os.path.join(server_dir, 'pickup', 'incoming', 'services')
+        service_file_name = '_mcp_test_hot_deploy_tools.py'
+        service_file_path = os.path.join(pickup_directory, service_file_name)
+
+        service_code = f'''\
+from zato.server.service import Service
+
+class MCPTestHotDeployTools(Service):
+    name = '{hot_deploy_service_name}'
+
+    def handle(self):
+        self.response.payload = '{{"status": "ok"}}'
+'''
+
+        with open(service_file_path, 'w') as f:
+            _ = f.write(service_code)
+
+        logger.info('[test_service_hot_deploy_updates_tools_list] deployed %s', hot_deploy_service_name)
+
+        # .. wait for the service to be picked up ..
+        time.sleep(5)
+
+        # .. open the edit dialog to add the hot-deployed service ..
+        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id = item_id_cell.inner_text().strip()
+
+        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+
+        # .. wait for the hot-deployed service to appear in the available services badge picker ..
+        badge_selector_edit = f'#badge-zone-available-edit .badge-zone-body .security-badge[data-name="{hot_deploy_service_name}"]'
+
+        deadline = time.monotonic() + 15
+
+        while time.monotonic() < deadline:
+            badge = page.query_selector(badge_selector_edit)
+            if badge:
+                break
+            # .. close and reopen edit to refresh the badge list ..
+            page.keyboard.press('Escape')
+            page.wait_for_selector('#edit-div', state='hidden', timeout=3000)
+            time.sleep(1)
+            page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+            page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        else:
+            os.remove(service_file_path)
+            raise AssertionError(
+                f'Hot-deployed service "{hot_deploy_service_name}" did not appear in edit badge picker within 15s')
+
+        badge.click()
+
+        submit_edit_form(page)
+
+        # .. verify tools/list now includes the hot-deployed service ..
+        url = f'http://127.0.0.1:{server_port}{url_path}'
+        auth = (sec_username, sec_password)
+        headers = {'Content-Type': 'application/json'}
+
+        init_response = requests.post(url, data=json.dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1}),
+            headers=headers, auth=auth, timeout=10)
+        assert init_response.status_code == OK, f'initialize failed: {init_response.status_code}'
+
+        session_id = init_response.headers['Mcp-Session-Id']
+        headers['Mcp-Session-Id'] = session_id
+
+        tl_response = requests.post(url, data=json.dumps({'jsonrpc': '2.0', 'method': 'tools/list', 'id': 2}),
+            headers=headers, auth=auth, timeout=10)
+        assert tl_response.status_code == OK, f'tools/list failed: {tl_response.status_code}'
+
+        tool_names = {t['name'] for t in tl_response.json()['result']['tools']}
+
+        logger.info('[test_service_hot_deploy_updates_tools_list] tool_names=%s', tool_names)
+
+        # .. clean up the deployed file ..
+        os.remove(service_file_path)
+
+        assert hot_deploy_service_name in tool_names, \
+            f'Expected "{hot_deploy_service_name}" in tools after hot-deploy, got: {tool_names}'
+
+# ################################################################################################################################
+
     def test_sec_def_password_change(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates a basic auth, assigns it to an MCP channel's security group,
         verifies the original password works, changes the password via the basic auth UI,
