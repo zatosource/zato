@@ -34,6 +34,7 @@ _expected_server_version = '2.4'
 @pytest.fixture(scope='module')
 def client(zato_server:'any_') -> 'MCPClient':
     out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
+
     return out
 
 # ################################################################################################################################
@@ -66,7 +67,8 @@ class TestInformationLeakage:
         response = client.jsonrpc('tools/call', params=params)
         data = response.json()
 
-        error_message = data['error']['message']
+        error = data['error']
+        error_message = error['message']
 
         # .. the error may mention the requested name, but must not leak internal ones.
         assert 'zato.server' not in error_message
@@ -81,7 +83,8 @@ class TestInformationLeakage:
         response = client.jsonrpc('initialize')
         data = response.json()
 
-        server_info = data['result']['serverInfo']
+        result = data['result']
+        server_info = result['serverInfo']
 
         assert server_info['name'] == _expected_server_name
         assert server_info['version'] == _expected_server_version
@@ -93,7 +96,9 @@ class TestInformationLeakage:
         """
 
         response = client.jsonrpc('tools/list')
-        tools = response.json()['result']['tools']
+        json_body = response.json()
+        result = json_body['result']
+        tools = result['tools']
 
         for tool in tools:
             tool_name = tool['name']

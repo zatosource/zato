@@ -21,13 +21,15 @@ from typing import NamedTuple
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
-sys.path.insert(0, os.path.dirname(__file__))
+_this_directory = os.path.dirname(__file__)
+sys.path.insert(0, _this_directory)
 
 # pytest
-import pytest
+import pytest  # noqa: E402
 
 # Zato
-from zato.common.util.config import get_config_object, update_config_file
+from zato.common.test import rand_string  # noqa: E402
+from zato.common.util.config import get_config_object, update_config_file  # noqa: E402
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,9 +40,9 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _CoverageConfig(NamedTuple): # type: ignore
-    coveragerc_path: str
-    coverage_data_directory: str
+class _CoverageConfig(NamedTuple):
+    coveragerc_path: 'str'
+    coverage_data_directory: 'str'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,10 +55,10 @@ _zato_py   = os.path.join(_zato_base, 'code', 'bin', 'python')
 _listener_path = os.path.join(
     _zato_base, 'code', 'zato-common', 'src', 'zato', 'common', 'file_transfer', 'listener.py')
 
-_password = 'test.invoke.' + os.urandom(8).hex()
+_password = 'test.invoke.' + rand_string()
 
 _mcp_username = 'test.mcp.live.user'
-_mcp_password = 'test.mcp.live.' + os.urandom(8).hex()
+_mcp_password = 'test.mcp.live.' + rand_string()
 _mcp_sec_def_name = 'test.mcp.live.auth'
 _mcp_group_name = 'mcp.test-live-group'
 
@@ -92,7 +94,9 @@ def _find_free_port() -> 'int':
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as tcp_socket:
         tcp_socket.bind(('127.0.0.1', 0))
 
-        out = tcp_socket.getsockname()[1]
+        socket_address = tcp_socket.getsockname()
+        out = socket_address[1]
+
         return out
 
 # ################################################################################################################################
@@ -275,6 +279,7 @@ title = MCP Live Test Coverage
 """)
 
     out = _CoverageConfig(coveragerc_path, coverage_data_directory)
+
     return out
 
 # ################################################################################################################################
@@ -412,7 +417,11 @@ def zato_server(request:'any_') -> 'any_':
         and writes it to the persistent log file.
         """
 
-        for line in iter(_server_process.stdout.readline, b''):  # type: ignore
+        server_process = _server_process
+        assert server_process is not None
+        assert server_process.stdout is not None
+        stdout = server_process.stdout
+        for line in iter(stdout.readline, b''):
             text = line.decode('utf-8', errors='replace').rstrip()
             elapsed = time.monotonic() - popen_time
             print(f'[SERVER {elapsed:6.1f}s] {text}')

@@ -248,7 +248,7 @@ class Create(ZatoCommand):
             service=service, cluster=cluster, security=admin_invoke_sec)
         session.add(admin_channel)
 
-        # Django invoke channel - used by the Django plugin, with per-channel service allowlist
+        # Django invoke channel - used by the Django plugin, with per-channel service allow list
         django_channel = HTTPSOAP(
             None, 'zato.django', True, True, 'channel',
             'plain_http', None, '/zato/api/invoke/django/{service_name}', None, '', None, DATA_FORMAT.JSON,

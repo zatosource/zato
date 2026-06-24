@@ -108,10 +108,19 @@ class TestDataClassIOSchema(TestCase):
         result = dataclass_model_to_schema(_RequestRequired)
 
         self.assertEqual(result['type'], 'object')
-        self.assertEqual(sorted(result['properties'].keys()), ['age', 'name'])
-        self.assertEqual(result['properties']['name'], {'type': 'string'})
-        self.assertEqual(result['properties']['age'], {'type': 'integer'})
-        self.assertEqual(sorted(result['required']), ['age', 'name'])
+
+        properties = result['properties']
+        property_keys = sorted(properties.keys())
+        self.assertEqual(property_keys, ['age', 'name'])
+
+        name_schema = properties['name']
+        age_schema = properties['age']
+        self.assertEqual(name_schema, {'type': 'string'})
+        self.assertEqual(age_schema, {'type': 'integer'})
+
+        required = result['required']
+        sorted_required = sorted(required)
+        self.assertEqual(sorted_required, ['age', 'name'])
 
 # ################################################################################################################################
 
@@ -122,7 +131,10 @@ class TestDataClassIOSchema(TestCase):
         result = dataclass_model_to_schema(_RequestOptional)
 
         self.assertEqual(result['type'], 'object')
-        self.assertEqual(sorted(result['properties'].keys()), ['email', 'priority'])
+
+        properties = result['properties']
+        property_keys = sorted(properties.keys())
+        self.assertEqual(property_keys, ['email', 'priority'])
         self.assertNotIn('required', result)
 
 # ################################################################################################################################
@@ -134,8 +146,14 @@ class TestDataClassIOSchema(TestCase):
         result = dataclass_model_to_schema(_RequestMixed)
 
         self.assertEqual(result['type'], 'object')
-        self.assertEqual(sorted(result['properties'].keys()), ['age', 'email', 'name', 'nickname'])
-        self.assertEqual(sorted(result['required']), ['age', 'name'])
+
+        properties = result['properties']
+        property_keys = sorted(properties.keys())
+        self.assertEqual(property_keys, ['age', 'email', 'name', 'nickname'])
+
+        required = result['required']
+        sorted_required = sorted(required)
+        self.assertEqual(sorted_required, ['age', 'name'])
 
 # ################################################################################################################################
 
@@ -146,12 +164,20 @@ class TestDataClassIOSchema(TestCase):
         result = dataclass_model_to_schema(_RequestNested)
 
         self.assertEqual(result['type'], 'object')
-        self.assertIn('address', result['properties'])
 
-        address_schema = result['properties']['address']
+        properties = result['properties']
+        self.assertIn('address', properties)
+
+        address_schema = properties['address']
         self.assertEqual(address_schema['type'], 'object')
-        self.assertEqual(sorted(address_schema['properties'].keys()), ['city', 'street'])
-        self.assertEqual(sorted(address_schema['required']), ['city', 'street'])
+
+        address_properties = address_schema['properties']
+        address_property_keys = sorted(address_properties.keys())
+        self.assertEqual(address_property_keys, ['city', 'street'])
+
+        address_required = address_schema['required']
+        sorted_address_required = sorted(address_required)
+        self.assertEqual(sorted_address_required, ['city', 'street'])
 
 # ################################################################################################################################
 
@@ -161,7 +187,9 @@ class TestDataClassIOSchema(TestCase):
 
         result = dataclass_model_to_schema(_RequestListOfType)
 
-        self.assertEqual(result['properties']['scores'], {'type': 'array', 'items': {'type': 'integer'}})
+        properties = result['properties']
+        scores_schema = properties['scores']
+        self.assertEqual(scores_schema, {'type': 'array', 'items': {'type': 'integer'}})
 
 # ################################################################################################################################
 
@@ -171,7 +199,9 @@ class TestDataClassIOSchema(TestCase):
 
         result = dataclass_model_to_schema(_RequestDictField)
 
-        self.assertEqual(result['properties']['metadata'], {'type': 'object'})
+        properties = result['properties']
+        metadata_schema = properties['metadata']
+        self.assertEqual(metadata_schema, {'type': 'object'})
 
 # ################################################################################################################################
 

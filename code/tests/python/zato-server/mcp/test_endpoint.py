@@ -59,6 +59,8 @@ class _MockBunch(dict):
 class ChannelMCPWrapperBuild(TestCase):
 
     def test_build_wrapper_creates_handler(self) -> 'None':
+        """ Verifies that build_wrapper creates an MCPHandler instance.
+        """
 
         server = _MockServer()
 
@@ -74,6 +76,8 @@ class ChannelMCPWrapperBuild(TestCase):
         self.assertIsInstance(wrapper.handler, MCPHandler)
 
     def test_build_wrapper_no_opaque(self) -> 'None':
+        """ Verifies that build_wrapper works without an opaque services key.
+        """
 
         server = _MockServer()
 
@@ -87,6 +91,8 @@ class ChannelMCPWrapperBuild(TestCase):
         self.assertIsNotNone(wrapper.handler)
 
     def test_build_wrapper_empty_services(self) -> 'None':
+        """ Verifies that build_wrapper with empty services produces no tools.
+        """
 
         server = _MockServer()
 
@@ -105,6 +111,8 @@ class ChannelMCPWrapperBuild(TestCase):
         self.assertEqual(len(tools), 0)
 
     def test_delete_clears_handler(self) -> 'None':
+        """ Verifies that delete sets handler to None.
+        """
 
         server = _MockServer()
 
@@ -128,6 +136,8 @@ class ChannelMCPWrapperBuild(TestCase):
 class ChannelMCPWrapperInvoke(TestCase):
 
     def test_invoke_service_through_wrapper(self) -> 'None':
+        """ Verifies that a service can be invoked through the wrapper handler.
+        """
 
         server = _MockServer()
         server._invoke_responses['crm.get-customer'] = {'name': 'Test Customer'}
@@ -157,11 +167,14 @@ class ChannelMCPWrapperInvoke(TestCase):
 
         self.assertEqual(mcp_response.status_code, OK)
 
-        result = mcp_response.body['result']
+        body = mcp_response.body
+        result = body['result']
         self.assertNotIn('isError', result)
 
         # The response text should contain the serialized service response
-        text = result['content'][0]['text']
+        content = result['content']
+        first_content = content[0]
+        text = first_content['text']
         parsed_response = loads(text)
         self.assertEqual(parsed_response['name'], 'Test Customer')
 
@@ -174,6 +187,8 @@ class MCPEndpointServiceDispatch(TestCase):
     """
 
     def test_dispatch_ping(self) -> 'None':
+        """ Verifies that a ping request dispatches correctly.
+        """
 
         server = _MockServer()
 
@@ -196,9 +211,14 @@ class MCPEndpointServiceDispatch(TestCase):
         mcp_response = wrapper.handler.handle_raw_request(raw)
 
         self.assertEqual(mcp_response.status_code, OK)
-        self.assertEqual(mcp_response.body['result'], {})
+
+        body = mcp_response.body
+        result = body['result']
+        self.assertEqual(result, {})
 
     def test_dispatch_batch_all_notifications_returns_204(self) -> 'None':
+        """ Verifies that a batch of only notifications returns 204.
+        """
 
         server = _MockServer()
 

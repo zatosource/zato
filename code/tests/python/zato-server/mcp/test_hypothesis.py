@@ -30,6 +30,21 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _filter_non_internal(service_name:'str') -> 'bool':
+    """ Returns True if the service name does not start with the internal prefix.
+    """
+    return not service_name.startswith('zato.')
+
+# ################################################################################################################################
+
+def _prepend_zato_prefix(service_name:'str') -> 'str':
+    """ Prepends the zato. prefix to a service name for test generation.
+    """
+    return 'zato.' + service_name
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _MockToolRegistry:
 
     def __init__(self, tools:'any_' = None, allowed_tools:'any_' = None) -> 'None':
@@ -96,7 +111,8 @@ class JSONRPCEnvelopeFuzzing(TestCase):
         """
 
         handler = _make_handler()
-        response = handler.handle_raw_request(text.encode('utf8'))
+        encoded_text = text.encode('utf8')
+        response = handler.handle_raw_request(encoded_text)
 
         self.assertIsNotNone(response)
         self.assertIsNotNone(response.status_code)
@@ -109,18 +125,22 @@ class JSONRPCEnvelopeFuzzing(TestCase):
         """ Non-JSON or non-object/array JSON text must return an error, never a success result.
         """
 
-        _ = assume(not text.strip().startswith('{'))
-        _ = assume(not text.strip().startswith('['))
+        stripped = text.strip()
+        _ = assume(not stripped.startswith('{'))
+        _ = assume(not stripped.startswith('['))
 
         handler = _make_handler()
-        response = handler.handle_raw_request(text.encode('utf8'))
+        encoded_text = text.encode('utf8')
+        response = handler.handle_raw_request(encoded_text)
 
         self.assertEqual(response.status_code, OK)
 
         # Either parse error (-32700) or invalid request (-32600) is acceptable
         # because some scalars like '0' or 'true' parse as valid JSON but are not objects/arrays
         if response.body:
-            error_code = response.body['error']['code']
+            body = response.body
+            error = body['error']
+            error_code = error['code']
             self.assertIn(error_code, (_error_parse, _error_invalid_req))
 
 # ################################################################################################################################
@@ -136,7 +156,8 @@ class JSONRPCEnvelopeFuzzing(TestCase):
         """
 
         handler = _make_handler()
-        raw = dumps(obj).encode('utf8')
+        serialized = dumps(obj)
+        raw = serialized.encode('utf8')
         response = handler.handle_raw_request(raw)
 
         self.assertIsNotNone(response)
@@ -158,7 +179,8 @@ class JSONRPCEnvelopeFuzzing(TestCase):
         """
 
         handler = _make_handler()
-        raw = dumps(arr).encode('utf8')
+        serialized = dumps(arr)
+        raw = serialized.encode('utf8')
         response = handler.handle_raw_request(raw)
 
         self.assertIsNotNone(response)
@@ -176,11 +198,15 @@ class JSONRPCEnvelopeFuzzing(TestCase):
 
         handler = _make_handler()
         msg = {'jsonrpc': _jsonrpc_version, 'method': method, 'id': 1}
-        raw = dumps(msg).encode('utf8')
+        serialized = dumps(msg)
+        raw = serialized.encode('utf8')
         response = handler.handle_raw_request(raw)
 
         self.assertEqual(response.status_code, OK)
-        self.assertEqual(response.body['error']['code'], _error_method_not_found)
+
+        body = response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_method_not_found)
 
 # ################################################################################################################################
 
@@ -194,11 +220,15 @@ class JSONRPCEnvelopeFuzzing(TestCase):
 
         handler = _make_handler()
         msg = {'jsonrpc': version, 'method': 'ping', 'id': 1}
-        raw = dumps(msg).encode('utf8')
+        serialized = dumps(msg)
+        raw = serialized.encode('utf8')
         response = handler.handle_raw_request(raw)
 
         self.assertEqual(response.status_code, OK)
-        self.assertEqual(response.body['error']['code'], _error_invalid_req)
+
+        body = response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_invalid_req)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -224,7 +254,8 @@ class BatchFuzzing(TestCase):
         """
 
         handler = _make_handler()
-        raw = dumps(messages).encode('utf8')
+        serialized = dumps(messages)
+        raw = serialized.encode('utf8')
         response = handler.handle_raw_request(raw)
 
         self.assertEqual(response.status_code, OK)
@@ -247,7 +278,8 @@ class BatchFuzzing(TestCase):
         """
 
         handler = _make_handler()
-        raw = dumps(messages).encode('utf8')
+        serialized = dumps(messages)
+        raw = serialized.encode('utf8')
         response = handler.handle_raw_request(raw)
 
         self.assertEqual(response.status_code, NO_CONTENT)
@@ -257,7 +289,7 @@ class BatchFuzzing(TestCase):
 # ################################################################################################################################
 
 class AllowlistEnforcement(TestCase):
-    """ Hypothesis tests that verify service allowlist is always enforced.
+    """ Hypothesis tests that verify service allow list is always enforced.
     """
 
 # ################################################################################################################################
@@ -265,7 +297,7 @@ class AllowlistEnforcement(TestCase):
     @given(st.text(min_size=1, max_size=100))
     @settings(max_examples=200)
     def test_unlisted_service_always_rejected(self, service_name:'str') -> 'None':
-        """ Any service not in the allowlist must be rejected by tools/call.
+        """ Any service not in the allow list must be rejected by tools/call.
         """
 
         handler = _make_handler(allowed_tools=set())
@@ -276,54 +308,61 @@ class AllowlistEnforcement(TestCase):
             'id': 1,
             'params': {'name': service_name},
         }
-        raw = dumps(msg).encode('utf8')
+        serialized = dumps(msg)
+        raw = serialized.encode('utf8')
         response = handler.handle_raw_request(raw)
 
         self.assertEqual(response.status_code, OK)
-        self.assertEqual(response.body['error']['code'], _error_method_not_found)
+
+        body = response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_method_not_found)
 
 # ################################################################################################################################
 
-    @given(st.text(min_size=1, max_size=100).map(lambda s: 'zato.' + s))
+    @given(st.text(min_size=1, max_size=100).map(_prepend_zato_prefix))
     @settings(max_examples=100)
     def test_internal_service_always_rejected_by_registry(self, service_name:'str') -> 'None':
         """ Any service starting with zato. must be rejected by is_tool_allowed,
-        even if it were somehow in the allowlist.
+        even if it were somehow in the allow list.
         """
 
         store = _MockServiceStore({})
         registry = ToolRegistry(store, [service_name]) # pyright: ignore[reportArgumentType]
         registry.rebuild()
 
-        self.assertFalse(registry.is_tool_allowed(service_name))
+        is_allowed = registry.is_tool_allowed(service_name)
+        self.assertFalse(is_allowed)
 
 # ################################################################################################################################
 
-    @given(st.text(min_size=1, max_size=100).filter(lambda s: not s.startswith('zato.')))
+    @given(st.text(min_size=1, max_size=100).filter(_filter_non_internal))
     @settings(max_examples=200)
     def test_non_internal_unlisted_service_rejected_by_registry(self, service_name:'str') -> 'None':
-        """ Any non-internal service not in the allowlist must be rejected.
+        """ Any non-internal service not in the allow list must be rejected.
         """
 
         store = _MockServiceStore({})
         registry = ToolRegistry(store, []) # pyright: ignore[reportArgumentType]
         registry.rebuild()
 
-        self.assertFalse(registry.is_tool_allowed(service_name))
+        is_allowed = registry.is_tool_allowed(service_name)
+        self.assertFalse(is_allowed)
 
 # ################################################################################################################################
 
-    @given(st.text(min_size=1, max_size=100).filter(lambda s: not s.startswith('zato.')))
+    @given(st.text(min_size=1, max_size=100).filter(_filter_non_internal))
     @settings(max_examples=200)
     def test_listed_non_internal_service_accepted_by_registry(self, service_name:'str') -> 'None':
-        """ A non-internal service in the allowlist must be accepted.
+        """ A non-internal service in the allow list must be accepted.
         """
 
         store = _MockServiceStore({})
         registry = ToolRegistry(store, [service_name]) # pyright: ignore[reportArgumentType]
         registry.rebuild()
 
-        self.assertTrue(registry.is_tool_allowed(service_name))
+        is_allowed = registry.is_tool_allowed(service_name)
+        self.assertTrue(is_allowed)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -334,9 +373,9 @@ class SchemaExtractionProperties(TestCase):
 
 # ################################################################################################################################
 
-    @given(st.lists(st.text(min_size=1, max_size=50).filter(lambda s: not s.startswith('zato.')), min_size=0, max_size=20, unique=True))
+    @given(st.lists(st.text(min_size=1, max_size=50).filter(_filter_non_internal), min_size=0, max_size=20, unique=True))
     @settings(max_examples=100)
-    def test_rebuild_produces_at_most_allowlist_count(self, service_names:'strlist') -> 'None':
+    def test_rebuild_produces_at_most_allow_list_count(self, service_names:'strlist') -> 'None':
         """ The number of tools after rebuild is at most the number of allowed services.
         """
 
@@ -353,7 +392,7 @@ class SchemaExtractionProperties(TestCase):
 
 # ################################################################################################################################
 
-    @given(st.lists(st.text(min_size=1, max_size=50).filter(lambda s: not s.startswith('zato.')), min_size=1, max_size=20, unique=True))
+    @given(st.lists(st.text(min_size=1, max_size=50).filter(_filter_non_internal), min_size=1, max_size=20, unique=True))
     @settings(max_examples=100)
     def test_all_tools_have_required_fields(self, service_names:'strlist') -> 'None':
         """ Every tool in the list must have name, description, and inputSchema.
@@ -374,7 +413,7 @@ class SchemaExtractionProperties(TestCase):
 
 # ################################################################################################################################
 
-    @given(st.lists(st.text(min_size=1, max_size=50).filter(lambda s: not s.startswith('zato.')), min_size=1, max_size=20, unique=True))
+    @given(st.lists(st.text(min_size=1, max_size=50).filter(_filter_non_internal), min_size=1, max_size=20, unique=True))
     @settings(max_examples=100)
     def test_tool_names_match_service_names(self, service_names:'strlist') -> 'None':
         """ Every tool name must be one of the allowed service names.
@@ -388,8 +427,13 @@ class SchemaExtractionProperties(TestCase):
         registry = ToolRegistry(store, service_names) # pyright: ignore[reportArgumentType]
         registry.rebuild()
 
-        tool_names = {tool['name'] for tool in registry.get_tools()}
-        self.assertTrue(tool_names.issubset(set(service_names)))
+        tool_names = set()
+        for tool in registry.get_tools():
+            tool_names.add(tool['name'])
+
+        service_name_set = set(service_names)
+        is_subset = tool_names.issubset(service_name_set)
+        self.assertTrue(is_subset)
 
 # ################################################################################################################################
 
@@ -408,7 +452,9 @@ class SchemaExtractionProperties(TestCase):
         registry.rebuild()
 
         for tool in registry.get_tools():
-            self.assertFalse(tool['name'].startswith(_internal_prefix))
+            tool_name = tool['name']
+            starts_with_internal = tool_name.startswith(_internal_prefix)
+            self.assertFalse(starts_with_internal)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -427,7 +473,8 @@ class SessionFuzzing(TestCase):
 
         handler = _make_handler()
         msg = {'jsonrpc': _jsonrpc_version, 'method': 'ping', 'id': 1}
-        raw = dumps(msg).encode('utf8')
+        serialized = dumps(msg)
+        raw = serialized.encode('utf8')
 
         response = handler.handle_raw_request(raw, session_id=session_id)
 

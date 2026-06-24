@@ -19,6 +19,12 @@ from _constants import _demo_echo_service, _error_method_not_found
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # A realistic but non-existent service name for testing tool-not-found errors
 _nonexistent_service = 'billing.generate-invoice'
 
@@ -26,8 +32,9 @@ _nonexistent_service = 'billing.generate-invoice'
 # ################################################################################################################################
 
 @pytest.fixture(scope='module')
-def client(zato_server:'dict') -> 'MCPClient':
+def client(zato_server:'anydict') -> 'MCPClient':
     out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
+
     return out
 
 # ################################################################################################################################
@@ -45,7 +52,8 @@ class TestToolsCall:
         params = {'name': _demo_echo_service, 'arguments': arguments}
 
         response = client.jsonrpc('tools/call', params=params)
-        result = response.json()['result']
+        json_body = response.json()
+        result = json_body['result']
 
         # The result must contain content with the echoed data ..
         content = result['content']
@@ -72,7 +80,9 @@ class TestToolsCall:
 
         # Must be a success response without isError ..
         assert 'result' in data
-        assert 'isError' not in data['result']
+
+        result = data['result']
+        assert 'isError' not in result
 
 # ################################################################################################################################
 
@@ -87,7 +97,9 @@ class TestToolsCall:
 
         # The response must be an error with the method-not-found code.
         assert 'error' in data
-        assert data['error']['code'] == _error_method_not_found
+
+        error = data['error']
+        assert error['code'] == _error_method_not_found
 
 # ################################################################################################################################
 # ################################################################################################################################

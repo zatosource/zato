@@ -110,6 +110,8 @@ def _make_handler(registry:'any_'=None, invoke_func:'callable_'=None) -> 'MCPHan
 class HandleInitialize(TestCase):
 
     def test_initialize_returns_capabilities(self) -> 'None':
+        """ Verifies that initialize returns protocol version, capabilities and server info.
+        """
 
         handler = _make_handler()
 
@@ -119,14 +121,22 @@ class HandleInitialize(TestCase):
         mcp_response = handler.handle_raw_request(raw)
 
         self.assertEqual(mcp_response.status_code, OK)
-        self.assertEqual(mcp_response.body['jsonrpc'], _jsonrpc_version)
-        self.assertEqual(mcp_response.body['id'], 1)
 
-        result = mcp_response.body['result']
+        body = mcp_response.body
+        self.assertEqual(body['jsonrpc'], _jsonrpc_version)
+        self.assertEqual(body['id'], 1)
+
+        result = body['result']
         self.assertEqual(result['protocolVersion'], _mcp_protocol_version)
-        self.assertTrue(result['capabilities']['tools']['listChanged'])
-        self.assertEqual(result['serverInfo']['name'], _server_name)
-        self.assertEqual(result['serverInfo']['version'], _server_version)
+
+        capabilities = result['capabilities']
+        tools_capability = capabilities['tools']
+        list_changed = tools_capability['listChanged']
+        self.assertTrue(list_changed)
+
+        server_info = result['serverInfo']
+        self.assertEqual(server_info['name'], _server_name)
+        self.assertEqual(server_info['version'], _server_version)
 
         # Session ID should be set on the response
         self.assertIsNotNone(mcp_response.session_id)
@@ -137,6 +147,8 @@ class HandleInitialize(TestCase):
 class HandleToolsList(TestCase):
 
     def test_tools_list_returns_tools(self) -> 'None':
+        """ Verifies that tools/list returns the registered tools.
+        """
 
         tools = [
             {'name': 'crm.get-customer', 'description': 'Get customer', 'inputSchema': {'type': 'object'}},
@@ -150,9 +162,14 @@ class HandleToolsList(TestCase):
         mcp_response = handler.handle_raw_request(raw)
 
         self.assertEqual(mcp_response.status_code, OK)
-        self.assertEqual(mcp_response.body['result']['tools'], tools)
+
+        body = mcp_response.body
+        result = body['result']
+        self.assertEqual(result['tools'], tools)
 
     def test_tools_list_empty(self) -> 'None':
+        """ Verifies that tools/list returns an empty list when no tools are registered.
+        """
 
         registry = _MockToolRegistry(tools=[])
         handler = _make_handler(registry=registry)
@@ -163,7 +180,10 @@ class HandleToolsList(TestCase):
         mcp_response = handler.handle_raw_request(raw)
 
         self.assertEqual(mcp_response.status_code, OK)
-        self.assertEqual(mcp_response.body['result']['tools'], [])
+
+        body = mcp_response.body
+        result = body['result']
+        self.assertEqual(result['tools'], [])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -171,6 +191,8 @@ class HandleToolsList(TestCase):
 class HandleToolsListPagination(TestCase):
 
     def test_tools_list_with_cursor(self) -> 'None':
+        """ Verifies that tools/list returns a next cursor when paginated.
+        """
 
         page1 = [{'name': 'svc.a', 'description': '', 'inputSchema': {'type': 'object'}}]
 
@@ -188,10 +210,14 @@ class HandleToolsListPagination(TestCase):
         raw = dumps(request)
         mcp_response = handler.handle_raw_request(raw)
 
-        self.assertEqual(mcp_response.body['result']['tools'], page1)
-        self.assertEqual(mcp_response.body['result']['nextCursor'], '1')
+        body = mcp_response.body
+        result = body['result']
+        self.assertEqual(result['tools'], page1)
+        self.assertEqual(result['nextCursor'], '1')
 
     def test_tools_list_last_page_no_next_cursor(self) -> 'None':
+        """ Verifies that the last page does not include a nextCursor field.
+        """
 
         tools = [{'name': 'svc.a', 'description': '', 'inputSchema': {'type': 'object'}}]
 
@@ -206,10 +232,14 @@ class HandleToolsListPagination(TestCase):
         raw = dumps(request)
         mcp_response = handler.handle_raw_request(raw)
 
-        self.assertEqual(mcp_response.body['result']['tools'], tools)
-        self.assertNotIn('nextCursor', mcp_response.body['result'])
+        body = mcp_response.body
+        result = body['result']
+        self.assertEqual(result['tools'], tools)
+        self.assertNotIn('nextCursor', result)
 
     def test_tools_list_passes_cursor_from_params(self) -> 'None':
+        """ Verifies that the cursor from params is passed to get_tools_page.
+        """
 
         captured_cursors = []
 
@@ -233,6 +263,8 @@ class HandleToolsListPagination(TestCase):
 class HandleToolsCall(TestCase):
 
     def test_successful_invocation(self) -> 'None':
+        """ Verifies that tools/call invokes the service and returns content.
+        """
 
         registry = _MockToolRegistry(allowed_tools={'crm.get-customer'})
         handler = _make_handler(registry=registry)
@@ -245,12 +277,19 @@ class HandleToolsCall(TestCase):
 
         self.assertEqual(mcp_response.status_code, OK)
 
-        result = mcp_response.body['result']
+        body = mcp_response.body
+        result = body['result']
         self.assertNotIn('isError', result)
-        self.assertEqual(len(result['content']), 1)
-        self.assertEqual(result['content'][0]['type'], 'text')
+
+        content = result['content']
+        self.assertEqual(len(content), 1)
+
+        first_content = content[0]
+        self.assertEqual(first_content['type'], 'text')
 
     def test_missing_tool_name(self) -> 'None':
+        """ Verifies that tools/call without a name returns invalid params error.
+        """
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
@@ -261,9 +300,14 @@ class HandleToolsCall(TestCase):
         mcp_response = handler.handle_raw_request(raw)
 
         self.assertEqual(mcp_response.status_code, OK)
-        self.assertEqual(mcp_response.body['error']['code'], _error_invalid_params)
+
+        body = mcp_response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_invalid_params)
 
     def test_disallowed_tool(self) -> 'None':
+        """ Verifies that calling a disallowed tool returns method not found.
+        """
 
         registry = _MockToolRegistry(allowed_tools=set())
         handler = _make_handler(registry=registry)
@@ -275,9 +319,14 @@ class HandleToolsCall(TestCase):
         mcp_response = handler.handle_raw_request(raw)
 
         self.assertEqual(mcp_response.status_code, OK)
-        self.assertEqual(mcp_response.body['error']['code'], _error_method_not_found)
+
+        body = mcp_response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_method_not_found)
 
     def test_service_exception_returns_is_error(self) -> 'None':
+        """ Verifies that a service exception produces isError with the error message.
+        """
 
         registry = _MockToolRegistry(allowed_tools={'crm.get-customer'})
         handler = _make_handler(registry=registry, invoke_func=_invoke_raises)
@@ -290,11 +339,18 @@ class HandleToolsCall(TestCase):
 
         self.assertEqual(mcp_response.status_code, OK)
 
-        result = mcp_response.body['result']
+        body = mcp_response.body
+        result = body['result']
         self.assertTrue(result['isError'])
-        self.assertEqual(result['content'][0]['text'], _test_service_error_message)
+
+        content = result['content']
+        first_content = content[0]
+        text = first_content['text']
+        self.assertEqual(text, _test_service_error_message)
 
     def test_string_response_serialized(self) -> 'None':
+        """ Verifies that a string service response is serialized as text content.
+        """
 
         def invoke_string(service_name:'str', payload:'anydict') -> 'str':
             return 'plain text response'
@@ -308,9 +364,16 @@ class HandleToolsCall(TestCase):
 
         mcp_response = handler.handle_raw_request(raw)
 
-        self.assertEqual(mcp_response.body['result']['content'][0]['text'], 'plain text response')
+        body = mcp_response.body
+        result = body['result']
+        content = result['content']
+        first_content = content[0]
+        text = first_content['text']
+        self.assertEqual(text, 'plain text response')
 
     def test_dict_response_serialized_as_json(self) -> 'None':
+        """ Verifies that a dict service response is serialized as JSON text.
+        """
 
         def invoke_dict(service_name:'str', payload:'anydict') -> 'anydict':
             return {'key': 'value'}
@@ -324,11 +387,17 @@ class HandleToolsCall(TestCase):
 
         mcp_response = handler.handle_raw_request(raw)
 
-        text = mcp_response.body['result']['content'][0]['text']
+        body = mcp_response.body
+        result = body['result']
+        content = result['content']
+        first_content = content[0]
+        text = first_content['text']
         self.assertIn('key', text)
         self.assertIn('value', text)
 
     def test_no_arguments_defaults_to_empty_dict(self) -> 'None':
+        """ Verifies that omitting arguments defaults to an empty dict payload.
+        """
 
         received_payloads = []
 
@@ -345,7 +414,8 @@ class HandleToolsCall(TestCase):
 
         _ = handler.handle_raw_request(raw)
 
-        self.assertEqual(received_payloads[0], {})
+        first_payload = received_payloads[0]
+        self.assertEqual(first_payload, {})
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -353,6 +423,8 @@ class HandleToolsCall(TestCase):
 class HandlePing(TestCase):
 
     def test_ping_returns_empty_result(self) -> 'None':
+        """ Verifies that ping returns an empty result object.
+        """
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
@@ -363,7 +435,10 @@ class HandlePing(TestCase):
         mcp_response = handler.handle_raw_request(raw)
 
         self.assertEqual(mcp_response.status_code, OK)
-        self.assertEqual(mcp_response.body['result'], {})
+
+        body = mcp_response.body
+        result = body['result']
+        self.assertEqual(result, {})
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -371,6 +446,8 @@ class HandlePing(TestCase):
 class HandleParseError(TestCase):
 
     def test_malformed_json(self) -> 'None':
+        """ Verifies that malformed JSON produces a parse error.
+        """
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
@@ -378,9 +455,14 @@ class HandleParseError(TestCase):
         mcp_response = handler.handle_raw_request(b'not json at all')
 
         self.assertEqual(mcp_response.status_code, OK)
-        self.assertEqual(mcp_response.body['error']['code'], _error_parse)
+
+        body = mcp_response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_parse)
 
     def test_non_object_non_array(self) -> 'None':
+        """ Verifies that a non-object non-array JSON value produces an invalid request error.
+        """
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
@@ -388,7 +470,10 @@ class HandleParseError(TestCase):
         mcp_response = handler.handle_raw_request(b'"just a string"')
 
         self.assertEqual(mcp_response.status_code, OK)
-        self.assertEqual(mcp_response.body['error']['code'], _error_invalid_req)
+
+        body = mcp_response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_invalid_req)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -396,6 +481,8 @@ class HandleParseError(TestCase):
 class HandleInvalidRequest(TestCase):
 
     def test_missing_jsonrpc_field(self) -> 'None':
+        """ Verifies that a missing jsonrpc field produces an invalid request error.
+        """
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
@@ -406,9 +493,14 @@ class HandleInvalidRequest(TestCase):
         mcp_response = handler.handle_raw_request(raw)
 
         self.assertEqual(mcp_response.status_code, OK)
-        self.assertEqual(mcp_response.body['error']['code'], _error_invalid_req)
+
+        body = mcp_response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_invalid_req)
 
     def test_wrong_jsonrpc_version(self) -> 'None':
+        """ Verifies that a wrong jsonrpc version produces an invalid request error.
+        """
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
@@ -419,9 +511,14 @@ class HandleInvalidRequest(TestCase):
         mcp_response = handler.handle_raw_request(raw)
 
         self.assertEqual(mcp_response.status_code, OK)
-        self.assertEqual(mcp_response.body['error']['code'], _error_invalid_req)
+
+        body = mcp_response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_invalid_req)
 
     def test_missing_method(self) -> 'None':
+        """ Verifies that a missing method field produces an invalid request error.
+        """
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
@@ -432,9 +529,14 @@ class HandleInvalidRequest(TestCase):
         mcp_response = handler.handle_raw_request(raw)
 
         self.assertEqual(mcp_response.status_code, OK)
-        self.assertEqual(mcp_response.body['error']['code'], _error_invalid_req)
+
+        body = mcp_response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_invalid_req)
 
     def test_unknown_method(self) -> 'None':
+        """ Verifies that an unknown method returns method not found.
+        """
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
@@ -445,7 +547,10 @@ class HandleInvalidRequest(TestCase):
         mcp_response = handler.handle_raw_request(raw)
 
         self.assertEqual(mcp_response.status_code, OK)
-        self.assertEqual(mcp_response.body['error']['code'], _error_method_not_found)
+
+        body = mcp_response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_method_not_found)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -453,6 +558,8 @@ class HandleInvalidRequest(TestCase):
 class HandleBatch(TestCase):
 
     def test_batch_with_two_requests(self) -> 'None':
+        """ Verifies that a batch of two requests returns two responses.
+        """
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
@@ -468,10 +575,15 @@ class HandleBatch(TestCase):
         self.assertEqual(mcp_response.status_code, OK)
         self.assertIsInstance(mcp_response.body, list)
         self.assertEqual(len(mcp_response.body), 2)
-        self.assertEqual(mcp_response.body[0]['id'], 1)
-        self.assertEqual(mcp_response.body[1]['id'], 2)
+
+        first_response = mcp_response.body[0]
+        second_response = mcp_response.body[1]
+        self.assertEqual(first_response['id'], 1)
+        self.assertEqual(second_response['id'], 2)
 
     def test_batch_notifications_produce_no_response(self) -> 'None':
+        """ Verifies that a batch of only notifications returns 204 No Content.
+        """
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
@@ -487,6 +599,8 @@ class HandleBatch(TestCase):
         self.assertIsNone(mcp_response.body)
 
     def test_batch_mixed_requests_and_notifications(self) -> 'None':
+        """ Verifies that a batch with mixed requests and notifications returns only request responses.
+        """
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
@@ -502,9 +616,13 @@ class HandleBatch(TestCase):
         self.assertEqual(mcp_response.status_code, OK)
         self.assertIsInstance(mcp_response.body, list)
         self.assertEqual(len(mcp_response.body), 1)
-        self.assertEqual(mcp_response.body[0]['id'], 1)
+
+        first_response = mcp_response.body[0]
+        self.assertEqual(first_response['id'], 1)
 
     def test_empty_batch_is_invalid(self) -> 'None':
+        """ Verifies that an empty batch returns an invalid request error.
+        """
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
@@ -514,9 +632,14 @@ class HandleBatch(TestCase):
         mcp_response = handler.handle_raw_request(raw)
 
         self.assertEqual(mcp_response.status_code, OK)
-        self.assertEqual(mcp_response.body['error']['code'], _error_invalid_req)
+
+        body = mcp_response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_invalid_req)
 
     def test_batch_individual_errors_do_not_affect_others(self) -> 'None':
+        """ Verifies that individual errors in a batch do not affect other requests.
+        """
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
@@ -534,12 +657,17 @@ class HandleBatch(TestCase):
         self.assertEqual(len(mcp_response.body), 3)
 
         # First and third should succeed
-        self.assertIn('result', mcp_response.body[0])
-        self.assertIn('result', mcp_response.body[2])
+        first_response = mcp_response.body[0]
+        third_response = mcp_response.body[2]
+        self.assertIn('result', first_response)
+        self.assertIn('result', third_response)
 
         # Second should be an error
-        self.assertIn('error', mcp_response.body[1])
-        self.assertEqual(mcp_response.body[1]['error']['code'], _error_method_not_found)
+        second_response = mcp_response.body[1]
+        self.assertIn('error', second_response)
+
+        error = second_response['error']
+        self.assertEqual(error['code'], _error_method_not_found)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -549,6 +677,8 @@ class HandleInitializeBatch(TestCase):
     """
 
     def test_initialize_plus_notification(self) -> 'None':
+        """ Verifies that a batch with initialize and notification returns one response.
+        """
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
@@ -565,9 +695,11 @@ class HandleInitializeBatch(TestCase):
         self.assertIsInstance(mcp_response.body, list)
         self.assertEqual(len(mcp_response.body), 1)
 
-        init_response = mcp_response.body[0]
-        self.assertEqual(init_response['id'], 1)
-        self.assertEqual(init_response['result']['protocolVersion'], _mcp_protocol_version)
+        initialize_response = mcp_response.body[0]
+        self.assertEqual(initialize_response['id'], 1)
+
+        result = initialize_response['result']
+        self.assertEqual(result['protocolVersion'], _mcp_protocol_version)
 
 # ################################################################################################################################
 # ################################################################################################################################

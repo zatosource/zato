@@ -22,9 +22,9 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class InitializeResult(NamedTuple): # type: ignore
-    response: requests.Response
-    session_id: str
+class InitializeResult(NamedTuple):
+    response: 'requests.Response'
+    session_id: 'str'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -94,7 +94,9 @@ class MCPClient:
         # .. send the request and return the response.
         headers = self._build_headers(session_id)
 
-        out = requests.post(self.mcp_url, data=dumps(body), headers=headers, auth=self.auth, timeout=_request_timeout)
+        request_data = dumps(body)
+        out = requests.post(self.mcp_url, data=request_data, headers=headers, auth=self.auth, timeout=_request_timeout)
+
         return out
 
 # ################################################################################################################################
@@ -109,7 +111,9 @@ class MCPClient:
 
         headers = self._build_headers(session_id)
 
-        out = requests.post(self.mcp_url, data=dumps(messages), headers=headers, auth=self.auth, timeout=_request_timeout)
+        request_data = dumps(messages)
+        out = requests.post(self.mcp_url, data=request_data, headers=headers, auth=self.auth, timeout=_request_timeout)
+
         return out
 
 # ################################################################################################################################
@@ -121,6 +125,7 @@ class MCPClient:
         headers = self._build_headers(session_id)
 
         out = requests.post(self.mcp_url, data=raw_bytes, headers=headers, auth=self.auth, timeout=_request_timeout)
+
         return out
 
 # ################################################################################################################################
@@ -132,6 +137,7 @@ class MCPClient:
         headers = self._build_headers(session_id)
 
         out = requests.get(self.mcp_url, headers=headers, auth=self.auth, timeout=_request_timeout)
+
         return out
 
 # ################################################################################################################################
@@ -143,6 +149,7 @@ class MCPClient:
         headers = self._build_headers(session_id)
 
         out = requests.delete(self.mcp_url, headers=headers, auth=self.auth, timeout=_request_timeout)
+
         return out
 
 # ################################################################################################################################
@@ -156,6 +163,7 @@ class MCPClient:
         session_id = response.headers[_session_header]
 
         out = InitializeResult(response, session_id)
+
         return out
 
 # ################################################################################################################################

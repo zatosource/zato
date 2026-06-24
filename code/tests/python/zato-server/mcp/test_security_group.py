@@ -17,7 +17,7 @@ from zato.common.api import Groups
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import anydict, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,8 +67,16 @@ class SecurityInputParsing(TestCase):
         }
 
         prefix = 'mcp_security_'
-        security_keys = [key for key in post_data if key.startswith(prefix)]
-        member_id_list = [post_data[key] for key in security_keys]
+
+        security_keys:'anylist' = []
+        for key in post_data:
+            if key.startswith(prefix):
+                security_keys.append(key)
+
+        member_id_list:'anylist' = []
+        for key in security_keys:
+            value = post_data[key]
+            member_id_list.append(value)
 
         self.assertEqual(len(member_id_list), 2)
         self.assertIn('basic_auth-5', member_id_list)
@@ -85,8 +93,16 @@ class SecurityInputParsing(TestCase):
         }
 
         prefix = 'mcp_security_'
-        security_keys = [key for key in post_data if key.startswith(prefix)]
-        member_id_list = [post_data[key] for key in security_keys]
+
+        security_keys:'anylist' = []
+        for key in post_data:
+            if key.startswith(prefix):
+                security_keys.append(key)
+
+        member_id_list:'anylist' = []
+        for key in security_keys:
+            value = post_data[key]
+            member_id_list.append(value)
 
         self.assertEqual(member_id_list, [])
 

@@ -16,6 +16,12 @@ from _constants import _session_header, _session_id_prefix
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _expected_protocol_version = '2025-11-05'
 _expected_server_name      = 'Apache'
 _expected_server_version   = '2.4'
@@ -24,8 +30,9 @@ _expected_server_version   = '2.4'
 # ################################################################################################################################
 
 @pytest.fixture(scope='module')
-def client(zato_server:'dict') -> 'MCPClient':
+def client(zato_server:'anydict') -> 'MCPClient':
     out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
+
     return out
 
 # ################################################################################################################################
@@ -59,7 +66,8 @@ class TestInitialize:
         """
 
         response = client.jsonrpc('initialize')
-        result = response.json()['result']
+        json_body = response.json()
+        result = json_body['result']
 
         # The capabilities must include tools with listChanged ..
         capabilities = result['capabilities']
@@ -74,7 +82,8 @@ class TestInitialize:
         """
 
         response = client.jsonrpc('initialize')
-        result = response.json()['result']
+        json_body = response.json()
+        result = json_body['result']
 
         # The server information must report the masked identity ..
         server_information = result['serverInfo']

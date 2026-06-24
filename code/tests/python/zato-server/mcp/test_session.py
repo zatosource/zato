@@ -48,7 +48,7 @@ def _invoke_noop(service_name:'str', payload:'anydict') -> 'anydict':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_handler(session_manager:'any_'=None) -> 'MCPHandler': # type: ignore
+def _make_handler(session_manager:'any_'=None) -> 'MCPHandler':
     """ Creates an MCPHandler with a session manager for tests.
     """
 
@@ -65,7 +65,7 @@ def _make_handler(session_manager:'any_'=None) -> 'MCPHandler': # type: ignore
 
 class SessionManagerCreate(TestCase):
 
-    def test_create_returns_session_id(self) -> 'None': # type: ignore
+    def test_create_returns_session_id(self) -> 'None':
 
         manager = MCPSessionManager()
         session_id = manager.create(_mcp_protocol_version)
@@ -73,7 +73,7 @@ class SessionManagerCreate(TestCase):
         self.assertIsInstance(session_id, str)
         self.assertTrue(len(session_id) > 0)
 
-    def test_create_increments_count(self) -> 'None': # type: ignore
+    def test_create_increments_count(self) -> 'None':
 
         manager = MCPSessionManager()
 
@@ -85,7 +85,7 @@ class SessionManagerCreate(TestCase):
         _ = manager.create(_mcp_protocol_version)
         self.assertEqual(manager.session_count, 2)
 
-    def test_each_session_has_unique_id(self) -> 'None': # type: ignore
+    def test_each_session_has_unique_id(self) -> 'None':
 
         manager = MCPSessionManager()
 
@@ -99,7 +99,7 @@ class SessionManagerCreate(TestCase):
 
 class SessionManagerValidate(TestCase):
 
-    def test_validate_existing_session(self) -> 'None': # type: ignore
+    def test_validate_existing_session(self) -> 'None':
 
         manager = MCPSessionManager()
         session_id = manager.create(_mcp_protocol_version)
@@ -108,7 +108,7 @@ class SessionManagerValidate(TestCase):
 
         self.assertTrue(result)
 
-    def test_validate_unknown_session(self) -> 'None': # type: ignore
+    def test_validate_unknown_session(self) -> 'None':
 
         manager = MCPSessionManager()
 
@@ -121,7 +121,7 @@ class SessionManagerValidate(TestCase):
 
 class SessionManagerDelete(TestCase):
 
-    def test_delete_existing_session(self) -> 'None': # type: ignore
+    def test_delete_existing_session(self) -> 'None':
 
         manager = MCPSessionManager()
         session_id = manager.create(_mcp_protocol_version)
@@ -132,7 +132,7 @@ class SessionManagerDelete(TestCase):
         self.assertEqual(manager.session_count, 0)
         self.assertFalse(manager.validate(session_id))
 
-    def test_delete_unknown_session(self) -> 'None': # type: ignore
+    def test_delete_unknown_session(self) -> 'None':
 
         manager = MCPSessionManager()
 
@@ -145,7 +145,7 @@ class SessionManagerDelete(TestCase):
 
 class SessionManagerCleanup(TestCase):
 
-    def test_cleanup_removes_expired(self) -> 'None': # type: ignore
+    def test_cleanup_removes_expired(self) -> 'None':
 
         manager = MCPSessionManager(ttl=0)
         _ = manager.create(_mcp_protocol_version)
@@ -156,7 +156,7 @@ class SessionManagerCleanup(TestCase):
         self.assertEqual(removed, 2)
         self.assertEqual(manager.session_count, 0)
 
-    def test_cleanup_keeps_fresh_sessions(self) -> 'None': # type: ignore
+    def test_cleanup_keeps_fresh_sessions(self) -> 'None':
 
         manager = MCPSessionManager(ttl=9999)
         _ = manager.create(_mcp_protocol_version)
@@ -171,7 +171,7 @@ class SessionManagerCleanup(TestCase):
 
 class HandlerInitializeCreatesSession(TestCase):
 
-    def test_initialize_returns_session_id(self) -> 'None': # type: ignore
+    def test_initialize_returns_session_id(self) -> 'None':
 
         session_manager = MCPSessionManager()
         handler = _make_handler(session_manager=session_manager)
@@ -194,7 +194,7 @@ class HandlerInitializeCreatesSession(TestCase):
         result = mcp_response.body['result']
         self.assertNotIn('_mcp_session_id', result)
 
-    def test_initialize_in_batch_returns_session_id(self) -> 'None': # type: ignore
+    def test_initialize_in_batch_returns_session_id(self) -> 'None':
 
         session_manager = MCPSessionManager()
         handler = _make_handler(session_manager=session_manager)
@@ -216,24 +216,27 @@ class HandlerInitializeCreatesSession(TestCase):
 
 class HandlerSessionValidation(TestCase):
 
-    def test_valid_session_id_accepted(self) -> 'None': # type: ignore
+    def test_valid_session_id_accepted(self) -> 'None':
 
         session_manager = MCPSessionManager()
         handler = _make_handler(session_manager=session_manager)
 
         # First, initialize to get a session ..
-        init_request = dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': {}})
-        init_response = handler.handle_raw_request(init_request)
-        session_id = init_response.session_id
+        initialize_request = dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': {}})
+        initialize_response = handler.handle_raw_request(initialize_request)
+        session_id = initialize_response.session_id
 
         # .. then use the session ID for a subsequent request.
         ping_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 2})
         ping_response = handler.handle_raw_request(ping_request, session_id=session_id)
 
         self.assertEqual(ping_response.status_code, OK)
-        self.assertEqual(ping_response.body['result'], {})
 
-    def test_invalid_session_id_rejected(self) -> 'None': # type: ignore
+        body = ping_response.body
+        result = body['result']
+        self.assertEqual(result, {})
+
+    def test_invalid_session_id_rejected(self) -> 'None':
 
         handler = _make_handler()
 
@@ -242,7 +245,7 @@ class HandlerSessionValidation(TestCase):
 
         self.assertEqual(mcp_response.status_code, NOT_FOUND)
 
-    def test_no_session_id_accepted(self) -> 'None': # type: ignore
+    def test_no_session_id_accepted(self) -> 'None':
 
         handler = _make_handler()
 
@@ -256,15 +259,15 @@ class HandlerSessionValidation(TestCase):
 
 class HandlerDeleteSession(TestCase):
 
-    def test_delete_existing_session(self) -> 'None': # type: ignore
+    def test_delete_existing_session(self) -> 'None':
 
         session_manager = MCPSessionManager()
         handler = _make_handler(session_manager=session_manager)
 
         # Create a session ..
-        init_request = dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': {}})
-        init_response = handler.handle_raw_request(init_request)
-        session_id = init_response.session_id
+        initialize_request = dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': {}})
+        initialize_response = handler.handle_raw_request(initialize_request)
+        session_id = initialize_response.session_id
 
         # .. delete it.
         delete_response = handler.handle_delete_session(session_id)
@@ -272,7 +275,7 @@ class HandlerDeleteSession(TestCase):
         self.assertEqual(delete_response.status_code, OK)
         self.assertEqual(session_manager.session_count, 0)
 
-    def test_delete_unknown_session(self) -> 'None': # type: ignore
+    def test_delete_unknown_session(self) -> 'None':
 
         handler = _make_handler()
 
@@ -280,7 +283,7 @@ class HandlerDeleteSession(TestCase):
 
         self.assertEqual(delete_response.status_code, NOT_FOUND)
 
-    def test_delete_without_session_id(self) -> 'None': # type: ignore
+    def test_delete_without_session_id(self) -> 'None':
 
         handler = _make_handler()
 
@@ -288,15 +291,15 @@ class HandlerDeleteSession(TestCase):
 
         self.assertEqual(delete_response.status_code, NOT_FOUND)
 
-    def test_deleted_session_is_rejected(self) -> 'None': # type: ignore
+    def test_deleted_session_is_rejected(self) -> 'None':
 
         session_manager = MCPSessionManager()
         handler = _make_handler(session_manager=session_manager)
 
         # Create and delete a session ..
-        init_request = dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': {}})
-        init_response = handler.handle_raw_request(init_request)
-        session_id = init_response.session_id
+        initialize_request = dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': {}})
+        initialize_response = handler.handle_raw_request(initialize_request)
+        session_id = initialize_response.session_id
 
         _ = handler.handle_delete_session(session_id)
 
@@ -311,7 +314,7 @@ class HandlerDeleteSession(TestCase):
 
 class SessionManagerNotifications(TestCase):
 
-    def test_queue_notification_for_all(self) -> 'None': # type: ignore
+    def test_queue_notification_for_all(self) -> 'None':
 
         manager = MCPSessionManager()
         sid_1 = manager.create(_mcp_protocol_version)
@@ -327,10 +330,13 @@ class SessionManagerNotifications(TestCase):
         n2 = manager.drain_notifications(sid_2)
 
         self.assertEqual(len(n1), 1)
-        self.assertEqual(n1[0]['method'], 'notifications/tools/list_changed')
+
+        first_notification = n1[0]
+        method = first_notification['method']
+        self.assertEqual(method, 'notifications/tools/list_changed')
         self.assertEqual(len(n2), 1)
 
-    def test_queue_notification_no_sessions(self) -> 'None': # type: ignore
+    def test_queue_notification_no_sessions(self) -> 'None':
 
         manager = MCPSessionManager()
 
@@ -339,7 +345,7 @@ class SessionManagerNotifications(TestCase):
 
         self.assertEqual(count, 0)
 
-    def test_drain_clears_queue(self) -> 'None': # type: ignore
+    def test_drain_clears_queue(self) -> 'None':
 
         manager = MCPSessionManager()
         sid = manager.create(_mcp_protocol_version)
@@ -355,7 +361,7 @@ class SessionManagerNotifications(TestCase):
         n2 = manager.drain_notifications(sid)
         self.assertEqual(len(n2), 0)
 
-    def test_drain_unknown_session_returns_empty(self) -> 'None': # type: ignore
+    def test_drain_unknown_session_returns_empty(self) -> 'None':
 
         manager = MCPSessionManager()
 
@@ -363,7 +369,7 @@ class SessionManagerNotifications(TestCase):
 
         self.assertEqual(result, [])
 
-    def test_multiple_notifications_queued(self) -> 'None': # type: ignore
+    def test_multiple_notifications_queued(self) -> 'None':
 
         manager = MCPSessionManager()
         sid = manager.create(_mcp_protocol_version)
@@ -383,7 +389,7 @@ class SessionManagerNotifications(TestCase):
 
 class HandlerNotifyToolsChanged(TestCase):
 
-    def test_notify_tools_changed_queues_for_all_sessions(self) -> 'None': # type: ignore
+    def test_notify_tools_changed_queues_for_all_sessions(self) -> 'None':
 
         session_manager = MCPSessionManager()
         handler = _make_handler(session_manager=session_manager)
@@ -400,10 +406,13 @@ class HandlerNotifyToolsChanged(TestCase):
         n2 = session_manager.drain_notifications(sid_2)
 
         self.assertEqual(len(n1), 1)
-        self.assertEqual(n1[0]['method'], 'notifications/tools/list_changed')
+
+        first_notification = n1[0]
+        method = first_notification['method']
+        self.assertEqual(method, 'notifications/tools/list_changed')
         self.assertEqual(len(n2), 1)
 
-    def test_notify_tools_changed_no_sessions(self) -> 'None': # type: ignore
+    def test_notify_tools_changed_no_sessions(self) -> 'None':
 
         handler = _make_handler()
 
@@ -416,7 +425,7 @@ class HandlerNotifyToolsChanged(TestCase):
 
 class HandlerGetPendingNotifications(TestCase):
 
-    def test_get_notifications_returns_pending(self) -> 'None': # type: ignore
+    def test_get_notifications_returns_pending(self) -> 'None':
 
         session_manager = MCPSessionManager()
         handler = _make_handler(session_manager=session_manager)
@@ -429,9 +438,12 @@ class HandlerGetPendingNotifications(TestCase):
         self.assertEqual(response.status_code, OK)
         self.assertIsInstance(response.body, list)
         self.assertEqual(len(response.body), 1)
-        self.assertEqual(response.body[0]['method'], 'notifications/tools/list_changed')
 
-    def test_get_notifications_empty_returns_no_content(self) -> 'None': # type: ignore
+        first_notification = response.body[0]
+        method = first_notification['method']
+        self.assertEqual(method, 'notifications/tools/list_changed')
+
+    def test_get_notifications_empty_returns_no_content(self) -> 'None':
 
         session_manager = MCPSessionManager()
         handler = _make_handler(session_manager=session_manager)
@@ -443,7 +455,7 @@ class HandlerGetPendingNotifications(TestCase):
         self.assertEqual(response.status_code, NO_CONTENT)
         self.assertIsNone(response.body)
 
-    def test_get_notifications_unknown_session_returns_not_found(self) -> 'None': # type: ignore
+    def test_get_notifications_unknown_session_returns_not_found(self) -> 'None':
 
         handler = _make_handler()
 
@@ -451,7 +463,7 @@ class HandlerGetPendingNotifications(TestCase):
 
         self.assertEqual(response.status_code, NOT_FOUND)
 
-    def test_get_notifications_no_session_id_returns_not_found(self) -> 'None': # type: ignore
+    def test_get_notifications_no_session_id_returns_not_found(self) -> 'None':
 
         handler = _make_handler()
 
@@ -459,7 +471,7 @@ class HandlerGetPendingNotifications(TestCase):
 
         self.assertEqual(response.status_code, NOT_FOUND)
 
-    def test_get_notifications_drains_queue(self) -> 'None': # type: ignore
+    def test_get_notifications_drains_queue(self) -> 'None':
 
         session_manager = MCPSessionManager()
         handler = _make_handler(session_manager=session_manager)
