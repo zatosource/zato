@@ -48,8 +48,9 @@ class ChannelMCPWrapper:
         # extracted from opaque1 by GenericConnection.to_dict during startup.
         allowed_services:'strlist' = self.config.get('services', [])
 
-        # .. build the tool registry ..
+        # .. build the tool registry and populate it immediately ..
         tool_registry = ToolRegistry(self.server.service_store, allowed_services)
+        tool_registry.rebuild()
 
         # .. build the session manager ..
         session_manager = MCPSessionManager()
