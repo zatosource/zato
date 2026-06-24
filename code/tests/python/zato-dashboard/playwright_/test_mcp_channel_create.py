@@ -1148,4 +1148,83 @@ class TestMCPChannelCreate:
         logger.info('[test_create_duplicate_url_path] duplicate url_path correctly blocked')
 
 # ################################################################################################################################
+
+    def test_sec_def_password_change(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates a basic auth, assigns it to an MCP channel's security group,
+        verifies the original password works, changes the password via the basic auth UI,
+        then verifies old password -> 403 and new password -> 200.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'pwd-chg'
+        url_path = '/mcp/pw-chg/' + os.urandom(4).hex()
+
+        # Create a basic auth definition ..
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'pwd-chg')
+        sec_name = sec_info['name']
+        sec_username = sec_info['username']
+        old_password = sec_info['password']
+
+        # .. navigate to MCP channels and create a channel with this sec def ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name)
+        page.fill('#id_url_path', url_path)
+
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
+            timeout=10000
+        )
+
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name}"]'
+        sec_badge = page.query_selector(badge_selector)
+        assert sec_badge is not None, f'Could not find badge for "{sec_name}"'
+        sec_badge.click()
+
+        submit_create_form(page)
+
+        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        # .. verify the original password works ..
+        response = _post_mcp(server_port, url_path, auth=(sec_username, old_password))
+        assert response.status_code == OK, f'Expected OK with original password, got {response.status_code}'
+
+        # .. navigate to the basic auth page and change the password ..
+        new_password = 'changed.' + os.urandom(8).hex()
+        basic_auth_page_url = '/zato/security/basic-auth/?cluster=1'
+
+        navigate_to_page(page, base_url, basic_auth_page_url)
+
+        row_selector_ba = f'#data-table tbody tr:has(td:text-is("{sec_name}"))'
+        row = page.wait_for_selector(row_selector_ba, state='visible', timeout=5000)
+
+        id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id = id_cell.inner_text().strip()
+
+        page.evaluate(f'$.fn.zato.data_table.change_password("{item_id}")')
+        page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
+
+        page.fill('#change_password-div #id_password', new_password)
+        page.click('#change_password-div input[type="submit"]')
+        page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
+
+        logger.info('[test_sec_def_password_change] password changed for %s', sec_name)
+
+        # .. wait for the password change to propagate to the security cache ..
+        page.wait_for_timeout(2000)
+
+        # .. old password should be rejected ..
+        response = _post_mcp(server_port, url_path, auth=(sec_username, old_password))
+        assert response.status_code == FORBIDDEN, \
+            f'Expected FORBIDDEN with old password after change, got {response.status_code}'
+
+        # .. new password should work ..
+        response = _post_mcp(server_port, url_path, auth=(sec_username, new_password))
+        assert response.status_code == OK, f'Expected OK with new password, got {response.status_code}'
+
+# ################################################################################################################################
 # ################################################################################################################################
