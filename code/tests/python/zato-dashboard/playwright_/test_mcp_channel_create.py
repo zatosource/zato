@@ -1675,4 +1675,222 @@ class MCPTestAllowListB(Service):
         os.remove(service_file_path_b)
 
 # ################################################################################################################################
+
+    def test_mcp_delete_channel(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates an MCP channel, deletes it via the UI confirm dialog,
+        then verifies the row is gone from the table and the URL returns 404.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'del'
+        url_path = '/mcp/delete-test/' + rand_string()
+
+        # Create a basic auth so we can verify the channel works before deletion ..
+        security_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'del')
+        security_name = security_info['name']
+        security_username = security_info['username']
+        security_password = security_info['password']
+
+        # .. navigate to MCP channels ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create the channel ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name)
+        page.fill('#id_url_path', url_path)
+
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
+            timeout=10000
+        )
+
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
+        security_badge = page.query_selector(badge_selector)
+        assert security_badge is not None, f'Could not find badge for "{security_name}"'
+        security_badge.click()
+
+        submit_create_form(page)
+
+        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        # .. verify the channel is live ..
+        response = _post_mcp(server_port, url_path, auth=(security_username, security_password))
+        assert response.status_code == OK, f'Expected OK before delete, got {response.status_code}'
+
+        # .. get the item id for the delete call ..
+        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id = item_id_cell.inner_text().strip()
+
+        # .. delete the channel via UI ..
+        page.evaluate(f'$.fn.zato.channel.mcp.delete_("{item_id}")')
+        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        page.click('#popup_ok')
+
+        # .. wait for the row to disappear ..
+        page.wait_for_selector(row_selector, state='hidden', timeout=5000)
+
+        # .. verify the row is gone ..
+        row_after_delete = page.query_selector(row_selector)
+        assert row_after_delete is None, f'Row "{channel_name}" should be gone after delete'
+
+        # .. verify the URL returns 404 ..
+        page.wait_for_timeout(1000)
+        response = _post_mcp(server_port, url_path, auth=(security_username, security_password))
+        assert response.status_code == NOT_FOUND, \
+            f'Expected NOT_FOUND after delete, got {response.status_code}'
+
+# ################################################################################################################################
+
+    def test_mcp_delete_channel_cleans_channel_rest(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates an MCP channel, deletes it via the UI,
+        then verifies no orphan REST channel with the same name remains in the ODB.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'orphan'
+        url_path = '/mcp/orphan-test/' + rand_string()
+
+        # Create a basic auth ..
+        security_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'orphan')
+        security_name = security_info['name']
+
+        # .. navigate to MCP channels ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create the channel ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name)
+        page.fill('#id_url_path', url_path)
+
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
+            timeout=10000
+        )
+
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
+        security_badge = page.query_selector(badge_selector)
+        assert security_badge is not None, f'Could not find badge for "{security_name}"'
+        security_badge.click()
+
+        submit_create_form(page)
+
+        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        # .. verify the REST channel exists before deletion ..
+        api_url = f'http://127.0.0.1:{server_port}/zato/api/invoke/zato.http-soap.get-list'
+        api_auth = ('admin.invoke', zato_dashboard['password'])
+        api_headers = {'Content-Type': 'application/json'}
+        api_payload = json.dumps({'cluster_id': 1, 'connection': 'channel', 'transport': 'plain_http'})
+
+        rest_response = requests.post(api_url, data=api_payload, headers=api_headers, auth=api_auth, timeout=10)
+        assert rest_response.status_code == OK, f'API get-list failed: {rest_response.status_code}'
+
+        rest_channels = rest_response.json()
+        found_before = False
+
+        for item in rest_channels:
+            if item['name'] == channel_name:
+                found_before = True
+                break
+
+        assert found_before, f'REST channel "{channel_name}" should exist before deletion'
+
+        # .. delete the MCP channel ..
+        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id = item_id_cell.inner_text().strip()
+
+        page.evaluate(f'$.fn.zato.channel.mcp.delete_("{item_id}")')
+        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        page.click('#popup_ok')
+        page.wait_for_selector(row_selector, state='hidden', timeout=5000)
+
+        # .. wait for cleanup to propagate ..
+        page.wait_for_timeout(1000)
+
+        # .. verify no orphan REST channel remains ..
+        rest_response = requests.post(api_url, data=api_payload, headers=api_headers, auth=api_auth, timeout=10)
+        assert rest_response.status_code == OK, f'API get-list failed after delete: {rest_response.status_code}'
+
+        rest_channels = rest_response.json()
+        found_after = False
+
+        for item in rest_channels:
+            if item['name'] == channel_name:
+                found_after = True
+                break
+
+        assert not found_after, f'Orphan REST channel "{channel_name}" still exists after MCP channel deletion'
+
+# ################################################################################################################################
+
+    def test_mcp_delete_cancel(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates an MCP channel, clicks delete but cancels the confirmation dialog.
+        Verifies the row remains in the table and the URL still works.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'del-cancel'
+        url_path = '/mcp/delete-cancel/' + rand_string()
+
+        # Create a basic auth ..
+        security_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'del-cancel')
+        security_name = security_info['name']
+        security_username = security_info['username']
+        security_password = security_info['password']
+
+        # .. navigate to MCP channels ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create the channel ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name)
+        page.fill('#id_url_path', url_path)
+
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
+            timeout=10000
+        )
+
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
+        security_badge = page.query_selector(badge_selector)
+        assert security_badge is not None, f'Could not find badge for "{security_name}"'
+        security_badge.click()
+
+        submit_create_form(page)
+
+        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        # .. get the item id ..
+        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id = item_id_cell.inner_text().strip()
+
+        # .. click delete but cancel ..
+        page.evaluate(f'$.fn.zato.channel.mcp.delete_("{item_id}")')
+        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        page.click('#popup_cancel')
+
+        # .. wait for the popup to close ..
+        page.wait_for_selector('#popup_container', state='hidden', timeout=5000)
+
+        # .. verify the row is still there ..
+        row_after_cancel = page.query_selector(row_selector)
+        assert row_after_cancel is not None, f'Row "{channel_name}" should still exist after cancel'
+
+        # .. verify the URL still works ..
+        response = _post_mcp(server_port, url_path, auth=(security_username, security_password))
+        assert response.status_code == OK, f'Expected OK after cancel, got {response.status_code}'
+
+# ################################################################################################################################
 # ################################################################################################################################
