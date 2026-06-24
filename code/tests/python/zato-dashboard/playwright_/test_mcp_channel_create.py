@@ -806,6 +806,261 @@ class TestMCPChannelCreate:
 
 # ################################################################################################################################
 
+    def test_edit_add_security_member(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates a channel with 1 sec def, edits to add a second sec def.
+        Asserts both can authenticate.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'add-sec'
+        url_path = '/mcp/pw-addsec/' + os.urandom(4).hex()
+
+        # Create two basic auth definitions ..
+        sec_info_1 = create_basic_auth(page, base_url, _Test_Name_Prefix, 'add-sec-1')
+        sec_name_1 = sec_info_1['name']
+        sec_username_1 = sec_info_1['username']
+        sec_password_1 = sec_info_1['password']
+
+        sec_info_2 = create_basic_auth(page, base_url, _Test_Name_Prefix, 'add-sec-2')
+        sec_name_2 = sec_info_2['name']
+        sec_username_2 = sec_info_2['username']
+        sec_password_2 = sec_info_2['password']
+
+        # .. navigate to MCP channels ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create the channel with only the first sec def ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name)
+        page.fill('#id_url_path', url_path)
+
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 2',
+            timeout=10000
+        )
+
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name_1}"]'
+        sec_badge = page.query_selector(badge_selector)
+        assert sec_badge is not None, f'Could not find badge for "{sec_name_1}"'
+        sec_badge.click()
+
+        submit_create_form(page)
+
+        # .. verify row appears ..
+        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        # .. confirm first creds work, second does not ..
+        response = _post_mcp(server_port, url_path, auth=(sec_username_1, sec_password_1))
+        assert response.status_code == OK, f'Expected OK for sec_1, got {response.status_code}'
+
+        response = _post_mcp(server_port, url_path, auth=(sec_username_2, sec_password_2))
+        assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN for sec_2 before edit, got {response.status_code}'
+
+        # .. open edit dialog ..
+        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id = item_id_cell.inner_text().strip()
+
+        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+
+        # .. wait for the security badge picker in edit mode ..
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-sec-edit .badge-zone-body .security-badge").length >= 1',
+            timeout=10000
+        )
+
+        # .. add the second sec def ..
+        badge_selector = f'#badge-zone-available-sec-edit .badge-zone-body .security-badge[data-name="{sec_name_2}"]'
+        sec_badge_2 = page.query_selector(badge_selector)
+        assert sec_badge_2 is not None, f'Could not find badge for "{sec_name_2}" in edit available zone'
+        sec_badge_2.click()
+
+        submit_edit_form(page)
+
+        logger.info('[test_edit_add_security_member] added sec def %s to channel %s', sec_name_2, channel_name)
+
+        # .. both should now authenticate ..
+        response = _post_mcp(server_port, url_path, auth=(sec_username_1, sec_password_1))
+        assert response.status_code == OK, f'Expected OK for sec_1 after edit, got {response.status_code}'
+
+        response = _post_mcp(server_port, url_path, auth=(sec_username_2, sec_password_2))
+        assert response.status_code == OK, f'Expected OK for sec_2 after edit, got {response.status_code}'
+
+# ################################################################################################################################
+
+    def test_edit_remove_security_member(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates a channel with 2 sec defs, edits to remove one.
+        Removed member -> 403, remaining member -> 200.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'rm-sec'
+        url_path = '/mcp/pw-rmsec/' + os.urandom(4).hex()
+
+        # Create two basic auth definitions ..
+        sec_info_1 = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rm-sec-1')
+        sec_name_1 = sec_info_1['name']
+        sec_username_1 = sec_info_1['username']
+        sec_password_1 = sec_info_1['password']
+
+        sec_info_2 = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rm-sec-2')
+        sec_name_2 = sec_info_2['name']
+        sec_username_2 = sec_info_2['username']
+        sec_password_2 = sec_info_2['password']
+
+        # .. navigate to MCP channels ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create the channel with both sec defs ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name)
+        page.fill('#id_url_path', url_path)
+
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 2',
+            timeout=10000
+        )
+
+        badge_1 = page.query_selector(
+            f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name_1}"]')
+        badge_2 = page.query_selector(
+            f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name_2}"]')
+        assert badge_1 is not None, f'Could not find badge for "{sec_name_1}"'
+        assert badge_2 is not None, f'Could not find badge for "{sec_name_2}"'
+        badge_1.click()
+        badge_2.click()
+
+        submit_create_form(page)
+
+        # .. verify row appears ..
+        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        # .. confirm both work ..
+        response = _post_mcp(server_port, url_path, auth=(sec_username_1, sec_password_1))
+        assert response.status_code == OK, f'Expected OK for sec_1 before edit, got {response.status_code}'
+
+        response = _post_mcp(server_port, url_path, auth=(sec_username_2, sec_password_2))
+        assert response.status_code == OK, f'Expected OK for sec_2 before edit, got {response.status_code}'
+
+        # .. open edit dialog ..
+        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id = item_id_cell.inner_text().strip()
+
+        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+
+        # .. wait for assigned sec badges in edit mode ..
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-assigned-sec-edit .badge-zone-body .security-badge").length === 2',
+            timeout=10000
+        )
+
+        # .. remove the first sec def by clicking it in the assigned zone ..
+        remove_selector = f'#badge-zone-assigned-sec-edit .badge-zone-body .security-badge[data-name="{sec_name_1}"]'
+        badge_to_remove = page.query_selector(remove_selector)
+        assert badge_to_remove is not None, f'Could not find badge "{sec_name_1}" in assigned sec zone'
+        badge_to_remove.click()
+
+        submit_edit_form(page)
+
+        logger.info('[test_edit_remove_security_member] removed sec def %s from channel %s', sec_name_1, channel_name)
+
+        # .. removed member should get 403, remaining should get 200 ..
+        response = _post_mcp(server_port, url_path, auth=(sec_username_1, sec_password_1))
+        assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN for removed sec_1, got {response.status_code}'
+
+        response = _post_mcp(server_port, url_path, auth=(sec_username_2, sec_password_2))
+        assert response.status_code == OK, f'Expected OK for remaining sec_2, got {response.status_code}'
+
+# ################################################################################################################################
+
+    def test_edit_remove_all_security(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates a channel with sec defs, edits to remove all.
+        Asserts all requests return 403 (default deny).
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'rm-all-sec'
+        url_path = '/mcp/pw-rmallsec/' + os.urandom(4).hex()
+
+        # Create a basic auth definition ..
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rm-all-sec')
+        sec_name = sec_info['name']
+        sec_username = sec_info['username']
+        sec_password = sec_info['password']
+
+        # .. navigate to MCP channels ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create the channel with security ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name)
+        page.fill('#id_url_path', url_path)
+
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
+            timeout=10000
+        )
+
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{sec_name}"]'
+        sec_badge = page.query_selector(badge_selector)
+        assert sec_badge is not None, f'Could not find badge for "{sec_name}"'
+        sec_badge.click()
+
+        submit_create_form(page)
+
+        # .. verify row appears ..
+        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        # .. confirm creds work ..
+        response = _post_mcp(server_port, url_path, auth=(sec_username, sec_password))
+        assert response.status_code == OK, f'Expected OK before edit, got {response.status_code}'
+
+        # .. open edit dialog ..
+        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id = item_id_cell.inner_text().strip()
+
+        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+
+        # .. wait for assigned sec badges in edit mode ..
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-assigned-sec-edit .badge-zone-body .security-badge").length === 1',
+            timeout=10000
+        )
+
+        # .. remove all sec defs by clicking the one assigned badge ..
+        remove_selector = f'#badge-zone-assigned-sec-edit .badge-zone-body .security-badge[data-name="{sec_name}"]'
+        badge_to_remove = page.query_selector(remove_selector)
+        assert badge_to_remove is not None, f'Could not find badge "{sec_name}" in assigned sec zone'
+        badge_to_remove.click()
+
+        submit_edit_form(page)
+
+        logger.info('[test_edit_remove_all_security] removed all security from channel %s', channel_name)
+
+        # .. with valid creds should get 403 (no group = default deny) ..
+        response = _post_mcp(server_port, url_path, auth=(sec_username, sec_password))
+        assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN with creds after removing all security, got {response.status_code}'
+
+        # .. without creds should also get 403 ..
+        response = _post_mcp(server_port, url_path)
+        assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN without creds after removing all security, got {response.status_code}'
+
+# ################################################################################################################################
+
     def test_create_duplicate_name(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates a channel, then tries to create another with the same name.
         Asserts the UI blocks submission (dialog stays open, field gets attention indicator).
