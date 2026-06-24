@@ -2051,4 +2051,118 @@ class MCPTestAllowListB(Service):
         assert row_other is None, f'Channel "{channel_name_other}" should NOT appear when searching for "{unique_token}"'
 
 # ################################################################################################################################
+
+    def test_mcp_full_lifecycle_via_ui(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ End-to-end lifecycle: create with security, verify live, rename, verify new URL live
+        and old URL dead, verify non-member rejected, deactivate, verify dead, reactivate,
+        verify live again, delete, verify dead. All state transitions driven via UI.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'lifecycle'
+        url_path = '/mcp/lifecycle/' + rand_string()
+        new_name = _Test_Name_Prefix + 'lifecycle-renamed'
+        new_url_path = '/mcp/lifecycle-renamed/' + rand_string()
+
+        # Create two basic auth definitions - one member, one non-member ..
+        security_info_member = create_basic_auth(page, base_url, _Test_Name_Prefix, 'life-member')
+        security_name_member = security_info_member['name']
+        security_username_member = security_info_member['username']
+        security_password_member = security_info_member['password']
+
+        security_info_nonmember = create_basic_auth(page, base_url, _Test_Name_Prefix, 'life-nonmember')
+        security_username_nonmember = security_info_nonmember['username']
+        security_password_nonmember = security_info_nonmember['password']
+
+        # .. navigate to MCP channels ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # 1. CREATE with security ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name)
+        page.fill('#id_url_path', url_path)
+
+        page.wait_for_function(
+            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
+            timeout=10000
+        )
+
+        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name_member}"]'
+        security_badge = page.query_selector(badge_selector)
+        assert security_badge is not None, f'Could not find badge for "{security_name_member}"'
+        security_badge.click()
+
+        submit_create_form(page)
+
+        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        # 2. POST with member creds -> 200 ..
+        response = _post_mcp(server_port, url_path, auth=(security_username_member, security_password_member))
+        assert response.status_code == OK, f'Expected OK with member creds, got {response.status_code}'
+
+        # 3. EDIT RENAME via UI ..
+        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id = item_id_cell.inner_text().strip()
+
+        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+
+        page.fill('#edit-div #id_edit-name', new_name)
+        page.fill('#edit-div #id_edit-url_path', new_url_path)
+        submit_edit_form(page)
+
+        new_row_selector = f'#data-table tbody tr:has(td:text-is("{new_name}"))'
+        page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
+
+        # 4. POST new URL with member creds -> 200 ..
+        response = _post_mcp(server_port, new_url_path, auth=(security_username_member, security_password_member))
+        assert response.status_code == OK, f'Expected OK at new URL, got {response.status_code}'
+
+        # 5. Old URL -> 404 ..
+        response = _post_mcp(server_port, url_path, auth=(security_username_member, security_password_member))
+        assert response.status_code == NOT_FOUND, f'Expected NOT_FOUND at old URL, got {response.status_code}'
+
+        # 6. Non-member -> 403 ..
+        response = _post_mcp(server_port, new_url_path, auth=(security_username_nonmember, security_password_nonmember))
+        assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN for non-member, got {response.status_code}'
+
+        # 7. EDIT DEACTIVATE via UI ..
+        row = page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
+        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        page.uncheck('#edit-div #id_edit-is_active')
+        submit_edit_form(page)
+
+        # 8. URL -> 404 ..
+        response = _post_mcp(server_port, new_url_path, auth=(security_username_member, security_password_member))
+        assert response.status_code == NOT_FOUND, f'Expected NOT_FOUND after deactivation, got {response.status_code}'
+
+        # 9. EDIT REACTIVATE via UI ..
+        row = page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
+        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        page.check('#edit-div #id_edit-is_active')
+        submit_edit_form(page)
+
+        # 10. URL -> 200 ..
+        response = _post_mcp(server_port, new_url_path, auth=(security_username_member, security_password_member))
+        assert response.status_code == OK, f'Expected OK after reactivation, got {response.status_code}'
+
+        # 11. DELETE via UI ..
+        row = page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
+        page.evaluate(f'$.fn.zato.channel.mcp.delete_("{item_id}")')
+        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        page.click('#popup_ok')
+        page.wait_for_selector(new_row_selector, state='hidden', timeout=5000)
+
+        # 12. URL -> 404 ..
+        page.wait_for_timeout(1000)
+        response = _post_mcp(server_port, new_url_path, auth=(security_username_member, security_password_member))
+        assert response.status_code == NOT_FOUND, f'Expected NOT_FOUND after delete, got {response.status_code}'
+
+# ################################################################################################################################
 # ################################################################################################################################
