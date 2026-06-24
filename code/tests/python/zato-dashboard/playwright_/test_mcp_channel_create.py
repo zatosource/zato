@@ -2165,4 +2165,103 @@ class MCPTestAllowListB(Service):
         assert response.status_code == NOT_FOUND, f'Expected NOT_FOUND after delete, got {response.status_code}'
 
 # ################################################################################################################################
+
+    def test_mcp_concurrent_edit_via_ui_and_api(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates a channel via UI, edits its url_path via the API, refreshes the UI page,
+        asserts the new url_path is displayed in the table, then edits via UI again
+        to confirm no stale data issues.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'conc-edit'
+        original_url_path = '/mcp/concurrent-original/' + rand_string()
+        api_url_path = '/mcp/concurrent-api/' + rand_string()
+        ui_url_path = '/mcp/concurrent-ui/' + rand_string()
+
+        # .. navigate to MCP channels ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. create the channel via UI ..
+        open_create_dialog(page)
+        page.fill('#id_name', channel_name)
+        page.fill('#id_url_path', original_url_path)
+        submit_create_form(page)
+
+        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        # .. get the channel's ID from the API ..
+        api_url = f'http://127.0.0.1:{server_port}/zato/api/invoke/zato.generic.connection.get-list'
+        api_auth = ('admin.invoke', zato_dashboard['password'])
+        api_headers = {'Content-Type': 'application/json'}
+        api_payload = json.dumps({'cluster_id': 1, 'type_': 'channel-mcp'})
+
+        list_response = requests.post(api_url, data=api_payload, headers=api_headers, auth=api_auth, timeout=10)
+        assert list_response.status_code == OK, f'get-list failed: {list_response.status_code}'
+
+        channel_data = None
+        for item in list_response.json():
+            if item['name'] == channel_name:
+                channel_data = item
+                break
+
+        assert channel_data is not None, f'Channel "{channel_name}" not found via API'
+        channel_id = channel_data['id']
+
+        # .. edit url_path via API ..
+        edit_url = f'http://127.0.0.1:{server_port}/zato/api/invoke/zato.generic.connection.edit'
+        edit_payload = json.dumps({
+            'id': channel_id,
+            'name': channel_name,
+            'type_': 'channel-mcp',
+            'is_active': True,
+            'is_internal': False,
+            'is_channel': True,
+            'is_outconn': False,
+            'url_path': api_url_path,
+        })
+
+        edit_response = requests.post(edit_url, data=edit_payload, headers=api_headers, auth=api_auth, timeout=10)
+        assert edit_response.status_code == OK, f'API edit failed: {edit_response.status_code} {edit_response.text}'
+
+        # .. refresh the UI page ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+        page.wait_for_selector('#data-table', state='visible', timeout=5000)
+
+        # .. the table should show the API-set url_path ..
+        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row_text = row.inner_text()
+        assert api_url_path in row_text, \
+            f'Expected API url_path "{api_url_path}" in row, got: {row_text}'
+
+        # .. verify the API-set URL is live (403 = no security but routable) ..
+        response = _post_mcp(server_port, api_url_path)
+        assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN at API url, got {response.status_code}'
+
+        # .. original URL should be gone ..
+        response = _post_mcp(server_port, original_url_path)
+        assert response.status_code == NOT_FOUND, f'Expected NOT_FOUND at original url, got {response.status_code}'
+
+        # .. now edit via UI to change url_path again ..
+        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id = item_id_cell.inner_text().strip()
+
+        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+
+        page.fill('#edit-div #id_edit-url_path', ui_url_path)
+        submit_edit_form(page)
+
+        # .. verify UI-set URL is live ..
+        response = _post_mcp(server_port, ui_url_path)
+        assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN at UI url, got {response.status_code}'
+
+        # .. API-set URL should now be gone ..
+        response = _post_mcp(server_port, api_url_path)
+        assert response.status_code == NOT_FOUND, f'Expected NOT_FOUND at API url after UI edit, got {response.status_code}'
+
+# ################################################################################################################################
 # ################################################################################################################################
