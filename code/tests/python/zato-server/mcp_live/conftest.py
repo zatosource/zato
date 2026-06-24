@@ -459,9 +459,11 @@ def zato_server(request:'any_') -> 'any_':
     global _listener_process
 
     pickup_directory = os.path.join(server_directory, 'pickup', 'incoming', 'services')
+    web_admin_repo = os.path.join(_temp_directory, 'web-admin', 'config', 'repo')
 
     listener_env = os.environ.copy()
     listener_env['Zato_Config_Bind_Port'] = str(port)
+    listener_env['Zato_Web_Admin_Repo_Dir'] = web_admin_repo
     _ = listener_env.pop('COVERAGE_PROCESS_START', None)
 
     _listener_process = subprocess.Popen(
