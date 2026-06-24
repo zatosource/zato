@@ -27,7 +27,7 @@ _nonexistent_service = 'billing.generate-invoice'
 
 @pytest.fixture(scope='module')
 def client(zato_server:'dict') -> 'MCPClient':
-    out = MCPClient(zato_server['mcp_url'])
+    out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
     return out
 
 # ################################################################################################################################
