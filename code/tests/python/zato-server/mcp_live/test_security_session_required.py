@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import BAD_REQUEST
+from http.client import BAD_REQUEST, OK
 
 # pytest
 import pytest
@@ -103,6 +103,77 @@ class TestSessionRequired:
 
         # .. and no result is returned.
         assert 'result' not in data
+
+# ################################################################################################################################
+
+    def test_initialize_without_session_id_succeeds(self, client:'MCPClient') -> 'None':
+        """ Initialize with no Mcp-Session-Id returns 200 and a new session id in the response header.
+        """
+
+        # Send an initialize without any session header ..
+        response = client.jsonrpc('initialize')
+
+        # .. it must succeed ..
+        assert response.status_code == OK
+
+        # .. the response must contain a non-empty session id header.
+        session_id = response.headers.get('Mcp-Session-Id', '')
+        assert len(session_id) > 0
+
+# ################################################################################################################################
+
+    def test_unknown_session_id_rejected(self, client:'MCPClient') -> 'None':
+        """ A non-initialize request with a syntactically valid but unknown session id
+        is rejected identically to the missing-header path.
+        """
+
+        # Use a plausible but never-issued session id ..
+        fake_session_id = 'mcp00000000000000000000000000000000'
+        response = client.jsonrpc('tools/list', session_id=fake_session_id)
+
+        # .. the session gate must reject it ..
+        assert response.status_code == BAD_REQUEST
+
+        # .. with the canonical JSON-RPC invalid-request error ..
+        data = response.json()
+        assert 'error' in data
+
+        error = data['error']
+        assert error['code'] == _error_invalid_request
+
+        # .. and no result is returned.
+        assert 'result' not in data
+
+# ################################################################################################################################
+
+    def test_new_session_after_delete(self, client:'MCPClient') -> 'None':
+        """ After deleting a session, using the dead id returns 400,
+        but a fresh initialize with the same credentials issues a new working session.
+        """
+
+        # Create a session and then delete it ..
+        initialize_result = client.initialize()
+        dead_session_id = initialize_result.session_id
+
+        _ = client.delete_session(dead_session_id)
+
+        # .. using the dead session id must fail ..
+        response = client.jsonrpc('tools/call', params={'name': _demo_echo_service, 'arguments': {'message': 'hi'}}, session_id=dead_session_id)
+        assert response.status_code == BAD_REQUEST
+
+        data = response.json()
+        assert data['error']['code'] == _error_invalid_request
+
+        # .. but a fresh initialize must succeed and produce a new working session ..
+        new_result = client.initialize()
+        new_session_id = new_result.session_id
+
+        assert len(new_session_id) > 0
+        assert new_session_id != dead_session_id
+
+        # .. and the new session must work for subsequent requests.
+        response = client.jsonrpc('tools/list', session_id=new_session_id)
+        assert response.status_code == OK
 
 # ################################################################################################################################
 # ################################################################################################################################
