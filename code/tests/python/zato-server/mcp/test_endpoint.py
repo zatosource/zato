@@ -31,6 +31,11 @@ class _MockServiceStore:
         self.services = {}
         self.name_to_impl_name = {}
 
+    def add_service(self, name:'str') -> 'None':
+        impl_name = 'impl.' + name
+        self.name_to_impl_name[name] = impl_name
+        self.services[impl_name] = {'service_class': type(name, (), {'__doc__': name, '_io': None})}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -63,6 +68,7 @@ class ChannelMCPWrapperBuild(TestCase):
         """
 
         server = _MockServer()
+        server.service_store.add_service('crm.get-customer')
 
         config = _MockBunch({
             'name': 'test-mcp-channel',
@@ -74,6 +80,9 @@ class ChannelMCPWrapperBuild(TestCase):
 
         self.assertIsNotNone(wrapper.handler)
         self.assertIsInstance(wrapper.handler, MCPHandler)
+
+        assert wrapper.handler is not None
+        wrapper.handler.tool_registry.rebuild()
 
     def test_build_wrapper_no_opaque(self) -> 'None':
         """ Verifies that build_wrapper works without an opaque services key.
@@ -140,6 +149,7 @@ class ChannelMCPWrapperInvoke(TestCase):
         """
 
         server = _MockServer()
+        server.service_store.add_service('crm.get-customer')
         server._invoke_responses['crm.get-customer'] = {'name': 'Test Customer'}
 
         config = _MockBunch({
@@ -149,6 +159,9 @@ class ChannelMCPWrapperInvoke(TestCase):
 
         wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
+
+        assert wrapper.handler is not None
+        wrapper.handler.tool_registry.rebuild()
 
         # Build a tools/call request
         request = {
