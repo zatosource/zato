@@ -40,7 +40,7 @@ def client(zato_server:'any_') -> 'MCPClient':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestSessionHijacking:
+class TestSessionValidation:
     """ Tests that session IDs cannot be forged, reused, or enumerated.
     """
 

@@ -45,8 +45,8 @@ def session_id(client:'MCPClient') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestACLEscape:
-    """ Tests that service name manipulation cannot bypass the allow list.
+class TestACLEnforcement:
+    """ Tests that service name manipulation cannot circumvent the allow list.
     """
 
     def test_path_traversal_in_service_name(self, client:'MCPClient', session_id:'str') -> 'None':

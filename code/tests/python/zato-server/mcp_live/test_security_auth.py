@@ -33,7 +33,7 @@ def client(zato_server:'any_') -> 'MCPClient':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestAuthBypass:
+class TestAuthRequired:
     """ Verifies that authentication is enforced before any JSON-RPC processing.
     """
 
