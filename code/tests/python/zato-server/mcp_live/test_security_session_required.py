@@ -196,4 +196,65 @@ class TestSessionRequired:
         assert data['error']['code'] == _error_invalid_request
 
 # ################################################################################################################################
+
+    def test_initialize_unsupported_protocol_version_rejected(self, client:'MCPClient') -> 'None':
+        """ Initialize with an unsupported protocolVersion is rejected.
+        """
+
+        # Send an initialize with a version the server does not support ..
+        params = {'protocolVersion': '1999-01-01', 'capabilities': {}, 'clientInfo': {'name': 'test', 'version': '1.0'}}
+        response = client.jsonrpc('initialize', params=params)
+
+        # .. it must fail with a JSON-RPC error ..
+        assert response.status_code == OK
+
+        data = response.json()
+        assert 'error' in data
+        assert data['error']['code'] == _error_invalid_request
+
+# ################################################################################################################################
+
+    def test_initialize_supported_protocol_version_echoed(self, client:'MCPClient') -> 'None':
+        """ Initialize with the supported version returns 200 and echoes the negotiated protocolVersion.
+        """
+
+        # Send an initialize with the correct version ..
+        params = {'protocolVersion': '2025-11-05', 'capabilities': {}, 'clientInfo': {'name': 'test', 'version': '1.0'}}
+        response = client.jsonrpc('initialize', params=params)
+
+        # .. it must succeed ..
+        assert response.status_code == OK
+
+        data = response.json()
+        assert 'result' in data
+
+        # .. and echo back the negotiated version.
+        assert data['result']['protocolVersion'] == '2025-11-05'
+
+# ################################################################################################################################
+
+    def test_mismatched_protocol_version_header_rejected(self, client:'MCPClient') -> 'None':
+        """ A request whose MCP-Protocol-Version header disagrees with the session's
+        negotiated version is rejected.
+        """
+
+        # Establish a valid session ..
+        initialize_result = client.initialize()
+        session_id = initialize_result.session_id
+
+        # .. send a request with a wrong MCP-Protocol-Version header ..
+        response = client.jsonrpc(
+            'tools/list',
+            session_id=session_id,
+            extra_headers={'MCP-Protocol-Version': '1999-01-01'},
+        )
+
+        # .. the server must reject it ..
+        assert response.status_code == BAD_REQUEST
+
+        # .. with the canonical JSON-RPC invalid-request error.
+        data = response.json()
+        assert data['error']['code'] == _error_invalid_request
+
+# ################################################################################################################################
 # ################################################################################################################################
