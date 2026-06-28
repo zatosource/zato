@@ -473,8 +473,8 @@ def zato_server(request:'any_') -> 'any_':
     _deploy_mcp_security(server_directory)
 
     # .. start the file-transfer listener that watches the pickup directory, so that
-    # files dropped at runtime trigger hot-deploy (and the MCP tools/list_changed
-    # notification). The server's own boot scan only covers files present at startup ..
+    # files dropped at runtime trigger hot-deploy. The server's own boot scan only
+    # covers files present at startup ..
     global _listener_process
 
     pickup_directory = os.path.join(server_directory, 'pickup', 'incoming', 'services')

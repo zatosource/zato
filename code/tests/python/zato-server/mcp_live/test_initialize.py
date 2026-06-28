@@ -62,18 +62,18 @@ class TestInitialize:
 # ################################################################################################################################
 
     def test_initialize_returns_capabilities(self, client:'MCPClient') -> 'None':
-        """ Initialize advertises tool list change notification capability.
+        """ Initialize advertises tool capabilities.
         """
 
         response = client.jsonrpc('initialize')
         json_body = response.json()
         result = json_body['result']
 
-        # The capabilities must include tools with listChanged ..
+        # The capabilities must include a tools section ..
         capabilities = result['capabilities']
         tools = capabilities['tools']
 
-        assert tools['listChanged'] is True
+        assert isinstance(tools, dict)
 
 # ################################################################################################################################
 

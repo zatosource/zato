@@ -976,17 +976,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def notify_mcp_tools_changed(self) -> 'None':
-        """ Rebuilds tool registries and queues list_changed notifications for all MCP channels.
-        Called after hot-deploy deploys new services at runtime.
-        """
-        for channel_config in self.config_manager.channel_mcp.values():
-            wrapper = channel_config.conn
-            if wrapper:
-                wrapper.on_services_deployed()
-
-# ################################################################################################################################
-
     def _start_scheduler(self) -> 'None':
         """ Connect to the standalone scheduler binary via Redis Streams and HTTP.
         """

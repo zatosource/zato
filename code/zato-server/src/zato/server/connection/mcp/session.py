@@ -16,7 +16,7 @@ from uuid import uuid4
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict, strdictlist, strlist, strnone
+    from zato.common.typing_ import strlist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,7 +43,6 @@ class MCPSession:
     created_at:       'float'
     last_seen_at:     'float'
     protocol_version: 'str'
-    pending_notifications: 'strdictlist'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -76,7 +75,6 @@ class MCPSessionManager:
         unique_id = uuid4().hex
         session.session_id = f'{_session_id_prefix}{unique_id}'
         session.protocol_version = protocol_version
-        session.pending_notifications = []
 
         # .. record the creation time ..
         now = monotonic()
@@ -159,42 +157,6 @@ class MCPSessionManager:
 
         # .. and return how many were cleaned up.
         out = len(expired)
-        return out
-
-# ################################################################################################################################
-
-    def queue_notification_for_all(self, notification:'stranydict') -> 'int':
-        """ Appends a JSON-RPC notification to every active session's pending queue.
-        Returns the number of sessions notified.
-        """
-
-        # Append the notification to each session's pending queue ..
-        for session in self._sessions.values():
-            session.pending_notifications.append(notification)
-
-        # .. and return how many sessions were notified.
-        out = len(self._sessions)
-        return out
-
-# ################################################################################################################################
-
-    def drain_notifications(self, session_id:'str') -> 'strdictlist':
-        """ Returns and clears all pending notifications for a session.
-        Returns an empty list if the session does not exist.
-        """
-
-        # Look up the session ..
-        session = self._sessions.get(session_id)
-
-        # .. if it does not exist, there is nothing to drain ..
-        if session is None:
-            return []
-
-        # .. otherwise, take the pending notifications
-        # and replace the queue with an empty list.
-        out = session.pending_notifications
-        session.pending_notifications = []
-
         return out
 
 # ################################################################################################################################

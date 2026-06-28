@@ -134,18 +134,6 @@ class MCPClient:
 
 # ################################################################################################################################
 
-    def get_notifications(self, session_id:'strnone' = None) -> 'requests.Response':
-        """ Sends a GET request to poll for server-to-client notifications.
-        """
-
-        headers = self._build_headers(session_id)
-
-        out = requests.get(self.mcp_url, headers=headers, auth=self.auth, timeout=_request_timeout)
-
-        return out
-
-# ################################################################################################################################
-
     def delete_session(self, session_id:'strnone' = None) -> 'requests.Response':
         """ Sends a DELETE request to terminate an MCP session.
         """
