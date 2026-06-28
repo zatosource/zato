@@ -12,7 +12,9 @@ from logging import getLogger
 from time import monotonic
 from uuid import uuid4
 
-# Zato
+# ################################################################################################################################
+# ################################################################################################################################
+
 if 0:
     from zato.common.typing_ import stranydict, strdictlist, strlist, strnone
 
@@ -57,19 +59,22 @@ class MCPSessionManager:
     Sessions are created on initialize, validated on every subsequent request,
     and cleaned up when deleted or after TTL expiry.
     """
-    def __init__(self, ttl:'int'=_default_session_ttl) -> 'None':
+
+    def __init__(self, ttl:'int' = _default_session_ttl) -> 'None':
         self.ttl = ttl
         self._sessions:'session_dict' = {}
 
 # ################################################################################################################################
 
-    def create(self, protocol_version:'str', remote_address:'str'='') -> 'str':
+    def create(self, protocol_version:'str', remote_address:'str' = '') -> 'str':
         """ Creates a new session and returns its ID.
         """
 
         # Build a new session object with a unique prefixed ID ..
         session = MCPSession()
-        session.session_id = f'{_session_id_prefix}{uuid4().hex}'
+
+        unique_id = uuid4().hex
+        session.session_id = f'{_session_id_prefix}{unique_id}'
         session.protocol_version = protocol_version
         session.pending_notifications = []
 

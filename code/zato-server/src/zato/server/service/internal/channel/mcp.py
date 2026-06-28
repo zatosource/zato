@@ -34,6 +34,9 @@ _session_response_header = 'Mcp-Session-Id'
 # MCP protocol version header name (lowercase, as stored by HTTPRequestData._extract_headers)
 _protocol_version_header = 'mcp-protocol-version'
 
+# WSGI environ key set by the Rust HTTP layer with the resolved client address
+_remote_addr_key = 'zato.http.remote_addr'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -60,7 +63,8 @@ class MCPEndpoint(AdminService):
             self.response.payload = ''
             return
 
-        logger.info('MCP channel `%s` authenticated sec_def id=`%s` username=`%s`',
+        logger.info(
+            'MCP channel `%s` authenticated sec_def id=`%s` username=`%s`',
             self.channel.name, self.channel.security.id, self.channel.security.username)
 
         # Look up the MCP channel config from the config manager,
@@ -75,7 +79,7 @@ class MCPEndpoint(AdminService):
         protocol_version_header = self.request.http.headers.get(_protocol_version_header)
 
         # .. get the remote address for session logging ..
-        remote_address = self.wsgi_environ.get('REMOTE_ADDR', '')
+        remote_address = self.wsgi_environ[_remote_addr_key]
 
         # .. handle GET requests for server-to-client notifications ..
         if self.request.http.method == 'GET':

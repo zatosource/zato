@@ -35,12 +35,12 @@ from zato.common.util.config import get_config_object, update_config_file  # noq
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, tupnone
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def pytest_report_teststatus(report:'any_', config:'any_') -> 'tuple[str, str, str] | None':
+def pytest_report_teststatus(report:'any_', config:'any_') -> 'tupnone':
     if report.when == 'call':
         outcome = report.outcome.upper()
         return report.outcome, f' {outcome} ', f'{outcome} {report.nodeid}'
