@@ -29,18 +29,26 @@ def client(zato_server:'anydict') -> 'MCPClient':
     return out
 
 # ################################################################################################################################
+
+@pytest.fixture(scope='module')
+def session_id(client:'MCPClient') -> 'str':
+    out = client.initialize().session_id
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestACL:
     """ Tests for access control list enforcement on MCP channels.
     """
 
-    def test_internal_service_rejected(self, client:'MCPClient') -> 'None':
+    def test_internal_service_rejected(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Calling a zato.* internal service returns tool-not-found.
         """
 
         params = {'name': 'zato.ping', 'arguments': {}}
-        response = client.jsonrpc('tools/call', params=params)
+        response = client.jsonrpc('tools/call', params=params, session_id=session_id)
         data = response.json()
 
         assert 'error' in data
@@ -50,12 +58,12 @@ class TestACL:
 
 # ################################################################################################################################
 
-    def test_unlisted_service_rejected(self, client:'MCPClient') -> 'None':
+    def test_unlisted_service_rejected(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Calling a service not in the channel's allow list returns tool-not-found.
         """
 
         params = {'name': 'my.private.service', 'arguments': {}}
-        response = client.jsonrpc('tools/call', params=params)
+        response = client.jsonrpc('tools/call', params=params, session_id=session_id)
         data = response.json()
 
         assert 'error' in data
@@ -65,11 +73,11 @@ class TestACL:
 
 # ################################################################################################################################
 
-    def test_tools_list_has_no_internal_services(self, client:'MCPClient') -> 'None':
+    def test_tools_list_has_no_internal_services(self, client:'MCPClient', session_id:'str') -> 'None':
         """ The tools/list response must not include any zato.* internal services.
         """
 
-        response = client.jsonrpc('tools/list')
+        response = client.jsonrpc('tools/list', session_id=session_id)
         json_body = response.json()
         result = json_body['result']
         tools = result['tools']
@@ -82,11 +90,11 @@ class TestACL:
 
 # ################################################################################################################################
 
-    def test_tools_list_only_shows_allow_listed_services(self, client:'MCPClient') -> 'None':
+    def test_tools_list_only_shows_allow_listed_services(self, client:'MCPClient', session_id:'str') -> 'None':
         """ The tools/list response must only show services from the channel's allow list.
         """
 
-        response = client.jsonrpc('tools/list')
+        response = client.jsonrpc('tools/list', session_id=session_id)
         json_body = response.json()
         result = json_body['result']
         tools = result['tools']

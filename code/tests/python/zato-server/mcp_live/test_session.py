@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import NOT_FOUND, OK
+from http.client import BAD_REQUEST, NOT_FOUND, OK
 
 # pytest
 import pytest
@@ -53,13 +53,13 @@ class TestSession:
 
 # ################################################################################################################################
 
-    def test_bogus_session_id_returns_not_found(self, client:'MCPClient') -> 'None':
-        """ A bogus session ID returns 404.
+    def test_bogus_session_id_rejected(self, client:'MCPClient') -> 'None':
+        """ A bogus session ID on a request is a protocol error and returns 400.
         """
 
         response = client.jsonrpc('ping', session_id='not-a-real-session')
 
-        assert response.status_code == NOT_FOUND
+        assert response.status_code == BAD_REQUEST
 
 # ################################################################################################################################
 
@@ -92,8 +92,8 @@ class TestSession:
 
 # ################################################################################################################################
 
-    def test_request_with_deleted_session_returns_not_found(self, client:'MCPClient') -> 'None':
-        """ A request with a deleted session ID returns 404.
+    def test_request_with_deleted_session_rejected(self, client:'MCPClient') -> 'None':
+        """ A request with a deleted session ID is a protocol error and returns 400.
         """
 
         # Create and delete a session ..
@@ -103,20 +103,22 @@ class TestSession:
         # .. a subsequent request with that session ID must fail.
         response = client.jsonrpc('ping', session_id=session_id)
 
-        assert response.status_code == NOT_FOUND
+        assert response.status_code == BAD_REQUEST
 
 # ################################################################################################################################
 
-    def test_ping_without_session_id_succeeds(self, client:'MCPClient') -> 'None':
-        """ Ping without a session ID header succeeds (session is optional).
+    def test_ping_without_session_id_rejected(self, client:'MCPClient') -> 'None':
+        """ Ping without a session ID header is rejected, since every method other than
+        initialize requires a valid session.
         """
 
         response = client.jsonrpc('ping')
 
-        assert response.status_code == OK
+        assert response.status_code == BAD_REQUEST
 
         data = response.json()
-        assert 'result' in data
+        assert 'error' in data
+        assert 'result' not in data
 
 # ################################################################################################################################
 # ################################################################################################################################

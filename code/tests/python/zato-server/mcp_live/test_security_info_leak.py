@@ -38,6 +38,14 @@ def client(zato_server:'any_') -> 'MCPClient':
     return out
 
 # ################################################################################################################################
+
+@pytest.fixture(scope='module')
+def session_id(client:'MCPClient') -> 'str':
+    out = client.initialize().session_id
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestInformationLeakage:
@@ -91,11 +99,11 @@ class TestInformationLeakage:
 
 # ################################################################################################################################
 
-    def test_tools_list_never_exposes_internal_services(self, client:'MCPClient') -> 'None':
+    def test_tools_list_never_exposes_internal_services(self, client:'MCPClient', session_id:'str') -> 'None':
         """ The tools/list response must never include zato.* internal services.
         """
 
-        response = client.jsonrpc('tools/list')
+        response = client.jsonrpc('tools/list', session_id=session_id)
         json_body = response.json()
         result = json_body['result']
         tools = result['tools']

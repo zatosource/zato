@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import NO_CONTENT, NOT_FOUND, OK
+from http.client import BAD_REQUEST, NO_CONTENT, NOT_FOUND, OK
 from unittest import TestCase
 
 # Hypothesis
@@ -17,7 +17,7 @@ from hypothesis import strategies as st
 # Zato
 from zato.common.json_internal import dumps
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_request, _error_method_not_found, \
-    _error_parse, _jsonrpc_version
+    _error_parse, _jsonrpc_version, _mcp_protocol_version
 from zato.server.connection.mcp.registry import ToolRegistry, _internal_prefix
 from zato.server.connection.mcp.session import MCPSessionManager
 
@@ -79,6 +79,17 @@ def _make_handler(allowed_tools:'any_' = None) -> 'any_':
 
     handler = MCPHandler(registry, invoke_func, session_manager) # pyright: ignore[reportArgumentType]
     return handler
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _make_session(handler:'any_') -> 'str':
+    """ Creates a valid session on the handler's manager and returns its ID.
+    Every method other than initialize requires one.
+    """
+
+    out = handler.session_manager.create(_mcp_protocol_version)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -156,9 +167,10 @@ class JSONRPCEnvelopeFuzzing(TestCase):
         """
 
         handler = _make_handler()
+        session_id = _make_session(handler)
         serialized = dumps(obj)
         raw = serialized.encode('utf8')
-        response = handler.handle_raw_request(raw)
+        response = handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertIsNotNone(response)
         self.assertEqual(response.status_code, OK)
@@ -197,10 +209,11 @@ class JSONRPCEnvelopeFuzzing(TestCase):
         _ = assume(method not in known_methods)
 
         handler = _make_handler()
+        session_id = _make_session(handler)
         msg = {'jsonrpc': _jsonrpc_version, 'method': method, 'id': 1}
         serialized = dumps(msg)
         raw = serialized.encode('utf8')
-        response = handler.handle_raw_request(raw)
+        response = handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(response.status_code, OK)
 
@@ -219,10 +232,11 @@ class JSONRPCEnvelopeFuzzing(TestCase):
         _ = assume(version != '2.0')
 
         handler = _make_handler()
+        session_id = _make_session(handler)
         msg = {'jsonrpc': version, 'method': 'ping', 'id': 1}
         serialized = dumps(msg)
         raw = serialized.encode('utf8')
-        response = handler.handle_raw_request(raw)
+        response = handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(response.status_code, OK)
 
@@ -301,6 +315,7 @@ class AllowlistEnforcement(TestCase):
         """
 
         handler = _make_handler(allowed_tools=set())
+        session_id = _make_session(handler)
 
         msg = {
             'jsonrpc': _jsonrpc_version,
@@ -310,7 +325,7 @@ class AllowlistEnforcement(TestCase):
         }
         serialized = dumps(msg)
         raw = serialized.encode('utf8')
-        response = handler.handle_raw_request(raw)
+        response = handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(response.status_code, OK)
 
@@ -478,7 +493,7 @@ class SessionFuzzing(TestCase):
 
         response = handler.handle_raw_request(raw, session_id=session_id)
 
-        self.assertEqual(response.status_code, NOT_FOUND)
+        self.assertEqual(response.status_code, BAD_REQUEST)
 
 # ################################################################################################################################
 

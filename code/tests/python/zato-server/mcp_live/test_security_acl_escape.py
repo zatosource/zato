@@ -35,18 +35,26 @@ def client(zato_server:'any_') -> 'MCPClient':
     return out
 
 # ################################################################################################################################
+
+@pytest.fixture(scope='module')
+def session_id(client:'MCPClient') -> 'str':
+    out = client.initialize().session_id
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestACLEscape:
     """ Tests that service name manipulation cannot bypass the allow list.
     """
 
-    def test_path_traversal_in_service_name(self, client:'MCPClient') -> 'None':
+    def test_path_traversal_in_service_name(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Path traversal in the service name must be rejected.
         """
 
         params = {'name': '../../zato.server.info', 'arguments': {}}
-        response = client.jsonrpc('tools/call', params=params)
+        response = client.jsonrpc('tools/call', params=params, session_id=session_id)
         data = response.json()
 
         assert 'error' in data
@@ -56,12 +64,12 @@ class TestACLEscape:
 
 # ################################################################################################################################
 
-    def test_null_byte_in_service_name(self, client:'MCPClient') -> 'None':
+    def test_null_byte_in_service_name(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Service name with embedded null bytes must be rejected.
         """
 
         params = {'name': 'demo.echo\x00zato.ping', 'arguments': {}}
-        response = client.jsonrpc('tools/call', params=params)
+        response = client.jsonrpc('tools/call', params=params, session_id=session_id)
         data = response.json()
 
         assert 'error' in data
@@ -71,13 +79,13 @@ class TestACLEscape:
 
 # ################################################################################################################################
 
-    def test_extremely_long_service_name(self, client:'MCPClient') -> 'None':
+    def test_extremely_long_service_name(self, client:'MCPClient', session_id:'str') -> 'None':
         """ An extremely long service name must be rejected without crashing.
         """
 
         long_name = 'a' * _max_service_name_length
         params = {'name': long_name, 'arguments': {}}
-        response = client.jsonrpc('tools/call', params=params)
+        response = client.jsonrpc('tools/call', params=params, session_id=session_id)
         data = response.json()
 
         assert 'error' in data
@@ -87,7 +95,7 @@ class TestACLEscape:
 
 # ################################################################################################################################
 
-    def test_case_variation_of_internal_service(self, client:'MCPClient') -> 'None':
+    def test_case_variation_of_internal_service(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Internal services with case variations must still be rejected.
         """
 
@@ -95,7 +103,7 @@ class TestACLEscape:
 
         for variant in case_variants:
             params = {'name': variant, 'arguments': {}}
-            response = client.jsonrpc('tools/call', params=params)
+            response = client.jsonrpc('tools/call', params=params, session_id=session_id)
             data = response.json()
 
             assert 'error' in data, f'Case variant {variant} was not rejected'
@@ -105,14 +113,14 @@ class TestACLEscape:
 
 # ################################################################################################################################
 
-    def test_unicode_homoglyph_service_name(self, client:'MCPClient') -> 'None':
+    def test_unicode_homoglyph_service_name(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Unicode homoglyphs of internal service names must be rejected.
         """
 
         # Cyrillic 'a' (U+0430) instead of Latin 'a' in 'zato'
         homoglyph_name = 'z\u0430to.ping'
         params = {'name': homoglyph_name, 'arguments': {}}
-        response = client.jsonrpc('tools/call', params=params)
+        response = client.jsonrpc('tools/call', params=params, session_id=session_id)
         data = response.json()
 
         assert 'error' in data

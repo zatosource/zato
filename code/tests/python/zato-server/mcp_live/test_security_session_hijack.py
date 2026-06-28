@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import uuid
-from http.client import NOT_FOUND
+from http.client import BAD_REQUEST
 
 # pytest
 import pytest
@@ -51,7 +51,7 @@ class TestSessionHijacking:
         forged_id = f'mcp{uuid.uuid4().hex}'
         response = client.jsonrpc('ping', session_id=forged_id)
 
-        assert response.status_code == NOT_FOUND
+        assert response.status_code == BAD_REQUEST
 
 # ################################################################################################################################
 
@@ -68,19 +68,19 @@ class TestSessionHijacking:
         # .. trying to use the deleted session should fail.
         response = client.jsonrpc('ping', session_id=session_id)
 
-        assert response.status_code == NOT_FOUND
+        assert response.status_code == BAD_REQUEST
 
 # ################################################################################################################################
 
     def test_session_id_enumeration(self, client:'MCPClient') -> 'None':
-        """ Iterating through sequential UUIDs must all return 404.
+        """ Iterating through sequential UUIDs must all be rejected as bad requests.
         """
 
         for _ in range(_enumeration_attempts):
             guessed_id = f'mcp{uuid.uuid4().hex}'
             response = client.jsonrpc('ping', session_id=guessed_id)
 
-            assert response.status_code == NOT_FOUND
+            assert response.status_code == BAD_REQUEST
 
 # ################################################################################################################################
 
@@ -90,8 +90,8 @@ class TestSessionHijacking:
 
         response = client.jsonrpc('ping', session_id='')
 
-        # .. empty string is not a valid session, server should handle it gracefully.
-        assert response.status_code in (NOT_FOUND, 200)
+        # .. empty string is not a valid session, so the request is a protocol error.
+        assert response.status_code == BAD_REQUEST
 
 # ################################################################################################################################
 # ################################################################################################################################

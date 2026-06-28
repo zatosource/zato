@@ -29,17 +29,25 @@ def client(zato_server:'anydict') -> 'MCPClient':
     return out
 
 # ################################################################################################################################
+
+@pytest.fixture(scope='module')
+def session_id(client:'MCPClient') -> 'str':
+    out = client.initialize().session_id
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestToolsList:
     """ Tests for the MCP tools/list JSON-RPC method.
     """
 
-    def test_tools_list_contains_demo_echo(self, client:'MCPClient') -> 'None':
+    def test_tools_list_contains_demo_echo(self, client:'MCPClient', session_id:'str') -> 'None':
         """ The tool registry must include demo.echo.
         """
 
-        response = client.jsonrpc('tools/list')
+        response = client.jsonrpc('tools/list', session_id=session_id)
         json_body = response.json()
         result = json_body['result']
         tools = result['tools']
@@ -55,11 +63,11 @@ class TestToolsList:
 
 # ################################################################################################################################
 
-    def test_each_tool_has_required_fields(self, client:'MCPClient') -> 'None':
+    def test_each_tool_has_required_fields(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Every tool must have name, description, and inputSchema.
         """
 
-        response = client.jsonrpc('tools/list')
+        response = client.jsonrpc('tools/list', session_id=session_id)
         json_body = response.json()
         result = json_body['result']
         tools = result['tools']
@@ -72,11 +80,11 @@ class TestToolsList:
 
 # ################################################################################################################################
 
-    def test_demo_echo_has_description(self, client:'MCPClient') -> 'None':
+    def test_demo_echo_has_description(self, client:'MCPClient', session_id:'str') -> 'None':
         """ The demo.echo tool must have a non-empty description.
         """
 
-        response = client.jsonrpc('tools/list')
+        response = client.jsonrpc('tools/list', session_id=session_id)
         json_body = response.json()
         result = json_body['result']
         tools = result['tools']
@@ -93,11 +101,11 @@ class TestToolsList:
 
 # ################################################################################################################################
 
-    def test_tools_list_returns_valid_schema(self, client:'MCPClient') -> 'None':
+    def test_tools_list_returns_valid_schema(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Every tool's inputSchema must be a valid JSON Schema object with a type field.
         """
 
-        response = client.jsonrpc('tools/list')
+        response = client.jsonrpc('tools/list', session_id=session_id)
         json_body = response.json()
         result = json_body['result']
         tools = result['tools']
@@ -112,11 +120,11 @@ class TestToolsList:
 
 # ################################################################################################################################
 
-    def test_pagination_with_cursor_zero(self, client:'MCPClient') -> 'None':
+    def test_pagination_with_cursor_zero(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Requesting tools/list with cursor 0 returns a valid page.
         """
 
-        response = client.jsonrpc('tools/list', params={'cursor': '0'})
+        response = client.jsonrpc('tools/list', params={'cursor': '0'}, session_id=session_id)
         json_body = response.json()
         result = json_body['result']
 
@@ -125,11 +133,11 @@ class TestToolsList:
 
 # ################################################################################################################################
 
-    def test_pagination_beyond_end(self, client:'MCPClient') -> 'None':
+    def test_pagination_beyond_end(self, client:'MCPClient', session_id:'str') -> 'None':
         """ A cursor value beyond the total tool count returns an empty page with no nextCursor.
         """
 
-        response = client.jsonrpc('tools/list', params={'cursor': '99999'})
+        response = client.jsonrpc('tools/list', params={'cursor': '99999'}, session_id=session_id)
         json_body = response.json()
         result = json_body['result']
 

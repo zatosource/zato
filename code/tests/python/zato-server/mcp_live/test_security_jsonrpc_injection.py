@@ -44,13 +44,21 @@ def client(zato_server:'any_') -> 'MCPClient':
     return out
 
 # ################################################################################################################################
+
+@pytest.fixture(scope='module')
+def session_id(client:'MCPClient') -> 'str':
+    out = client.initialize().session_id
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestJSONRPCInjection:
     """ Tests for JSON-RPC envelope manipulation and edge cases.
     """
 
-    def test_batch_with_mixed_valid_invalid(self, client:'MCPClient') -> 'None':
+    def test_batch_with_mixed_valid_invalid(self, client:'MCPClient', session_id:'str') -> 'None':
         """ A batch mixing valid and invalid methods must handle each independently.
         """
 
@@ -58,7 +66,7 @@ class TestJSONRPCInjection:
             {'jsonrpc': _jsonrpc_version, 'method': 'ping', 'id': 1},
             {'jsonrpc': _jsonrpc_version, 'method': 'nonexistent.method', 'id': 2},
         ]
-        response = client.jsonrpc_batch(messages)
+        response = client.jsonrpc_batch(messages, session_id=session_id)
         data = response.json()
 
         assert isinstance(data, list)
@@ -79,7 +87,7 @@ class TestJSONRPCInjection:
 
 # ################################################################################################################################
 
-    def test_nested_jsonrpc_in_params_is_opaque(self, client:'MCPClient') -> 'None':
+    def test_nested_jsonrpc_in_params_is_opaque(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Nested JSON-RPC objects inside params must be treated as opaque data.
         """
 
@@ -94,7 +102,7 @@ class TestJSONRPCInjection:
             'arguments': {'nested': nested_payload},
         }
 
-        response = client.jsonrpc('tools/call', params=params)
+        response = client.jsonrpc('tools/call', params=params, session_id=session_id)
         assert response.status_code == OK
 
         data = response.json()
