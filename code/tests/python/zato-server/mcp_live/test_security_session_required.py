@@ -83,4 +83,26 @@ class TestSessionRequired:
         assert 'result' not in data
 
 # ################################################################################################################################
+
+    def test_ping_without_session_id_rejected(self, client:'MCPClient') -> 'None':
+        """ A ping sent with no Mcp-Session-Id is rejected with a protocol error.
+        """
+
+        # Send a ping without ever calling initialize, so no session header is present ..
+        response = client.jsonrpc('ping')
+
+        # .. the session gate must reject it as a protocol error ..
+        assert response.status_code == BAD_REQUEST
+
+        # .. the body must carry the canonical JSON-RPC invalid-request error ..
+        data = response.json()
+        assert 'error' in data
+
+        error = data['error']
+        assert error['code'] == _error_invalid_request
+
+        # .. and no result is returned.
+        assert 'result' not in data
+
+# ################################################################################################################################
 # ################################################################################################################################
