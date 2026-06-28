@@ -48,8 +48,8 @@ def session_id(client:'MCPClient') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestInformationLeakage:
-    """ Tests that error responses and server metadata do not leak internal details.
+class TestErrorResponse:
+    """ Tests that error responses and server metadata do not expose internal details.
     """
 
     def test_error_responses_have_no_stack_traces(self, client:'MCPClient') -> 'None':
@@ -78,7 +78,7 @@ class TestInformationLeakage:
         error = data['error']
         error_message = error['message']
 
-        # .. the error may mention the requested name, but must not leak internal ones.
+        # .. the error may mention the requested name, but must not expose internal ones.
         assert 'zato.server' not in error_message
         assert 'zato.channel' not in error_message
 
@@ -111,7 +111,7 @@ class TestInformationLeakage:
         for tool in tools:
             tool_name = tool['name']
             assert not tool_name.startswith(_zato_internal_prefix), \
-                f'Internal service leaked in tools/list: {tool_name}'
+                f'Internal service found in tools/list: {tool_name}'
 
 # ################################################################################################################################
 # ################################################################################################################################
