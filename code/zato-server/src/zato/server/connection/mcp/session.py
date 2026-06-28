@@ -14,7 +14,7 @@ from uuid import uuid4
 
 # Zato
 if 0:
-    from zato.common.typing_ import stranydict, strdictlist, strlist
+    from zato.common.typing_ import stranydict, strdictlist, strlist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -101,6 +101,19 @@ class MCPSessionManager:
 
         # .. otherwise the session is unknown.
         return False
+
+# ################################################################################################################################
+
+    def get_protocol_version(self, session_id:'str') -> 'strnone':
+        """ Returns the protocol version negotiated for a session, or None if unknown.
+        """
+
+        # Look up the session, returning its negotiated version when present ..
+        if session := self._sessions.get(session_id):
+            return session.protocol_version
+
+        # .. otherwise the session is unknown.
+        return None
 
 # ################################################################################################################################
 

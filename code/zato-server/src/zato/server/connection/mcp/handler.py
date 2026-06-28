@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import dataclasses
-from http.client import NO_CONTENT, NOT_FOUND, OK
+from http.client import BAD_REQUEST, NO_CONTENT, NOT_FOUND, OK
 from logging import getLogger
 
 # Zato
@@ -18,19 +18,14 @@ from zato.common.json_internal import dumps, loads
 # ################################################################################################################################
 
 if 0:
-    from collections.abc import Generator
     from zato.common.typing_ import any_, anydict, strdictlist, stranydict, strnone
     from zato.server.connection.mcp.registry import ToolRegistry
     from zato.server.connection.mcp.session import MCPSessionManager
     from zato.server.service.store import ServiceStore
 
-    Generator = Generator
     MCPSessionManager = MCPSessionManager
     ServiceStore = ServiceStore
     strdictlist = strdictlist
-
-# Type alias for the SSE bytes generator
-sse_bytes_gen = 'Generator[bytes, None, None]'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,7 +37,7 @@ logger = getLogger('zato')
 
 # JSON-RPC 2.0 error codes
 _error_parse       = -32700
-_error_invalid_req = -32600
+_error_invalid_request = -32600
 _error_method_not_found = -32601
 _error_invalid_params   = -32602
 
@@ -52,18 +47,21 @@ _jsonrpc_version = '2.0'
 # MCP protocol version negotiated during initialize
 _mcp_protocol_version = '2025-11-05'
 
+# Protocol versions this server is willing to negotiate during initialize
+_supported_protocol_versions = frozenset({_mcp_protocol_version})
+
+# The initialize method is the only one that may run without an existing session
+_method_initialize = 'initialize'
+
 # Server metadata returned in the initialize response
 _server_name = 'Apache'
 _server_version = '2.4'
 
-# HTTP status code for invalid/unknown session
+# HTTP status code for a genuinely absent session resource on DELETE/GET
 _http_not_found = NOT_FOUND
 
-# SSE data line prefix
-_sse_data_prefix = b'data: '
-
-# SSE line terminator
-_sse_line_end = b'\n\n'
+# HTTP status code for a protocol-level rejection (missing, unknown, or expired session on a request that requires one)
+_http_bad_request = BAD_REQUEST
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,7 +73,6 @@ class MCPResponse:
     body:         'any_'
     status_code:  'int'
     session_id:   'strnone'  = None
-    is_streaming: 'bool'     = False
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -125,8 +122,15 @@ class MCPHandler:
 
 # ################################################################################################################################
 
-    def handle_raw_request(self, raw_data:'bytes', session_id:'strnone'=None, remote_address:'str'='') -> 'MCPResponse':
+    def handle_raw_request(
+        self,
+        raw_data:'bytes',
+        session_id:'strnone' = None,
+        remote_address:'str' = '',
+        protocol_version_header:'strnone' = None,
+        ) -> 'MCPResponse':
         """ Parses raw bytes into JSON and dispatches.
+        Every method other than initialize requires a valid session.
         """
 
         # Our response to produce
@@ -142,13 +146,35 @@ class MCPHandler:
             out.status_code = OK
             return out
 
-        # .. if a session ID was provided, validate it ..
-        if session_id:
-            if not self.session_manager.validate(session_id):
+        # .. resolve whether the caller holds a valid session up front, since the session
+        # gate below and the per-method dispatch both depend on it ..
+        session_is_valid = False
 
-                out.body = _make_error_response(None, _error_invalid_req, 'Invalid or expired session')
-                out.status_code = _http_not_found
+        if session_id:
+            session_is_valid = self.session_manager.validate(session_id)
+
+        # .. a session id that was supplied but does not validate is a protocol error,
+        # so reject it before doing any work (400, never 404, since auth is the HTTP layer's job) ..
+        if session_id:
+            if not session_is_valid:
+
+                out.body = _make_error_response(None, _error_invalid_request, 'Invalid or expired session')
+                out.status_code = _http_bad_request
                 return out
+
+        # .. when the caller holds a valid session and sent an MCP-Protocol-Version header,
+        # it must match the version negotiated for that session, otherwise reject ..
+        if session_is_valid:
+            if protocol_version_header is not None:
+
+                negotiated_version = self.session_manager.get_protocol_version(session_id)
+
+                if protocol_version_header != negotiated_version:
+
+                    message = f'Protocol version mismatch: header `{protocol_version_header}` does not match session `{negotiated_version}`'
+                    out.body = _make_error_response(None, _error_invalid_request, message)
+                    out.status_code = _http_bad_request
+                    return out
 
         # .. clear any pending session ID from a previous request
         # and store the remote address for session creation logging ..
@@ -158,25 +184,25 @@ class MCPHandler:
         # .. handle batch (array) vs single (object) ..
         if isinstance(parsed, list):
 
-            out = self._handle_batch(parsed)
+            out = self._handle_batch(parsed, session_is_valid)
             out.session_id = self._pending_session_id
             return out
 
         if isinstance(parsed, dict):
 
-            out.body = self._dispatch_single(parsed)
+            out.body = self._dispatch_single(parsed, session_is_valid)
             out.status_code = OK
             out.session_id = self._pending_session_id
             return out
 
         # .. anything else is an invalid request.
-        out.body = _make_error_response(None, _error_invalid_req, 'Invalid request')
+        out.body = _make_error_response(None, _error_invalid_request, 'Invalid request')
         out.status_code = OK
         return out
 
 # ################################################################################################################################
 
-    def _handle_batch(self, messages:'list') -> 'MCPResponse':
+    def _handle_batch(self, messages:'list', session_is_valid:'bool') -> 'MCPResponse':
         """ Handles a JSON-RPC batch request (array of messages).
         """
 
@@ -186,7 +212,7 @@ class MCPHandler:
         # Empty array is an invalid request per the JSON-RPC spec ..
         if not messages:
 
-            out.body = _make_error_response(None, _error_invalid_req, 'Invalid request: empty batch')
+            out.body = _make_error_response(None, _error_invalid_request, 'Invalid request: empty batch')
             out.status_code = OK
             return out
 
@@ -200,8 +226,8 @@ class MCPHandler:
                 self._handle_notification(message)
                 continue
 
-            # .. requests produce a response.
-            response = self._dispatch_single(message)
+            # .. requests produce a response, gated on the same session validity as the outer request.
+            response = self._dispatch_single(message, session_is_valid)
             responses.append(response)
 
         # If every message was a notification, return 204 ..
@@ -237,8 +263,9 @@ class MCPHandler:
 
 # ################################################################################################################################
 
-    def _dispatch_single(self, message:'anydict') -> 'stranydict':
+    def _dispatch_single(self, message:'anydict', session_is_valid:'bool') -> 'stranydict':
         """ Routes a single JSON-RPC request to the appropriate handler method.
+        Every method other than initialize requires a valid session.
         """
 
         # Validate basic JSON-RPC structure ..
@@ -247,21 +274,28 @@ class MCPHandler:
 
         if jsonrpc != _jsonrpc_version:
 
-            out = _make_error_response(request_id, _error_invalid_req, 'Invalid request: missing or wrong jsonrpc version')
+            out = _make_error_response(request_id, _error_invalid_request, 'Invalid request: missing or wrong jsonrpc version')
             return out
 
         method = message.get('method')
 
         if not method:
 
-            out = _make_error_response(request_id, _error_invalid_req, 'Invalid request: missing method')
+            out = _make_error_response(request_id, _error_invalid_request, 'Invalid request: missing method')
             return out
+
+        # .. only initialize may run without an established session, every other method is gated ..
+        if method != _method_initialize:
+            if not session_is_valid:
+
+                out = _make_error_response(request_id, _error_invalid_request, 'Session required: call initialize first')
+                return out
 
         # Params is optional per JSON-RPC 2.0 spec - a client may omit it entirely
         params = message.get('params', {})
 
         # .. route to the handler for this method.
-        if method == 'initialize':
+        if method == _method_initialize:
 
             out = self._handle_initialize(request_id, params)
             return out
@@ -294,7 +328,17 @@ class MCPHandler:
         for handle_raw_request to pick up and set as a response header.
         """
 
-        # Create a new session for this client ..
+        # The client states the protocol version it wants, reject anything we do not support ..
+        requested_version = params.get('protocolVersion')
+
+        if requested_version is not None:
+            if requested_version not in _supported_protocol_versions:
+
+                message = f'Unsupported protocol version: `{requested_version}`'
+                out = _make_error_response(request_id, _error_invalid_request, message)
+                return out
+
+        # .. create a new session for this client, recording the version it is bound to ..
         self._pending_session_id = self.session_manager.create(_mcp_protocol_version, self._remote_address)
 
         result:'stranydict' = {
@@ -392,53 +436,6 @@ class MCPHandler:
 
         out = _make_success_response(request_id, result)
         return out
-
-# ################################################################################################################################
-
-    def _handle_tools_call_streaming(self, request_id:'any_', params:'anydict') -> sse_bytes_gen:
-        """ Handles tools/call as an SSE stream, yielding bytes chunks.
-        Each yielded value is a complete SSE data frame containing a JSON-RPC message.
-        The final frame contains the tools/call result.
-        """
-
-        # Extract tool name from the params ..
-        tool_name = params.get('name')
-
-        if not tool_name:
-            error_response = _make_error_response(request_id, _error_invalid_params, 'Missing required parameter: name')
-            yield _sse_data_prefix + dumps(error_response).encode('utf8') + _sse_line_end
-            return
-
-        # .. check if the tool is allowed on this channel ..
-        if not self.tool_registry.is_tool_allowed(tool_name):
-            error_response = _make_error_response(request_id, _error_method_not_found, f'Tool not found: `{tool_name}`')
-            yield _sse_data_prefix + dumps(error_response).encode('utf8') + _sse_line_end
-            return
-
-        # .. extract arguments ..
-        arguments = params.get('arguments', {})
-
-        # .. invoke the service ..
-        try:
-            service_response = self.invoke_func(tool_name, arguments)
-        except Exception as error:
-            logger.debug('MCP: Service `%s` raised an exception during streaming', tool_name, exc_info=True)
-            result:'stranydict' = {
-                'content': [{'type': 'text', 'text': str(error)}],
-                'isError': True,
-            }
-            final_response = _make_success_response(request_id, result)
-            yield _sse_data_prefix + dumps(final_response).encode('utf8') + _sse_line_end
-            return
-
-        # .. wrap the successful response in MCP content format and yield the final SSE frame.
-        response_text = self._serialize_service_response(service_response)
-        result:'stranydict' = { # pyright: ignore[reportRedefinedVariable]
-            'content': [{'type': 'text', 'text': response_text}],
-        }
-        final_response = _make_success_response(request_id, result)
-
-        yield _sse_data_prefix + dumps(final_response).encode('utf8') + _sse_line_end
 
 # ################################################################################################################################
 
