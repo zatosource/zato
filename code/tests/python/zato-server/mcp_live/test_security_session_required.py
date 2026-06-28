@@ -61,4 +61,26 @@ class TestSessionRequired:
         assert 'result' not in data
 
 # ################################################################################################################################
+
+    def test_tools_list_without_session_id_rejected(self, client:'MCPClient') -> 'None':
+        """ A tools/list sent with no Mcp-Session-Id is rejected with a protocol error.
+        """
+
+        # Send a tools/list without ever calling initialize, so no session header is present ..
+        response = client.jsonrpc('tools/list')
+
+        # .. the session gate must reject it as a protocol error, not an auth error ..
+        assert response.status_code == BAD_REQUEST
+
+        # .. the body must carry the canonical JSON-RPC invalid-request error ..
+        data = response.json()
+        assert 'error' in data
+
+        error = data['error']
+        assert error['code'] == _error_invalid_request
+
+        # .. and no tool listing is returned.
+        assert 'result' not in data
+
+# ################################################################################################################################
 # ################################################################################################################################
