@@ -143,21 +143,17 @@ class ToolRegistryBuild(TestCase):
 
 # ################################################################################################################################
 
-    def test_unknown_service_skipped(self) -> 'None':
-        """ Verifies that a service not in the store is silently skipped.
+    def test_unknown_service_raises(self) -> 'None':
+        """ Verifies that a service not in the store causes rebuild to raise.
         """
 
         store = _MockServiceStore()
         store.add_service('crm.get-customer', _ServiceWithDoc)
 
         registry = ToolRegistry(store, ['crm.get-customer', 'nonexistent.service']) # pyright: ignore[reportArgumentType]
-        registry.rebuild()
-        tools = registry.get_tools()
 
-        self.assertEqual(len(tools), 1)
-
-        first_tool = tools[0]
-        self.assertEqual(first_tool['name'], 'crm.get-customer')
+        with self.assertRaises(ValueError):
+            registry.rebuild()
 
 # ################################################################################################################################
 
@@ -259,7 +255,7 @@ class ToolRegistryCache(TestCase):
 # ################################################################################################################################
 
     def test_rebuild_after_service_removed_from_store(self) -> 'None':
-        """ Verifies that rebuild reflects service removal from the store.
+        """ Verifies that rebuild raises when a previously deployed service is removed.
         """
 
         store = _MockServiceStore()
@@ -276,13 +272,8 @@ class ToolRegistryCache(TestCase):
         impl_name = store.name_to_impl_name.pop('billing.create-invoice')
         del store.services[impl_name]
 
-        registry.rebuild()
-        tools_after = registry.get_tools()
-
-        self.assertEqual(len(tools_after), 1)
-
-        first_tool = tools_after[0]
-        self.assertEqual(first_tool['name'], 'crm.get-customer')
+        with self.assertRaises(ValueError):
+            registry.rebuild()
 
 # ################################################################################################################################
 # ################################################################################################################################
