@@ -176,4 +176,24 @@ class TestSessionRequired:
         assert response.status_code == OK
 
 # ################################################################################################################################
+
+    def test_request_without_header_after_initialize_rejected(self, client:'MCPClient') -> 'None':
+        """ After a successful initialize, a follow-up tools/call that omits
+        the Mcp-Session-Id header is rejected.
+        """
+
+        # Establish a valid session first ..
+        _ = client.initialize()
+
+        # .. then send a tools/call without the session header ..
+        response = client.jsonrpc('tools/call', params={'name': _demo_echo_service, 'arguments': {'message': 'hi'}})
+
+        # .. the session gate must reject it ..
+        assert response.status_code == BAD_REQUEST
+
+        # .. with the canonical JSON-RPC invalid-request error.
+        data = response.json()
+        assert data['error']['code'] == _error_invalid_request
+
+# ################################################################################################################################
 # ################################################################################################################################
