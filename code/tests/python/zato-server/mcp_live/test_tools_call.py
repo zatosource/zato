@@ -38,20 +38,28 @@ def client(zato_server:'anydict') -> 'MCPClient':
     return out
 
 # ################################################################################################################################
+
+@pytest.fixture(scope='module')
+def session_id(client:'MCPClient') -> 'str':
+    out = client.initialize().session_id
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestToolsCall:
     """ Tests for the MCP tools/call JSON-RPC method.
     """
 
-    def test_call_echo_with_arguments(self, client:'MCPClient') -> 'None':
+    def test_call_echo_with_arguments(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Calling demo.echo with arguments returns the echoed data.
         """
 
         arguments = {'hello': 'world'}
         params = {'name': _demo_echo_service, 'arguments': arguments}
 
-        response = client.jsonrpc('tools/call', params=params)
+        response = client.jsonrpc('tools/call', params=params, session_id=session_id)
         json_body = response.json()
         result = json_body['result']
 
@@ -69,13 +77,13 @@ class TestToolsCall:
 
 # ################################################################################################################################
 
-    def test_call_echo_with_empty_arguments(self, client:'MCPClient') -> 'None':
+    def test_call_echo_with_empty_arguments(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Calling demo.echo with empty arguments succeeds.
         """
 
         params = {'name': _demo_echo_service, 'arguments': {}}
 
-        response = client.jsonrpc('tools/call', params=params)
+        response = client.jsonrpc('tools/call', params=params, session_id=session_id)
         data = response.json()
 
         # Must be a success response without isError ..
@@ -86,13 +94,13 @@ class TestToolsCall:
 
 # ################################################################################################################################
 
-    def test_call_nonexistent_tool(self, client:'MCPClient') -> 'None':
+    def test_call_nonexistent_tool(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Calling a tool that does not exist returns a method-not-found error.
         """
 
         params = {'name': _nonexistent_service, 'arguments': {}}
 
-        response = client.jsonrpc('tools/call', params=params)
+        response = client.jsonrpc('tools/call', params=params, session_id=session_id)
         data = response.json()
 
         # The response must be an error with the method-not-found code.

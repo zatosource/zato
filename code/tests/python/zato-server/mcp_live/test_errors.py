@@ -32,6 +32,14 @@ def client(zato_server:'anydict') -> 'MCPClient':
     return out
 
 # ################################################################################################################################
+
+@pytest.fixture(scope='module')
+def session_id(client:'MCPClient') -> 'str':
+    out = client.initialize().session_id
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestErrors:
@@ -94,11 +102,11 @@ class TestErrors:
 
 # ################################################################################################################################
 
-    def test_unknown_method_returns_method_not_found(self, client:'MCPClient') -> 'None':
+    def test_unknown_method_returns_method_not_found(self, client:'MCPClient', session_id:'str') -> 'None':
         """ An unknown method returns a method-not-found error.
         """
 
-        response = client.jsonrpc('resources/list')
+        response = client.jsonrpc('resources/list', session_id=session_id)
         data = response.json()
 
         assert 'error' in data
@@ -108,11 +116,11 @@ class TestErrors:
 
 # ################################################################################################################################
 
-    def test_tools_call_without_name_returns_invalid_params(self, client:'MCPClient') -> 'None':
+    def test_tools_call_without_name_returns_invalid_params(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Calling tools/call without the name parameter returns an invalid-params error.
         """
 
-        response = client.jsonrpc('tools/call', params={})
+        response = client.jsonrpc('tools/call', params={}, session_id=session_id)
         data = response.json()
 
         assert 'error' in data
@@ -122,11 +130,11 @@ class TestErrors:
 
 # ################################################################################################################################
 
-    def test_ping_returns_empty_result(self, client:'MCPClient') -> 'None':
+    def test_ping_returns_empty_result(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Ping returns an empty result object.
         """
 
-        response = client.jsonrpc('ping')
+        response = client.jsonrpc('ping', session_id=session_id)
 
         assert response.status_code == OK
 

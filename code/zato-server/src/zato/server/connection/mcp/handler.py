@@ -53,6 +53,9 @@ _supported_protocol_versions = frozenset({_mcp_protocol_version})
 # The initialize method is the only one that may run without an existing session
 _method_initialize = 'initialize'
 
+# Error message returned when a gated method is called without a valid session
+_session_required_message = 'Session required: call initialize first'
+
 # Server metadata returned in the initialize response
 _server_name = 'Apache'
 _server_version = '2.4'
@@ -190,6 +193,19 @@ class MCPHandler:
 
         if isinstance(parsed, dict):
 
+            # .. a single gated method without a valid session is a protocol error and must
+            # carry HTTP 400, unlike a batch where each element reports its own JSON-RPC error ..
+            method = parsed.get('method')
+
+            if method != _method_initialize:
+                if not session_is_valid:
+
+                    request_id = parsed.get('id')
+                    out.body = _make_error_response(request_id, _error_invalid_request, _session_required_message)
+                    out.status_code = _http_bad_request
+                    out.session_id = None
+                    return out
+
             out.body = self._dispatch_single(parsed, session_is_valid)
             out.status_code = OK
             out.session_id = self._pending_session_id
@@ -288,7 +304,7 @@ class MCPHandler:
         if method != _method_initialize:
             if not session_is_valid:
 
-                out = _make_error_response(request_id, _error_invalid_request, 'Session required: call initialize first')
+                out = _make_error_response(request_id, _error_invalid_request, _session_required_message)
                 return out
 
         # Params is optional per JSON-RPC 2.0 spec - a client may omit it entirely

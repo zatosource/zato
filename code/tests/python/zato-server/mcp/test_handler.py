@@ -107,6 +107,17 @@ def _make_handler(registry:'any_'=None, invoke_func:'callable_'=None) -> 'MCPHan
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _make_session(handler:'MCPHandler') -> 'str':
+    """ Creates a valid session on the handler's manager and returns its ID.
+    Every method other than initialize requires one.
+    """
+
+    out = handler.session_manager.create(_mcp_protocol_version)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class HandleInitialize(TestCase):
 
     def test_initialize_returns_capabilities(self) -> 'None':
@@ -155,11 +166,12 @@ class HandleToolsList(TestCase):
         ]
         registry = _MockToolRegistry(tools=tools)
         handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
 
         request = _make_request('tools/list')
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -173,11 +185,12 @@ class HandleToolsList(TestCase):
 
         registry = _MockToolRegistry(tools=[])
         handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
 
         request = _make_request('tools/list')
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -204,11 +217,12 @@ class HandleToolsListPagination(TestCase):
 
         registry = _PaginatingRegistry()
         handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
 
         # First page (no cursor)
         request = _make_request('tools/list')
         raw = dumps(request)
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
 
         body = mcp_response.body
         result = body['result']
@@ -227,10 +241,11 @@ class HandleToolsListPagination(TestCase):
 
         registry = _NoPaginationRegistry()
         handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
 
         request = _make_request('tools/list')
         raw = dumps(request)
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
 
         body = mcp_response.body
         result = body['result']
@@ -250,10 +265,11 @@ class HandleToolsListPagination(TestCase):
 
         registry = _CapturingRegistry()
         handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
 
         request = _make_request('tools/list', params={'cursor': '42'})
         raw = dumps(request)
-        _ = handler.handle_raw_request(raw)
+        _ = handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(captured_cursors, ['42'])
 
@@ -268,12 +284,13 @@ class HandleToolsCall(TestCase):
 
         registry = _MockToolRegistry(allowed_tools={'crm.get-customer'})
         handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
 
         params = {'name': 'crm.get-customer', 'arguments': {'customer_id': '123'}}
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -293,11 +310,12 @@ class HandleToolsCall(TestCase):
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
 
         request = _make_request('tools/call', {})
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -311,12 +329,13 @@ class HandleToolsCall(TestCase):
 
         registry = _MockToolRegistry(allowed_tools=set())
         handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
 
         params = {'name': 'secret.internal-service'}
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -330,12 +349,13 @@ class HandleToolsCall(TestCase):
 
         registry = _MockToolRegistry(allowed_tools={'crm.get-customer'})
         handler = _make_handler(registry=registry, invoke_func=_invoke_raises)
+        session_id = _make_session(handler)
 
         params = {'name': 'crm.get-customer', 'arguments': {}}
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -357,12 +377,13 @@ class HandleToolsCall(TestCase):
 
         registry = _MockToolRegistry(allowed_tools={'test.service'})
         handler = _make_handler(registry=registry, invoke_func=invoke_string)
+        session_id = _make_session(handler)
 
         params = {'name': 'test.service', 'arguments': {}}
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
 
         body = mcp_response.body
         result = body['result']
@@ -380,12 +401,13 @@ class HandleToolsCall(TestCase):
 
         registry = _MockToolRegistry(allowed_tools={'test.service'})
         handler = _make_handler(registry=registry, invoke_func=invoke_dict)
+        session_id = _make_session(handler)
 
         params = {'name': 'test.service', 'arguments': {}}
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
 
         body = mcp_response.body
         result = body['result']
@@ -407,12 +429,13 @@ class HandleToolsCall(TestCase):
 
         registry = _MockToolRegistry(allowed_tools={'test.service'})
         handler = _make_handler(registry=registry, invoke_func=invoke_capture)
+        session_id = _make_session(handler)
 
         params = {'name': 'test.service'}
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        _ = handler.handle_raw_request(raw)
+        _ = handler.handle_raw_request(raw, session_id=session_id)
 
         first_payload = received_payloads[0]
         self.assertEqual(first_payload, {})
@@ -428,11 +451,12 @@ class HandlePing(TestCase):
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
 
         request = _make_request('ping')
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -486,11 +510,12 @@ class HandleInvalidRequest(TestCase):
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
 
         request = {'method': 'ping', 'id': 1}
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -504,11 +529,12 @@ class HandleInvalidRequest(TestCase):
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
 
         request = {'jsonrpc': '1.0', 'method': 'ping', 'id': 1}
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -522,11 +548,12 @@ class HandleInvalidRequest(TestCase):
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
 
         request = {'jsonrpc': '2.0', 'id': 1}
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -540,11 +567,12 @@ class HandleInvalidRequest(TestCase):
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
 
         request = _make_request('nonexistent/method')
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -570,7 +598,8 @@ class HandleBatch(TestCase):
         ]
         raw = dumps(batch)
 
-        mcp_response = handler.handle_raw_request(raw)
+        session_id = _make_session(handler)
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
         self.assertIsInstance(mcp_response.body, list)
@@ -651,7 +680,8 @@ class HandleBatch(TestCase):
         ]
         raw = dumps(batch)
 
-        mcp_response = handler.handle_raw_request(raw)
+        session_id = _make_session(handler)
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
         self.assertEqual(len(mcp_response.body), 3)

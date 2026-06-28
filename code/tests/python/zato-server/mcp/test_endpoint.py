@@ -12,7 +12,7 @@ from unittest import TestCase
 
 # Zato
 from zato.common.json_internal import dumps, loads
-from zato.server.connection.mcp.handler import MCPHandler
+from zato.server.connection.mcp.handler import _mcp_protocol_version, MCPHandler
 from zato.server.generic.api.channel_mcp import ChannelMCPWrapper
 
 # ################################################################################################################################
@@ -163,7 +163,8 @@ class ChannelMCPWrapperInvoke(TestCase):
         raw = dumps(request)
 
         assert wrapper.handler is not None
-        mcp_response = wrapper.handler.handle_raw_request(raw)
+        session_id = wrapper.handler.session_manager.create(_mcp_protocol_version)
+        mcp_response = wrapper.handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -208,7 +209,8 @@ class MCPEndpointServiceDispatch(TestCase):
         raw = dumps(request)
 
         assert wrapper.handler is not None
-        mcp_response = wrapper.handler.handle_raw_request(raw)
+        session_id = wrapper.handler.session_manager.create(_mcp_protocol_version)
+        mcp_response = wrapper.handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 

@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import NO_CONTENT, NOT_FOUND, OK
+from http.client import BAD_REQUEST, NO_CONTENT, NOT_FOUND, OK
 from unittest import TestCase
 
 # Zato
@@ -243,16 +243,16 @@ class HandlerSessionValidation(TestCase):
         request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
         mcp_response = handler.handle_raw_request(request, session_id='bogus-session-id')
 
-        self.assertEqual(mcp_response.status_code, NOT_FOUND)
+        self.assertEqual(mcp_response.status_code, BAD_REQUEST)
 
-    def test_no_session_id_accepted(self) -> 'None':
+    def test_no_session_id_rejected(self) -> 'None':
 
         handler = _make_handler()
 
         request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
         mcp_response = handler.handle_raw_request(request)
 
-        self.assertEqual(mcp_response.status_code, OK)
+        self.assertEqual(mcp_response.status_code, BAD_REQUEST)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -307,7 +307,7 @@ class HandlerDeleteSession(TestCase):
         ping_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 2})
         ping_response = handler.handle_raw_request(ping_request, session_id=session_id)
 
-        self.assertEqual(ping_response.status_code, NOT_FOUND)
+        self.assertEqual(ping_response.status_code, BAD_REQUEST)
 
 # ################################################################################################################################
 # ################################################################################################################################
