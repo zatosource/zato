@@ -12,7 +12,7 @@ from unittest import TestCase
 
 # Zato
 from zato.common.json_internal import dumps
-from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_params, _error_invalid_req, \
+from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_params, _error_invalid_request, \
     _error_method_not_found, _error_parse, _jsonrpc_version, _mcp_protocol_version, _server_name, _server_version
 from zato.server.connection.mcp.session import MCPSessionManager
 
@@ -473,7 +473,7 @@ class HandleParseError(TestCase):
 
         body = mcp_response.body
         error = body['error']
-        self.assertEqual(error['code'], _error_invalid_req)
+        self.assertEqual(error['code'], _error_invalid_request)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -496,7 +496,7 @@ class HandleInvalidRequest(TestCase):
 
         body = mcp_response.body
         error = body['error']
-        self.assertEqual(error['code'], _error_invalid_req)
+        self.assertEqual(error['code'], _error_invalid_request)
 
     def test_wrong_jsonrpc_version(self) -> 'None':
         """ Verifies that a wrong jsonrpc version produces an invalid request error.
@@ -514,7 +514,7 @@ class HandleInvalidRequest(TestCase):
 
         body = mcp_response.body
         error = body['error']
-        self.assertEqual(error['code'], _error_invalid_req)
+        self.assertEqual(error['code'], _error_invalid_request)
 
     def test_missing_method(self) -> 'None':
         """ Verifies that a missing method field produces an invalid request error.
@@ -532,7 +532,7 @@ class HandleInvalidRequest(TestCase):
 
         body = mcp_response.body
         error = body['error']
-        self.assertEqual(error['code'], _error_invalid_req)
+        self.assertEqual(error['code'], _error_invalid_request)
 
     def test_unknown_method(self) -> 'None':
         """ Verifies that an unknown method returns method not found.
@@ -635,7 +635,7 @@ class HandleBatch(TestCase):
 
         body = mcp_response.body
         error = body['error']
-        self.assertEqual(error['code'], _error_invalid_req)
+        self.assertEqual(error['code'], _error_invalid_request)
 
     def test_batch_individual_errors_do_not_affect_others(self) -> 'None':
         """ Verifies that individual errors in a batch do not affect other requests.

@@ -16,7 +16,7 @@ from hypothesis import strategies as st
 
 # Zato
 from zato.common.json_internal import dumps
-from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_req, _error_method_not_found, \
+from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_request, _error_method_not_found, \
     _error_parse, _jsonrpc_version
 from zato.server.connection.mcp.registry import ToolRegistry, _internal_prefix
 from zato.server.connection.mcp.session import MCPSessionManager
@@ -141,7 +141,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
             body = response.body
             error = body['error']
             error_code = error['code']
-            self.assertIn(error_code, (_error_parse, _error_invalid_req))
+            self.assertIn(error_code, (_error_parse, _error_invalid_request))
 
 # ################################################################################################################################
 
@@ -228,7 +228,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
 
         body = response.body
         error = body['error']
-        self.assertEqual(error['code'], _error_invalid_req)
+        self.assertEqual(error['code'], _error_invalid_request)
 
 # ################################################################################################################################
 # ################################################################################################################################
