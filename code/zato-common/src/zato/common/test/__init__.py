@@ -205,6 +205,25 @@ def get_free_tcp_port(start=40000, stop=40500):
 
 # ################################################################################################################################
 
+def kill_server_process(process:'any_', kill_timeout:'int'=5, server_directory:'str'='') -> 'None':
+    """ Kills a Zato server subprocess and its entire process tree.
+    The `zato start --fg` wrapper spawns a shell script which spawns the actual
+    server binary, so we must kill by matching the server directory in the command line.
+    """
+
+    # stdlib
+    import subprocess as _subprocess
+
+    if process:
+        if process.poll() is None:
+            process.kill()
+            _ = process.wait(timeout=kill_timeout)
+
+    if server_directory:
+        _ = _subprocess.run(['pkill', '-9', '-f', server_directory], capture_output=True)
+
+# ################################################################################################################################
+
 def enrich_with_static_config(object_):
     """ Adds to an object (service instance or class) all attributes that are added by service store.
     Useful during tests since there is no service store around to do it.

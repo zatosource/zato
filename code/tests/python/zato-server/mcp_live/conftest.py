@@ -28,7 +28,7 @@ sys.path.insert(0, _this_directory)
 import pytest  # noqa: E402
 
 # Zato
-from zato.common.test import rand_string  # noqa: E402
+from zato.common.test import kill_server_process, rand_string  # noqa: E402
 from zato.common.util.config import get_config_object, update_config_file  # noqa: E402
 
 # ################################################################################################################################
@@ -133,8 +133,8 @@ def _kill_server() -> 'None':
     _kill_process(_listener_process)
     _listener_process = None
 
-    # .. then stop the server.
-    _kill_process(_server_process)
+    # .. then stop the server and its child processes.
+    kill_server_process(_server_process, _process_kill_timeout, server_directory=_temp_directory or '')
     _server_process = None
 
 # ################################################################################################################################
@@ -326,12 +326,12 @@ def pytest_addoption(parser:'any_') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope='session')
 def zato_server(request:'any_') -> 'any_':
-    """ Function-scoped fixture that spins up a Zato quickstart environment,
+    """ Session-scoped fixture that spins up a Zato quickstart environment,
     starts the server in foreground mode, waits for it to become ready,
     and yields connection details for the MCP tests.
-    Each test gets its own dedicated server for full isolation.
+    Shared across all tests that do not require session-state isolation.
     """
 
     global _server_process, _temp_directory
@@ -518,6 +518,9 @@ def zato_server(request:'any_') -> 'any_':
             shutil.rmtree(_temp_directory, ignore_errors=True)
 
     _temp_directory = None
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 # ################################################################################################################################
 # ################################################################################################################################
