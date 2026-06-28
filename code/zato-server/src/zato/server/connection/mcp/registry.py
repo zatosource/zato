@@ -75,14 +75,12 @@ class ToolRegistry:
             impl_name = self.service_store.name_to_impl_name.get(service_name)
 
             if impl_name is None:
-                logger.warning('MCP allow list contains service `%s` which is not deployed, skipping', service_name)
-                continue
+                raise ValueError(f'MCP allow list references service `{service_name}` which is not deployed')
 
             service_info = self.service_store.services.get(impl_name)
 
             if service_info is None:
-                logger.warning('No service info for impl `%s` (service `%s`), skipping', impl_name, service_name)
-                continue
+                raise ValueError(f'No service info for impl `{impl_name}` (service `{service_name}`)')
 
             # .. extract the service class and its metadata ..
             service_class = service_info['service_class']

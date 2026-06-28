@@ -303,4 +303,30 @@ class TestSessionRequired:
         assert error['code'] == _error_invalid_request
 
 # ################################################################################################################################
+
+    def test_delete_with_mismatched_protocol_version_rejected(self, client:'MCPClient') -> 'None':
+        """ A DELETE request whose MCP-Protocol-Version header disagrees with the session's
+        negotiated version is rejected, consistent with the POST path.
+        """
+
+        # Establish a valid session ..
+        initialize_result = client.initialize()
+        session_id = initialize_result.session_id
+
+        # .. send a DELETE with a wrong MCP-Protocol-Version header ..
+        response = client.delete_session(
+            session_id=session_id,
+            extra_headers={'MCP-Protocol-Version': _unsupported_protocol_version},
+        )
+
+        # .. the server must reject it ..
+        assert response.status_code == BAD_REQUEST
+
+        # .. with the canonical JSON-RPC invalid-request error.
+        data = response.json()
+
+        error = data['error']
+        assert error['code'] == _error_invalid_request
+
+# ################################################################################################################################
 # ################################################################################################################################

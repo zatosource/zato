@@ -134,11 +134,14 @@ class MCPClient:
 
 # ################################################################################################################################
 
-    def delete_session(self, session_id:'strnone' = None) -> 'requests.Response':
+    def delete_session(self, session_id:'strnone' = None, extra_headers:'anydictnone' = None) -> 'requests.Response':
         """ Sends a DELETE request to terminate an MCP session.
         """
 
         headers = self._build_headers(session_id)
+
+        if extra_headers:
+            headers.update(extra_headers)
 
         out = requests.delete(self.mcp_url, headers=headers, auth=self.auth, timeout=_request_timeout)
 

@@ -537,4 +537,25 @@ class MCPHandler:
         return out
 
 # ################################################################################################################################
+
+    def _make_session_rejected_response(self) -> 'stranydict':
+        """ Builds the JSON-RPC error body for an invalid or expired session.
+        Used by the endpoint layer for pre-dispatch validation on DELETE.
+        """
+
+        out = _make_error_response(None, _error_invalid_request, _message_invalid_session)
+        return out
+
+# ################################################################################################################################
+
+    def _make_version_mismatch_response(self, header_version:'str', negotiated_version:'strnone') -> 'stranydict':
+        """ Builds the JSON-RPC error body for a protocol version mismatch.
+        Used by the endpoint layer for pre-dispatch validation on DELETE.
+        """
+
+        message = f'Protocol version mismatch: header `{header_version}` does not match session `{negotiated_version}`'
+        out = _make_error_response(None, _error_invalid_request, message)
+        return out
+
+# ################################################################################################################################
 # ################################################################################################################################
