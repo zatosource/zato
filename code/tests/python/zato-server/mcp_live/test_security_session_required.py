@@ -25,6 +25,15 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Protocol version that the server supports
+_supported_protocol_version = '2025-11-05'
+
+# Protocol version that the server does not support
+_unsupported_protocol_version = '1999-01-01'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @pytest.fixture(scope='function')
 def client(zato_server:'any_') -> 'MCPClient':
     out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
@@ -52,6 +61,8 @@ class TestSessionRequired:
 
         # .. the body must carry the canonical JSON-RPC invalid-request error ..
         data = response.json()
+
+        # .. there must be an error field ..
         assert 'error' in data
 
         error = data['error']
@@ -74,6 +85,8 @@ class TestSessionRequired:
 
         # .. the body must carry the canonical JSON-RPC invalid-request error ..
         data = response.json()
+
+        # .. there must be an error field ..
         assert 'error' in data
 
         error = data['error']
@@ -96,6 +109,8 @@ class TestSessionRequired:
 
         # .. the body must carry the canonical JSON-RPC invalid-request error ..
         data = response.json()
+
+        # .. there must be an error field ..
         assert 'error' in data
 
         error = data['error']
@@ -116,9 +131,11 @@ class TestSessionRequired:
         # .. it must succeed ..
         assert response.status_code == OK
 
-        # .. the response must contain a non-empty session id header.
-        session_id = response.headers.get('Mcp-Session-Id', '')
-        assert len(session_id) > 0
+        # .. and the response must contain a non-empty session id header.
+        session_id = response.headers['Mcp-Session-Id']
+
+        session_id_length = len(session_id)
+        assert session_id_length > 0
 
 # ################################################################################################################################
 
@@ -136,6 +153,8 @@ class TestSessionRequired:
 
         # .. with the canonical JSON-RPC invalid-request error ..
         data = response.json()
+
+        # .. there must be an error field ..
         assert 'error' in data
 
         error = data['error']
@@ -148,7 +167,7 @@ class TestSessionRequired:
 
     def test_new_session_after_delete(self, client:'MCPClient') -> 'None':
         """ After deleting a session, using the dead id returns 400,
-        but a fresh initialize with the same credentials issues a new working session.
+        but a fresh initialize issues a new working session.
         """
 
         # Create a session and then delete it ..
@@ -158,17 +177,23 @@ class TestSessionRequired:
         _ = client.delete_session(dead_session_id)
 
         # .. using the dead session id must fail ..
-        response = client.jsonrpc('tools/call', params={'name': _demo_echo_service, 'arguments': {'message': 'hi'}}, session_id=dead_session_id)
+        params = {'name': _demo_echo_service, 'arguments': {'message': 'hi'}}
+        response = client.jsonrpc('tools/call', params=params, session_id=dead_session_id)
+
         assert response.status_code == BAD_REQUEST
 
+        # .. and the error must be the canonical invalid-request ..
         data = response.json()
-        assert data['error']['code'] == _error_invalid_request
+
+        error = data['error']
+        assert error['code'] == _error_invalid_request
 
         # .. but a fresh initialize must succeed and produce a new working session ..
         new_result = client.initialize()
         new_session_id = new_result.session_id
 
-        assert len(new_session_id) > 0
+        new_session_id_length = len(new_session_id)
+        assert new_session_id_length > 0
         assert new_session_id != dead_session_id
 
         # .. and the new session must work for subsequent requests.
@@ -186,14 +211,17 @@ class TestSessionRequired:
         _ = client.initialize()
 
         # .. then send a tools/call without the session header ..
-        response = client.jsonrpc('tools/call', params={'name': _demo_echo_service, 'arguments': {'message': 'hi'}})
+        params = {'name': _demo_echo_service, 'arguments': {'message': 'hi'}}
+        response = client.jsonrpc('tools/call', params=params)
 
         # .. the session gate must reject it ..
         assert response.status_code == BAD_REQUEST
 
         # .. with the canonical JSON-RPC invalid-request error.
         data = response.json()
-        assert data['error']['code'] == _error_invalid_request
+
+        error = data['error']
+        assert error['code'] == _error_invalid_request
 
 # ################################################################################################################################
 
@@ -202,15 +230,24 @@ class TestSessionRequired:
         """
 
         # Send an initialize with a version the server does not support ..
-        params = {'protocolVersion': '1999-01-01', 'capabilities': {}, 'clientInfo': {'name': 'test', 'version': '1.0'}}
+        params = {
+            'protocolVersion': _unsupported_protocol_version,
+            'capabilities': {},
+            'clientInfo': {'name': 'test', 'version': '1.0'},
+        }
         response = client.jsonrpc('initialize', params=params)
 
         # .. it must fail with a JSON-RPC error ..
         assert response.status_code == OK
 
+        # .. the body must carry the canonical invalid-request error.
         data = response.json()
+
+        # .. there must be an error field ..
         assert 'error' in data
-        assert data['error']['code'] == _error_invalid_request
+
+        error = data['error']
+        assert error['code'] == _error_invalid_request
 
 # ################################################################################################################################
 
@@ -219,17 +256,24 @@ class TestSessionRequired:
         """
 
         # Send an initialize with the correct version ..
-        params = {'protocolVersion': '2025-11-05', 'capabilities': {}, 'clientInfo': {'name': 'test', 'version': '1.0'}}
+        params = {
+            'protocolVersion': _supported_protocol_version,
+            'capabilities': {},
+            'clientInfo': {'name': 'test', 'version': '1.0'},
+        }
         response = client.jsonrpc('initialize', params=params)
 
         # .. it must succeed ..
         assert response.status_code == OK
 
+        # .. and the result must echo back the negotiated version.
         data = response.json()
+
+        # .. there must be a result field ..
         assert 'result' in data
 
-        # .. and echo back the negotiated version.
-        assert data['result']['protocolVersion'] == '2025-11-05'
+        result = data['result']
+        assert result['protocolVersion'] == _supported_protocol_version
 
 # ################################################################################################################################
 
@@ -246,7 +290,7 @@ class TestSessionRequired:
         response = client.jsonrpc(
             'tools/list',
             session_id=session_id,
-            extra_headers={'MCP-Protocol-Version': '1999-01-01'},
+            extra_headers={'MCP-Protocol-Version': _unsupported_protocol_version},
         )
 
         # .. the server must reject it ..
@@ -254,7 +298,9 @@ class TestSessionRequired:
 
         # .. with the canonical JSON-RPC invalid-request error.
         data = response.json()
-        assert data['error']['code'] == _error_invalid_request
+
+        error = data['error']
+        assert error['code'] == _error_invalid_request
 
 # ################################################################################################################################
 # ################################################################################################################################

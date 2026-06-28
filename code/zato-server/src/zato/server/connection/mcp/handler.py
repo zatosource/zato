@@ -36,8 +36,8 @@ logger = getLogger('zato')
 # ################################################################################################################################
 
 # JSON-RPC 2.0 error codes
-_error_parse       = -32700
-_error_invalid_request = -32600
+_error_parse            = -32700
+_error_invalid_request  = -32600
 _error_method_not_found = -32601
 _error_invalid_params   = -32602
 
@@ -56,8 +56,29 @@ _method_initialize = 'initialize'
 # Error message returned when a gated method is called without a valid session
 _session_required_message = 'Session required: call initialize first'
 
+# Error message returned when a supplied session id is invalid or expired
+_message_invalid_session = 'Invalid or expired session'
+
+# Error message returned when parse fails
+_message_parse_error = 'Parse error'
+
+# Error message returned when the top-level request is structurally invalid
+_message_invalid_request = 'Invalid request'
+
+# Error message returned when the batch array is empty
+_message_empty_batch = 'Invalid request: empty batch'
+
+# Error message returned when the jsonrpc version field is missing or wrong
+_message_missing_jsonrpc_version = 'Invalid request: missing or wrong jsonrpc version'
+
+# Error message returned when the method field is missing
+_message_missing_method = 'Invalid request: missing method'
+
+# Error message returned when the required tool name parameter is absent
+_message_missing_tool_name = 'Missing required parameter: name'
+
 # Server metadata returned in the initialize response
-_server_name = 'Apache'
+_server_name    = 'Apache'
 _server_version = '2.4'
 
 # HTTP status code for a genuinely absent session resource on DELETE/GET
@@ -117,6 +138,7 @@ class MCPHandler:
     """ Handles MCP JSON-RPC 2.0 dispatch for a single MCP channel.
     Routes initialize, tools/list, tools/call, and ping methods.
     """
+
     def __init__(self, tool_registry:'ToolRegistry', invoke_func:'any_', session_manager:'MCPSessionManager') -> 'None':
         self.tool_registry = tool_registry
         self.invoke_func = invoke_func
@@ -145,7 +167,7 @@ class MCPHandler:
         except Exception:
             logger.debug('MCP: Failed to parse JSON body', exc_info=True)
 
-            out.body = _make_error_response(None, _error_parse, 'Parse error')
+            out.body = _make_error_response(None, _error_parse, _message_parse_error)
             out.status_code = OK
             return out
 
@@ -161,7 +183,7 @@ class MCPHandler:
         if session_id:
             if not session_is_valid:
 
-                out.body = _make_error_response(None, _error_invalid_request, 'Invalid or expired session')
+                out.body = _make_error_response(None, _error_invalid_request, _message_invalid_session)
                 out.status_code = _http_bad_request
                 return out
 
@@ -212,7 +234,7 @@ class MCPHandler:
             return out
 
         # .. anything else is an invalid request.
-        out.body = _make_error_response(None, _error_invalid_request, 'Invalid request')
+        out.body = _make_error_response(None, _error_invalid_request, _message_invalid_request)
         out.status_code = OK
         return out
 
@@ -228,7 +250,7 @@ class MCPHandler:
         # Empty array is an invalid request per the JSON-RPC spec ..
         if not messages:
 
-            out.body = _make_error_response(None, _error_invalid_request, 'Invalid request: empty batch')
+            out.body = _make_error_response(None, _error_invalid_request, _message_empty_batch)
             out.status_code = OK
             return out
 
@@ -290,14 +312,14 @@ class MCPHandler:
 
         if jsonrpc != _jsonrpc_version:
 
-            out = _make_error_response(request_id, _error_invalid_request, 'Invalid request: missing or wrong jsonrpc version')
+            out = _make_error_response(request_id, _error_invalid_request, _message_missing_jsonrpc_version)
             return out
 
         method = message.get('method')
 
         if not method:
 
-            out = _make_error_response(request_id, _error_invalid_request, 'Invalid request: missing method')
+            out = _make_error_response(request_id, _error_invalid_request, _message_missing_method)
             return out
 
         # .. only initialize may run without an established session, every other method is gated ..
@@ -332,7 +354,8 @@ class MCPHandler:
             return out
 
         # .. anything else is an unknown method.
-        out = _make_error_response(request_id, _error_method_not_found, f'Method not found: `{method}`')
+        message = f'Method not found: `{method}`'
+        out = _make_error_response(request_id, _error_method_not_found, message)
         return out
 
 # ################################################################################################################################
@@ -407,13 +430,14 @@ class MCPHandler:
 
         if not tool_name:
 
-            out = _make_error_response(request_id, _error_invalid_params, 'Missing required parameter: name')
+            out = _make_error_response(request_id, _error_invalid_params, _message_missing_tool_name)
             return out
 
         # .. check if the tool is allowed on this channel ..
         if not self.tool_registry.is_tool_allowed(tool_name):
 
-            out = _make_error_response(request_id, _error_method_not_found, f'Tool not found: `{tool_name}`')
+            message = f'Tool not found: `{tool_name}`'
+            out = _make_error_response(request_id, _error_method_not_found, message)
             return out
 
         # .. extract arguments - optional per the MCP spec, defaults to empty dict ..
@@ -422,26 +446,26 @@ class MCPHandler:
         # .. invoke the service ..
         try:
             service_response = self.invoke_func(tool_name, arguments)
-        except Exception as error:
+        except Exception as e:
             logger.debug('MCP: Service `%s` raised an exception', tool_name, exc_info=True)
 
-            result:'stranydict' = {
+            error_result:'stranydict' = {
                 'content': [
                     {
                         'type': 'text',
-                        'text': str(error),
+                        'text': str(e),
                     },
                 ],
                 'isError': True,
             }
 
-            out = _make_success_response(request_id, result)
+            out = _make_success_response(request_id, error_result)
             return out
 
         # .. wrap the successful response in MCP content format.
         response_text = self._serialize_service_response(service_response)
 
-        result:'stranydict' = { # pyright: ignore[reportRedefinedVariable]
+        success_result:'stranydict' = {
             'content': [
                 {
                     'type': 'text',
@@ -450,7 +474,7 @@ class MCPHandler:
             ],
         }
 
-        out = _make_success_response(request_id, result)
+        out = _make_success_response(request_id, success_result)
         return out
 
 # ################################################################################################################################

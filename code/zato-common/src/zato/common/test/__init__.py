@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import subprocess
 from datetime import datetime
 from logging import getLogger
 from time import sleep
@@ -205,14 +206,11 @@ def get_free_tcp_port(start=40000, stop=40500):
 
 # ################################################################################################################################
 
-def kill_server_process(process:'any_', kill_timeout:'int'=5, server_directory:'str'='') -> 'None':
+def kill_server_process(process:'any_', kill_timeout:'int' = 5, server_directory:'str' = '') -> 'None':
     """ Kills a Zato server subprocess and its entire process tree.
     The `zato start --fg` wrapper spawns a shell script which spawns the actual
     server binary, so we must kill by matching the server directory in the command line.
     """
-
-    # stdlib
-    import subprocess as _subprocess
 
     if process:
         if process.poll() is None:
@@ -220,7 +218,7 @@ def kill_server_process(process:'any_', kill_timeout:'int'=5, server_directory:'
             _ = process.wait(timeout=kill_timeout)
 
     if server_directory:
-        _ = _subprocess.run(['pkill', '-9', '-f', server_directory], capture_output=True)
+        _ = subprocess.run(['pkill', '-9', '-f', server_directory], capture_output=True)
 
 # ################################################################################################################################
 
