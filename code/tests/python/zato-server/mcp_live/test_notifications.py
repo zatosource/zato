@@ -32,7 +32,7 @@ _notification_poll_interval = 1
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='function')
 def client(zato_server:'anydict') -> 'MCPClient':
     out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
 

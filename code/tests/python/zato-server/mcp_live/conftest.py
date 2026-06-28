@@ -326,11 +326,12 @@ def pytest_addoption(parser:'any_') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='function')
 def zato_server(request:'any_') -> 'any_':
-    """ Session-scoped fixture that spins up a Zato quickstart environment,
+    """ Function-scoped fixture that spins up a Zato quickstart environment,
     starts the server in foreground mode, waits for it to become ready,
     and yields connection details for the MCP tests.
+    Each test gets its own dedicated server for full isolation.
     """
 
     global _server_process, _temp_directory
