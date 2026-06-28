@@ -75,7 +75,7 @@ class ToolRegistry:
             impl_name = self.service_store.name_to_impl_name.get(service_name)
 
             if impl_name is None:
-                logger.info('MCP allow list contains service `%s` not yet deployed, will retry on hot-deploy', service_name)
+                logger.warning('MCP allow list contains service `%s` which is not deployed, skipping', service_name)
                 continue
 
             service_info = self.service_store.services.get(impl_name)

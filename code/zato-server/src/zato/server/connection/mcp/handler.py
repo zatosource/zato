@@ -383,9 +383,7 @@ class MCPHandler:
         result:'stranydict' = {
             'protocolVersion': _mcp_protocol_version,
             'capabilities': {
-                'tools': {
-                    'listChanged': True,
-                },
+                'tools': {},
             },
             'serverInfo': {
                 'name': _server_name,
@@ -506,64 +504,6 @@ class MCPHandler:
         """
 
         out = _make_success_response(request_id, {})
-        return out
-
-# ################################################################################################################################
-
-    def notify_tools_changed(self) -> 'int':
-        """ Rebuilds the tool registry and queues a notifications/tools/list_changed
-        notification to all active sessions.
-        Returns the number of sessions notified.
-        """
-
-        # Rebuild the registry so new or removed services are reflected ..
-        self.tool_registry.rebuild()
-
-        # .. build the notification message ..
-        notification:'stranydict' = {
-            'jsonrpc': _jsonrpc_version,
-            'method': 'notifications/tools/list_changed',
-        }
-
-        # .. and queue it for every active session.
-        out = self.session_manager.queue_notification_for_all(notification)
-        return out
-
-# ################################################################################################################################
-
-    def get_pending_notifications(self, session_id:'strnone') -> 'MCPResponse':
-        """ Returns pending notifications for a session as a JSON-RPC batch.
-        Used by GET requests for server-to-client notifications.
-        """
-
-        # Our response to produce
-        out = MCPResponse()
-        out.session_id = None
-
-        # A session ID is required for notification polling ..
-        if not session_id:
-            out.body = None
-            out.status_code = _http_not_found
-            return out
-
-        # .. the session must exist and be valid ..
-        if not self.session_manager.validate(session_id):
-            out.body = None
-            out.status_code = _http_not_found
-            return out
-
-        # .. drain all pending notifications for this session ..
-        notifications = self.session_manager.drain_notifications(session_id)
-
-        # .. if there are none, return 204 No Content ..
-        if not notifications:
-            out.body = None
-            out.status_code = NO_CONTENT
-            return out
-
-        # .. otherwise return them as a JSON-RPC batch.
-        out.body = notifications
-        out.status_code = OK
         return out
 
 # ################################################################################################################################
