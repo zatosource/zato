@@ -372,7 +372,7 @@ class AllowlistEnforcement(TestCase):
         """ A non-internal service in the allow list must be accepted.
         """
 
-        store = _MockServiceStore({})
+        store = _MockServiceStore({service_name: _MockServiceClass(service_name)})
         registry = ToolRegistry(store, [service_name]) # pyright: ignore[reportArgumentType]
         registry.rebuild()
 
