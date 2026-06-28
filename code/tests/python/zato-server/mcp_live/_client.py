@@ -77,6 +77,7 @@ class MCPClient:
         params:'anydictnone' = None,
         request_id:'any_' = 1,
         session_id:'strnone' = None,
+        extra_headers:'anydictnone' = None,
         ) -> 'requests.Response':
         """ Sends a single JSON-RPC request and returns the raw response.
         """
@@ -93,6 +94,9 @@ class MCPClient:
 
         # .. send the request and return the response.
         headers = self._build_headers(session_id)
+
+        if extra_headers:
+            headers.update(extra_headers)
 
         request_data = dumps(body)
         out = requests.post(self.mcp_url, data=request_data, headers=headers, auth=self.auth, timeout=_request_timeout)
