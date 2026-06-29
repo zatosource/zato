@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from collections.abc import Iterator
 from json import loads
 
 # pytest
@@ -40,10 +41,12 @@ def client(zato_server:'anydict') -> 'MCPClient':
 # ################################################################################################################################
 
 @pytest.fixture(scope='function')
-def session_id(client:'MCPClient') -> 'str':
+def session_id(client:'MCPClient') -> 'Iterator[str]':
     out = client.initialize().session_id
 
-    return out
+    yield out
+
+    _ = client.delete_session(session_id=out)
 
 # ################################################################################################################################
 # ################################################################################################################################

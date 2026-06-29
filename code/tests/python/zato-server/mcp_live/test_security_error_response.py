@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from collections.abc import Iterator
+
 # pytest
 import pytest
 
@@ -43,10 +46,12 @@ def client(zato_server:'any_') -> 'MCPClient':
 # ################################################################################################################################
 
 @pytest.fixture(scope='function')
-def session_id(client:'MCPClient') -> 'str':
+def session_id(client:'MCPClient') -> 'Iterator[str]':
     out = client.initialize().session_id
 
-    return out
+    yield out
+
+    _ = client.delete_session(session_id=out)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,6 +104,10 @@ class TestErrorResponse:
 
         assert server_info['name'] == _expected_server_name
         assert server_info['version'] == _expected_server_version
+
+        # .. clean up the session.
+        session_id = response.headers['Mcp-Session-Id']
+        _ = client.delete_session(session_id=session_id)
 
 # ################################################################################################################################
 

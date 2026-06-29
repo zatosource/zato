@@ -86,6 +86,9 @@ class TestSSESecurity:
         # .. the response should be successful regardless of content type.
         assert response.status_code == OK
 
+        # .. clean up the session.
+        _ = client.delete_session(session_id=session_id)
+
 # ################################################################################################################################
 
     def test_multiple_sse_streams_from_same_session(self, client:'MCPClient') -> 'None':
@@ -114,6 +117,9 @@ class TestSSESecurity:
         # .. both should succeed independently.
         assert response_first.status_code == OK
         assert response_second.status_code == OK
+
+        # .. clean up the session.
+        _ = client.delete_session(session_id=session_id)
 
 # ################################################################################################################################
 # ################################################################################################################################
