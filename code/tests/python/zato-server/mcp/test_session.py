@@ -174,6 +174,41 @@ class SessionManagerCleanup(TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class SessionManagerReaping(TestCase):
+
+    def test_idle_session_rejected_by_validate_after_ttl(self) -> 'None':
+        """ With a 0-second TTL, validate rejects an existing session without waiting for the sweep.
+        """
+
+        manager = MCPSessionManager(ttl=0, max_lifetime=9999)
+        session_id = manager.create(_mcp_protocol_version)
+
+        # The session was just created but the TTL is 0, so any elapsed time makes it idle-expired ..
+        is_valid = manager.validate(session_id)
+
+        self.assertFalse(is_valid)
+
+# ################################################################################################################################
+
+    def test_cleanup_expired_removes_idle_sessions(self) -> 'None':
+        """ Sessions older than the idle TTL are removed by cleanup_expired.
+        """
+
+        manager = MCPSessionManager(ttl=0, max_lifetime=9999)
+        _ = manager.create(_mcp_protocol_version)
+        _ = manager.create(_mcp_protocol_version)
+
+        self.assertEqual(manager.session_count, 2)
+
+        # With ttl=0 both sessions are idle-expired immediately ..
+        removed = manager.cleanup_expired()
+
+        self.assertEqual(removed, 2)
+        self.assertEqual(manager.session_count, 0)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class HandlerInitializeCreatesSession(TestCase):
 
     def test_initialize_returns_session_id(self) -> 'None':
