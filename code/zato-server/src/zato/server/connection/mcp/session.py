@@ -172,7 +172,9 @@ class MCPSessionManager:
             idle_time = now - session.last_seen_at
             lifetime = now - session.created_at
 
-            if idle_time > self.ttl or lifetime > self.max_lifetime:
+            if idle_time > self.ttl:
+                expired.append(session_id)
+            elif lifetime > self.max_lifetime:
                 expired.append(session_id)
 
         # .. remove each expired session from the store ..
@@ -219,12 +221,15 @@ class MCPSessionReaper:
         """ Main loop - sleeps between sweeps and calls cleanup_expired on every session manager.
         """
 
+        # Sleep for the configured interval between sweeps ..
         while self.keep_running:
             sleep(self.interval)
 
+            # .. check again after waking up in case stop() was called during sleep ..
             if not self.keep_running:
                 break
 
+            # .. and run the sweep.
             self._sweep()
 
 # ################################################################################################################################
@@ -233,12 +238,17 @@ class MCPSessionReaper:
         """ Iterates over all MCP channel wrappers and cleans up expired sessions.
         """
 
+        # Walk each channel wrapper and run cleanup on its session manager ..
         for wrapper in self.channel_mcp_dict.values():
-            session_manager = wrapper.handler.session_manager
+
+            handler = wrapper.handler
+            session_manager = handler.session_manager
             removed = session_manager.cleanup_expired()
 
+            # .. log how many were removed, if any.
             if removed:
-                logger.info('MCP: Reaper removed %d expired session(s) from channel `%s`', removed, wrapper.config.name)
+                channel_name = wrapper.config.name
+                logger.info('MCP: Reaper removed %d expired session(s) from channel `%s`', removed, channel_name)
 
 # ################################################################################################################################
 

@@ -58,6 +58,7 @@ from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.config_manager import ConfigManager
 from zato.server.config import ConfigStore
+from zato.server.connection.mcp.session import MCPSessionReaper
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import ODBConfigSource
 from zato.server.groups.base import GroupsManager
@@ -971,7 +972,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         """
         from zato.common.ext.bunch import bunchify
         from zato.common.api import GENERIC as COMMON_GENERIC
-        from zato.server.connection.mcp.session import MCPSessionReaper
 
         # Create the MCP channel wrappers that were skipped during init_generic_connections ..
         for config_dict in self.config_manager.config_store.generic_connection.values():
