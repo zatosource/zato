@@ -13,7 +13,7 @@ from unittest import TestCase
 # Zato
 from zato.common.json_internal import dumps
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_request, _mcp_protocol_version
-from zato.server.connection.mcp.session import MCPSessionManager
+from zato.server.connection.mcp.session import MCPSessionManager, MCPSessionReaper
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,6 +38,34 @@ class _MockToolRegistry:
 
     def rebuild(self) -> 'None':
         pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _MockReaperConfig:
+    """ Mock config object for reaper tests, carrying a channel name.
+    """
+    def __init__(self, name:'str') -> 'None':
+        self.name = name
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _MockReaperHandler:
+    """ Mock handler for reaper tests, carrying a session manager.
+    """
+    def __init__(self, session_manager:'any_') -> 'None':
+        self.session_manager = session_manager
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _MockReaperWrapper:
+    """ Mock channel wrapper for reaper tests.
+    """
+    def __init__(self, session_manager:'any_', name:'str') -> 'None':
+        self.handler = _MockReaperHandler(session_manager)
+        self.config = _MockReaperConfig(name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -204,6 +232,67 @@ class SessionManagerReaping(TestCase):
         removed = manager.cleanup_expired()
 
         self.assertEqual(removed, 2)
+        self.assertEqual(manager.session_count, 0)
+
+# ################################################################################################################################
+
+    def test_session_dropped_past_absolute_max_lifetime(self) -> 'None':
+        """ A session past max lifetime is rejected by validate even when last_seen_at is fresh.
+        """
+
+        # Use a generous idle TTL but a 0-second max lifetime ..
+        manager = MCPSessionManager(ttl=9999, max_lifetime=0)
+        session_id = manager.create(_mcp_protocol_version)
+
+        # The session was just created but max_lifetime=0 means any elapsed time exceeds it ..
+        is_valid = manager.validate(session_id)
+
+        self.assertFalse(is_valid)
+
+# ################################################################################################################################
+
+    def test_scheduled_cleanup_runs_across_managers(self) -> 'None':
+        """ The MCPSessionReaper sweeps all managers it is given.
+        """
+
+        # Build two managers, each with one expired session ..
+        orders_manager = MCPSessionManager(ttl=0, max_lifetime=9999)
+        _ = orders_manager.create(_mcp_protocol_version)
+
+        notifications_manager = MCPSessionManager(ttl=0, max_lifetime=9999)
+        _ = notifications_manager.create(_mcp_protocol_version)
+
+        # .. mock the channel_mcp_dict structure that the reaper expects ..
+        channel_dict:'anydict' = {
+            'test.mcp.orders': _MockReaperWrapper(orders_manager, 'test.mcp.orders'),
+            'test.mcp.notifications': _MockReaperWrapper(notifications_manager, 'test.mcp.notifications'),
+        }
+
+        reaper = MCPSessionReaper(channel_dict)
+
+        # .. run a single sweep directly (not the loop) ..
+        reaper._sweep()
+
+        # .. both managers must now be empty.
+        self.assertEqual(orders_manager.session_count, 0)
+        self.assertEqual(notifications_manager.session_count, 0)
+
+# ################################################################################################################################
+
+    def test_cleanup_expired_removes_max_lifetime_sessions(self) -> 'None':
+        """ cleanup_expired removes sessions past max lifetime even when they are not idle.
+        """
+
+        # Use a generous idle TTL but a 0-second max lifetime ..
+        manager = MCPSessionManager(ttl=9999, max_lifetime=0)
+        _ = manager.create(_mcp_protocol_version)
+
+        self.assertEqual(manager.session_count, 1)
+
+        # The session is not idle (ttl=9999) but is past max lifetime (max_lifetime=0) ..
+        removed = manager.cleanup_expired()
+
+        self.assertEqual(removed, 1)
         self.assertEqual(manager.session_count, 0)
 
 # ################################################################################################################################
