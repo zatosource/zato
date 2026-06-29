@@ -12,11 +12,14 @@ from logging import getLogger
 from time import monotonic
 from uuid import uuid4
 
+# gevent
+from gevent import sleep
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strlist, strnone
+    from zato.common.typing_ import anydict, strlist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,6 +31,9 @@ logger = getLogger('zato')
 
 # Default session TTL in seconds (30 minutes)
 _default_session_ttl = 1800
+
+# Default absolute max session lifetime in seconds (24 hours)
+_default_max_lifetime = 86400
 
 # Prefix for all MCP session IDs
 _session_id_prefix = 'mcp'
@@ -59,8 +65,9 @@ class MCPSessionManager:
     and cleaned up when deleted or after TTL expiry.
     """
 
-    def __init__(self, ttl:'int' = _default_session_ttl) -> 'None':
+    def __init__(self, ttl:'int' = _default_session_ttl, max_lifetime:'int' = _default_max_lifetime) -> 'None':
         self.ttl = ttl
+        self.max_lifetime = max_lifetime
         self._sessions:'session_dict' = {}
 
 # ################################################################################################################################
@@ -93,17 +100,33 @@ class MCPSessionManager:
 # ################################################################################################################################
 
     def validate(self, session_id:'str') -> 'bool':
-        """ Returns True if the session exists, False otherwise.
-        Touching the session updates its last_seen_at timestamp.
+        """ Returns True if the session is alive, False otherwise.
+        A session is dead if it does not exist, has been idle longer than the TTL,
+        or has exceeded the absolute max lifetime since creation.
+        Touching a live session updates its last_seen_at timestamp.
         """
 
-        # If the session exists, touch its timestamp and confirm ..
-        if session := self._sessions.get(session_id):
-            session.last_seen_at = monotonic()
-            return True
+        # If the session does not exist, it is unknown ..
+        if not (session := self._sessions.get(session_id)):
+            return False
 
-        # .. otherwise the session is unknown.
-        return False
+        now = monotonic()
+
+        # .. reject if the session has exceeded the absolute max lifetime ..
+        lifetime = now - session.created_at
+
+        if lifetime > self.max_lifetime:
+            return False
+
+        # .. reject if the session has been idle longer than the TTL ..
+        idle_time = now - session.last_seen_at
+
+        if idle_time > self.ttl:
+            return False
+
+        # .. the session is alive, refresh its last-seen timestamp.
+        session.last_seen_at = now
+        return True
 
 # ################################################################################################################################
 
@@ -136,18 +159,20 @@ class MCPSessionManager:
 # ################################################################################################################################
 
     def cleanup_expired(self) -> 'int':
-        """ Removes sessions that have not been seen within the TTL.
+        """ Removes sessions that are idle beyond the TTL or past the absolute max lifetime.
         Returns the number of sessions removed.
         """
 
-        # Collect session IDs that have exceeded the TTL ..
+        # Collect session IDs that have exceeded the idle TTL or the max lifetime ..
         now = monotonic()
         expired:'strlist' = []
 
         for session_id, session in self._sessions.items():
-            age = now - session.last_seen_at
 
-            if age > self.ttl:
+            idle_time = now - session.last_seen_at
+            lifetime = now - session.created_at
+
+            if idle_time > self.ttl or lifetime > self.max_lifetime:
                 expired.append(session_id)
 
         # .. remove each expired session from the store ..
@@ -168,6 +193,60 @@ class MCPSessionManager:
 
         out = len(self._sessions)
         return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Default interval between reaper sweeps in seconds (60 seconds)
+_default_reaper_interval = 60
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MCPSessionReaper:
+    """ Periodically sweeps all MCP channel session managers to remove expired sessions.
+    One instance per server process, spawned as a gevent greenlet after MCP channels are built.
+    """
+
+    def __init__(self, channel_mcp_dict:'anydict', interval:'int' = _default_reaper_interval) -> 'None':
+        self.channel_mcp_dict = channel_mcp_dict
+        self.interval = interval
+        self.keep_running = True
+
+# ################################################################################################################################
+
+    def run(self) -> 'None':
+        """ Main loop - sleeps between sweeps and calls cleanup_expired on every session manager.
+        """
+
+        while self.keep_running:
+            sleep(self.interval)
+
+            if not self.keep_running:
+                break
+
+            self._sweep()
+
+# ################################################################################################################################
+
+    def _sweep(self) -> 'None':
+        """ Iterates over all MCP channel wrappers and cleans up expired sessions.
+        """
+
+        for wrapper in self.channel_mcp_dict.values():
+            session_manager = wrapper.handler.session_manager
+            removed = session_manager.cleanup_expired()
+
+            if removed:
+                logger.info('MCP: Reaper removed %d expired session(s) from channel `%s`', removed, wrapper.config.name)
+
+# ################################################################################################################################
+
+    def stop(self) -> 'None':
+        """ Signals the reaper loop to exit.
+        """
+
+        self.keep_running = False
 
 # ################################################################################################################################
 # ################################################################################################################################
