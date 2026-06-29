@@ -90,6 +90,9 @@ _http_not_found = NOT_FOUND
 # HTTP status code for a protocol-level rejection (missing, unknown, or expired session on a request that requires one)
 _http_bad_request = BAD_REQUEST
 
+# Default sec_def_id when none is provided (e.g. in tests)
+_no_sec_def_id = 0
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -201,7 +204,7 @@ class MCPHandler:
         session_id:'strnone' = None,
         remote_address:'str' = '',
         protocol_version_header:'strnone' = None,
-        sec_def_id:'int' = 0,
+        sec_def_id:'int' = _no_sec_def_id,
         ) -> 'MCPResponse':
         """ Parses raw bytes into JSON and dispatches.
         Every method other than initialize requires a valid session.
@@ -233,8 +236,8 @@ class MCPHandler:
         # .. clear any pending session ID from a previous request
         # and store the remote address and sec_def_id for session creation ..
         self._pending_session_id = None
-        self._remote_address = remote_address
-        self._sec_def_id = sec_def_id
+        self._remote_address     = remote_address
+        self._sec_def_id         = sec_def_id
 
         # .. handle batch (array) vs single (object) ..
         if isinstance(parsed, list):
@@ -420,7 +423,8 @@ class MCPHandler:
             self._pending_session_id = self.session_manager.create(
                 _mcp_protocol_version, self._sec_def_id, self._remote_address)
         except ValueError as e:
-            out = _make_error_response(request_id, _error_invalid_request, str(e))
+            error_message = str(e)
+            out = _make_error_response(request_id, _error_invalid_request, error_message)
             return out
 
         result:'stranydict' = {

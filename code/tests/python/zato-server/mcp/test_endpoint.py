@@ -12,6 +12,7 @@ from unittest import TestCase
 
 # Zato
 from zato.common.json_internal import dumps, loads
+from zato.common.test import _test_sec_def_id
 from zato.server.connection.mcp.handler import _mcp_protocol_version, MCPHandler
 from zato.server.generic.api.channel_mcp import ChannelMCPWrapper
 
@@ -23,9 +24,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# Test sec_def_id used across all endpoint tests
-_test_sec_def_id = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -178,7 +176,8 @@ class ChannelMCPWrapperInvoke(TestCase):
         raw = dumps(request)
 
         assert wrapper.handler is not None
-        session_id = wrapper.handler.session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+        session_manager = wrapper.handler.session_manager
+        session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
         mcp_response = wrapper.handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
@@ -224,7 +223,8 @@ class MCPEndpointServiceDispatch(TestCase):
         raw = dumps(request)
 
         assert wrapper.handler is not None
-        session_id = wrapper.handler.session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+        session_manager = wrapper.handler.session_manager
+        session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
         mcp_response = wrapper.handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)

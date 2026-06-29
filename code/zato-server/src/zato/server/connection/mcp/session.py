@@ -72,8 +72,13 @@ class MCPSessionManager:
     and cleaned up when deleted or after TTL expiry.
     """
 
-    def __init__(self, ttl:'int' = _default_session_ttl, max_lifetime:'int' = _default_max_lifetime, max_sessions:'int' = _default_max_sessions) -> 'None':
-        self.ttl = ttl
+    def __init__(
+        self,
+        ttl:'int' = _default_session_ttl,
+        max_lifetime:'int' = _default_max_lifetime,
+        max_sessions:'int' = _default_max_sessions,
+        ) -> 'None':
+        self.ttl          = ttl
         self.max_lifetime = max_lifetime
         self.max_sessions = max_sessions
         self._sessions:'session_dict' = {}
@@ -93,15 +98,17 @@ class MCPSessionManager:
                 identity_count += 1
 
         # .. reject if the cap is reached ..
-        if identity_count >= self.max_sessions:
+        cap_reached = identity_count >= self.max_sessions
+
+        if cap_reached:
             raise ValueError(_message_session_limit_reached)
 
         # .. build a new session object with a unique prefixed ID ..
         session = MCPSession()
 
         unique_id = uuid4().hex
-        session.session_id = f'{_session_id_prefix}{unique_id}'
-        session.sec_def_id = sec_def_id
+        session.session_id       = f'{_session_id_prefix}{unique_id}'
+        session.sec_def_id       = sec_def_id
         session.protocol_version = protocol_version
 
         # .. record the creation time ..
