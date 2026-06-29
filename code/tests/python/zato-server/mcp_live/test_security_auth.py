@@ -55,5 +55,8 @@ class TestAuthRequired:
         # .. the response should succeed, proving that authenticated SSE works.
         assert response.status_code == OK
 
+        # .. clean up the session.
+        _ = client.delete_session(session_id=session_id)
+
 # ################################################################################################################################
 # ################################################################################################################################

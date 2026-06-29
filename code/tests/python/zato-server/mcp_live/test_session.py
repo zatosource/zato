@@ -51,6 +51,9 @@ class TestSession:
         assert response.status_code == OK
         assert 'result' in data
 
+        # .. clean up the session.
+        _ = client.delete_session(session_id=session_id)
+
 # ################################################################################################################################
 
     def test_bogus_session_id_rejected(self, client:'MCPClient') -> 'None':

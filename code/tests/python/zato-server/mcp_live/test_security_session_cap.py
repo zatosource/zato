@@ -52,9 +52,12 @@ class TestSessionCap:
         """
 
         # Fill the cap with successful sessions ..
+        session_ids = []
+
         for _ in range(_default_max_sessions):
             result = client.initialize()
             assert result.response.status_code == OK
+            session_ids.append(result.session_id)
 
         # .. the next initialize must be rejected with a generic error ..
         response = client.jsonrpc('initialize', params={
@@ -73,6 +76,10 @@ class TestSessionCap:
 
         # .. and no session header must be present in the rejected response.
         assert _session_header not in response.headers
+
+        # .. clean up all created sessions.
+        for session_id in session_ids:
+            _ = client.delete_session(session_id=session_id)
 
 # ################################################################################################################################
 # ################################################################################################################################

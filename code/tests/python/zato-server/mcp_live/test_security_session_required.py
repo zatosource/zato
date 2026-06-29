@@ -142,6 +142,9 @@ class TestSessionRequired:
         session_id_length = len(session_id)
         assert session_id_length > 0
 
+        # .. clean up the session.
+        _ = client.delete_session(session_id=session_id)
+
 # ################################################################################################################################
 
     def test_unknown_session_id_rejected(self, client:'MCPClient') -> 'None':
@@ -205,6 +208,9 @@ class TestSessionRequired:
         response = client.jsonrpc('tools/list', session_id=new_session_id)
         assert response.status_code == OK
 
+        # .. clean up the new session.
+        _ = client.delete_session(session_id=new_session_id)
+
 # ################################################################################################################################
 
     def test_request_without_header_after_initialize_rejected(self, client:'MCPClient') -> 'None':
@@ -213,7 +219,8 @@ class TestSessionRequired:
         """
 
         # Establish a valid session first ..
-        _ = client.initialize()
+        initialize_result = client.initialize()
+        session_id = initialize_result.session_id
 
         # .. then send a tools/call without the session header ..
         params = {'name': _demo_echo_service, 'arguments': {'message': 'hi'}}
@@ -227,6 +234,9 @@ class TestSessionRequired:
 
         error = data['error']
         assert error['code'] == _error_invalid_request
+
+        # .. clean up the session.
+        _ = client.delete_session(session_id=session_id)
 
 # ################################################################################################################################
 
@@ -251,6 +261,10 @@ class TestSessionRequired:
 
         assert result['protocolVersion'] == _supported_protocol_version
 
+        # .. clean up the session.
+        session_id = response.headers['Mcp-Session-Id']
+        _ = client.delete_session(session_id=session_id)
+
 # ################################################################################################################################
 
     def test_initialize_unsupported_version_creates_session(self, client:'MCPClient') -> 'None':
@@ -267,6 +281,10 @@ class TestSessionRequired:
 
         # .. a session must have been created ..
         assert 'Mcp-Session-Id' in response.headers
+
+        # .. clean up the session.
+        session_id = response.headers['Mcp-Session-Id']
+        _ = client.delete_session(session_id=session_id)
 
 # ################################################################################################################################
 
@@ -293,6 +311,10 @@ class TestSessionRequired:
 
         result = data['result']
         assert result['protocolVersion'] == _supported_protocol_version
+
+        # .. clean up the session.
+        session_id = response.headers['Mcp-Session-Id']
+        _ = client.delete_session(session_id=session_id)
 
 # ################################################################################################################################
 
@@ -321,6 +343,9 @@ class TestSessionRequired:
         error = data['error']
         assert error['code'] == _error_invalid_request
 
+        # .. clean up the session.
+        _ = client.delete_session(session_id=session_id)
+
 # ################################################################################################################################
 
     def test_delete_with_mismatched_protocol_version_rejected(self, client:'MCPClient') -> 'None':
@@ -346,6 +371,9 @@ class TestSessionRequired:
 
         error = data['error']
         assert error['code'] == _error_invalid_request
+
+        # .. clean up the session.
+        _ = client.delete_session(session_id=session_id)
 
 # ################################################################################################################################
 

@@ -62,6 +62,10 @@ class TestInitialize:
 
         assert result['protocolVersion'] == _expected_protocol_version
 
+        # .. clean up the session.
+        session_id = response.headers[_session_header]
+        _ = client.delete_session(session_id=session_id)
+
 # ################################################################################################################################
 
     def test_initialize_returns_capabilities(self, client:'MCPClient') -> 'None':
@@ -77,6 +81,10 @@ class TestInitialize:
         tools = capabilities['tools']
 
         assert isinstance(tools, dict)
+
+        # .. clean up the session.
+        session_id = response.headers[_session_header]
+        _ = client.delete_session(session_id=session_id)
 
 # ################################################################################################################################
 
@@ -94,6 +102,10 @@ class TestInitialize:
         assert server_information['name'] == _expected_server_name
         assert server_information['version'] == _expected_server_version
 
+        # .. clean up the session.
+        session_id = response.headers[_session_header]
+        _ = client.delete_session(session_id=session_id)
+
 # ################################################################################################################################
 
     def test_initialize_returns_session_id_header(self, client:'MCPClient') -> 'None':
@@ -108,6 +120,9 @@ class TestInitialize:
 
         assert session_id.startswith(_session_id_prefix)
 
+        # .. clean up the session.
+        _ = client.delete_session(session_id=session_id)
+
 # ################################################################################################################################
 
     def test_second_initialize_creates_different_session(self, client:'MCPClient') -> 'None':
@@ -121,6 +136,10 @@ class TestInitialize:
 
         # .. they must differ.
         assert session_id_1 != session_id_2
+
+        # .. clean up both sessions.
+        _ = client.delete_session(session_id=session_id_1)
+        _ = client.delete_session(session_id=session_id_2)
 
 # ################################################################################################################################
 # ################################################################################################################################

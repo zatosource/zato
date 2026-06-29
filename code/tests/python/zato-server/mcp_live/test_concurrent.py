@@ -52,9 +52,10 @@ class TestConcurrent:
         """ Fire 20 parallel initialize requests, assert all return 200.
         """
 
-        def _send_request() -> 'int':
+        def _send_request() -> 'tuple':
             response = client.jsonrpc('initialize', params=_initialize_params)
-            return response.status_code
+            session_id = response.headers['Mcp-Session-Id']
+            return response.status_code, session_id
 
         results:'anylist' = []
 
@@ -66,11 +67,15 @@ class TestConcurrent:
                 futures.append(future)
 
             for future in as_completed(futures):
-                status_code = future.result()
-                results.append(status_code)
+                result = future.result()
+                results.append(result)
 
-        for idx, status_code in enumerate(results):
+        for idx, (status_code, _) in enumerate(results):
             assert status_code == OK, f'Request {idx} returned {status_code}, expected {OK}'
+
+        # .. clean up all created sessions.
+        for _, session_id in results:
+            _ = client.delete_session(session_id=session_id)
 
 # ################################################################################################################################
 # ################################################################################################################################
