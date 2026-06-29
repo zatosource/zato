@@ -13,7 +13,7 @@ from logging import getLogger
 
 # Zato
 from zato.common.json_internal import dumps, loads
-from zato.server.connection.mcp.session import session_valid, session_invalid_identity
+from zato.server.connection.mcp.session import Session_Invalid_Identity, Session_Valid
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -169,7 +169,7 @@ class MCPHandler:
 
             validation_result = self.session_manager.validate(session_id, self._sec_def_id)
 
-            if validation_result != session_valid:
+            if validation_result != Session_Valid:
                 logger.info('MCP: Invalid or expired session `%s`', session_id)
                 out = MCPResponse()
                 out.body = _make_error_response(None, _error_invalid_request, _message_bad_request)
@@ -597,12 +597,12 @@ class MCPHandler:
         # An identity mismatch returns 400 to reject without leaking session existence ..
         validation_result = self.session_manager.validate(session_id, sec_def_id)
 
-        if validation_result == session_invalid_identity:
+        if validation_result == Session_Invalid_Identity:
             out.body = None
             out.status_code = _http_bad_request
             return out
 
-        if validation_result != session_valid:
+        if validation_result != Session_Valid:
             out.body = None
             out.status_code = _http_not_found
             return out
