@@ -28,6 +28,9 @@ _expected_server_name = 'Apache'
 # Expected server version returned in initialize
 _expected_server_version = '2.4'
 
+# Standard params for initialize requests in tests
+_initialize_params = {'protocolVersion': '2025-11-05', 'capabilities': {}, 'clientInfo': {'name': 'test', 'version': '1.0'}}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -88,7 +91,7 @@ class TestErrorResponse:
         """ The initialize response must report the masked server name.
         """
 
-        response = client.jsonrpc('initialize')
+        response = client.jsonrpc('initialize', params=_initialize_params)
         data = response.json()
 
         result = data['result']

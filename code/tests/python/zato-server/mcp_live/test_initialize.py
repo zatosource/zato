@@ -26,6 +26,9 @@ _expected_protocol_version = '2025-11-05'
 _expected_server_name      = 'Apache'
 _expected_server_version   = '2.4'
 
+# Standard params for initialize requests in tests
+_initialize_params = {'protocolVersion': _expected_protocol_version, 'capabilities': {}, 'clientInfo': {'name': 'test', 'version': '1.0'}}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -46,7 +49,7 @@ class TestInitialize:
         """ Initialize returns a valid JSON-RPC 2.0 response with the expected protocol version.
         """
 
-        response = client.jsonrpc('initialize')
+        response = client.jsonrpc('initialize', params=_initialize_params)
         data = response.json()
 
         # The response must be a valid JSON-RPC 2.0 success ..
@@ -65,7 +68,7 @@ class TestInitialize:
         """ Initialize advertises tool capabilities.
         """
 
-        response = client.jsonrpc('initialize')
+        response = client.jsonrpc('initialize', params=_initialize_params)
         json_body = response.json()
         result = json_body['result']
 
@@ -81,7 +84,7 @@ class TestInitialize:
         """ Initialize reports the masked server identity.
         """
 
-        response = client.jsonrpc('initialize')
+        response = client.jsonrpc('initialize', params=_initialize_params)
         json_body = response.json()
         result = json_body['result']
 
@@ -97,7 +100,7 @@ class TestInitialize:
         """ Initialize sets the Mcp-Session-Id response header.
         """
 
-        response = client.jsonrpc('initialize')
+        response = client.jsonrpc('initialize', params=_initialize_params)
 
         # The session ID must be present in the response headers
         # and start with the expected prefix.

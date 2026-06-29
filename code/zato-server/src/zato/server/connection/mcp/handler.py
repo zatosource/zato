@@ -80,6 +80,9 @@ _message_missing_method = 'Invalid request: missing method'
 # Error message returned when the required tool name parameter is absent
 _message_missing_tool_name = 'Missing required parameter: name'
 
+# Error message returned when protocolVersion is absent from initialize params
+_message_missing_protocol_version = 'Missing required parameter: protocolVersion'
+
 # Server metadata returned in the initialize response
 _server_name    = 'Apache'
 _server_version = '2.4'
@@ -406,15 +409,18 @@ class MCPHandler:
         for handle_raw_request to pick up and set as a response header.
         """
 
-        # The client states the protocol version it wants, reject anything we do not support ..
-        requested_version = params.get('protocolVersion')
+        # The client must state the protocol version it wants ..
+        if (requested_version := params.get('protocolVersion')) is None:
 
-        if requested_version is not None:
-            if requested_version not in _supported_protocol_versions:
+            out = _make_error_response(request_id, _error_invalid_request, _message_missing_protocol_version)
+            return out
 
-                message = f'Unsupported protocol version: `{requested_version}`'
-                out = _make_error_response(request_id, _error_invalid_request, message)
-                return out
+        # .. reject anything we do not support ..
+        if requested_version not in _supported_protocol_versions:
+
+            message = f'Unsupported protocol version: `{requested_version}`'
+            out = _make_error_response(request_id, _error_invalid_request, message)
+            return out
 
         # .. create a new session for this client, recording the version it is bound to ..
         self._pending_session_id = self.session_manager.create(_mcp_protocol_version, self._remote_address)

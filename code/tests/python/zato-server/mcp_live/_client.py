@@ -154,7 +154,13 @@ class MCPClient:
         Returns the response and the session ID from the response header.
         """
 
-        response = self.jsonrpc('initialize')
+        params = {
+            'protocolVersion': '2025-11-05',
+            'capabilities': {},
+            'clientInfo': {'name': 'zato-mcp-test', 'version': '1.0'},
+        }
+
+        response = self.jsonrpc('initialize', params=params)
         session_id = response.headers[_session_header]
 
         out = InitializeResult(response, session_id)

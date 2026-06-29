@@ -27,6 +27,9 @@ if 0:
 
 _concurrent_request_count = 20
 
+# Standard params for initialize requests in tests
+_initialize_params = {'protocolVersion': '2025-11-05', 'capabilities': {}, 'clientInfo': {'name': 'test', 'version': '1.0'}}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -50,7 +53,7 @@ class TestConcurrent:
         """
 
         def _send_request() -> 'int':
-            response = client.jsonrpc('initialize')
+            response = client.jsonrpc('initialize', params=_initialize_params)
             return response.status_code
 
         results:'anylist' = []
