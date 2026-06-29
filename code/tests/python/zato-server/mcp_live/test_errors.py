@@ -29,7 +29,6 @@ if 0:
 @pytest.fixture(scope='function')
 def client(zato_server:'anydict') -> 'MCPClient':
     out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
-
     return out
 
 # ################################################################################################################################
