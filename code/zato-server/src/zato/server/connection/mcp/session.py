@@ -38,6 +38,12 @@ _default_max_lifetime = 86400
 # Default maximum sessions per sec_def per channel
 _default_max_sessions = 100
 
+# Validation result constants
+session_valid        = 'session_valid'
+session_not_found    = 'session_not_found'
+session_expired      = 'session_expired'
+session_invalid_identity = 'session_invalid_identity'
+
 # Error message when session cap is reached (logged server-side, not sent to client)
 _message_session_limit_reached = 'Session limit reached for client'
 
@@ -128,21 +134,20 @@ class MCPSessionManager:
 
 # ################################################################################################################################
 
-    def validate(self, session_id:'str', sec_def_id:'int' = 0) -> 'bool':
-        """ Returns True if the session is alive and owned by the caller, False if not found or expired.
-        Raises PermissionError if the session exists but belongs to a different identity.
+    def validate(self, session_id:'str', sec_def_id:'int' = 0) -> 'str':
+        """ Returns a validation result constant indicating the session state.
         Touching a live session updates its last_seen_at timestamp.
         """
 
         # If the session does not exist, it is unknown ..
         if not (session := self._sessions.get(session_id)):
-            return False
+            return session_not_found
 
         # .. reject if the session belongs to a different identity ..
         if sec_def_id:
             if session.sec_def_id != sec_def_id:
                 logger.info('MCP: Session `%s` owned by sec_def %d, caller is %d', session_id, session.sec_def_id, sec_def_id)
-                raise PermissionError(session_id)
+                return session_invalid_identity
 
         now = monotonic()
 
@@ -150,17 +155,17 @@ class MCPSessionManager:
         lifetime = now - session.created_at
 
         if lifetime > self.max_lifetime:
-            return False
+            return session_expired
 
         # .. reject if the session has been idle longer than the TTL ..
         idle_time = now - session.last_seen_at
 
         if idle_time > self.ttl:
-            return False
+            return session_expired
 
         # .. the session is alive, refresh its last-seen timestamp.
         session.last_seen_at = now
-        return True
+        return session_valid
 
 # ################################################################################################################################
 

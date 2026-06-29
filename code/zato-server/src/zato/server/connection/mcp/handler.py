@@ -13,6 +13,7 @@ from logging import getLogger
 
 # Zato
 from zato.common.json_internal import dumps, loads
+from zato.server.connection.mcp.session import session_valid, session_invalid_identity
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -156,8 +157,8 @@ class MCPHandler:
 
 # ################################################################################################################################
 
-    def _validate_session_and_version(self, session_id:'strnone', protocol_version_header:'strnone') -> 'MCPResponse | None':
-        """ Validates session existence, ownership, and protocol version match.
+    def _validate_session(self, session_id:'strnone', protocol_version_header:'strnone') -> 'MCPResponse | None':
+        """ Validates session existence, identity, and protocol version match.
         Returns an MCPResponse with a 400 error if the session is invalid, or None if everything is fine.
         Called by handle_raw_request where an invalid session means it was terminated, never existed,
         or belongs to a different identity.
@@ -166,12 +167,9 @@ class MCPHandler:
         # If a session id was supplied, it must be valid ..
         if session_id:
 
-            try:
-                session_is_valid = self.session_manager.validate(session_id, self._sec_def_id)
-            except PermissionError:
-                session_is_valid = False
+            validation_result = self.session_manager.validate(session_id, self._sec_def_id)
 
-            if not session_is_valid:
+            if validation_result != session_valid:
                 logger.info('MCP: Invalid or expired session `%s`', session_id)
                 out = MCPResponse()
                 out.body = _make_error_response(None, _error_invalid_request, _message_bad_request)
@@ -239,13 +237,13 @@ class MCPHandler:
         self._sec_def_id         = sec_def_id
 
         # .. validate session and protocol version up front ..
-        validation_error = self._validate_session_and_version(session_id, protocol_version_header)
+        validation_error = self._validate_session(session_id, protocol_version_header)
 
         if validation_error:
             return validation_error
 
         # .. if validation passed and a session_id was provided, the session is valid
-        # (otherwise _validate_session_and_version would have returned an error) ..
+        # (otherwise _validate_session would have returned an error) ..
         session_is_valid = bool(session_id)
 
         # .. handle batch (array) vs single (object) ..
@@ -595,16 +593,16 @@ class MCPHandler:
             return out
 
         # .. check if the session exists and belongs to the caller.
-        # For DELETE, an unknown session is 404 (resource not found).
+        # For DELETE, an unknown or expired session is 404 (resource not found).
         # An identity mismatch returns 400 to reject without leaking session existence ..
-        try:
-            session_exists = self.session_manager.validate(session_id, sec_def_id)
-        except PermissionError:
+        validation_result = self.session_manager.validate(session_id, sec_def_id)
+
+        if validation_result == session_invalid_identity:
             out.body = None
             out.status_code = _http_bad_request
             return out
 
-        if not session_exists:
+        if validation_result != session_valid:
             out.body = None
             out.status_code = _http_not_found
             return out
