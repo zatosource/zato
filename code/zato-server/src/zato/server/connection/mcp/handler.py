@@ -47,9 +47,6 @@ _jsonrpc_version = '2.0'
 # MCP protocol version negotiated during initialize
 _mcp_protocol_version = '2025-11-05'
 
-# Protocol versions this server is willing to negotiate during initialize
-_supported_protocol_versions = frozenset({_mcp_protocol_version})
-
 # The initialize method is the only one that may run without an existing session
 _method_initialize = 'initialize'
 
@@ -413,13 +410,6 @@ class MCPHandler:
         if (requested_version := params.get('protocolVersion')) is None:
 
             out = _make_error_response(request_id, _error_invalid_request, _message_missing_protocol_version)
-            return out
-
-        # .. reject anything we do not support ..
-        if requested_version not in _supported_protocol_versions:
-
-            message = f'Unsupported protocol version: `{requested_version}`'
-            out = _make_error_response(request_id, _error_invalid_request, message)
             return out
 
         # .. create a new session for this client, recording the version it is bound to ..

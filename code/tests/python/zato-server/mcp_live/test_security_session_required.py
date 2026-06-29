@@ -230,8 +230,8 @@ class TestSessionRequired:
 
 # ################################################################################################################################
 
-    def test_initialize_unsupported_protocol_version_rejected(self, client:'MCPClient') -> 'None':
-        """ Initialize with an unsupported protocolVersion is rejected.
+    def test_initialize_unsupported_version_returns_server_version(self, client:'MCPClient') -> 'None':
+        """ Initialize with an unsupported protocolVersion returns the server's version per spec.
         """
 
         # Send an initialize with a version the server does not support ..
@@ -242,17 +242,31 @@ class TestSessionRequired:
         }
         response = client.jsonrpc('initialize', params=params)
 
-        # .. it must fail with a JSON-RPC error ..
+        # .. it must succeed ..
         assert response.status_code == OK
 
-        # .. the body must carry the canonical invalid-request error.
+        # .. the result must carry the server's own version.
         data = response.json()
+        result = data['result']
 
-        # .. there must be an error field ..
-        assert 'error' in data
+        assert result['protocolVersion'] == _supported_protocol_version
 
-        error = data['error']
-        assert error['code'] == _error_invalid_request
+# ################################################################################################################################
+
+    def test_initialize_unsupported_version_creates_session(self, client:'MCPClient') -> 'None':
+        """ Initialize with an unsupported protocolVersion still creates a session.
+        """
+
+        # Send an initialize with a version the server does not support ..
+        params = {
+            'protocolVersion': _unsupported_protocol_version,
+            'capabilities': {},
+            'clientInfo': {'name': 'test', 'version': '1.0'},
+        }
+        response = client.jsonrpc('initialize', params=params)
+
+        # .. a session must have been created ..
+        assert 'Mcp-Session-Id' in response.headers
 
 # ################################################################################################################################
 
