@@ -50,11 +50,8 @@ _mcp_protocol_version = '2025-11-05'
 # The initialize method is the only one that may run without an existing session
 _method_initialize = 'initialize'
 
-# Error message returned when a gated method is called without a valid session
-_session_required_message = 'Session required: call initialize first'
-
-# Error message returned when a supplied session id is invalid or expired
-_message_invalid_session = 'Invalid or expired session'
+# Generic error message returned to clients for all session-related rejections
+_message_bad_request = 'Bad request'
 
 # Error message returned when parse fails
 _message_parse_error = 'Parse error'
@@ -164,8 +161,9 @@ class MCPHandler:
             session_is_valid = self.session_manager.validate(session_id)
 
             if not session_is_valid:
+                logger.info('MCP: Invalid or expired session `%s`', session_id)
                 out = MCPResponse()
-                out.body = _make_error_response(None, _error_invalid_request, _message_invalid_session)
+                out.body = _make_error_response(None, _error_invalid_request, _message_bad_request)
                 out.status_code = _http_not_found
                 return out
 
@@ -255,8 +253,9 @@ class MCPHandler:
             if method != _method_initialize:
                 if not session_is_valid:
 
+                    logger.info('MCP: Session required but not provided')
                     request_id = parsed.get('id')
-                    out.body = _make_error_response(request_id, _error_invalid_request, _session_required_message)
+                    out.body = _make_error_response(request_id, _error_invalid_request, _message_bad_request)
                     out.status_code = _http_bad_request
                     out.session_id = None
                     return out
@@ -370,7 +369,7 @@ class MCPHandler:
         if method != _method_initialize:
             if not session_is_valid:
 
-                out = _make_error_response(request_id, _error_invalid_request, _session_required_message)
+                out = _make_error_response(request_id, _error_invalid_request, _message_bad_request)
                 return out
 
         # Params is optional per JSON-RPC 2.0 spec - a client may omit it entirely
@@ -423,8 +422,8 @@ class MCPHandler:
             self._pending_session_id = self.session_manager.create(
                 _mcp_protocol_version, self._sec_def_id, self._remote_address)
         except ValueError as e:
-            error_message = str(e)
-            out = _make_error_response(request_id, _error_invalid_request, error_message)
+            logger.info('MCP: %s', e)
+            out = _make_error_response(request_id, _error_invalid_request, _message_bad_request)
             return out
 
         result:'stranydict' = {

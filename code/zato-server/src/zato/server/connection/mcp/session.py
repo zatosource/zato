@@ -38,8 +38,8 @@ _default_max_lifetime = 86400
 # Default maximum sessions per sec_def per channel
 _default_max_sessions = 100
 
-# Error message when session cap is reached
-_message_session_limit_reached = 'Session limit reached for this identity'
+# Error message when session cap is reached (logged server-side, not sent to client)
+_message_session_limit_reached = 'Session limit reached for client'
 
 # Prefix for all MCP session IDs
 _session_id_prefix = 'mcp'
