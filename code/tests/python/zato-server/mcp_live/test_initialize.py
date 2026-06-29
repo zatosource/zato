@@ -10,8 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # local
-from _client import MCPClient
-from _constants import _session_header, _session_id_prefix
+from _client import MCPClient, _session_header
+from _constants import _session_id_prefix
 
 # ################################################################################################################################
 # ################################################################################################################################
