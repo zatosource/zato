@@ -971,6 +971,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         """
         from zato.common.ext.bunch import bunchify
         from zato.common.api import GENERIC as COMMON_GENERIC
+        from zato.server.connection.mcp.session import MCPSessionReaper
 
         # Create the MCP channel wrappers that were skipped during init_generic_connections ..
         for config_dict in self.config_manager.config_store.generic_connection.values():
@@ -983,7 +984,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 self.config_manager._create_generic_connection(
                     config_as_bunch, raise_exc=True, is_starting=False)
 
-        # .. now all wrappers exist with their registries populated.
+        # .. now all wrappers exist with their registries populated,
+        # spawn a single reaper greenlet to periodically clean up expired sessions ..
+        channel_mcp_dict = self.config_manager.channel_mcp
+        self._mcp_session_reaper = MCPSessionReaper(channel_mcp_dict)
+
+        _ = spawn(self._mcp_session_reaper.run)
 
 # ################################################################################################################################
 
