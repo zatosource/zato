@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import uuid
-from http.client import BAD_REQUEST
+from http.client import BAD_REQUEST, NOT_FOUND
 
 # pytest
 import pytest
@@ -45,13 +45,13 @@ class TestSessionValidation:
     """
 
     def test_forged_session_id_rejected(self, client:'MCPClient') -> 'None':
-        """ A forged session ID with valid UUID format must be rejected.
+        """ A forged session ID with valid UUID format must be rejected with 404.
         """
 
         forged_id = f'mcp{uuid.uuid4().hex}'
         response = client.jsonrpc('ping', session_id=forged_id)
 
-        assert response.status_code == BAD_REQUEST
+        assert response.status_code == NOT_FOUND
 
 # ################################################################################################################################
 
@@ -65,22 +65,22 @@ class TestSessionValidation:
 
         _ = client.delete_session(session_id)
 
-        # .. trying to use the deleted session should fail.
+        # .. trying to use the deleted session should return 404.
         response = client.jsonrpc('ping', session_id=session_id)
 
-        assert response.status_code == BAD_REQUEST
+        assert response.status_code == NOT_FOUND
 
 # ################################################################################################################################
 
     def test_session_id_enumeration(self, client:'MCPClient') -> 'None':
-        """ Iterating through sequential UUIDs must all be rejected as bad requests.
+        """ Iterating through sequential UUIDs must all be rejected as 404 (not found).
         """
 
         for _ in range(_enumeration_attempts):
             guessed_id = f'mcp{uuid.uuid4().hex}'
             response = client.jsonrpc('ping', session_id=guessed_id)
 
-            assert response.status_code == BAD_REQUEST
+            assert response.status_code == NOT_FOUND
 
 # ################################################################################################################################
 
