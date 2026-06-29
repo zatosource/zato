@@ -238,6 +238,7 @@ channel_mcp:
     url_path: /mcp/demo
     services:
       - demo.echo
+      - test.raise
     security_groups:
       - {_mcp_group_name}
 '''

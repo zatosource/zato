@@ -8,13 +8,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from collections.abc import Iterator
+from http.client import OK
 
 # pytest
 import pytest
 
 # local
 from _client import MCPClient
-from _constants import _zato_internal_prefix
+from _constants import _error_invalid_request, _zato_internal_prefix
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,6 +34,12 @@ _expected_server_version = '2.4'
 
 # Standard params for initialize requests in tests
 _initialize_params = {'protocolVersion': '2025-11-05', 'capabilities': {}, 'clientInfo': {'name': 'test', 'version': '1.0'}}
+
+# The test service that always raises an exception
+_raise_service = 'test.raise'
+
+# The generic error message expected from the server
+_expected_error_message = 'Bad request'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -123,6 +130,30 @@ class TestErrorResponse:
             tool_name = tool['name']
             assert not tool_name.startswith(_zato_internal_prefix), \
                 f'Internal service found in tools/list: {tool_name}'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestExceptionResponse:
+    """ Tests that service exceptions return a generic message and no internal details.
+    """
+
+    def test_service_exception_returns_generic_message(self, client:'MCPClient', session_id:'str') -> 'None':
+        """ A tool whose service raises returns the generic error message with isError: True.
+        """
+
+        params = {'name': _raise_service, 'arguments': {}}
+        response = client.jsonrpc('tools/call', params=params, session_id=session_id)
+
+        assert response.status_code == OK
+
+        data = response.json()
+        result = data['result']
+        content = result['content']
+        first_entry = content[0]
+
+        assert first_entry['text'] == _expected_error_message
+        assert result['isError'] is True
 
 # ################################################################################################################################
 # ################################################################################################################################
