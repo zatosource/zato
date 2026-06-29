@@ -152,8 +152,8 @@ class MCPHandler:
 
     def _validate_session_and_version(self, session_id:'strnone', protocol_version_header:'strnone') -> 'MCPResponse | None':
         """ Validates session existence and protocol version match.
-        Returns an MCPResponse with a 400 error if validation fails, or None if everything is fine.
-        Called by handle_raw_request where an unknown session is a protocol error (400).
+        Returns an MCPResponse with a 404 error if the session is unknown, or None if everything is fine.
+        Called by handle_raw_request where an unknown session means it was terminated or never existed.
         """
 
         # If a session id was supplied, it must be valid ..
@@ -163,7 +163,7 @@ class MCPHandler:
             if not session_is_valid:
                 out = MCPResponse()
                 out.body = _make_error_response(None, _error_invalid_request, _message_invalid_session)
-                out.status_code = _http_bad_request
+                out.status_code = _http_not_found
                 return out
 
             # .. when the session is valid, check the protocol version header ..
