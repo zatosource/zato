@@ -83,12 +83,18 @@ def _make_handler(allowed_tools:'any_' = None) -> 'any_':
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Test sec_def_id used across all hypothesis tests
+_test_sec_def_id = 1
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _make_session(handler:'any_') -> 'str':
     """ Creates a valid session on the handler's manager and returns its ID.
     Every method other than initialize requires one.
     """
 
-    out = handler.session_manager.create(_mcp_protocol_version)
+    out = handler.session_manager.create(_mcp_protocol_version, _test_sec_def_id)
     return out
 
 # ################################################################################################################################

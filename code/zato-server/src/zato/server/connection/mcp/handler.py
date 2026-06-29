@@ -201,6 +201,7 @@ class MCPHandler:
         session_id:'strnone' = None,
         remote_address:'str' = '',
         protocol_version_header:'strnone' = None,
+        sec_def_id:'int' = 0,
         ) -> 'MCPResponse':
         """ Parses raw bytes into JSON and dispatches.
         Every method other than initialize requires a valid session.
@@ -230,9 +231,10 @@ class MCPHandler:
         session_is_valid = bool(session_id)
 
         # .. clear any pending session ID from a previous request
-        # and store the remote address for session creation logging ..
+        # and store the remote address and sec_def_id for session creation ..
         self._pending_session_id = None
         self._remote_address = remote_address
+        self._sec_def_id = sec_def_id
 
         # .. handle batch (array) vs single (object) ..
         if isinstance(parsed, list):
@@ -412,8 +414,14 @@ class MCPHandler:
             out = _make_error_response(request_id, _error_invalid_request, _message_missing_protocol_version)
             return out
 
-        # .. create a new session for this client, recording the version it is bound to ..
-        self._pending_session_id = self.session_manager.create(_mcp_protocol_version, self._remote_address)
+        # .. create a new session for this client, recording the version it is bound to,
+        # rejecting if the per-identity cap has been reached ..
+        try:
+            self._pending_session_id = self.session_manager.create(
+                _mcp_protocol_version, self._sec_def_id, self._remote_address)
+        except ValueError as e:
+            out = _make_error_response(request_id, _error_invalid_request, str(e))
+            return out
 
         result:'stranydict' = {
             'protocolVersion': _mcp_protocol_version,

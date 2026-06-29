@@ -81,6 +81,9 @@ class MCPEndpoint(AdminService):
         # .. get the remote address for session logging ..
         remote_address = self.wsgi_environ[_remote_addr_key]
 
+        # .. get the sec_def id of the authenticated caller ..
+        sec_def_id = self.channel.security.id
+
         # .. handle DELETE requests for session termination ..
         if self.request.http.method == 'DELETE':
 
@@ -103,7 +106,7 @@ class MCPEndpoint(AdminService):
 
         # .. dispatch through the MCP handler ..
         mcp_response = wrapper.handler.handle_raw_request(
-            raw_request, session_id, remote_address, protocol_version_header)
+            raw_request, session_id, remote_address, protocol_version_header, sec_def_id)
 
         # .. if the handler returned a session ID (from initialize), set it as a response header ..
         if mcp_response.session_id:
