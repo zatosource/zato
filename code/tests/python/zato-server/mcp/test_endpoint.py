@@ -81,9 +81,6 @@ class ChannelMCPWrapperBuild(TestCase):
         self.assertIsNotNone(wrapper.handler)
         self.assertIsInstance(wrapper.handler, MCPHandler)
 
-        assert wrapper.handler is not None
-        wrapper.handler.tool_registry.rebuild()
-
     def test_build_wrapper_no_opaque(self) -> 'None':
         """ Verifies that build_wrapper works without an opaque services key.
         """
@@ -161,7 +158,6 @@ class ChannelMCPWrapperInvoke(TestCase):
         wrapper.build_wrapper()
 
         assert wrapper.handler is not None
-        wrapper.handler.tool_registry.rebuild()
 
         # Build a tools/call request
         request = {
