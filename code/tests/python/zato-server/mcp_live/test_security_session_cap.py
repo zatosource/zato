@@ -56,15 +56,18 @@ class TestSessionCap:
 
         for _ in range(_default_max_sessions):
             result = client.initialize()
-            assert result.response.status_code == OK
+            initialize_response = result.response
+            assert initialize_response.status_code == OK
             session_ids.append(result.session_id)
 
         # .. the next initialize must be rejected with a generic error ..
-        response = client.jsonrpc('initialize', params={
+        params = {
             'protocolVersion': '2025-11-05',
             'capabilities': {},
             'clientInfo': {'name': 'zato-mcp-test', 'version': '1.0'},
-        })
+        }
+
+        response = client.jsonrpc('initialize', params=params)
 
         assert response.status_code == OK
 
@@ -75,7 +78,8 @@ class TestSessionCap:
         assert error['message'] == _expected_error_message
 
         # .. and no session header must be present in the rejected response.
-        assert _session_header not in response.headers
+        response_headers = response.headers
+        assert _session_header not in response_headers
 
         # .. clean up all created sessions.
         for session_id in session_ids:

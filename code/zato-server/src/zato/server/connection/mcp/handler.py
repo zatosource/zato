@@ -419,7 +419,8 @@ class MCPHandler:
         # .. create a new session for this client, recording the version it is bound to,
         # rejecting if the per-identity cap has been reached ..
         try:
-            self._pending_session_id = self.session_manager.create(
+            session_manager = self.session_manager
+            self._pending_session_id = session_manager.create(
                 _mcp_protocol_version, self._sec_def_id, self._remote_address)
         except ValueError as e:
             logger.info('MCP: %s', e)

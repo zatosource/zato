@@ -57,7 +57,9 @@ class MCPEndpoint(AdminService):
 
         # MCP channels require authentication via security groups ..
         # .. if the HTTP layer did not authenticate the caller, reject immediately.
-        if not self.channel.security.id:
+        channel_security = self.channel.security
+
+        if not channel_security.id:
             logger.info('MCP channel `%s` rejected unauthenticated request', self.channel.name)
             self.response.status_code = FORBIDDEN
             self.response.payload = ''
@@ -65,7 +67,7 @@ class MCPEndpoint(AdminService):
 
         logger.info(
             'MCP channel `%s` authenticated sec_def id=`%s` username=`%s`',
-            self.channel.name, self.channel.security.id, self.channel.security.username)
+            self.channel.name, channel_security.id, channel_security.username)
 
         # Look up the MCP channel config from the config manager,
         # then reach the ChannelMCPWrapper through its .conn attribute ..
@@ -82,7 +84,7 @@ class MCPEndpoint(AdminService):
         remote_address = self.wsgi_environ[_remote_addr_key]
 
         # .. get the sec_def id of the authenticated caller ..
-        sec_def_id = self.channel.security.id
+        sec_def_id = channel_security.id
 
         # .. get the handler for request dispatch ..
         handler = wrapper.handler
