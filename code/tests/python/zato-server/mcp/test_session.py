@@ -12,7 +12,7 @@ from unittest import TestCase
 
 # Zato
 from zato.common.json_internal import dumps
-from zato.server.connection.mcp.handler import MCPHandler, _mcp_protocol_version
+from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_request, _mcp_protocol_version
 from zato.server.connection.mcp.session import MCPSessionManager
 
 # ################################################################################################################################
@@ -194,7 +194,9 @@ class HandlerInitializeCreatesSession(TestCase):
         result = mcp_response.body['result']
         self.assertNotIn('_mcp_session_id', result)
 
-    def test_initialize_in_batch_returns_session_id(self) -> 'None':
+    def test_initialize_in_batch_rejected(self) -> 'None':
+        """ The MCP spec forbids initialize inside a batch.
+        """
 
         session_manager = MCPSessionManager()
         handler = _make_handler(session_manager=session_manager)
@@ -208,8 +210,9 @@ class HandlerInitializeCreatesSession(TestCase):
         mcp_response = handler.handle_raw_request(raw)
 
         self.assertEqual(mcp_response.status_code, OK)
-        self.assertIsNotNone(mcp_response.session_id)
-        self.assertEqual(session_manager.session_count, 1)
+        self.assertEqual(mcp_response.body['error']['code'], _error_invalid_request)
+        self.assertIsNone(mcp_response.session_id)
+        self.assertEqual(session_manager.session_count, 0)
 
 # ################################################################################################################################
 # ################################################################################################################################
