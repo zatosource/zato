@@ -974,9 +974,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         # Create the MCP channel wrappers that were skipped during init_generic_connections ..
         for config_dict in self.config_manager.config_store.generic_connection.values():
+
             config = config_dict['config']
-            if config['type_'] == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP:
-                self.config_manager._create_generic_connection(bunchify(config), raise_exc=True, is_starting=False)
+            config_type = config['type_']
+
+            if config_type == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP:
+                config_as_bunch = bunchify(config)
+                self.config_manager._create_generic_connection(
+                    config_as_bunch, raise_exc=True, is_starting=False)
 
         # .. now all wrappers exist with their registries populated.
 
