@@ -286,8 +286,10 @@ class MCPHandler:
         # batch if any element attempts it ..
         for message in messages:
             if isinstance(message, dict):
-                if message.get('method') == _method_initialize:
-                    out.body = _make_error_response(message.get('id'), _error_invalid_request, _message_initialize_in_batch)
+                method = message.get('method')
+                if method == _method_initialize:
+                    request_id = message.get('id')
+                    out.body = _make_error_response(request_id, _error_invalid_request, _message_initialize_in_batch)
                     out.status_code = OK
                     return out
 
