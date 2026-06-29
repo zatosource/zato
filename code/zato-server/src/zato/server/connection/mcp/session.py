@@ -35,6 +35,12 @@ _default_session_ttl = 1800
 # Default absolute max session lifetime in seconds (24 hours)
 _default_max_lifetime = 86400
 
+# Default maximum sessions per sec_def per channel
+_default_max_sessions = 100
+
+# Error message when session cap is reached
+_message_session_limit_reached = 'Session limit reached for this identity'
+
 # Prefix for all MCP session IDs
 _session_id_prefix = 'mcp'
 
@@ -46,6 +52,7 @@ class MCPSession:
     """ Holds state for a single MCP session.
     """
     session_id:       'str'
+    sec_def_id:       'int'
     created_at:       'float'
     last_seen_at:     'float'
     protocol_version: 'str'
@@ -65,22 +72,36 @@ class MCPSessionManager:
     and cleaned up when deleted or after TTL expiry.
     """
 
-    def __init__(self, ttl:'int' = _default_session_ttl, max_lifetime:'int' = _default_max_lifetime) -> 'None':
+    def __init__(self, ttl:'int' = _default_session_ttl, max_lifetime:'int' = _default_max_lifetime, max_sessions:'int' = _default_max_sessions) -> 'None':
         self.ttl = ttl
         self.max_lifetime = max_lifetime
+        self.max_sessions = max_sessions
         self._sessions:'session_dict' = {}
 
 # ################################################################################################################################
 
-    def create(self, protocol_version:'str', remote_address:'str' = '') -> 'str':
+    def create(self, protocol_version:'str', sec_def_id:'int', remote_address:'str' = '') -> 'str':
         """ Creates a new session and returns its ID.
+        Raises ValueError if the per-identity session cap has been reached.
         """
 
-        # Build a new session object with a unique prefixed ID ..
+        # Count how many sessions this sec_def already owns ..
+        identity_count = 0
+
+        for session in self._sessions.values():
+            if session.sec_def_id == sec_def_id:
+                identity_count += 1
+
+        # .. reject if the cap is reached ..
+        if identity_count >= self.max_sessions:
+            raise ValueError(_message_session_limit_reached)
+
+        # .. build a new session object with a unique prefixed ID ..
         session = MCPSession()
 
         unique_id = uuid4().hex
         session.session_id = f'{_session_id_prefix}{unique_id}'
+        session.sec_def_id = sec_def_id
         session.protocol_version = protocol_version
 
         # .. record the creation time ..

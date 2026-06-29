@@ -70,6 +70,12 @@ class _MockReaperWrapper:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Test sec_def_id used across all session tests
+_test_sec_def_id = 1
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _invoke_noop(service_name:'str', payload:'anydict') -> 'anydict':
     return {}
 
@@ -101,7 +107,7 @@ class SessionManagerCreate(TestCase):
     def test_create_returns_session_id(self) -> 'None':
 
         manager = MCPSessionManager()
-        session_id = manager.create(_mcp_protocol_version)
+        session_id = manager.create(_mcp_protocol_version, _test_sec_def_id)
 
         self.assertIsInstance(session_id, str)
         self.assertTrue(len(session_id) > 0)
@@ -112,18 +118,18 @@ class SessionManagerCreate(TestCase):
 
         self.assertEqual(manager.session_count, 0)
 
-        _ = manager.create(_mcp_protocol_version)
+        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
         self.assertEqual(manager.session_count, 1)
 
-        _ = manager.create(_mcp_protocol_version)
+        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
         self.assertEqual(manager.session_count, 2)
 
     def test_each_session_has_unique_id(self) -> 'None':
 
         manager = MCPSessionManager()
 
-        session_id_1 = manager.create(_mcp_protocol_version)
-        session_id_2 = manager.create(_mcp_protocol_version)
+        session_id_1 = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        session_id_2 = manager.create(_mcp_protocol_version, _test_sec_def_id)
 
         self.assertNotEqual(session_id_1, session_id_2)
 
@@ -135,7 +141,7 @@ class SessionManagerValidate(TestCase):
     def test_validate_existing_session(self) -> 'None':
 
         manager = MCPSessionManager()
-        session_id = manager.create(_mcp_protocol_version)
+        session_id = manager.create(_mcp_protocol_version, _test_sec_def_id)
 
         result = manager.validate(session_id)
 
@@ -157,7 +163,7 @@ class SessionManagerDelete(TestCase):
     def test_delete_existing_session(self) -> 'None':
 
         manager = MCPSessionManager()
-        session_id = manager.create(_mcp_protocol_version)
+        session_id = manager.create(_mcp_protocol_version, _test_sec_def_id)
 
         result = manager.delete(session_id)
 
@@ -181,8 +187,8 @@ class SessionManagerCleanup(TestCase):
     def test_cleanup_removes_expired(self) -> 'None':
 
         manager = MCPSessionManager(ttl=0)
-        _ = manager.create(_mcp_protocol_version)
-        _ = manager.create(_mcp_protocol_version)
+        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
 
         removed = manager.cleanup_expired()
 
@@ -192,7 +198,7 @@ class SessionManagerCleanup(TestCase):
     def test_cleanup_keeps_fresh_sessions(self) -> 'None':
 
         manager = MCPSessionManager(ttl=9999)
-        _ = manager.create(_mcp_protocol_version)
+        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
 
         removed = manager.cleanup_expired()
 
@@ -209,7 +215,7 @@ class SessionManagerReaping(TestCase):
         """
 
         manager = MCPSessionManager(ttl=0, max_lifetime=9999)
-        session_id = manager.create(_mcp_protocol_version)
+        session_id = manager.create(_mcp_protocol_version, _test_sec_def_id)
 
         # The session was just created but the TTL is 0, so any elapsed time makes it idle-expired ..
         is_valid = manager.validate(session_id)
@@ -223,8 +229,8 @@ class SessionManagerReaping(TestCase):
         """
 
         manager = MCPSessionManager(ttl=0, max_lifetime=9999)
-        _ = manager.create(_mcp_protocol_version)
-        _ = manager.create(_mcp_protocol_version)
+        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
 
         self.assertEqual(manager.session_count, 2)
 
@@ -242,7 +248,7 @@ class SessionManagerReaping(TestCase):
 
         # Use a generous idle TTL but a 0-second max lifetime ..
         manager = MCPSessionManager(ttl=9999, max_lifetime=0)
-        session_id = manager.create(_mcp_protocol_version)
+        session_id = manager.create(_mcp_protocol_version, _test_sec_def_id)
 
         # The session was just created but max_lifetime=0 means any elapsed time exceeds it ..
         is_valid = manager.validate(session_id)
@@ -257,10 +263,10 @@ class SessionManagerReaping(TestCase):
 
         # Build two managers, each with one expired session ..
         orders_manager = MCPSessionManager(ttl=0, max_lifetime=9999)
-        _ = orders_manager.create(_mcp_protocol_version)
+        _ = orders_manager.create(_mcp_protocol_version, _test_sec_def_id)
 
         notifications_manager = MCPSessionManager(ttl=0, max_lifetime=9999)
-        _ = notifications_manager.create(_mcp_protocol_version)
+        _ = notifications_manager.create(_mcp_protocol_version, _test_sec_def_id)
 
         # .. mock the channel_mcp_dict structure that the reaper expects ..
         channel_dict:'anydict' = {
@@ -285,7 +291,7 @@ class SessionManagerReaping(TestCase):
 
         # Use a generous idle TTL but a 0-second max lifetime ..
         manager = MCPSessionManager(ttl=9999, max_lifetime=0)
-        _ = manager.create(_mcp_protocol_version)
+        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
 
         self.assertEqual(manager.session_count, 1)
 

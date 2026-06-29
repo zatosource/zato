@@ -112,12 +112,18 @@ def _make_handler(registry:'any_'=None, invoke_func:'callable_'=None) -> 'MCPHan
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Test sec_def_id used across all handler tests
+_test_sec_def_id = 1
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _make_session(handler:'MCPHandler') -> 'str':
     """ Creates a valid session on the handler's manager and returns its ID.
     Every method other than initialize requires one.
     """
 
-    out = handler.session_manager.create(_mcp_protocol_version)
+    out = handler.session_manager.create(_mcp_protocol_version, _test_sec_def_id)
     return out
 
 # ################################################################################################################################
