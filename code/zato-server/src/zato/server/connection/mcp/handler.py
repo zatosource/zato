@@ -90,6 +90,12 @@ _http_bad_request = BAD_REQUEST
 # Default sec_def_id when none is provided (e.g. in tests)
 _no_sec_def_id = 0
 
+# Maximum number of messages allowed in a single JSON-RPC batch request
+_max_batch_size = 20
+
+# Error message returned when a batch exceeds the maximum allowed size
+_message_batch_too_large = 'Invalid request: batch too large'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -283,6 +289,15 @@ class MCPHandler:
         if not messages:
 
             out.body = _make_error_response(None, _error_invalid_request, _message_empty_batch)
+            out.status_code = OK
+            return out
+
+        # .. reject batches that exceed the configured maximum size ..
+        batch_size = len(messages)
+
+        if batch_size > _max_batch_size:
+            logger.info('MCP: Batch rejected, size %d exceeds cap %d', batch_size, _max_batch_size)
+            out.body = _make_error_response(None, _error_invalid_request, _message_batch_too_large)
             out.status_code = OK
             return out
 
