@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import NO_CONTENT, NOT_FOUND, OK
+from http.client import BAD_REQUEST, NO_CONTENT, NOT_FOUND, OK
 from unittest import TestCase
 
 # Hypothesis
@@ -490,7 +490,7 @@ class SessionFuzzing(TestCase):
     @given(st.text(min_size=1, max_size=200))
     @settings(max_examples=200)
     def test_random_session_id_rejected(self, session_id:'str') -> 'None':
-        """ A random string as session ID must be rejected with 404.
+        """ A random string as session ID must be rejected with 400.
         """
 
         handler = _make_handler()
@@ -500,7 +500,7 @@ class SessionFuzzing(TestCase):
 
         response = handler.handle_raw_request(raw, session_id=session_id)
 
-        self.assertEqual(response.status_code, NOT_FOUND)
+        self.assertEqual(response.status_code, BAD_REQUEST)
 
 # ################################################################################################################################
 

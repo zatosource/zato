@@ -14,7 +14,8 @@ from unittest import TestCase
 from zato.common.json_internal import dumps
 from zato.common.test import _test_sec_def_id
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_request, _mcp_protocol_version
-from zato.server.connection.mcp.session import MCPSessionManager, MCPSessionReaper
+from zato.server.connection.mcp.session import MCPSessionManager, MCPSessionReaper, \
+    session_expired, session_not_found, session_valid
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -143,7 +144,7 @@ class SessionManagerValidate(TestCase):
 
         result = manager.validate(session_id)
 
-        self.assertTrue(result)
+        self.assertEqual(result, session_valid)
 
     def test_validate_unknown_session(self) -> 'None':
 
@@ -151,7 +152,7 @@ class SessionManagerValidate(TestCase):
 
         result = manager.validate('nonexistent-session-id')
 
-        self.assertFalse(result)
+        self.assertEqual(result, session_not_found)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -167,7 +168,7 @@ class SessionManagerDelete(TestCase):
 
         self.assertTrue(result)
         self.assertEqual(manager.session_count, 0)
-        self.assertFalse(manager.validate(session_id))
+        self.assertEqual(manager.validate(session_id), session_not_found)
 
     def test_delete_unknown_session(self) -> 'None':
 
@@ -218,7 +219,7 @@ class SessionManagerReaping(TestCase):
         # The session was just created but the TTL is 0, so any elapsed time makes it idle-expired ..
         is_valid = manager.validate(session_id)
 
-        self.assertFalse(is_valid)
+        self.assertEqual(is_valid, session_expired)
 
 # ################################################################################################################################
 
@@ -251,7 +252,7 @@ class SessionManagerReaping(TestCase):
         # The session was just created but max_lifetime=0 means any elapsed time exceeds it ..
         is_valid = manager.validate(session_id)
 
-        self.assertFalse(is_valid)
+        self.assertEqual(is_valid, session_expired)
 
 # ################################################################################################################################
 
@@ -408,7 +409,7 @@ class HandlerSessionValidation(TestCase):
         request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
         mcp_response = handler.handle_raw_request(request, session_id='bogus-session-id')
 
-        self.assertEqual(mcp_response.status_code, NOT_FOUND)
+        self.assertEqual(mcp_response.status_code, BAD_REQUEST)
 
     def test_no_session_id_rejected(self) -> 'None':
 
@@ -472,7 +473,7 @@ class HandlerDeleteSession(TestCase):
         ping_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 2})
         ping_response = handler.handle_raw_request(ping_request, session_id=session_id)
 
-        self.assertEqual(ping_response.status_code, NOT_FOUND)
+        self.assertEqual(ping_response.status_code, BAD_REQUEST)
 
 # ################################################################################################################################
 # ################################################################################################################################
