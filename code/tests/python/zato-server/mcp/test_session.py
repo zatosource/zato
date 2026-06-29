@@ -61,6 +61,11 @@ def _make_handler(session_manager:'any_'=None) -> 'MCPHandler':
     return out
 
 # ################################################################################################################################
+
+# Standard params for initialize requests in tests
+_initialize_params = {'protocolVersion': '2025-11-05', 'capabilities': {}, 'clientInfo': {'name': 'test', 'version': '1.0'}}
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class SessionManagerCreate(TestCase):
@@ -180,7 +185,7 @@ class HandlerInitializeCreatesSession(TestCase):
             'jsonrpc': '2.0',
             'method': 'initialize',
             'id': 1,
-            'params': {},
+            'params': _initialize_params,
         }
         raw = dumps(request)
 
@@ -193,6 +198,35 @@ class HandlerInitializeCreatesSession(TestCase):
         # The session ID must not leak into the JSON-RPC result
         result = mcp_response.body['result']
         self.assertNotIn('_mcp_session_id', result)
+
+    def test_initialize_without_protocol_version_rejected(self) -> 'None':
+        """ Initialize with no protocolVersion in params is rejected.
+        """
+
+        session_manager = MCPSessionManager()
+        handler = _make_handler(session_manager=session_manager)
+
+        # Send an initialize with empty params (no protocolVersion) ..
+        request = {
+            'jsonrpc': '2.0',
+            'method': 'initialize',
+            'id': 1,
+            'params': {},
+        }
+        raw = dumps(request)
+
+        mcp_response = handler.handle_raw_request(raw)
+
+        # .. must return an error ..
+        self.assertEqual(mcp_response.status_code, OK)
+        self.assertIn('error', mcp_response.body)
+
+        error = mcp_response.body['error']
+        self.assertEqual(error['code'], _error_invalid_request)
+
+        # .. and no session must have been created.
+        self.assertEqual(session_manager.session_count, 0)
+        self.assertIsNone(mcp_response.session_id)
 
     def test_initialize_in_batch_rejected(self) -> 'None':
         """ The MCP spec forbids initialize inside a batch.
@@ -225,7 +259,7 @@ class HandlerSessionValidation(TestCase):
         handler = _make_handler(session_manager=session_manager)
 
         # First, initialize to get a session ..
-        initialize_request = dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': {}})
+        initialize_request = dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': _initialize_params})
         initialize_response = handler.handle_raw_request(initialize_request)
         session_id = initialize_response.session_id
 
@@ -268,7 +302,7 @@ class HandlerDeleteSession(TestCase):
         handler = _make_handler(session_manager=session_manager)
 
         # Create a session ..
-        initialize_request = dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': {}})
+        initialize_request = dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': _initialize_params})
         initialize_response = handler.handle_raw_request(initialize_request)
         session_id = initialize_response.session_id
 
@@ -300,7 +334,7 @@ class HandlerDeleteSession(TestCase):
         handler = _make_handler(session_manager=session_manager)
 
         # Create and delete a session ..
-        initialize_request = dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': {}})
+        initialize_request = dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': _initialize_params})
         initialize_response = handler.handle_raw_request(initialize_request)
         session_id = initialize_response.session_id
 

@@ -67,6 +67,11 @@ def _make_request(method:'str', params:'anydictnone' = None, request_id:'any_' =
     return out
 
 # ################################################################################################################################
+
+# Standard params for initialize requests in tests
+_initialize_params = {'protocolVersion': '2025-11-05', 'capabilities': {}, 'clientInfo': {'name': 'test', 'version': '1.0'}}
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def _invoke_success(service_name:'str', payload:'anydict') -> 'anydict':
@@ -126,7 +131,7 @@ class HandleInitialize(TestCase):
 
         handler = _make_handler()
 
-        request = _make_request('initialize')
+        request = _make_request('initialize', params=_initialize_params)
         raw = dumps(request)
 
         mcp_response = handler.handle_raw_request(raw)

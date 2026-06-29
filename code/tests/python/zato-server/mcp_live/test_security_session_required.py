@@ -126,7 +126,12 @@ class TestSessionRequired:
         """
 
         # Send an initialize without any session header ..
-        response = client.jsonrpc('initialize')
+        params = {
+            'protocolVersion': _supported_protocol_version,
+            'capabilities': {},
+            'clientInfo': {'name': 'test', 'version': '1.0'},
+        }
+        response = client.jsonrpc('initialize', params=params)
 
         # .. it must succeed ..
         assert response.status_code == OK
@@ -327,6 +332,44 @@ class TestSessionRequired:
 
         error = data['error']
         assert error['code'] == _error_invalid_request
+
+# ################################################################################################################################
+
+    def test_initialize_without_protocol_version_rejected(self, client:'MCPClient') -> 'None':
+        """ Initialize with no protocolVersion in params is rejected per the MCP spec.
+        """
+
+        # Send an initialize without the required protocolVersion field ..
+        params = {
+            'capabilities': {},
+            'clientInfo': {'name': 'test', 'version': '1.0'},
+        }
+        response = client.jsonrpc('initialize', params=params)
+
+        # .. the response must carry a JSON-RPC error ..
+        assert response.status_code == OK
+
+        data = response.json()
+        assert 'error' in data
+
+        error = data['error']
+        assert error['code'] == _error_invalid_request
+
+# ################################################################################################################################
+
+    def test_initialize_without_protocol_version_creates_no_session(self, client:'MCPClient') -> 'None':
+        """ Initialize with no protocolVersion must not create a session.
+        """
+
+        # Send an initialize without the required protocolVersion field ..
+        params = {
+            'capabilities': {},
+            'clientInfo': {'name': 'test', 'version': '1.0'},
+        }
+        response = client.jsonrpc('initialize', params=params)
+
+        # .. no session must have been created, so no Mcp-Session-Id header ..
+        assert 'Mcp-Session-Id' not in response.headers
 
 # ################################################################################################################################
 # ################################################################################################################################
