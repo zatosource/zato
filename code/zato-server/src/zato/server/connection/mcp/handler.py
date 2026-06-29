@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import dataclasses
 from http.client import BAD_REQUEST, NO_CONTENT, NOT_FOUND, OK
 from logging import getLogger
+from traceback import format_exc
 
 # Zato
 from zato.common.json_internal import dumps, loads
@@ -224,7 +225,7 @@ class MCPHandler:
         try:
             parsed = loads(raw_data)
         except Exception:
-            logger.debug('MCP: Failed to parse JSON body', exc_info=True)
+            logger.warning('MCP: Failed to parse JSON body:\n%s', format_exc())
 
             out.body = _make_error_response(None, _error_parse, _message_parse_error)
             out.status_code = OK
@@ -509,14 +510,15 @@ class MCPHandler:
         # .. invoke the service ..
         try:
             service_response = self.invoke_func(tool_name, arguments)
-        except Exception as e:
-            logger.debug('MCP: Service `%s` raised an exception', tool_name, exc_info=True)
+        except Exception:
+            exception_detail = format_exc()
+            logger.warning('MCP: Service `%s` raised an exception:\n%s', tool_name, exception_detail)
 
             error_result:'stranydict' = {
                 'content': [
                     {
                         'type': 'text',
-                        'text': str(e),
+                        'text': _message_bad_request,
                     },
                 ],
                 'isError': True,
