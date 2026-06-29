@@ -225,7 +225,7 @@ class MCPHandler:
         try:
             parsed = loads(raw_data)
         except Exception:
-            logger.warning('MCP: Failed to parse JSON body:\n%s', format_exc())
+            logger.info('MCP: Could not parse the JSON body:\n%s', format_exc())
 
             out.body = _make_error_response(None, _error_parse, _message_parse_error)
             out.status_code = OK
