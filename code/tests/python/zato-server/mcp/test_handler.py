@@ -12,6 +12,7 @@ from unittest import TestCase
 
 # Zato
 from zato.common.json_internal import dumps
+from zato.common.test import _test_sec_def_id
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_params, _error_invalid_request, \
     _error_method_not_found, _error_parse, _jsonrpc_version, _mcp_protocol_version, _server_name, _server_version
 from zato.server.connection.mcp.session import MCPSessionManager
@@ -112,9 +113,6 @@ def _make_handler(registry:'any_'=None, invoke_func:'callable_'=None) -> 'MCPHan
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Test sec_def_id used across all handler tests
-_test_sec_def_id = 1
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -123,7 +121,8 @@ def _make_session(handler:'MCPHandler') -> 'str':
     Every method other than initialize requires one.
     """
 
-    out = handler.session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+    session_manager = handler.session_manager
+    out = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
     return out
 
 # ################################################################################################################################

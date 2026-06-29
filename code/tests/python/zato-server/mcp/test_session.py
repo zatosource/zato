@@ -12,6 +12,7 @@ from unittest import TestCase
 
 # Zato
 from zato.common.json_internal import dumps
+from zato.common.test import _test_sec_def_id
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_request, _mcp_protocol_version
 from zato.server.connection.mcp.session import MCPSessionManager, MCPSessionReaper
 
@@ -69,9 +70,6 @@ class _MockReaperWrapper:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# Test sec_def_id used across all session tests
-_test_sec_def_id = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
