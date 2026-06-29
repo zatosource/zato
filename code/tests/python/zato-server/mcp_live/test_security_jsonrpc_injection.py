@@ -41,7 +41,6 @@ _oversized_payload_bytes = 1_100_000
 @pytest.fixture(scope='function')
 def client(zato_server:'any_') -> 'MCPClient':
     out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
-
     return out
 
 # ################################################################################################################################

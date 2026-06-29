@@ -99,8 +99,8 @@ class MCPClient:
             headers.update(extra_headers)
 
         request_data = dumps(body)
-        out = requests.post(self.mcp_url, data=request_data, headers=headers, auth=self.auth, timeout=_request_timeout)
 
+        out = requests.post(self.mcp_url, data=request_data, headers=headers, auth=self.auth, timeout=_request_timeout)
         return out
 
 # ################################################################################################################################
@@ -116,8 +116,8 @@ class MCPClient:
         headers = self._build_headers(session_id)
 
         request_data = dumps(messages)
-        out = requests.post(self.mcp_url, data=request_data, headers=headers, auth=self.auth, timeout=_request_timeout)
 
+        out = requests.post(self.mcp_url, data=request_data, headers=headers, auth=self.auth, timeout=_request_timeout)
         return out
 
 # ################################################################################################################################
@@ -129,7 +129,6 @@ class MCPClient:
         headers = self._build_headers(session_id)
 
         out = requests.post(self.mcp_url, data=raw_bytes, headers=headers, auth=self.auth, timeout=_request_timeout)
-
         return out
 
 # ################################################################################################################################
@@ -144,7 +143,6 @@ class MCPClient:
             headers.update(extra_headers)
 
         out = requests.delete(self.mcp_url, headers=headers, auth=self.auth, timeout=_request_timeout)
-
         return out
 
 # ################################################################################################################################
@@ -164,7 +162,6 @@ class MCPClient:
         session_id = response.headers[_session_header]
 
         out = InitializeResult(response, session_id)
-
         return out
 
 # ################################################################################################################################

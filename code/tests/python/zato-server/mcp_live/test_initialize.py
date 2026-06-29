@@ -35,7 +35,6 @@ _initialize_params = {'protocolVersion': _expected_protocol_version, 'capabiliti
 @pytest.fixture(scope='function')
 def client(zato_server:'anydict') -> 'MCPClient':
     out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
-
     return out
 
 # ################################################################################################################################

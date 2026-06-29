@@ -104,8 +104,8 @@ def _find_free_port() -> 'int':
         tcp_socket.bind(('127.0.0.1', 0))
 
         socket_address = tcp_socket.getsockname()
-        out = socket_address[1]
 
+        out = socket_address[1]
         return out
 
 # ################################################################################################################################
@@ -288,7 +288,6 @@ title = MCP Live Test Coverage
 """)
 
     out = _CoverageConfig(coveragerc_path, coverage_data_directory)
-
     return out
 
 # ################################################################################################################################
