@@ -15,7 +15,7 @@ from zato.common.json_internal import dumps
 from zato.common.test import _test_sec_def_id
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_request, _mcp_protocol_version
 from zato.server.connection.mcp.session import MCPSessionManager, MCPSessionReaper, \
-    session_expired, session_not_found, session_valid
+    Session_Expired, Session_Not_Found, Session_Valid
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -144,7 +144,7 @@ class SessionManagerValidate(TestCase):
 
         result = manager.validate(session_id)
 
-        self.assertEqual(result, session_valid)
+        self.assertEqual(result, Session_Valid)
 
     def test_validate_unknown_session(self) -> 'None':
 
@@ -152,7 +152,7 @@ class SessionManagerValidate(TestCase):
 
         result = manager.validate('nonexistent-session-id')
 
-        self.assertEqual(result, session_not_found)
+        self.assertEqual(result, Session_Not_Found)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -168,7 +168,7 @@ class SessionManagerDelete(TestCase):
 
         self.assertTrue(result)
         self.assertEqual(manager.session_count, 0)
-        self.assertEqual(manager.validate(session_id), session_not_found)
+        self.assertEqual(manager.validate(session_id), Session_Not_Found)
 
     def test_delete_unknown_session(self) -> 'None':
 
@@ -219,7 +219,7 @@ class SessionManagerReaping(TestCase):
         # The session was just created but the TTL is 0, so any elapsed time makes it idle-expired ..
         is_valid = manager.validate(session_id)
 
-        self.assertEqual(is_valid, session_expired)
+        self.assertEqual(is_valid, Session_Expired)
 
 # ################################################################################################################################
 
@@ -252,7 +252,7 @@ class SessionManagerReaping(TestCase):
         # The session was just created but max_lifetime=0 means any elapsed time exceeds it ..
         is_valid = manager.validate(session_id)
 
-        self.assertEqual(is_valid, session_expired)
+        self.assertEqual(is_valid, Session_Expired)
 
 # ################################################################################################################################
 

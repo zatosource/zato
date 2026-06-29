@@ -66,12 +66,12 @@ _listener_path = os.path.join(
 
 _password = 'test.invoke.' + rand_string()
 
-_mcp_username = 'test.mcp.live.user'
-_mcp_password = 'test.mcp.live.' + rand_string()
-_mcp_sec_def_name = 'test.mcp.live.auth'
+_mcp_username       = 'test.mcp.live.user'
+_mcp_password       = 'test.mcp.live.' + rand_string()
+_mcp_sec_def_name   = 'test.mcp.live.auth'
 
-_mcp_username_b = 'test.mcp.live.user.b'
-_mcp_password_b = 'test.mcp.live.b.' + rand_string()
+_mcp_username_b     = 'test.mcp.live.user.b'
+_mcp_password_b     = 'test.mcp.live.b.' + rand_string()
 _mcp_sec_def_name_b = 'test.mcp.live.auth.b'
 
 _mcp_group_name = 'mcp.test-live-group'
