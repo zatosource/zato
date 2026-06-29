@@ -128,16 +128,21 @@ class MCPSessionManager:
 
 # ################################################################################################################################
 
-    def validate(self, session_id:'str') -> 'bool':
-        """ Returns True if the session is alive, False otherwise.
-        A session is dead if it does not exist, has been idle longer than the TTL,
-        or has exceeded the absolute max lifetime since creation.
+    def validate(self, session_id:'str', sec_def_id:'int' = 0) -> 'bool':
+        """ Returns True if the session is alive and owned by the caller, False if not found or expired.
+        Raises PermissionError if the session exists but belongs to a different identity.
         Touching a live session updates its last_seen_at timestamp.
         """
 
         # If the session does not exist, it is unknown ..
         if not (session := self._sessions.get(session_id)):
             return False
+
+        # .. reject if the session belongs to a different identity ..
+        if sec_def_id:
+            if session.sec_def_id != sec_def_id:
+                logger.info('MCP: Session `%s` owned by sec_def %d, caller is %d', session_id, session.sec_def_id, sec_def_id)
+                raise PermissionError(session_id)
 
         now = monotonic()
 
