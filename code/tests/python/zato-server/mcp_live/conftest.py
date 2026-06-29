@@ -69,6 +69,11 @@ _password = 'test.invoke.' + rand_string()
 _mcp_username = 'test.mcp.live.user'
 _mcp_password = 'test.mcp.live.' + rand_string()
 _mcp_sec_def_name = 'test.mcp.live.auth'
+
+_mcp_username_b = 'test.mcp.live.user.b'
+_mcp_password_b = 'test.mcp.live.b.' + rand_string()
+_mcp_sec_def_name_b = 'test.mcp.live.auth.b'
+
 _mcp_group_name = 'mcp.test-live-group'
 
 _reports_directory = os.path.join(_zato_base, 'code', 'tests', 'python', 'zato-server', 'mcp_live', 'reports')
@@ -216,11 +221,16 @@ security:
     type: basic_auth
     username: {_mcp_username}
     password: "{_mcp_password}"
+  - name: {_mcp_sec_def_name_b}
+    type: basic_auth
+    username: {_mcp_username_b}
+    password: "{_mcp_password_b}"
 
 groups:
   - name: {_mcp_group_name}
     members:
       - {_mcp_sec_def_name}
+      - {_mcp_sec_def_name_b}
 
 channel_mcp:
   - name: {mcp_channel_name}
@@ -508,6 +518,7 @@ def zato_server(request:'any_') -> 'any_':
         'password': _password,
         'mcp_url': mcp_url,
         'mcp_auth': (_mcp_username, _mcp_password),
+        'mcp_auth_b': (_mcp_username_b, _mcp_password_b),
         'server_directory': server_directory,
         'temp_directory': _temp_directory,
     }
