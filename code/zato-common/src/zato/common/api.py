@@ -1115,13 +1115,13 @@ class Echo(Service):
 # ################################################################################################################################
 
 class Raise(Service):
-    """ Always raises an exception. Used to test that exception details are not leaked to MCP clients.
-    """
+    \"\"\" Always raises an exception. Used to test that exception details are not leaked to MCP clients.
+    \"\"\"
 
     name = 'test.raise'
 
     def handle(self):
-        raise Exception('This is a test exception with internal details /srv/zato/server/path.py line 42')
+        raise Exception('Test exception')
 
 # ################################################################################################################################
 # ################################################################################################################################

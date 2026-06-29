@@ -15,7 +15,7 @@ import pytest
 
 # local
 from _client import MCPClient
-from _constants import _error_invalid_request, _zato_internal_prefix
+from _constants import _zato_internal_prefix
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -154,6 +154,30 @@ class TestExceptionResponse:
 
         assert first_entry['text'] == _expected_error_message
         assert result['isError'] is True
+
+# ################################################################################################################################
+
+    def test_service_exception_body_has_no_internal_detail(self, client:'MCPClient', session_id:'str') -> 'None':
+        """ The response body contains no exception text, file paths, tracebacks, or SQL.
+        """
+
+        params = {'name': _raise_service, 'arguments': {}}
+        response = client.jsonrpc('tools/call', params=params, session_id=session_id)
+        response_text = response.text
+
+        # .. must not contain the actual exception message ..
+        assert 'Test exception' not in response_text
+
+        # .. must not contain file paths ..
+        assert '.py' not in response_text
+
+        # .. must not contain traceback markers ..
+        assert 'Traceback' not in response_text
+        assert 'File "' not in response_text
+
+        # .. must not contain SQL fragments.
+        assert 'SELECT' not in response_text
+        assert 'INSERT' not in response_text
 
 # ################################################################################################################################
 # ################################################################################################################################
