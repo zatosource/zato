@@ -106,7 +106,8 @@ class MCPSessionManager:
         # .. build a new session object with a unique prefixed ID ..
         session = MCPSession()
 
-        unique_id = uuid4().hex
+        session_uuid = uuid4()
+        unique_id = session_uuid.hex
         session.session_id       = f'{_session_id_prefix}{unique_id}'
         session.sec_def_id       = sec_def_id
         session.protocol_version = protocol_version
