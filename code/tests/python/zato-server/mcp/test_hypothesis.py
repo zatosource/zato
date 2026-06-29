@@ -106,6 +106,8 @@ class JSONRPCEnvelopeFuzzing(TestCase):
     def test_arbitrary_bytes_never_crash(self, raw_data:'bytes') -> 'None':
         """ Any byte sequence must produce a valid MCPResponse, never an unhandled exception.
         """
+        """ Any byte sequence must produce a valid MCPResponse, never an unhandled exception.
+        """
 
         handler = _make_handler()
         response = handler.handle_raw_request(raw_data)

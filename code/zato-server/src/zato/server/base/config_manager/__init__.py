@@ -765,8 +765,8 @@ class ConfigManager(_ConfigManagerBase):
 
     def init_generic_connections(self) -> 'None':
 
-        # Some connection types are built elsewhere
-        to_skip = {}
+        # MCP channels are built after services are deployed in _build_mcp_tool_registries
+        to_skip = {COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP}
 
         for config_dict in self.config_store.generic_connection.values():
 

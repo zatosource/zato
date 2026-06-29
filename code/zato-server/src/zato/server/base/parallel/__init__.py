@@ -965,14 +965,22 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 # ################################################################################################################################
 
     def _build_mcp_tool_registries(self) -> 'None':
-        """ Builds tool registries for all MCP channels.
-        Called after all services (internal and user-defined) are deployed.
+        """ Creates MCP channel wrappers and builds their tool registries.
+        Called after all services (internal and user-defined) are deployed,
+        so rebuild() can resolve every service on the allow list.
         """
-        for channel_config in self.config_manager.channel_mcp.values():
-            wrapper = channel_config.conn
-            if wrapper:
-                if wrapper.handler:
-                    wrapper.handler.tool_registry.rebuild()
+        from zato.common.ext.bunch import bunchify
+        from zato.common.api import GENERIC as COMMON_GENERIC
+
+        # Create the MCP channel wrappers that were skipped during init_generic_connections ..
+        for config_dict in self.config_manager.config_store.generic_connection.values():
+            if config_dict:
+                config = config_dict.get('config')
+                if config:
+                    if config['type_'] == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP:
+                        self.config_manager._create_generic_connection(bunchify(config), raise_exc=True, is_starting=False)
+
+        # .. now all wrappers exist with their registries populated.
 
 # ################################################################################################################################
 

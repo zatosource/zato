@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from http.client import BAD_REQUEST, FORBIDDEN, NO_CONTENT
+from http.client import FORBIDDEN, NO_CONTENT
 
 # Zato
 from zato.common.json_internal import dumps
@@ -81,29 +81,18 @@ class MCPEndpoint(AdminService):
         # .. get the remote address for session logging ..
         remote_address = self.wsgi_environ[_remote_addr_key]
 
-        # .. handle DELETE requests for session termination, applying the same session
-        # and protocol version checks that handle_raw_request applies to POST ..
+        # .. handle DELETE requests for session termination ..
         if self.request.http.method == 'DELETE':
 
-            if session_id:
-                if not wrapper.handler.session_manager.validate(session_id):
-                    self.response.status_code = BAD_REQUEST
-                    self.response.payload = dumps(wrapper.handler._make_session_rejected_response())
-                    self.response.data_format = _content_type_json
-                    return
-
-                if protocol_version_header is not None:
-                    negotiated = wrapper.handler.session_manager.get_protocol_version(session_id)
-                    if protocol_version_header != negotiated:
-                        self.response.status_code = BAD_REQUEST
-                        self.response.payload = dumps(wrapper.handler._make_version_mismatch_response(
-                            protocol_version_header, negotiated))
-                        self.response.data_format = _content_type_json
-                        return
-
-            mcp_response = wrapper.handler.handle_delete_session(session_id)
+            mcp_response = wrapper.handler.handle_delete_session(session_id, protocol_version_header)
             self.response.status_code = mcp_response.status_code
-            self.response.payload = ''
+
+            if mcp_response.body:
+                self.response.payload = dumps(mcp_response.body)
+                self.response.data_format = _content_type_json
+            else:
+                self.response.payload = ''
+
             return
 
         # .. get the raw request body ..

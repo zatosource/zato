@@ -147,6 +147,51 @@ class MCPHandler:
 
 # ################################################################################################################################
 
+    def _validate_session_and_version(self, session_id:'strnone', protocol_version_header:'strnone') -> 'MCPResponse | None':
+        """ Validates session existence and protocol version match.
+        Returns an MCPResponse with a 400 error if validation fails, or None if everything is fine.
+        Called by handle_raw_request where an unknown session is a protocol error (400).
+        """
+
+        # If a session id was supplied, it must be valid ..
+        if session_id:
+            session_is_valid = self.session_manager.validate(session_id)
+
+            if not session_is_valid:
+                out = MCPResponse()
+                out.body = _make_error_response(None, _error_invalid_request, _message_invalid_session)
+                out.status_code = _http_bad_request
+                return out
+
+            # .. when the session is valid, check the protocol version header ..
+            return self._validate_protocol_version(session_id, protocol_version_header)
+
+        # .. validation passed.
+        return None
+
+# ################################################################################################################################
+
+    def _validate_protocol_version(self, session_id:'str', protocol_version_header:'strnone') -> 'MCPResponse | None':
+        """ Checks that the MCP-Protocol-Version header matches the negotiated version.
+        Returns an MCPResponse with a 400 error on mismatch, or None if fine.
+        """
+
+        if protocol_version_header is None:
+            return None
+
+        negotiated_version = self.session_manager.get_protocol_version(session_id)
+
+        if protocol_version_header != negotiated_version:
+            message = f'Protocol version mismatch: header `{protocol_version_header}` does not match session `{negotiated_version}`'
+            out = MCPResponse()
+            out.body = _make_error_response(None, _error_invalid_request, message)
+            out.status_code = _http_bad_request
+            return out
+
+        return None
+
+# ################################################################################################################################
+
     def handle_raw_request(
         self,
         raw_data:'bytes',
@@ -171,35 +216,15 @@ class MCPHandler:
             out.status_code = OK
             return out
 
-        # .. resolve whether the caller holds a valid session up front, since the session
-        # gate below and the per-method dispatch both depend on it ..
-        session_is_valid = False
+        # .. validate session and protocol version up front ..
+        validation_error = self._validate_session_and_version(session_id, protocol_version_header)
 
-        if session_id:
-            session_is_valid = self.session_manager.validate(session_id)
+        if validation_error:
+            return validation_error
 
-        # .. a session id that was supplied but does not validate is a protocol error,
-        # so reject it before doing any work (400, never 404, since auth is the HTTP layer's job) ..
-        if session_id:
-            if not session_is_valid:
-
-                out.body = _make_error_response(None, _error_invalid_request, _message_invalid_session)
-                out.status_code = _http_bad_request
-                return out
-
-        # .. when the caller holds a valid session and sent an MCP-Protocol-Version header,
-        # it must match the version negotiated for that session, otherwise reject ..
-        if session_is_valid:
-            if protocol_version_header is not None:
-
-                negotiated_version = self.session_manager.get_protocol_version(session_id)
-
-                if protocol_version_header != negotiated_version:
-
-                    message = f'Protocol version mismatch: header `{protocol_version_header}` does not match session `{negotiated_version}`'
-                    out.body = _make_error_response(None, _error_invalid_request, message)
-                    out.status_code = _http_bad_request
-                    return out
+        # .. if validation passed and a session_id was provided, the session is valid
+        # (otherwise _validate_session_and_version would have returned an error) ..
+        session_is_valid = bool(session_id)
 
         # .. clear any pending session ID from a previous request
         # and store the remote address for session creation logging ..
@@ -508,7 +533,7 @@ class MCPHandler:
 
 # ################################################################################################################################
 
-    def handle_delete_session(self, session_id:'strnone') -> 'MCPResponse':
+    def handle_delete_session(self, session_id:'strnone', protocol_version_header:'strnone' = None) -> 'MCPResponse':
         """ Handles an HTTP DELETE request to terminate an MCP session.
         """
 
@@ -522,39 +547,25 @@ class MCPHandler:
             out.status_code = _http_not_found
             return out
 
-        # .. try to delete it ..
-        was_deleted = self.session_manager.delete(session_id)
+        # .. check if the session exists. For DELETE, an unknown session is 404 (resource not found),
+        # not 400, because the caller is asking to delete something that does not exist ..
+        session_exists = self.session_manager.validate(session_id)
 
-        # .. if it existed, confirm with 200 ..
-        if was_deleted:
+        if not session_exists:
             out.body = None
-            out.status_code = OK
+            out.status_code = _http_not_found
             return out
 
-        # .. otherwise the session was not found.
+        # .. the session exists, so check protocol version consistency ..
+        version_error = self._validate_protocol_version(session_id, protocol_version_header)
+
+        if version_error:
+            return version_error
+
+        # .. delete it.
+        _ = self.session_manager.delete(session_id)
         out.body = None
-        out.status_code = _http_not_found
-        return out
-
-# ################################################################################################################################
-
-    def _make_session_rejected_response(self) -> 'stranydict':
-        """ Builds the JSON-RPC error body for an invalid or expired session.
-        Used by the endpoint layer for pre-dispatch validation on DELETE.
-        """
-
-        out = _make_error_response(None, _error_invalid_request, _message_invalid_session)
-        return out
-
-# ################################################################################################################################
-
-    def _make_version_mismatch_response(self, header_version:'str', negotiated_version:'strnone') -> 'stranydict':
-        """ Builds the JSON-RPC error body for a protocol version mismatch.
-        Used by the endpoint layer for pre-dispatch validation on DELETE.
-        """
-
-        message = f'Protocol version mismatch: header `{header_version}` does not match session `{negotiated_version}`'
-        out = _make_error_response(None, _error_invalid_request, message)
+        out.status_code = OK
         return out
 
 # ################################################################################################################################
