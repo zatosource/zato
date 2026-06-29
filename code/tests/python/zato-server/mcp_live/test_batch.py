@@ -38,8 +38,8 @@ class TestBatch:
     """ Tests for JSON-RPC batch request handling.
     """
 
-    def test_batch_with_request_and_notification(self, client:'MCPClient') -> 'None':
-        """ A batch with one request and one notification returns one response.
+    def test_batch_with_initialize_rejected(self, client:'MCPClient') -> 'None':
+        """ The MCP spec says initialize MUST NOT appear in a batch.
         """
 
         messages = [
@@ -51,15 +51,9 @@ class TestBatch:
 
         assert response.status_code == OK
 
-        # The batch response must be an array with exactly one element
-        # because the notification produces no response.
         data = response.json()
-        assert isinstance(data, list)
-        assert len(data) == 1
-
-        # The single response must be for the initialize request.
-        assert data[0]['id'] == 1
-        assert 'result' in data[0]
+        assert 'error' in data
+        assert data['error']['code'] == _error_invalid_request
 
 # ################################################################################################################################
 

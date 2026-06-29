@@ -68,6 +68,9 @@ _message_invalid_request = 'Invalid request'
 # Error message returned when the batch array is empty
 _message_empty_batch = 'Invalid request: empty batch'
 
+# Error message returned when initialize appears inside a batch
+_message_initialize_in_batch = 'Invalid request: initialize MUST NOT appear in a batch'
+
 # Error message returned when the jsonrpc version field is missing or wrong
 _message_missing_jsonrpc_version = 'Invalid request: missing or wrong jsonrpc version'
 
@@ -278,6 +281,15 @@ class MCPHandler:
             out.body = _make_error_response(None, _error_invalid_request, _message_empty_batch)
             out.status_code = OK
             return out
+
+        # .. the MCP spec forbids initialize inside a batch, reject the entire
+        # batch if any element attempts it ..
+        for message in messages:
+            if isinstance(message, dict):
+                if message.get('method') == _method_initialize:
+                    out.body = _make_error_response(message.get('id'), _error_invalid_request, _message_initialize_in_batch)
+                    out.status_code = OK
+                    return out
 
         # .. dispatch each message independently and collect responses for requests (not notifications).
         responses:'strdictlist' = []

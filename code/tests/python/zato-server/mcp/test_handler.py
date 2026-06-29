@@ -632,14 +632,15 @@ class HandleBatch(TestCase):
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
 
         batch = [
-            _make_request('initialize', request_id=1),
+            _make_request('ping', request_id=1),
             {'jsonrpc': '2.0', 'method': 'notifications/initialized'},
         ]
         raw = dumps(batch)
 
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
         self.assertIsInstance(mcp_response.body, list)
@@ -702,11 +703,11 @@ class HandleBatch(TestCase):
 # ################################################################################################################################
 
 class HandleInitializeBatch(TestCase):
-    """ Tests the typical real-world batch: [initialize, notifications/initialized].
+    """ Tests that initialize inside a batch is rejected per the MCP spec.
     """
 
     def test_initialize_plus_notification(self) -> 'None':
-        """ Verifies that a batch with initialize and notification returns one response.
+        """ The MCP spec says initialize MUST NOT appear in a batch.
         """
 
         registry = _MockToolRegistry()
@@ -721,14 +722,7 @@ class HandleInitializeBatch(TestCase):
         mcp_response = handler.handle_raw_request(raw)
 
         self.assertEqual(mcp_response.status_code, OK)
-        self.assertIsInstance(mcp_response.body, list)
-        self.assertEqual(len(mcp_response.body), 1)
-
-        initialize_response = mcp_response.body[0]
-        self.assertEqual(initialize_response['id'], 1)
-
-        result = initialize_response['result']
-        self.assertEqual(result['protocolVersion'], _mcp_protocol_version)
+        self.assertEqual(mcp_response.body['error']['code'], _error_invalid_request)
 
 # ################################################################################################################################
 # ################################################################################################################################

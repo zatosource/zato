@@ -258,7 +258,7 @@ class BatchFuzzing(TestCase):
     @given(st.lists(
         st.fixed_dictionaries({
             'jsonrpc': st.just('2.0'),
-            'method': st.sampled_from(['ping', 'tools/list', 'initialize']),
+            'method': st.sampled_from(['ping', 'tools/list']),
             'id': st.integers(min_value=1, max_value=10000),
         }),
         min_size=1,
