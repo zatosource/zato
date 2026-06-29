@@ -29,8 +29,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Maximum number of messages in a large batch test
-_large_batch_size = 1000
+# Maximum number of messages in a large batch test (must not exceed the server's batch cap)
+_large_batch_size = 20
 
 # Size threshold for an oversized payload test
 _oversized_payload_bytes = 1_100_000

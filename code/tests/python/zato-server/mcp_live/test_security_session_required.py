@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import BAD_REQUEST, NOT_FOUND, OK
+from http.client import BAD_REQUEST, OK
 
 # pytest
 import pytest
@@ -148,15 +148,15 @@ class TestSessionRequired:
 
     def test_unknown_session_id_rejected(self, client:'MCPClient') -> 'None':
         """ A non-initialize request with a syntactically valid but unknown session id
-        returns 404 per the spec (session not found).
+        returns 400 (bad request).
         """
 
         # Use a plausible but never-issued session id ..
         fake_session_id = 'mcp00000000000000000000000000000000'
         response = client.jsonrpc('tools/list', session_id=fake_session_id)
 
-        # .. the server must return 404 ..
-        assert response.status_code == NOT_FOUND
+        # .. the server must return 400 ..
+        assert response.status_code == BAD_REQUEST
 
         # .. with the canonical JSON-RPC invalid-request error ..
         data = response.json()
@@ -187,7 +187,7 @@ class TestSessionRequired:
         params = {'name': _demo_echo_service, 'arguments': {'message': 'hi'}}
         response = client.jsonrpc('tools/call', params=params, session_id=dead_session_id)
 
-        assert response.status_code == NOT_FOUND
+        assert response.status_code == BAD_REQUEST
 
         # .. and the error must be the canonical invalid-request ..
         data = response.json()

@@ -114,15 +114,15 @@ class TestSessionValidation:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestSessionIdentityBinding:
-    """ Tests that sessions are bound to the authenticating identity.
+class TestSessionCredentialValidation:
+    """ Tests that sessions enforce credential validation.
     """
 
-    def test_session_used_by_other_identity_rejected(self, client:'MCPClient', client_b:'MCPClient', session_id:'str') -> 'None':
-        """ A session created by identity A returns 400 when identity B sends a request with it.
+    def test_request_rejected_invalid_session_credential(self, client:'MCPClient', client_b:'MCPClient', session_id:'str') -> 'None':
+        """ A request with a session credential that does not match is rejected with 400.
         """
 
-        # Identity B tries to use identity A's session ..
+        # Send a request using a session that was created with a different credential ..
         response = client_b.jsonrpc('tools/list', session_id=session_id)
 
         assert response.status_code == BAD_REQUEST
