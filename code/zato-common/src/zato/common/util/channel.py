@@ -133,7 +133,7 @@ def ensure_mcp_channel_exists(session, cluster_id):
         generic_conn.is_channel = True
         generic_conn.is_outconn = False
         generic_conn.cluster_id = cluster_id
-        generic_conn.opaque1 = '{"services": ["demo.echo"], "url_path": "/mcp/demo"}'
+        generic_conn.opaque1 = '{"services": ["demo.echo", "test.raise"], "url_path": "/mcp/demo"}'
 
         session.add(generic_conn)
 

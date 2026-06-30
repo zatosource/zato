@@ -14,7 +14,8 @@ from unittest import TestCase
 from zato.common.json_internal import dumps
 from zato.common.test import _test_sec_def_id
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_params, _error_invalid_request, \
-    _error_method_not_found, _error_parse, _jsonrpc_version, _mcp_protocol_version, _server_name, _server_version
+    _error_method_not_found, _error_parse, _jsonrpc_version, _mcp_protocol_version, _message_bad_request, \
+    _server_name, _server_version
 from zato.server.connection.mcp.session import MCPSessionManager
 
 # ################################################################################################################################
@@ -375,7 +376,7 @@ class HandleToolsCall(TestCase):
         content = result['content']
         first_content = content[0]
         text = first_content['text']
-        self.assertEqual(text, _test_service_error_message)
+        self.assertEqual(text, _message_bad_request)
 
     def test_string_response_serialized(self) -> 'None':
         """ Verifies that a string service response is serialized as text content.
