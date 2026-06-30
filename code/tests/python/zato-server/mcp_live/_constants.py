@@ -21,6 +21,9 @@ _jsonrpc_version = '2.0'
 # The demo service exposed on the default MCP channel
 _demo_echo_service = 'demo.echo'
 
+# The test service that always raises an exception
+_raise_service = 'test.raise'
+
 # Header name for the MCP session ID prefix
 _session_id_prefix = 'mcp'
 

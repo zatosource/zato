@@ -15,7 +15,7 @@ import pytest
 
 # local
 from _client import MCPClient
-from _constants import _zato_internal_prefix
+from _constants import _raise_service, _zato_internal_prefix
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,9 +34,6 @@ _expected_server_version = '2.4'
 
 # Standard params for initialize requests in tests
 _initialize_params = {'protocolVersion': '2025-11-05', 'capabilities': {}, 'clientInfo': {'name': 'test', 'version': '1.0'}}
-
-# The test service that always raises an exception
-_raise_service = 'test.raise'
 
 # The generic error message expected from the server
 _expected_error_message = 'Bad request'

@@ -14,7 +14,7 @@ import pytest
 
 # local
 from _client import MCPClient
-from _constants import _demo_echo_service, _error_method_not_found, _zato_internal_prefix
+from _constants import _demo_echo_service, _error_method_not_found, _raise_service, _zato_internal_prefix
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,16 +103,17 @@ class TestACL:
         result = json_body['result']
         tools = result['tools']
 
-        # The default channel allows only demo.echo ..
+        # The default channel allows demo.echo and test.raise ..
         tool_names = []
 
         for tool in tools:
             tool_names.append(tool['name'])
 
         assert _demo_echo_service in tool_names
+        assert _raise_service in tool_names
 
         # .. and no other services should be present.
-        assert len(tool_names) == 1
+        assert len(tool_names) == 2
 
 # ################################################################################################################################
 # ################################################################################################################################
