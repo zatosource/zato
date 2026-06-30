@@ -76,6 +76,9 @@ _message_missing_method = 'Invalid request: missing method'
 # Error message returned when the required tool name parameter is absent
 _message_missing_tool_name = 'Missing required parameter: name'
 
+# Error message returned when the cursor parameter is not a valid integer
+_message_invalid_cursor = 'Invalid cursor value'
+
 # Error message returned when protocolVersion is absent from initialize params
 _message_missing_protocol_version = 'Missing required parameter: protocolVersion'
 
@@ -469,7 +472,12 @@ class MCPHandler:
         """
 
         cursor = params.get('cursor')
-        tools, next_cursor = self.tool_registry.get_tools_page(cursor)
+
+        try:
+            tools, next_cursor = self.tool_registry.get_tools_page(cursor)
+        except ValueError:
+            out = _make_error_response(request_id, _error_invalid_params, _message_invalid_cursor)
+            return out
 
         result:'stranydict' = {
             'tools': tools,

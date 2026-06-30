@@ -113,22 +113,31 @@ class ToolRegistry:
         """ Returns a page of tools starting from the given cursor.
         The cursor is an opaque string representing the start index.
         Returns (tools_page, next_cursor) where next_cursor is None if no more pages.
+        Raises ValueError if the cursor is not a valid integer.
         """
 
         all_tools = self._cached_tools
+        total = len(all_tools)
 
         # Decode the cursor into a start index ..
-        start = 0
+        if cursor is None:
+            start = 0
+        else:
+            # Non-numeric cursors are rejected
+            try:
+                start = int(cursor)
+            except (ValueError, TypeError):
+                raise ValueError(f'Invalid cursor value: `{cursor}`')
 
-        if cursor:
-            start = int(cursor)
+            # Clamp to valid range [0, total]
+            start = max(0, min(start, total))
 
         # .. slice out the current page ..
         end = start + _default_page_size
         page = all_tools[start:end]
 
         # .. if there are more tools beyond this page, produce a next cursor ..
-        if end < len(all_tools):
+        if end < total:
             next_cursor = str(end)
         else:
             next_cursor = None
