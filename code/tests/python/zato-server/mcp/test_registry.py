@@ -470,3 +470,93 @@ class ToolRegistryAllowlistCheck(TestCase):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class RegistryCursorGuard(TestCase):
+    """ Tests for cursor validation and clamping in get_tools_page.
+    """
+
+# ################################################################################################################################
+
+    def test_negative_cursor_clamped_to_first_page(self) -> 'None':
+        """ Verifies that a negative cursor is clamped to 0 and returns the first page.
+        """
+
+        store = _MockServiceStore()
+        store.add_service('crm.get-customer', _ServiceWithDoc)
+
+        registry = ToolRegistry(store, ['crm.get-customer']) # pyright: ignore[reportArgumentType]
+        registry.rebuild()
+
+        tools_negative, cursor_negative = registry.get_tools_page('-5')
+        tools_zero, cursor_zero = registry.get_tools_page('0')
+
+        self.assertEqual(tools_negative, tools_zero)
+        self.assertEqual(cursor_negative, cursor_zero)
+
+# ################################################################################################################################
+
+    def test_out_of_range_cursor_returns_empty_page(self) -> 'None':
+        """ Verifies that a cursor beyond the tool count is clamped and returns an empty page.
+        """
+
+        store = _MockServiceStore()
+        store.add_service('crm.get-customer', _ServiceWithDoc)
+        store.add_service('billing.create-invoice', _ServiceNoDoc)
+
+        registry = ToolRegistry(store, ['crm.get-customer', 'billing.create-invoice']) # pyright: ignore[reportArgumentType]
+        registry.rebuild()
+
+        tools, next_cursor = registry.get_tools_page('99999')
+
+        self.assertEqual(len(tools), 0)
+        self.assertIsNone(next_cursor)
+
+# ################################################################################################################################
+
+    def test_valid_cursor_returns_expected_page(self) -> 'None':
+        """ Verifies that a valid numeric cursor returns the correct slice and nextCursor.
+        """
+
+        store = _MockServiceStore()
+
+        total_services = _default_page_size + 10
+
+        service_names = []
+
+        for _ in range(total_services):
+            name = f'svc.service-{len(service_names):04d}'
+            store.add_service(name, _ServiceWithDoc)
+            service_names.append(name)
+
+        registry = ToolRegistry(store, service_names) # pyright: ignore[reportArgumentType]
+        registry.rebuild()
+
+        # Request second page starting at _default_page_size
+        cursor_value = str(_default_page_size)
+        tools, next_cursor = registry.get_tools_page(cursor_value)
+
+        self.assertEqual(len(tools), 10)
+        self.assertIsNone(next_cursor)
+
+        # First tool on second page should be the one at index _default_page_size
+        expected_name = f'svc.service-{_default_page_size:04d}'
+        first_tool = tools[0]
+        self.assertEqual(first_tool['name'], expected_name)
+
+# ################################################################################################################################
+
+    def test_non_numeric_cursor_raises(self) -> 'None':
+        """ Verifies that a non-numeric cursor raises ValueError.
+        """
+
+        store = _MockServiceStore()
+        store.add_service('crm.get-customer', _ServiceWithDoc)
+
+        registry = ToolRegistry(store, ['crm.get-customer']) # pyright: ignore[reportArgumentType]
+        registry.rebuild()
+
+        with self.assertRaises(ValueError):
+            _ = registry.get_tools_page('abc')
+
+# ################################################################################################################################
+# ################################################################################################################################

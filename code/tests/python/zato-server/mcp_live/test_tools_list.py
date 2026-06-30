@@ -14,7 +14,7 @@ import pytest
 
 # local
 from _client import MCPClient
-from _constants import _demo_echo_service
+from _constants import _demo_echo_service, _error_invalid_params
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -149,6 +149,24 @@ class TestToolsList:
         # and there must be no nextCursor.
         assert result['tools'] == []
         assert 'nextCursor' not in result
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestToolsListCursor:
+    """ Tests for cursor validation in the MCP tools/list method.
+    """
+
+    def test_non_numeric_cursor_returns_invalid_params(self, client:'MCPClient', session_id:'str') -> 'None':
+        """ A non-numeric cursor value returns a JSON-RPC invalid-params error.
+        """
+
+        response = client.jsonrpc('tools/list', params={'cursor': 'not-a-number'}, session_id=session_id)
+        json_body = response.json()
+        error = json_body['error']
+
+        assert error['code'] == _error_invalid_params
+        assert 'cursor' in error['message'].lower()
 
 # ################################################################################################################################
 # ################################################################################################################################
