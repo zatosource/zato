@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from dataclasses import dataclass
 from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED, OK
 from inspect import isclass
@@ -39,6 +38,7 @@ from zato.common.json_internal import dumps
 from zato.common.monitoring.metrics import ServiceMetrics
 from zato.common.typing_ import cast_, type_
 from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
+from zato.common.util.logging_ import current_cid as _current_cid, current_service_name as _current_service_name
 from zato.common.util.python_ import get_module_name_by_path
 from zato.common.util.time_ import utcnow
 from zato.server.commands import CommandsFacade
@@ -126,8 +126,6 @@ if 0:
 
 logger = logging.getLogger(__name__)
 _get_logger=logging.getLogger
-
-from zato.common.util.logging_ import current_cid as _current_cid, current_service_name as _current_service_name
 
 # ################################################################################################################################
 
