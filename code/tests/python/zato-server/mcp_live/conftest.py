@@ -390,7 +390,7 @@ def zato_server(request:'any_') -> 'any_':
     repo_location = os.path.join(server_directory, 'config', 'repo')
     config = get_config_object(repo_location, 'server.conf')
     config['main']['port'] = str(port) # pyright: ignore[reportIndexIssue, reportCallIssue, reportArgumentType]
-    config['main']['bind'] = f'0.0.0.0:{port}' # pyright: ignore[reportIndexIssue, reportCallIssue, reportArgumentType]
+    config['main']['bind'] = f'127.0.0.1:{port}' # pyright: ignore[reportIndexIssue, reportCallIssue, reportArgumentType]
     update_config_file(config, repo_location, 'server.conf') # pyright: ignore[reportArgumentType]
 
     config_time = time.monotonic()
@@ -411,6 +411,7 @@ def zato_server(request:'any_') -> 'any_':
     server_env = os.environ.copy()
     server_env['Zato_Config_Bind_Port'] = str(port)
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
+    server_env['Zato_MCP_Check_Origin'] = 'true'
     _ = server_env.pop('COVERAGE_PROCESS_START', None)
 
     if use_coverage:

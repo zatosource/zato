@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import NO_CONTENT, NOT_FOUND, OK
+from http.client import FORBIDDEN, NO_CONTENT, NOT_FOUND, OK
 from unittest import TestCase
 
 # Zato
@@ -15,6 +15,7 @@ from zato.common.json_internal import dumps, loads
 from zato.common.test import _test_sec_def_id
 from zato.server.connection.mcp.handler import _mcp_protocol_version, MCPHandler
 from zato.server.generic.api.channel_mcp import ChannelMCPWrapper
+from zato.server.service.internal.channel import mcp as mcp_endpoint_module
 from zato.server.service.internal.channel.mcp import MCPEndpoint
 
 # ################################################################################################################################
@@ -286,6 +287,104 @@ def _make_endpoint(channel_name:'str', wrapper:'ChannelMCPWrapper') -> 'MCPEndpo
 
     out = endpoint
     return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MCPEndpointOriginValidation(TestCase):
+    """ Tests that the Origin header is validated to prevent DNS rebinding attacks.
+    """
+
+    def setUp(self) -> 'None':
+        self._original_check_origin = mcp_endpoint_module.check_origin
+        mcp_endpoint_module.check_origin = True
+
+    def tearDown(self) -> 'None':
+        mcp_endpoint_module.check_origin = self._original_check_origin
+
+    def test_request_without_origin_is_allowed(self) -> 'None':
+        """ A request that carries no Origin header (a non-browser MCP client)
+        is processed normally.
+        """
+
+        server = _MockServer()
+
+        config = _MockBunch({
+            'name': 'origin-channel',
+            'services': [],
+        })
+
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper.build_wrapper()
+
+        assert wrapper.handler is not None
+        session_manager = wrapper.handler.session_manager
+        session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+
+        endpoint = _make_endpoint('origin-channel', wrapper)
+        endpoint.request.http.headers['mcp-session-id'] = session_id
+        endpoint.request.raw_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
+
+        endpoint.handle()
+
+        self.assertEqual(endpoint.response.status_code, OK)
+
+    def test_request_with_disallowed_origin_rejected(self) -> 'None':
+        """ A request carrying an Origin not on the allow list is rejected with 403
+        and the target service is never invoked.
+        """
+
+        server = _MockServer()
+
+        config = _MockBunch({
+            'name': 'origin-channel',
+            'services': [],
+        })
+
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper.build_wrapper()
+
+        assert wrapper.handler is not None
+        session_manager = wrapper.handler.session_manager
+        session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+
+        endpoint = _make_endpoint('origin-channel', wrapper)
+        endpoint.request.http.headers['mcp-session-id'] = session_id
+        endpoint.request.http.headers['origin'] = 'https://evil.example.com'
+        endpoint.request.raw_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
+
+        endpoint.handle()
+
+        self.assertEqual(endpoint.response.status_code, FORBIDDEN)
+        self.assertEqual(endpoint.response.payload, '')
+
+    def test_request_with_allowed_origin_accepted(self) -> 'None':
+        """ A request carrying an Origin that is on the channel's allow list is processed.
+        """
+
+        server = _MockServer()
+
+        config = _MockBunch({
+            'name': 'origin-channel',
+            'services': [],
+            'allowed_origins': ['https://app.example.com'],
+        })
+
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper.build_wrapper()
+
+        assert wrapper.handler is not None
+        session_manager = wrapper.handler.session_manager
+        session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+
+        endpoint = _make_endpoint('origin-channel', wrapper)
+        endpoint.request.http.headers['mcp-session-id'] = session_id
+        endpoint.request.http.headers['origin'] = 'https://app.example.com'
+        endpoint.request.raw_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
+
+        endpoint.handle()
+
+        self.assertEqual(endpoint.response.status_code, OK)
 
 # ################################################################################################################################
 # ################################################################################################################################

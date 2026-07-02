@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import os
 from http.client import FORBIDDEN, NO_CONTENT, NOT_FOUND
 
 # Zato
@@ -36,6 +37,18 @@ _protocol_version_header = 'mcp-protocol-version'
 
 # WSGI environ key set by the Rust HTTP layer with the resolved client address
 _remote_addr_key = 'zato.http.remote_addr'
+
+# Origin header name (lowercase, as stored by HTTPRequestData._extract_headers)
+_origin_header = 'origin'
+
+# Environment variable that enables Origin validation
+_check_origin_env_key = 'Zato_MCP_Check_Origin'
+
+# Whether to validate the Origin header on incoming requests
+check_origin = os.environ.get(_check_origin_env_key) == 'true'
+
+# Origin values allowed by default when Origin validation is enabled
+_default_allowed_origins:'tuple' = ()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,6 +86,19 @@ class MCPEndpoint(AdminService):
         # then reach the ChannelMCPWrapper through its .conn attribute ..
         channel_config = self.server.config_manager.channel_mcp[self.channel.name]
         wrapper = channel_config.conn
+
+        # .. when Origin validation is enabled and the header is present,
+        # it must match the channel's allowed origins ..
+        if check_origin:
+            if origin := self.request.http.headers.get(_origin_header):
+
+                allowed_origins = wrapper.config.get('allowed_origins') or _default_allowed_origins
+
+                if origin not in allowed_origins:
+                    logger.info('MCP channel `%s` rejected origin `%s`', self.channel.name, origin)
+                    self.response.status_code = FORBIDDEN
+                    self.response.payload = ''
+                    return
 
         # .. read the session ID from the request header if present ..
         session_id = self.request.http.headers.get(_session_header)
