@@ -20,8 +20,8 @@ from hypothesis import strategies as st
 from zato.common.api import CONTENT_TYPE, DATA_FORMAT, MISC, IO, TRACE1, ZATO_NONE
 from zato.common.exception import BackendInvocationError, BadRequest, Forbidden, \
     MethodNotAllowed, NotFound, ServiceMissingException, TooManyRequests, Unauthorized
-from zato.common.json_ import dumps
 from zato.common.marshal_.api import ElementMissing
+from zato.common.util.logging_ import current_cid, current_service_name
 from zato.server.connection.http_soap.channel import RequestDispatcher, response_404, status_response
 
 # ################################################################################################################################
@@ -693,7 +693,7 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         """ A generic Exception from handle sets 500 status.
         """
         ctx = _make_dispatcher()
-        ctx.mock_handle.side_effect = RuntimeError('Something went wrong')
+        ctx.mock_handle.side_effect = Exception('Test error message')
         wsgi_environ = _make_wsgi_environ()
 
         _ = _dispatch(ctx, wsgi_environ)
@@ -707,7 +707,7 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item({'name': MISC.DefaultAdminInvokeChannel})
         ctx = _make_dispatcher(channel_item=channel_item)
-        ctx.mock_handle.side_effect = RuntimeError('Admin error details')
+        ctx.mock_handle.side_effect = Exception('Admin error details')
         wsgi_environ = _make_wsgi_environ()
 
         _ = _dispatch(ctx, wsgi_environ)
@@ -719,13 +719,13 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
     def test_generic_exception_non_admin_returns_default_error(self) -> 'None':
         """ A generic exception on a non-admin channel with return_tracebacks=False returns default_error_message.
         """
-        ctx = _make_dispatcher(return_tracebacks=False, default_error_message='Something happened')
-        ctx.mock_handle.side_effect = RuntimeError('Secret trace')
+        ctx = _make_dispatcher(return_tracebacks=False, default_error_message='Default error message')
+        ctx.mock_handle.side_effect = Exception('Internal error details')
         wsgi_environ = _make_wsgi_environ()
 
         result = _dispatch(ctx, wsgi_environ)
 
-        self.assertIn('Something happened', result)
+        self.assertIn('Default error message', result)
 
 # ################################################################################################################################
 
@@ -733,12 +733,12 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         """ A generic exception on a non-admin channel with return_tracebacks=True returns e.args.
         """
         ctx = _make_dispatcher(return_tracebacks=True)
-        ctx.mock_handle.side_effect = RuntimeError('Visible trace')
+        ctx.mock_handle.side_effect = Exception('Test error details')
         wsgi_environ = _make_wsgi_environ()
 
         result = _dispatch(ctx, wsgi_environ)
 
-        self.assertIn('Visible trace', str(result))
+        self.assertIn('Test error details', str(result))
 
 # ################################################################################################################################
 
@@ -764,7 +764,7 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item({'data_format': DATA_FORMAT.JSON})
         ctx = _make_dispatcher(channel_item=channel_item)
-        ctx.mock_handle.side_effect = RuntimeError('Error')
+        ctx.mock_handle.side_effect = Exception('Test error message')
         wsgi_environ = _make_wsgi_environ()
 
         _ = _dispatch(ctx, wsgi_environ)
@@ -811,7 +811,7 @@ class DispatchFinallyBlockTestCase(unittest.TestCase):
         def handle_with_headers_and_error(*args:'any_', **kwargs:'any_') -> 'None':
             container = args[9]
             container['X-Error-Header'] = 'error-value'
-            raise RuntimeError('Boom')
+            raise Exception('Test error message')
 
         ctx.mock_handle.side_effect = handle_with_headers_and_error
 
@@ -873,6 +873,74 @@ class DispatchLoggingTestCase(unittest.TestCase):
             info_calls = [str(call_item) for call_item in mock_logger.info.call_args_list]
             found = any('REST cha' in call_item for call_item in info_calls)
             self.assertFalse(found, f'REST log line should not appear when logging disabled: {info_calls}')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DispatchLoggingContextTestCase(unittest.TestCase):
+    """ Tests for the greenlet-local logging context bound and reset by dispatch.
+    """
+
+    def setUp(self) -> 'None':
+
+        # Simulate a pooled greenlet that still carries the previous request's context ..
+        previous_cid_token = current_cid.set('zcid-previous-9999')
+        previous_service_name_token = current_service_name.set('previous.service')
+
+        # .. and make sure the test always restores the original context.
+        self.addCleanup(current_cid.reset, previous_cid_token)
+        self.addCleanup(current_service_name.reset, previous_service_name_token)
+
+# ################################################################################################################################
+
+    @patch('zato.server.connection.http_soap.channel._logger_is_enabled_for', return_value=True)
+    def test_context_is_bound_before_inbound_log_line(self, mock_enabled:'MagicMock') -> 'None':
+        """ At the time the inbound REST log line is emitted, the logging context already holds
+        the new request's cid and service name, not the previous request's.
+        """
+        ctx = _make_dispatcher(rest_log_ignore=set())
+        wsgi_environ = _make_wsgi_environ()
+
+        observed = {}
+
+        def capture_context(*args:'any_', **kwargs:'any_') -> 'None':
+            observed['cid'] = current_cid.get()
+            observed['service_name'] = current_service_name.get()
+
+        with patch('zato.server.connection.http_soap.channel.logger') as mock_logger:
+            mock_logger.info.side_effect = capture_context
+            _ = _dispatch(ctx, wsgi_environ)
+
+        self.assertEqual(observed['cid'], _test_cid)
+        self.assertEqual(observed['service_name'], 'test.service')
+
+# ################################################################################################################################
+
+    def test_context_is_restored_after_dispatch(self) -> 'None':
+        """ Once dispatch returns, the logging context is restored to what it was before the call,
+        so an idle, pooled greenlet does not hold this request's context.
+        """
+        ctx = _make_dispatcher()
+        wsgi_environ = _make_wsgi_environ()
+
+        _ = _dispatch(ctx, wsgi_environ)
+
+        self.assertEqual(current_cid.get(), 'zcid-previous-9999')
+        self.assertEqual(current_service_name.get(), 'previous.service')
+
+# ################################################################################################################################
+
+    def test_context_is_restored_when_handler_raises(self) -> 'None':
+        """ The logging context is restored even when the request handler raises an exception.
+        """
+        ctx = _make_dispatcher()
+        ctx.mock_handle.side_effect = Exception('Test error message')
+        wsgi_environ = _make_wsgi_environ()
+
+        _ = _dispatch(ctx, wsgi_environ)
+
+        self.assertEqual(current_cid.get(), 'zcid-previous-9999')
+        self.assertEqual(current_service_name.get(), 'previous.service')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1050,7 +1118,7 @@ class DispatchHypothesisTestCase(unittest.TestCase):
     @given(
         error_type=st.sampled_from([
             'bad_request', 'unauthorized', 'forbidden', 'not_found',
-            'too_many_requests', 'method_not_allowed', 'model_validation', 'runtime_error', 'value_error',
+            'too_many_requests', 'method_not_allowed', 'model_validation', 'generic_error', 'value_error',
         ])
     )
     @hypothesis_settings(max_examples=20, suppress_health_check=[HealthCheck.differing_executors])
@@ -1058,14 +1126,14 @@ class DispatchHypothesisTestCase(unittest.TestCase):
         """ Fuzz exception types from handle - dispatch always returns a response.
         """
         error_map = {
-            'bad_request': BadRequest(_test_cid, 'Bad'),
-            'unauthorized': Unauthorized(_test_cid, 'Unauth', 'Basic realm="test"'),
+            'bad_request': BadRequest(_test_cid, 'Bad request details'),
+            'unauthorized': Unauthorized(_test_cid, 'Unauthorized details', 'Basic realm="test"'),
             'forbidden': Forbidden(_test_cid, 'Forbidden'),
             'not_found': NotFound(_test_cid, 'Not found'),
             'too_many_requests': TooManyRequests(_test_cid, 'Rate limited'),
             'method_not_allowed': MethodNotAllowed(_test_cid, 'Not allowed'),
             'model_validation': ElementMissing('/field'),
-            'runtime_error': RuntimeError('Crash'),
+            'generic_error': Exception('Test error message'),
             'value_error': ValueError('Bad value'),
         }
 
@@ -1106,7 +1174,7 @@ class DispatchDefaultAdminChannelTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item({'name': 'my.regular.channel'})
         ctx = _make_dispatcher(channel_item=channel_item)
-        exc = BadRequest(_test_cid, 'Secret error')
+        exc = BadRequest(_test_cid, 'Internal error details')
         exc.needs_msg = False
         ctx.mock_handle.side_effect = exc
         wsgi_environ = _make_wsgi_environ()
@@ -1114,7 +1182,7 @@ class DispatchDefaultAdminChannelTestCase(unittest.TestCase):
         result = _dispatch(ctx, wsgi_environ)
 
         self.assertIn('Bad request', result)
-        self.assertNotIn('Secret error', result)
+        self.assertNotIn('Internal error details', result)
 
 # ################################################################################################################################
 
@@ -1139,7 +1207,7 @@ class DispatchDefaultAdminChannelTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item({'name': MISC.DefaultAdminInvokeChannel})
         ctx = _make_dispatcher(channel_item=channel_item)
-        ctx.mock_handle.side_effect = RuntimeError('Something broke')
+        ctx.mock_handle.side_effect = Exception('Admin error details')
         wsgi_environ = _make_wsgi_environ()
 
         _ = _dispatch(ctx, wsgi_environ)
@@ -1153,7 +1221,7 @@ class DispatchDefaultAdminChannelTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item({'name': 'regular.channel'})
         ctx = _make_dispatcher(channel_item=channel_item)
-        ctx.mock_handle.side_effect = RuntimeError('Crash')
+        ctx.mock_handle.side_effect = Exception('Test error message')
         wsgi_environ = _make_wsgi_environ()
 
         _ = _dispatch(ctx, wsgi_environ)
@@ -1168,14 +1236,14 @@ class DispatchDefaultAdminChannelTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item({'name': 'aaa.channel'})
         ctx = _make_dispatcher(channel_item=channel_item)
-        exc = BadRequest(_test_cid, 'Secret details')
+        exc = BadRequest(_test_cid, 'Internal error details')
         exc.needs_msg = False
         ctx.mock_handle.side_effect = exc
         wsgi_environ = _make_wsgi_environ()
 
         result = _dispatch(ctx, wsgi_environ)
 
-        self.assertNotIn('Secret details', result)
+        self.assertNotIn('Internal error details', result)
         self.assertIn('Bad request', result)
 
 # ################################################################################################################################
@@ -1186,7 +1254,7 @@ class DispatchDefaultAdminChannelTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item({'name': 'aaa.channel'})
         ctx = _make_dispatcher(channel_item=channel_item)
-        ctx.mock_handle.side_effect = RuntimeError('Crash')
+        ctx.mock_handle.side_effect = Exception('Test error message')
         wsgi_environ = _make_wsgi_environ()
 
         _ = _dispatch(ctx, wsgi_environ)
@@ -1208,7 +1276,7 @@ class DispatchErrorHandlerJSONTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item({'data_format': DATA_FORMAT.JSON})
         ctx = _make_dispatcher(channel_item=channel_item)
-        ctx.mock_handle.side_effect = RuntimeError('Oops')
+        ctx.mock_handle.side_effect = Exception('Test error message')
         wsgi_environ = _make_wsgi_environ()
 
         _ = _dispatch(ctx, wsgi_environ)
@@ -1224,7 +1292,7 @@ class DispatchErrorHandlerJSONTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item({'data_format': 'csv'})
         ctx = _make_dispatcher(channel_item=channel_item)
-        ctx.mock_handle.side_effect = RuntimeError('Oops')
+        ctx.mock_handle.side_effect = Exception('Test error message')
         wsgi_environ = _make_wsgi_environ()
 
         _ = _dispatch(ctx, wsgi_environ)
@@ -1240,7 +1308,7 @@ class DispatchErrorHandlerJSONTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item({'data_format': 'xml'})
         ctx = _make_dispatcher(channel_item=channel_item)
-        ctx.mock_handle.side_effect = RuntimeError('Oops')
+        ctx.mock_handle.side_effect = Exception('Test error message')
         wsgi_environ = _make_wsgi_environ()
 
         _ = _dispatch(ctx, wsgi_environ)
@@ -1325,7 +1393,7 @@ class DispatchExceptionFormattingTestCase(unittest.TestCase):
         mock_stack_format.return_value = 'formatted-stack'
         channel_item = _make_channel_item()
         ctx = _make_dispatcher(channel_item=channel_item)
-        ctx.mock_handle.side_effect = RuntimeError('Boom')
+        ctx.mock_handle.side_effect = Exception('Test error message')
         wsgi_environ = _make_wsgi_environ()
 
         _ = _dispatch(ctx, wsgi_environ)
@@ -1343,12 +1411,12 @@ class DispatchExceptionFormattingTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item()
         ctx = _make_dispatcher(channel_item=channel_item, return_tracebacks=True)
-        ctx.mock_handle.side_effect = RuntimeError('Crash details')
+        ctx.mock_handle.side_effect = Exception('Test error details')
         wsgi_environ = _make_wsgi_environ()
 
         result = _dispatch(ctx, wsgi_environ)
 
-        self.assertIn('Crash details', str(result))
+        self.assertIn('Test error details', str(result))
 
 # ################################################################################################################################
 
@@ -1356,13 +1424,13 @@ class DispatchExceptionFormattingTestCase(unittest.TestCase):
         """ When return_tracebacks is False and a generic exception occurs, default error message is returned.
         """
         channel_item = _make_channel_item()
-        ctx = _make_dispatcher(channel_item=channel_item, return_tracebacks=False, default_error_message='Oops')
-        ctx.mock_handle.side_effect = RuntimeError('Secret crash')
+        ctx = _make_dispatcher(channel_item=channel_item, return_tracebacks=False, default_error_message='Default error message')
+        ctx.mock_handle.side_effect = Exception('Internal error details')
         wsgi_environ = _make_wsgi_environ()
 
         result = _dispatch(ctx, wsgi_environ)
 
-        self.assertNotIn('Secret crash', str(result))
+        self.assertNotIn('Internal error details', str(result))
 
 # ################################################################################################################################
 
@@ -1374,7 +1442,7 @@ class DispatchExceptionFormattingTestCase(unittest.TestCase):
 
         def side_effect(*args:'any_', **kwargs:'any_') -> 'None':
             args[9]['X-Custom-Header'] = 'custom-value'
-            raise RuntimeError('fail')
+            raise Exception('Test error message')
 
         ctx.mock_handle.side_effect = side_effect
         wsgi_environ = _make_wsgi_environ()

@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from dataclasses import dataclass
 from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED, OK
 from inspect import isclass
@@ -39,6 +38,7 @@ from zato.common.json_internal import dumps
 from zato.common.monitoring.metrics import ServiceMetrics
 from zato.common.typing_ import cast_, type_
 from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
+from zato.common.util.logging_ import current_cid as _current_cid, current_service_name as _current_service_name
 from zato.common.util.python_ import get_module_name_by_path
 from zato.common.util.time_ import utcnow
 from zato.server.commands import CommandsFacade
@@ -126,8 +126,6 @@ if 0:
 
 logger = logging.getLogger(__name__)
 _get_logger=logging.getLogger
-
-from zato.common.util.logging_ import current_cid as _current_cid, current_service_name as _current_service_name
 
 # ################################################################################################################################
 
@@ -699,12 +697,44 @@ class Service:
         **kwargs:'any_'
     ) -> 'any_':
 
+        # Bind the logging context to this invocation, keeping the tokens so the previous context
+        # can be restored afterwards - this matters both for pooled greenlets, which must not carry
+        # a finished request's context, and for nested self.invoke() calls, where the parent's
+        # service name must come back once the child returns.
+        cid_token = _current_cid.set(cid)
+        service_name_token = _current_service_name.set(service.name)
+
+        try:
+            out = self._update_handle(
+                set_response_func, service, raw_request, channel, data_format, transport,
+                server, config_dispatcher, config_manager, cid, *args, **kwargs)
+            return out
+
+        finally:
+            # Restore the previous logging context no matter how the invocation ended.
+            _current_cid.reset(cid_token)
+            _current_service_name.reset(service_name_token)
+
+# ################################################################################################################################
+
+    def _update_handle(self,
+        set_response_func, # type: callable_
+        service,       # type: Service
+        raw_request,   # type: any_
+        channel,       # type: str
+        data_format,   # type: str
+        transport,     # type: str
+        server,        # type: ParallelServer
+        config_dispatcher, # type: ConfigDispatcher | None
+        config_manager,  # type: ConfigManager
+        cid,           # type: str
+        *args:'any_',
+        **kwargs:'any_'
+    ) -> 'any_':
+
         self.process_name = kwargs.get('process_name') or service.process_name
 
         service.logger = _get_logger(service.name) # type: Logger
-
-        _current_cid.set(cid)
-        _current_service_name.set(service.name)
 
         # .. now we can assign the logger to our request object.
         service.request.logger = service.logger

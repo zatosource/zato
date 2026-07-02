@@ -25,7 +25,6 @@ from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HTTP_SOAP, MISC,
 from zato.common.const import ServiceConst
 from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, ServiceMissingException
 from zato.common.json_ import dumps
-from zato.common.json_internal import loads
 from zato.common.marshal_.api import Model, ModelValidationError
 from zato.common.rate_limiting.common import current_time_us
 from zato.common.typing_ import cast_
@@ -33,6 +32,7 @@ from zato.common.util.api import as_bool, utcnow
 from zato.common.util.auth import enrich_with_sec_data, extract_basic_auth
 from zato.common.util.exception import pretty_format_exception
 from zato.common.util.http_ import get_form_data as util_get_form_data, QueryDict
+from zato.common.util.logging_ import current_cid, current_service_name
 from zato.server.reqresp.payload import IOPayload
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, NotFound, Unauthorized
 from zato.server.groups.ctx import SecurityGroupsCtx
@@ -43,7 +43,7 @@ from zato.server.service.internal import AdminService
 if 0:
     from zato.common.config_dispatcher import ConfigDispatcher
     from zato.common.rate_limiting.cidr import SlottedCheckResult
-    from zato.common.typing_ import any_, anydict, anytuple, callable_, dictnone, stranydict, strlist, strstrdict
+    from zato.common.typing_ import any_, anydict, callable_, dictnone, stranydict, strlist, strstrdict
     from zato.server.service import Service
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.config_manager import ConfigManager
@@ -249,11 +249,13 @@ class RequestDispatcher:
             if channel_name == 'zato.api.invoke' and meta.path_info.startswith('/zato'):
                 return
             service_name = channel_item['service_name'] if channel_item else '<no-channel>'
-            logger.info(
-                f'REST cha \u2192 cid={cid}; {meta.http_method} {meta.wsgi_raw_uri} name={channel_name};'
-                f' service={service_name}; len={len(payload)}; agent={user_agent};'
-                f' remote-addr={remote_addr}:{meta.wsgi_remote_port}'
-            )
+            payload_len = len(payload)
+
+            request_part = f'REST cha \u2192 cid={cid}; {meta.http_method} {meta.wsgi_raw_uri} name={channel_name};'
+            details_part = f' service={service_name}; len={payload_len}; agent={user_agent};'
+            remote_part = f' remote-addr={remote_addr}:{meta.wsgi_remote_port}'
+
+            logger.info(request_part + details_part + remote_part)
 
 # ################################################################################################################################
 
@@ -608,6 +610,31 @@ class RequestDispatcher:
         remote_addr:'str',
     ) -> 'any_':
 
+        # Bind the logging context to this request before anything is logged, otherwise a pooled greenlet
+        # would still carry the previous request's cid and service name in its log prefix.
+        cid_token = current_cid.set(cid)
+        service_name_token = current_service_name.set('')
+
+        try:
+            out = self._dispatch(cid, wsgi_environ, config_manager, user_agent, remote_addr)
+            return out
+
+        finally:
+            # Restore the previous logging context so an idle, pooled greenlet holds no request context.
+            current_cid.reset(cid_token)
+            current_service_name.reset(service_name_token)
+
+# ################################################################################################################################
+
+    def _dispatch(
+        self,
+        cid:'str',
+        wsgi_environ:'stranydict',
+        config_manager:'ConfigManager',
+        user_agent:'str',
+        remote_addr:'str',
+    ) -> 'any_':
+
         # Reusable
         _has_log_info = _logger_is_enabled_for(_logging_info)
 
@@ -626,6 +653,11 @@ class RequestDispatcher:
         channel_item = url_match_result.channel_item
         channel_name = url_match_result.channel_name
         payload = url_match_result.payload
+
+        # Now that we know what service will handle the request, bind its name to the logging context
+        # so all log lines emitted from this point on, including the inbound summary below, carry it.
+        if channel_item:
+            _ = current_service_name.set(channel_item['service_name'])
 
         # This dictionary may be populated by a service with HTTP headers,
         # which the headers will be still in the dictionary even if the service
@@ -706,9 +738,6 @@ class RequestDispatcher:
 
         # .. build the key prefix ..
         key_prefix = prefix_template.format(sec_def_id)
-
-        # .. log the known sec_def IDs before the check ..
-        known_ids = list(self.server.rate_limiting_manager._sec_def_matchers.keys())
 
         # .. and check rate limiting.
         out = self.server.rate_limiting_manager.check_sec_def(sec_def_id, remote_addr, now_us, key_prefix)

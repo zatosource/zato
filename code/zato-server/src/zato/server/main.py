@@ -123,6 +123,15 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The default upper bound on the size of a single incoming message, in megabytes
+_default_max_msg_size_mb = 8
+
+# How many bytes there are in one megabyte
+_megabyte = 1024 * 1024
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ZatoApplication:
 
     def __init__(
@@ -221,7 +230,16 @@ class ZatoApplication:
         host = str(self.zato_host)
         port = int(self.zato_port)
 
-        self._http_server = HTTPServer(host, port, request_handler, server_software)
+        # The maximum size of a single incoming message, given in megabytes ..
+        if max_msg_size := os.environ.get('Zato_TCP_Max_Msg_Size'):
+            max_msg_size = int(max_msg_size)
+        else:
+            max_msg_size = _default_max_msg_size_mb
+
+        # .. which we convert to bytes for the HTTP server.
+        max_msg_size = max_msg_size * _megabyte
+
+        self._http_server = HTTPServer(host, port, request_handler, server_software, max_msg_size)
 
         try:
             self._http_server.serve_forever()

@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from http.client import FORBIDDEN, NO_CONTENT
+import os
+from http.client import FORBIDDEN, NO_CONTENT, NOT_FOUND
 
 # Zato
 from zato.common.json_internal import dumps
@@ -36,6 +37,18 @@ _protocol_version_header = 'mcp-protocol-version'
 
 # WSGI environ key set by the Rust HTTP layer with the resolved client address
 _remote_addr_key = 'zato.http.remote_addr'
+
+# Origin header name (lowercase, as stored by HTTPRequestData._extract_headers)
+_origin_header = 'origin'
+
+# Environment variable that enables Origin validation
+_check_origin_env_key = 'Zato_MCP_Check_Origin'
+
+# Whether to validate the Origin header on incoming requests
+check_origin = os.environ.get(_check_origin_env_key) == 'true'
+
+# Origin values allowed by default when Origin validation is enabled
+_default_allowed_origins:'tuple' = ()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,6 +87,19 @@ class MCPEndpoint(AdminService):
         channel_config = self.server.config_manager.channel_mcp[self.channel.name]
         wrapper = channel_config.conn
 
+        # .. when Origin validation is enabled and the header is present,
+        # it must match the channel's allowed origins ..
+        if check_origin:
+            if origin := self.request.http.headers.get(_origin_header):
+
+                allowed_origins = wrapper.config.get('allowed_origins') or _default_allowed_origins
+
+                if origin not in allowed_origins:
+                    logger.info('MCP channel `%s` rejected origin `%s`', self.channel.name, origin)
+                    self.response.status_code = FORBIDDEN
+                    self.response.payload = ''
+                    return
+
         # .. read the session ID from the request header if present ..
         session_id = self.request.http.headers.get(_session_header)
 
@@ -86,13 +112,22 @@ class MCPEndpoint(AdminService):
         # .. get the sec_def id of the authenticated caller ..
         sec_def_id = channel_security.id
 
-        # .. get the handler for request dispatch ..
+        # .. get the handler for request dispatch, reading it once into a local so a channel
+        # deletion later in this request cannot affect the dispatch already underway ..
         handler = wrapper.handler
+
+        # .. no handler means the channel is not usable - it was not built yet,
+        # its build failed, or it is being deleted - in all cases the resource does not exist ..
+        if handler is None:
+            logger.info('MCP channel `%s` has no handler (not built yet, build failed, or channel deleted)', self.channel.name)
+            self.response.status_code = NOT_FOUND
+            self.response.payload = ''
+            return
 
         # .. handle DELETE requests for session termination ..
         if self.request.http.method == 'DELETE':
 
-            mcp_response = handler.handle_delete_session(session_id, protocol_version_header, sec_def_id)
+            mcp_response = handler.handle_delete_session(session_id, sec_def_id, protocol_version_header)
             self.response.status_code = mcp_response.status_code
 
             if mcp_response.body:
@@ -111,7 +146,7 @@ class MCPEndpoint(AdminService):
 
         # .. dispatch through the MCP handler ..
         mcp_response = handler.handle_raw_request(
-            raw_request, session_id, remote_address, protocol_version_header, sec_def_id)
+            raw_request, sec_def_id, session_id, remote_address, protocol_version_header)
 
         # .. if the handler returned a session ID (from initialize), set it as a response header ..
         if mcp_response.session_id:

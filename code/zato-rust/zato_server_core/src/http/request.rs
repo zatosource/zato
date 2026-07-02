@@ -107,7 +107,6 @@ fn chrono_to_py_datetime<'py>(
 #[pyfunction]
 #[pyo3(signature = (server, http_environ, new_cid_func, local_tz_offset_secs, **kwargs))]
 #[expect(
-    clippy::too_many_arguments,
     clippy::too_many_lines,
     clippy::similar_names,
     reason = "PyO3 entrypoint mirrors the Python call signature which requires all these parameters"

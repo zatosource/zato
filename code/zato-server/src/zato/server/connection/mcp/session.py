@@ -134,9 +134,10 @@ class MCPSessionManager:
 
 # ################################################################################################################################
 
-    def validate(self, session_id:'str', sec_def_id:'int' = 0) -> 'str':
+    def validate(self, session_id:'str', sec_def_id:'int') -> 'str':
         """ Returns a validation result constant indicating the session state.
         Touching a live session updates its last_seen_at timestamp.
+        Ownership is always enforced - a session is only valid for the identity that created it.
         """
 
         # If the session does not exist, it is unknown ..
@@ -144,10 +145,9 @@ class MCPSessionManager:
             return Session_Not_Found
 
         # .. reject if the session belongs to a different identity ..
-        if sec_def_id:
-            if session.sec_def_id != sec_def_id:
-                logger.info('MCP: Session `%s` owned by sec_def %d, caller is %d', session_id, session.sec_def_id, sec_def_id)
-                return Session_Invalid_Identity
+        if session.sec_def_id != sec_def_id:
+            logger.info('MCP: Session `%s` owned by sec_def %d, caller is %d', session_id, session.sec_def_id, sec_def_id)
+            return Session_Invalid_Identity
 
         now = monotonic()
 
