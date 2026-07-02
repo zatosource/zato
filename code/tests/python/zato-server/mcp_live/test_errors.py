@@ -144,4 +144,87 @@ class TestErrors:
         assert data['result'] == {}
 
 # ################################################################################################################################
+
+    def test_batch_with_non_dict_elements(self, client:'MCPClient', session_id:'str') -> 'None':
+        """ A batch mixing non-dict elements with a valid request returns
+        one error per invalid element and still processes the valid one.
+        """
+
+        raw_body = b'[1, "not a request", null, {"jsonrpc": "2.0", "method": "ping", "id": 4}]'
+        response = client.jsonrpc_raw(raw_body, session_id=session_id)
+
+        assert response.status_code == OK
+
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) == 4
+
+        # The three non-dict elements must each report an invalid-request error ..
+        for item in data[:3]:
+            assert 'error' in item
+
+            error = item['error']
+            assert error['code'] == _error_invalid_request
+
+        # .. and the valid ping must still succeed.
+        ping_response = data[3]
+        assert 'result' in ping_response
+        assert ping_response['id'] == 4
+
+# ################################################################################################################################
+
+    def test_params_as_list_returns_invalid_params(self, client:'MCPClient', session_id:'str') -> 'None':
+        """ A params field that is a list returns an invalid-params error.
+        """
+
+        raw_body = b'{"jsonrpc": "2.0", "method": "tools/list", "id": 1, "params": ["not", "an", "object"]}'
+        response = client.jsonrpc_raw(raw_body, session_id=session_id)
+
+        assert response.status_code == OK
+
+        data = response.json()
+        assert 'error' in data
+
+        error = data['error']
+        assert error['code'] == _error_invalid_params
+
+# ################################################################################################################################
+
+    def test_params_as_string_returns_invalid_params(self, client:'MCPClient', session_id:'str') -> 'None':
+        """ A params field that is a string returns an invalid-params error.
+        """
+
+        raw_body = b'{"jsonrpc": "2.0", "method": "tools/call", "id": 1, "params": "name=demo.echo"}'
+        response = client.jsonrpc_raw(raw_body, session_id=session_id)
+
+        assert response.status_code == OK
+
+        data = response.json()
+        assert 'error' in data
+
+        error = data['error']
+        assert error['code'] == _error_invalid_params
+
+# ################################################################################################################################
+
+    def test_initialize_params_as_number_returns_invalid_params(self, client:'MCPClient') -> 'None':
+        """ Initialize with a numeric params field returns an invalid-params error
+        and creates no session.
+        """
+
+        raw_body = b'{"jsonrpc": "2.0", "method": "initialize", "id": 1, "params": 123}'
+        response = client.jsonrpc_raw(raw_body)
+
+        assert response.status_code == OK
+
+        data = response.json()
+        assert 'error' in data
+
+        error = data['error']
+        assert error['code'] == _error_invalid_params
+
+        # No session must have been created for the rejected initialize
+        assert 'Mcp-Session-Id' not in response.headers
+
+# ################################################################################################################################
 # ################################################################################################################################

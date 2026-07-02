@@ -80,6 +80,9 @@ _message_missing_tool_name = 'Missing required parameter: name'
 # Error message returned when the cursor parameter is not a valid integer
 _message_invalid_cursor = 'Invalid cursor value'
 
+# Error message returned when params is present but is not an object
+_message_invalid_params = 'Invalid params: expected an object'
+
 # Error message returned when protocolVersion is absent from initialize params
 _message_missing_protocol_version = 'Missing required parameter: protocolVersion'
 
@@ -343,7 +346,13 @@ class MCPHandler:
 
         for message in messages:
 
-            # Notifications have no 'id' field and produce no response ..
+            # Non-dict elements are invalid requests, reported individually per the JSON-RPC spec ..
+            if not isinstance(message, dict):
+                response = _make_error_response(None, _error_invalid_request, _message_invalid_request)
+                responses.append(response)
+                continue
+
+            # .. notifications have no 'id' field and produce no response ..
             if 'id' not in message:
                 self._handle_notification(message)
                 continue
@@ -426,6 +435,13 @@ class MCPHandler:
 
         # Params is optional per JSON-RPC 2.0 spec - a client may omit it entirely
         params = message.get('params', {})
+
+        # .. but when present, it must be an object, otherwise the handlers cannot read it ..
+        if not isinstance(params, dict):
+
+            body = _make_error_response(request_id, _error_invalid_params, _message_invalid_params)
+            out = DispatchResult(body, None)
+            return out
 
         # .. route to the handler for this method.
         if method == _method_initialize:
@@ -558,9 +574,12 @@ class MCPHandler:
         # .. extract arguments - optional per the MCP spec, defaults to empty dict ..
         arguments = params.get('arguments', {})
 
-        # .. invoke the service ..
+        # .. invoke the service and serialize its response, treating a serialization
+        # failure (e.g. bytes that do not decode or objects that do not dump to JSON)
+        # the same way as a service exception ..
         try:
             service_response = self.invoke_func(tool_name, arguments)
+            response_text = self._serialize_service_response(service_response)
         except Exception:
             exception_detail = format_exc()
             logger.warning('MCP: Service `%s` raised an exception:\n%s', tool_name, exception_detail)
@@ -579,7 +598,6 @@ class MCPHandler:
             return out
 
         # .. wrap the successful response in MCP content format.
-        response_text = self._serialize_service_response(service_response)
 
         success_result:'stranydict' = {
             'content': [
