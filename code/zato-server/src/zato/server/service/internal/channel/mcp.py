@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from http.client import FORBIDDEN, NO_CONTENT
+from http.client import FORBIDDEN, NO_CONTENT, NOT_FOUND
 
 # Zato
 from zato.common.json_internal import dumps
@@ -86,8 +86,17 @@ class MCPEndpoint(AdminService):
         # .. get the sec_def id of the authenticated caller ..
         sec_def_id = channel_security.id
 
-        # .. get the handler for request dispatch ..
+        # .. get the handler for request dispatch, reading it once into a local so a channel
+        # deletion later in this request cannot affect the dispatch already underway ..
         handler = wrapper.handler
+
+        # .. no handler means the channel is not usable - it was not built yet,
+        # its build failed, or it is being deleted - in all cases the resource does not exist ..
+        if handler is None:
+            logger.info('MCP channel `%s` has no handler (not built yet, build failed, or channel deleted)', self.channel.name)
+            self.response.status_code = NOT_FOUND
+            self.response.payload = ''
+            return
 
         # .. handle DELETE requests for session termination ..
         if self.request.http.method == 'DELETE':

@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import NO_CONTENT, OK
+from http.client import NO_CONTENT, NOT_FOUND, OK
 from unittest import TestCase
 
 # Zato
@@ -15,6 +15,7 @@ from zato.common.json_internal import dumps, loads
 from zato.common.test import _test_sec_def_id
 from zato.server.connection.mcp.handler import _mcp_protocol_version, MCPHandler
 from zato.server.generic.api.channel_mcp import ChannelMCPWrapper
+from zato.server.service.internal.channel.mcp import MCPEndpoint
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -192,6 +193,214 @@ class ChannelMCPWrapperInvoke(TestCase):
         text = first_content['text']
         parsed_response = loads(text)
         self.assertEqual(parsed_response['name'], 'Test Customer')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _MockChannelSecurity:
+    """ Mock of the authenticated security definition on a channel.
+    """
+    def __init__(self) -> 'None':
+        self.id = _test_sec_def_id
+        self.username = 'test.user'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _MockChannel:
+    """ Mock of the channel a service runs on.
+    """
+    def __init__(self, name:'str') -> 'None':
+        self.name = name
+        self.security = _MockChannelSecurity()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _MockHTTPRequest:
+    """ Mock of the HTTP portion of a service request.
+    """
+    def __init__(self) -> 'None':
+        self.headers = {}
+        self.method = 'POST'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _MockRequest:
+    """ Mock of a service request.
+    """
+    def __init__(self) -> 'None':
+        self.http = _MockHTTPRequest()
+        self.raw_request = ''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _MockResponse:
+    """ Mock of a service response.
+    """
+    def __init__(self) -> 'None':
+        self.status_code = OK
+        self.payload = None
+        self.headers = {}
+        self.data_format = ''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _MockConfigManager:
+    """ Mock of the server's config manager holding MCP channel configs.
+    """
+    def __init__(self) -> 'None':
+        self.channel_mcp = {}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _MockEndpointServer:
+    """ Mock of the parallel server an endpoint service reaches through self.server.
+    """
+    def __init__(self) -> 'None':
+        self.config_manager = _MockConfigManager()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _make_endpoint(channel_name:'str', wrapper:'ChannelMCPWrapper') -> 'MCPEndpoint':
+    """ Builds an MCPEndpoint with only the attributes that handle() uses,
+    bypassing the full service initialization machinery.
+    """
+
+    endpoint = MCPEndpoint.__new__(MCPEndpoint)
+
+    endpoint.channel = _MockChannel(channel_name) # pyright: ignore[reportAttributeAccessIssue]
+    endpoint.request = _MockRequest() # pyright: ignore[reportAttributeAccessIssue]
+    endpoint.response = _MockResponse() # pyright: ignore[reportAttributeAccessIssue]
+    endpoint.wsgi_environ = {'zato.http.remote_addr': '127.0.0.1'}
+
+    server = _MockEndpointServer()
+    channel_config = _MockBunch({'conn': wrapper})
+    server.config_manager.channel_mcp[channel_name] = channel_config
+    endpoint.server = server # pyright: ignore[reportAttributeAccessIssue]
+
+    out = endpoint
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MCPEndpointNoHandler(TestCase):
+    """ Tests requests arriving when the wrapper has no handler,
+    which happens when the channel is not built yet, its build failed,
+    or it is being deleted.
+    """
+
+    def test_request_after_wrapper_delete_returns_not_found(self) -> 'None':
+        """ A request processed after the wrapper's handler was cleared
+        returns 404 instead of failing with an exception.
+        """
+
+        server = _MockServer()
+
+        config = _MockBunch({
+            'name': 'deleted-channel',
+            'services': [],
+        })
+
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper.build_wrapper()
+
+        # Simulate the channel being deleted while a request is in flight ..
+        wrapper.delete()
+
+        # .. a request arriving now must get a clean 404 ..
+        endpoint = _make_endpoint('deleted-channel', wrapper)
+        endpoint.request.raw_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
+
+        endpoint.handle()
+
+        self.assertEqual(endpoint.response.status_code, NOT_FOUND)
+        self.assertEqual(endpoint.response.payload, '')
+
+    def test_delete_request_after_wrapper_delete_returns_not_found(self) -> 'None':
+        """ A DELETE for session termination after the wrapper's handler
+        was cleared also returns 404.
+        """
+
+        server = _MockServer()
+
+        config = _MockBunch({
+            'name': 'deleted-channel',
+            'services': [],
+        })
+
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper.build_wrapper()
+        wrapper.delete()
+
+        endpoint = _make_endpoint('deleted-channel', wrapper)
+        endpoint.request.http.method = 'DELETE'
+
+        endpoint.handle()
+
+        self.assertEqual(endpoint.response.status_code, NOT_FOUND)
+        self.assertEqual(endpoint.response.payload, '')
+
+    def test_request_before_wrapper_build_returns_not_found(self) -> 'None':
+        """ A request arriving after the wrapper is constructed
+        but before build_wrapper runs also returns 404.
+        """
+
+        server = _MockServer()
+
+        config = _MockBunch({
+            'name': 'unbuilt-channel',
+            'services': [],
+        })
+
+        # The wrapper exists but build_wrapper was never called, so there is no handler ..
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+
+        # .. a request arriving now must get a clean 404 ..
+        endpoint = _make_endpoint('unbuilt-channel', wrapper)
+        endpoint.request.raw_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
+
+        endpoint.handle()
+
+        self.assertEqual(endpoint.response.status_code, NOT_FOUND)
+        self.assertEqual(endpoint.response.payload, '')
+
+    def test_request_with_live_wrapper_dispatches_normally(self) -> 'None':
+        """ The same endpoint construction with a live wrapper dispatches normally,
+        proving the 404 above comes from the no-handler guard.
+        """
+
+        server = _MockServer()
+
+        config = _MockBunch({
+            'name': 'live-channel',
+            'services': [],
+        })
+
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper.build_wrapper()
+
+        assert wrapper.handler is not None
+        session_manager = wrapper.handler.session_manager
+        session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+
+        endpoint = _make_endpoint('live-channel', wrapper)
+        endpoint.request.http.headers['mcp-session-id'] = session_id
+        endpoint.request.raw_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
+
+        endpoint.handle()
+
+        self.assertEqual(endpoint.response.status_code, OK)
+
+        body = loads(endpoint.response.payload)
+        result = body['result']
+        self.assertEqual(result, {})
 
 # ################################################################################################################################
 # ################################################################################################################################
