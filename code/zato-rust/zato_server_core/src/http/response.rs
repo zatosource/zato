@@ -181,8 +181,8 @@ mod tests {
         let parts = make_parts(1, "200 OK", true);
         let mut buf = Vec::new();
 
-        pyo3::prepare_freethreaded_python();
-        pyo3::Python::with_gil(|_py| {
+        pyo3::Python::initialize();
+        pyo3::Python::attach(|_py| {
             build_response_headers_only(&parts, &mut buf).expect("should serialize headers");
         });
 
@@ -195,8 +195,8 @@ mod tests {
         let parts = make_parts(1, "200 OK", true);
         let mut buf = Vec::new();
 
-        pyo3::prepare_freethreaded_python();
-        pyo3::Python::with_gil(|_py| {
+        pyo3::Python::initialize();
+        pyo3::Python::attach(|_py| {
             build_response_headers_only(&parts, &mut buf).expect("should serialize headers");
         });
 
@@ -212,8 +212,8 @@ mod tests {
         let parts = make_parts(1, "200 OK", true);
         let mut buf = Vec::new();
 
-        pyo3::prepare_freethreaded_python();
-        pyo3::Python::with_gil(|_py| {
+        pyo3::Python::initialize();
+        pyo3::Python::attach(|_py| {
             build_response_headers_only(&parts, &mut buf).expect("should serialize headers");
         });
 
@@ -229,8 +229,8 @@ mod tests {
         let parts = make_parts(1, "200 OK", false);
         let mut buf = Vec::new();
 
-        pyo3::prepare_freethreaded_python();
-        pyo3::Python::with_gil(|_py| {
+        pyo3::Python::initialize();
+        pyo3::Python::attach(|_py| {
             build_response_headers_only(&parts, &mut buf).expect("should serialize headers");
         });
 
@@ -242,8 +242,8 @@ mod tests {
         let parts = make_parts(1, "200 OK", true);
         let mut buf = Vec::new();
 
-        pyo3::prepare_freethreaded_python();
-        pyo3::Python::with_gil(|_py| {
+        pyo3::Python::initialize();
+        pyo3::Python::attach(|_py| {
             build_response_headers_only(&parts, &mut buf).expect("should serialize headers");
         });
 
@@ -259,8 +259,8 @@ mod tests {
         let parts = make_parts(1, "200 OK", false);
         let mut buf = Vec::new();
 
-        pyo3::prepare_freethreaded_python();
-        pyo3::Python::with_gil(|_py| {
+        pyo3::Python::initialize();
+        pyo3::Python::attach(|_py| {
             build_response_headers_only(&parts, &mut buf).expect("should serialize headers");
         });
 
@@ -270,8 +270,8 @@ mod tests {
 
     #[test]
     fn headers_only_includes_python_supplied_headers() {
-        pyo3::prepare_freethreaded_python();
-        pyo3::Python::with_gil(|py| {
+        pyo3::Python::initialize();
+        pyo3::Python::attach(|py| {
             let headers = PyDict::new(py);
             headers.set_item("x-custom-header", "test-value").expect("should set header");
 

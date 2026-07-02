@@ -40,7 +40,13 @@ impl Drop for WatcherCleanup {
     clippy::cast_possible_truncation,
     reason = "extracting individual octets from a 32-bit IPv4 address stored in network byte order"
 )]
-pub(super) fn accept_loop(py: Python<'_>, listen_fd: i32, request_handler: &PyObject, server_software: &str) -> PyResult<()> {
+pub(super) fn accept_loop(
+    py: Python<'_>,
+    listen_fd: i32,
+    request_handler: &PyObject,
+    server_software: &str,
+    max_msg_size: usize,
+) -> PyResult<()> {
     let gevent = py.import("gevent")?;
     let hub = gevent.call_method0("get_hub")?;
     let loop_obj = hub.getattr(intern!(py, "loop"))?;
@@ -114,6 +120,7 @@ pub(super) fn accept_loop(py: Python<'_>, listen_fd: i32, request_handler: &PyOb
                             remote_port: &remote_port,
                             request_handler: &handler_ref,
                             server_software: &software,
+                            max_msg_size,
                         },
                     );
                     // SAFETY: client_fd is a valid socket obtained from accept4 above.

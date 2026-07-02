@@ -20,6 +20,8 @@ pub struct HTTPServer {
     host: String,
     /// Bind port.
     port: u16,
+    /// Upper bound on total request size in bytes.
+    max_msg_size: usize,
 }
 
 #[pymethods]
@@ -27,12 +29,13 @@ impl HTTPServer {
     /// Creates a new server instance (does not start listening yet).
     #[new]
     #[expect(clippy::missing_const_for_fn, reason = "PyO3 #[new] methods cannot be const")]
-    fn new(host: String, port: u16, request_handler: PyObject, server_software: String) -> Self {
+    fn new(host: String, port: u16, request_handler: PyObject, server_software: String, max_msg_size: usize) -> Self {
         Self {
             request_handler,
             server_software,
             host,
             port,
+            max_msg_size,
         }
     }
 
@@ -41,7 +44,7 @@ impl HTTPServer {
         set_process_name();
         let listen_fd = create_listen_socket(&self.host, self.port)?;
         LISTEN_FD.store(listen_fd, Relaxed);
-        let result = accept_loop(py, listen_fd, &self.request_handler, &self.server_software);
+        let result = accept_loop(py, listen_fd, &self.request_handler, &self.server_software, self.max_msg_size);
         close_listen_fd();
         result?;
         Ok(py.None().into_bound(py))
