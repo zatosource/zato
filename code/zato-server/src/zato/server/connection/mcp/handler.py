@@ -96,9 +96,6 @@ _http_not_found = NOT_FOUND
 # HTTP status code for a protocol-level rejection (missing, unknown, or expired session on a request that requires one)
 _http_bad_request = BAD_REQUEST
 
-# Default sec_def_id when none is provided (e.g. in tests)
-_no_sec_def_id = 0
-
 # Maximum number of messages allowed in a single JSON-RPC batch request
 _max_batch_size = 20
 
@@ -230,10 +227,10 @@ class MCPHandler:
     def handle_raw_request(
         self,
         raw_data:'bytes',
+        sec_def_id:'int',
         session_id:'strnone' = None,
         remote_address:'str' = '',
         protocol_version_header:'strnone' = None,
-        sec_def_id:'int' = _no_sec_def_id,
         ) -> 'MCPResponse':
         """ Parses raw bytes into JSON and dispatches.
         Every method other than initialize requires a valid session.
@@ -647,8 +644,8 @@ class MCPHandler:
     def handle_delete_session(
         self,
         session_id:'strnone',
+        sec_def_id:'int',
         protocol_version_header:'strnone' = None,
-        sec_def_id:'int' = _no_sec_def_id,
         ) -> 'MCPResponse':
         """ Handles an HTTP DELETE request to terminate an MCP session.
         """

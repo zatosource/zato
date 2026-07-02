@@ -127,7 +127,7 @@ class MCPEndpoint(AdminService):
         # .. handle DELETE requests for session termination ..
         if self.request.http.method == 'DELETE':
 
-            mcp_response = handler.handle_delete_session(session_id, protocol_version_header, sec_def_id)
+            mcp_response = handler.handle_delete_session(session_id, sec_def_id, protocol_version_header)
             self.response.status_code = mcp_response.status_code
 
             if mcp_response.body:
@@ -146,7 +146,7 @@ class MCPEndpoint(AdminService):
 
         # .. dispatch through the MCP handler ..
         mcp_response = handler.handle_raw_request(
-            raw_request, session_id, remote_address, protocol_version_header, sec_def_id)
+            raw_request, sec_def_id, session_id, remote_address, protocol_version_header)
 
         # .. if the handler returned a session ID (from initialize), set it as a response header ..
         if mcp_response.session_id:
