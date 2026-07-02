@@ -10,7 +10,7 @@ use pyo3::types::{PyBytes, PyDict};
 use super::headers::set_header;
 use super::io::{GeventLoop, fd_read, fd_write_all, header_value_eq, parse_content_length};
 use super::response::{ResponseParts, build_response, build_response_headers_only};
-use super::{MAX_HEADERS, MAX_REQUEST_SIZE, PyObject};
+use super::{MAX_HEADERS, PyObject};
 
 /// Context for handling a single HTTP connection.
 pub(super) struct ConnectionCtx<'conn> {
@@ -24,6 +24,8 @@ pub(super) struct ConnectionCtx<'conn> {
     pub request_handler: &'conn PyObject,
     /// Server software string for the `Server` response header.
     pub server_software: &'conn str,
+    /// Upper bound on total request size in bytes.
+    pub max_msg_size: usize,
 }
 
 /// HTTP chunked transfer terminator sent after the last iterator chunk.
@@ -144,7 +146,7 @@ pub(super) fn handle_connection(py: Python<'_>, ctx: &ConnectionCtx<'_>) -> PyRe
                     for header in req.headers.iter() {
                         set_header(py, &dict, header.name, header.value)?;
                         if header.name.eq_ignore_ascii_case("content-length") {
-                            content_len = parse_content_length(header.value);
+                            content_len = parse_content_length(header.value, ctx.max_msg_size);
                         } else if header.name.eq_ignore_ascii_case("connection") {
                             keep_alive_flag = header_value_eq(header.value, b"keep-alive");
                         }
@@ -152,7 +154,7 @@ pub(super) fn handle_connection(py: Python<'_>, ctx: &ConnectionCtx<'_>) -> PyRe
                     break (hlen, content_len, keep_alive_flag, ver, dict);
                 }
                 Ok(httparse::Status::Partial) => {
-                    if buf.len() >= MAX_REQUEST_SIZE {
+                    if buf.len() >= ctx.max_msg_size {
                         return Err(pyo3::exceptions::PyValueError::new_err("request too large"));
                     }
                     let bytes_read = fd_read(py, ctx.fd, &mut buf, &gev)?;

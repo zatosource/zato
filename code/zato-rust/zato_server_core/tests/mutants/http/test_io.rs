@@ -1,37 +1,37 @@
 use zato_server_core::http::io::{header_value_eq, parse_content_length, trim_ows};
 
-const MAX_REQUEST_SIZE: usize = 1_048_576;
+const DEFAULT_MAX_MSG_SIZE: usize = 8 * 1024 * 1024;
 
 #[test]
 fn parse_content_length_zero() {
-    assert_eq!(parse_content_length(b"0"), 0);
+    assert_eq!(parse_content_length(b"0", DEFAULT_MAX_MSG_SIZE), 0);
 }
 
 #[test]
 fn parse_content_length_exact_max() {
-    let text = MAX_REQUEST_SIZE.to_string();
-    assert_eq!(parse_content_length(text.as_bytes()), MAX_REQUEST_SIZE);
+    let text = DEFAULT_MAX_MSG_SIZE.to_string();
+    assert_eq!(parse_content_length(text.as_bytes(), DEFAULT_MAX_MSG_SIZE), DEFAULT_MAX_MSG_SIZE);
 }
 
 #[test]
 fn parse_content_length_above_max_clamps() {
-    let text = (MAX_REQUEST_SIZE + 1).to_string();
-    assert_eq!(parse_content_length(text.as_bytes()), MAX_REQUEST_SIZE);
+    let text = (DEFAULT_MAX_MSG_SIZE + 1).to_string();
+    assert_eq!(parse_content_length(text.as_bytes(), DEFAULT_MAX_MSG_SIZE), DEFAULT_MAX_MSG_SIZE);
 }
 
 #[test]
 fn parse_content_length_empty() {
-    assert_eq!(parse_content_length(b""), 0);
+    assert_eq!(parse_content_length(b"", DEFAULT_MAX_MSG_SIZE), 0);
 }
 
 #[test]
 fn parse_content_length_non_digit() {
-    assert_eq!(parse_content_length(b"abc"), 0);
+    assert_eq!(parse_content_length(b"abc", DEFAULT_MAX_MSG_SIZE), 0);
 }
 
 #[test]
 fn parse_content_length_leading_spaces() {
-    assert_eq!(parse_content_length(b"  42"), 42);
+    assert_eq!(parse_content_length(b"  42", DEFAULT_MAX_MSG_SIZE), 42);
 }
 
 #[test]

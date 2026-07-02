@@ -6,7 +6,7 @@
 use pyo3::intern;
 use pyo3::prelude::*;
 
-use super::{GEVENT_IO_READ, GEVENT_IO_WRITE, MAX_REQUEST_SIZE, READ_BUF};
+use super::{GEVENT_IO_READ, GEVENT_IO_WRITE, READ_BUF};
 
 /// Gevent event loop references needed for non-blocking I/O.
 pub(super) struct GeventLoop<'py> {
@@ -75,17 +75,17 @@ pub(super) fn fd_write_all(py: Python<'_>, fd: i32, data: &[u8], gev: &GeventLoo
 }
 
 /// Hand-rolled ASCII decimal parser for Content-Length header values.
-/// Returns `MAX_REQUEST_SIZE` on overflow to trigger the request-too-large path.
+/// Returns `max_msg_size` on overflow to trigger the request-too-large path.
 #[inline]
 #[expect(clippy::as_conversions, reason = "ASCII digit subtraction yields 0..=9, always fits in usize")]
-pub fn parse_content_length(raw: &[u8]) -> usize {
+pub fn parse_content_length(raw: &[u8], max_msg_size: usize) -> usize {
     let mut result: usize = 0;
     for &byte in raw {
         match byte {
             b'0'..=b'9' => {
                 result = match result.checked_mul(10).and_then(|val| val.checked_add((byte - b'0') as usize)) {
-                    Some(val) if val <= MAX_REQUEST_SIZE => val,
-                    _ => return MAX_REQUEST_SIZE,
+                    Some(val) if val <= max_msg_size => val,
+                    _ => return max_msg_size,
                 };
             }
             b' ' | b'\t' => {}
