@@ -11,17 +11,3 @@ log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 filterwarnings = [
     "ignore:'urllib3\\[secure\\]' extra is deprecated:DeprecationWarning",
 ]
-
-[tool.pyright]
-extraPaths = [
-    "./lib/python3.8/site-packages",
-    "./lib/python3.12/site-packages",
-    "./src",
-    "./zato-agent/src",
-    "./zato-cli/src",
-    "./zato-common/src",
-    "./zato-distlock/src",
-    "./zato-hl7/src",
-    "./zato-server/src",
-    "./zato-web-admin/src",
-]
