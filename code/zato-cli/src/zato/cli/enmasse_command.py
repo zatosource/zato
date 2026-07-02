@@ -175,7 +175,12 @@ class Enmasse(ZatoCommand):
                     self.logger.info('Client address=%s', client.address)
 
                     # .. reload configuration ..
-                    _ = client.invoke('zato.server.invoker', {'func_name':'reload_config'})
+                    self.logger.info('Invoking reload_config on %s', client.address)
+                    reload_response = client.invoke('zato.server.invoker', {'func_name':'reload_config'})
+                    self.logger.info('reload_config response ok=%s data=%s', reload_response.ok, reload_response.data)
+
+                else:
+                    self.logger.info('Skipping config reload (Zato_Needs_Config_Reload is False)')
 
                 # .. and confirm it all went fine.
                 self.logger.info('⭐ Enmasse OK (%s)', args.input)

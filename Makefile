@@ -8,7 +8,7 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener \
 	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-enmasse \
-	test-cli test-mcp test-graphql test-hl7 test-ui _test-ui test-common test-distlock \
+	test-cli test-mcp _test-mcp test-graphql test-hl7 test-ui test-ui-pubsub _test-ui test-common test-distlock \
 	test-all test \
 	health-ruff health-clippy \
 	format format-zato \
@@ -152,8 +152,10 @@ scheduler:
 	clear
 	cd ~/env/qs-1/ && zato start scheduler/ --fg --verbose
 
+Zato_Server_Dir ?= $(HOME)/env/qs-1/server1
+
 listener:
-	py $(CURDIR)/code/zato-common/src/zato/common/file_transfer/listener.py ~/env/qs-1/server1/pickup/incoming/services/
+	py $(CURDIR)/code/zato-common/src/zato/common/file_transfer/listener.py $(Zato_Server_Dir)/pickup/incoming/services/
 
 haproxy:
 	@mkdir -p $(HAPROXY_DEV_DIR)
@@ -410,12 +412,24 @@ test-cli: ## CLI tests.
 		$(FAIL_FAST) $(PYTEST_ARGS)
 	$(MAKE) -C $(CURDIR)/code/zato-cli test
 
-test-mcp: ## MCP unit and live tests.
-	$(ZATO_PY) -m pytest \
+test-mcp: ## All MCP tests.
+	$(MAKE) _test-mcp 2>&1 | tee /tmp/logs-test-mcp.txt
+
+_test-mcp:
+	ruff check \
 		$(CURDIR)/code/tests/python/zato-server/mcp/ \
 		$(CURDIR)/code/tests/python/zato-server/mcp_live/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mcp -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS)
+		2>&1 | $(TS)
+	pyright \
+		$(CURDIR)/code/tests/python/zato-server/mcp/ \
+		$(CURDIR)/code/tests/python/zato-server/mcp_live/ \
+		2>&1 | $(TS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/mcp/ \
+		$(CURDIR)/code/tests/python/zato-server/mcp_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mcp -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		2>&1 | $(TS)
 
 test-graphql: ## GraphQL live tests.
 	$(ZATO_PY) -m pytest \
@@ -431,8 +445,32 @@ test-hl7: ## HL7v2 parsing and MLLP tests.
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-ui: ## Dashboard backend and Playwright tests.
+	$(MAKE) test-ui-pubsub 2>&1 | tee /tmp/logs-test-ui-pubsub.txt
 	$(MAKE) _test-ui 2>&1 | tee /tmp/logs-test-ui.txt
 	$(MAKE) -C $(CURDIR)/code/zato-web-admin test
+
+test-ui-pubsub:
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_topic_create.py \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_topic_lifecycle.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_topic_publish.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_permission_create.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_permission_lifecycle.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_subscription_create.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
+		$(FAIL_FAST) $(PYTEST_ARGS)
 
 _test-ui:
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \

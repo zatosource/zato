@@ -7,10 +7,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from collections.abc import Iterator
 from http.client import OK
 
 # pytest
 import pytest
+
+# requests
+import requests
 
 # local
 from _client import MCPClient
@@ -25,8 +29,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Maximum number of messages in a large batch test
-_large_batch_size = 1000
+# Maximum number of messages in a large batch test (must not exceed the server's batch cap)
+_large_batch_size = 20
 
 # Size threshold for an oversized payload test
 _oversized_payload_bytes = 1_100_000
@@ -34,10 +38,20 @@ _oversized_payload_bytes = 1_100_000
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='function')
 def client(zato_server:'any_') -> 'MCPClient':
-    out = MCPClient(zato_server['mcp_url'])
+    out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
     return out
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='function')
+def session_id(client:'MCPClient') -> 'Iterator[str]':
+    out = client.initialize().session_id
+
+    yield out
+
+    _ = client.delete_session(session_id=out)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,7 +60,7 @@ class TestJSONRPCInjection:
     """ Tests for JSON-RPC envelope manipulation and edge cases.
     """
 
-    def test_batch_with_mixed_valid_invalid(self, client:'MCPClient') -> 'None':
+    def test_batch_with_mixed_valid_invalid(self, client:'MCPClient', session_id:'str') -> 'None':
         """ A batch mixing valid and invalid methods must handle each independently.
         """
 
@@ -54,7 +68,7 @@ class TestJSONRPCInjection:
             {'jsonrpc': _jsonrpc_version, 'method': 'ping', 'id': 1},
             {'jsonrpc': _jsonrpc_version, 'method': 'nonexistent.method', 'id': 2},
         ]
-        response = client.jsonrpc_batch(messages)
+        response = client.jsonrpc_batch(messages, session_id=session_id)
         data = response.json()
 
         assert isinstance(data, list)
@@ -69,11 +83,13 @@ class TestJSONRPCInjection:
         # .. ping should succeed, nonexistent should error.
         assert 'result' in response_by_id[1]
         assert 'error' in response_by_id[2]
-        assert response_by_id[2]['error']['code'] == _error_method_not_found
+
+        error = response_by_id[2]['error']
+        assert error['code'] == _error_method_not_found
 
 # ################################################################################################################################
 
-    def test_nested_jsonrpc_in_params_is_opaque(self, client:'MCPClient') -> 'None':
+    def test_nested_jsonrpc_in_params_is_opaque(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Nested JSON-RPC objects inside params must be treated as opaque data.
         """
 
@@ -88,7 +104,7 @@ class TestJSONRPCInjection:
             'arguments': {'nested': nested_payload},
         }
 
-        response = client.jsonrpc('tools/call', params=params)
+        response = client.jsonrpc('tools/call', params=params, session_id=session_id)
         assert response.status_code == OK
 
         data = response.json()
@@ -99,14 +115,29 @@ class TestJSONRPCInjection:
 # ################################################################################################################################
 
     def test_oversized_payload_rejected(self, client:'MCPClient') -> 'None':
-        """ A payload larger than 1MB must be rejected.
+        """ A payload larger than the 1 MiB server limit must be rejected, not crash.
+
+        The Rust HTTP layer caps reads at MAX_REQUEST_SIZE (1 MiB), so an oversized
+        body is truncated and never parses as valid JSON. The server may either drop
+        the connection (request too large) or return a JSON-RPC parse error over
+        HTTP 200. Both are valid rejections - what matters is that the server stays up.
         """
 
         large_data = b'x' * _oversized_payload_bytes
-        response = client.jsonrpc_raw(large_data)
 
-        # .. the server should reject it, not crash.
-        assert response.status_code >= 400
+        # .. a dropped connection is itself a valid rejection of an oversized body ..
+        try:
+            response = client.jsonrpc_raw(large_data)
+        except requests.exceptions.ConnectionError:
+            return
+
+        # .. otherwise the server must not have processed it as a successful request ..
+        if response.status_code >= 400:
+            return
+
+        # .. at HTTP 200 the truncated body must surface as a JSON-RPC error, never a result.
+        data = response.json()
+        assert 'error' in data
 
 # ################################################################################################################################
 

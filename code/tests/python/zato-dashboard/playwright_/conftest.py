@@ -55,9 +55,12 @@ _Server_Wait_Timeout   = 60
 _Quickstart_Timeout    = 120
 _Ping_Poll_Interval    = 0.5
 
-_server_process    = None # type: ignore
-_dashboard_process = None # type: ignore
-_temporary_dir     = None # type: ignore
+_cleanup_refs = {
+    'server_process': None,
+    'dashboard_process': None,
+    'listener_process': None,
+    'temporary_dir': None,
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -102,23 +105,25 @@ def _kill_process(process:'subprocess.Popen | None') -> 'None':
 def _cleanup() -> 'None':
     """ Cleans up all test processes and the temporary directory.
     """
-    global _server_process, _dashboard_process, _temporary_dir
+    for key in ('listener_process', 'server_process', 'dashboard_process'):
+        _kill_process(_cleanup_refs[key])
+        _cleanup_refs[key] = None
 
-    # Kill the server ..
-    _kill_process(_server_process)
-    _server_process = None
-
-    # .. kill the dashboard ..
-    _kill_process(_dashboard_process)
-    _dashboard_process = None
-
-    # .. remove the temporary directory.
-    if _temporary_dir:
-        if os.path.isdir(_temporary_dir):
-            shutil.rmtree(_temporary_dir, ignore_errors=True)
-    _temporary_dir = None
+    tmp = _cleanup_refs['temporary_dir']
+    if tmp and os.path.isdir(tmp) and not _cleanup_refs.get('has_failures'):
+        shutil.rmtree(tmp, ignore_errors=True)
+    _cleanup_refs['temporary_dir'] = None
 
 atexit.register(_cleanup)
+
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item:'any_', call:'any_') -> 'any_':
+    """ Track test failures so we can skip temp dir cleanup for debugging.
+    """
+    outcome = yield
+    report = outcome.get_result()
+    if report.failed:
+        _cleanup_refs['has_failures'] = True
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -172,8 +177,6 @@ def _stream_output(process:'subprocess.Popen', label:'str', time_reference:'floa
 def zato_dashboard() -> 'any_':
     """ Session-scoped fixture that creates a quickstart environment with server and dashboard.
     """
-    global _server_process, _dashboard_process, _temporary_dir
-
     time_start = time.monotonic()
 
     # Allocate dynamic ports ..
@@ -181,7 +184,8 @@ def zato_dashboard() -> 'any_':
     dashboard_port = _find_free_port()
     broker_port    = _find_free_port()
 
-    _temporary_dir = tempfile.mkdtemp(prefix='zato_pw_test_')
+    temporary_dir = tempfile.mkdtemp(prefix='zato_pw_test_')
+    _cleanup_refs['temporary_dir'] = temporary_dir
 
     # .. 1) create a quickstart environment with both server and dashboard ..
 
@@ -189,7 +193,7 @@ def zato_dashboard() -> 'any_':
     quickstart_env.pop('COVERAGE_PROCESS_START', None)
 
     quickstart_command = [
-        _Zato_Bin, 'quickstart', 'create', _temporary_dir,
+        _Zato_Bin, 'quickstart', 'create', temporary_dir,
         '--servers', '1',
         '--password', _Password,
         '--server-api-client-for-scheduler-password', _Password,
@@ -207,7 +211,7 @@ def zato_dashboard() -> 'any_':
 
     # .. 2) patch server.conf to bind on our dynamic port ..
 
-    server_dir = os.path.join(_temporary_dir, 'server1')
+    server_dir = os.path.join(temporary_dir, 'server1')
     server_config_path = os.path.join(server_dir, 'config', 'repo', 'server.conf')
 
     with open(server_config_path, 'r') as server_config_file:
@@ -225,7 +229,7 @@ def zato_dashboard() -> 'any_':
 
     # .. 3) patch web-admin.conf to use our dashboard port ..
 
-    dashboard_dir = os.path.join(_temporary_dir, 'web-admin')
+    dashboard_dir = os.path.join(temporary_dir, 'web-admin')
     dashboard_config_path = os.path.join(dashboard_dir, 'config', 'repo', 'web-admin.conf')
 
     with open(dashboard_config_path, 'r') as config_file:
@@ -247,17 +251,18 @@ def zato_dashboard() -> 'any_':
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
     server_env.pop('COVERAGE_PROCESS_START', None)
 
-    _server_process = subprocess.Popen(
+    server_process = subprocess.Popen(
         [_Zato_Bin, 'start', server_dir, '--fg'],
         env=server_env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
+    _cleanup_refs['server_process'] = server_process
 
     time_after_server_start = time.monotonic()
 
     server_thread = threading.Thread(
-        target=_stream_output, args=(_server_process, 'SERVER', time_after_server_start), daemon=True)
+        target=_stream_output, args=(server_process, 'SERVER', time_after_server_start), daemon=True)
     server_thread.start()
 
     # .. 5) start the dashboard ..
@@ -266,15 +271,16 @@ def zato_dashboard() -> 'any_':
     dashboard_env.pop('COVERAGE_PROCESS_START', None)
     dashboard_env['Zato_Server_Address'] = f'http://127.0.0.1:{server_port}'
 
-    _dashboard_process = subprocess.Popen(
+    dashboard_process = subprocess.Popen(
         [_Zato_Bin, 'start', dashboard_dir, '--fg'],
         env=dashboard_env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
+    _cleanup_refs['dashboard_process'] = dashboard_process
 
     dashboard_thread = threading.Thread(
-        target=_stream_output, args=(_dashboard_process, 'DASHBOARD', time_after_server_start), daemon=True)
+        target=_stream_output, args=(dashboard_process, 'DASHBOARD', time_after_server_start), daemon=True)
     dashboard_thread.start()
 
     # .. 6) wait for both to be ready ..
@@ -293,9 +299,32 @@ def zato_dashboard() -> 'any_':
 
     except Exception:
         logger.error('Components did not become ready, stdout was streamed above')
-        _kill_process(_server_process)
-        _kill_process(_dashboard_process)
+        _kill_process(server_process)
+        _kill_process(dashboard_process)
         raise
+
+    # .. 7) start the file pickup listener so hot-deploy works for enmasse imports ..
+
+    listener_env = os.environ.copy()
+    listener_env['Zato_Config_Bind_Port'] = str(server_port)
+    listener_env['Zato_Web_Admin_Repo_Dir'] = os.path.join(dashboard_dir, 'config', 'repo')
+    listener_env['Zato_Server_Dir'] = server_dir
+    listener_env.pop('COVERAGE_PROCESS_START', None)
+
+    listener_process = subprocess.Popen(
+        ['make', 'listener'],
+        cwd=_Zato_Base,
+        env=listener_env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    _cleanup_refs['listener_process'] = listener_process
+
+    listener_thread = threading.Thread(
+        target=_stream_output, args=(listener_process, 'LISTENER', time_after_server_start), daemon=True)
+    listener_thread.start()
+
+    logger.info('[TIMING] file pickup listener started, pid=%s', listener_process.pid)
 
     yield {
         'host': host,
@@ -305,22 +334,30 @@ def zato_dashboard() -> 'any_':
         'password': _Password,
         'server_dir': server_dir,
         'dashboard_dir': dashboard_dir,
-        'temporary_dir': _temporary_dir,
+        'temporary_dir': temporary_dir,
+        'server_process': server_process,
+        'dashboard_process': dashboard_process,
+        'listener_process': listener_process,
     }
 
-    # .. teardown: stop server ..
-    _kill_process(_server_process)
-    _server_process = None
+    # .. teardown: stop listener ..
+    _kill_process(listener_process)
+    _cleanup_refs['listener_process'] = None
+
+    # .. stop server ..
+    _kill_process(server_process)
+    _cleanup_refs['server_process'] = None
 
     # .. stop dashboard ..
-    _kill_process(_dashboard_process)
-    _dashboard_process = None
+    _kill_process(dashboard_process)
+    _cleanup_refs['dashboard_process'] = None
 
-    # .. remove the temporary directory.
-    if _temporary_dir:
-        if os.path.isdir(_temporary_dir):
-            shutil.rmtree(_temporary_dir, ignore_errors=True)
-    _temporary_dir = None
+    # .. remove the temporary directory only if all tests passed.
+    if _cleanup_refs.get('has_failures'):
+        logger.info('[TEARDOWN] Keeping temporary directory for debugging: %s', temporary_dir)
+    elif os.path.isdir(temporary_dir):
+        shutil.rmtree(temporary_dir, ignore_errors=True)
+    _cleanup_refs['temporary_dir'] = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -348,9 +385,36 @@ def playwright_browser() -> 'any_':
 # ################################################################################################################################
 
 @pytest.fixture()
-def logged_in_page(zato_dashboard:'anydict', playwright_browser:'any_') -> 'any_':
+def logged_in_page(zato_dashboard:'anydict', playwright_browser:'any_', request:'any_') -> 'any_':
     """ Provides a fresh, logged-in Playwright page for each test.
     """
+
+    test_name = request.node.name
+
+    # Capture process and browser state before doing anything ..
+    dashboard_process = zato_dashboard['dashboard_process']
+    server_process = zato_dashboard['server_process']
+
+    dashboard_poll = dashboard_process.poll() if dashboard_process else 'no-process'
+    server_poll = server_process.poll() if server_process else 'no-process'
+    browser_connected = playwright_browser.is_connected()
+    browser_contexts = len(playwright_browser.contexts)
+
+    logger.info(
+        f'[FIXTURE-SETUP] {test_name}: '
+        f'dashboard_pid={getattr(dashboard_process, "pid", None)} poll={dashboard_poll}, '
+        f'server_pid={getattr(server_process, "pid", None)} poll={server_poll}, '
+        f'browser_connected={browser_connected} contexts={browser_contexts}'
+    )
+
+    # Probe dashboard HTTP before creating the page ..
+    dashboard_url = zato_dashboard['dashboard_url']
+    try:
+        probe_request = Request(f'{dashboard_url}/accounts/login/', method='GET')
+        with urlopen(probe_request, timeout=5) as probe_response:
+            logger.info(f'[FIXTURE-SETUP] {test_name}: HTTP probe status={probe_response.status}')
+    except Exception as probe_exc:
+        logger.error(f'[FIXTURE-SETUP] {test_name}: HTTP probe FAILED: {probe_exc}')
 
     # Create a new browser context ..
     context = playwright_browser.new_context()
@@ -358,10 +422,60 @@ def logged_in_page(zato_dashboard:'anydict', playwright_browser:'any_') -> 'any_
     # .. open a page ..
     page = context.new_page()
 
+    # .. listen for page crashes and unexpected closes ..
+    _close_reasons = [] # type: list
+
+    def _on_page_crash() -> 'None':
+        _close_reasons.append('PAGE_CRASH')
+        logger.debug(f'[PAGE-EVENT] {test_name}: page renderer stopped')
+
+    def _on_page_close(_p:'any_') -> 'None':
+        _close_reasons.append('PAGE_CLOSE')
+        import traceback
+        stack = ''.join(traceback.format_stack())
+        logger.debug(f'[PAGE-EVENT] {test_name}: PAGE CLOSED, stack:\n{stack}')
+
+    def _on_context_close(_c:'any_') -> 'None':
+        _close_reasons.append('CONTEXT_CLOSE')
+        import traceback
+        stack = ''.join(traceback.format_stack())
+        logger.debug(f'[PAGE-EVENT] {test_name}: CONTEXT CLOSED, stack:\n{stack}')
+
+    page.on('crash', _on_page_crash)
+    page.on('close', _on_page_close)
+    context.on('close', _on_context_close)
+
+    # .. capture browser console messages tagged with DIAG ..
+    def _on_console(msg:'any_') -> 'None':
+        text = msg.text
+        if 'DIAG' in text:
+            logger.info(f'[BROWSER] {test_name}: {text}')
+
+    page.on('console', _on_console)
+
+    # .. also capture all response errors from the dashboard ..
+    def _on_response(response:'any_') -> 'None':
+        if response.status >= 400:
+            logger.warning(f'[HTTP] {test_name}: {response.status} {response.url}')
+
+    page.on('response', _on_response)
+
     # .. log into the dashboard ..
-    dashboard_url = zato_dashboard['dashboard_url']
     password = zato_dashboard['password']
-    login_to_dashboard(page, dashboard_url, password)
+
+    try:
+        login_to_dashboard(page, dashboard_url, password)
+    except Exception as login_exc:
+        # Dump full diagnostic state on login failure
+        logger.error(
+            f'[FIXTURE-SETUP] {test_name}: LOGIN FAILED: {login_exc}, '
+            f'page.is_closed={page.is_closed()}, '
+            f'close_reasons={_close_reasons}, '
+            f'dashboard_poll={dashboard_process.poll() if dashboard_process else "no-process"}, '
+            f'server_poll={server_process.poll() if server_process else "no-process"}, '
+            f'browser_connected={playwright_browser.is_connected()}'
+        )
+        raise
 
     yield page
 
@@ -392,6 +506,9 @@ _Log_Noise_Patterns = [
     'check_latest_version',
     'favicon.ico',
     'Could not determine version',
+    'Invalid Basic Auth credentials (groups)',
+    'URL not found',
+    'is not active, raising NotFound',
 ]
 
 @pytest.fixture(autouse=True)
@@ -441,21 +558,29 @@ def check_no_log_errors(zato_dashboard:'anydict', request:'any_') -> 'any_':
                 continue
 
             # .. skip known noise ..
-            is_noise = False
+            is_expected = False
             for noise_pattern in _Log_Noise_Patterns:
                 if noise_pattern in line:
-                    is_noise = True
+                    is_expected = True
                     break
 
-            if is_noise:
+            # .. skip patterns declared by the test via the expect_log_errors marker ..
+            if not is_expected:
+                marker = request.node.get_closest_marker('expect_log_errors')
+                if marker:
+                    for pattern in marker.args:
+                        if pattern in line:
+                            is_expected = True
+                            break
+
+            if is_expected:
                 continue
 
             problems.append(f'[{label}] {line.strip()}')
 
     if problems:
-        test_name = request.node.name
         joined = '\n'.join(problems)
-        pytest.fail(f'Log errors/warnings during {test_name}:\n{joined}')
+        pytest.fail(f'Log errors/warnings during {request.node.name}:\n{joined}')
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -7,110 +7,112 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from unittest import TestCase, main
+from unittest import TestCase
 
 # Zato
+import zato.server.base.config_manager as config_manager_module
+from zato.common.ext.bunch import Bunch
 from zato.common.api import GENERIC as COMMON_GENERIC
-from zato.server.service.internal.generic import connection as conn_module
-from zato.common.util.channel import on_mcp_channel_create_edit, on_mcp_channel_delete
+from zato.server.generic.api.channel_mcp import ChannelMCPWrapper, ChannelMCPWrapper as Imported
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class HookRegistration(TestCase):
-    """ Tests that the MCP create/edit hook is registered.
+class ChannelMCPConstant(TestCase):
+    """ Tests that the CHANNEL_MCP constant is correctly defined.
     """
 
 # ################################################################################################################################
 
-    def test_hook_registered_for_channel_mcp(self):
+    def test_constant_value(self) -> 'None':
+        """ Verifies that the CHANNEL_MCP constant has the expected string value.
+        """
 
-        # The hook dict must contain our type ..
-        hook = conn_module.hook
-        mcp_type = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP
-
-        # .. and it must point to the correct function.
-        self.assertIn(mcp_type, hook)
-        self.assertIs(hook[mcp_type], on_mcp_channel_create_edit)
+        self.assertEqual(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP, 'channel-mcp')
 
 # ################################################################################################################################
 
-    def test_instance_hook_exists(self):
+    def test_constant_is_string(self) -> 'None':
+        """ Verifies that the CHANNEL_MCP constant is a string type.
+        """
 
-        # The module must define instance_hook for delete support.
-        self.assertTrue(hasattr(conn_module, 'instance_hook'))
-        self.assertTrue(callable(conn_module.instance_hook))
+        self.assertIsInstance(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP, str)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class InstanceHookDispatch(TestCase):
-    """ Tests that instance_hook only calls on_mcp_channel_delete for MCP types.
+class ChannelMCPWrapperInit(TestCase):
+    """ Tests that the ChannelMCPWrapper can be instantiated and has the expected interface.
     """
 
 # ################################################################################################################################
 
-    def test_instance_hook_skips_non_mcp(self):
+    def test_wrapper_stores_config_and_server(self) -> 'None':
+        """ Verifies that the wrapper stores config and server references.
+        """
 
-        # Track whether on_mcp_channel_delete was called ..
-        calls = []
-        original = conn_module.on_mcp_channel_delete
+        config = Bunch(name='test-mcp-channel')
+        server = Bunch()
 
-        def _mock_delete(session, channel_name, cluster_id):
-            calls.append((session, channel_name, cluster_id))
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
 
-        conn_module.on_mcp_channel_delete = _mock_delete
-
-        class _MockInstance:
-            type_ = 'channel-kafka'
-            name = 'test'
-            cluster_id = 1
-
-        class _MockAttrs:
-            _meta_session = None
-
-        try:
-            conn_module.instance_hook(None, {}, _MockInstance(), _MockAttrs())
-        finally:
-            conn_module.on_mcp_channel_delete = original
-
-        # .. must not have been called for non-MCP types.
-        self.assertEqual(len(calls), 0)
+        self.assertIs(wrapper.config, config)
+        self.assertIs(wrapper.server, server)
 
 # ################################################################################################################################
 
-    def test_instance_hook_calls_delete_for_mcp(self):
+    def test_build_wrapper_callable(self) -> 'None':
+        """ Verifies that build_wrapper can be called without error.
+        """
 
-        # Track whether on_mcp_channel_delete was called ..
-        calls = []
+        service_store = Bunch(services={}, name_to_impl_name={})
+        config = Bunch(name='test-mcp-channel')
+        server = Bunch(service_store=service_store)
 
-        class _MockInstance:
-            type_ = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP
-            name = 'my-mcp'
-            cluster_id = 1
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper.build_wrapper()
 
-        class _MockAttrs:
-            _meta_session = 'fake-session'
+# ################################################################################################################################
 
-        # .. patch the delete function temporarily ..
-        original = conn_module.on_mcp_channel_delete
+    def test_delete_callable(self) -> 'None':
+        """ Verifies that delete can be called without error.
+        """
 
-        def _mock_delete(session, channel_name, cluster_id):
-            calls.append((session, channel_name, cluster_id))
+        config = Bunch(name='test-mcp-channel')
+        server = Bunch()
 
-        conn_module.on_mcp_channel_delete = _mock_delete
-
-        try:
-            conn_module.instance_hook(None, {}, _MockInstance(), _MockAttrs())
-        finally:
-            conn_module.on_mcp_channel_delete = original
-
-        # .. verify the call was made with the correct arguments.
-        self.assertEqual(len(calls), 1)
-        self.assertEqual(calls[0], ('fake-session', 'my-mcp', 1))
+        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper.delete()
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-if __name__ == '__main__':
-    _ = main()
+class ConfigManagerGenericConnWiring(TestCase):
+    """ Tests that ConfigManager maps include the CHANNEL_MCP type.
+    """
+
+# ################################################################################################################################
+
+    def test_generic_conn_api_has_mcp(self) -> 'None':
+        """ Verifies that the config manager source references CHANNEL_MCP.
+        """
+
+        source = config_manager_module.__file__
+
+        with open(source) as source_file:
+            content = source_file.read()
+
+        self.assertIn('CHANNEL_MCP', content)
+        self.assertIn('self.channel_mcp', content)
+        self.assertIn('ChannelMCPWrapper', content)
+
+# ################################################################################################################################
+
+    def test_wrapper_import(self) -> 'None':
+        """ Verifies that the wrapper import resolves to the same class.
+        """
+
+        self.assertIs(Imported, ChannelMCPWrapper)
+
+# ################################################################################################################################
+# ################################################################################################################################

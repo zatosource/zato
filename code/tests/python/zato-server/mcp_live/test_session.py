@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import NOT_FOUND, OK
+from http.client import BAD_REQUEST, NOT_FOUND, OK
 
 # pytest
 import pytest
@@ -18,9 +18,15 @@ from _client import MCPClient
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.fixture(scope='module')
-def client(zato_server:'dict') -> 'MCPClient':
-    out = MCPClient(zato_server['mcp_url'])
+if 0:
+    from zato.common.typing_ import anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='function')
+def client(zato_server:'anydict') -> 'MCPClient':
+    out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
     return out
 
 # ################################################################################################################################
@@ -44,15 +50,18 @@ class TestSession:
         assert response.status_code == OK
         assert 'result' in data
 
+        # .. clean up the session.
+        _ = client.delete_session(session_id=session_id)
+
 # ################################################################################################################################
 
-    def test_bogus_session_id_returns_not_found(self, client:'MCPClient') -> 'None':
-        """ A bogus session ID returns 404.
+    def test_bogus_session_id_rejected(self, client:'MCPClient') -> 'None':
+        """ A bogus session ID on a request returns 400.
         """
 
         response = client.jsonrpc('ping', session_id='not-a-real-session')
 
-        assert response.status_code == NOT_FOUND
+        assert response.status_code == BAD_REQUEST
 
 # ################################################################################################################################
 
@@ -85,31 +94,33 @@ class TestSession:
 
 # ################################################################################################################################
 
-    def test_request_with_deleted_session_returns_not_found(self, client:'MCPClient') -> 'None':
-        """ A request with a deleted session ID returns 404.
+    def test_request_with_deleted_session_rejected(self, client:'MCPClient') -> 'None':
+        """ A request with a deleted session ID returns 400.
         """
 
         # Create and delete a session ..
         _, session_id = client.initialize()
         _ = client.delete_session(session_id=session_id)
 
-        # .. a subsequent request with that session ID must fail.
+        # .. a subsequent request with that session ID must return 400.
         response = client.jsonrpc('ping', session_id=session_id)
 
-        assert response.status_code == NOT_FOUND
+        assert response.status_code == BAD_REQUEST
 
 # ################################################################################################################################
 
-    def test_ping_without_session_id_succeeds(self, client:'MCPClient') -> 'None':
-        """ Ping without a session ID header succeeds (session is optional).
+    def test_ping_without_session_id_rejected(self, client:'MCPClient') -> 'None':
+        """ Ping without a session ID header is rejected, since every method other than
+        initialize requires a valid session.
         """
 
         response = client.jsonrpc('ping')
 
-        assert response.status_code == OK
+        assert response.status_code == BAD_REQUEST
 
         data = response.json()
-        assert 'result' in data
+        assert 'error' in data
+        assert 'result' not in data
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -19,9 +19,15 @@ from _constants import _error_invalid_request, _jsonrpc_version
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.fixture(scope='module')
-def client(zato_server:'dict') -> 'MCPClient':
-    out = MCPClient(zato_server['mcp_url'])
+if 0:
+    from zato.common.typing_ import anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='function')
+def client(zato_server:'anydict') -> 'MCPClient':
+    out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
     return out
 
 # ################################################################################################################################
@@ -31,8 +37,8 @@ class TestBatch:
     """ Tests for JSON-RPC batch request handling.
     """
 
-    def test_batch_with_request_and_notification(self, client:'MCPClient') -> 'None':
-        """ A batch with one request and one notification returns one response.
+    def test_batch_with_initialize_rejected(self, client:'MCPClient') -> 'None':
+        """ The MCP spec says initialize MUST NOT appear in a batch.
         """
 
         messages = [
@@ -44,15 +50,9 @@ class TestBatch:
 
         assert response.status_code == OK
 
-        # The batch response must be an array with exactly one element
-        # because the notification produces no response.
         data = response.json()
-        assert isinstance(data, list)
-        assert len(data) == 1
-
-        # The single response must be for the initialize request.
-        assert data[0]['id'] == 1
-        assert 'result' in data[0]
+        assert 'error' in data
+        assert data['error']['code'] == _error_invalid_request
 
 # ################################################################################################################################
 
@@ -66,7 +66,9 @@ class TestBatch:
 
         data = response.json()
         assert 'error' in data
-        assert data['error']['code'] == _error_invalid_request
+
+        error = data['error']
+        assert error['code'] == _error_invalid_request
 
 # ################################################################################################################################
 

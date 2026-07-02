@@ -139,9 +139,14 @@ class TestHotDeploy(TestCase):
         if not os.path.isfile(_ZATO_BIN):
             raise SkipTest(f'ZATO HOT DEPLOY TESTS SKIPPED - zato binary not found at {_ZATO_BIN}')
 
+        # Undo any pollution from earlier test modules that disable config reload
+        os.environ.pop('Zato_Needs_Config_Reload', None)
+
         cls.port = _find_free_port()
         broker_port = _find_free_port()
         _tmpdir = tempfile.mkdtemp(prefix='zato_hot_deploy_test_')
+
+        logger.warning('[setUpClass] port=%d broker_port=%d tmpdir=%s', cls.port, broker_port, _tmpdir)
 
         qs_dir = os.path.join(_tmpdir, 'qs')
         os.makedirs(qs_dir)
@@ -156,12 +161,16 @@ class TestHotDeploy(TestCase):
             '--no-scheduler',
         ]
 
+        logger.warning('[setUpClass] Running quickstart create in %s', qs_dir)
         result = subprocess.run(qs_cmd, capture_output=True, text=True, timeout=120, env=qs_env)
         if result.returncode != 0:
+            logger.warning('[setUpClass] quickstart FAILED: stdout=%s stderr=%s', result.stdout[-500:], result.stderr[-500:])
             shutil.rmtree(_tmpdir, ignore_errors=True)
             _tmpdir = None
             raise SkipTest(
                 f'ZATO HOT DEPLOY TESTS SKIPPED - quickstart create failed:\n{result.stdout}\n{result.stderr}')
+
+        logger.warning('[setUpClass] quickstart OK')
 
         cls.server_dir = os.path.join(qs_dir, 'server1')
         repo_location = os.path.join(cls.server_dir, 'config', 'repo')
@@ -177,12 +186,14 @@ class TestHotDeploy(TestCase):
         env['Zato_Broker_HTTP_Port'] = str(broker_port)
         env.pop('COVERAGE_PROCESS_START', None)
 
+        logger.warning('[setUpClass] Starting server on port %d', cls.port)
         _server_proc = subprocess.Popen(
             [_ZATO_BIN, 'start', cls.server_dir, '--fg'],
             env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
+        logger.warning('[setUpClass] Server PID=%d', _server_proc.pid)
 
         cls._server_output_lines = []
 
@@ -197,9 +208,12 @@ class TestHotDeploy(TestCase):
         try:
             _wait_for_server('127.0.0.1', cls.port, _PASSWORD, timeout=60)
         except Exception:
+            logger.warning('[setUpClass] Server did not become ready within 60s')
             cls._dump_debug(repo_location)
             _kill_proc(_server_proc)
             raise
+
+        logger.warning('[setUpClass] Server is ready')
 
         # Start the file listener so that files written after server boot are deployed ..
         pickup_dir = os.path.join(cls.server_dir, 'pickup', 'incoming', 'services')
@@ -210,12 +224,14 @@ class TestHotDeploy(TestCase):
         listener_env['Zato_Web_Admin_Repo_Dir'] = web_admin_repo
         listener_env.pop('COVERAGE_PROCESS_START', None)
 
+        logger.warning('[setUpClass] Starting file listener on %s', pickup_dir)
         cls._listener_proc = subprocess.Popen(
             [_PYTHON_BIN, _LISTENER_PATH, pickup_dir],
             env=listener_env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
+        logger.warning('[setUpClass] Listener PID=%d', cls._listener_proc.pid)
 
         cls._listener_output_lines = []
 
@@ -229,6 +245,7 @@ class TestHotDeploy(TestCase):
 
         # .. give the listeners time to initialize.
         time.sleep(2)
+        logger.warning('[setUpClass] Setup complete, server_dir=%s', cls.server_dir)
 
     @classmethod
     def _dump_debug(cls, repo_location=None):
@@ -258,6 +275,7 @@ class TestHotDeploy(TestCase):
     @classmethod
     def tearDownClass(cls):
         global _tmpdir, _server_proc
+        logger.warning('[tearDownClass] Stopping listener and server')
         _kill_proc(cls._listener_proc)
         cls._listener_proc = None
         _kill_proc(_server_proc)
@@ -265,6 +283,7 @@ class TestHotDeploy(TestCase):
         if _tmpdir and os.path.isdir(_tmpdir):
             shutil.rmtree(_tmpdir, ignore_errors=True)
         _tmpdir = None
+        logger.warning('[tearDownClass] Cleanup complete')
 
 # ################################################################################################################################
 
@@ -273,13 +292,16 @@ class TestHotDeploy(TestCase):
         try:
             with open(tmp_path, 'w') as f:
                 f.write(yaml_content)
+
+            logger.warning('[enmasse_cli] Running enmasse --import with input=%s server_dir=%s', tmp_path, self.server_dir)
             result = subprocess.run(
                 [_ZATO_BIN, 'enmasse', self.server_dir, '--verbose', '--import', '--input', tmp_path,
                  '--missing-wait-time', '15'],
                 capture_output=True, text=True, timeout=30,
             )
-            print(f'\n--- DEBUG enmasse stdout:\n{result.stdout}\n--- DEBUG enmasse stderr:\n{result.stderr}',
-                  file=sys.stderr)
+            logger.warning('[enmasse_cli] exit_code=%d', result.returncode)
+            logger.warning('[enmasse_cli] stdout (last 1000 chars):\n%s', result.stdout[-1000:])
+            logger.warning('[enmasse_cli] stderr (last 1000 chars):\n%s', result.stderr[-1000:])
 
             if result.returncode != 0:
                 self.__class__._dump_debug()
@@ -298,17 +320,32 @@ class TestHotDeploy(TestCase):
 
         last_status = None
         last_text = None
+        attempt = 0
 
         while time.monotonic() < deadline:
+            attempt += 1
             try:
                 resp = req_lib.get(url, timeout=5)
                 last_status = resp.status_code
                 last_text = resp.text
+                if attempt <= 3 or attempt % 10 == 0:
+                    logger.warning('[WAIT attempt=%d] GET %s -> %d body=%s', attempt, url, resp.status_code, resp.text[:100])
                 if resp.status_code == 200 and expected_response in resp.text:
                     return resp.text
-            except Exception:
-                pass
+            except Exception as wait_error:
+                if attempt <= 3:
+                    logger.warning('[WAIT attempt=%d] GET %s -> exception: %s', attempt, url, wait_error)
             time.sleep(1)
+
+        # .. dump the server log on failure ..
+        server_log = os.path.join(self.server_dir, 'logs', 'server.log')
+        if os.path.isfile(server_log):
+            logger.warning('--- server.log (last 80 lines) at failure: ---')
+            with open(server_log) as log_file:
+                lines = log_file.readlines()
+                for line in lines[-80:]:
+                    logger.warning(line.rstrip())
+            logger.warning('--- End of server.log ---')
 
         self.__class__._dump_debug()
         self.fail(
@@ -334,13 +371,17 @@ class TestHotDeploy(TestCase):
         pickup_dir = os.path.join(self.server_dir, 'pickup', 'incoming', 'services')
         service_path = os.path.join(pickup_dir, f'hd_test_default_{token[:8]}.py')
 
+        logger.warning('[HD01] Writing service to %s', service_path)
         with open(service_path, 'w') as f:
             f.write(service_code)
 
+        logger.warning('[HD01] Sleeping 3s for pickup')
         time.sleep(3)
 
+        logger.warning('[HD01] Running enmasse import for channel=%s url_path=%s', channel_name, url_path)
         self._deploy_enmasse_via_cli(enmasse_yaml)
 
+        logger.warning('[HD01] Waiting for channel at %s', url_path)
         resp_text = self._wait_for_channel(url_path, expected, timeout=30)
         self.assertIn(expected, resp_text)
 

@@ -7,10 +7,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from unittest import TestCase, main
+from unittest import TestCase
 
 # Zato
+from zato.admin.web.views.channel.mcp import _mcp_group_name_prefix
 from zato.common.api import Groups
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import anydict, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -21,9 +28,10 @@ class SecurityGroupNaming(TestCase):
 
 # ################################################################################################################################
 
-    def test_group_name_uses_mcp_prefix(self):
+    def test_group_name_uses_mcp_prefix(self) -> 'None':
         """ The auto-created group name must be mcp.<channel_name>.
         """
+
         channel_name = 'my-mcp-channel'
         group_name = 'mcp.' + channel_name
 
@@ -31,10 +39,10 @@ class SecurityGroupNaming(TestCase):
 
 # ################################################################################################################################
 
-    def test_group_name_prefix_constant(self):
+    def test_group_name_prefix_constant(self) -> 'None':
         """ The prefix used in views must match the convention.
         """
-        from zato.admin.web.views.channel.mcp import _mcp_group_name_prefix
+
         self.assertEqual(_mcp_group_name_prefix, 'mcp.')
 
 # ################################################################################################################################
@@ -47,9 +55,10 @@ class SecurityInputParsing(TestCase):
 
 # ################################################################################################################################
 
-    def test_hidden_input_names_produce_member_ids(self):
+    def test_hidden_input_names_produce_member_ids(self) -> 'None':
         """ The hidden input value format sec_type-id must be passed as member_id_list.
         """
+
         # Simulated POST data from the security badge picker
         post_data = {
             'mcp_security_basic_auth-5': 'basic_auth-5',
@@ -58,8 +67,16 @@ class SecurityInputParsing(TestCase):
         }
 
         prefix = 'mcp_security_'
-        security_keys = [key for key in post_data if key.startswith(prefix)]
-        member_id_list = [post_data[key] for key in security_keys]
+
+        security_keys:'anylist' = []
+        for key in post_data:
+            if key.startswith(prefix):
+                security_keys.append(key)
+
+        member_id_list:'anylist' = []
+        for key in security_keys:
+            value = post_data[key]
+            member_id_list.append(value)
 
         self.assertEqual(len(member_id_list), 2)
         self.assertIn('basic_auth-5', member_id_list)
@@ -67,16 +84,25 @@ class SecurityInputParsing(TestCase):
 
 # ################################################################################################################################
 
-    def test_empty_security_produces_empty_member_list(self):
+    def test_empty_security_produces_empty_member_list(self) -> 'None':
         """ No security hidden inputs means an empty member_id_list.
         """
+
         post_data = {
             'name': 'test-channel',
         }
 
         prefix = 'mcp_security_'
-        security_keys = [key for key in post_data if key.startswith(prefix)]
-        member_id_list = [post_data[key] for key in security_keys]
+
+        security_keys:'anylist' = []
+        for key in post_data:
+            if key.startswith(prefix):
+                security_keys.append(key)
+
+        member_id_list:'anylist' = []
+        for key in security_keys:
+            value = post_data[key]
+            member_id_list.append(value)
 
         self.assertEqual(member_id_list, [])
 
@@ -89,9 +115,10 @@ class HookSecurityGroupsPropagation(TestCase):
 
 # ################################################################################################################################
 
-    def test_security_groups_stored_in_opaque(self):
+    def test_security_groups_stored_in_opaque(self) -> 'None':
         """ When security_groups are in data, they must end up in HTTPSOAP.opaque1.
         """
+
         security_groups = [42, 99]
         opaque = {'security_groups': security_groups} if security_groups else {}
 
@@ -99,11 +126,12 @@ class HookSecurityGroupsPropagation(TestCase):
 
 # ################################################################################################################################
 
-    def test_security_groups_merged_into_existing_opaque(self):
+    def test_security_groups_merged_into_existing_opaque(self) -> 'None':
         """ When updating an existing channel, security_groups must be merged
         into the existing opaque data without losing other keys.
         """
-        current_opaque = {'some_other_key': 'value'}
+
+        current_opaque:'anydict' = {'some_other_key': 'value'}
         security_groups = [7]
 
         current_opaque['security_groups'] = security_groups
@@ -113,9 +141,10 @@ class HookSecurityGroupsPropagation(TestCase):
 
 # ################################################################################################################################
 
-    def test_empty_security_groups_produces_empty_opaque(self):
+    def test_empty_security_groups_produces_empty_opaque(self) -> 'None':
         """ No security_groups means opaque is empty.
         """
+
         security_groups = []
         opaque = {'security_groups': security_groups} if security_groups else {}
 
@@ -130,9 +159,10 @@ class DeleteCleanup(TestCase):
 
 # ################################################################################################################################
 
-    def test_group_name_matches_channel_name(self):
+    def test_group_name_matches_channel_name(self) -> 'None':
         """ The group to delete must be named mcp.<channel_name>.
         """
+
         channel_name = 'production-api'
         group_name = 'mcp.' + channel_name
 
@@ -140,14 +170,12 @@ class DeleteCleanup(TestCase):
 
 # ################################################################################################################################
 
-    def test_group_type_is_api_clients(self):
+    def test_group_type_is_api_clients(self) -> 'None':
         """ The auto-created group must be of type Group_Parent with API_Clients subtype.
         """
+
         self.assertEqual(Groups.Type.Group_Parent, 'zato-group')
         self.assertEqual(Groups.Type.API_Clients, 'zato-api-creds')
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-if __name__ == '__main__':
-    _ = main()

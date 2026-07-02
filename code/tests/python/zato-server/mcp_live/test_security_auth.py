@@ -24,15 +24,15 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='function')
 def client(zato_server:'any_') -> 'MCPClient':
-    out = MCPClient(zato_server['mcp_url'])
+    out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
     return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestAuthBypass:
+class TestAuthRequired:
     """ Verifies that authentication is enforced before any JSON-RPC processing.
     """
 
@@ -41,8 +41,8 @@ class TestAuthBypass:
         """
 
         # Initialize a session first ..
-        init_result = client.initialize()
-        session_id = init_result.session_id
+        initialize_result = client.initialize()
+        session_id = initialize_result.session_id
 
         # .. send a tools/call with Accept: text/event-stream using the session ..
         response = client.jsonrpc(
@@ -53,6 +53,9 @@ class TestAuthBypass:
 
         # .. the response should succeed, proving that authenticated SSE works.
         assert response.status_code == OK
+
+        # .. clean up the session.
+        _ = client.delete_session(session_id=session_id)
 
 # ################################################################################################################################
 # ################################################################################################################################

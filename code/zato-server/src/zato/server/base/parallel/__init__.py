@@ -58,6 +58,7 @@ from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.config_manager import ConfigManager
 from zato.server.config import ConfigStore
+from zato.server.connection.mcp.session import MCPSessionReaper
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import ODBConfigSource
 from zato.server.groups.base import GroupsManager
@@ -965,25 +966,30 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 # ################################################################################################################################
 
     def _build_mcp_tool_registries(self) -> 'None':
-        """ Builds tool registries for all MCP channels.
-        Called after all services (internal and user-defined) are deployed.
+        """ Creates MCP channel wrappers and builds their tool registries.
+        Called after all services (internal and user-defined) are deployed,
+        so rebuild() can resolve every service on the allow list.
         """
-        for channel_config in self.config_manager.channel_mcp.values():
-            wrapper = channel_config.conn
-            if wrapper:
-                if wrapper.handler:
-                    wrapper.handler.tool_registry.rebuild()
+        from zato.common.ext.bunch import bunchify
+        from zato.common.api import GENERIC as COMMON_GENERIC
 
-# ################################################################################################################################
+        # Create the MCP channel wrappers that were skipped during init_generic_connections ..
+        for config_dict in self.config_manager.config_store.generic_connection.values():
 
-    def notify_mcp_tools_changed(self) -> 'None':
-        """ Rebuilds tool registries and queues list_changed notifications for all MCP channels.
-        Called after hot-deploy deploys new services at runtime.
-        """
-        for channel_config in self.config_manager.channel_mcp.values():
-            wrapper = channel_config.conn
-            if wrapper:
-                wrapper.on_services_deployed()
+            config = config_dict['config']
+            config_type = config['type_']
+
+            if config_type == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP:
+                config_as_bunch = bunchify(config)
+                self.config_manager._create_generic_connection(
+                    config_as_bunch, raise_exc=True, is_starting=False)
+
+        # .. now all wrappers exist with their registries populated,
+        # spawn a single reaper greenlet to periodically clean up expired sessions ..
+        channel_mcp_dict = self.config_manager.channel_mcp
+        self._mcp_session_reaper = MCPSessionReaper(channel_mcp_dict)
+
+        _ = spawn(self._mcp_session_reaper.run)
 
 # ################################################################################################################################
 
@@ -1711,11 +1717,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         from zato.server.commands import CommandsFacade
 
         pubsub_dir = os.path.dirname(zato.server.service.internal.pubsub.__file__)
-
         config_path = os.path.join(pubsub_dir, 'demo-enmasse.yaml')
 
-        # Deploy the service file first so enmasse can find it
         full_path = os.path.join(self.hot_deploy_config.pickup_dir, 'demo_pubsub_services.py')
+
         with open_w(full_path) as f:
             f.write(Default_Demo_PubSub_Service_File_Data)
 
@@ -2072,6 +2077,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         _entity_type_to_table = {
             'security': 'sec_base',
             'generic_connection': 'generic_conn',
+            'outgoing_rest': 'http_soap',
+            'outgoing_soap': 'http_soap',
+            'channel_rest': 'http_soap',
+            'channel_soap': 'http_soap',
+        }
+
+        # The http_soap table stores channels and outgoing connections together,
+        # so uniqueness must be scoped by the connection direction and transport ..
+        _entity_type_to_extra_where = {
+            'outgoing_rest': "connection = 'outgoing' AND transport = 'plain_http'",
+            'outgoing_soap': "connection = 'outgoing' AND transport = 'soap'",
+            'channel_rest':  "connection = 'channel' AND transport = 'plain_http'",
+            'channel_soap':  "connection = 'channel' AND transport = 'soap'",
         }
 
         table_name = _entity_type_to_table.get(entity_type, entity_type)
@@ -2082,6 +2100,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # .. start with the primary equality condition ..
         where = f'{attr_name} = :val'
 
+        # .. append any entity-specific scoping conditions ..
+        extra_where = _entity_type_to_extra_where.get(entity_type)
+        if extra_where:
+            where = f'{where} AND {extra_where}'
+
         # .. and, when a scoping filter is given, narrow the check down further so that
         # .. it matches the real ODB unique constraint (e.g. username is unique per sec_type) ..
         if filter_name:
@@ -2090,11 +2113,15 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         with closing(self.odb.session()) as session:
             query = f'SELECT 1 FROM {table_name} WHERE {where} LIMIT 1'
+            logger.debug('[DIAG] check_attr_exists: entity_type=%s, table=%s, query=%s, params=%s',
+                entity_type, table_name, query, params)
             result = session.execute(
                 text(query),  # type: ignore[operator]
                 params
             )
             exists = result.fetchone() is not None
+
+        logger.debug('[DIAG] check_attr_exists: entity_type=%s, value=%s, exists=%s', entity_type, value, exists)
 
         out = json.dumps({'exists': exists})
         return out

@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from collections.abc import Iterator
+
 # pytest
 import pytest
 
@@ -28,59 +31,75 @@ _max_service_name_length = 10000
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='function')
 def client(zato_server:'any_') -> 'MCPClient':
-    out = MCPClient(zato_server['mcp_url'])
+    out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
     return out
 
 # ################################################################################################################################
+
+@pytest.fixture(scope='function')
+def session_id(client:'MCPClient') -> 'Iterator[str]':
+    out = client.initialize().session_id
+
+    yield out
+
+    _ = client.delete_session(session_id=out)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
-class TestACLEscape:
-    """ Tests that service name manipulation cannot bypass the allowlist.
+class TestACLEnforcement:
+    """ Tests that service name manipulation cannot circumvent the allow list.
     """
 
-    def test_path_traversal_in_service_name(self, client:'MCPClient') -> 'None':
+    def test_path_traversal_in_service_name(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Path traversal in the service name must be rejected.
         """
 
         params = {'name': '../../zato.server.info', 'arguments': {}}
-        response = client.jsonrpc('tools/call', params=params)
+        response = client.jsonrpc('tools/call', params=params, session_id=session_id)
         data = response.json()
 
         assert 'error' in data
-        assert data['error']['code'] == _error_method_not_found
+
+        error = data['error']
+        assert error['code'] == _error_method_not_found
 
 # ################################################################################################################################
 
-    def test_null_byte_in_service_name(self, client:'MCPClient') -> 'None':
+    def test_null_byte_in_service_name(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Service name with embedded null bytes must be rejected.
         """
 
         params = {'name': 'demo.echo\x00zato.ping', 'arguments': {}}
-        response = client.jsonrpc('tools/call', params=params)
+        response = client.jsonrpc('tools/call', params=params, session_id=session_id)
         data = response.json()
 
         assert 'error' in data
-        assert data['error']['code'] == _error_method_not_found
+
+        error = data['error']
+        assert error['code'] == _error_method_not_found
 
 # ################################################################################################################################
 
-    def test_extremely_long_service_name(self, client:'MCPClient') -> 'None':
+    def test_extremely_long_service_name(self, client:'MCPClient', session_id:'str') -> 'None':
         """ An extremely long service name must be rejected without crashing.
         """
 
         long_name = 'a' * _max_service_name_length
         params = {'name': long_name, 'arguments': {}}
-        response = client.jsonrpc('tools/call', params=params)
+        response = client.jsonrpc('tools/call', params=params, session_id=session_id)
         data = response.json()
 
         assert 'error' in data
-        assert data['error']['code'] == _error_method_not_found
+
+        error = data['error']
+        assert error['code'] == _error_method_not_found
 
 # ################################################################################################################################
 
-    def test_case_variation_of_internal_service(self, client:'MCPClient') -> 'None':
+    def test_case_variation_of_internal_service(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Internal services with case variations must still be rejected.
         """
 
@@ -88,26 +107,30 @@ class TestACLEscape:
 
         for variant in case_variants:
             params = {'name': variant, 'arguments': {}}
-            response = client.jsonrpc('tools/call', params=params)
+            response = client.jsonrpc('tools/call', params=params, session_id=session_id)
             data = response.json()
 
             assert 'error' in data, f'Case variant {variant} was not rejected'
-            assert data['error']['code'] == _error_method_not_found
+
+            error = data['error']
+            assert error['code'] == _error_method_not_found
 
 # ################################################################################################################################
 
-    def test_unicode_homoglyph_service_name(self, client:'MCPClient') -> 'None':
+    def test_unicode_homoglyph_service_name(self, client:'MCPClient', session_id:'str') -> 'None':
         """ Unicode homoglyphs of internal service names must be rejected.
         """
 
         # Cyrillic 'a' (U+0430) instead of Latin 'a' in 'zato'
         homoglyph_name = 'z\u0430to.ping'
         params = {'name': homoglyph_name, 'arguments': {}}
-        response = client.jsonrpc('tools/call', params=params)
+        response = client.jsonrpc('tools/call', params=params, session_id=session_id)
         data = response.json()
 
         assert 'error' in data
-        assert data['error']['code'] == _error_method_not_found
+
+        error = data['error']
+        assert error['code'] == _error_method_not_found
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -10,8 +10,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # local
-from _client import MCPClient
-from _constants import _session_header, _session_id_prefix
+from _client import MCPClient, _session_header
+from _constants import _session_id_prefix
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -20,12 +26,15 @@ _expected_protocol_version = '2025-11-05'
 _expected_server_name      = 'Apache'
 _expected_server_version   = '2.4'
 
+# Standard params for initialize requests in tests
+_initialize_params = {'protocolVersion': _expected_protocol_version, 'capabilities': {}, 'clientInfo': {'name': 'test', 'version': '1.0'}}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.fixture(scope='module')
-def client(zato_server:'dict') -> 'MCPClient':
-    out = MCPClient(zato_server['mcp_url'])
+@pytest.fixture(scope='function')
+def client(zato_server:'anydict') -> 'MCPClient':
+    out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
     return out
 
 # ################################################################################################################################
@@ -39,7 +48,7 @@ class TestInitialize:
         """ Initialize returns a valid JSON-RPC 2.0 response with the expected protocol version.
         """
 
-        response = client.jsonrpc('initialize')
+        response = client.jsonrpc('initialize', params=_initialize_params)
         data = response.json()
 
         # The response must be a valid JSON-RPC 2.0 success ..
@@ -52,20 +61,29 @@ class TestInitialize:
 
         assert result['protocolVersion'] == _expected_protocol_version
 
+        # .. clean up the session.
+        session_id = response.headers[_session_header]
+        _ = client.delete_session(session_id=session_id)
+
 # ################################################################################################################################
 
     def test_initialize_returns_capabilities(self, client:'MCPClient') -> 'None':
-        """ Initialize advertises tool list change notification capability.
+        """ Initialize advertises tool capabilities.
         """
 
-        response = client.jsonrpc('initialize')
-        result = response.json()['result']
+        response = client.jsonrpc('initialize', params=_initialize_params)
+        json_body = response.json()
+        result = json_body['result']
 
-        # The capabilities must include tools with listChanged ..
+        # The capabilities must include a tools section ..
         capabilities = result['capabilities']
         tools = capabilities['tools']
 
-        assert tools['listChanged'] is True
+        assert isinstance(tools, dict)
+
+        # .. clean up the session.
+        session_id = response.headers[_session_header]
+        _ = client.delete_session(session_id=session_id)
 
 # ################################################################################################################################
 
@@ -73,8 +91,9 @@ class TestInitialize:
         """ Initialize reports the masked server identity.
         """
 
-        response = client.jsonrpc('initialize')
-        result = response.json()['result']
+        response = client.jsonrpc('initialize', params=_initialize_params)
+        json_body = response.json()
+        result = json_body['result']
 
         # The server information must report the masked identity ..
         server_information = result['serverInfo']
@@ -82,19 +101,26 @@ class TestInitialize:
         assert server_information['name'] == _expected_server_name
         assert server_information['version'] == _expected_server_version
 
+        # .. clean up the session.
+        session_id = response.headers[_session_header]
+        _ = client.delete_session(session_id=session_id)
+
 # ################################################################################################################################
 
     def test_initialize_returns_session_id_header(self, client:'MCPClient') -> 'None':
         """ Initialize sets the Mcp-Session-Id response header.
         """
 
-        response = client.jsonrpc('initialize')
+        response = client.jsonrpc('initialize', params=_initialize_params)
 
         # The session ID must be present in the response headers
         # and start with the expected prefix.
         session_id = response.headers[_session_header]
 
         assert session_id.startswith(_session_id_prefix)
+
+        # .. clean up the session.
+        _ = client.delete_session(session_id=session_id)
 
 # ################################################################################################################################
 
@@ -109,6 +135,10 @@ class TestInitialize:
 
         # .. they must differ.
         assert session_id_1 != session_id_2
+
+        # .. clean up both sessions.
+        _ = client.delete_session(session_id=session_id_1)
+        _ = client.delete_session(session_id=session_id_2)
 
 # ################################################################################################################################
 # ################################################################################################################################

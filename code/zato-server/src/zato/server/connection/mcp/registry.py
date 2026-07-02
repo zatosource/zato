@@ -38,7 +38,7 @@ _default_page_size = 100
 
 class ToolRegistry:
     """ Builds and caches the MCP tools/list response for a given set of allowed services.
-    Each MCP channel has its own ToolRegistry instance with its own allowlist.
+    Each MCP channel has its own ToolRegistry instance with its own allow list.
     """
     def __init__(self, service_store:'ServiceStore', allowed_services:'strlist') -> 'None':
         self.service_store = service_store
@@ -58,7 +58,7 @@ class ToolRegistry:
 
     def rebuild(self) -> 'None':
         """ Rebuilds the cached tools list by scanning the service store
-        for each service in the allowlist.
+        for each service in the allow list.
         """
 
         # Walk through each allowed service name and try to resolve it ..
@@ -66,23 +66,21 @@ class ToolRegistry:
 
         for service_name in self.allowed_services:
 
-            # Never expose internal services regardless of allowlist contents
+            # Never expose internal services regardless of allow list contents
             if service_name.startswith(_internal_prefix):
-                logger.warning('Skipping internal service `%s` from MCP tool exposure', service_name)
+                logger.info('Skipping internal service `%s` from MCP tool exposure', service_name)
                 continue
 
             # Look up the service in the store ..
             impl_name = self.service_store.name_to_impl_name.get(service_name)
 
             if impl_name is None:
-                logger.info('MCP allowlist contains service `%s` not yet deployed, will retry on hot-deploy', service_name)
-                continue
+                raise ValueError(f'MCP allow list references service `{service_name}` which is not deployed')
 
             service_info = self.service_store.services.get(impl_name)
 
             if service_info is None:
-                logger.warning('No service info for impl `%s` (service `%s`), skipping', impl_name, service_name)
-                continue
+                raise ValueError(f'No service info for impl `{impl_name}` (service `{service_name}`)')
 
             # .. extract the service class and its metadata ..
             service_class = service_info['service_class']
@@ -115,22 +113,31 @@ class ToolRegistry:
         """ Returns a page of tools starting from the given cursor.
         The cursor is an opaque string representing the start index.
         Returns (tools_page, next_cursor) where next_cursor is None if no more pages.
+        Raises ValueError if the cursor is not a valid integer.
         """
 
         all_tools = self._cached_tools
+        total = len(all_tools)
 
         # Decode the cursor into a start index ..
-        start = 0
+        if cursor is None:
+            start = 0
+        else:
+            # Non-numeric cursors are rejected
+            try:
+                start = int(cursor)
+            except (ValueError, TypeError):
+                raise ValueError(f'Invalid cursor value: `{cursor}`')
 
-        if cursor:
-            start = int(cursor)
+            # Clamp to valid range [0, total]
+            start = max(0, min(start, total))
 
         # .. slice out the current page ..
         end = start + _default_page_size
         page = all_tools[start:end]
 
         # .. if there are more tools beyond this page, produce a next cursor ..
-        if end < len(all_tools):
+        if end < total:
             next_cursor = str(end)
         else:
             next_cursor = None
@@ -142,14 +149,14 @@ class ToolRegistry:
 # ################################################################################################################################
 
     def is_tool_allowed(self, service_name:'str') -> 'bool':
-        """ Checks whether a service name is in the allowlist and is not internal.
+        """ Checks whether a service name is in the allow list and is not internal.
         """
 
         # Internal services are never exposed as MCP tools ..
         if service_name.startswith(_internal_prefix):
             return False
 
-        # .. otherwise check membership in the allowlist.
+        # .. otherwise check membership in the allow list.
         out = service_name in self.allowed_services
         return out
 

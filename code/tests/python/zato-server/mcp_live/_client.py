@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from json import dumps
+from typing import NamedTuple
 
 # requests
 import requests
@@ -16,15 +17,14 @@ import requests
 # ################################################################################################################################
 
 if 0:
-    from typing import NamedTuple
-    from zato.common.typing_ import any_, anydict, anydictnone, strdictlist, strnone
+    from zato.common.typing_ import any_, anydict, anydictnone, strdictlist, strnone, tupnone
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class InitializeResult(NamedTuple): # type: ignore
-    response: requests.Response
-    session_id: str
+class InitializeResult(NamedTuple):
+    response: 'requests.Response'
+    session_id: 'str'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,14 +47,16 @@ class MCPClient:
     GET notification polling, and DELETE session termination.
     """
 
-    def __init__(self, mcp_url:'str') -> 'None':
-        """ Stores the MCP endpoint URL for all subsequent requests.
+    def __init__(self, mcp_url:'str', auth:'tupnone' = None) -> 'None':
+        """ Stores the MCP endpoint URL and optional auth for all subsequent requests.
         """
+
         self.mcp_url = mcp_url
+        self.auth = auth
 
 # ################################################################################################################################
 
-    def _build_headers(self, session_id:'strnone'=None) -> 'anydict':
+    def _build_headers(self, session_id:'strnone' = None) -> 'anydict':
         """ Builds request headers, including the session ID header if provided.
         """
 
@@ -72,9 +74,10 @@ class MCPClient:
     def jsonrpc(
         self,
         method:'str',
-        params:'anydictnone'=None,
-        request_id:'any_'=1,
-        session_id:'strnone'=None,
+        params:'anydictnone' = None,
+        request_id:'any_' = 1,
+        session_id:'strnone' = None,
+        extra_headers:'anydictnone' = None,
         ) -> 'requests.Response':
         """ Sends a single JSON-RPC request and returns the raw response.
         """
@@ -92,7 +95,12 @@ class MCPClient:
         # .. send the request and return the response.
         headers = self._build_headers(session_id)
 
-        out = requests.post(self.mcp_url, data=dumps(body), headers=headers, timeout=_request_timeout)
+        if extra_headers:
+            headers.update(extra_headers)
+
+        request_data = dumps(body)
+
+        out = requests.post(self.mcp_url, data=request_data, headers=headers, auth=self.auth, timeout=_request_timeout)
         return out
 
 # ################################################################################################################################
@@ -100,47 +108,41 @@ class MCPClient:
     def jsonrpc_batch(
         self,
         messages:'strdictlist',
-        session_id:'strnone'=None,
+        session_id:'strnone' = None,
         ) -> 'requests.Response':
         """ Sends a JSON-RPC batch request (array of messages) and returns the raw response.
         """
 
         headers = self._build_headers(session_id)
 
-        out = requests.post(self.mcp_url, data=dumps(messages), headers=headers, timeout=_request_timeout)
+        request_data = dumps(messages)
+
+        out = requests.post(self.mcp_url, data=request_data, headers=headers, auth=self.auth, timeout=_request_timeout)
         return out
 
 # ################################################################################################################################
 
-    def jsonrpc_raw(self, raw_bytes:'bytes', session_id:'strnone'=None) -> 'requests.Response':
+    def jsonrpc_raw(self, raw_bytes:'bytes', session_id:'strnone' = None) -> 'requests.Response':
         """ Sends raw bytes as the request body for error path testing.
         """
 
         headers = self._build_headers(session_id)
 
-        out = requests.post(self.mcp_url, data=raw_bytes, headers=headers, timeout=_request_timeout)
+        out = requests.post(self.mcp_url, data=raw_bytes, headers=headers, auth=self.auth, timeout=_request_timeout)
         return out
 
 # ################################################################################################################################
 
-    def get_notifications(self, session_id:'strnone'=None) -> 'requests.Response':
-        """ Sends a GET request to poll for server-to-client notifications.
-        """
-
-        headers = self._build_headers(session_id)
-
-        out = requests.get(self.mcp_url, headers=headers, timeout=_request_timeout)
-        return out
-
-# ################################################################################################################################
-
-    def delete_session(self, session_id:'strnone'=None) -> 'requests.Response':
+    def delete_session(self, session_id:'strnone' = None, extra_headers:'anydictnone' = None) -> 'requests.Response':
         """ Sends a DELETE request to terminate an MCP session.
         """
 
         headers = self._build_headers(session_id)
 
-        out = requests.delete(self.mcp_url, headers=headers, timeout=_request_timeout)
+        if extra_headers:
+            headers.update(extra_headers)
+
+        out = requests.delete(self.mcp_url, headers=headers, auth=self.auth, timeout=_request_timeout)
         return out
 
 # ################################################################################################################################
@@ -150,7 +152,13 @@ class MCPClient:
         Returns the response and the session ID from the response header.
         """
 
-        response = self.jsonrpc('initialize')
+        params = {
+            'protocolVersion': '2025-11-05',
+            'capabilities': {},
+            'clientInfo': {'name': 'zato-mcp-test', 'version': '1.0'},
+        }
+
+        response = self.jsonrpc('initialize', params=params)
         session_id = response.headers[_session_header]
 
         out = InitializeResult(response, session_id)

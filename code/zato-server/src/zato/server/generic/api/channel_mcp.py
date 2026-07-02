@@ -48,8 +48,10 @@ class ChannelMCPWrapper:
         # extracted from opaque1 by GenericConnection.to_dict during startup.
         allowed_services:'strlist' = self.config.get('services', [])
 
-        # .. build the tool registry ..
+        # .. build the tool registry and populate it. This is safe because MCP channels
+        # are only created after all services are deployed ..
         tool_registry = ToolRegistry(self.server.service_store, allowed_services)
+        tool_registry.rebuild()
 
         # .. build the session manager ..
         session_manager = MCPSessionManager()
@@ -69,20 +71,6 @@ class ChannelMCPWrapper:
 
         out = self.server.invoke(service_name, payload)
         return out
-
-# ################################################################################################################################
-
-    def on_services_deployed(self) -> 'None':
-        """ Called after hot-deploy deploys new services.
-        Rebuilds the tool registry and queues list_changed notifications.
-        """
-
-        # Rebuild and notify only if the handler has been initialized ..
-        if self.handler:
-            count = self.handler.notify_tools_changed()
-
-            session_suffix = 'session' if count == 1 else 'sessions'
-            logger.info('MCP channel `%s`: tools changed, notified %d %s', self.config.name, count, session_suffix)
 
 # ################################################################################################################################
 

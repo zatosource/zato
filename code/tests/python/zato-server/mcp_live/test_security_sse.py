@@ -39,9 +39,9 @@ _sse_request_timeout = 30
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='function')
 def client(zato_server:'any_') -> 'MCPClient':
-    out = MCPClient(zato_server['mcp_url'])
+    out = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
     return out
 
 # ################################################################################################################################
@@ -57,8 +57,8 @@ class TestSSESecurity:
         """
 
         # Initialize a session first ..
-        init_result = client.initialize()
-        session_id = init_result.session_id
+        initialize_result = client.initialize()
+        session_id = initialize_result.session_id
 
         # .. send a tools/call with SSE Accept header ..
         headers = {
@@ -78,11 +78,15 @@ class TestSSESecurity:
             client.mcp_url,
             json=body,
             headers=headers,
+            auth=client.auth,
             timeout=_sse_request_timeout,
         )
 
         # .. the response should be successful regardless of content type.
         assert response.status_code == OK
+
+        # .. clean up the session.
+        _ = client.delete_session(session_id=session_id)
 
 # ################################################################################################################################
 
@@ -91,8 +95,8 @@ class TestSSESecurity:
         """
 
         # Initialize a session ..
-        init_result = client.initialize()
-        session_id = init_result.session_id
+        initialize_result = client.initialize()
+        session_id = initialize_result.session_id
 
         # .. send two independent tools/call requests with the same session ..
         response_first = client.jsonrpc(
@@ -112,6 +116,9 @@ class TestSSESecurity:
         # .. both should succeed independently.
         assert response_first.status_code == OK
         assert response_second.status_code == OK
+
+        # .. clean up the session.
+        _ = client.delete_session(session_id=session_id)
 
 # ################################################################################################################################
 # ################################################################################################################################

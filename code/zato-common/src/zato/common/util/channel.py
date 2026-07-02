@@ -133,7 +133,7 @@ def ensure_mcp_channel_exists(session, cluster_id):
         generic_conn.is_channel = True
         generic_conn.is_outconn = False
         generic_conn.cluster_id = cluster_id
-        generic_conn.opaque1 = '{"services": ["demo.echo"], "url_path": "/mcp/demo"}'
+        generic_conn.opaque1 = '{"services": ["demo.echo", "test.raise"], "url_path": "/mcp/demo"}'
 
         session.add(generic_conn)
 
@@ -142,75 +142,153 @@ def ensure_mcp_channel_exists(session, cluster_id):
 # ################################################################################################################################
 # ################################################################################################################################
 
+def ensure_mcp_rest_channel(session, channel_name, url_path, cluster_id, is_active=True,
+                            security_groups=None, old_name=None):
+    """ Creates or updates the REST channel that makes an MCP channel reachable over HTTP.
+    Called from both the server-side hook (on_mcp_channel_create_edit) and the enmasse importer.
+    Does NOT commit - the caller is responsible for committing the session.
+    """
+    from zato.common.api import CONNECTION, DATA_FORMAT, URL_TYPE
+    from zato.common.odb.model import Cluster, HTTPSOAP, Service
+    from zato.common.util.sql import set_instance_opaque_attrs
+
+    security_groups = security_groups or []
+
+    # If this is a rename, delete the old REST channel first ..
+    if old_name and old_name != channel_name:
+        old_http = session.query(HTTPSOAP).filter(
+            HTTPSOAP.name == old_name,
+            HTTPSOAP.cluster_id == cluster_id,
+            HTTPSOAP.connection == CONNECTION.CHANNEL,
+        ).first()
+        if old_http:
+            session.delete(old_http)
+
+    # .. check if the REST channel already exists ..
+    existing_http = session.query(HTTPSOAP).filter(
+        HTTPSOAP.name == channel_name,
+        HTTPSOAP.cluster_id == cluster_id,
+        HTTPSOAP.connection == CONNECTION.CHANNEL,
+    ).first()
+
+    # .. if it exists, update it ..
+    if existing_http:
+        existing_http.url_path = url_path
+        existing_http.is_active = is_active
+        set_instance_opaque_attrs(existing_http, {'security_groups': security_groups})
+
+    # .. otherwise, create a new one.
+    else:
+        cluster = session.query(Cluster).filter(Cluster.id == cluster_id).one()
+
+        mcp_service = session.query(Service).filter(
+            Service.name == mcp_service_name,
+            Service.cluster_id == cluster_id,
+        ).first()
+
+        if not mcp_service:
+            mcp_service = Service(None, mcp_service_name, True, mcp_service_name, True, cluster)
+            session.add(mcp_service)
+            session.flush()
+
+        http_channel = HTTPSOAP(
+            None, channel_name, is_active, True, CONNECTION.CHANNEL,
+            URL_TYPE.PLAIN_HTTP, None, url_path, None, '', None, DATA_FORMAT.JSON,
+            service=mcp_service, cluster=cluster, security=None)
+        set_instance_opaque_attrs(http_channel, {'security_groups': security_groups})
+        session.add(http_channel)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _resolve_security_group_names_to_ids(session, group_names, cluster_id):
+    """ Converts a list of security group names to their database IDs.
+    Needed because GenericConn stores group names but HTTPSOAP needs group IDs
+    for the server's security_groups_ctx_builder to work.
+    """
+    from zato.common.api import Groups
+    from zato.common.odb.model import GenericObject
+
+    if not group_names:
+        return []
+
+    out = []
+
+    for name in group_names:
+
+        # .. skip entries that are already numeric IDs ..
+        if isinstance(name, int):
+            out.append(name)
+            continue
+
+        group = session.query(GenericObject).filter(
+            GenericObject.name == name,
+            GenericObject.type_ == Groups.Type.Group_Parent,
+            GenericObject.cluster_id == cluster_id,
+        ).first()
+
+        if group:
+            out.append(group.id)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def on_mcp_channel_create_edit(service, data, model, old_name):
     """ Hook called by zato.generic.connection create/edit for channel-mcp type.
-    Ensures a matching HTTPSOAP channel exists and routes to the MCPEndpoint service.
-    On rename, the old HTTPSOAP channel is removed and a new one is created.
-    Also propagates security_groups from the MCP channel to the HTTPSOAP channel's opaque data.
+    Creates or updates the HTTPSOAP channel by invoking the standard http-soap services,
+    which handle ODB persistence, uniqueness checks, and broker notification.
     """
+    import logging
     from contextlib import closing
 
     from zato.common.api import CONNECTION, DATA_FORMAT, URL_TYPE
-    from zato.common.odb.model import Cluster, HTTPSOAP, Service
+    from zato.common.odb.model import HTTPSOAP
+
+    logger = logging.getLogger(__name__)
+
+    channel_name = data['name']
+    url_path = data['url_path']
+    is_active = data.get('is_active', True)
+    cluster_id = model.cluster_id
 
     with closing(service.server.odb.session()) as session:
 
-        channel_name = data['name']
-        url_path = data['url_path']
-        cluster_id = model.cluster_id
         security_groups = data.get('security_groups', [])
+        security_groups = _resolve_security_group_names_to_ids(session, security_groups, cluster_id)
 
-        # If this is a rename, delete the old HTTPSOAP channel first ..
-        if old_name and old_name != channel_name:
-            old_http = session.query(HTTPSOAP).filter(
-                HTTPSOAP.name == old_name,
-                HTTPSOAP.cluster_id == cluster_id,
-                HTTPSOAP.connection == CONNECTION.CHANNEL,
-            ).first()
-            if old_http:
-                session.delete(old_http)
-
-        # .. check if the HTTPSOAP channel already exists ..
-        existing_http = session.query(HTTPSOAP).filter(
-            HTTPSOAP.name == channel_name,
+        # Check if the HTTPSOAP channel already exists (use old_name for renames) ..
+        lookup_name = old_name if (old_name and old_name != channel_name) else channel_name
+        existing = session.query(HTTPSOAP).filter(
+            HTTPSOAP.name == lookup_name,
             HTTPSOAP.cluster_id == cluster_id,
             HTTPSOAP.connection == CONNECTION.CHANNEL,
         ).first()
 
-        # Build the opaque data with security groups ..
-        opaque = {'security_groups': security_groups} if security_groups else {}
+    # Build the payload common to both create and edit ..
+    payload = {
+        'name': channel_name,
+        'url_path': url_path,
+        'connection': CONNECTION.CHANNEL,
+        'transport': URL_TYPE.PLAIN_HTTP,
+        'is_active': is_active,
+        'is_internal': True,
+        'data_format': DATA_FORMAT.JSON,
+        'service': mcp_service_name,
+        'security_groups': security_groups,
+        'cluster_id': cluster_id,
+    }
 
-        # .. if it exists, update its URL path and security groups ..
-        if existing_http:
-            existing_http.url_path = url_path
-            existing_http.is_active = data.get('is_active', True)
+    if existing:
+        payload['id'] = existing.id
+        service_name = 'zato.http-soap.edit'
+        logger.info('on_mcp_channel_create_edit: editing HTTPSOAP id=%s name=%s -> %s', existing.id, lookup_name, channel_name)
+    else:
+        service_name = 'zato.http-soap.create'
+        logger.info('on_mcp_channel_create_edit: creating HTTPSOAP name=%s url_path=%s', channel_name, url_path)
 
-            # .. merge security_groups into existing opaque data ..
-            current_opaque = existing_http.opaque1 or {}
-            current_opaque['security_groups'] = security_groups
-            existing_http.opaque1 = current_opaque
-
-        # .. otherwise, create a new one.
-        else:
-            cluster = session.query(Cluster).filter(Cluster.id == cluster_id).one()
-
-            mcp_service = session.query(Service).filter(
-                Service.name == mcp_service_name,
-                Service.cluster_id == cluster_id,
-            ).first()
-
-            if not mcp_service:
-                mcp_service = Service(None, mcp_service_name, True, mcp_service_name, True, cluster)
-                session.add(mcp_service)
-                session.flush()
-
-            http_channel = HTTPSOAP(
-                None, channel_name, True, data.get('is_active', True), CONNECTION.CHANNEL,
-                URL_TYPE.PLAIN_HTTP, None, url_path, None, '', None, DATA_FORMAT.JSON,
-                service=mcp_service, cluster=cluster, opaque=opaque)
-            session.add(http_channel)
-
-        session.commit()
+    service.invoke(service_name, payload)
 
 # ################################################################################################################################
 # ################################################################################################################################
