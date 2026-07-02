@@ -15,6 +15,7 @@ from unittest.mock import MagicMock, patch
 from zato.common.api import CHANNEL, DATA_FORMAT
 from zato.common.exception import Inactive, ZatoException
 from zato.common.marshal_.api import Model
+from zato.common.util.logging_ import current_cid, current_service_name
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -269,6 +270,94 @@ class TestServiceInvoke(unittest.TestCase):
         self.assertGreater(cid_length, 0)
 
         mock_spawn.assert_called_once()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestUpdateHandleLoggingContext(unittest.TestCase):
+    """ Tests for the logging context bound and reset by update_handle.
+    """
+
+    def setUp(self) -> 'None':
+
+        # Simulate a caller, e.g. a parent service, whose context is already bound ..
+        parent_cid_token = current_cid.set('parent-cid-001')
+        parent_service_name_token = current_service_name.set('parent.service')
+
+        # .. and make sure the test always restores the original context.
+        self.addCleanup(current_cid.reset, parent_cid_token)
+        self.addCleanup(current_service_name.reset, parent_service_name_token)
+
+# ################################################################################################################################
+
+    def _make_service(self) -> 'Service':
+        """ Builds a minimally-wired Service instance whose _update_handle is mocked out.
+        """
+        service = Service.__new__(Service)
+        service.name = 'child.service'
+
+        return service
+
+# ################################################################################################################################
+
+    def _call_update_handle(self, service:'Service') -> 'any_':
+        """ Shorthand to call update_handle with standard test parameters.
+        """
+        out = service.update_handle(
+            MagicMock(), service, {'key': 'val'}, CHANNEL.INVOKE, DATA_FORMAT.JSON,
+            '', MagicMock(), MagicMock(), MagicMock(), 'child-cid-002')
+
+        return out
+
+# ################################################################################################################################
+
+    def test_context_is_bound_during_invocation(self) -> 'None':
+        """ While _update_handle runs, the logging context holds the invoked service's cid and name.
+        """
+        service = self._make_service()
+
+        observed = {}
+
+        def capture_context(*args:'any_', **kwargs:'any_') -> 'str':
+            observed['cid'] = current_cid.get()
+            observed['service_name'] = current_service_name.get()
+            return 'response'
+
+        service._update_handle = capture_context
+
+        result = self._call_update_handle(service)
+
+        self.assertEqual(result, 'response')
+        self.assertEqual(observed['cid'], 'child-cid-002')
+        self.assertEqual(observed['service_name'], 'child.service')
+
+# ################################################################################################################################
+
+    def test_context_is_restored_after_invocation(self) -> 'None':
+        """ After update_handle returns, the caller's logging context is restored,
+        so a parent service's name comes back once a nested self.invoke() completes.
+        """
+        service = self._make_service()
+        service._update_handle = MagicMock(return_value='response')
+
+        _ = self._call_update_handle(service)
+
+        self.assertEqual(current_cid.get(), 'parent-cid-001')
+        self.assertEqual(current_service_name.get(), 'parent.service')
+
+# ################################################################################################################################
+
+    def test_context_is_restored_when_service_raises(self) -> 'None':
+        """ The caller's logging context is restored even when the invoked service raises.
+        """
+        service = self._make_service()
+        service._update_handle = MagicMock(side_effect=ZatoException(msg='Test error message'))
+
+        with self.assertRaises(ZatoException):
+            _ = self._call_update_handle(service)
+
+        self.assertEqual(current_cid.get(), 'parent-cid-001')
+        self.assertEqual(current_service_name.get(), 'parent.service')
 
 # ################################################################################################################################
 # ################################################################################################################################

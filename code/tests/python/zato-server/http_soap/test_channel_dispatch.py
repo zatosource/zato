@@ -22,6 +22,7 @@ from zato.common.exception import BackendInvocationError, BadRequest, Forbidden,
     MethodNotAllowed, NotFound, ServiceMissingException, TooManyRequests, Unauthorized
 from zato.common.json_ import dumps
 from zato.common.marshal_.api import ElementMissing
+from zato.common.util.logging_ import current_cid, current_service_name
 from zato.server.connection.http_soap.channel import RequestDispatcher, response_404, status_response
 
 # ################################################################################################################################
@@ -873,6 +874,74 @@ class DispatchLoggingTestCase(unittest.TestCase):
             info_calls = [str(call_item) for call_item in mock_logger.info.call_args_list]
             found = any('REST cha' in call_item for call_item in info_calls)
             self.assertFalse(found, f'REST log line should not appear when logging disabled: {info_calls}')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DispatchLoggingContextTestCase(unittest.TestCase):
+    """ Tests for the greenlet-local logging context bound and reset by dispatch.
+    """
+
+    def setUp(self) -> 'None':
+
+        # Simulate a pooled greenlet that still carries the previous request's context ..
+        previous_cid_token = current_cid.set('zcid-previous-9999')
+        previous_service_name_token = current_service_name.set('previous.service')
+
+        # .. and make sure the test always restores the original context.
+        self.addCleanup(current_cid.reset, previous_cid_token)
+        self.addCleanup(current_service_name.reset, previous_service_name_token)
+
+# ################################################################################################################################
+
+    @patch('zato.server.connection.http_soap.channel._logger_is_enabled_for', return_value=True)
+    def test_context_is_bound_before_inbound_log_line(self, mock_enabled:'MagicMock') -> 'None':
+        """ At the time the inbound REST log line is emitted, the logging context already holds
+        the new request's cid and service name, not the previous request's.
+        """
+        ctx = _make_dispatcher(rest_log_ignore=set())
+        wsgi_environ = _make_wsgi_environ()
+
+        observed = {}
+
+        def capture_context(*args:'any_', **kwargs:'any_') -> 'None':
+            observed['cid'] = current_cid.get()
+            observed['service_name'] = current_service_name.get()
+
+        with patch('zato.server.connection.http_soap.channel.logger') as mock_logger:
+            mock_logger.info.side_effect = capture_context
+            _ = _dispatch(ctx, wsgi_environ)
+
+        self.assertEqual(observed['cid'], _test_cid)
+        self.assertEqual(observed['service_name'], 'test.service')
+
+# ################################################################################################################################
+
+    def test_context_is_restored_after_dispatch(self) -> 'None':
+        """ Once dispatch returns, the logging context is restored to what it was before the call,
+        so an idle, pooled greenlet does not hold this request's context.
+        """
+        ctx = _make_dispatcher()
+        wsgi_environ = _make_wsgi_environ()
+
+        _ = _dispatch(ctx, wsgi_environ)
+
+        self.assertEqual(current_cid.get(), 'zcid-previous-9999')
+        self.assertEqual(current_service_name.get(), 'previous.service')
+
+# ################################################################################################################################
+
+    def test_context_is_restored_when_handler_raises(self) -> 'None':
+        """ The logging context is restored even when the request handler raises an exception.
+        """
+        ctx = _make_dispatcher()
+        ctx.mock_handle.side_effect = Exception('Test error message')
+        wsgi_environ = _make_wsgi_environ()
+
+        _ = _dispatch(ctx, wsgi_environ)
+
+        self.assertEqual(current_cid.get(), 'zcid-previous-9999')
+        self.assertEqual(current_service_name.get(), 'previous.service')
 
 # ################################################################################################################################
 # ################################################################################################################################
