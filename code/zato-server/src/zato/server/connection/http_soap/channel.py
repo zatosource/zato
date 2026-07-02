@@ -25,7 +25,6 @@ from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HTTP_SOAP, MISC,
 from zato.common.const import ServiceConst
 from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, ServiceMissingException
 from zato.common.json_ import dumps
-from zato.common.json_internal import loads
 from zato.common.marshal_.api import Model, ModelValidationError
 from zato.common.rate_limiting.common import current_time_us
 from zato.common.typing_ import cast_
@@ -44,7 +43,7 @@ from zato.server.service.internal import AdminService
 if 0:
     from zato.common.config_dispatcher import ConfigDispatcher
     from zato.common.rate_limiting.cidr import SlottedCheckResult
-    from zato.common.typing_ import any_, anydict, anytuple, callable_, dictnone, stranydict, strlist, strstrdict
+    from zato.common.typing_ import any_, anydict, callable_, dictnone, stranydict, strlist, strstrdict
     from zato.server.service import Service
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.config_manager import ConfigManager
@@ -250,11 +249,13 @@ class RequestDispatcher:
             if channel_name == 'zato.api.invoke' and meta.path_info.startswith('/zato'):
                 return
             service_name = channel_item['service_name'] if channel_item else '<no-channel>'
-            logger.info(
-                f'REST cha \u2192 cid={cid}; {meta.http_method} {meta.wsgi_raw_uri} name={channel_name};'
-                f' service={service_name}; len={len(payload)}; agent={user_agent};'
-                f' remote-addr={remote_addr}:{meta.wsgi_remote_port}'
-            )
+            payload_len = len(payload)
+
+            request_part = f'REST cha \u2192 cid={cid}; {meta.http_method} {meta.wsgi_raw_uri} name={channel_name};'
+            details_part = f' service={service_name}; len={payload_len}; agent={user_agent};'
+            remote_part = f' remote-addr={remote_addr}:{meta.wsgi_remote_port}'
+
+            logger.info(request_part + details_part + remote_part)
 
 # ################################################################################################################################
 
@@ -737,9 +738,6 @@ class RequestDispatcher:
 
         # .. build the key prefix ..
         key_prefix = prefix_template.format(sec_def_id)
-
-        # .. log the known sec_def IDs before the check ..
-        known_ids = list(self.server.rate_limiting_manager._sec_def_matchers.keys())
 
         # .. and check rate limiting.
         out = self.server.rate_limiting_manager.check_sec_def(sec_def_id, remote_addr, now_us, key_prefix)
