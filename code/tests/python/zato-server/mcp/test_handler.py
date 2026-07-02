@@ -140,7 +140,7 @@ class HandleInitialize(TestCase):
         request = _make_request('initialize', params=_initialize_params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -181,7 +181,7 @@ class HandleToolsList(TestCase):
         request = _make_request('tools/list')
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -200,7 +200,7 @@ class HandleToolsList(TestCase):
         request = _make_request('tools/list')
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -232,7 +232,7 @@ class HandleToolsListPagination(TestCase):
         # First page (no cursor)
         request = _make_request('tools/list')
         raw = dumps(request)
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         body = mcp_response.body
         result = body['result']
@@ -255,7 +255,7 @@ class HandleToolsListPagination(TestCase):
 
         request = _make_request('tools/list')
         raw = dumps(request)
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         body = mcp_response.body
         result = body['result']
@@ -279,7 +279,7 @@ class HandleToolsListPagination(TestCase):
 
         request = _make_request('tools/list', params={'cursor': '42'})
         raw = dumps(request)
-        _ = handler.handle_raw_request(raw, session_id=session_id)
+        _ = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(captured_cursors, ['42'])
 
@@ -300,7 +300,7 @@ class HandleToolsCall(TestCase):
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -325,7 +325,7 @@ class HandleToolsCall(TestCase):
         request = _make_request('tools/call', {})
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -345,7 +345,7 @@ class HandleToolsCall(TestCase):
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -365,7 +365,7 @@ class HandleToolsCall(TestCase):
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -393,7 +393,7 @@ class HandleToolsCall(TestCase):
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         body = mcp_response.body
         result = body['result']
@@ -417,7 +417,7 @@ class HandleToolsCall(TestCase):
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         body = mcp_response.body
         result = body['result']
@@ -445,7 +445,7 @@ class HandleToolsCall(TestCase):
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        _ = handler.handle_raw_request(raw, session_id=session_id)
+        _ = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         first_payload = received_payloads[0]
         self.assertEqual(first_payload, {})
@@ -466,7 +466,7 @@ class HandlePing(TestCase):
         request = _make_request('ping')
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -486,7 +486,7 @@ class HandleParseError(TestCase):
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
 
-        mcp_response = handler.handle_raw_request(b'not json at all')
+        mcp_response = handler.handle_raw_request(b'not json at all', _test_sec_def_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -501,7 +501,7 @@ class HandleParseError(TestCase):
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
 
-        mcp_response = handler.handle_raw_request(b'"just a string"')
+        mcp_response = handler.handle_raw_request(b'"just a string"', _test_sec_def_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -525,7 +525,7 @@ class HandleInvalidRequest(TestCase):
         request = {'method': 'ping', 'id': 1}
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -544,7 +544,7 @@ class HandleInvalidRequest(TestCase):
         request = {'jsonrpc': '1.0', 'method': 'ping', 'id': 1}
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -563,7 +563,7 @@ class HandleInvalidRequest(TestCase):
         request = {'jsonrpc': '2.0', 'id': 1}
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -582,7 +582,7 @@ class HandleInvalidRequest(TestCase):
         request = _make_request('nonexistent/method')
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -609,7 +609,7 @@ class HandleBatch(TestCase):
         raw = dumps(batch)
 
         session_id = _make_session(handler)
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
         self.assertIsInstance(mcp_response.body, list)
@@ -632,7 +632,7 @@ class HandleBatch(TestCase):
         ]
         raw = dumps(batch)
 
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id)
 
         self.assertEqual(mcp_response.status_code, NO_CONTENT)
         self.assertIsNone(mcp_response.body)
@@ -651,7 +651,7 @@ class HandleBatch(TestCase):
         ]
         raw = dumps(batch)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
         self.assertIsInstance(mcp_response.body, list)
@@ -669,7 +669,7 @@ class HandleBatch(TestCase):
 
         raw = dumps([])
 
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -692,7 +692,7 @@ class HandleBatch(TestCase):
         raw = dumps(batch)
 
         session_id = _make_session(handler)
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
         self.assertEqual(len(mcp_response.body), 3)
@@ -730,7 +730,7 @@ class HandleInitializeBatch(TestCase):
         ]
         raw = dumps(batch)
 
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id)
 
         self.assertEqual(mcp_response.status_code, OK)
         self.assertEqual(mcp_response.body['error']['code'], _error_invalid_request)
@@ -759,7 +759,7 @@ class HandleMalformedInput(TestCase):
         ]
         raw = dumps(batch)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
         self.assertIsInstance(mcp_response.body, list)
@@ -787,7 +787,7 @@ class HandleMalformedInput(TestCase):
         request = {'jsonrpc': '2.0', 'method': 'tools/list', 'id': 1, 'params': ['not', 'an', 'object']}
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -806,7 +806,7 @@ class HandleMalformedInput(TestCase):
         request = {'jsonrpc': '2.0', 'method': 'tools/call', 'id': 1, 'params': 'name=demo.echo'}
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -825,7 +825,7 @@ class HandleMalformedInput(TestCase):
         request = {'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': 123}
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -853,7 +853,7 @@ class HandleMalformedInput(TestCase):
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -882,7 +882,7 @@ class HandleMalformedInput(TestCase):
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -919,7 +919,7 @@ class HandleConcurrentDispatch(TestCase):
             initialize_request = _make_request('initialize', params=_initialize_params, request_id=99)
             raw = dumps(initialize_request)
 
-            interleaved_response = handler.handle_raw_request(raw)
+            interleaved_response = handler.handle_raw_request(raw, _test_sec_def_id)
             interleaved_responses.append(interleaved_response)
 
             return 'Customer details'
@@ -933,7 +933,7 @@ class HandleConcurrentDispatch(TestCase):
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         # .. the interleaved initialize must have created its own session ..
         interleaved_response = interleaved_responses[0]
@@ -968,7 +968,7 @@ class HandleConcurrentDispatch(TestCase):
             initialize_request = _make_request('initialize', params=_initialize_params, request_id=99)
             raw = dumps(initialize_request)
 
-            interleaved_response = handler.handle_raw_request(raw)
+            interleaved_response = handler.handle_raw_request(raw, _test_sec_def_id)
             interleaved_responses.append(interleaved_response)
 
             return 'Customer details'
@@ -981,11 +981,11 @@ class HandleConcurrentDispatch(TestCase):
         params = {'name': 'crm.get-customer', 'arguments': {'customer_id': '123'}}
         tools_call_request = _make_request('tools/call', params)
         raw = dumps(tools_call_request)
-        _ = handler.handle_raw_request(raw, session_id=session_id)
+        _ = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         initialize_request = _make_request('initialize', params=_initialize_params, request_id=2)
         raw = dumps(initialize_request)
-        initialize_response = handler.handle_raw_request(raw)
+        initialize_response = handler.handle_raw_request(raw, _test_sec_def_id)
 
         # .. both initialize responses must carry session IDs ..
         interleaved_response = interleaved_responses[0]

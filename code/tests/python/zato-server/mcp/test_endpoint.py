@@ -180,7 +180,7 @@ class ChannelMCPWrapperInvoke(TestCase):
         assert wrapper.handler is not None
         session_manager = wrapper.handler.session_manager
         session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
-        mcp_response = wrapper.handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = wrapper.handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -533,7 +533,7 @@ class MCPEndpointServiceDispatch(TestCase):
         assert wrapper.handler is not None
         session_manager = wrapper.handler.session_manager
         session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
-        mcp_response = wrapper.handler.handle_raw_request(raw, session_id=session_id)
+        mcp_response = wrapper.handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -561,7 +561,7 @@ class MCPEndpointServiceDispatch(TestCase):
         raw = dumps(batch)
 
         assert wrapper.handler is not None
-        mcp_response = wrapper.handler.handle_raw_request(raw)
+        mcp_response = wrapper.handler.handle_raw_request(raw, _test_sec_def_id)
 
         self.assertEqual(mcp_response.status_code, NO_CONTENT)
         self.assertIsNone(mcp_response.body)
