@@ -737,3 +737,108 @@ class HandleInitializeBatch(TestCase):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class HandleConcurrentDispatch(TestCase):
+    """ Tests dispatch behavior when requests sharing one handler instance interleave.
+    """
+
+    def test_tools_call_response_carries_no_session_id(self) -> 'None':
+        """ A tools/call response carries no session ID even when another
+        request runs on the same handler during its service invocation.
+        """
+
+        registry = _MockToolRegistry(allowed_tools={'crm.get-customer'})
+
+        # Shared slots so the invoke function can reach the handler after it is built
+        # and so the test can inspect the interleaved response afterwards
+        handler_holder:'anylist' = []
+        interleaved_responses:'anylist' = []
+
+        def invoke_with_interleaved_initialize(service_name:'str', payload:'anydict') -> 'str':
+            """ Runs a full initialize on the same handler mid-call,
+            the way concurrent requests interleave at runtime.
+            """
+
+            handler = handler_holder[0]
+
+            initialize_request = _make_request('initialize', params=_initialize_params, request_id=99)
+            raw = dumps(initialize_request)
+
+            interleaved_response = handler.handle_raw_request(raw)
+            interleaved_responses.append(interleaved_response)
+
+            return 'Customer details'
+
+        handler = _make_handler(registry=registry, invoke_func=invoke_with_interleaved_initialize)
+        handler_holder.append(handler)
+        session_id = _make_session(handler)
+
+        # Run a tools/call whose service invocation triggers the interleaved initialize ..
+        params = {'name': 'crm.get-customer', 'arguments': {'customer_id': '123'}}
+        request = _make_request('tools/call', params)
+        raw = dumps(request)
+
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+
+        # .. the interleaved initialize must have created its own session ..
+        interleaved_response = interleaved_responses[0]
+        self.assertIsNotNone(interleaved_response.session_id)
+
+        # .. the outer tools/call must have succeeded ..
+        self.assertEqual(mcp_response.status_code, OK)
+
+        body = mcp_response.body
+        self.assertIn('result', body)
+
+        # .. and per the spec only initialize responses carry a session ID.
+        self.assertIsNone(mcp_response.session_id)
+
+    def test_interleaved_initialize_responses_carry_their_own_session_ids(self) -> 'None':
+        """ Two initialize calls where the second one runs while the first one
+        is still being dispatched must each report their own session ID.
+        """
+
+        registry = _MockToolRegistry(allowed_tools={'crm.get-customer'})
+
+        # Shared slots so the invoke function can reach the handler after it is built
+        handler_holder:'anylist' = []
+        interleaved_responses:'anylist' = []
+
+        def invoke_with_interleaved_initialize(service_name:'str', payload:'anydict') -> 'str':
+            """ Runs an initialize on the same handler mid-call.
+            """
+
+            handler = handler_holder[0]
+
+            initialize_request = _make_request('initialize', params=_initialize_params, request_id=99)
+            raw = dumps(initialize_request)
+
+            interleaved_response = handler.handle_raw_request(raw)
+            interleaved_responses.append(interleaved_response)
+
+            return 'Customer details'
+
+        handler = _make_handler(registry=registry, invoke_func=invoke_with_interleaved_initialize)
+        handler_holder.append(handler)
+        session_id = _make_session(handler)
+
+        # Run a tools/call that interleaves an initialize, then a plain initialize afterwards ..
+        params = {'name': 'crm.get-customer', 'arguments': {'customer_id': '123'}}
+        tools_call_request = _make_request('tools/call', params)
+        raw = dumps(tools_call_request)
+        _ = handler.handle_raw_request(raw, session_id=session_id)
+
+        initialize_request = _make_request('initialize', params=_initialize_params, request_id=2)
+        raw = dumps(initialize_request)
+        initialize_response = handler.handle_raw_request(raw)
+
+        # .. both initialize responses must carry session IDs ..
+        interleaved_response = interleaved_responses[0]
+        self.assertIsNotNone(interleaved_response.session_id)
+        self.assertIsNotNone(initialize_response.session_id)
+
+        # .. and the two session IDs must differ.
+        self.assertNotEqual(interleaved_response.session_id, initialize_response.session_id)
+
+# ################################################################################################################################
+# ################################################################################################################################
