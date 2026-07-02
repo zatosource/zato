@@ -11,6 +11,7 @@ import dataclasses
 from http.client import BAD_REQUEST, NO_CONTENT, NOT_FOUND, OK
 from logging import getLogger
 from traceback import format_exc
+from typing import NamedTuple
 
 # Zato
 from zato.common.json_internal import dumps, loads
@@ -20,7 +21,7 @@ from zato.server.connection.mcp.session import Session_Invalid_Identity, Session
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, strdictlist, stranydict, strnone
+    from zato.common.typing_ import any_, anydict, anylist, strdictlist, stranydict, strnone
     from zato.server.connection.mcp.registry import ToolRegistry
     from zato.server.connection.mcp.session import MCPSessionManager
     from zato.server.service.store import ServiceStore
@@ -115,6 +116,16 @@ class MCPResponse:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class DispatchResult(NamedTuple):
+    """ Carries a single JSON-RPC response body plus the ID of a session
+    created during dispatch (only initialize creates one, all other methods yield None).
+    """
+    body:       'stranydict'
+    session_id: 'strnone'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _make_error_response(request_id:'any_', code:'int', message:'str') -> 'stranydict':
     """ Builds a JSON-RPC 2.0 error response.
     """
@@ -157,11 +168,15 @@ class MCPHandler:
         self.tool_registry = tool_registry
         self.invoke_func = invoke_func
         self.session_manager = session_manager
-        self._pending_session_id:'strnone' = None
 
 # ################################################################################################################################
 
-    def _validate_session(self, session_id:'strnone', protocol_version_header:'strnone') -> 'MCPResponse | None':
+    def _validate_session(
+        self,
+        session_id:'strnone',
+        protocol_version_header:'strnone',
+        sec_def_id:'int',
+        ) -> 'MCPResponse | None':
         """ Validates session existence, identity, and protocol version match.
         Returns an MCPResponse with a 400 error if the session is invalid, or None if everything is fine.
         Called by handle_raw_request where an invalid session means it was terminated, never existed,
@@ -171,7 +186,7 @@ class MCPHandler:
         # If a session id was supplied, it must be valid ..
         if session_id:
 
-            validation_result = self.session_manager.validate(session_id, self._sec_def_id)
+            validation_result = self.session_manager.validate(session_id, sec_def_id)
 
             if validation_result != Session_Valid:
                 logger.info('MCP: Invalid or expired session `%s`', session_id)
@@ -234,14 +249,8 @@ class MCPHandler:
             out.status_code = OK
             return out
 
-        # .. clear any pending session ID from a previous request
-        # and store the remote address and sec_def_id for session creation ..
-        self._pending_session_id = None
-        self._remote_address     = remote_address
-        self._sec_def_id         = sec_def_id
-
         # .. validate session and protocol version up front ..
-        validation_error = self._validate_session(session_id, protocol_version_header)
+        validation_error = self._validate_session(session_id, protocol_version_header, sec_def_id)
 
         if validation_error:
             return validation_error
@@ -253,8 +262,7 @@ class MCPHandler:
         # .. handle batch (array) vs single (object) ..
         if isinstance(parsed, list):
 
-            out = self._handle_batch(parsed, session_is_valid)
-            out.session_id = self._pending_session_id
+            out = self._handle_batch(parsed, session_is_valid, sec_def_id, remote_address)
             return out
 
         if isinstance(parsed, dict):
@@ -273,9 +281,13 @@ class MCPHandler:
                     out.session_id = None
                     return out
 
-            out.body = self._dispatch_single(parsed, session_is_valid)
+            # .. dispatch the request, receiving both the body and the ID of any session
+            # that initialize may have created, keeping all state local to this call ..
+            dispatch_result = self._dispatch_single(parsed, session_is_valid, sec_def_id, remote_address)
+
+            out.body = dispatch_result.body
             out.status_code = OK
-            out.session_id = self._pending_session_id
+            out.session_id = dispatch_result.session_id
             return out
 
         # .. anything else is an invalid request.
@@ -285,8 +297,15 @@ class MCPHandler:
 
 # ################################################################################################################################
 
-    def _handle_batch(self, messages:'list', session_is_valid:'bool') -> 'MCPResponse':
+    def _handle_batch(
+        self,
+        messages:'anylist',
+        session_is_valid:'bool',
+        sec_def_id:'int',
+        remote_address:'str',
+        ) -> 'MCPResponse':
         """ Handles a JSON-RPC batch request (array of messages).
+        Initialize is forbidden inside a batch, so no batch element can ever create a session.
         """
 
         # Our response to produce
@@ -330,8 +349,9 @@ class MCPHandler:
                 continue
 
             # .. requests produce a response, gated on the same session validity as the outer request.
-            response = self._dispatch_single(message, session_is_valid)
-            responses.append(response)
+            # Initialize was already rejected above, so dispatch_result.session_id is always None here.
+            dispatch_result = self._dispatch_single(message, session_is_valid, sec_def_id, remote_address)
+            responses.append(dispatch_result.body)
 
         # If every message was a notification, return 204 ..
         if not responses:
@@ -366,9 +386,16 @@ class MCPHandler:
 
 # ################################################################################################################################
 
-    def _dispatch_single(self, message:'anydict', session_is_valid:'bool') -> 'stranydict':
+    def _dispatch_single(
+        self,
+        message:'anydict',
+        session_is_valid:'bool',
+        sec_def_id:'int',
+        remote_address:'str',
+        ) -> 'DispatchResult':
         """ Routes a single JSON-RPC request to the appropriate handler method.
         Every method other than initialize requires a valid session.
+        Returns the response body plus the ID of any session that initialize created.
         """
 
         # Validate basic JSON-RPC structure ..
@@ -377,21 +404,24 @@ class MCPHandler:
 
         if jsonrpc != _jsonrpc_version:
 
-            out = _make_error_response(request_id, _error_invalid_request, _message_missing_jsonrpc_version)
+            body = _make_error_response(request_id, _error_invalid_request, _message_missing_jsonrpc_version)
+            out = DispatchResult(body, None)
             return out
 
         method = message.get('method')
 
         if not method:
 
-            out = _make_error_response(request_id, _error_invalid_request, _message_missing_method)
+            body = _make_error_response(request_id, _error_invalid_request, _message_missing_method)
+            out = DispatchResult(body, None)
             return out
 
         # .. only initialize may run without an established session, every other method is gated ..
         if method != _method_initialize:
             if not session_is_valid:
 
-                out = _make_error_response(request_id, _error_invalid_request, _message_bad_request)
+                body = _make_error_response(request_id, _error_invalid_request, _message_bad_request)
+                out = DispatchResult(body, None)
                 return out
 
         # Params is optional per JSON-RPC 2.0 spec - a client may omit it entirely
@@ -400,53 +430,64 @@ class MCPHandler:
         # .. route to the handler for this method.
         if method == _method_initialize:
 
-            out = self._handle_initialize(request_id, params)
+            out = self._handle_initialize(request_id, params, sec_def_id, remote_address)
             return out
 
         if method == 'tools/list':
 
-            out = self._handle_tools_list(request_id, params)
+            body = self._handle_tools_list(request_id, params)
+            out = DispatchResult(body, None)
             return out
 
         if method == 'tools/call':
 
-            out = self._handle_tools_call(request_id, params)
+            body = self._handle_tools_call(request_id, params)
+            out = DispatchResult(body, None)
             return out
 
         if method == 'ping':
 
-            out = self._handle_ping(request_id)
+            body = self._handle_ping(request_id)
+            out = DispatchResult(body, None)
             return out
 
         # .. anything else is an unknown method.
-        message = f'Method not found: `{method}`'
-        out = _make_error_response(request_id, _error_method_not_found, message)
+        error_message = f'Method not found: `{method}`'
+        body = _make_error_response(request_id, _error_method_not_found, error_message)
+
+        out = DispatchResult(body, None)
         return out
 
 # ################################################################################################################################
 
-    def _handle_initialize(self, request_id:'any_', params:'anydict') -> 'stranydict':
+    def _handle_initialize(
+        self,
+        request_id:'any_',
+        params:'anydict',
+        sec_def_id:'int',
+        remote_address:'str',
+        ) -> 'DispatchResult':
         """ Handles the MCP initialize request.
-        Returns server capabilities and negotiated protocol version.
-        Creates a new session and stores its ID on _pending_session_id
-        for handle_raw_request to pick up and set as a response header.
+        Returns server capabilities and negotiated protocol version,
+        together with the ID of the newly created session so the caller
+        can set it as a response header.
         """
 
         # The client must state the protocol version it wants ..
-        if (requested_version := params.get('protocolVersion')) is None:
+        if params.get('protocolVersion') is None:
 
-            out = _make_error_response(request_id, _error_invalid_request, _message_missing_protocol_version)
+            body = _make_error_response(request_id, _error_invalid_request, _message_missing_protocol_version)
+            out = DispatchResult(body, None)
             return out
 
         # .. create a new session for this client, recording the version it is bound to,
         # rejecting if the per-identity cap has been reached ..
         try:
-            session_manager = self.session_manager
-            self._pending_session_id = session_manager.create(
-                _mcp_protocol_version, self._sec_def_id, self._remote_address)
+            new_session_id = self.session_manager.create(_mcp_protocol_version, sec_def_id, remote_address)
         except ValueError as e:
             logger.info('MCP: %s', e)
-            out = _make_error_response(request_id, _error_invalid_request, _message_bad_request)
+            body = _make_error_response(request_id, _error_invalid_request, _message_bad_request)
+            out = DispatchResult(body, None)
             return out
 
         result:'stranydict' = {
@@ -460,7 +501,9 @@ class MCPHandler:
             },
         }
 
-        out = _make_success_response(request_id, result)
+        body = _make_success_response(request_id, result)
+
+        out = DispatchResult(body, new_session_id)
         return out
 
 # ################################################################################################################################
