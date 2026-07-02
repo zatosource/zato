@@ -50,8 +50,8 @@ pub(crate) const MAX_HEADERS: usize = 96;
 /// Stack buffer size for `libc::read` calls.
 pub(crate) const READ_BUF: usize = 16384;
 
-/// Upper bound on total request size to prevent memory exhaustion.
-pub(crate) const MAX_REQUEST_SIZE: usize = 1_048_576;
+/// Upper bound on total request size (16 MiB).
+pub(crate) const MAX_REQUEST_SIZE: usize = 16 * 1024 * 1024;
 
 /// TCP listen backlog (pending connections queue depth).
 pub(crate) const LISTEN_BACKLOG: libc::c_int = 2048;

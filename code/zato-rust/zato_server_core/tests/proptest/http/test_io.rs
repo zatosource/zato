@@ -1,7 +1,7 @@
 use proptest::prelude::*;
 use zato_server_core::http::io::{header_value_eq, parse_content_length, trim_ows};
 
-const MAX_REQUEST_SIZE: usize = 1_048_576;
+const MAX_REQUEST_SIZE: usize = 16 * 1024 * 1024;
 
 proptest! {
 
