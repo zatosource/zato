@@ -738,6 +738,161 @@ class HandleInitializeBatch(TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class HandleMalformedInput(TestCase):
+    """ Tests that structurally invalid input produces JSON-RPC errors, never exceptions.
+    """
+
+    def test_batch_with_non_dict_elements(self) -> 'None':
+        """ Non-dict batch elements each produce an invalid request error
+        while valid elements in the same batch are still processed.
+        """
+
+        registry = _MockToolRegistry()
+        handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
+
+        batch = [
+            1,
+            'not a request object',
+            None,
+            _make_request('ping', request_id=4),
+        ]
+        raw = dumps(batch)
+
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+
+        self.assertEqual(mcp_response.status_code, OK)
+        self.assertIsInstance(mcp_response.body, list)
+        self.assertEqual(len(mcp_response.body), 4)
+
+        # The three non-dict elements must each report an invalid request error ..
+        for response in mcp_response.body[:3]:
+            error = response['error']
+            self.assertEqual(error['code'], _error_invalid_request)
+            self.assertIsNone(response['id'])
+
+        # .. and the valid ping must still succeed.
+        ping_response = mcp_response.body[3]
+        self.assertIn('result', ping_response)
+        self.assertEqual(ping_response['id'], 4)
+
+    def test_params_as_list_rejected(self) -> 'None':
+        """ A params field that is a list produces an invalid params error.
+        """
+
+        registry = _MockToolRegistry()
+        handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
+
+        request = {'jsonrpc': '2.0', 'method': 'tools/list', 'id': 1, 'params': ['not', 'an', 'object']}
+        raw = dumps(request)
+
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+
+        self.assertEqual(mcp_response.status_code, OK)
+
+        body = mcp_response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_invalid_params)
+
+    def test_params_as_string_rejected(self) -> 'None':
+        """ A params field that is a string produces an invalid params error.
+        """
+
+        registry = _MockToolRegistry()
+        handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
+
+        request = {'jsonrpc': '2.0', 'method': 'tools/call', 'id': 1, 'params': 'name=demo.echo'}
+        raw = dumps(request)
+
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+
+        self.assertEqual(mcp_response.status_code, OK)
+
+        body = mcp_response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_invalid_params)
+
+    def test_params_as_number_in_initialize_rejected(self) -> 'None':
+        """ Initialize with a numeric params field is rejected and creates no session.
+        """
+
+        registry = _MockToolRegistry()
+        handler = _make_handler(registry=registry)
+        session_manager = handler.session_manager
+
+        request = {'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': 123}
+        raw = dumps(request)
+
+        mcp_response = handler.handle_raw_request(raw)
+
+        self.assertEqual(mcp_response.status_code, OK)
+
+        body = mcp_response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_invalid_params)
+
+        # No session must have been created for the rejected initialize
+        self.assertIsNone(mcp_response.session_id)
+        self.assertEqual(session_manager.session_count, 0)
+
+    def test_undecodable_bytes_response_returns_is_error(self) -> 'None':
+        """ A service response of bytes that do not decode as UTF-8
+        produces an isError result, not an exception.
+        """
+
+        def invoke_invalid_bytes(service_name:'str', payload:'anydict') -> 'bytes':
+            return b'\xff\xfe invalid utf8 \xff'
+
+        registry = _MockToolRegistry(allowed_tools={'test.service'})
+        handler = _make_handler(registry=registry, invoke_func=invoke_invalid_bytes)
+        session_id = _make_session(handler)
+
+        params = {'name': 'test.service', 'arguments': {}}
+        request = _make_request('tools/call', params)
+        raw = dumps(request)
+
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+
+        self.assertEqual(mcp_response.status_code, OK)
+
+        body = mcp_response.body
+        result = body['result']
+        self.assertTrue(result['isError'])
+
+        content = result['content']
+        first_content = content[0]
+        text = first_content['text']
+        self.assertEqual(text, _message_bad_request)
+
+    def test_unserializable_response_returns_is_error(self) -> 'None':
+        """ A service response that cannot be dumped to JSON
+        produces an isError result, not an exception.
+        """
+
+        def invoke_unserializable(service_name:'str', payload:'anydict') -> 'any_':
+            return object()
+
+        registry = _MockToolRegistry(allowed_tools={'test.service'})
+        handler = _make_handler(registry=registry, invoke_func=invoke_unserializable)
+        session_id = _make_session(handler)
+
+        params = {'name': 'test.service', 'arguments': {}}
+        request = _make_request('tools/call', params)
+        raw = dumps(request)
+
+        mcp_response = handler.handle_raw_request(raw, session_id=session_id)
+
+        self.assertEqual(mcp_response.status_code, OK)
+
+        body = mcp_response.body
+        result = body['result']
+        self.assertTrue(result['isError'])
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class HandleConcurrentDispatch(TestCase):
     """ Tests dispatch behavior when requests sharing one handler instance interleave.
     """
