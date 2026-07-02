@@ -33,6 +33,7 @@ from zato.common.util.api import as_bool, utcnow
 from zato.common.util.auth import enrich_with_sec_data, extract_basic_auth
 from zato.common.util.exception import pretty_format_exception
 from zato.common.util.http_ import get_form_data as util_get_form_data, QueryDict
+from zato.common.util.logging_ import current_cid, current_service_name
 from zato.server.reqresp.payload import IOPayload
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, NotFound, Unauthorized
 from zato.server.groups.ctx import SecurityGroupsCtx
@@ -608,6 +609,31 @@ class RequestDispatcher:
         remote_addr:'str',
     ) -> 'any_':
 
+        # Bind the logging context to this request before anything is logged, otherwise a pooled greenlet
+        # would still carry the previous request's cid and service name in its log prefix.
+        cid_token = current_cid.set(cid)
+        service_name_token = current_service_name.set('')
+
+        try:
+            out = self._dispatch(cid, wsgi_environ, config_manager, user_agent, remote_addr)
+            return out
+
+        finally:
+            # Restore the previous logging context so an idle, pooled greenlet holds no request context.
+            current_cid.reset(cid_token)
+            current_service_name.reset(service_name_token)
+
+# ################################################################################################################################
+
+    def _dispatch(
+        self,
+        cid:'str',
+        wsgi_environ:'stranydict',
+        config_manager:'ConfigManager',
+        user_agent:'str',
+        remote_addr:'str',
+    ) -> 'any_':
+
         # Reusable
         _has_log_info = _logger_is_enabled_for(_logging_info)
 
@@ -626,6 +652,11 @@ class RequestDispatcher:
         channel_item = url_match_result.channel_item
         channel_name = url_match_result.channel_name
         payload = url_match_result.payload
+
+        # Now that we know what service will handle the request, bind its name to the logging context
+        # so all log lines emitted from this point on, including the inbound summary below, carry it.
+        if channel_item:
+            _ = current_service_name.set(channel_item['service_name'])
 
         # This dictionary may be populated by a service with HTTP headers,
         # which the headers will be still in the dictionary even if the service
