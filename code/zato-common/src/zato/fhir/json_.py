@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any, Type, TypeVar
 
-import zato_fhir_r4_0_1_core as _rust
+import zato.fhir_r4_0_1_core as _rust
 
 T = TypeVar('T')
 

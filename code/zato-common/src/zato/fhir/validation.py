@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from zato_fhir_r4_0_1_core import (
+from zato.fhir_r4_0_1_core import (
     ValidationError as _ValidationError,
     ValidationResult as _ValidationResult,
     validate as _validate,
