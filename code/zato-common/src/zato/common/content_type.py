@@ -21,6 +21,12 @@ import magic
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Reject external entities, network access and DTDs so parsing untrusted XML cannot trigger XXE or entity expansion.
+_xml_parser = etree.XMLParser(resolve_entities=False, no_network=True, load_dtd=False)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def get_content_type(data:'str | bytes') -> 'str':
     """ Detects the MIME content type of the given data.
     """
@@ -56,7 +62,7 @@ def _format_xml(data:'str') -> 'str':
 
     # Parse the XML from raw bytes ..
     data_bytes = data.encode('utf-8')
-    tree = etree.fromstring(data_bytes)
+    tree = etree.fromstring(data_bytes, _xml_parser)
 
     # .. indent the tree ..
     etree.indent(tree)
@@ -73,7 +79,7 @@ def _format_html(data:'str') -> 'str':
     """
 
     # Parse the HTML from a string reader ..
-    parser = etree.HTMLParser()
+    parser = etree.HTMLParser(no_network=True)
     string_io = io.StringIO(data)
     doc = etree.parse(string_io, parser)
 
