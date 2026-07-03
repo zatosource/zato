@@ -28,8 +28,8 @@ _Raw_de_imedone_01 = (
     'Kastanienweg 31&Kastanienweg&31^^Dresden^^01067^^H~Mühlenstr. 8&Mühlenstr.&8^^Dresden^^01067^^BDL||^PRN^PH^^49^351^2468135^^^^^0351/2468135|'
     '^WPN^PH^^49^351^9753^246^^^^0351/9753-246|DEU^German^HL70296^^deutsch|M^married^HL70002^^verheiratet|CAT^catholic^HL70006^^katholisch||||||'
     'Elisabethen-Spital|||DEU^German^HL70171^^deutsch\r'
-    'PV1|1|I|CHI^302^2^IN^^N^A^4|R|||620401^Vögler^Thëodor^^^Dr.^^^Ulmen-Klinik^L^^^DN^^^DN^^G||||||||||||3142^^^Ulmen-Klinik^VN|||||||||||||||||||||||||'
-    '202612151645\r'
+    'PV1|1|I|CHI^302^2^IN^^N^A^4|R|||620401^Vögler^Thëodor^^^Dr.^^^Ulmen-Klinik^L^^^DN^^^DN^^G||||||||||||3142^^^Ulmen-Klinik^VN|||||||||||||||||'
+    '||||||||202612151645\r'
     'PV2|||||||||20250405|4\r'
     'ZBE|5678^KIS|202612151705||INSERT'
 )
@@ -801,9 +801,9 @@ class Test_de_imedone_01_1_ADT_A01_Admission_standard_profile_wiki_hl7_de(unitte
 
         segment.patient_identifier_list = CX(cx_1='7654321', cx_4='Ulmen-Klinik', cx_5='PI')
         segment.patient_name = [
-            XPN(xpn_1='Winkler', xpn_2='Ingëborg', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Schröter', xpn_8='M', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Winkler', xpn_5='Frau', xpn_8='D', xpn_13='G'),
+            XPN(xpn_1='Winkler', xpn_2='Ingëborg', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Schröter', xpn_7='M', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Winkler', xpn_5='Frau', xpn_7='D', xpn_11='G'),
         ]
         segment.date_time_of_birth = '19851023'
         segment.administrative_sex = CWE(cwe_1='F')
@@ -811,6 +811,8 @@ class Test_de_imedone_01_1_ADT_A01_Admission_standard_profile_wiki_hl7_de(unitte
             XAD(xad_1='Kastanienweg 31&Kastanienweg&31', xad_3='Dresden', xad_5='01067', xad_7='H'),
             XAD(xad_1='Mühlenstr. 8&Mühlenstr.&8', xad_3='Dresden', xad_5='01067', xad_7='BDL'),
         ]
+        segment.pid_13 = '^PRN^PH^^49^351^2468135^^^^^0351/2468135'
+        segment.pid_14 = '^WPN^PH^^49^351^9753^246^^^^0351/9753-246'
         segment.primary_language = CWE(cwe_1='DEU', cwe_2='German', cwe_3='HL70296', cwe_5='deutsch')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002', cwe_5='verheiratet')
         segment.religion = CWE(cwe_1='CAT', cwe_2='catholic', cwe_3='HL70006', cwe_5='katholisch')
@@ -840,11 +842,11 @@ class Test_de_imedone_01_1_ADT_A01_Admission_standard_profile_wiki_hl7_de(unitte
             xcn_2='Vögler',
             xcn_3='Thëodor',
             xcn_6='Dr.',
-            xcn_10='Ulmen-Klinik',
-            xcn_11='L',
-            xcn_14='DN',
-            xcn_18='DN',
-            xcn_20='G',
+            xcn_9='Ulmen-Klinik',
+            xcn_10='L',
+            xcn_13='DN',
+            xcn_16='DN',
+            xcn_18='G',
         )
         segment.visit_number = CX(cx_1='3142', cx_4='Ulmen-Klinik', cx_5='VN')
         segment.admit_date_time = '202612151645'
@@ -852,8 +854,7 @@ class Test_de_imedone_01_1_ADT_A01_Admission_standard_profile_wiki_hl7_de(unitte
         serialized = segment.serialize()
         expected = (
             'PV1|1|I|CHI^302^2^IN^^N^A^4|R|||620401^Vögler^Thëodor^^^Dr.^^^Ulmen-Klinik^L^^^DN^^^DN^^G||||||||||||3142^^^Ulmen-Klinik^VN|||||||||||||||||'
-            '||||||||'
-            '202612151645'
+            '||||||||202612151645'
         )
         self.assertEqual(serialized, expected)
 
@@ -895,9 +896,9 @@ class Test_de_imedone_01_1_ADT_A01_Admission_standard_profile_wiki_hl7_de(unitte
 
         message.pid.patient_identifier_list = CX(cx_1='7654321', cx_4='Ulmen-Klinik', cx_5='PI')
         message.pid.patient_name = [
-            XPN(xpn_1='Winkler', xpn_2='Ingëborg', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Schröter', xpn_8='M', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Winkler', xpn_5='Frau', xpn_8='D', xpn_13='G'),
+            XPN(xpn_1='Winkler', xpn_2='Ingëborg', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Schröter', xpn_7='M', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Winkler', xpn_5='Frau', xpn_7='D', xpn_11='G'),
         ]
         message.pid.date_time_of_birth = '19851023'
         message.pid.administrative_sex = CWE(cwe_1='F')
@@ -905,6 +906,8 @@ class Test_de_imedone_01_1_ADT_A01_Admission_standard_profile_wiki_hl7_de(unitte
             XAD(xad_1='Kastanienweg 31&Kastanienweg&31', xad_3='Dresden', xad_5='01067', xad_7='H'),
             XAD(xad_1='Mühlenstr. 8&Mühlenstr.&8', xad_3='Dresden', xad_5='01067', xad_7='BDL'),
         ]
+        message.pid.pid_13 = '^PRN^PH^^49^351^2468135^^^^^0351/2468135'
+        message.pid.pid_14 = '^WPN^PH^^49^351^9753^246^^^^0351/9753-246'
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_2='German', cwe_3='HL70296', cwe_5='deutsch')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002', cwe_5='verheiratet')
         message.pid.religion = CWE(cwe_1='CAT', cwe_2='catholic', cwe_3='HL70006', cwe_5='katholisch')
@@ -920,11 +923,11 @@ class Test_de_imedone_01_1_ADT_A01_Admission_standard_profile_wiki_hl7_de(unitte
             xcn_2='Vögler',
             xcn_3='Thëodor',
             xcn_6='Dr.',
-            xcn_10='Ulmen-Klinik',
-            xcn_11='L',
-            xcn_14='DN',
-            xcn_18='DN',
-            xcn_20='G',
+            xcn_9='Ulmen-Klinik',
+            xcn_10='L',
+            xcn_13='DN',
+            xcn_16='DN',
+            xcn_18='G',
         )
         message.pv1.visit_number = CX(cx_1='3142', cx_4='Ulmen-Klinik', cx_5='VN')
         message.pv1.admit_date_time = '202612151645'
@@ -947,8 +950,8 @@ _Raw_de_imedone_02 = (
     'PID|||54321^^^Ulmen-Klinik^PI||Bachmann^Liëselotte^^^^^L^A^^^G~Nölting^^^^^^M^A^^^G||19830711|F|||'
     'Kastanienweg 31&Kastanienweg&31^^Dresden^^^^H~Mühlenstr. 8&Mühlenstr.&8^^Dresden^^^^BDL||^PRN^PH^^49^351^2468135^^^^^0351/2468135|'
     '^WPN^PH^^49^351^9753^246^^^^0351/9753-246|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Elisabethen-Spital|||DEU^^HL70171\r'
-    'PV1|1|I|URO^301^1^IN^^N^A^4|R|||620403^Hüttner^Frïedhelm^^^Dr.^^^Ulmen-Klinik^L^^^DN|620405^Büchner^Wïlfried^^^Dr.^^^^L^^^DN^^A^^^G|||||R|||||E|'
-    '3142^^^Ulmen-Klinik^VN|||||||||||||||||||||||||202604011645\r'
+    'PV1|1|I|URO^301^1^IN^^N^A^4|R|||620403^Hüttner^Frïedhelm^^^Dr.^^^Ulmen-Klinik^L^^^DN|620405^Büchner^Wïlfried^^^Dr.^^^^L^^^DN^^A^^^G|||||R|||'
+    '||E|3142^^^Ulmen-Klinik^VN|||||||||||||||||||||||||202604011645\r'
     'PV2|||0101^vollstationär, Normalfall^GSG0001||||||20260405|4||||||||||||||||||||||||||N|N\r'
     'ZBE|5678^KIS|202604011705||INSERT'
 )
@@ -1747,8 +1750,8 @@ class Test_de_imedone_02_2_ADT_A01_Admission_for_DRG_wiki_hl7_de(unittest.TestCa
 
         segment.patient_identifier_list = CX(cx_1='54321', cx_4='Ulmen-Klinik', cx_5='PI')
         segment.patient_name = [
-            XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Nölting', xpn_8='M', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Nölting', xpn_7='M', xpn_8='A', xpn_11='G'),
         ]
         segment.date_time_of_birth = '19830711'
         segment.administrative_sex = CWE(cwe_1='F')
@@ -1756,6 +1759,8 @@ class Test_de_imedone_02_2_ADT_A01_Admission_for_DRG_wiki_hl7_de(unittest.TestCa
             XAD(xad_1='Kastanienweg 31&Kastanienweg&31', xad_3='Dresden', xad_7='H'),
             XAD(xad_1='Mühlenstr. 8&Mühlenstr.&8', xad_3='Dresden', xad_7='BDL'),
         ]
+        segment.pid_13 = '^PRN^PH^^49^351^2468135^^^^^0351/2468135'
+        segment.pid_14 = '^WPN^PH^^49^351^9753^246^^^^0351/9753-246'
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -1779,8 +1784,8 @@ class Test_de_imedone_02_2_ADT_A01_Admission_for_DRG_wiki_hl7_de(unittest.TestCa
         segment.patient_class = CWE(cwe_1='I')
         segment.assigned_patient_location = PL(pl_1='URO', pl_2='301', pl_3='1', pl_4='IN', pl_6='N', pl_7='A', pl_8='4')
         segment.admission_type = CWE(cwe_1='R')
-        segment.attending_doctor = XCN(xcn_1='620403', xcn_2='Hüttner', xcn_3='Frïedhelm', xcn_6='Dr.', xcn_10='Ulmen-Klinik', xcn_11='L', xcn_14='DN')
-        segment.referring_doctor = XCN(xcn_1='620405', xcn_2='Büchner', xcn_3='Wïlfried', xcn_6='Dr.', xcn_11='L', xcn_14='DN', xcn_16='A', xcn_20='G')
+        segment.attending_doctor = XCN(xcn_1='620403', xcn_2='Hüttner', xcn_3='Frïedhelm', xcn_6='Dr.', xcn_9='Ulmen-Klinik', xcn_10='L', xcn_13='DN')
+        segment.referring_doctor = XCN(xcn_1='620405', xcn_2='Büchner', xcn_3='Wïlfried', xcn_6='Dr.', xcn_10='L', xcn_13='DN', xcn_15='A', xcn_18='G')
         segment.re_admission_indicator = CWE(cwe_1='R')
         segment.patient_type = CWE(cwe_1='E')
         segment.visit_number = CX(cx_1='3142', cx_4='Ulmen-Klinik', cx_5='VN')
@@ -1788,8 +1793,8 @@ class Test_de_imedone_02_2_ADT_A01_Admission_for_DRG_wiki_hl7_de(unittest.TestCa
 
         serialized = segment.serialize()
         expected = (
-            'PV1|1|I|URO^301^1^IN^^N^A^4|R|||620403^Hüttner^Frïedhelm^^^Dr.^^^Ulmen-Klinik^L^^^DN|620405^Büchner^Wïlfried^^^Dr.^^^^L^^^DN^^A^^^G|||||R|||||E|'
-            '3142^^^Ulmen-Klinik^VN|||||||||||||||||||||||||202604011645'
+            'PV1|1|I|URO^301^1^IN^^N^A^4|R|||620403^Hüttner^Frïedhelm^^^Dr.^^^Ulmen-Klinik^L^^^DN|620405^Büchner^Wïlfried^^^Dr.^^^^L^^^DN^^A^^^G|||||R|||'
+            '||E|3142^^^Ulmen-Klinik^VN|||||||||||||||||||||||||202604011645'
         )
         self.assertEqual(serialized, expected)
 
@@ -1838,8 +1843,8 @@ class Test_de_imedone_02_2_ADT_A01_Admission_for_DRG_wiki_hl7_de(unittest.TestCa
 
         message.pid.patient_identifier_list = CX(cx_1='54321', cx_4='Ulmen-Klinik', cx_5='PI')
         message.pid.patient_name = [
-            XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Nölting', xpn_8='M', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Nölting', xpn_7='M', xpn_8='A', xpn_11='G'),
         ]
         message.pid.date_time_of_birth = '19830711'
         message.pid.administrative_sex = CWE(cwe_1='F')
@@ -1847,6 +1852,8 @@ class Test_de_imedone_02_2_ADT_A01_Admission_for_DRG_wiki_hl7_de(unittest.TestCa
             XAD(xad_1='Kastanienweg 31&Kastanienweg&31', xad_3='Dresden', xad_7='H'),
             XAD(xad_1='Mühlenstr. 8&Mühlenstr.&8', xad_3='Dresden', xad_7='BDL'),
         ]
+        message.pid.pid_13 = '^PRN^PH^^49^351^2468135^^^^^0351/2468135'
+        message.pid.pid_14 = '^WPN^PH^^49^351^9753^246^^^^0351/9753-246'
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -1857,8 +1864,8 @@ class Test_de_imedone_02_2_ADT_A01_Admission_for_DRG_wiki_hl7_de(unittest.TestCa
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.assigned_patient_location = PL(pl_1='URO', pl_2='301', pl_3='1', pl_4='IN', pl_6='N', pl_7='A', pl_8='4')
         message.pv1.admission_type = CWE(cwe_1='R')
-        message.pv1.attending_doctor = XCN(xcn_1='620403', xcn_2='Hüttner', xcn_3='Frïedhelm', xcn_6='Dr.', xcn_10='Ulmen-Klinik', xcn_11='L', xcn_14='DN')
-        message.pv1.referring_doctor = XCN(xcn_1='620405', xcn_2='Büchner', xcn_3='Wïlfried', xcn_6='Dr.', xcn_11='L', xcn_14='DN', xcn_16='A', xcn_20='G')
+        message.pv1.attending_doctor = XCN(xcn_1='620403', xcn_2='Hüttner', xcn_3='Frïedhelm', xcn_6='Dr.', xcn_9='Ulmen-Klinik', xcn_10='L', xcn_13='DN')
+        message.pv1.referring_doctor = XCN(xcn_1='620405', xcn_2='Büchner', xcn_3='Wïlfried', xcn_6='Dr.', xcn_10='L', xcn_13='DN', xcn_15='A', xcn_18='G')
         message.pv1.re_admission_indicator = CWE(cwe_1='R')
         message.pv1.patient_type = CWE(cwe_1='E')
         message.pv1.visit_number = CX(cx_1='3142', cx_4='Ulmen-Klinik', cx_5='VN')
@@ -1882,10 +1889,10 @@ _Raw_de_imedone_03 = (
     '2.16.840.1.113883.2.6.9.40^^2.16.840.1.113883.2.6^ISO\r'
     'EVN||202606051705||||020506051645\r'
     'PID|||54321^^^Eschen-Krankenhaus^PI||Ströbel^Hëlmut^^^Dr.^^L^A^^^G~Ströbel^Hëlmut^^^Herr Dr.^^D^A^^^G||19720219|F|||'
-    'Weinbergstr. 19&Weinbergstr.&19^^Leipzig^^04103^^H||^PRN^PH^^49^341^4681357^^^^^0341/4681357|^WPN^PH^^49^341^97531^^^^^0341/97531|DEU^^HL70296|'
-    'M^married^HL70002|CAT^^HL70006||||||Elisabethen-Spital|||DEU^^HL70171\r'
-    'PV1|1|I|HNO^201^2^IN^^N^A^4|R|||620403^Hüttner^Frïedhelm^^^Dr.^^^Eschen-Krankenhaus^L^^^^^^DN||||||||||||529814^^^Eschen-Krankenhaus^VN|01100000||||C|'
-    '202401|||||||||||||||||||200506051645\r'
+    'Weinbergstr. 19&Weinbergstr.&19^^Leipzig^^04103^^H||^PRN^PH^^49^341^4681357^^^^^0341/4681357|^WPN^PH^^49^341^97531^^^^^0341/97531|'
+    'DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Elisabethen-Spital|||DEU^^HL70171\r'
+    'PV1|1|I|HNO^201^2^IN^^N^A^4|R|||620403^Hüttner^Frïedhelm^^^Dr.^^^Eschen-Krankenhaus^L^^^^^^DN||||||||||||529814^^^Eschen-Krankenhaus^VN|'
+    '01100000||||C|202401|||||||||||||||||||200506051645\r'
     'PV2|||||||||20260615|10\r'
     'ZBE|82914^KIS|202606051705||INSERT'
 )
@@ -2552,12 +2559,14 @@ class Test_de_imedone_03_3_ADT_A01_Admission_for_billing_wiki_hl7_de(unittest.Te
 
         segment.patient_identifier_list = CX(cx_1='54321', cx_4='Eschen-Krankenhaus', cx_5='PI')
         segment.patient_name = [
-            XPN(xpn_1='Ströbel', xpn_2='Hëlmut', xpn_5='Dr.', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Ströbel', xpn_2='Hëlmut', xpn_5='Herr Dr.', xpn_8='D', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Ströbel', xpn_2='Hëlmut', xpn_5='Dr.', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Ströbel', xpn_2='Hëlmut', xpn_5='Herr Dr.', xpn_7='D', xpn_8='A', xpn_11='G'),
         ]
         segment.date_time_of_birth = '19720219'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Weinbergstr. 19&Weinbergstr.&19', xad_3='Leipzig', xad_5='04103', xad_7='H')
+        segment.pid_13 = '^PRN^PH^^49^341^4681357^^^^^0341/4681357'
+        segment.pid_14 = '^WPN^PH^^49^341^97531^^^^^0341/97531'
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -2567,8 +2576,8 @@ class Test_de_imedone_03_3_ADT_A01_Admission_for_billing_wiki_hl7_de(unittest.Te
         serialized = segment.serialize()
         expected = (
             'PID|||54321^^^Eschen-Krankenhaus^PI||Ströbel^Hëlmut^^^Dr.^^L^A^^^G~Ströbel^Hëlmut^^^Herr Dr.^^D^A^^^G||19720219|F|||'
-            'Weinbergstr. 19&Weinbergstr.&19^^Leipzig^^04103^^H||^PRN^PH^^49^341^4681357^^^^^0341/4681357|^WPN^PH^^49^341^97531^^^^^0341/97531|DEU^^HL70296|'
-            'M^married^HL70002|CAT^^HL70006||||||Elisabethen-Spital|||DEU^^HL70171'
+            'Weinbergstr. 19&Weinbergstr.&19^^Leipzig^^04103^^H||^PRN^PH^^49^341^4681357^^^^^0341/4681357|^WPN^PH^^49^341^97531^^^^^0341/97531|'
+            'DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Elisabethen-Spital|||DEU^^HL70171'
         )
         self.assertEqual(serialized, expected)
 
@@ -2581,7 +2590,7 @@ class Test_de_imedone_03_3_ADT_A01_Admission_for_billing_wiki_hl7_de(unittest.Te
         segment.patient_class = CWE(cwe_1='I')
         segment.assigned_patient_location = PL(pl_1='HNO', pl_2='201', pl_3='2', pl_4='IN', pl_6='N', pl_7='A', pl_8='4')
         segment.admission_type = CWE(cwe_1='R')
-        segment.attending_doctor = XCN(xcn_1='620403', xcn_2='Hüttner', xcn_3='Frïedhelm', xcn_6='Dr.', xcn_10='Eschen-Krankenhaus', xcn_11='L', xcn_18='DN')
+        segment.attending_doctor = XCN(xcn_1='620403', xcn_2='Hüttner', xcn_3='Frïedhelm', xcn_6='Dr.', xcn_9='Eschen-Krankenhaus', xcn_10='L', xcn_16='DN')
         segment.visit_number = CX(cx_1='529814', cx_4='Eschen-Krankenhaus', cx_5='VN')
         segment.financial_class = FC(fc_1='01100000')
         segment.contract_code = CWE(cwe_1='C')
@@ -2591,8 +2600,7 @@ class Test_de_imedone_03_3_ADT_A01_Admission_for_billing_wiki_hl7_de(unittest.Te
         serialized = segment.serialize()
         expected = (
             'PV1|1|I|HNO^201^2^IN^^N^A^4|R|||620403^Hüttner^Frïedhelm^^^Dr.^^^Eschen-Krankenhaus^L^^^^^^DN||||||||||||529814^^^Eschen-Krankenhaus^VN|'
-            '01100000||||C|'
-            '202401|||||||||||||||||||200506051645'
+            '01100000||||C|202401|||||||||||||||||||200506051645'
         )
         self.assertEqual(serialized, expected)
 
@@ -2634,12 +2642,14 @@ class Test_de_imedone_03_3_ADT_A01_Admission_for_billing_wiki_hl7_de(unittest.Te
 
         message.pid.patient_identifier_list = CX(cx_1='54321', cx_4='Eschen-Krankenhaus', cx_5='PI')
         message.pid.patient_name = [
-            XPN(xpn_1='Ströbel', xpn_2='Hëlmut', xpn_5='Dr.', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Ströbel', xpn_2='Hëlmut', xpn_5='Herr Dr.', xpn_8='D', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Ströbel', xpn_2='Hëlmut', xpn_5='Dr.', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Ströbel', xpn_2='Hëlmut', xpn_5='Herr Dr.', xpn_7='D', xpn_8='A', xpn_11='G'),
         ]
         message.pid.date_time_of_birth = '19720219'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Weinbergstr. 19&Weinbergstr.&19', xad_3='Leipzig', xad_5='04103', xad_7='H')
+        message.pid.pid_13 = '^PRN^PH^^49^341^4681357^^^^^0341/4681357'
+        message.pid.pid_14 = '^WPN^PH^^49^341^97531^^^^^0341/97531'
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -2650,15 +2660,7 @@ class Test_de_imedone_03_3_ADT_A01_Admission_for_billing_wiki_hl7_de(unittest.Te
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.assigned_patient_location = PL(pl_1='HNO', pl_2='201', pl_3='2', pl_4='IN', pl_6='N', pl_7='A', pl_8='4')
         message.pv1.admission_type = CWE(cwe_1='R')
-        message.pv1.attending_doctor = XCN(
-            xcn_1='620403',
-            xcn_2='Hüttner',
-            xcn_3='Frïedhelm',
-            xcn_6='Dr.',
-            xcn_10='Eschen-Krankenhaus',
-            xcn_11='L',
-            xcn_18='DN',
-        )
+        message.pv1.attending_doctor = XCN(xcn_1='620403', xcn_2='Hüttner', xcn_3='Frïedhelm', xcn_6='Dr.', xcn_9='Eschen-Krankenhaus', xcn_10='L', xcn_16='DN')
         message.pv1.visit_number = CX(cx_1='529814', cx_4='Eschen-Krankenhaus', cx_5='VN')
         message.pv1.financial_class = FC(fc_1='01100000')
         message.pv1.contract_code = CWE(cwe_1='C')
@@ -2990,8 +2992,8 @@ _Raw_de_imedone_05 = (
     'PID|||54321^^^Ulmen-Klinik^PI||Bachmann^Liëselotte^^^^^L^A^^^G~Nölting^^^^^^M^A^^^G||19830711|F|||'
     'Kastanienweg 31&Kastanienweg&31^^Dresden^^^^H~Mühlenstr. 8&Mühlenstr.&8^^Dresden^^^^BDL||^PRN^PH^^49^351^2468135^^^^^0351/2468135|'
     '^WPN^PH^^49^351^9753^246^^^^0351/9753-246|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Elisabethen-Spital|||DEU^^HL70171\r'
-    'PV1|1|I|CHI^303^3^CH^^N^D^4|R||IN1^202^1^IN^^N^D^2|620409^Hüttner^Frïedhelm^^^Dr.^^^Ulmen-Klinik^L^^^DN||||||||||||3142^^^Ulmen-Klinik^VN|||||||||||||'
-    '||||||||||||202604011645\r'
+    'PV1|1|I|CHI^303^3^CH^^N^D^4|R||IN1^202^1^IN^^N^D^2|620409^Hüttner^Frïedhelm^^^Dr.^^^Ulmen-Klinik^L^^^DN||||||||||||3142^^^Ulmen-Klinik^VN|||'
+    '||||||||||||||||||||||202604011645\r'
     'PV2|||||||||20260405|4\r'
     'ZBE|1234^KIS|202604011935||INSERT'
 )
@@ -3734,8 +3736,8 @@ class Test_de_imedone_05_5_ADT_A02_Transfer_standard_profile_wiki_hl7_de(unittes
 
         segment.patient_identifier_list = CX(cx_1='54321', cx_4='Ulmen-Klinik', cx_5='PI')
         segment.patient_name = [
-            XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Nölting', xpn_8='M', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Nölting', xpn_7='M', xpn_8='A', xpn_11='G'),
         ]
         segment.date_time_of_birth = '19830711'
         segment.administrative_sex = CWE(cwe_1='F')
@@ -3743,6 +3745,8 @@ class Test_de_imedone_05_5_ADT_A02_Transfer_standard_profile_wiki_hl7_de(unittes
             XAD(xad_1='Kastanienweg 31&Kastanienweg&31', xad_3='Dresden', xad_7='H'),
             XAD(xad_1='Mühlenstr. 8&Mühlenstr.&8', xad_3='Dresden', xad_7='BDL'),
         ]
+        segment.pid_13 = '^PRN^PH^^49^351^2468135^^^^^0351/2468135'
+        segment.pid_14 = '^WPN^PH^^49^351^9753^246^^^^0351/9753-246'
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -3767,15 +3771,14 @@ class Test_de_imedone_05_5_ADT_A02_Transfer_standard_profile_wiki_hl7_de(unittes
         segment.assigned_patient_location = PL(pl_1='CHI', pl_2='303', pl_3='3', pl_4='CH', pl_6='N', pl_7='D', pl_8='4')
         segment.admission_type = CWE(cwe_1='R')
         segment.prior_patient_location = PL(pl_1='IN1', pl_2='202', pl_3='1', pl_4='IN', pl_6='N', pl_7='D', pl_8='2')
-        segment.attending_doctor = XCN(xcn_1='620409', xcn_2='Hüttner', xcn_3='Frïedhelm', xcn_6='Dr.', xcn_10='Ulmen-Klinik', xcn_11='L', xcn_14='DN')
+        segment.attending_doctor = XCN(xcn_1='620409', xcn_2='Hüttner', xcn_3='Frïedhelm', xcn_6='Dr.', xcn_9='Ulmen-Klinik', xcn_10='L', xcn_13='DN')
         segment.visit_number = CX(cx_1='3142', cx_4='Ulmen-Klinik', cx_5='VN')
         segment.admit_date_time = '202604011645'
 
         serialized = segment.serialize()
         expected = (
             'PV1|1|I|CHI^303^3^CH^^N^D^4|R||IN1^202^1^IN^^N^D^2|620409^Hüttner^Frïedhelm^^^Dr.^^^Ulmen-Klinik^L^^^DN||||||||||||3142^^^Ulmen-Klinik^VN|||'
-            '||||||||||'
-            '||||||||||||202604011645'
+            '||||||||||||||||||||||202604011645'
         )
         self.assertEqual(serialized, expected)
 
@@ -3821,8 +3824,8 @@ class Test_de_imedone_05_5_ADT_A02_Transfer_standard_profile_wiki_hl7_de(unittes
 
         message.pid.patient_identifier_list = CX(cx_1='54321', cx_4='Ulmen-Klinik', cx_5='PI')
         message.pid.patient_name = [
-            XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Nölting', xpn_8='M', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Nölting', xpn_7='M', xpn_8='A', xpn_11='G'),
         ]
         message.pid.date_time_of_birth = '19830711'
         message.pid.administrative_sex = CWE(cwe_1='F')
@@ -3830,6 +3833,8 @@ class Test_de_imedone_05_5_ADT_A02_Transfer_standard_profile_wiki_hl7_de(unittes
             XAD(xad_1='Kastanienweg 31&Kastanienweg&31', xad_3='Dresden', xad_7='H'),
             XAD(xad_1='Mühlenstr. 8&Mühlenstr.&8', xad_3='Dresden', xad_7='BDL'),
         ]
+        message.pid.pid_13 = '^PRN^PH^^49^351^2468135^^^^^0351/2468135'
+        message.pid.pid_14 = '^WPN^PH^^49^351^9753^246^^^^0351/9753-246'
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -3841,7 +3846,7 @@ class Test_de_imedone_05_5_ADT_A02_Transfer_standard_profile_wiki_hl7_de(unittes
         message.pv1.assigned_patient_location = PL(pl_1='CHI', pl_2='303', pl_3='3', pl_4='CH', pl_6='N', pl_7='D', pl_8='4')
         message.pv1.admission_type = CWE(cwe_1='R')
         message.pv1.prior_patient_location = PL(pl_1='IN1', pl_2='202', pl_3='1', pl_4='IN', pl_6='N', pl_7='D', pl_8='2')
-        message.pv1.attending_doctor = XCN(xcn_1='620409', xcn_2='Hüttner', xcn_3='Frïedhelm', xcn_6='Dr.', xcn_10='Ulmen-Klinik', xcn_11='L', xcn_14='DN')
+        message.pv1.attending_doctor = XCN(xcn_1='620409', xcn_2='Hüttner', xcn_3='Frïedhelm', xcn_6='Dr.', xcn_9='Ulmen-Klinik', xcn_10='L', xcn_13='DN')
         message.pv1.visit_number = CX(cx_1='3142', cx_4='Ulmen-Klinik', cx_5='VN')
         message.pv1.admit_date_time = '202604011645'
 
@@ -4571,8 +4576,8 @@ class Test_de_imedone_06_6_ADT_A02_Transfer_for_DRG_wiki_hl7_de(unittest.TestCas
 
         segment.patient_identifier_list = CX(cx_1='54321', cx_4='Ulmen-Klinik', cx_5='PI')
         segment.patient_name = [
-            XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Nölting', xpn_8='M', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Nölting', xpn_7='M', xpn_8='A', xpn_11='G'),
         ]
         segment.date_time_of_birth = '19830711'
         segment.administrative_sex = CWE(cwe_1='F')
@@ -4580,6 +4585,8 @@ class Test_de_imedone_06_6_ADT_A02_Transfer_for_DRG_wiki_hl7_de(unittest.TestCas
             XAD(xad_1='Kastanienweg 31&Kastanienweg&31', xad_3='Dresden', xad_7='H'),
             XAD(xad_1='Mühlenstr. 8&Mühlenstr.&8', xad_3='Dresden', xad_7='BDL'),
         ]
+        segment.pid_13 = '^PRN^PH^^49^351^2468135^^^^^0351/2468135'
+        segment.pid_14 = '^WPN^PH^^49^351^9753^246^^^^0351/9753-246'
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -4655,8 +4662,8 @@ class Test_de_imedone_06_6_ADT_A02_Transfer_for_DRG_wiki_hl7_de(unittest.TestCas
 
         message.pid.patient_identifier_list = CX(cx_1='54321', cx_4='Ulmen-Klinik', cx_5='PI')
         message.pid.patient_name = [
-            XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Nölting', xpn_8='M', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Nölting', xpn_7='M', xpn_8='A', xpn_11='G'),
         ]
         message.pid.date_time_of_birth = '19830711'
         message.pid.administrative_sex = CWE(cwe_1='F')
@@ -4664,6 +4671,8 @@ class Test_de_imedone_06_6_ADT_A02_Transfer_for_DRG_wiki_hl7_de(unittest.TestCas
             XAD(xad_1='Kastanienweg 31&Kastanienweg&31', xad_3='Dresden', xad_7='H'),
             XAD(xad_1='Mühlenstr. 8&Mühlenstr.&8', xad_3='Dresden', xad_7='BDL'),
         ]
+        message.pid.pid_13 = '^PRN^PH^^49^351^2468135^^^^^0351/2468135'
+        message.pid.pid_14 = '^WPN^PH^^49^351^9753^246^^^^0351/9753-246'
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -4698,8 +4707,8 @@ _Raw_de_imedone_07 = (
     'PID|||54321^^^Ulmen-Klinik^PI||Bachmann^Liëselotte^^^^^L^A^^^G~Nölting^^^^^^M^A^^^G||19830711|F|||'
     'Kastanienweg 31&Kastanienweg&31^^Dresden^^^^H~Mühlenstr. 8&Mühlenstr.&8^^Dresden^^^^BDL||^PRN^PH^^49^351^2468135^^^^^0351/2468135|'
     '^WPN^PH^^49^351^9753^246^^^^0351/9753-246|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Elisabethen-Spital|||DEU^^HL70171\r'
-    'PV1|1|I|HNO^311^3^IN^^N^B^4|R|||620407^Hüttner^Frïedhelm^^^Dr.^^^Ulmen-Klinik^L^^^DN^^^DN||||||||||||3142^^^Ulmen-Klinik^VN|||||||||||||||||011|||||||'
-    '|202504011645|202504061100\r'
+    'PV1|1|I|HNO^311^3^IN^^N^B^4|R|||620407^Hüttner^Frïedhelm^^^Dr.^^^Ulmen-Klinik^L^^^DN^^^DN||||||||||||3142^^^Ulmen-Klinik^VN|||||||||||||||||'
+    '011||||||||202504011645|202504061100\r'
     'ZBE|5678^KIS|202504011705||REFERENCE'
 )
 
@@ -5399,8 +5408,8 @@ class Test_de_imedone_07_7_ADT_A03_Discharge_wiki_hl7_de(unittest.TestCase):
 
         segment.patient_identifier_list = CX(cx_1='54321', cx_4='Ulmen-Klinik', cx_5='PI')
         segment.patient_name = [
-            XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Nölting', xpn_8='M', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Nölting', xpn_7='M', xpn_8='A', xpn_11='G'),
         ]
         segment.date_time_of_birth = '19830711'
         segment.administrative_sex = CWE(cwe_1='F')
@@ -5408,6 +5417,8 @@ class Test_de_imedone_07_7_ADT_A03_Discharge_wiki_hl7_de(unittest.TestCase):
             XAD(xad_1='Kastanienweg 31&Kastanienweg&31', xad_3='Dresden', xad_7='H'),
             XAD(xad_1='Mühlenstr. 8&Mühlenstr.&8', xad_3='Dresden', xad_7='BDL'),
         ]
+        segment.pid_13 = '^PRN^PH^^49^351^2468135^^^^^0351/2468135'
+        segment.pid_14 = '^WPN^PH^^49^351^9753^246^^^^0351/9753-246'
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -5436,10 +5447,10 @@ class Test_de_imedone_07_7_ADT_A03_Discharge_wiki_hl7_de(unittest.TestCase):
             xcn_2='Hüttner',
             xcn_3='Frïedhelm',
             xcn_6='Dr.',
-            xcn_10='Ulmen-Klinik',
-            xcn_11='L',
-            xcn_14='DN',
-            xcn_18='DN',
+            xcn_9='Ulmen-Klinik',
+            xcn_10='L',
+            xcn_13='DN',
+            xcn_16='DN',
         )
         segment.visit_number = CX(cx_1='3142', cx_4='Ulmen-Klinik', cx_5='VN')
         segment.discharge_disposition = CWE(cwe_1='011')
@@ -5449,8 +5460,7 @@ class Test_de_imedone_07_7_ADT_A03_Discharge_wiki_hl7_de(unittest.TestCase):
         serialized = segment.serialize()
         expected = (
             'PV1|1|I|HNO^311^3^IN^^N^B^4|R|||620407^Hüttner^Frïedhelm^^^Dr.^^^Ulmen-Klinik^L^^^DN^^^DN||||||||||||3142^^^Ulmen-Klinik^VN|||||||||||||||||'
-            '011|||||||'
-            '|202504011645|202504061100'
+            '011||||||||202504011645|202504061100'
         )
         self.assertEqual(serialized, expected)
 
@@ -5484,8 +5494,8 @@ class Test_de_imedone_07_7_ADT_A03_Discharge_wiki_hl7_de(unittest.TestCase):
 
         message.pid.patient_identifier_list = CX(cx_1='54321', cx_4='Ulmen-Klinik', cx_5='PI')
         message.pid.patient_name = [
-            XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Nölting', xpn_8='M', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Nölting', xpn_7='M', xpn_8='A', xpn_11='G'),
         ]
         message.pid.date_time_of_birth = '19830711'
         message.pid.administrative_sex = CWE(cwe_1='F')
@@ -5493,6 +5503,8 @@ class Test_de_imedone_07_7_ADT_A03_Discharge_wiki_hl7_de(unittest.TestCase):
             XAD(xad_1='Kastanienweg 31&Kastanienweg&31', xad_3='Dresden', xad_7='H'),
             XAD(xad_1='Mühlenstr. 8&Mühlenstr.&8', xad_3='Dresden', xad_7='BDL'),
         ]
+        message.pid.pid_13 = '^PRN^PH^^49^351^2468135^^^^^0351/2468135'
+        message.pid.pid_14 = '^WPN^PH^^49^351^9753^246^^^^0351/9753-246'
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -5508,10 +5520,10 @@ class Test_de_imedone_07_7_ADT_A03_Discharge_wiki_hl7_de(unittest.TestCase):
             xcn_2='Hüttner',
             xcn_3='Frïedhelm',
             xcn_6='Dr.',
-            xcn_10='Ulmen-Klinik',
-            xcn_11='L',
-            xcn_14='DN',
-            xcn_18='DN',
+            xcn_9='Ulmen-Klinik',
+            xcn_10='L',
+            xcn_13='DN',
+            xcn_16='DN',
         )
         message.pv1.visit_number = CX(cx_1='3142', cx_4='Ulmen-Klinik', cx_5='VN')
         message.pv1.discharge_disposition = CWE(cwe_1='011')
@@ -5529,8 +5541,8 @@ _Raw_de_imedone_08 = (
     'MSH|^~\\&|MEDOS|RAD|SAP-ISH||20240120116412002||ADT^A01|1325-1|P|2.5|||||DEU|8859/1|DEU\r'
     'EVN|A01|20240120164122|20240120140000\r'
     'PID|||8765^^^KIS||Bachmann^Liëselotte^^^^^L~Schäfer^Liëselotte^^^^^B||19820504|F|||'
-    'Falkenweg 15&Falkenweg&15^^Dresden-Neustadt^^01099^DEU^H~^^Chemnitz^^^DEU^N||^PRN^PH^^49^351^7823456~^PRN^FX^^49^351^7823457|^WPN^PH^^49^351^9182736||'
-    'M|CAT||||||Herz-Jesu-Hospital|||DEU|Bühnentechniker|DEU\r'
+    'Falkenweg 15&Falkenweg&15^^Dresden-Neustadt^^01099^DEU^H~^^Chemnitz^^^DEU^N||^PRN^PH^^49^351^7823456~^PRN^FX^^49^351^7823457|'
+    '^WPN^PH^^49^351^9182736||M|CAT||||||Herz-Jesu-Hospital|||DEU|Bühnentechniker|DEU\r'
     'NK1|1|Bachmann^Wërner|FTH|||||||||||M|M|19540108|||DEU|DEU|||||CAT\r'
     'PV1|1|I|IN2^4^3^CHI^^^^6||||||||||||||||0712843^^^^VN^KIS^20240120|||||||||||||||||||||||||20240120\r'
     'PV2|||||||||20240402'
@@ -6030,6 +6042,7 @@ class Test_de_imedone_08_8_ADT_A01_HL7_v2_5_admission_with_MEDOS_sending_applica
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A01'
         segment.recorded_date_time = '20240120164122'
         segment.date_time_planned_event = '20240120140000'
 
@@ -6043,25 +6056,27 @@ class Test_de_imedone_08_8_ADT_A01_HL7_v2_5_admission_with_MEDOS_sending_applica
         segment = PID()
 
         segment.patient_identifier_list = CX(cx_1='8765', cx_4='KIS')
-        segment.patient_name = [XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_8='L'), XPN(xpn_1='Schäfer', xpn_2='Liëselotte', xpn_8='B')]
+        segment.patient_name = [XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_7='L'), XPN(xpn_1='Schäfer', xpn_2='Liëselotte', xpn_7='B')]
         segment.date_time_of_birth = '19820504'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = [
             XAD(xad_1='Falkenweg 15&Falkenweg&15', xad_3='Dresden-Neustadt', xad_5='01099', xad_6='DEU', xad_7='H'),
             XAD(xad_3='Chemnitz', xad_6='DEU', xad_7='N'),
         ]
+        segment.pid_13 = '^PRN^PH^^49^351^7823456~^PRN^FX^^49^351^7823457'
+        segment.pid_14 = '^WPN^PH^^49^351^9182736'
         segment.marital_status = CWE(cwe_1='M')
         segment.religion = CWE(cwe_1='CAT')
         segment.birth_place = 'Herz-Jesu-Hospital'
         segment.citizenship = CWE(cwe_1='DEU')
         segment.veterans_military_status = CWE(cwe_1='Bühnentechniker')
+        segment.pid_28 = 'DEU'
 
         serialized = segment.serialize()
         expected = (
             'PID|||8765^^^KIS||Bachmann^Liëselotte^^^^^L~Schäfer^Liëselotte^^^^^B||19820504|F|||'
             'Falkenweg 15&Falkenweg&15^^Dresden-Neustadt^^01099^DEU^H~^^Chemnitz^^^DEU^N||^PRN^PH^^49^351^7823456~^PRN^FX^^49^351^7823457|'
-            '^WPN^PH^^49^351^9182736||'
-            'M|CAT||||||Herz-Jesu-Hospital|||DEU|Bühnentechniker|DEU'
+            '^WPN^PH^^49^351^9182736||M|CAT||||||Herz-Jesu-Hospital|||DEU|Bühnentechniker|DEU'
         )
         self.assertEqual(serialized, expected)
 
@@ -6127,22 +6142,26 @@ class Test_de_imedone_08_8_ADT_A01_HL7_v2_5_admission_with_MEDOS_sending_applica
         message.msh.character_set = '8859/1'
         message.msh.principal_language_of_message = CWE(cwe_1='DEU')
 
+        message.evn.evn_1 = 'A01'
         message.evn.recorded_date_time = '20240120164122'
         message.evn.date_time_planned_event = '20240120140000'
 
         message.pid.patient_identifier_list = CX(cx_1='8765', cx_4='KIS')
-        message.pid.patient_name = [XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_8='L'), XPN(xpn_1='Schäfer', xpn_2='Liëselotte', xpn_8='B')]
+        message.pid.patient_name = [XPN(xpn_1='Bachmann', xpn_2='Liëselotte', xpn_7='L'), XPN(xpn_1='Schäfer', xpn_2='Liëselotte', xpn_7='B')]
         message.pid.date_time_of_birth = '19820504'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = [
             XAD(xad_1='Falkenweg 15&Falkenweg&15', xad_3='Dresden-Neustadt', xad_5='01099', xad_6='DEU', xad_7='H'),
             XAD(xad_3='Chemnitz', xad_6='DEU', xad_7='N'),
         ]
+        message.pid.pid_13 = '^PRN^PH^^49^351^7823456~^PRN^FX^^49^351^7823457'
+        message.pid.pid_14 = '^WPN^PH^^49^351^9182736'
         message.pid.marital_status = CWE(cwe_1='M')
         message.pid.religion = CWE(cwe_1='CAT')
         message.pid.birth_place = 'Herz-Jesu-Hospital'
         message.pid.citizenship = CWE(cwe_1='DEU')
         message.pid.veterans_military_status = CWE(cwe_1='Bühnentechniker')
+        message.pid.pid_28 = 'DEU'
 
         message.pv1.set_id_pv1 = '1'
         message.pv1.patient_class = CWE(cwe_1='I')
@@ -6162,7 +6181,7 @@ class Test_de_imedone_08_8_ADT_A01_HL7_v2_5_admission_with_MEDOS_sending_applica
 _Raw_de_imedone_09 = (
     'MSH|^~\\&|samedi-hl7gateway|samedi|APPLICATION|CLINIC|20260403151846+0200||ADT^A08^ADT_A01|991765815154685352|P|2.5||||||UNICODE UTF-8\r'
     'EVN|A08|202604031516+0200\r'
-    'PID|1|54321|qcë8bbf2b09^^^&www.praxis-öst.de&DNS^PI~54321^^^^PT||Nächstname^Rübën^^^Prof.||19970226|M|||Straßenweg 24^^Örtchen^^54321^DE||'
+    'PID|1|54321|qcë8bbf2b09^^^&www.example.com&DNS^PI~54321^^^^PT||Nächstname^Rübën^^^Prof.||19970226|M|||Straßenweg 24^^Örtchen^^54321^DE||'
     '+49152 666 54321^^CP^^^^^^^^^+49152 666 54321~+49 351 666 789^^PH^^^^^^^^^+49 351 666 789~ëmail@beispiel.örg^NET^X.400^ëmail@beispiel.örg\r'
     'PV1|1|U'
 )
@@ -6311,7 +6330,7 @@ class Test_de_imedone_09_9_ADT_A08_Patient_update_samedi_HL7gateway_to_iMedOne_h
     def test_navigate_PID_3_0_4_2(self) -> 'None':
         message = parse_hl7(_Raw_de_imedone_09, validate=False)
         result = message.get('PID.3[0].4.2')
-        self.assertEqual(result, 'www.praxis-öst.de')
+        self.assertEqual(result, 'www.example.com')
 
 # ################################################################################################################
 
@@ -6443,6 +6462,7 @@ class Test_de_imedone_09_9_ADT_A08_Patient_update_samedi_HL7gateway_to_iMedOne_h
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A08'
         segment.recorded_date_time = '202604031516+0200'
 
         serialized = segment.serialize()
@@ -6455,15 +6475,19 @@ class Test_de_imedone_09_9_ADT_A08_Patient_update_samedi_HL7gateway_to_iMedOne_h
         segment = PID()
 
         segment.set_id_pid = '1'
-        segment.patient_identifier_list = [CX(cx_1='qcë8bbf2b09', cx_4='&www.praxis-öst.de&DNS', cx_5='PI'), CX(cx_1='54321', cx_5='PT')]
+        segment.pid_2 = '54321'
+        segment.patient_identifier_list = [CX(cx_1='qcë8bbf2b09', cx_4='&www.example.com&DNS', cx_5='PI'), CX(cx_1='54321', cx_5='PT')]
         segment.patient_name = XPN(xpn_1='Nächstname', xpn_2='Rübën', xpn_5='Prof.')
         segment.date_time_of_birth = '19970226'
         segment.administrative_sex = CWE(cwe_1='M')
         segment.patient_address = XAD(xad_1='Straßenweg 24', xad_3='Örtchen', xad_5='54321', xad_6='DE')
+        segment.pid_13 = (
+            '+49152 666 54321^^CP^^^^^^^^^+49152 666 54321~+49 351 666 789^^PH^^^^^^^^^+49 351 666 789~ëmail@beispiel.örg^NET^X.400^ëmail@beispiel.örg'
+        )
 
         serialized = segment.serialize()
         expected = (
-            'PID|1|54321|qcë8bbf2b09^^^&www.praxis-öst.de&DNS^PI~54321^^^^PT||Nächstname^Rübën^^^Prof.||19970226|M|||Straßenweg 24^^Örtchen^^54321^DE||'
+            'PID|1|54321|qcë8bbf2b09^^^&www.example.com&DNS^PI~54321^^^^PT||Nächstname^Rübën^^^Prof.||19970226|M|||Straßenweg 24^^Örtchen^^54321^DE||'
             '+49152 666 54321^^CP^^^^^^^^^+49152 666 54321~+49 351 666 789^^PH^^^^^^^^^+49 351 666 789~ëmail@beispiel.örg^NET^X.400^ëmail@beispiel.örg'
         )
         self.assertEqual(serialized, expected)
@@ -6496,14 +6520,19 @@ class Test_de_imedone_09_9_ADT_A08_Patient_update_samedi_HL7gateway_to_iMedOne_h
         message.msh.version_id = VID(vid_1='2.5')
         message.msh.character_set = 'UNICODE UTF-8'
 
+        message.evn.evn_1 = 'A08'
         message.evn.recorded_date_time = '202604031516+0200'
 
         message.pid.set_id_pid = '1'
-        message.pid.patient_identifier_list = [CX(cx_1='qcë8bbf2b09', cx_4='&www.praxis-öst.de&DNS', cx_5='PI'), CX(cx_1='54321', cx_5='PT')]
+        message.pid.pid_2 = '54321'
+        message.pid.patient_identifier_list = [CX(cx_1='qcë8bbf2b09', cx_4='&www.example.com&DNS', cx_5='PI'), CX(cx_1='54321', cx_5='PT')]
         message.pid.patient_name = XPN(xpn_1='Nächstname', xpn_2='Rübën', xpn_5='Prof.')
         message.pid.date_time_of_birth = '19970226'
         message.pid.administrative_sex = CWE(cwe_1='M')
         message.pid.patient_address = XAD(xad_1='Straßenweg 24', xad_3='Örtchen', xad_5='54321', xad_6='DE')
+        message.pid.pid_13 = (
+            '+49152 666 54321^^CP^^^^^^^^^+49152 666 54321~+49 351 666 789^^PH^^^^^^^^^+49 351 666 789~ëmail@beispiel.örg^NET^X.400^ëmail@beispiel.örg'
+        )
 
         message.pv1.set_id_pv1 = '1'
         message.pv1.patient_class = CWE(cwe_1='U')
@@ -6518,7 +6547,7 @@ class Test_de_imedone_09_9_ADT_A08_Patient_update_samedi_HL7gateway_to_iMedOne_h
 _Raw_de_imedone_10 = (
     'MSH|^~\\&|samedi-hl7gateway|samedi|APPLICATION|CLINIC|20260403152323+0200||ADT^A29^ADT_A21|21471412864163822995|P|2.5||||||UNICODE UTF-8\r'
     'EVN|A29|202604031523+0200\r'
-    'PID|1|77|r72f56c8b65^^^&www.praxis-öst.de&DNS^PI~77^^^^PT||Lëtzt^Ërste||198510201\r'
+    'PID|1|77|r72f56c8b65^^^&www.example.com&DNS^PI~77^^^^PT||Lëtzt^Ërste||198510201\r'
     'PV1|1|U'
 )
 
@@ -6666,7 +6695,7 @@ class Test_de_imedone_10_10_ADT_A29_Patient_deletion_samedi_HL7gateway_hl7gatewa
     def test_navigate_PID_3_0_4_2(self) -> 'None':
         message = parse_hl7(_Raw_de_imedone_10, validate=False)
         result = message.get('PID.3[0].4.2')
-        self.assertEqual(result, 'www.praxis-öst.de')
+        self.assertEqual(result, 'www.example.com')
 
 # ################################################################################################################
 
@@ -6756,6 +6785,7 @@ class Test_de_imedone_10_10_ADT_A29_Patient_deletion_samedi_HL7gateway_hl7gatewa
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A29'
         segment.recorded_date_time = '202604031523+0200'
 
         serialized = segment.serialize()
@@ -6768,12 +6798,13 @@ class Test_de_imedone_10_10_ADT_A29_Patient_deletion_samedi_HL7gateway_hl7gatewa
         segment = PID()
 
         segment.set_id_pid = '1'
-        segment.patient_identifier_list = [CX(cx_1='r72f56c8b65', cx_4='&www.praxis-öst.de&DNS', cx_5='PI'), CX(cx_1='77', cx_5='PT')]
+        segment.pid_2 = '77'
+        segment.patient_identifier_list = [CX(cx_1='r72f56c8b65', cx_4='&www.example.com&DNS', cx_5='PI'), CX(cx_1='77', cx_5='PT')]
         segment.patient_name = XPN(xpn_1='Lëtzt', xpn_2='Ërste')
         segment.date_time_of_birth = '198510201'
 
         serialized = segment.serialize()
-        expected = 'PID|1|77|r72f56c8b65^^^&www.praxis-öst.de&DNS^PI~77^^^^PT||Lëtzt^Ërste||198510201'
+        expected = 'PID|1|77|r72f56c8b65^^^&www.example.com&DNS^PI~77^^^^PT||Lëtzt^Ërste||198510201'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -6804,10 +6835,12 @@ class Test_de_imedone_10_10_ADT_A29_Patient_deletion_samedi_HL7gateway_hl7gatewa
         message.msh.version_id = VID(vid_1='2.5')
         message.msh.character_set = 'UNICODE UTF-8'
 
+        message.evn.evn_1 = 'A29'
         message.evn.recorded_date_time = '202604031523+0200'
 
         message.pid.set_id_pid = '1'
-        message.pid.patient_identifier_list = [CX(cx_1='r72f56c8b65', cx_4='&www.praxis-öst.de&DNS', cx_5='PI'), CX(cx_1='77', cx_5='PT')]
+        message.pid.pid_2 = '77'
+        message.pid.patient_identifier_list = [CX(cx_1='r72f56c8b65', cx_4='&www.example.com&DNS', cx_5='PI'), CX(cx_1='77', cx_5='PT')]
         message.pid.patient_name = XPN(xpn_1='Lëtzt', xpn_2='Ërste')
         message.pid.date_time_of_birth = '198510201'
 
@@ -6824,8 +6857,8 @@ class Test_de_imedone_10_10_ADT_A29_Patient_deletion_samedi_HL7gateway_hl7gatewa
 _Raw_de_imedone_11 = (
     'MSH|^~\\&|KomServer|KOMSERV|samedi-hl7gateway|samedi|20260523123517||ADT^A08|2638170166537|P|2.5|9E62D52F8DE791B||AL|NE||8859/1\r'
     'EVN|A08|202610260719\r'
-    'PID|1||4566^^^&www.praxis-öst.de&DNS^PI~287711^^^Rädvis^PI|20000052^^^DRË^PI|Prüfer^Hëide||19500524|F|||Prüfweg 30&Prüfweg 30^^Görlitz^^02826^DE^L||'
-    '^^PH^^^^03581-7654321 Büro|^^PH'
+    'PID|1||4566^^^&www.example.com&DNS^PI~287711^^^Rädvis^PI|20000052^^^DRË^PI|Prüfer^Hëide||19500524|F|||'
+    'Prüfweg 30&Prüfweg 30^^Görlitz^^02826^DE^L||^^PH^^^^03581-7654321 Büro|^^PH'
 )
 
 class Test_de_imedone_11_11_ADT_A08_Inbound_from_KIS_to_samedi_hl7gateway_samedi_de(unittest.TestCase):
@@ -6986,7 +7019,7 @@ class Test_de_imedone_11_11_ADT_A08_Inbound_from_KIS_to_samedi_hl7gateway_samedi
     def test_navigate_PID_3_0_4_2(self) -> 'None':
         message = parse_hl7(_Raw_de_imedone_11, validate=False)
         result = message.get('PID.3[0].4.2')
-        self.assertEqual(result, 'www.praxis-öst.de')
+        self.assertEqual(result, 'www.example.com')
 
 # ################################################################################################################
 
@@ -7121,6 +7154,7 @@ class Test_de_imedone_11_11_ADT_A08_Inbound_from_KIS_to_samedi_hl7gateway_samedi
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A08'
         segment.recorded_date_time = '202610260719'
 
         serialized = segment.serialize()
@@ -7133,17 +7167,19 @@ class Test_de_imedone_11_11_ADT_A08_Inbound_from_KIS_to_samedi_hl7gateway_samedi
         segment = PID()
 
         segment.set_id_pid = '1'
-        segment.patient_identifier_list = [CX(cx_1='4566', cx_4='&www.praxis-öst.de&DNS', cx_5='PI'), CX(cx_1='287711', cx_4='Rädvis', cx_5='PI')]
+        segment.patient_identifier_list = [CX(cx_1='4566', cx_4='&www.example.com&DNS', cx_5='PI'), CX(cx_1='287711', cx_4='Rädvis', cx_5='PI')]
+        segment.pid_4 = '20000052^^^DRË^PI'
         segment.patient_name = XPN(xpn_1='Prüfer', xpn_2='Hëide')
         segment.date_time_of_birth = '19500524'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Prüfweg 30&Prüfweg 30', xad_3='Görlitz', xad_5='02826', xad_6='DE', xad_7='L')
+        segment.pid_13 = '^^PH^^^^03581-7654321 Büro'
+        segment.pid_14 = '^^PH'
 
         serialized = segment.serialize()
         expected = (
-            'PID|1||4566^^^&www.praxis-öst.de&DNS^PI~287711^^^Rädvis^PI|20000052^^^DRË^PI|Prüfer^Hëide||19500524|F|||'
-            'Prüfweg 30&Prüfweg 30^^Görlitz^^02826^DE^L||'
-            '^^PH^^^^03581-7654321 Büro|^^PH'
+            'PID|1||4566^^^&www.example.com&DNS^PI~287711^^^Rädvis^PI|20000052^^^DRË^PI|Prüfer^Hëide||19500524|F|||'
+            'Prüfweg 30&Prüfweg 30^^Görlitz^^02826^DE^L||^^PH^^^^03581-7654321 Büro|^^PH'
         )
         self.assertEqual(serialized, expected)
 
@@ -7166,14 +7202,18 @@ class Test_de_imedone_11_11_ADT_A08_Inbound_from_KIS_to_samedi_hl7gateway_samedi
         message.msh.application_acknowledgment_type = 'NE'
         message.msh.character_set = '8859/1'
 
+        message.evn.evn_1 = 'A08'
         message.evn.recorded_date_time = '202610260719'
 
         message.pid.set_id_pid = '1'
-        message.pid.patient_identifier_list = [CX(cx_1='4566', cx_4='&www.praxis-öst.de&DNS', cx_5='PI'), CX(cx_1='287711', cx_4='Rädvis', cx_5='PI')]
+        message.pid.patient_identifier_list = [CX(cx_1='4566', cx_4='&www.example.com&DNS', cx_5='PI'), CX(cx_1='287711', cx_4='Rädvis', cx_5='PI')]
+        message.pid.pid_4 = '20000052^^^DRË^PI'
         message.pid.patient_name = XPN(xpn_1='Prüfer', xpn_2='Hëide')
         message.pid.date_time_of_birth = '19500524'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Prüfweg 30&Prüfweg 30', xad_3='Görlitz', xad_5='02826', xad_6='DE', xad_7='L')
+        message.pid.pid_13 = '^^PH^^^^03581-7654321 Büro'
+        message.pid.pid_14 = '^^PH'
 
         serialized = message.serialize()
         serialized_length = len(serialized)
@@ -7185,9 +7225,9 @@ class Test_de_imedone_11_11_ADT_A08_Inbound_from_KIS_to_samedi_hl7gateway_samedi
 _Raw_de_imedone_12 = (
     'MSH|^~\\&|KomServer|KOMSERV|samedi-hl7gateway|samedi|20260523123517||ADT^A40|2638170166537|P|2.5|9E62D52F8DE791B||AL|NE||8859/1\r'
     'EVN|A40|202502041715\r'
-    'PID|1||4566^^^&www.praxis-öst.de&DNS^PI~287711^^^Rädvis^PI|20000052^^^DRË^PI|Prüfer^Hëide||19500524|F|||Prüfweg 30&Prüfweg 30^^Görlitz^^02826^DE^L||'
-    '^^PH^^^^03581-7654321 Büro|^^PH\r'
-    'MRG|4567~u263401ef91^^^&www.praxis-öst.de&DNS~4467533^^^&1.2.276.0.76.3.1.660.1.1.1.2.1&ISO^PI|'
+    'PID|1||4566^^^&www.example.com&DNS^PI~287711^^^Rädvis^PI|20000052^^^DRË^PI|Prüfer^Hëide||19500524|F|||'
+    'Prüfweg 30&Prüfweg 30^^Görlitz^^02826^DE^L||^^PH^^^^03581-7654321 Büro|^^PH\r'
+    'MRG|4567~u263401ef91^^^&www.example.com&DNS~4467533^^^&1.2.276.0.76.3.1.660.1.1.1.2.1&ISO^PI|'
 )
 
 class Test_de_imedone_12_12_ADT_A40_Patient_merge_hl7gateway_samedi_de(unittest.TestCase):
@@ -7348,7 +7388,7 @@ class Test_de_imedone_12_12_ADT_A40_Patient_merge_hl7gateway_samedi_de(unittest.
     def test_navigate_PID_3_0_4_2(self) -> 'None':
         message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('PID.3[0].4.2')
-        self.assertEqual(result, 'www.praxis-öst.de')
+        self.assertEqual(result, 'www.example.com')
 
 # ################################################################################################################
 
@@ -7474,7 +7514,7 @@ class Test_de_imedone_12_12_ADT_A40_Patient_merge_hl7gateway_samedi_de(unittest.
     def test_navigate_MRG_1_1_4_2(self) -> 'None':
         message = parse_hl7(_Raw_de_imedone_12, validate=False)
         result = message.get('MRG.1[1].4.2')
-        self.assertEqual(result, 'www.praxis-öst.de')
+        self.assertEqual(result, 'www.example.com')
 
 # ################################################################################################################
 
@@ -7539,6 +7579,7 @@ class Test_de_imedone_12_12_ADT_A40_Patient_merge_hl7gateway_samedi_de(unittest.
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A40'
         segment.recorded_date_time = '202502041715'
 
         serialized = segment.serialize()
@@ -7551,17 +7592,19 @@ class Test_de_imedone_12_12_ADT_A40_Patient_merge_hl7gateway_samedi_de(unittest.
         segment = PID()
 
         segment.set_id_pid = '1'
-        segment.patient_identifier_list = [CX(cx_1='4566', cx_4='&www.praxis-öst.de&DNS', cx_5='PI'), CX(cx_1='287711', cx_4='Rädvis', cx_5='PI')]
+        segment.patient_identifier_list = [CX(cx_1='4566', cx_4='&www.example.com&DNS', cx_5='PI'), CX(cx_1='287711', cx_4='Rädvis', cx_5='PI')]
+        segment.pid_4 = '20000052^^^DRË^PI'
         segment.patient_name = XPN(xpn_1='Prüfer', xpn_2='Hëide')
         segment.date_time_of_birth = '19500524'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Prüfweg 30&Prüfweg 30', xad_3='Görlitz', xad_5='02826', xad_6='DE', xad_7='L')
+        segment.pid_13 = '^^PH^^^^03581-7654321 Büro'
+        segment.pid_14 = '^^PH'
 
         serialized = segment.serialize()
         expected = (
-            'PID|1||4566^^^&www.praxis-öst.de&DNS^PI~287711^^^Rädvis^PI|20000052^^^DRË^PI|Prüfer^Hëide||19500524|F|||'
-            'Prüfweg 30&Prüfweg 30^^Görlitz^^02826^DE^L||'
-            '^^PH^^^^03581-7654321 Büro|^^PH'
+            'PID|1||4566^^^&www.example.com&DNS^PI~287711^^^Rädvis^PI|20000052^^^DRË^PI|Prüfer^Hëide||19500524|F|||'
+            'Prüfweg 30&Prüfweg 30^^Görlitz^^02826^DE^L||^^PH^^^^03581-7654321 Büro|^^PH'
         )
         self.assertEqual(serialized, expected)
 
@@ -7572,12 +7615,13 @@ class Test_de_imedone_12_12_ADT_A40_Patient_merge_hl7gateway_samedi_de(unittest.
 
         segment.prior_patient_identifier_list = [
             CX(cx_1='4567'),
-            CX(cx_1='u263401ef91', cx_4='&www.praxis-öst.de&DNS'),
+            CX(cx_1='u263401ef91', cx_4='&www.example.com&DNS'),
             CX(cx_1='4467533', cx_4='&1.2.276.0.76.3.1.660.1.1.1.2.1&ISO', cx_5='PI'),
         ]
+        segment.mrg_2 = ''
 
         serialized = segment.serialize()
-        expected = 'MRG|4567~u263401ef91^^^&www.praxis-öst.de&DNS~4467533^^^&1.2.276.0.76.3.1.660.1.1.1.2.1&ISO^PI|'
+        expected = 'MRG|4567~u263401ef91^^^&www.example.com&DNS~4467533^^^&1.2.276.0.76.3.1.660.1.1.1.2.1&ISO^PI|'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -7599,6 +7643,7 @@ class Test_de_imedone_12_12_ADT_A40_Patient_merge_hl7gateway_samedi_de(unittest.
         message.msh.application_acknowledgment_type = 'NE'
         message.msh.character_set = '8859/1'
 
+        message.evn.evn_1 = 'A40'
         message.evn.recorded_date_time = '202502041715'
 
         serialized = message.serialize()
@@ -7615,9 +7660,9 @@ _Raw_de_imedone_13 = (
     'NTE||_default|Comment\r'
     'NTE||Affected body parts|arm~left leg~head\r'
     'NTE||Kommentar zum Patienten|patient comment, patient without external patient number\r'
-    'PID|1||s1299de4014^^^&www.praxis-öst.de&DNS^PI~^^^^PT||Förster^Stëfan||19820511|M|||Gleisstraße 24^^Potsdam^^14467^DE||'
-    '+49 172 7654321^^CP^^^^^^^^^+49 172 7654321~+49 351 76543-210^^PH^^^^^^^^^+49 351 76543-210~pöst@beispiel.örg^NET^X.400^pöst@beispiel.örg~'
-    '+49 351 76543-211^^FX^^^^^^^^^+49 351 76543-211\r'
+    'PID|1||s1299de4014^^^&www.example.com&DNS^PI~^^^^PT||Förster^Stëfan||19820511|M|||Gleisstraße 24^^Potsdam^^14467^DE||'
+    '+49 172 7654321^^CP^^^^^^^^^+49 172 7654321~+49 351 76543-210^^PH^^^^^^^^^+49 351 76543-210~pöst@beispiel.örg^NET^X.400^'
+    'pöst@beispiel.örg~+49 351 76543-211^^FX^^^^^^^^^+49 351 76543-211\r'
     'RGS|1|A\r'
     'AIG|1|A|2^Stëfan Möritz^99SAMEDI-RESOURCE^radiologist|||||20260516130000+0200|||1800|s\r'
     'AIG|2|A|1^Sprechzimmer^99SAMEDI-RESOURCE^room-1|||||20260516130000+0200|||1800|s'
@@ -7844,7 +7889,7 @@ class Test_de_imedone_13_13_SIU_S12_New_appointment_booking_samedi_to_iMedOne_hl
     def test_navigate_PID_3_0_4_2(self) -> 'None':
         message = parse_hl7(_Raw_de_imedone_13, validate=False)
         result = message.get('PID.3[0].4.2')
-        self.assertEqual(result, 'www.praxis-öst.de')
+        self.assertEqual(result, 'www.example.com')
 
 # ################################################################################################################
 
@@ -8028,6 +8073,8 @@ class Test_de_imedone_13_13_SIU_S12_New_appointment_booking_samedi_to_iMedOne_hl
         segment.filler_appointment_id = EI(ei_1='a-ëqcdl7hwscfuze4w')
         segment.event_reason = CWE(cwe_1='BOOKED')
         segment.appointment_type = CWE(cwe_1='1', cwe_2='MRT')
+        segment.sch_9 = '1800'
+        segment.sch_11 = '^^M30^20260516130000+0200^20260516133000+0200'
         segment.filler_status_code = CWE(cwe_1='Booked')
 
         serialized = segment.serialize()
@@ -8090,17 +8137,21 @@ class Test_de_imedone_13_13_SIU_S12_New_appointment_booking_samedi_to_iMedOne_hl
         segment = PID()
 
         segment.set_id_pid = '1'
-        segment.patient_identifier_list = [CX(cx_1='s1299de4014', cx_4='&www.praxis-öst.de&DNS', cx_5='PI'), CX(cx_5='PT')]
+        segment.patient_identifier_list = [CX(cx_1='s1299de4014', cx_4='&www.example.com&DNS', cx_5='PI'), CX(cx_5='PT')]
         segment.patient_name = XPN(xpn_1='Förster', xpn_2='Stëfan')
         segment.date_time_of_birth = '19820511'
         segment.administrative_sex = CWE(cwe_1='M')
         segment.patient_address = XAD(xad_1='Gleisstraße 24', xad_3='Potsdam', xad_5='14467', xad_6='DE')
+        segment.pid_13 = (
+            '+49 172 7654321^^CP^^^^^^^^^+49 172 7654321~+49 351 76543-210^^PH^^^^^^^^^+49 351 76543-210~pöst@beispiel.örg^NET^X.400^'
+            'pöst@beispiel.örg~+49 351 76543-211^^FX^^^^^^^^^+49 351 76543-211'
+        )
 
         serialized = segment.serialize()
         expected = (
-            'PID|1||s1299de4014^^^&www.praxis-öst.de&DNS^PI~^^^^PT||Förster^Stëfan||19820511|M|||Gleisstraße 24^^Potsdam^^14467^DE||'
-            '+49 172 7654321^^CP^^^^^^^^^+49 172 7654321~+49 351 76543-210^^PH^^^^^^^^^+49 351 76543-210~pöst@beispiel.örg^NET^X.400^pöst@beispiel.örg~'
-            '+49 351 76543-211^^FX^^^^^^^^^+49 351 76543-211'
+            'PID|1||s1299de4014^^^&www.example.com&DNS^PI~^^^^PT||Förster^Stëfan||19820511|M|||Gleisstraße 24^^Potsdam^^14467^DE||'
+            '+49 172 7654321^^CP^^^^^^^^^+49 172 7654321~+49 351 76543-210^^PH^^^^^^^^^+49 351 76543-210~pöst@beispiel.örg^NET^X.400^'
+            'pöst@beispiel.örg~+49 351 76543-211^^FX^^^^^^^^^+49 351 76543-211'
         )
         self.assertEqual(serialized, expected)
 
@@ -8167,6 +8218,8 @@ class Test_de_imedone_13_13_SIU_S12_New_appointment_booking_samedi_to_iMedOne_hl
         message.sch.filler_appointment_id = EI(ei_1='a-ëqcdl7hwscfuze4w')
         message.sch.event_reason = CWE(cwe_1='BOOKED')
         message.sch.appointment_type = CWE(cwe_1='1', cwe_2='MRT')
+        message.sch.sch_9 = '1800'
+        message.sch.sch_11 = '^^M30^20260516130000+0200^20260516133000+0200'
         message.sch.filler_status_code = CWE(cwe_1='Booked')
 
         message.tq1.set_id_tq1 = '1'
@@ -8486,6 +8539,8 @@ class Test_de_imedone_14_14_SIU_S13_Appointment_rescheduling_samedi_to_iMedOne_h
         segment.filler_appointment_id = EI(ei_1='a-ëqcdl7hwscfuze4w')
         segment.event_reason = CWE(cwe_1='BOOKED')
         segment.appointment_type = CWE(cwe_2='Test')
+        segment.sch_9 = '1800'
+        segment.sch_11 = '^^M30^20260410135000+0200^20260410142000+0200'
         segment.filler_status_code = CWE(cwe_1='Booked')
 
         serialized = segment.serialize()
@@ -8581,6 +8636,8 @@ class Test_de_imedone_14_14_SIU_S13_Appointment_rescheduling_samedi_to_iMedOne_h
         message.sch.filler_appointment_id = EI(ei_1='a-ëqcdl7hwscfuze4w')
         message.sch.event_reason = CWE(cwe_1='BOOKED')
         message.sch.appointment_type = CWE(cwe_2='Test')
+        message.sch.sch_9 = '1800'
+        message.sch.sch_11 = '^^M30^20260410135000+0200^20260410142000+0200'
         message.sch.filler_status_code = CWE(cwe_1='Booked')
 
         message.tq1.set_id_tq1 = '1'
@@ -8601,7 +8658,7 @@ _Raw_de_imedone_15 = (
     'TQ1|1||||||20260516140000+0200|20260516143000+0200|||||30^min\r'
     'NTE||_default|updated comment\r'
     'NTE||Kommentar zum Patienten|patient comment, patient without external patient number\r'
-    'PID|1||s1299de4014^^^&www.praxis-öst.de&DNS^PI~^^^^PT||Förster^Stëfan||19820511|M\r'
+    'PID|1||s1299de4014^^^&www.example.com&DNS^PI~^^^^PT||Förster^Stëfan||19820511|M\r'
     'RGS|1|X\r'
     'AIG|1|X|2^Stëfan Möritz^99SAMEDI-RESOURCE^radiologist|||||20260516140000+0200|||1800|s\r'
     'AIG|2|X|1^Sprechzimmer^99SAMEDI-RESOURCE^room-1|||||20260516140000+0200|||1800|s'
@@ -8828,7 +8885,7 @@ class Test_de_imedone_15_15_SIU_S14_Appointment_modification_samedi_to_iMedOne_h
     def test_navigate_PID_3_0_4_2(self) -> 'None':
         message = parse_hl7(_Raw_de_imedone_15, validate=False)
         result = message.get('PID.3[0].4.2')
-        self.assertEqual(result, 'www.praxis-öst.de')
+        self.assertEqual(result, 'www.example.com')
 
 # ################################################################################################################
 
@@ -8984,6 +9041,8 @@ class Test_de_imedone_15_15_SIU_S14_Appointment_modification_samedi_to_iMedOne_h
         segment.filler_appointment_id = EI(ei_1='a-ëqcdl7hwscfuze4w')
         segment.event_reason = CWE(cwe_1='BOOKED')
         segment.appointment_type = CWE(cwe_1='1', cwe_2='MRT')
+        segment.sch_9 = '1800'
+        segment.sch_11 = '^^M30^20260516140000+0200^20260516143000+0200'
         segment.filler_status_code = CWE(cwe_1='Booked')
 
         serialized = segment.serialize()
@@ -9034,13 +9093,13 @@ class Test_de_imedone_15_15_SIU_S14_Appointment_modification_samedi_to_iMedOne_h
         segment = PID()
 
         segment.set_id_pid = '1'
-        segment.patient_identifier_list = [CX(cx_1='s1299de4014', cx_4='&www.praxis-öst.de&DNS', cx_5='PI'), CX(cx_5='PT')]
+        segment.patient_identifier_list = [CX(cx_1='s1299de4014', cx_4='&www.example.com&DNS', cx_5='PI'), CX(cx_5='PT')]
         segment.patient_name = XPN(xpn_1='Förster', xpn_2='Stëfan')
         segment.date_time_of_birth = '19820511'
         segment.administrative_sex = CWE(cwe_1='M')
 
         serialized = segment.serialize()
-        expected = 'PID|1||s1299de4014^^^&www.praxis-öst.de&DNS^PI~^^^^PT||Förster^Stëfan||19820511|M'
+        expected = 'PID|1||s1299de4014^^^&www.example.com&DNS^PI~^^^^PT||Förster^Stëfan||19820511|M'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -9106,6 +9165,8 @@ class Test_de_imedone_15_15_SIU_S14_Appointment_modification_samedi_to_iMedOne_h
         message.sch.filler_appointment_id = EI(ei_1='a-ëqcdl7hwscfuze4w')
         message.sch.event_reason = CWE(cwe_1='BOOKED')
         message.sch.appointment_type = CWE(cwe_1='1', cwe_2='MRT')
+        message.sch.sch_9 = '1800'
+        message.sch.sch_11 = '^^M30^20260516140000+0200^20260516143000+0200'
         message.sch.filler_status_code = CWE(cwe_1='Booked')
 
         message.tq1.set_id_tq1 = '1'
@@ -9132,7 +9193,7 @@ _Raw_de_imedone_16 = (
     'TQ1|1||||||20260516140000+0200|20260516143000+0200|||||30^min\r'
     'NTE||_default|updated comment\r'
     'NTE||Kommentar zum Patienten|patient comment, patient without external patient number\r'
-    'PID|1||s1299de4014^^^&www.praxis-öst.de&DNS^PI~^^^^PT||Förster^Stëfan||19820511|M\r'
+    'PID|1||s1299de4014^^^&www.example.com&DNS^PI~^^^^PT||Förster^Stëfan||19820511|M\r'
     'RGS|1|D\r'
     'AIG|1|D|1^Sprechzimmer^99SAMEDI-RESOURCE^room-1|||||20260516140000+0200|||1800|s'
 )
@@ -9358,7 +9419,7 @@ class Test_de_imedone_16_16_SIU_S15_Appointment_cancellation_samedi_to_iMedOne_h
     def test_navigate_PID_3_0_4_2(self) -> 'None':
         message = parse_hl7(_Raw_de_imedone_16, validate=False)
         result = message.get('PID.3[0].4.2')
-        self.assertEqual(result, 'www.praxis-öst.de')
+        self.assertEqual(result, 'www.example.com')
 
 # ################################################################################################################
 
@@ -9514,6 +9575,8 @@ class Test_de_imedone_16_16_SIU_S15_Appointment_cancellation_samedi_to_iMedOne_h
         segment.filler_appointment_id = EI(ei_1='a-ëqcdl7hwscfuze4w')
         segment.event_reason = CWE(cwe_1='BOOKED')
         segment.appointment_type = CWE(cwe_1='1', cwe_2='MRT')
+        segment.sch_9 = '1800'
+        segment.sch_11 = '^^M30^20260516140000+0200^20260516143000+0200'
         segment.filler_status_code = CWE(cwe_1='Deleted')
 
         serialized = segment.serialize()
@@ -9564,13 +9627,13 @@ class Test_de_imedone_16_16_SIU_S15_Appointment_cancellation_samedi_to_iMedOne_h
         segment = PID()
 
         segment.set_id_pid = '1'
-        segment.patient_identifier_list = [CX(cx_1='s1299de4014', cx_4='&www.praxis-öst.de&DNS', cx_5='PI'), CX(cx_5='PT')]
+        segment.patient_identifier_list = [CX(cx_1='s1299de4014', cx_4='&www.example.com&DNS', cx_5='PI'), CX(cx_5='PT')]
         segment.patient_name = XPN(xpn_1='Förster', xpn_2='Stëfan')
         segment.date_time_of_birth = '19820511'
         segment.administrative_sex = CWE(cwe_1='M')
 
         serialized = segment.serialize()
-        expected = 'PID|1||s1299de4014^^^&www.praxis-öst.de&DNS^PI~^^^^PT||Förster^Stëfan||19820511|M'
+        expected = 'PID|1||s1299de4014^^^&www.example.com&DNS^PI~^^^^PT||Förster^Stëfan||19820511|M'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -9620,6 +9683,8 @@ class Test_de_imedone_16_16_SIU_S15_Appointment_cancellation_samedi_to_iMedOne_h
         message.sch.filler_appointment_id = EI(ei_1='a-ëqcdl7hwscfuze4w')
         message.sch.event_reason = CWE(cwe_1='BOOKED')
         message.sch.appointment_type = CWE(cwe_1='1', cwe_2='MRT')
+        message.sch.sch_9 = '1800'
+        message.sch.sch_11 = '^^M30^20260516140000+0200^20260516143000+0200'
         message.sch.filler_status_code = CWE(cwe_1='Deleted')
 
         message.tq1.set_id_tq1 = '1'
@@ -9645,7 +9710,7 @@ _Raw_de_imedone_17 = (
     'SCH||b-ëqcdl7hwscfuze4w||||BOOKED||1^MRT|1800||^^M30^20260516100000+0200^20260516103000+0200||||||||||||||Booked\r'
     'TQ1|1||||||20260516100000+0200|20260516103000+0200|||||30^min\r'
     'NTE||Kommentar zum Patienten|patient with an external patient ID\r'
-    'PID|1|54321|t4538ef9435^^^&www.praxis-öst.de&DNS^PI~54321^^^^PT||Kräuter^Ännelïese|||F\r'
+    'PID|1|54321|t4538ef9435^^^&www.example.com&DNS^PI~54321^^^^PT||Kräuter^Ännelïese|||F\r'
     'RGS|1|A\r'
     'AIG|1|A|2^Stëfan Möritz^99SAMEDI-RESOURCE^radiologist|||||20260516100000+0200|||1800|s\r'
     'AIG|2|A|1^Sprechzimmer^99SAMEDI-RESOURCE^room-1|||||20260516100000+0200|||1800|'
@@ -9872,7 +9937,7 @@ class Test_de_imedone_17_17_SIU_S12_Appointment_with_external_patient_number_hl7
     def test_navigate_PID_3_0_4_2(self) -> 'None':
         message = parse_hl7(_Raw_de_imedone_17, validate=False)
         result = message.get('PID.3[0].4.2')
-        self.assertEqual(result, 'www.praxis-öst.de')
+        self.assertEqual(result, 'www.example.com')
 
 # ################################################################################################################
 
@@ -10028,6 +10093,8 @@ class Test_de_imedone_17_17_SIU_S12_Appointment_with_external_patient_number_hl7
         segment.filler_appointment_id = EI(ei_1='b-ëqcdl7hwscfuze4w')
         segment.event_reason = CWE(cwe_1='BOOKED')
         segment.appointment_type = CWE(cwe_1='1', cwe_2='MRT')
+        segment.sch_9 = '1800'
+        segment.sch_11 = '^^M30^20260516100000+0200^20260516103000+0200'
         segment.filler_status_code = CWE(cwe_1='Booked')
 
         serialized = segment.serialize()
@@ -10066,12 +10133,13 @@ class Test_de_imedone_17_17_SIU_S12_Appointment_with_external_patient_number_hl7
         segment = PID()
 
         segment.set_id_pid = '1'
-        segment.patient_identifier_list = [CX(cx_1='t4538ef9435', cx_4='&www.praxis-öst.de&DNS', cx_5='PI'), CX(cx_1='54321', cx_5='PT')]
+        segment.pid_2 = '54321'
+        segment.patient_identifier_list = [CX(cx_1='t4538ef9435', cx_4='&www.example.com&DNS', cx_5='PI'), CX(cx_1='54321', cx_5='PT')]
         segment.patient_name = XPN(xpn_1='Kräuter', xpn_2='Ännelïese')
         segment.administrative_sex = CWE(cwe_1='F')
 
         serialized = segment.serialize()
-        expected = 'PID|1|54321|t4538ef9435^^^&www.praxis-öst.de&DNS^PI~54321^^^^PT||Kräuter^Ännelïese|||F'
+        expected = 'PID|1|54321|t4538ef9435^^^&www.example.com&DNS^PI~54321^^^^PT||Kräuter^Ännelïese|||F'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -10112,6 +10180,7 @@ class Test_de_imedone_17_17_SIU_S12_Appointment_with_external_patient_number_hl7
         segment.resource_id = CWE(cwe_1='1', cwe_2='Sprechzimmer', cwe_3='99SAMEDI-RESOURCE', cwe_4='room-1')
         segment.start_date_time = '20260516100000+0200'
         segment.duration = '1800'
+        segment.aig_12 = ''
 
         serialized = segment.serialize()
         expected = 'AIG|2|A|1^Sprechzimmer^99SAMEDI-RESOURCE^room-1|||||20260516100000+0200|||1800|'
@@ -10136,6 +10205,8 @@ class Test_de_imedone_17_17_SIU_S12_Appointment_with_external_patient_number_hl7
         message.sch.filler_appointment_id = EI(ei_1='b-ëqcdl7hwscfuze4w')
         message.sch.event_reason = CWE(cwe_1='BOOKED')
         message.sch.appointment_type = CWE(cwe_1='1', cwe_2='MRT')
+        message.sch.sch_9 = '1800'
+        message.sch.sch_11 = '^^M30^20260516100000+0200^20260516103000+0200'
         message.sch.filler_status_code = CWE(cwe_1='Booked')
 
         message.tq1.set_id_tq1 = '1'
@@ -10157,7 +10228,7 @@ _Raw_de_imedone_18 = (
     'MSH|^~\\&|system|clinic|samedi-hl7gateway|samedi|20260101000000||SIU^S12^SIU_S12|87654|P|2.5||||||8859/1\r'
     'SCH||567890^system||||||Sprechstunde, Peter Mueller|||||||||||||||||Booked\r'
     'TQ1|1||||||202601150800|202601150830|||||30^min\r'
-    'PID|1|54321|t4538ef9435^^^&www.praxis-öst.de&DNS^PI~54321^^^^PT||Kräuter^Ännelïese|||F\r'
+    'PID|1|54321|t4538ef9435^^^&www.example.com&DNS^PI~54321^^^^PT||Kräuter^Ännelïese|||F\r'
     'RGS|1|A\r'
     'AIL|1||room-1|||202601150800^YYYYLLDDHHMM|||30|min\r'
     'AIP|1||radiologist|||202601150800^YYYYLLDDHHMM|||30|min'
@@ -10363,7 +10434,7 @@ class Test_de_imedone_18_18_SIU_S12_Inbound_from_KIS_to_samedi_hl7gateway_samedi
     def test_navigate_PID_3_0_4_2(self) -> 'None':
         message = parse_hl7(_Raw_de_imedone_18, validate=False)
         result = message.get('PID.3[0].4.2')
-        self.assertEqual(result, 'www.praxis-öst.de')
+        self.assertEqual(result, 'www.example.com')
 
 # ################################################################################################################
 
@@ -10565,12 +10636,13 @@ class Test_de_imedone_18_18_SIU_S12_Inbound_from_KIS_to_samedi_hl7gateway_samedi
         segment = PID()
 
         segment.set_id_pid = '1'
-        segment.patient_identifier_list = [CX(cx_1='t4538ef9435', cx_4='&www.praxis-öst.de&DNS', cx_5='PI'), CX(cx_1='54321', cx_5='PT')]
+        segment.pid_2 = '54321'
+        segment.patient_identifier_list = [CX(cx_1='t4538ef9435', cx_4='&www.example.com&DNS', cx_5='PI'), CX(cx_1='54321', cx_5='PT')]
         segment.patient_name = XPN(xpn_1='Kräuter', xpn_2='Ännelïese')
         segment.administrative_sex = CWE(cwe_1='F')
 
         serialized = segment.serialize()
-        expected = 'PID|1|54321|t4538ef9435^^^&www.praxis-öst.de&DNS^PI~54321^^^^PT||Kräuter^Ännelïese|||F'
+        expected = 'PID|1|54321|t4538ef9435^^^&www.example.com&DNS^PI~54321^^^^PT||Kräuter^Ännelïese|||F'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -10651,7 +10723,7 @@ _Raw_de_imedone_19 = (
     'MSH|^~\\&|||||20260912142642||ADT^A01^ADT_A01|MSG00001|P|2.6|\r'
     'EVN|A01|20260912142642||\r'
     'PID|0||123456789^^^PVS1||Prüffrau^Sïlke||19670714|F|||Prüfstraße 789^^Prüfstadt^^98765||'
-    '09876/54321-0~^NET^Internet^heinz.prüfmann@prüfpost.com~0987/65432109^^CP\r'
+    '09876/54321-0~^NET^Internet^heinz.prüfmann@example.com~0987/65432109^^CP\r'
     'PV1||I|||||||||||||||||8523|\r'
     'IN1|1|0|BKV2|ÜLMENKRANKENVERSICHERUNG|||||||||||||||||||||||||||||||||||||||||||||49'
 )
@@ -10875,6 +10947,7 @@ class Test_de_imedone_19_19_ADT_A01_E_ConsentPro_Thieme_Compliance_support_thiem
         segment.message_control_id = 'MSG00001'
         segment.processing_id = PT(pt_1='P')
         segment.version_id = VID(vid_1='2.6')
+        segment.msh_13 = ''
 
         serialized = segment.serialize()
         expected = 'MSH|^~\\&|||||20260912142642||ADT^A01^ADT_A01|MSG00001|P|2.6|'
@@ -10885,7 +10958,9 @@ class Test_de_imedone_19_19_ADT_A01_E_ConsentPro_Thieme_Compliance_support_thiem
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A01'
         segment.recorded_date_time = '20260912142642'
+        segment.evn_4 = ''
 
         serialized = segment.serialize()
         expected = 'EVN|A01|20260912142642||'
@@ -10902,11 +10977,12 @@ class Test_de_imedone_19_19_ADT_A01_E_ConsentPro_Thieme_Compliance_support_thiem
         segment.date_time_of_birth = '19670714'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Prüfstraße 789', xad_3='Prüfstadt', xad_5='98765')
+        segment.pid_13 = '09876/54321-0~^NET^Internet^heinz.prüfmann@example.com~0987/65432109^^CP'
 
         serialized = segment.serialize()
         expected = (
             'PID|0||123456789^^^PVS1||Prüffrau^Sïlke||19670714|F|||Prüfstraße 789^^Prüfstadt^^98765||'
-            '09876/54321-0~^NET^Internet^heinz.prüfmann@prüfpost.com~0987/65432109^^CP'
+            '09876/54321-0~^NET^Internet^heinz.prüfmann@example.com~0987/65432109^^CP'
         )
         self.assertEqual(serialized, expected)
 
@@ -10917,6 +10993,7 @@ class Test_de_imedone_19_19_ADT_A01_E_ConsentPro_Thieme_Compliance_support_thiem
 
         segment.patient_class = CWE(cwe_1='I')
         segment.visit_number = CX(cx_1='8523')
+        segment.pv1_20 = ''
 
         serialized = segment.serialize()
         expected = 'PV1||I|||||||||||||||||8523|'
@@ -10947,8 +11024,11 @@ class Test_de_imedone_19_19_ADT_A01_E_ConsentPro_Thieme_Compliance_support_thiem
         message.msh.message_control_id = 'MSG00001'
         message.msh.processing_id = PT(pt_1='P')
         message.msh.version_id = VID(vid_1='2.6')
+        message.msh.msh_13 = ''
 
+        message.evn.evn_1 = 'A01'
         message.evn.recorded_date_time = '20260912142642'
+        message.evn.evn_4 = ''
 
         message.pid.set_id_pid = '0'
         message.pid.patient_identifier_list = CX(cx_1='123456789', cx_4='PVS1')
@@ -10956,9 +11036,11 @@ class Test_de_imedone_19_19_ADT_A01_E_ConsentPro_Thieme_Compliance_support_thiem
         message.pid.date_time_of_birth = '19670714'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Prüfstraße 789', xad_3='Prüfstadt', xad_5='98765')
+        message.pid.pid_13 = '09876/54321-0~^NET^Internet^heinz.prüfmann@example.com~0987/65432109^^CP'
 
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.visit_number = CX(cx_1='8523')
+        message.pv1.pv1_20 = ''
 
         serialized = message.serialize()
         serialized_length = len(serialized)
@@ -10971,9 +11053,9 @@ _Raw_de_imedone_20 = (
     'MSH|^~\\&|||||20260912142642||ADT^A02^ADT_A02|MSG00001|P|2.6|\r'
     'EVN|A02|20260912142642||\r'
     'PID|0||123456789^^^PVS1||Prüffrau^Sïlke||19670714|F|||Prüfstraße 789^^Prüfstadt^^98765||'
-    '09876/54321-0~^NET^X.400^heinz.prüfmann@prüfpost.com~0987/65432109^^CP\r'
-    'PV1||I|neüStation^neüZimmer^neüBett|||ältStation^ältZimmer^ältBett|0100^TÄT,HËINZ|0148^TÄT,MÄJA ES||SUR|||||||0148^TÄT,HËINZ|S|2800|A|||||||||||||||||'
-    '||GËNKRH||||||'
+    '09876/54321-0~^NET^X.400^heinz.prüfmann@example.com~0987/65432109^^CP\r'
+    'PV1||I|neüStation^neüZimmer^neüBett|||ältStation^ältZimmer^ältBett|0100^TÄT,HËINZ|0148^TÄT,MÄJA ES||SUR|||||||0148^TÄT,HËINZ|S|2800|A|||||||'
+    '||||||||||||GËNKRH||||||'
 )
 
 class Test_de_imedone_20_20_ADT_A02_Transfer_E_ConsentPro_Thieme_Compliance_support_thieme_compliance_de(unittest.TestCase):
@@ -11272,6 +11354,7 @@ class Test_de_imedone_20_20_ADT_A02_Transfer_E_ConsentPro_Thieme_Compliance_supp
         segment.message_control_id = 'MSG00001'
         segment.processing_id = PT(pt_1='P')
         segment.version_id = VID(vid_1='2.6')
+        segment.msh_13 = ''
 
         serialized = segment.serialize()
         expected = 'MSH|^~\\&|||||20260912142642||ADT^A02^ADT_A02|MSG00001|P|2.6|'
@@ -11282,7 +11365,9 @@ class Test_de_imedone_20_20_ADT_A02_Transfer_E_ConsentPro_Thieme_Compliance_supp
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A02'
         segment.recorded_date_time = '20260912142642'
+        segment.evn_4 = ''
 
         serialized = segment.serialize()
         expected = 'EVN|A02|20260912142642||'
@@ -11299,11 +11384,12 @@ class Test_de_imedone_20_20_ADT_A02_Transfer_E_ConsentPro_Thieme_Compliance_supp
         segment.date_time_of_birth = '19670714'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Prüfstraße 789', xad_3='Prüfstadt', xad_5='98765')
+        segment.pid_13 = '09876/54321-0~^NET^X.400^heinz.prüfmann@example.com~0987/65432109^^CP'
 
         serialized = segment.serialize()
         expected = (
             'PID|0||123456789^^^PVS1||Prüffrau^Sïlke||19670714|F|||Prüfstraße 789^^Prüfstadt^^98765||'
-            '09876/54321-0~^NET^X.400^heinz.prüfmann@prüfpost.com~0987/65432109^^CP'
+            '09876/54321-0~^NET^X.400^heinz.prüfmann@example.com~0987/65432109^^CP'
         )
         self.assertEqual(serialized, expected)
 
@@ -11323,12 +11409,12 @@ class Test_de_imedone_20_20_ADT_A02_Transfer_E_ConsentPro_Thieme_Compliance_supp
         segment.visit_number = CX(cx_1='2800')
         segment.financial_class = FC(fc_1='A')
         segment.servicing_facility = CWE(cwe_1='GËNKRH')
+        segment.pv1_45 = ''
 
         serialized = segment.serialize()
         expected = (
             'PV1||I|neüStation^neüZimmer^neüBett|||ältStation^ältZimmer^ältBett|0100^TÄT,HËINZ|0148^TÄT,MÄJA ES||SUR|||||||0148^TÄT,HËINZ|S|2800|A|||||||'
-            '||||||||||'
-            '||GËNKRH||||||'
+            '||||||||||||GËNKRH||||||'
         )
         self.assertEqual(serialized, expected)
 
@@ -11342,8 +11428,11 @@ class Test_de_imedone_20_20_ADT_A02_Transfer_E_ConsentPro_Thieme_Compliance_supp
         message.msh.message_control_id = 'MSG00001'
         message.msh.processing_id = PT(pt_1='P')
         message.msh.version_id = VID(vid_1='2.6')
+        message.msh.msh_13 = ''
 
+        message.evn.evn_1 = 'A02'
         message.evn.recorded_date_time = '20260912142642'
+        message.evn.evn_4 = ''
 
         message.pid.set_id_pid = '0'
         message.pid.patient_identifier_list = CX(cx_1='123456789', cx_4='PVS1')
@@ -11351,6 +11440,7 @@ class Test_de_imedone_20_20_ADT_A02_Transfer_E_ConsentPro_Thieme_Compliance_supp
         message.pid.date_time_of_birth = '19670714'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Prüfstraße 789', xad_3='Prüfstadt', xad_5='98765')
+        message.pid.pid_13 = '09876/54321-0~^NET^X.400^heinz.prüfmann@example.com~0987/65432109^^CP'
 
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.assigned_patient_location = PL(pl_1='neüStation', pl_2='neüZimmer', pl_3='neüBett')
@@ -11363,6 +11453,7 @@ class Test_de_imedone_20_20_ADT_A02_Transfer_E_ConsentPro_Thieme_Compliance_supp
         message.pv1.visit_number = CX(cx_1='2800')
         message.pv1.financial_class = FC(fc_1='A')
         message.pv1.servicing_facility = CWE(cwe_1='GËNKRH')
+        message.pv1.pv1_45 = ''
 
         serialized = message.serialize()
         serialized_length = len(serialized)

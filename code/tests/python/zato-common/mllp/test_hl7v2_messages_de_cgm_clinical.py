@@ -24,9 +24,10 @@ _Raw_de_cgm_clinical_01 = (
     'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260315083000||ADT^A01^ADT_A01|CTL00001|P|2.6\r'
     'EVN|A01|20260315083000\r'
     'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
-    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\r'
-    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
-    'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260315083000\r'
+    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com\r'
+    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+    'ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||'
+    'Westflügel^Raum 603^Bett 3^Neurochirurgie||20260315083000\r'
     'IN1|1|0|KV001|BÜRGERKRANKENVERSICHERUNG|Königstraße 88^^München^^80331||||||||||||||||||||||||||||||||||||||||||||49'
 )
 
@@ -517,6 +518,7 @@ class Test_de_cgm_clinical_01_1_ADT_A01_station_re_Aufnahme_inpatient_admission_
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A01'
         segment.recorded_date_time = '20260315083000'
 
         serialized = segment.serialize()
@@ -533,11 +535,12 @@ class Test_de_cgm_clinical_01_1_ADT_A01_station_re_Aufnahme_inpatient_admission_
         segment.date_time_of_birth = '19830214'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
+        segment.pid_13 = '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
 
         serialized = segment.serialize()
         expected = (
             'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
-            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
         )
         self.assertEqual(serialized, expected)
 
@@ -548,9 +551,9 @@ class Test_de_cgm_clinical_01_1_ADT_A01_station_re_Aufnahme_inpatient_admission_
 
         segment.patient_class = CWE(cwe_1='I')
         segment.assigned_patient_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
-        segment.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        segment.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        segment.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        segment.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        segment.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        segment.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         segment.temporary_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
         segment.visit_number = CX(cx_1='FALL7890')
         segment.pending_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
@@ -558,8 +561,9 @@ class Test_de_cgm_clinical_01_1_ADT_A01_station_re_Aufnahme_inpatient_admission_
 
         serialized = segment.serialize()
         expected = (
-            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
-            'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260315083000'
+            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+            'ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||'
+            'Westflügel^Raum 603^Bett 3^Neurochirurgie||20260315083000'
         )
         self.assertEqual(serialized, expected)
 
@@ -594,6 +598,7 @@ class Test_de_cgm_clinical_01_1_ADT_A01_station_re_Aufnahme_inpatient_admission_
         message.msh.processing_id = PT(pt_1='P')
         message.msh.version_id = VID(vid_1='2.6')
 
+        message.evn.evn_1 = 'A01'
         message.evn.recorded_date_time = '20260315083000'
 
         message.pid.patient_identifier_list = CX(cx_1='PT7890', cx_4='Löwenklinik')
@@ -601,12 +606,13 @@ class Test_de_cgm_clinical_01_1_ADT_A01_station_re_Aufnahme_inpatient_admission_
         message.pid.date_time_of_birth = '19830214'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
+        message.pid.pid_13 = '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
 
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.assigned_patient_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
-        message.pv1.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        message.pv1.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        message.pv1.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        message.pv1.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         message.pv1.temporary_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
         message.pv1.visit_number = CX(cx_1='FALL7890')
         message.pv1.pending_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
@@ -623,9 +629,10 @@ _Raw_de_cgm_clinical_02 = (
     'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260315093000||ADT^A02^ADT_A02|CTL00002|P|2.6\r'
     'EVN|A02|20260315093000\r'
     'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
-    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\r'
-    'PV1||I|Nordflügel^Raum 502^Bett 2^Innere Medizin||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.|'
-    '|Südflügel^Raum 401^Bett 1^Orthopädie||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260315093000'
+    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com\r'
+    'PV1||I|Nordflügel^Raum 502^Bett 2^Innere Medizin||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+    'ARZ300^Schröder^Jürgen^^^Dr.^med.||Südflügel^Raum 401^Bett 1^Orthopädie||||||||FALL7890|||||||||||||||||||||||'
+    'Westflügel^Raum 603^Bett 3^Neurochirurgie||20260315093000'
 )
 
 class Test_de_cgm_clinical_02_2_ADT_A02_Verlegung_patient_transfer(unittest.TestCase):
@@ -1059,6 +1066,7 @@ class Test_de_cgm_clinical_02_2_ADT_A02_Verlegung_patient_transfer(unittest.Test
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A02'
         segment.recorded_date_time = '20260315093000'
 
         serialized = segment.serialize()
@@ -1075,11 +1083,12 @@ class Test_de_cgm_clinical_02_2_ADT_A02_Verlegung_patient_transfer(unittest.Test
         segment.date_time_of_birth = '19830214'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
+        segment.pid_13 = '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
 
         serialized = segment.serialize()
         expected = (
             'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
-            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
         )
         self.assertEqual(serialized, expected)
 
@@ -1090,9 +1099,9 @@ class Test_de_cgm_clinical_02_2_ADT_A02_Verlegung_patient_transfer(unittest.Test
 
         segment.patient_class = CWE(cwe_1='I')
         segment.assigned_patient_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
-        segment.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        segment.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        segment.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        segment.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        segment.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        segment.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         segment.temporary_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
         segment.visit_number = CX(cx_1='FALL7890')
         segment.pending_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
@@ -1101,8 +1110,8 @@ class Test_de_cgm_clinical_02_2_ADT_A02_Verlegung_patient_transfer(unittest.Test
         serialized = segment.serialize()
         expected = (
             'PV1||I|Nordflügel^Raum 502^Bett 2^Innere Medizin||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
-            'ARZ300^Schröder^Jürgen^^^Dr.^med.|'
-            '|Südflügel^Raum 401^Bett 1^Orthopädie||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260315093000'
+            'ARZ300^Schröder^Jürgen^^^Dr.^med.||Südflügel^Raum 401^Bett 1^Orthopädie||||||||FALL7890|||||||||||||||||||||||'
+            'Westflügel^Raum 603^Bett 3^Neurochirurgie||20260315093000'
         )
         self.assertEqual(serialized, expected)
 
@@ -1121,6 +1130,7 @@ class Test_de_cgm_clinical_02_2_ADT_A02_Verlegung_patient_transfer(unittest.Test
         message.msh.processing_id = PT(pt_1='P')
         message.msh.version_id = VID(vid_1='2.6')
 
+        message.evn.evn_1 = 'A02'
         message.evn.recorded_date_time = '20260315093000'
 
         message.pid.patient_identifier_list = CX(cx_1='PT7890', cx_4='Löwenklinik')
@@ -1128,12 +1138,13 @@ class Test_de_cgm_clinical_02_2_ADT_A02_Verlegung_patient_transfer(unittest.Test
         message.pid.date_time_of_birth = '19830214'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
+        message.pid.pid_13 = '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
 
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.assigned_patient_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
-        message.pv1.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        message.pv1.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        message.pv1.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        message.pv1.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         message.pv1.temporary_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
         message.pv1.visit_number = CX(cx_1='FALL7890')
         message.pv1.pending_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
@@ -1150,9 +1161,10 @@ _Raw_de_cgm_clinical_03 = (
     'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260320140000||ADT^A03^ADT_A03|CTL00003|P|2.6\r'
     'EVN|A03|20260320140000\r'
     'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
-    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\r'
-    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
-    'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260320140000'
+    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com\r'
+    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+    'ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||'
+    'Westflügel^Raum 603^Bett 3^Neurochirurgie||20260320140000'
 )
 
 class Test_de_cgm_clinical_03_3_ADT_A03_Entlassung_discharge(unittest.TestCase):
@@ -1586,6 +1598,7 @@ class Test_de_cgm_clinical_03_3_ADT_A03_Entlassung_discharge(unittest.TestCase):
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A03'
         segment.recorded_date_time = '20260320140000'
 
         serialized = segment.serialize()
@@ -1602,11 +1615,12 @@ class Test_de_cgm_clinical_03_3_ADT_A03_Entlassung_discharge(unittest.TestCase):
         segment.date_time_of_birth = '19830214'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
+        segment.pid_13 = '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
 
         serialized = segment.serialize()
         expected = (
             'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
-            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
         )
         self.assertEqual(serialized, expected)
 
@@ -1617,9 +1631,9 @@ class Test_de_cgm_clinical_03_3_ADT_A03_Entlassung_discharge(unittest.TestCase):
 
         segment.patient_class = CWE(cwe_1='I')
         segment.assigned_patient_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
-        segment.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        segment.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        segment.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        segment.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        segment.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        segment.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         segment.temporary_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
         segment.visit_number = CX(cx_1='FALL7890')
         segment.pending_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
@@ -1627,8 +1641,9 @@ class Test_de_cgm_clinical_03_3_ADT_A03_Entlassung_discharge(unittest.TestCase):
 
         serialized = segment.serialize()
         expected = (
-            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
-            'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260320140000'
+            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+            'ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||'
+            'Westflügel^Raum 603^Bett 3^Neurochirurgie||20260320140000'
         )
         self.assertEqual(serialized, expected)
 
@@ -1647,6 +1662,7 @@ class Test_de_cgm_clinical_03_3_ADT_A03_Entlassung_discharge(unittest.TestCase):
         message.msh.processing_id = PT(pt_1='P')
         message.msh.version_id = VID(vid_1='2.6')
 
+        message.evn.evn_1 = 'A03'
         message.evn.recorded_date_time = '20260320140000'
 
         message.pid.patient_identifier_list = CX(cx_1='PT7890', cx_4='Löwenklinik')
@@ -1654,12 +1670,13 @@ class Test_de_cgm_clinical_03_3_ADT_A03_Entlassung_discharge(unittest.TestCase):
         message.pid.date_time_of_birth = '19830214'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
+        message.pid.pid_13 = '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
 
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.assigned_patient_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
-        message.pv1.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        message.pv1.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        message.pv1.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        message.pv1.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         message.pv1.temporary_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
         message.pv1.visit_number = CX(cx_1='FALL7890')
         message.pv1.pending_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
@@ -1676,9 +1693,10 @@ _Raw_de_cgm_clinical_04 = (
     'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260321100000||ADT^A04^ADT_A01|CTL00004|P|2.6\r'
     'EVN|A04|20260321100000\r'
     'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
-    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\r'
-    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
-    'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260321100000\r'
+    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com\r'
+    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+    'ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||'
+    'Westflügel^Raum 603^Bett 3^Neurochirurgie||20260321100000\r'
     'IN1|1|0|KV001|BÜRGERKRANKENVERSICHERUNG|Königstraße 88^^München^^80331||||||||||||||||||||||||||||||||||||||||||||49'
 )
 
@@ -2169,6 +2187,7 @@ class Test_de_cgm_clinical_04_4_ADT_A04_ambulante_Registrierung_outpatient_regis
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A04'
         segment.recorded_date_time = '20260321100000'
 
         serialized = segment.serialize()
@@ -2185,11 +2204,12 @@ class Test_de_cgm_clinical_04_4_ADT_A04_ambulante_Registrierung_outpatient_regis
         segment.date_time_of_birth = '19830214'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
+        segment.pid_13 = '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
 
         serialized = segment.serialize()
         expected = (
             'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
-            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
         )
         self.assertEqual(serialized, expected)
 
@@ -2200,9 +2220,9 @@ class Test_de_cgm_clinical_04_4_ADT_A04_ambulante_Registrierung_outpatient_regis
 
         segment.patient_class = CWE(cwe_1='I')
         segment.assigned_patient_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
-        segment.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        segment.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        segment.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        segment.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        segment.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        segment.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         segment.temporary_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
         segment.visit_number = CX(cx_1='FALL7890')
         segment.pending_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
@@ -2210,8 +2230,9 @@ class Test_de_cgm_clinical_04_4_ADT_A04_ambulante_Registrierung_outpatient_regis
 
         serialized = segment.serialize()
         expected = (
-            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
-            'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260321100000'
+            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+            'ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||'
+            'Westflügel^Raum 603^Bett 3^Neurochirurgie||20260321100000'
         )
         self.assertEqual(serialized, expected)
 
@@ -2246,6 +2267,7 @@ class Test_de_cgm_clinical_04_4_ADT_A04_ambulante_Registrierung_outpatient_regis
         message.msh.processing_id = PT(pt_1='P')
         message.msh.version_id = VID(vid_1='2.6')
 
+        message.evn.evn_1 = 'A04'
         message.evn.recorded_date_time = '20260321100000'
 
         message.pid.patient_identifier_list = CX(cx_1='PT7890', cx_4='Löwenklinik')
@@ -2253,12 +2275,13 @@ class Test_de_cgm_clinical_04_4_ADT_A04_ambulante_Registrierung_outpatient_regis
         message.pid.date_time_of_birth = '19830214'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
+        message.pid.pid_13 = '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
 
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.assigned_patient_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
-        message.pv1.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        message.pv1.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        message.pv1.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        message.pv1.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         message.pv1.temporary_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
         message.pv1.visit_number = CX(cx_1='FALL7890')
         message.pv1.pending_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
@@ -2275,9 +2298,10 @@ _Raw_de_cgm_clinical_05 = (
     'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260322080000||ADT^A05^ADT_A05|CTL00005|P|2.6\r'
     'EVN|A05|20260322080000\r'
     'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
-    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\r'
-    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
-    'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260322080000\r'
+    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com\r'
+    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+    'ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||'
+    'Westflügel^Raum 603^Bett 3^Neurochirurgie||20260322080000\r'
     'IN1|1|0|KV001|BÜRGERKRANKENVERSICHERUNG|Königstraße 88^^München^^80331||||||||||||||||||||||||||||||||||||||||||||49'
 )
 
@@ -2768,6 +2792,7 @@ class Test_de_cgm_clinical_05_5_ADT_A05_Voraufnahme_pre_admission_with_insurance
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A05'
         segment.recorded_date_time = '20260322080000'
 
         serialized = segment.serialize()
@@ -2784,11 +2809,12 @@ class Test_de_cgm_clinical_05_5_ADT_A05_Voraufnahme_pre_admission_with_insurance
         segment.date_time_of_birth = '19830214'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
+        segment.pid_13 = '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
 
         serialized = segment.serialize()
         expected = (
             'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
-            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
         )
         self.assertEqual(serialized, expected)
 
@@ -2799,9 +2825,9 @@ class Test_de_cgm_clinical_05_5_ADT_A05_Voraufnahme_pre_admission_with_insurance
 
         segment.patient_class = CWE(cwe_1='I')
         segment.assigned_patient_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
-        segment.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        segment.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        segment.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        segment.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        segment.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        segment.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         segment.temporary_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
         segment.visit_number = CX(cx_1='FALL7890')
         segment.pending_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
@@ -2809,8 +2835,9 @@ class Test_de_cgm_clinical_05_5_ADT_A05_Voraufnahme_pre_admission_with_insurance
 
         serialized = segment.serialize()
         expected = (
-            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
-            'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260322080000'
+            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+            'ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||'
+            'Westflügel^Raum 603^Bett 3^Neurochirurgie||20260322080000'
         )
         self.assertEqual(serialized, expected)
 
@@ -2845,6 +2872,7 @@ class Test_de_cgm_clinical_05_5_ADT_A05_Voraufnahme_pre_admission_with_insurance
         message.msh.processing_id = PT(pt_1='P')
         message.msh.version_id = VID(vid_1='2.6')
 
+        message.evn.evn_1 = 'A05'
         message.evn.recorded_date_time = '20260322080000'
 
         message.pid.patient_identifier_list = CX(cx_1='PT7890', cx_4='Löwenklinik')
@@ -2852,12 +2880,13 @@ class Test_de_cgm_clinical_05_5_ADT_A05_Voraufnahme_pre_admission_with_insurance
         message.pid.date_time_of_birth = '19830214'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
+        message.pid.pid_13 = '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
 
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.assigned_patient_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
-        message.pv1.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        message.pv1.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        message.pv1.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        message.pv1.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         message.pv1.temporary_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
         message.pv1.visit_number = CX(cx_1='FALL7890')
         message.pv1.pending_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
@@ -2874,9 +2903,10 @@ _Raw_de_cgm_clinical_06 = (
     'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260323090000||ADT^A08^ADT_A01|CTL00006|P|2.6\r'
     'EVN|A08|20260323090000\r'
     'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Märta^^Frau||19820501|F|||Überlandstraße 99^^Würzburg^^97070||'
-    '^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@yähoo.de\r'
-    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
-    'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260323090000\r'
+    '^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@example.com\r'
+    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+    'ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||'
+    'Westflügel^Raum 603^Bett 3^Neurochirurgie||20260323090000\r'
     'IN1|1|0|KV001|BÜRGERKRANKENVERSICHERUNG|Königstraße 88^^München^^80331||||||||||||||||||||||||||||||||||||||||||||49'
 )
 
@@ -3367,6 +3397,7 @@ class Test_de_cgm_clinical_06_6_ADT_A08_nderung_Patientendaten_update_patient_wi
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A08'
         segment.recorded_date_time = '20260323090000'
 
         serialized = segment.serialize()
@@ -3383,11 +3414,12 @@ class Test_de_cgm_clinical_06_6_ADT_A08_nderung_Patientendaten_update_patient_wi
         segment.date_time_of_birth = '19820501'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Überlandstraße 99', xad_3='Würzburg', xad_5='97070')
+        segment.pid_13 = '^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@example.com'
 
         serialized = segment.serialize()
         expected = (
             'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Märta^^Frau||19820501|F|||Überlandstraße 99^^Würzburg^^97070||'
-            '^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@yähoo.de'
+            '^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@example.com'
         )
         self.assertEqual(serialized, expected)
 
@@ -3398,9 +3430,9 @@ class Test_de_cgm_clinical_06_6_ADT_A08_nderung_Patientendaten_update_patient_wi
 
         segment.patient_class = CWE(cwe_1='I')
         segment.assigned_patient_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
-        segment.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        segment.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        segment.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        segment.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        segment.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        segment.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         segment.temporary_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
         segment.visit_number = CX(cx_1='FALL7890')
         segment.pending_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
@@ -3408,8 +3440,9 @@ class Test_de_cgm_clinical_06_6_ADT_A08_nderung_Patientendaten_update_patient_wi
 
         serialized = segment.serialize()
         expected = (
-            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
-            'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260323090000'
+            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+            'ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||'
+            'Westflügel^Raum 603^Bett 3^Neurochirurgie||20260323090000'
         )
         self.assertEqual(serialized, expected)
 
@@ -3444,6 +3477,7 @@ class Test_de_cgm_clinical_06_6_ADT_A08_nderung_Patientendaten_update_patient_wi
         message.msh.processing_id = PT(pt_1='P')
         message.msh.version_id = VID(vid_1='2.6')
 
+        message.evn.evn_1 = 'A08'
         message.evn.recorded_date_time = '20260323090000'
 
         message.pid.patient_identifier_list = CX(cx_1='PT7890', cx_4='Löwenklinik')
@@ -3451,12 +3485,13 @@ class Test_de_cgm_clinical_06_6_ADT_A08_nderung_Patientendaten_update_patient_wi
         message.pid.date_time_of_birth = '19820501'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Überlandstraße 99', xad_3='Würzburg', xad_5='97070')
+        message.pid.pid_13 = '^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@example.com'
 
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.assigned_patient_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
-        message.pv1.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        message.pv1.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        message.pv1.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        message.pv1.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         message.pv1.temporary_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
         message.pv1.visit_number = CX(cx_1='FALL7890')
         message.pv1.pending_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
@@ -3473,9 +3508,10 @@ _Raw_de_cgm_clinical_07 = (
     'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260324110000||ADT^A09^ADT_A09|CTL00007|P|2.6\r'
     'EVN|A09|20260324110000\r'
     'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
-    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\r'
-    'PV1||I|Nordflügel^Raum 502^Bett 2^Innere Medizin||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.|'
-    '|Südflügel^Raum 401^Bett 1^Orthopädie||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260324110000'
+    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com\r'
+    'PV1||I|Nordflügel^Raum 502^Bett 2^Innere Medizin||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+    'ARZ300^Schröder^Jürgen^^^Dr.^med.||Südflügel^Raum 401^Bett 1^Orthopädie||||||||FALL7890|||||||||||||||||||||||'
+    'Westflügel^Raum 603^Bett 3^Neurochirurgie||20260324110000'
 )
 
 class Test_de_cgm_clinical_07_7_ADT_A09_Patient_verl_sst_Einrichtung_patient_departing(unittest.TestCase):
@@ -3909,6 +3945,7 @@ class Test_de_cgm_clinical_07_7_ADT_A09_Patient_verl_sst_Einrichtung_patient_dep
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A09'
         segment.recorded_date_time = '20260324110000'
 
         serialized = segment.serialize()
@@ -3925,11 +3962,12 @@ class Test_de_cgm_clinical_07_7_ADT_A09_Patient_verl_sst_Einrichtung_patient_dep
         segment.date_time_of_birth = '19830214'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
+        segment.pid_13 = '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
 
         serialized = segment.serialize()
         expected = (
             'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
-            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
         )
         self.assertEqual(serialized, expected)
 
@@ -3940,9 +3978,9 @@ class Test_de_cgm_clinical_07_7_ADT_A09_Patient_verl_sst_Einrichtung_patient_dep
 
         segment.patient_class = CWE(cwe_1='I')
         segment.assigned_patient_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
-        segment.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        segment.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        segment.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        segment.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        segment.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        segment.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         segment.temporary_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
         segment.visit_number = CX(cx_1='FALL7890')
         segment.pending_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
@@ -3951,8 +3989,8 @@ class Test_de_cgm_clinical_07_7_ADT_A09_Patient_verl_sst_Einrichtung_patient_dep
         serialized = segment.serialize()
         expected = (
             'PV1||I|Nordflügel^Raum 502^Bett 2^Innere Medizin||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
-            'ARZ300^Schröder^Jürgen^^^Dr.^med.|'
-            '|Südflügel^Raum 401^Bett 1^Orthopädie||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260324110000'
+            'ARZ300^Schröder^Jürgen^^^Dr.^med.||Südflügel^Raum 401^Bett 1^Orthopädie||||||||FALL7890|||||||||||||||||||||||'
+            'Westflügel^Raum 603^Bett 3^Neurochirurgie||20260324110000'
         )
         self.assertEqual(serialized, expected)
 
@@ -3971,6 +4009,7 @@ class Test_de_cgm_clinical_07_7_ADT_A09_Patient_verl_sst_Einrichtung_patient_dep
         message.msh.processing_id = PT(pt_1='P')
         message.msh.version_id = VID(vid_1='2.6')
 
+        message.evn.evn_1 = 'A09'
         message.evn.recorded_date_time = '20260324110000'
 
         message.pid.patient_identifier_list = CX(cx_1='PT7890', cx_4='Löwenklinik')
@@ -3978,12 +4017,13 @@ class Test_de_cgm_clinical_07_7_ADT_A09_Patient_verl_sst_Einrichtung_patient_dep
         message.pid.date_time_of_birth = '19830214'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
+        message.pid.pid_13 = '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
 
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.assigned_patient_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
-        message.pv1.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        message.pv1.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        message.pv1.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        message.pv1.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         message.pv1.temporary_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
         message.pv1.visit_number = CX(cx_1='FALL7890')
         message.pv1.pending_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
@@ -4000,9 +4040,10 @@ _Raw_de_cgm_clinical_08 = (
     'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260324113000||ADT^A10^ADT_A09|CTL00008|P|2.6\r'
     'EVN|A10|20260324113000\r'
     'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
-    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\r'
-    'PV1||I|Westflügel^Raum 603^Bett 3^Neurochirurgie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.|'
-    '|Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Südflügel^Raum 401^Bett 1^Orthopädie||20260324113000'
+    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com\r'
+    'PV1||I|Westflügel^Raum 603^Bett 3^Neurochirurgie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+    'ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||'
+    'Südflügel^Raum 401^Bett 1^Orthopädie||20260324113000'
 )
 
 class Test_de_cgm_clinical_08_8_ADT_A10_Patient_erreicht_Einrichtung_patient_arriving(unittest.TestCase):
@@ -4436,6 +4477,7 @@ class Test_de_cgm_clinical_08_8_ADT_A10_Patient_erreicht_Einrichtung_patient_arr
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A10'
         segment.recorded_date_time = '20260324113000'
 
         serialized = segment.serialize()
@@ -4452,11 +4494,12 @@ class Test_de_cgm_clinical_08_8_ADT_A10_Patient_erreicht_Einrichtung_patient_arr
         segment.date_time_of_birth = '19830214'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
+        segment.pid_13 = '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
 
         serialized = segment.serialize()
         expected = (
             'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
-            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
         )
         self.assertEqual(serialized, expected)
 
@@ -4467,9 +4510,9 @@ class Test_de_cgm_clinical_08_8_ADT_A10_Patient_erreicht_Einrichtung_patient_arr
 
         segment.patient_class = CWE(cwe_1='I')
         segment.assigned_patient_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
-        segment.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        segment.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        segment.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        segment.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        segment.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        segment.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         segment.temporary_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
         segment.visit_number = CX(cx_1='FALL7890')
         segment.pending_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
@@ -4478,8 +4521,8 @@ class Test_de_cgm_clinical_08_8_ADT_A10_Patient_erreicht_Einrichtung_patient_arr
         serialized = segment.serialize()
         expected = (
             'PV1||I|Westflügel^Raum 603^Bett 3^Neurochirurgie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
-            'ARZ300^Schröder^Jürgen^^^Dr.^med.|'
-            '|Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Südflügel^Raum 401^Bett 1^Orthopädie||20260324113000'
+            'ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||'
+            'Südflügel^Raum 401^Bett 1^Orthopädie||20260324113000'
         )
         self.assertEqual(serialized, expected)
 
@@ -4498,6 +4541,7 @@ class Test_de_cgm_clinical_08_8_ADT_A10_Patient_erreicht_Einrichtung_patient_arr
         message.msh.processing_id = PT(pt_1='P')
         message.msh.version_id = VID(vid_1='2.6')
 
+        message.evn.evn_1 = 'A10'
         message.evn.recorded_date_time = '20260324113000'
 
         message.pid.patient_identifier_list = CX(cx_1='PT7890', cx_4='Löwenklinik')
@@ -4505,12 +4549,13 @@ class Test_de_cgm_clinical_08_8_ADT_A10_Patient_erreicht_Einrichtung_patient_arr
         message.pid.date_time_of_birth = '19830214'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
+        message.pid.pid_13 = '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
 
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.assigned_patient_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
-        message.pv1.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        message.pv1.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        message.pv1.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        message.pv1.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         message.pv1.temporary_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
         message.pv1.visit_number = CX(cx_1='FALL7890')
         message.pv1.pending_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
@@ -4527,9 +4572,10 @@ _Raw_de_cgm_clinical_09 = (
     'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260325070000||ADT^A11^ADT_A09|CTL00009|P|2.6\r'
     'EVN|A11|20260325070000\r'
     'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
-    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\r'
-    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
-    'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260325070000'
+    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com\r'
+    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+    'ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||'
+    'Westflügel^Raum 603^Bett 3^Neurochirurgie||20260325070000'
 )
 
 class Test_de_cgm_clinical_09_9_ADT_A11_Stornierung_Aufnahme_cancel_admit(unittest.TestCase):
@@ -4963,6 +5009,7 @@ class Test_de_cgm_clinical_09_9_ADT_A11_Stornierung_Aufnahme_cancel_admit(unitte
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A11'
         segment.recorded_date_time = '20260325070000'
 
         serialized = segment.serialize()
@@ -4979,11 +5026,12 @@ class Test_de_cgm_clinical_09_9_ADT_A11_Stornierung_Aufnahme_cancel_admit(unitte
         segment.date_time_of_birth = '19830214'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
+        segment.pid_13 = '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
 
         serialized = segment.serialize()
         expected = (
             'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
-            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
         )
         self.assertEqual(serialized, expected)
 
@@ -4994,9 +5042,9 @@ class Test_de_cgm_clinical_09_9_ADT_A11_Stornierung_Aufnahme_cancel_admit(unitte
 
         segment.patient_class = CWE(cwe_1='I')
         segment.assigned_patient_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
-        segment.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        segment.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        segment.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        segment.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        segment.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        segment.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         segment.temporary_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
         segment.visit_number = CX(cx_1='FALL7890')
         segment.pending_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
@@ -5004,8 +5052,9 @@ class Test_de_cgm_clinical_09_9_ADT_A11_Stornierung_Aufnahme_cancel_admit(unitte
 
         serialized = segment.serialize()
         expected = (
-            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
-            'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260325070000'
+            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+            'ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||'
+            'Westflügel^Raum 603^Bett 3^Neurochirurgie||20260325070000'
         )
         self.assertEqual(serialized, expected)
 
@@ -5024,6 +5073,7 @@ class Test_de_cgm_clinical_09_9_ADT_A11_Stornierung_Aufnahme_cancel_admit(unitte
         message.msh.processing_id = PT(pt_1='P')
         message.msh.version_id = VID(vid_1='2.6')
 
+        message.evn.evn_1 = 'A11'
         message.evn.recorded_date_time = '20260325070000'
 
         message.pid.patient_identifier_list = CX(cx_1='PT7890', cx_4='Löwenklinik')
@@ -5031,12 +5081,13 @@ class Test_de_cgm_clinical_09_9_ADT_A11_Stornierung_Aufnahme_cancel_admit(unitte
         message.pid.date_time_of_birth = '19830214'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
+        message.pid.pid_13 = '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@example.com'
 
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.assigned_patient_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
-        message.pv1.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        message.pv1.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        message.pv1.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        message.pv1.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         message.pv1.temporary_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
         message.pv1.visit_number = CX(cx_1='FALL7890')
         message.pv1.pending_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
@@ -5052,8 +5103,10 @@ class Test_de_cgm_clinical_09_9_ADT_A11_Stornierung_Aufnahme_cancel_admit(unitte
 _Raw_de_cgm_clinical_10 = (
     'MSH|^~\\&|termin-gw|praxis-süd|PRAXIS_APP|KLINIK_RÖNTGEN|20260401151846+0200||ADT^A08^ADT_A01|740298561038472159|P|2.5||||||UNICODE UTF-8\r'
     'EVN|A08|202604011516+0200\r'
-    'PID|1|56789|xbc3def912a^^^&www.praxis-süd.de&DNS^PI~56789^^^^PT||Überström^Rikård^^^Prof.||19880913|M|||Straße der Einheit 42^^Zürich^^8001^CH||'
-    '+41794321098^^CP^^^^^^^^^+41794321098~+41446789012^^PH^^^^^^^^^+41446789012~rikard.ueberstroem@praxis-süd.ch^NET^X.400^rikard.ueberstroem@praxis-süd.ch\r'
+    'PID|1|56789|xbc3def912a^^^&www.example.com&DNS^PI~56789^^^^PT||Überström^Rikård^^^Prof.||19880913|M|||'
+    'Straße der Einheit 42^^Zürich^^8001^CH||'
+    '+41794321098^^CP^^^^^^^^^+41794321098~+41446789012^^PH^^^^^^^^^+41446789012~rikard.ueberstroem@example.com^NET^X.400^'
+    'rikard.ueberstroem@example.com\r'
     'PV1|1|U'
 )
 
@@ -5203,7 +5256,7 @@ class Test_de_cgm_clinical_10_10_ADT_A08_patient_update_via_samedi_HL7gateway(un
     def test_navigate_PID_3_0_4_2(self) -> 'None':
         message = parse_hl7(_Raw_de_cgm_clinical_10, validate=False)
         result = message.get('PID.3[0].4.2')
-        self.assertEqual(result, 'www.praxis-süd.de')
+        self.assertEqual(result, 'www.example.com')
 
 # ################################################################################################################
 
@@ -5335,6 +5388,7 @@ class Test_de_cgm_clinical_10_10_ADT_A08_patient_update_via_samedi_HL7gateway(un
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A08'
         segment.recorded_date_time = '202604011516+0200'
 
         serialized = segment.serialize()
@@ -5347,17 +5401,23 @@ class Test_de_cgm_clinical_10_10_ADT_A08_patient_update_via_samedi_HL7gateway(un
         segment = PID()
 
         segment.set_id_pid = '1'
-        segment.patient_identifier_list = [CX(cx_1='xbc3def912a', cx_4='&www.praxis-süd.de&DNS', cx_5='PI'), CX(cx_1='56789', cx_5='PT')]
+        segment.pid_2 = '56789'
+        segment.patient_identifier_list = [CX(cx_1='xbc3def912a', cx_4='&www.example.com&DNS', cx_5='PI'), CX(cx_1='56789', cx_5='PT')]
         segment.patient_name = XPN(xpn_1='Überström', xpn_2='Rikård', xpn_5='Prof.')
         segment.date_time_of_birth = '19880913'
         segment.administrative_sex = CWE(cwe_1='M')
         segment.patient_address = XAD(xad_1='Straße der Einheit 42', xad_3='Zürich', xad_5='8001', xad_6='CH')
+        segment.pid_13 = (
+            '+41794321098^^CP^^^^^^^^^+41794321098~+41446789012^^PH^^^^^^^^^+41446789012~rikard.ueberstroem@example.com^NET^X.400^'
+            'rikard.ueberstroem@example.com'
+        )
 
         serialized = segment.serialize()
         expected = (
-            'PID|1|56789|xbc3def912a^^^&www.praxis-süd.de&DNS^PI~56789^^^^PT||Überström^Rikård^^^Prof.||19880913|M|||Straße der Einheit 42^^Zürich^^8001^CH||'
-            '+41794321098^^CP^^^^^^^^^+41794321098~+41446789012^^PH^^^^^^^^^+41446789012~'
-            'rikard.ueberstroem@praxis-süd.ch^NET^X.400^rikard.ueberstroem@praxis-süd.ch'
+            'PID|1|56789|xbc3def912a^^^&www.example.com&DNS^PI~56789^^^^PT||Überström^Rikård^^^Prof.||19880913|M|||'
+            'Straße der Einheit 42^^Zürich^^8001^CH||'
+            '+41794321098^^CP^^^^^^^^^+41794321098~+41446789012^^PH^^^^^^^^^+41446789012~rikard.ueberstroem@example.com^NET^X.400^'
+            'rikard.ueberstroem@example.com'
         )
         self.assertEqual(serialized, expected)
 
@@ -5389,14 +5449,20 @@ class Test_de_cgm_clinical_10_10_ADT_A08_patient_update_via_samedi_HL7gateway(un
         message.msh.version_id = VID(vid_1='2.5')
         message.msh.character_set = 'UNICODE UTF-8'
 
+        message.evn.evn_1 = 'A08'
         message.evn.recorded_date_time = '202604011516+0200'
 
         message.pid.set_id_pid = '1'
-        message.pid.patient_identifier_list = [CX(cx_1='xbc3def912a', cx_4='&www.praxis-süd.de&DNS', cx_5='PI'), CX(cx_1='56789', cx_5='PT')]
+        message.pid.pid_2 = '56789'
+        message.pid.patient_identifier_list = [CX(cx_1='xbc3def912a', cx_4='&www.example.com&DNS', cx_5='PI'), CX(cx_1='56789', cx_5='PT')]
         message.pid.patient_name = XPN(xpn_1='Überström', xpn_2='Rikård', xpn_5='Prof.')
         message.pid.date_time_of_birth = '19880913'
         message.pid.administrative_sex = CWE(cwe_1='M')
         message.pid.patient_address = XAD(xad_1='Straße der Einheit 42', xad_3='Zürich', xad_5='8001', xad_6='CH')
+        message.pid.pid_13 = (
+            '+41794321098^^CP^^^^^^^^^+41794321098~+41446789012^^PH^^^^^^^^^+41446789012~rikard.ueberstroem@example.com^NET^X.400^'
+            'rikard.ueberstroem@example.com'
+        )
 
         message.pv1.set_id_pv1 = '1'
         message.pv1.patient_class = CWE(cwe_1='U')
@@ -5411,7 +5477,7 @@ class Test_de_cgm_clinical_10_10_ADT_A08_patient_update_via_samedi_HL7gateway(un
 _Raw_de_cgm_clinical_11 = (
     'MSH|^~\\&|termin-gw|praxis-süd|PRAXIS_APP|KLINIK_RÖNTGEN|20260401152323+0200||ADT^A29^ADT_A21|829471036285019374|P|2.5||||||UNICODE UTF-8\r'
     'EVN|A29|202604011523+0200\r'
-    'PID|1|44|y8a2bc7e31f^^^&www.praxis-süd.de&DNS^PI~44^^^^PT||Öztürk^Fátima||19751120\r'
+    'PID|1|44|y8a2bc7e31f^^^&www.example.com&DNS^PI~44^^^^PT||Öztürk^Fátima||19751120\r'
     'PV1|1|U'
 )
 
@@ -5561,7 +5627,7 @@ class Test_de_cgm_clinical_11_11_ADT_A29_patient_deleted_via_samedi_HL7gateway(u
     def test_navigate_PID_3_0_4_2(self) -> 'None':
         message = parse_hl7(_Raw_de_cgm_clinical_11, validate=False)
         result = message.get('PID.3[0].4.2')
-        self.assertEqual(result, 'www.praxis-süd.de')
+        self.assertEqual(result, 'www.example.com')
 
 # ################################################################################################################
 
@@ -5651,6 +5717,7 @@ class Test_de_cgm_clinical_11_11_ADT_A29_patient_deleted_via_samedi_HL7gateway(u
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A29'
         segment.recorded_date_time = '202604011523+0200'
 
         serialized = segment.serialize()
@@ -5663,12 +5730,13 @@ class Test_de_cgm_clinical_11_11_ADT_A29_patient_deleted_via_samedi_HL7gateway(u
         segment = PID()
 
         segment.set_id_pid = '1'
-        segment.patient_identifier_list = [CX(cx_1='y8a2bc7e31f', cx_4='&www.praxis-süd.de&DNS', cx_5='PI'), CX(cx_1='44', cx_5='PT')]
+        segment.pid_2 = '44'
+        segment.patient_identifier_list = [CX(cx_1='y8a2bc7e31f', cx_4='&www.example.com&DNS', cx_5='PI'), CX(cx_1='44', cx_5='PT')]
         segment.patient_name = XPN(xpn_1='Öztürk', xpn_2='Fátima')
         segment.date_time_of_birth = '19751120'
 
         serialized = segment.serialize()
-        expected = 'PID|1|44|y8a2bc7e31f^^^&www.praxis-süd.de&DNS^PI~44^^^^PT||Öztürk^Fátima||19751120'
+        expected = 'PID|1|44|y8a2bc7e31f^^^&www.example.com&DNS^PI~44^^^^PT||Öztürk^Fátima||19751120'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -5699,10 +5767,12 @@ class Test_de_cgm_clinical_11_11_ADT_A29_patient_deleted_via_samedi_HL7gateway(u
         message.msh.version_id = VID(vid_1='2.5')
         message.msh.character_set = 'UNICODE UTF-8'
 
+        message.evn.evn_1 = 'A29'
         message.evn.recorded_date_time = '202604011523+0200'
 
         message.pid.set_id_pid = '1'
-        message.pid.patient_identifier_list = [CX(cx_1='y8a2bc7e31f', cx_4='&www.praxis-süd.de&DNS', cx_5='PI'), CX(cx_1='44', cx_5='PT')]
+        message.pid.pid_2 = '44'
+        message.pid.patient_identifier_list = [CX(cx_1='y8a2bc7e31f', cx_4='&www.example.com&DNS', cx_5='PI'), CX(cx_1='44', cx_5='PT')]
         message.pid.patient_name = XPN(xpn_1='Öztürk', xpn_2='Fátima')
         message.pid.date_time_of_birth = '19751120'
 
@@ -5719,7 +5789,7 @@ class Test_de_cgm_clinical_11_11_ADT_A29_patient_deleted_via_samedi_HL7gateway(u
 _Raw_de_cgm_clinical_12 = (
     'MSH|^~\\&|IntSrv|INTSRV_KH|termin-gw|praxis-süd|20260410123517||ADT^A08|2638150947283|P|2.5|9E72B53F8AC791B||AL|NE||8859/1\r'
     'EVN|A08|202604061019\r'
-    'PID|1||5566^^^&www.praxis-süd.de&DNS^PI~331742^^^Röntgen^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||'
+    'PID|1||5566^^^&www.example.com&DNS^PI~331742^^^Röntgen^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||'
     'Brückenweg 23&Brückenweg 23^^Düsseldorf^^40545^DE^L||^^PH^^^^0211-7654321 Büro|^^PH'
 )
 
@@ -5883,7 +5953,7 @@ class Test_de_cgm_clinical_12_12_ADT_A08_incoming_from_KIS_via_KomServer(unittes
     def test_navigate_PID_3_0_4_2(self) -> 'None':
         message = parse_hl7(_Raw_de_cgm_clinical_12, validate=False)
         result = message.get('PID.3[0].4.2')
-        self.assertEqual(result, 'www.praxis-süd.de')
+        self.assertEqual(result, 'www.example.com')
 
 # ################################################################################################################
 
@@ -6018,6 +6088,7 @@ class Test_de_cgm_clinical_12_12_ADT_A08_incoming_from_KIS_via_KomServer(unittes
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A08'
         segment.recorded_date_time = '202604061019'
 
         serialized = segment.serialize()
@@ -6030,15 +6101,18 @@ class Test_de_cgm_clinical_12_12_ADT_A08_incoming_from_KIS_via_KomServer(unittes
         segment = PID()
 
         segment.set_id_pid = '1'
-        segment.patient_identifier_list = [CX(cx_1='5566', cx_4='&www.praxis-süd.de&DNS', cx_5='PI'), CX(cx_1='331742', cx_4='Röntgen', cx_5='PI')]
+        segment.patient_identifier_list = [CX(cx_1='5566', cx_4='&www.example.com&DNS', cx_5='PI'), CX(cx_1='331742', cx_4='Röntgen', cx_5='PI')]
+        segment.pid_4 = '20000077^^^KÖL^PI'
         segment.patient_name = XPN(xpn_1='Größe', xpn_2='Frédérique')
         segment.date_time_of_birth = '19560318'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Brückenweg 23&Brückenweg 23', xad_3='Düsseldorf', xad_5='40545', xad_6='DE', xad_7='L')
+        segment.pid_13 = '^^PH^^^^0211-7654321 Büro'
+        segment.pid_14 = '^^PH'
 
         serialized = segment.serialize()
         expected = (
-            'PID|1||5566^^^&www.praxis-süd.de&DNS^PI~331742^^^Röntgen^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||'
+            'PID|1||5566^^^&www.example.com&DNS^PI~331742^^^Röntgen^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||'
             'Brückenweg 23&Brückenweg 23^^Düsseldorf^^40545^DE^L||^^PH^^^^0211-7654321 Büro|^^PH'
         )
         self.assertEqual(serialized, expected)
@@ -6062,14 +6136,18 @@ class Test_de_cgm_clinical_12_12_ADT_A08_incoming_from_KIS_via_KomServer(unittes
         message.msh.application_acknowledgment_type = 'NE'
         message.msh.character_set = '8859/1'
 
+        message.evn.evn_1 = 'A08'
         message.evn.recorded_date_time = '202604061019'
 
         message.pid.set_id_pid = '1'
-        message.pid.patient_identifier_list = [CX(cx_1='5566', cx_4='&www.praxis-süd.de&DNS', cx_5='PI'), CX(cx_1='331742', cx_4='Röntgen', cx_5='PI')]
+        message.pid.patient_identifier_list = [CX(cx_1='5566', cx_4='&www.example.com&DNS', cx_5='PI'), CX(cx_1='331742', cx_4='Röntgen', cx_5='PI')]
+        message.pid.pid_4 = '20000077^^^KÖL^PI'
         message.pid.patient_name = XPN(xpn_1='Größe', xpn_2='Frédérique')
         message.pid.date_time_of_birth = '19560318'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Brückenweg 23&Brückenweg 23', xad_3='Düsseldorf', xad_5='40545', xad_6='DE', xad_7='L')
+        message.pid.pid_13 = '^^PH^^^^0211-7654321 Büro'
+        message.pid.pid_14 = '^^PH'
 
         serialized = message.serialize()
         serialized_length = len(serialized)
@@ -6402,6 +6480,7 @@ class Test_de_cgm_clinical_13_13_ADT_A08_incoming_with_multiple_external_identif
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A08'
         segment.recorded_date_time = '202604061019'
 
         serialized = segment.serialize()
@@ -6419,10 +6498,13 @@ class Test_de_cgm_clinical_13_13_ADT_A08_incoming_with_multiple_external_identif
             CX(cx_1='77777', cx_4='&a1b2c3d4-e5f6-7890-abcd-ef1234567890&UUID', cx_5='PI'),
             CX(cx_1='88888', cx_4='baz', cx_5='PI'),
         ]
+        segment.pid_4 = '20000077^^^KÖL^PI'
         segment.patient_name = XPN(xpn_1='Größe', xpn_2='Frédérique')
         segment.date_time_of_birth = '19560318'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Brückenweg 23&Brückenweg 23', xad_3='Köln', xad_5='50667', xad_6='DE', xad_7='L')
+        segment.pid_13 = '^^PH^^^^0221-7654321 Büro'
+        segment.pid_14 = '^^PH'
 
         serialized = segment.serialize()
         expected = (
@@ -6462,6 +6544,7 @@ class Test_de_cgm_clinical_13_13_ADT_A08_incoming_with_multiple_external_identif
         message.msh.application_acknowledgment_type = 'NE'
         message.msh.character_set = '8859/1'
 
+        message.evn.evn_1 = 'A08'
         message.evn.recorded_date_time = '202604061019'
 
         message.pid.set_id_pid = '1'
@@ -6470,10 +6553,13 @@ class Test_de_cgm_clinical_13_13_ADT_A08_incoming_with_multiple_external_identif
             CX(cx_1='77777', cx_4='&a1b2c3d4-e5f6-7890-abcd-ef1234567890&UUID', cx_5='PI'),
             CX(cx_1='88888', cx_4='baz', cx_5='PI'),
         ]
+        message.pid.pid_4 = '20000077^^^KÖL^PI'
         message.pid.patient_name = XPN(xpn_1='Größe', xpn_2='Frédérique')
         message.pid.date_time_of_birth = '19560318'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Brückenweg 23&Brückenweg 23', xad_3='Köln', xad_5='50667', xad_6='DE', xad_7='L')
+        message.pid.pid_13 = '^^PH^^^^0221-7654321 Büro'
+        message.pid.pid_14 = '^^PH'
 
         message.pv1.set_id_pv1 = '1'
         message.pv1.patient_class = CWE(cwe_1='U')
@@ -6488,9 +6574,9 @@ class Test_de_cgm_clinical_13_13_ADT_A08_incoming_with_multiple_external_identif
 _Raw_de_cgm_clinical_14 = (
     'MSH|^~\\&|IntSrv|INTSRV_KH|termin-gw|praxis-süd|20260410123517||ADT^A40|2638150947283|P|2.5|9E72B53F8AC791B||AL|NE||8859/1\r'
     'EVN|A40|202604081715\r'
-    'PID|1||5566^^^&www.praxis-süd.de&DNS^PI~331742^^^Röntgen^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||'
+    'PID|1||5566^^^&www.example.com&DNS^PI~331742^^^Röntgen^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||'
     'Brückenweg 23&Brückenweg 23^^Düsseldorf^^40545^DE^L||^^PH^^^^0211-7654321 Büro|^^PH\r'
-    'MRG|9876~q283746bcde^^^&www.praxis-süd.de&DNS~5567823^^^&1.2.276.0.76.3.1.660.1.1.1.2.1&ISO^PI|'
+    'MRG|9876~q283746bcde^^^&www.example.com&DNS~5567823^^^&1.2.276.0.76.3.1.660.1.1.1.2.1&ISO^PI|'
 )
 
 class Test_de_cgm_clinical_14_14_ADT_A40_Zusammenf_hrung_Patienten_merge_patient(unittest.TestCase):
@@ -6653,7 +6739,7 @@ class Test_de_cgm_clinical_14_14_ADT_A40_Zusammenf_hrung_Patienten_merge_patient
     def test_navigate_PID_3_0_4_2(self) -> 'None':
         message = parse_hl7(_Raw_de_cgm_clinical_14, validate=False)
         result = message.get('PID.3[0].4.2')
-        self.assertEqual(result, 'www.praxis-süd.de')
+        self.assertEqual(result, 'www.example.com')
 
 # ################################################################################################################
 
@@ -6779,7 +6865,7 @@ class Test_de_cgm_clinical_14_14_ADT_A40_Zusammenf_hrung_Patienten_merge_patient
     def test_navigate_MRG_1_1_4_2(self) -> 'None':
         message = parse_hl7(_Raw_de_cgm_clinical_14, validate=False)
         result = message.get('MRG.1[1].4.2')
-        self.assertEqual(result, 'www.praxis-süd.de')
+        self.assertEqual(result, 'www.example.com')
 
 # ################################################################################################################
 
@@ -6844,6 +6930,7 @@ class Test_de_cgm_clinical_14_14_ADT_A40_Zusammenf_hrung_Patienten_merge_patient
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A40'
         segment.recorded_date_time = '202604081715'
 
         serialized = segment.serialize()
@@ -6856,15 +6943,18 @@ class Test_de_cgm_clinical_14_14_ADT_A40_Zusammenf_hrung_Patienten_merge_patient
         segment = PID()
 
         segment.set_id_pid = '1'
-        segment.patient_identifier_list = [CX(cx_1='5566', cx_4='&www.praxis-süd.de&DNS', cx_5='PI'), CX(cx_1='331742', cx_4='Röntgen', cx_5='PI')]
+        segment.patient_identifier_list = [CX(cx_1='5566', cx_4='&www.example.com&DNS', cx_5='PI'), CX(cx_1='331742', cx_4='Röntgen', cx_5='PI')]
+        segment.pid_4 = '20000077^^^KÖL^PI'
         segment.patient_name = XPN(xpn_1='Größe', xpn_2='Frédérique')
         segment.date_time_of_birth = '19560318'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Brückenweg 23&Brückenweg 23', xad_3='Düsseldorf', xad_5='40545', xad_6='DE', xad_7='L')
+        segment.pid_13 = '^^PH^^^^0211-7654321 Büro'
+        segment.pid_14 = '^^PH'
 
         serialized = segment.serialize()
         expected = (
-            'PID|1||5566^^^&www.praxis-süd.de&DNS^PI~331742^^^Röntgen^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||'
+            'PID|1||5566^^^&www.example.com&DNS^PI~331742^^^Röntgen^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||'
             'Brückenweg 23&Brückenweg 23^^Düsseldorf^^40545^DE^L||^^PH^^^^0211-7654321 Büro|^^PH'
         )
         self.assertEqual(serialized, expected)
@@ -6876,12 +6966,13 @@ class Test_de_cgm_clinical_14_14_ADT_A40_Zusammenf_hrung_Patienten_merge_patient
 
         segment.prior_patient_identifier_list = [
             CX(cx_1='9876'),
-            CX(cx_1='q283746bcde', cx_4='&www.praxis-süd.de&DNS'),
+            CX(cx_1='q283746bcde', cx_4='&www.example.com&DNS'),
             CX(cx_1='5567823', cx_4='&1.2.276.0.76.3.1.660.1.1.1.2.1&ISO', cx_5='PI'),
         ]
+        segment.mrg_2 = ''
 
         serialized = segment.serialize()
-        expected = 'MRG|9876~q283746bcde^^^&www.praxis-süd.de&DNS~5567823^^^&1.2.276.0.76.3.1.660.1.1.1.2.1&ISO^PI|'
+        expected = 'MRG|9876~q283746bcde^^^&www.example.com&DNS~5567823^^^&1.2.276.0.76.3.1.660.1.1.1.2.1&ISO^PI|'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -6903,6 +6994,7 @@ class Test_de_cgm_clinical_14_14_ADT_A40_Zusammenf_hrung_Patienten_merge_patient
         message.msh.application_acknowledgment_type = 'NE'
         message.msh.character_set = '8859/1'
 
+        message.evn.evn_1 = 'A40'
         message.evn.recorded_date_time = '202604081715'
 
         serialized = message.serialize()
@@ -6913,7 +7005,8 @@ class Test_de_cgm_clinical_14_14_ADT_A40_Zusammenf_hrung_Patienten_merge_patient
 # ################################################################################################################
 
 _Raw_de_cgm_clinical_15 = (
-    'MSH|^~\\&|KLINx||AUFN||20260401112408||ADT^A01^ADT_A01|77|P|2.5|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.1^^2.16.840.1.113883.2.6^ISO'
+    'MSH|^~\\&|KLINx||AUFN||20260401112408||ADT^A01^ADT_A01|77|P|2.5|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.1^^2.16.840.1.113883.2.6^ISO'
 )
 
 class Test_de_cgm_clinical_15_15_ADT_A01_Aufnahme_from_MSH_segment_reference_HL7_DE(unittest.TestCase):
@@ -7134,9 +7227,10 @@ _Raw_de_cgm_clinical_16 = (
     'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260401120000||ADT^A31^ADT_A05|CTL00010|P|2.6\r'
     'EVN|A31|20260401120000\r'
     'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Märta^^Frau||19820501|F|||Überlandstraße 99^^Würzburg^^97070||'
-    '^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@yähoo.de\r'
-    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
-    'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260401120000\r'
+    '^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@example.com\r'
+    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+    'ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||'
+    'Westflügel^Raum 603^Bett 3^Neurochirurgie||20260401120000\r'
     'IN1|1|0|KV001|BÜRGERKRANKENVERSICHERUNG|Königstraße 88^^München^^80331||||||||||||||||||||||||||||||||||||||||||||49'
 )
 
@@ -7627,6 +7721,7 @@ class Test_de_cgm_clinical_16_16_ADT_A31_nderung_Personendaten_update_person_inf
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A31'
         segment.recorded_date_time = '20260401120000'
 
         serialized = segment.serialize()
@@ -7643,11 +7738,12 @@ class Test_de_cgm_clinical_16_16_ADT_A31_nderung_Personendaten_update_person_inf
         segment.date_time_of_birth = '19820501'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Überlandstraße 99', xad_3='Würzburg', xad_5='97070')
+        segment.pid_13 = '^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@example.com'
 
         serialized = segment.serialize()
         expected = (
             'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Märta^^Frau||19820501|F|||Überlandstraße 99^^Würzburg^^97070||'
-            '^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@yähoo.de'
+            '^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@example.com'
         )
         self.assertEqual(serialized, expected)
 
@@ -7658,9 +7754,9 @@ class Test_de_cgm_clinical_16_16_ADT_A31_nderung_Personendaten_update_person_inf
 
         segment.patient_class = CWE(cwe_1='I')
         segment.assigned_patient_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
-        segment.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        segment.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        segment.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        segment.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        segment.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        segment.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         segment.temporary_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
         segment.visit_number = CX(cx_1='FALL7890')
         segment.pending_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
@@ -7668,8 +7764,9 @@ class Test_de_cgm_clinical_16_16_ADT_A31_nderung_Personendaten_update_person_inf
 
         serialized = segment.serialize()
         expected = (
-            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
-            'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260401120000'
+            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+            'ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||'
+            'Westflügel^Raum 603^Bett 3^Neurochirurgie||20260401120000'
         )
         self.assertEqual(serialized, expected)
 
@@ -7704,6 +7801,7 @@ class Test_de_cgm_clinical_16_16_ADT_A31_nderung_Personendaten_update_person_inf
         message.msh.processing_id = PT(pt_1='P')
         message.msh.version_id = VID(vid_1='2.6')
 
+        message.evn.evn_1 = 'A31'
         message.evn.recorded_date_time = '20260401120000'
 
         message.pid.patient_identifier_list = CX(cx_1='PT7890', cx_4='Löwenklinik')
@@ -7711,12 +7809,13 @@ class Test_de_cgm_clinical_16_16_ADT_A31_nderung_Personendaten_update_person_inf
         message.pid.date_time_of_birth = '19820501'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Überlandstraße 99', xad_3='Würzburg', xad_5='97070')
+        message.pid.pid_13 = '^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@example.com'
 
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.assigned_patient_location = PL(pl_1='Südflügel', pl_2='Raum 401', pl_3='Bett 1', pl_4='Orthopädie')
-        message.pv1.attending_doctor = XCN(xcn_1='ARZ100', xcn_2='Müller', xcn_3='Björn', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.referring_doctor = XCN(xcn_1='ARZ200', xcn_2='Bäcker', xcn_3='Günther', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.consulting_doctor = XCN(xcn_1='ARZ300', xcn_2='Schröder', xcn_3='Jürgen', xcn_6='Dr.', xcn_8='med.')
+        message.pv1.pv1_7 = 'ARZ100^Müller^Björn^^^Dr.^med.'
+        message.pv1.pv1_8 = 'ARZ200^Bäcker^Günther^^^Dr.^med.'
+        message.pv1.pv1_9 = 'ARZ300^Schröder^Jürgen^^^Dr.^med.'
         message.pv1.temporary_location = PL(pl_1='Nordflügel', pl_2='Raum 502', pl_3='Bett 2', pl_4='Innere Medizin')
         message.pv1.visit_number = CX(cx_1='FALL7890')
         message.pv1.pending_location = PL(pl_1='Westflügel', pl_2='Raum 603', pl_3='Bett 3', pl_4='Neurochirurgie')
@@ -7731,8 +7830,8 @@ class Test_de_cgm_clinical_16_16_ADT_A31_nderung_Personendaten_update_person_inf
 
 _Raw_de_cgm_clinical_17 = (
     'MSH|^~\\&|HÄMA LAB|ZLAB-7|BEFUND ÖST|GEBÄUDE9|20260215093000||ORU^R01|STRG-7890|P|2.4\r'
-    'PID|||888-77-6666||LÖWENTHAL^ÉVA^M^^^^L|GRÖSSMANN|19750520|F|||Blücherstraße 28^^Göttingen^NI^37073||(0551)2345678|(0551)876-543||||AC888776666||'
-    '89-B5667^NI^20260101\r'
+    'PID|||888-77-6666||LÖWENTHAL^ÉVA^M^^^^L|GRÖSSMANN|19750520|F|||Blücherstraße 28^^Göttingen^NI^37073||(0551)2345678|(0551)876-543||||'
+    'AC888776666||89-B5667^NI^20260101\r'
     'OBR|1|934561^BEFUND ÖST|2078945^HÄMA LAB|17856^HÄMOGLOBIN|||20260215073000|||||||||888-77-6666^ÜBERALL^PÀTRÍCIA P^^^^MD^^|||||||||F||||||'
     '777-66-5555^HIPPÖKRÄTÉS^HÖRST H^^^^MD\r'
     'OBX|1|SN|718-7^HÄMOGLOBIN^BLUT:MCNC:PT:BLUT:QN||^145|g/L|120_160|N|||F'
@@ -8121,17 +8220,20 @@ class Test_de_cgm_clinical_17_17_ORU_R01_Laborbefund_laboratory_result(unittest.
         segment = PID()
 
         segment.patient_identifier_list = CX(cx_1='888-77-6666')
-        segment.patient_name = XPN(xpn_1='LÖWENTHAL', xpn_2='ÉVA', xpn_3='M', xpn_8='L')
+        segment.patient_name = XPN(xpn_1='LÖWENTHAL', xpn_2='ÉVA', xpn_3='M', xpn_7='L')
         segment.mothers_maiden_name = XPN(xpn_1='GRÖSSMANN')
         segment.date_time_of_birth = '19750520'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Blücherstraße 28', xad_3='Göttingen', xad_4='NI', xad_5='37073')
+        segment.pid_13 = '(0551)2345678'
+        segment.pid_14 = '(0551)876-543'
         segment.patient_account_number = CX(cx_1='AC888776666')
+        segment.pid_20 = '89-B5667^NI^20260101'
 
         serialized = segment.serialize()
         expected = (
-            'PID|||888-77-6666||LÖWENTHAL^ÉVA^M^^^^L|GRÖSSMANN|19750520|F|||Blücherstraße 28^^Göttingen^NI^37073||(0551)2345678|(0551)876-543||||AC888776666||'
-            '89-B5667^NI^20260101'
+            'PID|||888-77-6666||LÖWENTHAL^ÉVA^M^^^^L|GRÖSSMANN|19750520|F|||Blücherstraße 28^^Göttingen^NI^37073||(0551)2345678|(0551)876-543||||'
+            'AC888776666||89-B5667^NI^20260101'
         )
         self.assertEqual(serialized, expected)
 
@@ -8145,6 +8247,7 @@ class Test_de_cgm_clinical_17_17_ORU_R01_Laborbefund_laboratory_result(unittest.
         segment.filler_order_number = EI(ei_1='2078945', ei_2='HÄMA LAB')
         segment.universal_service_identifier = CWE(cwe_1='17856', cwe_2='HÄMOGLOBIN')
         segment.observation_date_time = '20260215073000'
+        segment.obr_16 = '888-77-6666^ÜBERALL^PÀTRÍCIA P^^^^MD^^'
         segment.result_status = 'F'
         segment.reason_for_study = CWE(cwe_1='777-66-5555', cwe_2='HIPPÖKRÄTÉS', cwe_3='HÖRST H', cwe_7='MD')
 
@@ -8163,7 +8266,7 @@ class Test_de_cgm_clinical_17_17_ORU_R01_Laborbefund_laboratory_result(unittest.
         segment.set_id_obx = '1'
         segment.value_type = 'SN'
         segment.observation_identifier = CWE(cwe_1='718-7', cwe_2='HÄMOGLOBIN', cwe_3='BLUT:MCNC:PT:BLUT:QN')
-        segment.observation_value = []
+        segment.obx_5 = '^145'
         segment.units = CWE(cwe_1='g/L')
         segment.reference_range = '120_160'
         segment.interpretation_codes = CWE(cwe_1='N')
@@ -8196,12 +8299,12 @@ class Test_de_cgm_clinical_17_17_ORU_R01_Laborbefund_laboratory_result(unittest.
 # ################################################################################################################
 
 _Raw_de_cgm_clinical_18 = (
-    "MSH|^~\\&|GrößeReg|KölnKlinikC|ÜberOE|ZürichBildZ|20260529090131-0500||ADT^A01^ADT_A01|01052901|P|2.5\r"
-    "EVN||200605290901||||200605290900\r"
-    "PID|||78452991^^^Hügelreg^PI||BRÜCKNER^BÄRBEL^Q^JR||19700815|M||2028-9^^HL70005^RA99113^^XYZ|"
+    'MSH|^~\\&|GrößeReg|KölnKlinikC|ÜberOE|ZürichBildZ|20260529090131-0500||ADT^A01^ADT_A01|01052901|P|2.5\r'
+    'EVN||200605290901||||200605290900\r'
+    'PID|||78452991^^^Hügelreg^PI||BRÜCKNER^BÄRBEL^Q^JR||19700815|M||2028-9^^HL70005^RA99113^^XYZ|'
     "Gänseblümchenweg 14^^Nürnberg^BY^90403^^M~MÜLLER'S BÄCKEREI^Königsallee 200^^Düsseldorf^NW^40212^^O|||||||0105I30001^^^99DEF^AN\r"
-    "PV1||I|W^389^1^UABH^^^^3||||54321^WÖRNER^RÉX^J^^^MD^0010^UAMC^L||98765^GRÄBER^LÜCIA^X^^^MD^0010^UAMC^L|MED|||||A0||"
-    "24680^TÖNJES^SÖRÉN^T^^^MD^0010^UAMC^L|||||||||||||||||||||||||||200605290900"
+    'PV1||I|W^389^1^UABH^^^^3||||54321^WÖRNER^RÉX^J^^^MD^0010^UAMC^L||98765^GRÄBER^LÜCIA^X^^^MD^0010^UAMC^L|MED|||||A0||'
+    '24680^TÖNJES^SÖRÉN^T^^^MD^0010^UAMC^L|||||||||||||||||||||||||||200605290900'
 )
 
 class Test_de_cgm_clinical_18_18_ADT_A01_Aufnahme_with_Caristix_reference_encoding(unittest.TestCase):
@@ -8800,7 +8903,7 @@ class Test_de_cgm_clinical_18_18_ADT_A01_Aufnahme_with_Caristix_reference_encodi
 
         serialized = segment.serialize()
         expected = (
-            "PID|||78452991^^^Hügelreg^PI||BRÜCKNER^BÄRBEL^Q^JR||19700815|M||2028-9^^HL70005^RA99113^^XYZ|"
+            'PID|||78452991^^^Hügelreg^PI||BRÜCKNER^BÄRBEL^Q^JR||19700815|M||2028-9^^HL70005^RA99113^^XYZ|'
             "Gänseblümchenweg 14^^Nürnberg^BY^90403^^M~MÜLLER'S BÄCKEREI^Königsallee 200^^Düsseldorf^NW^40212^^O|||||||0105I30001^^^99DEF^AN"
         )
         self.assertEqual(serialized, expected)
@@ -8812,11 +8915,11 @@ class Test_de_cgm_clinical_18_18_ADT_A01_Aufnahme_with_Caristix_reference_encodi
 
         segment.patient_class = CWE(cwe_1='I')
         segment.assigned_patient_location = PL(pl_1='W', pl_2='389', pl_3='1', pl_4='UABH', pl_8='3')
-        segment.attending_doctor = XCN(xcn_1='54321', xcn_2='WÖRNER', xcn_3='RÉX', xcn_4='J', xcn_8='MD', xcn_9='0010', xcn_10='UAMC', xcn_11='L')
-        segment.consulting_doctor = XCN(xcn_1='98765', xcn_2='GRÄBER', xcn_3='LÜCIA', xcn_4='X', xcn_8='MD', xcn_9='0010', xcn_10='UAMC', xcn_11='L')
+        segment.pv1_7 = '54321^WÖRNER^RÉX^J^^^MD^0010^UAMC^L'
+        segment.pv1_9 = '98765^GRÄBER^LÜCIA^X^^^MD^0010^UAMC^L'
         segment.hospital_service = CWE(cwe_1='MED')
         segment.ambulatory_status = CWE(cwe_1='A0')
-        segment.admitting_doctor = XCN(xcn_1='24680', xcn_2='TÖNJES', xcn_3='SÖRÉN', xcn_4='T', xcn_8='MD', xcn_9='0010', xcn_10='UAMC', xcn_11='L')
+        segment.pv1_17 = '24680^TÖNJES^SÖRÉN^T^^^MD^0010^UAMC^L'
         segment.admit_date_time = '200605290900'
 
         serialized = segment.serialize()
@@ -8857,11 +8960,11 @@ class Test_de_cgm_clinical_18_18_ADT_A01_Aufnahme_with_Caristix_reference_encodi
 
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.assigned_patient_location = PL(pl_1='W', pl_2='389', pl_3='1', pl_4='UABH', pl_8='3')
-        message.pv1.attending_doctor = XCN(xcn_1='54321', xcn_2='WÖRNER', xcn_3='RÉX', xcn_4='J', xcn_8='MD', xcn_9='0010', xcn_10='UAMC', xcn_11='L')
-        message.pv1.consulting_doctor = XCN(xcn_1='98765', xcn_2='GRÄBER', xcn_3='LÜCIA', xcn_4='X', xcn_8='MD', xcn_9='0010', xcn_10='UAMC', xcn_11='L')
+        message.pv1.pv1_7 = '54321^WÖRNER^RÉX^J^^^MD^0010^UAMC^L'
+        message.pv1.pv1_9 = '98765^GRÄBER^LÜCIA^X^^^MD^0010^UAMC^L'
         message.pv1.hospital_service = CWE(cwe_1='MED')
         message.pv1.ambulatory_status = CWE(cwe_1='A0')
-        message.pv1.admitting_doctor = XCN(xcn_1='24680', xcn_2='TÖNJES', xcn_3='SÖRÉN', xcn_4='T', xcn_8='MD', xcn_9='0010', xcn_10='UAMC', xcn_11='L')
+        message.pv1.pv1_17 = '24680^TÖNJES^SÖRÉN^T^^^MD^0010^UAMC^L'
         message.pv1.admit_date_time = '200605290900'
 
         serialized = message.serialize()
@@ -9116,6 +9219,7 @@ class Test_de_cgm_clinical_19_19_ACK_A02_transport_acknowledgment_for_transfer(u
 
         segment.acknowledgment_code = 'CA'
         segment.message_control_id = 'AUFN002'
+        segment.msa_3 = ''
 
         serialized = segment.serialize()
         expected = 'MSA|CA|AUFN002|'
@@ -9144,6 +9248,7 @@ class Test_de_cgm_clinical_19_19_ACK_A02_transport_acknowledgment_for_transfer(u
 
         message.msa.acknowledgment_code = 'CA'
         message.msa.message_control_id = 'AUFN002'
+        message.msa.msa_3 = ''
 
         serialized = message.serialize()
         serialized_length = len(serialized)
@@ -9153,10 +9258,11 @@ class Test_de_cgm_clinical_19_19_ACK_A02_transport_acknowledgment_for_transfer(u
 # ################################################################################################################
 
 _Raw_de_cgm_clinical_20 = (
-    'MSH|^~\\&|SENDE_APPLIKATION|SENDE_EINRICHTUNG|EMPFANGS_APPLIKATION|EMPFANGS_EINRICHTUNG|20260613083617||ADT^A04|934576120260613083617|P|2.3||||\r'
+    'MSH|^~\\&|SENDE_APPLIKATION|SENDE_EINRICHTUNG|EMPFANGS_APPLIKATION|EMPFANGS_EINRICHTUNG|20260613083617||ADT^A04|934576120260613083617|P|2.3||'
+    '||\r'
     'EVN|A04|20260613083617|||\r'
-    'PID|1||246813||MÜNCHHAUSEN^THÉODOR^||19550718|M|||Brückenstraße 5^^Zürich^ZH^8001||(044)9391289^^^theodor@zürich-mail.ch|||||2847|99999999||||||||||||'
-    '||||||||\r'
+    'PID|1||246813||MÜNCHHAUSEN^THÉODOR^||19550718|M|||Brückenstraße 5^^Zürich^ZH^8001||(044)9391289^^^theodor@example.com|||||2847|99999999|||||'
+    '|||||||||||||||\r'
     'PV1|1|O|||||7^Wörner^Güntér^^MD^^^^|||||||||||||||||||||||||||||||||||||||||||||'
 )
 
@@ -9406,10 +9512,12 @@ class Test_de_cgm_clinical_20_20_ADT_A04_registration_from_ringholm_de_reference
         segment.message_control_id = '934576120260613083617'
         segment.processing_id = PT(pt_1='P')
         segment.version_id = VID(vid_1='2.3')
+        segment.msh_16 = ''
 
         serialized = segment.serialize()
         expected = (
-            'MSH|^~\\&|SENDE_APPLIKATION|SENDE_EINRICHTUNG|EMPFANGS_APPLIKATION|EMPFANGS_EINRICHTUNG|20260613083617||ADT^A04|934576120260613083617|P|2.3||||'
+            'MSH|^~\\&|SENDE_APPLIKATION|SENDE_EINRICHTUNG|EMPFANGS_APPLIKATION|EMPFANGS_EINRICHTUNG|20260613083617||ADT^A04|934576120260613083617|P|2.3||'
+            '||'
         )
         self.assertEqual(serialized, expected)
 
@@ -9418,7 +9526,9 @@ class Test_de_cgm_clinical_20_20_ADT_A04_registration_from_ringholm_de_reference
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A04'
         segment.recorded_date_time = '20260613083617'
+        segment.evn_5 = ''
 
         serialized = segment.serialize()
         expected = 'EVN|A04|20260613083617|||'
@@ -9431,17 +9541,19 @@ class Test_de_cgm_clinical_20_20_ADT_A04_registration_from_ringholm_de_reference
 
         segment.set_id_pid = '1'
         segment.patient_identifier_list = CX(cx_1='246813')
-        segment.patient_name = XPN(xpn_1='MÜNCHHAUSEN', xpn_2='THÉODOR')
+        segment.patient_name = XPN(xpn_1='MÜNCHHAUSEN', xpn_2='THÉODOR', xpn_3='')
         segment.date_time_of_birth = '19550718'
         segment.administrative_sex = CWE(cwe_1='M')
         segment.patient_address = XAD(xad_1='Brückenstraße 5', xad_3='Zürich', xad_4='ZH', xad_5='8001')
+        segment.pid_13 = '(044)9391289^^^theodor@example.com'
         segment.patient_account_number = CX(cx_1='2847')
+        segment.pid_19 = '99999999'
+        segment.pid_39 = ''
 
         serialized = segment.serialize()
         expected = (
-            'PID|1||246813||MÜNCHHAUSEN^THÉODOR^||19550718|M|||Brückenstraße 5^^Zürich^ZH^8001||(044)9391289^^^theodor@zürich-mail.ch|||||2847|99999999||'
-            '||||||||||'
-            '||||||||'
+            'PID|1||246813||MÜNCHHAUSEN^THÉODOR^||19550718|M|||Brückenstraße 5^^Zürich^ZH^8001||(044)9391289^^^theodor@example.com|||||2847|99999999|||||'
+            '|||||||||||||||'
         )
         self.assertEqual(serialized, expected)
 
@@ -9452,7 +9564,8 @@ class Test_de_cgm_clinical_20_20_ADT_A04_registration_from_ringholm_de_reference
 
         segment.set_id_pv1 = '1'
         segment.patient_class = CWE(cwe_1='O')
-        segment.attending_doctor = XCN(xcn_1='7', xcn_2='Wörner', xcn_3='Güntér', xcn_5='MD')
+        segment.attending_doctor = XCN(xcn_1='7', xcn_2='Wörner', xcn_3='Güntér', xcn_5='MD', xcn_9='')
+        segment.pv1_52 = ''
 
         serialized = segment.serialize()
         expected = 'PV1|1|O|||||7^Wörner^Güntér^^MD^^^^|||||||||||||||||||||||||||||||||||||||||||||'
@@ -9472,20 +9585,27 @@ class Test_de_cgm_clinical_20_20_ADT_A04_registration_from_ringholm_de_reference
         message.msh.message_control_id = '934576120260613083617'
         message.msh.processing_id = PT(pt_1='P')
         message.msh.version_id = VID(vid_1='2.3')
+        message.msh.msh_16 = ''
 
+        message.evn.evn_1 = 'A04'
         message.evn.recorded_date_time = '20260613083617'
+        message.evn.evn_5 = ''
 
         message.pid.set_id_pid = '1'
         message.pid.patient_identifier_list = CX(cx_1='246813')
-        message.pid.patient_name = XPN(xpn_1='MÜNCHHAUSEN', xpn_2='THÉODOR')
+        message.pid.patient_name = XPN(xpn_1='MÜNCHHAUSEN', xpn_2='THÉODOR', xpn_3='')
         message.pid.date_time_of_birth = '19550718'
         message.pid.administrative_sex = CWE(cwe_1='M')
         message.pid.patient_address = XAD(xad_1='Brückenstraße 5', xad_3='Zürich', xad_4='ZH', xad_5='8001')
+        message.pid.pid_13 = '(044)9391289^^^theodor@example.com'
         message.pid.patient_account_number = CX(cx_1='2847')
+        message.pid.pid_19 = '99999999'
+        message.pid.pid_39 = ''
 
         message.pv1.set_id_pv1 = '1'
         message.pv1.patient_class = CWE(cwe_1='O')
-        message.pv1.attending_doctor = XCN(xcn_1='7', xcn_2='Wörner', xcn_3='Güntér', xcn_5='MD')
+        message.pv1.attending_doctor = XCN(xcn_1='7', xcn_2='Wörner', xcn_3='Güntér', xcn_5='MD', xcn_9='')
+        message.pv1.pv1_52 = ''
 
         serialized = message.serialize()
         serialized_length = len(serialized)

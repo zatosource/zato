@@ -25,11 +25,11 @@ _Raw_de_cloverleaf_01 = (
     '2.16.840.1.113883.2.6.9.38^^2.16.840.1.113883.2.6^ISO\r'
     'EVN||202603151705||||202603151645\r'
     'PID|||8901234^^^Birken-Klinik^PI||Pfeiffer^Lörchen^^^^^L^A^^^G~Hübner^^^^^^M^A^^^G~Pfeiffer^^^^Frau^^D^^^^G||19860419|F|||'
-    'Lindenallee 6&Lindenallee&6^^Stuttgart^^70173^^H~Kirchgasse 21&Kirchgasse&21^^Stuttgart^^70173^^BDL||^PRN^PH^^49^711^2468135^^^^^0711/2468135|'
-    '^WPN^PH^^49^711^9753^246^^^^0711/9753-246|DEU^German^HL70296^^deutsch|M^married^HL70002^^verheiratet|CAT^catholic^HL70006^^katholisch||||||'
-    'Marienhospital Süd|||DEU^German^HL70171^^deutsch\r'
-    'PV1|1|I|CHI^302^2^IN^^N^A^4|R|||820301^Böttcher^Thëodor^^^Dr.^^^Birken-Klinik^L^^^DN^^^DN^^G||||||||||||2917^^^Birken-Klinik^VN|||||||||||||||||||||||'
-    '||202603151645\r'
+    'Lindenallee 6&Lindenallee&6^^Stuttgart^^70173^^H~Kirchgasse 21&Kirchgasse&21^^Stuttgart^^70173^^BDL||'
+    '^PRN^PH^^49^711^2468135^^^^^0711/2468135|^WPN^PH^^49^711^9753^246^^^^0711/9753-246|DEU^German^HL70296^^deutsch|'
+    'M^married^HL70002^^verheiratet|CAT^catholic^HL70006^^katholisch||||||Marienhospital Süd|||DEU^German^HL70171^^deutsch\r'
+    'PV1|1|I|CHI^302^2^IN^^N^A^4|R|||820301^Böttcher^Thëodor^^^Dr.^^^Birken-Klinik^L^^^DN^^^DN^^G||||||||||||2917^^^Birken-Klinik^VN|||||||||||||'
+    '||||||||||||202603151645\r'
     'PV2|||||||||20250405|4\r'
     'ZBE|4567^KIS|202603151705||INSERT'
 )
@@ -801,9 +801,9 @@ class Test_de_cloverleaf_01_1_ADT_A01_admission_standard_HL7_D_profile_v2_5(unit
 
         segment.patient_identifier_list = CX(cx_1='8901234', cx_4='Birken-Klinik', cx_5='PI')
         segment.patient_name = [
-            XPN(xpn_1='Pfeiffer', xpn_2='Lörchen', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Hübner', xpn_8='M', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Pfeiffer', xpn_5='Frau', xpn_8='D', xpn_13='G'),
+            XPN(xpn_1='Pfeiffer', xpn_2='Lörchen', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Hübner', xpn_7='M', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Pfeiffer', xpn_5='Frau', xpn_7='D', xpn_11='G'),
         ]
         segment.date_time_of_birth = '19860419'
         segment.administrative_sex = CWE(cwe_1='F')
@@ -811,6 +811,8 @@ class Test_de_cloverleaf_01_1_ADT_A01_admission_standard_HL7_D_profile_v2_5(unit
             XAD(xad_1='Lindenallee 6&Lindenallee&6', xad_3='Stuttgart', xad_5='70173', xad_7='H'),
             XAD(xad_1='Kirchgasse 21&Kirchgasse&21', xad_3='Stuttgart', xad_5='70173', xad_7='BDL'),
         ]
+        segment.pid_13 = '^PRN^PH^^49^711^2468135^^^^^0711/2468135'
+        segment.pid_14 = '^WPN^PH^^49^711^9753^246^^^^0711/9753-246'
         segment.primary_language = CWE(cwe_1='DEU', cwe_2='German', cwe_3='HL70296', cwe_5='deutsch')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002', cwe_5='verheiratet')
         segment.religion = CWE(cwe_1='CAT', cwe_2='catholic', cwe_3='HL70006', cwe_5='katholisch')
@@ -820,9 +822,9 @@ class Test_de_cloverleaf_01_1_ADT_A01_admission_standard_HL7_D_profile_v2_5(unit
         serialized = segment.serialize()
         expected = (
             'PID|||8901234^^^Birken-Klinik^PI||Pfeiffer^Lörchen^^^^^L^A^^^G~Hübner^^^^^^M^A^^^G~Pfeiffer^^^^Frau^^D^^^^G||19860419|F|||'
-            'Lindenallee 6&Lindenallee&6^^Stuttgart^^70173^^H~Kirchgasse 21&Kirchgasse&21^^Stuttgart^^70173^^BDL||^PRN^PH^^49^711^2468135^^^^^0711/2468135|'
-            '^WPN^PH^^49^711^9753^246^^^^0711/9753-246|DEU^German^HL70296^^deutsch|M^married^HL70002^^verheiratet|CAT^catholic^HL70006^^katholisch||||||'
-            'Marienhospital Süd|||DEU^German^HL70171^^deutsch'
+            'Lindenallee 6&Lindenallee&6^^Stuttgart^^70173^^H~Kirchgasse 21&Kirchgasse&21^^Stuttgart^^70173^^BDL||'
+            '^PRN^PH^^49^711^2468135^^^^^0711/2468135|^WPN^PH^^49^711^9753^246^^^^0711/9753-246|DEU^German^HL70296^^deutsch|'
+            'M^married^HL70002^^verheiratet|CAT^catholic^HL70006^^katholisch||||||Marienhospital Süd|||DEU^German^HL70171^^deutsch'
         )
         self.assertEqual(serialized, expected)
 
@@ -840,11 +842,11 @@ class Test_de_cloverleaf_01_1_ADT_A01_admission_standard_HL7_D_profile_v2_5(unit
             xcn_2='Böttcher',
             xcn_3='Thëodor',
             xcn_6='Dr.',
-            xcn_10='Birken-Klinik',
-            xcn_11='L',
-            xcn_14='DN',
-            xcn_18='DN',
-            xcn_20='G',
+            xcn_9='Birken-Klinik',
+            xcn_10='L',
+            xcn_13='DN',
+            xcn_16='DN',
+            xcn_18='G',
         )
         segment.visit_number = CX(cx_1='2917', cx_4='Birken-Klinik', cx_5='VN')
         segment.admit_date_time = '202603151645'
@@ -852,8 +854,7 @@ class Test_de_cloverleaf_01_1_ADT_A01_admission_standard_HL7_D_profile_v2_5(unit
         serialized = segment.serialize()
         expected = (
             'PV1|1|I|CHI^302^2^IN^^N^A^4|R|||820301^Böttcher^Thëodor^^^Dr.^^^Birken-Klinik^L^^^DN^^^DN^^G||||||||||||2917^^^Birken-Klinik^VN|||||||||||||'
-            '||||||||||'
-            '||202603151645'
+            '||||||||||||202603151645'
         )
         self.assertEqual(serialized, expected)
 
@@ -895,9 +896,9 @@ class Test_de_cloverleaf_01_1_ADT_A01_admission_standard_HL7_D_profile_v2_5(unit
 
         message.pid.patient_identifier_list = CX(cx_1='8901234', cx_4='Birken-Klinik', cx_5='PI')
         message.pid.patient_name = [
-            XPN(xpn_1='Pfeiffer', xpn_2='Lörchen', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Hübner', xpn_8='M', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Pfeiffer', xpn_5='Frau', xpn_8='D', xpn_13='G'),
+            XPN(xpn_1='Pfeiffer', xpn_2='Lörchen', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Hübner', xpn_7='M', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Pfeiffer', xpn_5='Frau', xpn_7='D', xpn_11='G'),
         ]
         message.pid.date_time_of_birth = '19860419'
         message.pid.administrative_sex = CWE(cwe_1='F')
@@ -905,6 +906,8 @@ class Test_de_cloverleaf_01_1_ADT_A01_admission_standard_HL7_D_profile_v2_5(unit
             XAD(xad_1='Lindenallee 6&Lindenallee&6', xad_3='Stuttgart', xad_5='70173', xad_7='H'),
             XAD(xad_1='Kirchgasse 21&Kirchgasse&21', xad_3='Stuttgart', xad_5='70173', xad_7='BDL'),
         ]
+        message.pid.pid_13 = '^PRN^PH^^49^711^2468135^^^^^0711/2468135'
+        message.pid.pid_14 = '^WPN^PH^^49^711^9753^246^^^^0711/9753-246'
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_2='German', cwe_3='HL70296', cwe_5='deutsch')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002', cwe_5='verheiratet')
         message.pid.religion = CWE(cwe_1='CAT', cwe_2='catholic', cwe_3='HL70006', cwe_5='katholisch')
@@ -920,11 +923,11 @@ class Test_de_cloverleaf_01_1_ADT_A01_admission_standard_HL7_D_profile_v2_5(unit
             xcn_2='Böttcher',
             xcn_3='Thëodor',
             xcn_6='Dr.',
-            xcn_10='Birken-Klinik',
-            xcn_11='L',
-            xcn_14='DN',
-            xcn_18='DN',
-            xcn_20='G',
+            xcn_9='Birken-Klinik',
+            xcn_10='L',
+            xcn_13='DN',
+            xcn_16='DN',
+            xcn_18='G',
         )
         message.pv1.visit_number = CX(cx_1='2917', cx_4='Birken-Klinik', cx_5='VN')
         message.pv1.admit_date_time = '202603151645'
@@ -947,8 +950,8 @@ _Raw_de_cloverleaf_02 = (
     'PID|||34567^^^Birken-Klinik^PI||Feldmann^Sïbylle^^^^^L^A^^^G~Grüber^^^^^^M^A^^^G||19810622|F|||'
     'Lindenallee 6&Lindenallee&6^^Stuttgart^^^^H~Kirchgasse 21&Kirchgasse&21^^Stuttgart^^^^BDL||^PRN^PH^^49^711^2468135^^^^^0711/2468135|'
     '^WPN^PH^^49^711^9753^246^^^^0711/9753-246|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Marienhospital Süd|||DEU^^HL70171\r'
-    'PV1|1|I|URO^301^1^IN^^N^A^4|R|||820303^Rüttger^Frïedrich^^^Dr.^^^Birken-Klinik^L^^^DN|820311^Zöllner^Wïlhelm^^^Dr.^^^^L^^^DN^^A^^^G|||||R|||||E|'
-    '2917^^^Birken-Klinik^VN|||||||||||||||||||||||||202604011645\r'
+    'PV1|1|I|URO^301^1^IN^^N^A^4|R|||820303^Rüttger^Frïedrich^^^Dr.^^^Birken-Klinik^L^^^DN|820311^Zöllner^Wïlhelm^^^Dr.^^^^L^^^DN^^A^^^G|||||R|||'
+    '||E|2917^^^Birken-Klinik^VN|||||||||||||||||||||||||202604011645\r'
     'PV2|||0101^vollstationär, Normalfall^GSG0001||||||20260405|4||||||||||||||||||||||||||N|N\r'
     'ZBE|4567^KIS|202604011705||INSERT'
 )
@@ -1746,13 +1749,15 @@ class Test_de_cloverleaf_02_2_ADT_A01_admission_with_DRG_HL7_D_profile_v2_5(unit
         segment = PID()
 
         segment.patient_identifier_list = CX(cx_1='34567', cx_4='Birken-Klinik', cx_5='PI')
-        segment.patient_name = [XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Grüber', xpn_8='M', xpn_9='A', xpn_13='G')]
+        segment.patient_name = [XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_7='L', xpn_8='A', xpn_11='G'), XPN(xpn_1='Grüber', xpn_7='M', xpn_8='A', xpn_11='G')]
         segment.date_time_of_birth = '19810622'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = [
             XAD(xad_1='Lindenallee 6&Lindenallee&6', xad_3='Stuttgart', xad_7='H'),
             XAD(xad_1='Kirchgasse 21&Kirchgasse&21', xad_3='Stuttgart', xad_7='BDL'),
         ]
+        segment.pid_13 = '^PRN^PH^^49^711^2468135^^^^^0711/2468135'
+        segment.pid_14 = '^WPN^PH^^49^711^9753^246^^^^0711/9753-246'
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -1776,8 +1781,8 @@ class Test_de_cloverleaf_02_2_ADT_A01_admission_with_DRG_HL7_D_profile_v2_5(unit
         segment.patient_class = CWE(cwe_1='I')
         segment.assigned_patient_location = PL(pl_1='URO', pl_2='301', pl_3='1', pl_4='IN', pl_6='N', pl_7='A', pl_8='4')
         segment.admission_type = CWE(cwe_1='R')
-        segment.attending_doctor = XCN(xcn_1='820303', xcn_2='Rüttger', xcn_3='Frïedrich', xcn_6='Dr.', xcn_10='Birken-Klinik', xcn_11='L', xcn_14='DN')
-        segment.referring_doctor = XCN(xcn_1='820311', xcn_2='Zöllner', xcn_3='Wïlhelm', xcn_6='Dr.', xcn_11='L', xcn_14='DN', xcn_16='A', xcn_20='G')
+        segment.attending_doctor = XCN(xcn_1='820303', xcn_2='Rüttger', xcn_3='Frïedrich', xcn_6='Dr.', xcn_9='Birken-Klinik', xcn_10='L', xcn_13='DN')
+        segment.referring_doctor = XCN(xcn_1='820311', xcn_2='Zöllner', xcn_3='Wïlhelm', xcn_6='Dr.', xcn_10='L', xcn_13='DN', xcn_15='A', xcn_18='G')
         segment.re_admission_indicator = CWE(cwe_1='R')
         segment.patient_type = CWE(cwe_1='E')
         segment.visit_number = CX(cx_1='2917', cx_4='Birken-Klinik', cx_5='VN')
@@ -1785,8 +1790,8 @@ class Test_de_cloverleaf_02_2_ADT_A01_admission_with_DRG_HL7_D_profile_v2_5(unit
 
         serialized = segment.serialize()
         expected = (
-            'PV1|1|I|URO^301^1^IN^^N^A^4|R|||820303^Rüttger^Frïedrich^^^Dr.^^^Birken-Klinik^L^^^DN|820311^Zöllner^Wïlhelm^^^Dr.^^^^L^^^DN^^A^^^G|||||R|||||E|'
-            '2917^^^Birken-Klinik^VN|||||||||||||||||||||||||202604011645'
+            'PV1|1|I|URO^301^1^IN^^N^A^4|R|||820303^Rüttger^Frïedrich^^^Dr.^^^Birken-Klinik^L^^^DN|820311^Zöllner^Wïlhelm^^^Dr.^^^^L^^^DN^^A^^^G|||||R|||'
+            '||E|2917^^^Birken-Klinik^VN|||||||||||||||||||||||||202604011645'
         )
         self.assertEqual(serialized, expected)
 
@@ -1835,8 +1840,8 @@ class Test_de_cloverleaf_02_2_ADT_A01_admission_with_DRG_HL7_D_profile_v2_5(unit
 
         message.pid.patient_identifier_list = CX(cx_1='34567', cx_4='Birken-Klinik', cx_5='PI')
         message.pid.patient_name = [
-            XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Grüber', xpn_8='M', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Grüber', xpn_7='M', xpn_8='A', xpn_11='G'),
         ]
         message.pid.date_time_of_birth = '19810622'
         message.pid.administrative_sex = CWE(cwe_1='F')
@@ -1844,6 +1849,8 @@ class Test_de_cloverleaf_02_2_ADT_A01_admission_with_DRG_HL7_D_profile_v2_5(unit
             XAD(xad_1='Lindenallee 6&Lindenallee&6', xad_3='Stuttgart', xad_7='H'),
             XAD(xad_1='Kirchgasse 21&Kirchgasse&21', xad_3='Stuttgart', xad_7='BDL'),
         ]
+        message.pid.pid_13 = '^PRN^PH^^49^711^2468135^^^^^0711/2468135'
+        message.pid.pid_14 = '^WPN^PH^^49^711^9753^246^^^^0711/9753-246'
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -1854,8 +1861,8 @@ class Test_de_cloverleaf_02_2_ADT_A01_admission_with_DRG_HL7_D_profile_v2_5(unit
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.assigned_patient_location = PL(pl_1='URO', pl_2='301', pl_3='1', pl_4='IN', pl_6='N', pl_7='A', pl_8='4')
         message.pv1.admission_type = CWE(cwe_1='R')
-        message.pv1.attending_doctor = XCN(xcn_1='820303', xcn_2='Rüttger', xcn_3='Frïedrich', xcn_6='Dr.', xcn_10='Birken-Klinik', xcn_11='L', xcn_14='DN')
-        message.pv1.referring_doctor = XCN(xcn_1='820311', xcn_2='Zöllner', xcn_3='Wïlhelm', xcn_6='Dr.', xcn_11='L', xcn_14='DN', xcn_16='A', xcn_20='G')
+        message.pv1.attending_doctor = XCN(xcn_1='820303', xcn_2='Rüttger', xcn_3='Frïedrich', xcn_6='Dr.', xcn_9='Birken-Klinik', xcn_10='L', xcn_13='DN')
+        message.pv1.referring_doctor = XCN(xcn_1='820311', xcn_2='Zöllner', xcn_3='Wïlhelm', xcn_6='Dr.', xcn_10='L', xcn_13='DN', xcn_15='A', xcn_18='G')
         message.pv1.re_admission_indicator = CWE(cwe_1='R')
         message.pv1.patient_type = CWE(cwe_1='E')
         message.pv1.visit_number = CX(cx_1='2917', cx_4='Birken-Klinik', cx_5='VN')
@@ -2186,10 +2193,10 @@ _Raw_de_cloverleaf_04 = (
     '2.16.840.1.113883.2.6.9.40^^2.16.840.1.113883.2.6^ISO\r'
     'EVN||202606051705||||022606051645\r'
     'PID|||34567^^^Eichen-Krankenhaus^PI||Hölzl^Bërndt^^^Dr.^^L^A^^^G~Hölzl^Bërndt^^^Herr Dr.^^D^A^^^G||19690117|F|||'
-    'Schillerweg 44&Schillerweg&44^^Augsburg^^86150^^H||^PRN^PH^^49^821^4681357^^^^^0821/4681357|^WPN^PH^^49^821^97531^^^^^0821/97531|DEU^^HL70296|'
-    'M^married^HL70002|CAT^^HL70006||||||Marienhospital Süd|||DEU^^HL70171\r'
-    'PV1|1|I|HNO^201^2^IN^^N^A^4|R|||820303^Rüttger^Frïedrich^^^Dr.^^^Eichen-Krankenhaus^L^^^^^^DN ||||||||||||418263^^^Eichen-Krankenhaus^VN|01100000||||'
-    'C|202401|||||||||||||||||||202606051645\r'
+    'Schillerweg 44&Schillerweg&44^^Augsburg^^86150^^H||^PRN^PH^^49^821^4681357^^^^^0821/4681357|^WPN^PH^^49^821^97531^^^^^0821/97531|'
+    'DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Marienhospital Süd|||DEU^^HL70171\r'
+    'PV1|1|I|HNO^201^2^IN^^N^A^4|R|||820303^Rüttger^Frïedrich^^^Dr.^^^Eichen-Krankenhaus^L^^^^^^DN ||||||||||||418263^^^Eichen-Krankenhaus^VN|'
+    '01100000||||C|202401|||||||||||||||||||202606051645\r'
     'PV2|||||||||20260615|10\r'
     'ZBE|71823^KIS|202606051705||INSERT'
 )
@@ -2856,12 +2863,14 @@ class Test_de_cloverleaf_04_4_ADT_A01_admission_with_billing_HL7_D_profile_v2_5(
 
         segment.patient_identifier_list = CX(cx_1='34567', cx_4='Eichen-Krankenhaus', cx_5='PI')
         segment.patient_name = [
-            XPN(xpn_1='Hölzl', xpn_2='Bërndt', xpn_5='Dr.', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Hölzl', xpn_2='Bërndt', xpn_5='Herr Dr.', xpn_8='D', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Hölzl', xpn_2='Bërndt', xpn_5='Dr.', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Hölzl', xpn_2='Bërndt', xpn_5='Herr Dr.', xpn_7='D', xpn_8='A', xpn_11='G'),
         ]
         segment.date_time_of_birth = '19690117'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Schillerweg 44&Schillerweg&44', xad_3='Augsburg', xad_5='86150', xad_7='H')
+        segment.pid_13 = '^PRN^PH^^49^821^4681357^^^^^0821/4681357'
+        segment.pid_14 = '^WPN^PH^^49^821^97531^^^^^0821/97531'
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -2871,8 +2880,8 @@ class Test_de_cloverleaf_04_4_ADT_A01_admission_with_billing_HL7_D_profile_v2_5(
         serialized = segment.serialize()
         expected = (
             'PID|||34567^^^Eichen-Krankenhaus^PI||Hölzl^Bërndt^^^Dr.^^L^A^^^G~Hölzl^Bërndt^^^Herr Dr.^^D^A^^^G||19690117|F|||'
-            'Schillerweg 44&Schillerweg&44^^Augsburg^^86150^^H||^PRN^PH^^49^821^4681357^^^^^0821/4681357|^WPN^PH^^49^821^97531^^^^^0821/97531|DEU^^HL70296|'
-            'M^married^HL70002|CAT^^HL70006||||||Marienhospital Süd|||DEU^^HL70171'
+            'Schillerweg 44&Schillerweg&44^^Augsburg^^86150^^H||^PRN^PH^^49^821^4681357^^^^^0821/4681357|^WPN^PH^^49^821^97531^^^^^0821/97531|'
+            'DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Marienhospital Süd|||DEU^^HL70171'
         )
         self.assertEqual(serialized, expected)
 
@@ -2885,7 +2894,7 @@ class Test_de_cloverleaf_04_4_ADT_A01_admission_with_billing_HL7_D_profile_v2_5(
         segment.patient_class = CWE(cwe_1='I')
         segment.assigned_patient_location = PL(pl_1='HNO', pl_2='201', pl_3='2', pl_4='IN', pl_6='N', pl_7='A', pl_8='4')
         segment.admission_type = CWE(cwe_1='R')
-        segment.attending_doctor = XCN(xcn_1='820303', xcn_2='Rüttger', xcn_3='Frïedrich', xcn_6='Dr.', xcn_10='Eichen-Krankenhaus', xcn_11='L', xcn_18='DN ')
+        segment.attending_doctor = XCN(xcn_1='820303', xcn_2='Rüttger', xcn_3='Frïedrich', xcn_6='Dr.', xcn_9='Eichen-Krankenhaus', xcn_10='L', xcn_16='DN ')
         segment.visit_number = CX(cx_1='418263', cx_4='Eichen-Krankenhaus', cx_5='VN')
         segment.financial_class = FC(fc_1='01100000')
         segment.contract_code = CWE(cwe_1='C')
@@ -2895,8 +2904,7 @@ class Test_de_cloverleaf_04_4_ADT_A01_admission_with_billing_HL7_D_profile_v2_5(
         serialized = segment.serialize()
         expected = (
             'PV1|1|I|HNO^201^2^IN^^N^A^4|R|||820303^Rüttger^Frïedrich^^^Dr.^^^Eichen-Krankenhaus^L^^^^^^DN ||||||||||||418263^^^Eichen-Krankenhaus^VN|'
-            '01100000||||'
-            'C|202401|||||||||||||||||||202606051645'
+            '01100000||||C|202401|||||||||||||||||||202606051645'
         )
         self.assertEqual(serialized, expected)
 
@@ -2938,12 +2946,14 @@ class Test_de_cloverleaf_04_4_ADT_A01_admission_with_billing_HL7_D_profile_v2_5(
 
         message.pid.patient_identifier_list = CX(cx_1='34567', cx_4='Eichen-Krankenhaus', cx_5='PI')
         message.pid.patient_name = [
-            XPN(xpn_1='Hölzl', xpn_2='Bërndt', xpn_5='Dr.', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Hölzl', xpn_2='Bërndt', xpn_5='Herr Dr.', xpn_8='D', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Hölzl', xpn_2='Bërndt', xpn_5='Dr.', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Hölzl', xpn_2='Bërndt', xpn_5='Herr Dr.', xpn_7='D', xpn_8='A', xpn_11='G'),
         ]
         message.pid.date_time_of_birth = '19690117'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Schillerweg 44&Schillerweg&44', xad_3='Augsburg', xad_5='86150', xad_7='H')
+        message.pid.pid_13 = '^PRN^PH^^49^821^4681357^^^^^0821/4681357'
+        message.pid.pid_14 = '^WPN^PH^^49^821^97531^^^^^0821/97531'
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -2959,9 +2969,9 @@ class Test_de_cloverleaf_04_4_ADT_A01_admission_with_billing_HL7_D_profile_v2_5(
             xcn_2='Rüttger',
             xcn_3='Frïedrich',
             xcn_6='Dr.',
-            xcn_10='Eichen-Krankenhaus',
-            xcn_11='L',
-            xcn_18='DN ',
+            xcn_9='Eichen-Krankenhaus',
+            xcn_10='L',
+            xcn_16='DN ',
         )
         message.pv1.visit_number = CX(cx_1='418263', cx_4='Eichen-Krankenhaus', cx_5='VN')
         message.pv1.financial_class = FC(fc_1='01100000')
@@ -2987,8 +2997,8 @@ _Raw_de_cloverleaf_05 = (
     'PID|||34567^^^Birken-Klinik^PI||Feldmann^Sïbylle^^^^^L^A^^^G~Grüber^^^^^^M^A^^^G||19810622|F|||'
     'Lindenallee 6&Lindenallee&6^^Stuttgart^^^^H~Kirchgasse 21&Kirchgasse&21^^Stuttgart^^^^BDL||^PRN^PH^^49^711^2468135^^^^^0711/2468135|'
     '^WPN^PH^^49^711^9753^246^^^^0711/9753-246|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Marienhospital Süd|||DEU^^HL70171\r'
-    'PV1|1|I|HNO^311^3^IN^^N^B^4|R|||820309^Rüttger^Frïedrich^^^Dr.^^^Birken-Klinik^L^^^DN^^^DN ||||||||||||2917^^^Birken-Klinik^VN|||||||||||||||||011||||'
-    '||||202504011645|202504061100\r'
+    'PV1|1|I|HNO^311^3^IN^^N^B^4|R|||820309^Rüttger^Frïedrich^^^Dr.^^^Birken-Klinik^L^^^DN^^^DN ||||||||||||2917^^^Birken-Klinik^VN||||||||||||||'
+    '|||011||||||||202504011645|202504061100\r'
     'ZBE|4567^KIS|202504011705||REFERENCE'
 )
 
@@ -3687,13 +3697,15 @@ class Test_de_cloverleaf_05_5_ADT_A03_discharge_standard_HL7_D_profile_v2_5(unit
         segment = PID()
 
         segment.patient_identifier_list = CX(cx_1='34567', cx_4='Birken-Klinik', cx_5='PI')
-        segment.patient_name = [XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Grüber', xpn_8='M', xpn_9='A', xpn_13='G')]
+        segment.patient_name = [XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_7='L', xpn_8='A', xpn_11='G'), XPN(xpn_1='Grüber', xpn_7='M', xpn_8='A', xpn_11='G')]
         segment.date_time_of_birth = '19810622'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = [
             XAD(xad_1='Lindenallee 6&Lindenallee&6', xad_3='Stuttgart', xad_7='H'),
             XAD(xad_1='Kirchgasse 21&Kirchgasse&21', xad_3='Stuttgart', xad_7='BDL'),
         ]
+        segment.pid_13 = '^PRN^PH^^49^711^2468135^^^^^0711/2468135'
+        segment.pid_14 = '^WPN^PH^^49^711^9753^246^^^^0711/9753-246'
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -3722,10 +3734,10 @@ class Test_de_cloverleaf_05_5_ADT_A03_discharge_standard_HL7_D_profile_v2_5(unit
             xcn_2='Rüttger',
             xcn_3='Frïedrich',
             xcn_6='Dr.',
-            xcn_10='Birken-Klinik',
-            xcn_11='L',
-            xcn_14='DN',
-            xcn_18='DN ',
+            xcn_9='Birken-Klinik',
+            xcn_10='L',
+            xcn_13='DN',
+            xcn_16='DN ',
         )
         segment.visit_number = CX(cx_1='2917', cx_4='Birken-Klinik', cx_5='VN')
         segment.discharge_disposition = CWE(cwe_1='011')
@@ -3735,8 +3747,7 @@ class Test_de_cloverleaf_05_5_ADT_A03_discharge_standard_HL7_D_profile_v2_5(unit
         serialized = segment.serialize()
         expected = (
             'PV1|1|I|HNO^311^3^IN^^N^B^4|R|||820309^Rüttger^Frïedrich^^^Dr.^^^Birken-Klinik^L^^^DN^^^DN ||||||||||||2917^^^Birken-Klinik^VN||||||||||||||'
-            '|||011||||'
-            '||||202504011645|202504061100'
+            '|||011||||||||202504011645|202504061100'
         )
         self.assertEqual(serialized, expected)
 
@@ -3770,8 +3781,8 @@ class Test_de_cloverleaf_05_5_ADT_A03_discharge_standard_HL7_D_profile_v2_5(unit
 
         message.pid.patient_identifier_list = CX(cx_1='34567', cx_4='Birken-Klinik', cx_5='PI')
         message.pid.patient_name = [
-            XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Grüber', xpn_8='M', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Grüber', xpn_7='M', xpn_8='A', xpn_11='G'),
         ]
         message.pid.date_time_of_birth = '19810622'
         message.pid.administrative_sex = CWE(cwe_1='F')
@@ -3779,6 +3790,8 @@ class Test_de_cloverleaf_05_5_ADT_A03_discharge_standard_HL7_D_profile_v2_5(unit
             XAD(xad_1='Lindenallee 6&Lindenallee&6', xad_3='Stuttgart', xad_7='H'),
             XAD(xad_1='Kirchgasse 21&Kirchgasse&21', xad_3='Stuttgart', xad_7='BDL'),
         ]
+        message.pid.pid_13 = '^PRN^PH^^49^711^2468135^^^^^0711/2468135'
+        message.pid.pid_14 = '^WPN^PH^^49^711^9753^246^^^^0711/9753-246'
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -3794,10 +3807,10 @@ class Test_de_cloverleaf_05_5_ADT_A03_discharge_standard_HL7_D_profile_v2_5(unit
             xcn_2='Rüttger',
             xcn_3='Frïedrich',
             xcn_6='Dr.',
-            xcn_10='Birken-Klinik',
-            xcn_11='L',
-            xcn_14='DN',
-            xcn_18='DN ',
+            xcn_9='Birken-Klinik',
+            xcn_10='L',
+            xcn_13='DN',
+            xcn_16='DN ',
         )
         message.pv1.visit_number = CX(cx_1='2917', cx_4='Birken-Klinik', cx_5='VN')
         message.pv1.discharge_disposition = CWE(cwe_1='011')
@@ -3816,8 +3829,8 @@ _Raw_de_cloverleaf_06 = (
     '2.16.840.1.113883.2.6.9.48^^2.16.840.1.113883.2.6^ISO\r'
     'EVN||202504011705||||202504011645\r'
     'PID|||34567^^^Birken-Klinik^PI||an der Mühle&an der&Mühle^Tïlman^^^^^L^A^^^G||19710803|M|||'
-    'Lindenallee 6&Lindenallee&6^^Stuttgart^^^^H~Kirchgasse  21&Kirchgasse&21^^Stuttgart^^^^BDL||||DEU^^HL70296|W^widowed^HL70002^^verwitwet|CAT^^HL70006||'
-    '||||Marienhospital Süd|||DEU^^HL70171\r'
+    'Lindenallee 6&Lindenallee&6^^Stuttgart^^^^H~Kirchgasse  21&Kirchgasse&21^^Stuttgart^^^^BDL||||DEU^^HL70296|W^widowed^HL70002^^verwitwet|'
+    'CAT^^HL70006||||||Marienhospital Süd|||DEU^^HL70171\r'
     'PV1|1|I|HNO^311^3^IN^^N^B^4|R|||||||||||||||2917^^^Birken-Klinik^VN|||||||||||||||||011||||||||202504011645|202504061100\r'
     'PV2|||0102^vollstationär, Arbeitsunfall^GSG0001|||||||4|4|||||||||||||||||||||||||N|N\r'
     'ZBE|4567^KIS|202504011705||REFERENCE'
@@ -4463,7 +4476,7 @@ class Test_de_cloverleaf_06_6_ADT_A03_discharge_with_DRG_HL7_D_profile_v2_5(unit
         segment = PID()
 
         segment.patient_identifier_list = CX(cx_1='34567', cx_4='Birken-Klinik', cx_5='PI')
-        segment.patient_name = XPN(xpn_1='an der Mühle&an der&Mühle', xpn_2='Tïlman', xpn_8='L', xpn_9='A', xpn_13='G')
+        segment.patient_name = XPN(xpn_1='an der Mühle&an der&Mühle', xpn_2='Tïlman', xpn_7='L', xpn_8='A', xpn_11='G')
         segment.date_time_of_birth = '19710803'
         segment.administrative_sex = CWE(cwe_1='M')
         segment.patient_address = [
@@ -4480,8 +4493,7 @@ class Test_de_cloverleaf_06_6_ADT_A03_discharge_with_DRG_HL7_D_profile_v2_5(unit
         expected = (
             'PID|||34567^^^Birken-Klinik^PI||an der Mühle&an der&Mühle^Tïlman^^^^^L^A^^^G||19710803|M|||'
             'Lindenallee 6&Lindenallee&6^^Stuttgart^^^^H~Kirchgasse  21&Kirchgasse&21^^Stuttgart^^^^BDL||||DEU^^HL70296|W^widowed^HL70002^^verwitwet|'
-            'CAT^^HL70006||'
-            '||||Marienhospital Süd|||DEU^^HL70171'
+            'CAT^^HL70006||||||Marienhospital Süd|||DEU^^HL70171'
         )
         self.assertEqual(serialized, expected)
 
@@ -4543,7 +4555,7 @@ class Test_de_cloverleaf_06_6_ADT_A03_discharge_with_DRG_HL7_D_profile_v2_5(unit
         message.evn.event_occurred = '202504011645'
 
         message.pid.patient_identifier_list = CX(cx_1='34567', cx_4='Birken-Klinik', cx_5='PI')
-        message.pid.patient_name = XPN(xpn_1='an der Mühle&an der&Mühle', xpn_2='Tïlman', xpn_8='L', xpn_9='A', xpn_13='G')
+        message.pid.patient_name = XPN(xpn_1='an der Mühle&an der&Mühle', xpn_2='Tïlman', xpn_7='L', xpn_8='A', xpn_11='G')
         message.pid.date_time_of_birth = '19710803'
         message.pid.administrative_sex = CWE(cwe_1='M')
         message.pid.patient_address = [
@@ -4583,8 +4595,8 @@ _Raw_de_cloverleaf_07 = (
     '2.16.840.1.113883.2.6.9.49^^2.16.840.1.113883.2.6^ISO\r'
     'EVN||202504011705||||202504011645\r'
     'PID|||34567^^^Birken-Klinik^PI||an der Mühle&an der&Mühle^Tïlman^^^^^L^A^^^G||19710803|M|||'
-    'Lindenallee 6&Lindenallee&6^^Stuttgart^^^^H~Kirchgasse 21&Kirchgasse&21^^Stuttgart^^^^BDL||||DEU^^HL70296|W^widowed^HL70002^^verwitwet|CAT^^HL70006|||'
-    '|||Marienhospital Süd|||DEU^^HL70171\r'
+    'Lindenallee 6&Lindenallee&6^^Stuttgart^^^^H~Kirchgasse 21&Kirchgasse&21^^Stuttgart^^^^BDL||||DEU^^HL70296|W^widowed^HL70002^^verwitwet|'
+    'CAT^^HL70006||||||Marienhospital Süd|||DEU^^HL70171\r'
     'PV1|1|I|HNO^311^3^IN^^N^B^4|R|||||||||||||||2917^^^Birken-Klinik^VN|||||||||||||||||011||||||||202504011645|202504061100\r'
     'PV2||||||||||||||||||||||||||||||||||||N|N\r'
     'ZBE|4567^KIS|202504011705||REFERENCE'
@@ -5195,7 +5207,7 @@ class Test_de_cloverleaf_07_7_ADT_A03_discharge_with_billing_HL7_D_profile_v2_5(
         segment = PID()
 
         segment.patient_identifier_list = CX(cx_1='34567', cx_4='Birken-Klinik', cx_5='PI')
-        segment.patient_name = XPN(xpn_1='an der Mühle&an der&Mühle', xpn_2='Tïlman', xpn_8='L', xpn_9='A', xpn_13='G')
+        segment.patient_name = XPN(xpn_1='an der Mühle&an der&Mühle', xpn_2='Tïlman', xpn_7='L', xpn_8='A', xpn_11='G')
         segment.date_time_of_birth = '19710803'
         segment.administrative_sex = CWE(cwe_1='M')
         segment.patient_address = [
@@ -5212,8 +5224,7 @@ class Test_de_cloverleaf_07_7_ADT_A03_discharge_with_billing_HL7_D_profile_v2_5(
         expected = (
             'PID|||34567^^^Birken-Klinik^PI||an der Mühle&an der&Mühle^Tïlman^^^^^L^A^^^G||19710803|M|||'
             'Lindenallee 6&Lindenallee&6^^Stuttgart^^^^H~Kirchgasse 21&Kirchgasse&21^^Stuttgart^^^^BDL||||DEU^^HL70296|W^widowed^HL70002^^verwitwet|'
-            'CAT^^HL70006|||'
-            '|||Marienhospital Süd|||DEU^^HL70171'
+            'CAT^^HL70006||||||Marienhospital Süd|||DEU^^HL70171'
         )
         self.assertEqual(serialized, expected)
 
@@ -5272,7 +5283,7 @@ class Test_de_cloverleaf_07_7_ADT_A03_discharge_with_billing_HL7_D_profile_v2_5(
         message.evn.event_occurred = '202504011645'
 
         message.pid.patient_identifier_list = CX(cx_1='34567', cx_4='Birken-Klinik', cx_5='PI')
-        message.pid.patient_name = XPN(xpn_1='an der Mühle&an der&Mühle', xpn_2='Tïlman', xpn_8='L', xpn_9='A', xpn_13='G')
+        message.pid.patient_name = XPN(xpn_1='an der Mühle&an der&Mühle', xpn_2='Tïlman', xpn_7='L', xpn_8='A', xpn_11='G')
         message.pid.date_time_of_birth = '19710803'
         message.pid.administrative_sex = CWE(cwe_1='M')
         message.pid.patient_address = [
@@ -6005,13 +6016,15 @@ class Test_de_cloverleaf_08_8_ADT_A02_transfer_standard_HL7_D_profile_v2_5(unitt
         segment = PID()
 
         segment.patient_identifier_list = CX(cx_1='34567', cx_4='Birken-Klinik', cx_5='PI')
-        segment.patient_name = [XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Grüber', xpn_8='M', xpn_9='A', xpn_13='G')]
+        segment.patient_name = [XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_7='L', xpn_8='A', xpn_11='G'), XPN(xpn_1='Grüber', xpn_7='M', xpn_8='A', xpn_11='G')]
         segment.date_time_of_birth = '19810622'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = [
             XAD(xad_1='Lindenallee 6&Lindenallee&6', xad_3='Stuttgart', xad_7='H'),
             XAD(xad_1='Kirchgasse 21&Kirchgasse&21', xad_3='Stuttgart', xad_7='BDL'),
         ]
+        segment.pid_13 = '^PRN^PH^^49^711^2468135^^^^^0711/2468135'
+        segment.pid_14 = '^WPN^PH^^49^711^9753^246^^^^0711/9753-246'
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -6085,8 +6098,8 @@ class Test_de_cloverleaf_08_8_ADT_A02_transfer_standard_HL7_D_profile_v2_5(unitt
 
         message.pid.patient_identifier_list = CX(cx_1='34567', cx_4='Birken-Klinik', cx_5='PI')
         message.pid.patient_name = [
-            XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Grüber', xpn_8='M', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Grüber', xpn_7='M', xpn_8='A', xpn_11='G'),
         ]
         message.pid.date_time_of_birth = '19810622'
         message.pid.administrative_sex = CWE(cwe_1='F')
@@ -6094,6 +6107,8 @@ class Test_de_cloverleaf_08_8_ADT_A02_transfer_standard_HL7_D_profile_v2_5(unitt
             XAD(xad_1='Lindenallee 6&Lindenallee&6', xad_3='Stuttgart', xad_7='H'),
             XAD(xad_1='Kirchgasse 21&Kirchgasse&21', xad_3='Stuttgart', xad_7='BDL'),
         ]
+        message.pid.pid_13 = '^PRN^PH^^49^711^2468135^^^^^0711/2468135'
+        message.pid.pid_14 = '^WPN^PH^^49^711^9753^246^^^^0711/9753-246'
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -6749,13 +6764,15 @@ class Test_de_cloverleaf_09_9_ADT_A12_cancel_transfer_HL7_D_profile_v2_5(unittes
         segment = PID()
 
         segment.patient_identifier_list = CX(cx_1='34567', cx_4='Birken-Klinik', cx_5='PI')
-        segment.patient_name = XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_8='L', xpn_9='A', xpn_13='G')
+        segment.patient_name = XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_7='L', xpn_8='A', xpn_11='G')
         segment.date_time_of_birth = '19810622'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = [
             XAD(xad_1='Lindenallee 6&Lindenallee&6', xad_3='Stuttgart', xad_7='H'),
             XAD(xad_1='Kirchgasse 21&Kirchgasse&21', xad_3='Stuttgart', xad_7='BDL'),
         ]
+        segment.pid_13 = '^PRN^PH^^49^711^2468135^^^^^0711/2468135'
+        segment.pid_14 = '^WPN^PH^^49^711^9753^246^^^^0711/9753-246'
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -6824,13 +6841,15 @@ class Test_de_cloverleaf_09_9_ADT_A12_cancel_transfer_HL7_D_profile_v2_5(unittes
         message.evn.event_occurred = '202604011645'
 
         message.pid.patient_identifier_list = CX(cx_1='34567', cx_4='Birken-Klinik', cx_5='PI')
-        message.pid.patient_name = XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_8='L', xpn_9='A', xpn_13='G')
+        message.pid.patient_name = XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_7='L', xpn_8='A', xpn_11='G')
         message.pid.date_time_of_birth = '19810622'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = [
             XAD(xad_1='Lindenallee 6&Lindenallee&6', xad_3='Stuttgart', xad_7='H'),
             XAD(xad_1='Kirchgasse 21&Kirchgasse&21', xad_3='Stuttgart', xad_7='BDL'),
         ]
+        message.pid.pid_13 = '^PRN^PH^^49^711^2468135^^^^^0711/2468135'
+        message.pid.pid_14 = '^WPN^PH^^49^711^9753^246^^^^0711/9753-246'
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -7471,13 +7490,15 @@ class Test_de_cloverleaf_10_10_ADT_A04_outpatient_registration_HL7_D_profile_v2_
         segment = PID()
 
         segment.patient_identifier_list = CX(cx_1='34567', cx_4='Birken-Klinik', cx_5='PI')
-        segment.patient_name = [XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Grüber', xpn_8='M', xpn_9='A', xpn_13='G')]
+        segment.patient_name = [XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_7='L', xpn_8='A', xpn_11='G'), XPN(xpn_1='Grüber', xpn_7='M', xpn_8='A', xpn_11='G')]
         segment.date_time_of_birth = '19810622'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = [
             XAD(xad_1='Lindenallee 6&Lindenallee&6', xad_3='Stuttgart', xad_7='H'),
             XAD(xad_1='Kirchgasse 21&Kirchgasse&21', xad_3='Stuttgart', xad_7='BDL'),
         ]
+        segment.pid_13 = '^PRN^PH^^49^711^2468135^^^^^0711/2468135'
+        segment.pid_14 = '^WPN^PH^^49^711^9753^246^^^^0711/9753-246'
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -7538,8 +7559,8 @@ class Test_de_cloverleaf_10_10_ADT_A04_outpatient_registration_HL7_D_profile_v2_
 
         message.pid.patient_identifier_list = CX(cx_1='34567', cx_4='Birken-Klinik', cx_5='PI')
         message.pid.patient_name = [
-            XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Grüber', xpn_8='M', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Grüber', xpn_7='M', xpn_8='A', xpn_11='G'),
         ]
         message.pid.date_time_of_birth = '19810622'
         message.pid.administrative_sex = CWE(cwe_1='F')
@@ -7547,6 +7568,8 @@ class Test_de_cloverleaf_10_10_ADT_A04_outpatient_registration_HL7_D_profile_v2_
             XAD(xad_1='Lindenallee 6&Lindenallee&6', xad_3='Stuttgart', xad_7='H'),
             XAD(xad_1='Kirchgasse 21&Kirchgasse&21', xad_3='Stuttgart', xad_7='BDL'),
         ]
+        message.pid.pid_13 = '^PRN^PH^^49^711^2468135^^^^^0711/2468135'
+        message.pid.pid_14 = '^WPN^PH^^49^711^9753^246^^^^0711/9753-246'
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -8143,13 +8166,15 @@ class Test_de_cloverleaf_11_11_ADT_A04_pre_admission_registration_HL7_D_profile_
         segment = PID()
 
         segment.patient_identifier_list = CX(cx_1='34567', cx_4='Birken-Klinik', cx_5='PI')
-        segment.patient_name = [XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Grüber', xpn_8='M', xpn_9='A', xpn_13='G')]
+        segment.patient_name = [XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_7='L', xpn_8='A', xpn_11='G'), XPN(xpn_1='Grüber', xpn_7='M', xpn_8='A', xpn_11='G')]
         segment.date_time_of_birth = '19810622'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = [
             XAD(xad_1='Lindenallee 6&Lindenallee&6', xad_3='Stuttgart', xad_7='H'),
             XAD(xad_1='Kirchgasse 21&Kirchgasse&21', xad_3='Stuttgart', xad_7='BDL'),
         ]
+        segment.pid_13 = '^PRN^PH^^49^711^2468135^^^^^0711/2468135'
+        segment.pid_14 = '^WPN^PH^^49^711^9753^246^^^^0711/9753-246'
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -8217,8 +8242,8 @@ class Test_de_cloverleaf_11_11_ADT_A04_pre_admission_registration_HL7_D_profile_
 
         message.pid.patient_identifier_list = CX(cx_1='34567', cx_4='Birken-Klinik', cx_5='PI')
         message.pid.patient_name = [
-            XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Grüber', xpn_8='M', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Feldmann', xpn_2='Sïbylle', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Grüber', xpn_7='M', xpn_8='A', xpn_11='G'),
         ]
         message.pid.date_time_of_birth = '19810622'
         message.pid.administrative_sex = CWE(cwe_1='F')
@@ -8226,6 +8251,8 @@ class Test_de_cloverleaf_11_11_ADT_A04_pre_admission_registration_HL7_D_profile_
             XAD(xad_1='Lindenallee 6&Lindenallee&6', xad_3='Stuttgart', xad_7='H'),
             XAD(xad_1='Kirchgasse 21&Kirchgasse&21', xad_3='Stuttgart', xad_7='BDL'),
         ]
+        message.pid.pid_13 = '^PRN^PH^^49^711^2468135^^^^^0711/2468135'
+        message.pid.pid_14 = '^WPN^PH^^49^711^9753^246^^^^0711/9753-246'
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -8814,8 +8841,8 @@ class Test_de_cloverleaf_12_12_ADT_A31_person_update_HL7_D_profile_v2_5(unittest
 
         segment.patient_identifier_list = CX(cx_1='34567', cx_4='Birken-Klinik', cx_5='PI')
         segment.patient_name = [
-            XPN(xpn_1='Jäger', xpn_2='Rölf', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Jäger', xpn_2='Rölfe', xpn_5='Herr', xpn_8='D', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Jäger', xpn_2='Rölf', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Jäger', xpn_2='Rölfe', xpn_5='Herr', xpn_7='D', xpn_8='A', xpn_11='G'),
         ]
         segment.date_time_of_birth = '19830915'
         segment.administrative_sex = CWE(cwe_1='M')
@@ -8823,6 +8850,8 @@ class Test_de_cloverleaf_12_12_ADT_A31_person_update_HL7_D_profile_v2_5(unittest
             XAD(xad_1='Lindenallee 6&Lindenallee&6', xad_3='Stuttgart', xad_7='H'),
             XAD(xad_1='Kirchgasse 21&Kirchgasse&21', xad_3='Stuttgart', xad_7='BDL'),
         ]
+        segment.pid_13 = '^PRN^PH^^49^711^2468135^^^^^0711/2468135'
+        segment.pid_14 = '^WPN^PH^^49^711^9753^246^^^^0711/9753-246'
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -8879,8 +8908,8 @@ class Test_de_cloverleaf_12_12_ADT_A31_person_update_HL7_D_profile_v2_5(unittest
 
         message.pid.patient_identifier_list = CX(cx_1='34567', cx_4='Birken-Klinik', cx_5='PI')
         message.pid.patient_name = [
-            XPN(xpn_1='Jäger', xpn_2='Rölf', xpn_8='L', xpn_9='A', xpn_13='G'),
-            XPN(xpn_1='Jäger', xpn_2='Rölfe', xpn_5='Herr', xpn_8='D', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Jäger', xpn_2='Rölf', xpn_7='L', xpn_8='A', xpn_11='G'),
+            XPN(xpn_1='Jäger', xpn_2='Rölfe', xpn_5='Herr', xpn_7='D', xpn_8='A', xpn_11='G'),
         ]
         message.pid.date_time_of_birth = '19830915'
         message.pid.administrative_sex = CWE(cwe_1='M')
@@ -8888,6 +8917,8 @@ class Test_de_cloverleaf_12_12_ADT_A31_person_update_HL7_D_profile_v2_5(unittest
             XAD(xad_1='Lindenallee 6&Lindenallee&6', xad_3='Stuttgart', xad_7='H'),
             XAD(xad_1='Kirchgasse 21&Kirchgasse&21', xad_3='Stuttgart', xad_7='BDL'),
         ]
+        message.pid.pid_13 = '^PRN^PH^^49^711^2468135^^^^^0711/2468135'
+        message.pid.pid_14 = '^WPN^PH^^49^711^9753^246^^^^0711/9753-246'
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -8908,8 +8939,8 @@ _Raw_de_cloverleaf_13 = (
     'MSH|^~\\&|KIS|ADT|LAB|ADT|202609201025||ADT^A08^ADT_A01|00013424|P|2.5^DEU&&HL70399|||AL|NE||8859/1|||'
     '2.16.840.1.113883.2.6.9.62^^2.16.840.1.113883.2.6^ISO~2.16.840.1.113883.2.6.9.52^^2.16.840.1.113883.2.6^ISO\r'
     'EVN||202609201025\r'
-    'PID|||667812^^^KIS^PI||Brückmann&&Brückmann^Hëlga^^^^^L~Süßkind&&Süßkind^Hëlga^^^^^B||19780211|F|||||^PRN^PH^^49^711^4582716^^^^^0711/4582716||'
-    'DEU^German^HL70296^deutsch|M^^HL70002|EVC^^HL70006|||||||Y|2\r'
+    'PID|||667812^^^KIS^PI||Brückmann&&Brückmann^Hëlga^^^^^L~Süßkind&&Süßkind^Hëlga^^^^^B||19780211|F|||||'
+    '^PRN^PH^^49^711^4582716^^^^^0711/4582716||DEU^German^HL70296^deutsch|M^^HL70002|EVC^^HL70006|||||||Y|2\r'
     'PV1|1|I|IN1^202^^IN^^N^A||||||||||||||||20267891^^^KIS^VN\r'
     'OBX|1|NM|11884-4^Gestationsalter^LN||36||1-40|N|||F|||20260920\r'
     'ZBE|812943|20260920||REFERENCE'
@@ -9457,9 +9488,10 @@ class Test_de_cloverleaf_13_13_ADT_A08_update_with_gestational_age_OBX_HL7_D_DRG
         segment = PID()
 
         segment.patient_identifier_list = CX(cx_1='667812', cx_4='KIS', cx_5='PI')
-        segment.patient_name = [XPN(xpn_1='Brückmann&&Brückmann', xpn_2='Hëlga', xpn_8='L'), XPN(xpn_1='Süßkind&&Süßkind', xpn_2='Hëlga', xpn_8='B')]
+        segment.patient_name = [XPN(xpn_1='Brückmann&&Brückmann', xpn_2='Hëlga', xpn_7='L'), XPN(xpn_1='Süßkind&&Süßkind', xpn_2='Hëlga', xpn_7='B')]
         segment.date_time_of_birth = '19780211'
         segment.administrative_sex = CWE(cwe_1='F')
+        segment.pid_13 = '^PRN^PH^^49^711^4582716^^^^^0711/4582716'
         segment.primary_language = CWE(cwe_1='DEU', cwe_2='German', cwe_3='HL70296', cwe_4='deutsch')
         segment.marital_status = CWE(cwe_1='M', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='EVC', cwe_3='HL70006')
@@ -9468,8 +9500,8 @@ class Test_de_cloverleaf_13_13_ADT_A08_update_with_gestational_age_OBX_HL7_D_DRG
 
         serialized = segment.serialize()
         expected = (
-            'PID|||667812^^^KIS^PI||Brückmann&&Brückmann^Hëlga^^^^^L~Süßkind&&Süßkind^Hëlga^^^^^B||19780211|F|||||^PRN^PH^^49^711^4582716^^^^^0711/4582716||'
-            'DEU^German^HL70296^deutsch|M^^HL70002|EVC^^HL70006|||||||Y|2'
+            'PID|||667812^^^KIS^PI||Brückmann&&Brückmann^Hëlga^^^^^L~Süßkind&&Süßkind^Hëlga^^^^^B||19780211|F|||||'
+            '^PRN^PH^^49^711^4582716^^^^^0711/4582716||DEU^German^HL70296^deutsch|M^^HL70002|EVC^^HL70006|||||||Y|2'
         )
         self.assertEqual(serialized, expected)
 
@@ -9495,7 +9527,7 @@ class Test_de_cloverleaf_13_13_ADT_A08_update_with_gestational_age_OBX_HL7_D_DRG
         segment.set_id_obx = '1'
         segment.value_type = 'NM'
         segment.observation_identifier = CWE(cwe_1='11884-4', cwe_2='Gestationsalter', cwe_3='LN')
-        segment.observation_value = []
+        segment.obx_5 = '36'
         segment.reference_range = '1-40'
         segment.interpretation_codes = CWE(cwe_1='N')
         segment.observation_result_status = 'F'
@@ -9530,9 +9562,10 @@ class Test_de_cloverleaf_13_13_ADT_A08_update_with_gestational_age_OBX_HL7_D_DRG
         message.evn.recorded_date_time = '202609201025'
 
         message.pid.patient_identifier_list = CX(cx_1='667812', cx_4='KIS', cx_5='PI')
-        message.pid.patient_name = [XPN(xpn_1='Brückmann&&Brückmann', xpn_2='Hëlga', xpn_8='L'), XPN(xpn_1='Süßkind&&Süßkind', xpn_2='Hëlga', xpn_8='B')]
+        message.pid.patient_name = [XPN(xpn_1='Brückmann&&Brückmann', xpn_2='Hëlga', xpn_7='L'), XPN(xpn_1='Süßkind&&Süßkind', xpn_2='Hëlga', xpn_7='B')]
         message.pid.date_time_of_birth = '19780211'
         message.pid.administrative_sex = CWE(cwe_1='F')
+        message.pid.pid_13 = '^PRN^PH^^49^711^4582716^^^^^0711/4582716'
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_2='German', cwe_3='HL70296', cwe_4='deutsch')
         message.pid.marital_status = CWE(cwe_1='M', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='EVC', cwe_3='HL70006')
@@ -9555,10 +9588,11 @@ _Raw_de_cloverleaf_14 = (
     'MSH|^~\\&|KIS|ADT|LAB|ADT|202609201025||ADT^A08^ADT_A01|00013424|P|2.5^DEU&&HL70399|||AL|NE||8859/1|||'
     '2.16.840.1.113883.2.6.9.62^^2.16.840.1.113883.2.6^ISO~2.16.840.1.113883.2.6.9.52^^2.16.840.1.113883.2.6^ISO\r'
     'EVN||202609201025\r'
-    'PID|||667812^^^KIS^PI||Brückmann&&Brückmann^Hëlga^^^^^L||19780211|F|||||^PRN^PH^^49^711^4582716||DEU^^HL70296|M^^HL70002|EVC^^HL70006|||||||Y|2\r'
+    'PID|||667812^^^KIS^PI||Brückmann&&Brückmann^Hëlga^^^^^L||19780211|F|||||^PRN^PH^^49^711^4582716||DEU^^HL70296|M^^HL70002|EVC^^HL70006|||||||'
+    'Y|2\r'
     'PV1|1|I|IN1^202^^IN^^N^A||||||||||||||||202677891^^^KIS^VN|||||||||||||||||||||||||202609161815\r'
-    'DG1|1||P07.1^Neugeborenes mit sonstigem niedrigem Geburtsgewicht^I10-2004||20260920|BD|||||||||1|519834^Förster&&Förster^Löthar^^^Dr.^^^^L^^^DN||||'
-    '518347291^KIS|A\r'
+    'DG1|1||P07.1^Neugeborenes mit sonstigem niedrigem Geburtsgewicht^I10-2004||20260920|BD|||||||||1|'
+    '519834^Förster&&Förster^Löthar^^^Dr.^^^^L^^^DN||||518347291^KIS|A\r'
     'ZBE|671238542^KIS|20260919||REFERENCE'
 )
 
@@ -10118,9 +10152,10 @@ class Test_de_cloverleaf_14_14_ADT_A08_update_with_diagnosis_DG1_HL7_D_DRG_profi
         segment = PID()
 
         segment.patient_identifier_list = CX(cx_1='667812', cx_4='KIS', cx_5='PI')
-        segment.patient_name = XPN(xpn_1='Brückmann&&Brückmann', xpn_2='Hëlga', xpn_8='L')
+        segment.patient_name = XPN(xpn_1='Brückmann&&Brückmann', xpn_2='Hëlga', xpn_7='L')
         segment.date_time_of_birth = '19780211'
         segment.administrative_sex = CWE(cwe_1='F')
+        segment.pid_13 = '^PRN^PH^^49^711^4582716'
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='EVC', cwe_3='HL70006')
@@ -10129,7 +10164,8 @@ class Test_de_cloverleaf_14_14_ADT_A08_update_with_diagnosis_DG1_HL7_D_DRG_profi
 
         serialized = segment.serialize()
         expected = (
-            'PID|||667812^^^KIS^PI||Brückmann&&Brückmann^Hëlga^^^^^L||19780211|F|||||^PRN^PH^^49^711^4582716||DEU^^HL70296|M^^HL70002|EVC^^HL70006|||||||Y|2'
+            'PID|||667812^^^KIS^PI||Brückmann&&Brückmann^Hëlga^^^^^L||19780211|F|||||^PRN^PH^^49^711^4582716||DEU^^HL70296|M^^HL70002|EVC^^HL70006|||||||'
+            'Y|2'
         )
         self.assertEqual(serialized, expected)
 
@@ -10158,15 +10194,14 @@ class Test_de_cloverleaf_14_14_ADT_A08_update_with_diagnosis_DG1_HL7_D_DRG_profi
         segment.diagnosis_date_time = '20260920'
         segment.diagnosis_type = CWE(cwe_1='BD')
         segment.diagnosis_priority = '1'
-        segment.diagnosing_clinician = XCN(xcn_1='519834', xcn_2='Förster&&Förster', xcn_3='Löthar', xcn_6='Dr.', xcn_11='L', xcn_14='DN')
+        segment.diagnosing_clinician = XCN(xcn_1='519834', xcn_2='Förster&&Förster', xcn_3='Löthar', xcn_6='Dr.', xcn_10='L', xcn_13='DN')
         segment.diagnosis_identifier = EI(ei_1='518347291', ei_2='KIS')
         segment.diagnosis_action_code = 'A'
 
         serialized = segment.serialize()
         expected = (
             'DG1|1||P07.1^Neugeborenes mit sonstigem niedrigem Geburtsgewicht^I10-2004||20260920|BD|||||||||1|'
-            '519834^Förster&&Förster^Löthar^^^Dr.^^^^L^^^DN||||'
-            '518347291^KIS|A'
+            '519834^Förster&&Förster^Löthar^^^Dr.^^^^L^^^DN||||518347291^KIS|A'
         )
         self.assertEqual(serialized, expected)
 
@@ -10195,9 +10230,10 @@ class Test_de_cloverleaf_14_14_ADT_A08_update_with_diagnosis_DG1_HL7_D_DRG_profi
         message.evn.recorded_date_time = '202609201025'
 
         message.pid.patient_identifier_list = CX(cx_1='667812', cx_4='KIS', cx_5='PI')
-        message.pid.patient_name = XPN(xpn_1='Brückmann&&Brückmann', xpn_2='Hëlga', xpn_8='L')
+        message.pid.patient_name = XPN(xpn_1='Brückmann&&Brückmann', xpn_2='Hëlga', xpn_7='L')
         message.pid.date_time_of_birth = '19780211'
         message.pid.administrative_sex = CWE(cwe_1='F')
+        message.pid.pid_13 = '^PRN^PH^^49^711^4582716'
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='EVC', cwe_3='HL70006')
@@ -10215,7 +10251,7 @@ class Test_de_cloverleaf_14_14_ADT_A08_update_with_diagnosis_DG1_HL7_D_DRG_profi
         message.dg1.diagnosis_date_time = '20260920'
         message.dg1.diagnosis_type = CWE(cwe_1='BD')
         message.dg1.diagnosis_priority = '1'
-        message.dg1.diagnosing_clinician = XCN(xcn_1='519834', xcn_2='Förster&&Förster', xcn_3='Löthar', xcn_6='Dr.', xcn_11='L', xcn_14='DN')
+        message.dg1.diagnosing_clinician = XCN(xcn_1='519834', xcn_2='Förster&&Förster', xcn_3='Löthar', xcn_6='Dr.', xcn_10='L', xcn_13='DN')
         message.dg1.diagnosis_identifier = EI(ei_1='518347291', ei_2='KIS')
         message.dg1.diagnosis_action_code = 'A'
 
@@ -10230,9 +10266,10 @@ _Raw_de_cloverleaf_15 = (
     'MSH|^~\\&|HOSPAT|ADT|DATAGATE|ADT|20260416180000||MDM^T02^MDM_T02|102000|D|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|||'
     '2.16.840.1.113883.2.6.9.69^^2.16.840.1.1.13883.2.6^ISO\r'
     'EVN||20260416180000\r'
-    'PID|||205000418^^^Tannen-Klinikum^PI||Würzburger^Gërd^^^^^L||19660514|M|||Brühlweg 11^^Kempten^^87435^DEU^H|08312649|0831-5287634|08323-291|DEU||EVC||'
-    '||||Nürnberg|||D\r'
-    'PV1||I|C1^^^CH|N|6308714||||||||||||||6308714^^^Tannen-Klinikum^VN||K|||||||||||||||E|||7823|||||20260122155500|20260813174000|||617||6308714\r'
+    'PID|||205000418^^^Tannen-Klinikum^PI||Würzburger^Gërd^^^^^L||19660514|M|||Brühlweg 11^^Kempten^^87435^DEU^H|08312649|0831-5287634|08323-291|'
+    'DEU||EVC||||||Nürnberg|||D\r'
+    'PV1||I|C1^^^CH|N|6308714||||||||||||||6308714^^^Tannen-Klinikum^VN||K|||||||||||||||E|||7823|||||20260122155500|20260813174000|||617||'
+    '6308714\r'
     'TXA|1|CN|application/word|||20260416142700|20260416142700||||wörnli|78491||||78491.doc^HOSPAT|DI\r'
     'OBX|1|ED|^Document Content|1|^text/plain^^Base64^VGhpcyBpcyBhbiBleGFtcGxlIERvY3VtZW50Lg==||||||F'
 )
@@ -10812,10 +10849,13 @@ class Test_de_cloverleaf_15_15_MDM_T02_document_notification_with_content_HL7_D_
         segment = PID()
 
         segment.patient_identifier_list = CX(cx_1='205000418', cx_4='Tannen-Klinikum', cx_5='PI')
-        segment.patient_name = XPN(xpn_1='Würzburger', xpn_2='Gërd', xpn_8='L')
+        segment.patient_name = XPN(xpn_1='Würzburger', xpn_2='Gërd', xpn_7='L')
         segment.date_time_of_birth = '19660514'
         segment.administrative_sex = CWE(cwe_1='M')
         segment.patient_address = XAD(xad_1='Brühlweg 11', xad_3='Kempten', xad_5='87435', xad_6='DEU', xad_7='H')
+        segment.pid_12 = '08312649'
+        segment.pid_13 = '0831-5287634'
+        segment.pid_14 = '08323-291'
         segment.primary_language = CWE(cwe_1='DEU')
         segment.religion = CWE(cwe_1='EVC')
         segment.birth_place = 'Nürnberg'
@@ -10824,8 +10864,7 @@ class Test_de_cloverleaf_15_15_MDM_T02_document_notification_with_content_HL7_D_
         serialized = segment.serialize()
         expected = (
             'PID|||205000418^^^Tannen-Klinikum^PI||Würzburger^Gërd^^^^^L||19660514|M|||Brühlweg 11^^Kempten^^87435^DEU^H|08312649|0831-5287634|08323-291|'
-            'DEU||EVC||'
-            '||||Nürnberg|||D'
+            'DEU||EVC||||||Nürnberg|||D'
         )
         self.assertEqual(serialized, expected)
 
@@ -10849,7 +10888,8 @@ class Test_de_cloverleaf_15_15_MDM_T02_document_notification_with_content_HL7_D_
 
         serialized = segment.serialize()
         expected = (
-            'PV1||I|C1^^^CH|N|6308714||||||||||||||6308714^^^Tannen-Klinikum^VN||K|||||||||||||||E|||7823|||||20260122155500|20260813174000|||617||6308714'
+            'PV1||I|C1^^^CH|N|6308714||||||||||||||6308714^^^Tannen-Klinikum^VN||K|||||||||||||||E|||7823|||||20260122155500|20260813174000|||617||'
+            '6308714'
         )
         self.assertEqual(serialized, expected)
 
@@ -10881,7 +10921,7 @@ class Test_de_cloverleaf_15_15_MDM_T02_document_notification_with_content_HL7_D_
         segment.value_type = 'ED'
         segment.observation_identifier = CWE(cwe_2='Document Content')
         segment.observation_sub_id = OG(og_1='1')
-        segment.observation_value = []
+        segment.obx_5 = '^text/plain^^Base64^VGhpcyBpcyBhbiBleGFtcGxlIERvY3VtZW50Lg=='
         segment.observation_result_status = 'F'
 
         serialized = segment.serialize()
@@ -10911,10 +10951,13 @@ class Test_de_cloverleaf_15_15_MDM_T02_document_notification_with_content_HL7_D_
         message.evn.recorded_date_time = '20260416180000'
 
         message.pid.patient_identifier_list = CX(cx_1='205000418', cx_4='Tannen-Klinikum', cx_5='PI')
-        message.pid.patient_name = XPN(xpn_1='Würzburger', xpn_2='Gërd', xpn_8='L')
+        message.pid.patient_name = XPN(xpn_1='Würzburger', xpn_2='Gërd', xpn_7='L')
         message.pid.date_time_of_birth = '19660514'
         message.pid.administrative_sex = CWE(cwe_1='M')
         message.pid.patient_address = XAD(xad_1='Brühlweg 11', xad_3='Kempten', xad_5='87435', xad_6='DEU', xad_7='H')
+        message.pid.pid_12 = '08312649'
+        message.pid.pid_13 = '0831-5287634'
+        message.pid.pid_14 = '08323-291'
         message.pid.primary_language = CWE(cwe_1='DEU')
         message.pid.religion = CWE(cwe_1='EVC')
         message.pid.birth_place = 'Nürnberg'
@@ -10954,9 +10997,10 @@ _Raw_de_cloverleaf_16 = (
     'MSH|^~\\&|HOSPAT|ADT|DATAGATE|ADT|20260416181000||MDM^T08^MDM_T02|102001|D|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|||'
     '2.16.840.1.113883.2.6.9.69^^2.16.840.1.1.13883.2.6^ISO\r'
     'EVN||20260416181000\r'
-    'PID|||205000418^^^Tannen-Klinikum^PI||Würzburger^Gërd^^^^^L||19660514|M|||Brühlweg 11^^Kempten^^87435^DEU^H|08312649|0831-5287634|08323-291|DEU||EVC||'
-    '||||Nürnberg|||D\r'
-    'PV1||I|C1^^^CH|N|6308714||||||||||||||6308714^^^Tannen-Klinikum^VN||K|||||||||||||||E|||7823|||||20260122155500|20260813174000|||617||6308714\r'
+    'PID|||205000418^^^Tannen-Klinikum^PI||Würzburger^Gërd^^^^^L||19660514|M|||Brühlweg 11^^Kempten^^87435^DEU^H|08312649|0831-5287634|08323-291|'
+    'DEU||EVC||||||Nürnberg|||D\r'
+    'PV1||I|C1^^^CH|N|6308714||||||||||||||6308714^^^Tannen-Klinikum^VN||K|||||||||||||||E|||7823|||||20260122155500|20260813174000|||617||'
+    '6308714\r'
     'TXA|1|CN|application/word|||20260416142700|20260416142700|20260416170000|||wörnli|78491||||78491.doc^HOSPAT|AU\r'
     'OBX|1|ED|^Document Content|1|^text/plain^^Base64^VGhpcyBpcyBhbiBleGFtcGxlIERvY3VtZW50Lg==||||||F'
 )
@@ -11543,10 +11587,13 @@ class Test_de_cloverleaf_16_16_MDM_T08_document_status_change_HL7_D_MDM_profile_
         segment = PID()
 
         segment.patient_identifier_list = CX(cx_1='205000418', cx_4='Tannen-Klinikum', cx_5='PI')
-        segment.patient_name = XPN(xpn_1='Würzburger', xpn_2='Gërd', xpn_8='L')
+        segment.patient_name = XPN(xpn_1='Würzburger', xpn_2='Gërd', xpn_7='L')
         segment.date_time_of_birth = '19660514'
         segment.administrative_sex = CWE(cwe_1='M')
         segment.patient_address = XAD(xad_1='Brühlweg 11', xad_3='Kempten', xad_5='87435', xad_6='DEU', xad_7='H')
+        segment.pid_12 = '08312649'
+        segment.pid_13 = '0831-5287634'
+        segment.pid_14 = '08323-291'
         segment.primary_language = CWE(cwe_1='DEU')
         segment.religion = CWE(cwe_1='EVC')
         segment.birth_place = 'Nürnberg'
@@ -11555,8 +11602,7 @@ class Test_de_cloverleaf_16_16_MDM_T08_document_status_change_HL7_D_MDM_profile_
         serialized = segment.serialize()
         expected = (
             'PID|||205000418^^^Tannen-Klinikum^PI||Würzburger^Gërd^^^^^L||19660514|M|||Brühlweg 11^^Kempten^^87435^DEU^H|08312649|0831-5287634|08323-291|'
-            'DEU||EVC||'
-            '||||Nürnberg|||D'
+            'DEU||EVC||||||Nürnberg|||D'
         )
         self.assertEqual(serialized, expected)
 
@@ -11580,7 +11626,8 @@ class Test_de_cloverleaf_16_16_MDM_T08_document_status_change_HL7_D_MDM_profile_
 
         serialized = segment.serialize()
         expected = (
-            'PV1||I|C1^^^CH|N|6308714||||||||||||||6308714^^^Tannen-Klinikum^VN||K|||||||||||||||E|||7823|||||20260122155500|20260813174000|||617||6308714'
+            'PV1||I|C1^^^CH|N|6308714||||||||||||||6308714^^^Tannen-Klinikum^VN||K|||||||||||||||E|||7823|||||20260122155500|20260813174000|||617||'
+            '6308714'
         )
         self.assertEqual(serialized, expected)
 
@@ -11613,7 +11660,7 @@ class Test_de_cloverleaf_16_16_MDM_T08_document_status_change_HL7_D_MDM_profile_
         segment.value_type = 'ED'
         segment.observation_identifier = CWE(cwe_2='Document Content')
         segment.observation_sub_id = OG(og_1='1')
-        segment.observation_value = []
+        segment.obx_5 = '^text/plain^^Base64^VGhpcyBpcyBhbiBleGFtcGxlIERvY3VtZW50Lg=='
         segment.observation_result_status = 'F'
 
         serialized = segment.serialize()
@@ -11643,10 +11690,13 @@ class Test_de_cloverleaf_16_16_MDM_T08_document_status_change_HL7_D_MDM_profile_
         message.evn.recorded_date_time = '20260416181000'
 
         message.pid.patient_identifier_list = CX(cx_1='205000418', cx_4='Tannen-Klinikum', cx_5='PI')
-        message.pid.patient_name = XPN(xpn_1='Würzburger', xpn_2='Gërd', xpn_8='L')
+        message.pid.patient_name = XPN(xpn_1='Würzburger', xpn_2='Gërd', xpn_7='L')
         message.pid.date_time_of_birth = '19660514'
         message.pid.administrative_sex = CWE(cwe_1='M')
         message.pid.patient_address = XAD(xad_1='Brühlweg 11', xad_3='Kempten', xad_5='87435', xad_6='DEU', xad_7='H')
+        message.pid.pid_12 = '08312649'
+        message.pid.pid_13 = '0831-5287634'
+        message.pid.pid_14 = '08323-291'
         message.pid.primary_language = CWE(cwe_1='DEU')
         message.pid.religion = CWE(cwe_1='EVC')
         message.pid.birth_place = 'Nürnberg'
@@ -12083,6 +12133,7 @@ class Test_de_cloverleaf_17_17_DFT_P03_financial_transaction_Thieme_E_ConsentPro
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'P03'
         segment.recorded_date_time = '20260315144018'
 
         serialized = segment.serialize()
@@ -12099,6 +12150,7 @@ class Test_de_cloverleaf_17_17_DFT_P03_financial_transaction_Thieme_E_ConsentPro
         segment.date_time_of_birth = '19890327'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Gärtnerstr. 78', xad_3='Brückstadt', xad_5='54321')
+        segment.pid_13 = '05678/12345-0'
 
         serialized = segment.serialize()
         expected = 'PID|||20260315P00289||Schäffer^Ülrike||19890327|F|||Gärtnerstr. 78^^Brückstadt^^54321||05678/12345-0'
@@ -12162,6 +12214,7 @@ class Test_de_cloverleaf_17_17_DFT_P03_financial_transaction_Thieme_E_ConsentPro
         message.msh.country_code = 'DEU'
         message.msh.character_set = 'UNICODE UTF-8'
 
+        message.evn.evn_1 = 'P03'
         message.evn.recorded_date_time = '20260315144018'
 
         message.pid.patient_identifier_list = CX(cx_1='20260315P00289')
@@ -12169,6 +12222,7 @@ class Test_de_cloverleaf_17_17_DFT_P03_financial_transaction_Thieme_E_ConsentPro
         message.pid.date_time_of_birth = '19890327'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Gärtnerstr. 78', xad_3='Brückstadt', xad_5='54321')
+        message.pid.pid_13 = '05678/12345-0'
 
         serialized = message.serialize()
         serialized_length = len(serialized)
@@ -12185,8 +12239,8 @@ _Raw_de_cloverleaf_18 = (
     'ORC|SC|20260315A00078|20260315A00078~001||CM||||20260315144123\r'
     'OBR|1|20260315A00078|20260315A00078~001|D-An1E^Narkose/Regionalanästhesie^com.thieme.ecp\r'
     'NTE|1|L|Maßnahme vom Patienten akzeptiert|RE\r'
-    'TXA|1|HP|AP|20260315144123||20260315140844|||B000852446^Brünner^Rëné^^^Dr. med.|||7c29a4e1-83df-41b7-9562-d8ef12345a02^com.thieme.ecp||20260315A00078|'
-    '20260315A00078~001|I_D-An1E_20260315A00078_20260315144103.pdf|LA|U'
+    'TXA|1|HP|AP|20260315144123||20260315140844|||B000852446^Brünner^Rëné^^^Dr. med.|||7c29a4e1-83df-41b7-9562-d8ef12345a02^com.thieme.ecp||'
+    '20260315A00078|20260315A00078~001|I_D-An1E_20260315A00078_20260315144103.pdf|LA|U'
 )
 
 class Test_de_cloverleaf_18_18_MDM_T01_consent_document_notification_Thieme_E_ConsentPro(unittest.TestCase):
@@ -12720,6 +12774,7 @@ class Test_de_cloverleaf_18_18_MDM_T01_consent_document_notification_Thieme_E_Co
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'T01'
         segment.recorded_date_time = '20260315144123'
 
         serialized = segment.serialize()
@@ -12736,6 +12791,7 @@ class Test_de_cloverleaf_18_18_MDM_T01_consent_document_notification_Thieme_E_Co
         segment.date_time_of_birth = '19890327'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Gärtnerstr. 78', xad_3='Brückstadt', xad_5='54321')
+        segment.pid_13 = '05678/12345-0'
 
         serialized = segment.serialize()
         expected = 'PID|||20260315P00289||Schäffer^Ülrike||19890327|F|||Gärtnerstr. 78^^Brückstadt^^54321||05678/12345-0'
@@ -12765,7 +12821,7 @@ class Test_de_cloverleaf_18_18_MDM_T01_consent_document_notification_Thieme_E_Co
 
         segment.order_control = 'SC'
         segment.placer_order_number = EI(ei_1='20260315A00078')
-        segment.filler_order_number = EI(ei_1='20260315A00078')
+        segment.orc_3 = '20260315A00078~001'
         segment.order_status = 'CM'
         segment.date_time_of_order_event = '20260315144123'
 
@@ -12780,7 +12836,7 @@ class Test_de_cloverleaf_18_18_MDM_T01_consent_document_notification_Thieme_E_Co
 
         segment.set_id_obr = '1'
         segment.placer_order_number = EI(ei_1='20260315A00078')
-        segment.filler_order_number = EI(ei_1='20260315A00078')
+        segment.obr_3 = '20260315A00078~001'
         segment.universal_service_identifier = CWE(cwe_1='D-An1E', cwe_2='Narkose/Regionalanästhesie', cwe_3='com.thieme.ecp')
 
         serialized = segment.serialize()
@@ -12814,7 +12870,7 @@ class Test_de_cloverleaf_18_18_MDM_T01_consent_document_notification_Thieme_E_Co
         segment.originator_code_name = XCN(xcn_1='B000852446', xcn_2='Brünner', xcn_3='Rëné', xcn_6='Dr. med.')
         segment.unique_document_number = EI(ei_1='7c29a4e1-83df-41b7-9562-d8ef12345a02', ei_2='com.thieme.ecp')
         segment.placer_order_number = EI(ei_1='20260315A00078')
-        segment.filler_order_number = EI(ei_1='20260315A00078')
+        segment.txa_15 = '20260315A00078~001'
         segment.unique_document_file_name = 'I_D-An1E_20260315A00078_20260315144103.pdf'
         segment.document_completion_status = 'LA'
         segment.document_confidentiality_status = 'U'
@@ -12822,8 +12878,7 @@ class Test_de_cloverleaf_18_18_MDM_T01_consent_document_notification_Thieme_E_Co
         serialized = segment.serialize()
         expected = (
             'TXA|1|HP|AP|20260315144123||20260315140844|||B000852446^Brünner^Rëné^^^Dr. med.|||7c29a4e1-83df-41b7-9562-d8ef12345a02^com.thieme.ecp||'
-            '20260315A00078|'
-            '20260315A00078~001|I_D-An1E_20260315A00078_20260315144103.pdf|LA|U'
+            '20260315A00078|20260315A00078~001|I_D-An1E_20260315A00078_20260315144103.pdf|LA|U'
         )
         self.assertEqual(serialized, expected)
 
@@ -12846,6 +12901,7 @@ class Test_de_cloverleaf_18_18_MDM_T01_consent_document_notification_Thieme_E_Co
         message.msh.country_code = 'DEU'
         message.msh.character_set = 'UNICODE UTF-8'
 
+        message.evn.evn_1 = 'T01'
         message.evn.recorded_date_time = '20260315144123'
 
         message.pid.patient_identifier_list = CX(cx_1='20260315P00289')
@@ -12853,6 +12909,7 @@ class Test_de_cloverleaf_18_18_MDM_T01_consent_document_notification_Thieme_E_Co
         message.pid.date_time_of_birth = '19890327'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Gärtnerstr. 78', xad_3='Brückstadt', xad_5='54321')
+        message.pid.pid_13 = '05678/12345-0'
 
         message.pv1.set_id_pv1 = '1'
         message.pv1.patient_class = CWE(cwe_1='I')
@@ -12870,7 +12927,7 @@ class Test_de_cloverleaf_18_18_MDM_T01_consent_document_notification_Thieme_E_Co
         message.txa.originator_code_name = XCN(xcn_1='B000852446', xcn_2='Brünner', xcn_3='Rëné', xcn_6='Dr. med.')
         message.txa.unique_document_number = EI(ei_1='7c29a4e1-83df-41b7-9562-d8ef12345a02', ei_2='com.thieme.ecp')
         message.txa.placer_order_number = EI(ei_1='20260315A00078')
-        message.txa.filler_order_number = EI(ei_1='20260315A00078')
+        message.txa.txa_15 = '20260315A00078~001'
         message.txa.unique_document_file_name = 'I_D-An1E_20260315A00078_20260315144103.pdf'
         message.txa.document_completion_status = 'LA'
         message.txa.document_confidentiality_status = 'U'
@@ -12886,7 +12943,7 @@ _Raw_de_cloverleaf_19 = (
     'MSH|^~\\&|SENDESYSTEM|SENDEKH|EMPFANGSSYSTEM|EMPFANGSKH|20260101120000||ADT^A01^ADT_A01|MSG00001|P|2.6\r'
     'EVN|A01|20260101120000\r'
     'PID|||PAT042^^^Ahornhöhe-Klinik||Schäffer^Ülrike^Bïrgit^^Frau||20080614|F|||Höhenstr. 55^^Brückstadt^^54321||'
-    '^^PH^05678901234~^^CP^05678901235~^^Internet^ulrike.schaeffer@brückpost.de\r'
+    '^^PH^05678901234~^^CP^05678901235~^^Internet^ulrike.schaeffer@example.com\r'
     'PV1||I|Station A^Zimmer 111^Bett 1^Chirurgie||||ATT001^K.^Gräte^^^Dr.^med.|REF001^Ö.^Fränz^^^Dr.^med.|CON001^W.^Hëlmut^^^Dr.^med.||'
     'Station B^Zimmer 222^Bett 2^Innere Medizin||||||||FALL042|||||||||||||||||||||||Station C^Zimmer 333^Bett 3^Neurologie||20260101120000\r'
     'IN1|1|0|BKV1|BRÜCKENKRANKENVERSICHERUNG|Höhenstr. 55^^Brückstadt^^54321||||||||||||||||||||||||||||||||||||||||||||49'
@@ -13377,6 +13434,7 @@ class Test_de_cloverleaf_19_19_ADT_A01_admission_with_insurance_Thieme_E_Consent
     def test_build_EVN(self) -> 'None':
         segment = EVN()
 
+        segment.evn_1 = 'A01'
         segment.recorded_date_time = '20260101120000'
 
         serialized = segment.serialize()
@@ -13393,11 +13451,12 @@ class Test_de_cloverleaf_19_19_ADT_A01_admission_with_insurance_Thieme_E_Consent
         segment.date_time_of_birth = '20080614'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Höhenstr. 55', xad_3='Brückstadt', xad_5='54321')
+        segment.pid_13 = '^^PH^05678901234~^^CP^05678901235~^^Internet^ulrike.schaeffer@example.com'
 
         serialized = segment.serialize()
         expected = (
             'PID|||PAT042^^^Ahornhöhe-Klinik||Schäffer^Ülrike^Bïrgit^^Frau||20080614|F|||Höhenstr. 55^^Brückstadt^^54321||'
-            '^^PH^05678901234~^^CP^05678901235~^^Internet^ulrike.schaeffer@brückpost.de'
+            '^^PH^05678901234~^^CP^05678901235~^^Internet^ulrike.schaeffer@example.com'
         )
         self.assertEqual(serialized, expected)
 
@@ -13408,9 +13467,9 @@ class Test_de_cloverleaf_19_19_ADT_A01_admission_with_insurance_Thieme_E_Consent
 
         segment.patient_class = CWE(cwe_1='I')
         segment.assigned_patient_location = PL(pl_1='Station A', pl_2='Zimmer 111', pl_3='Bett 1', pl_4='Chirurgie')
-        segment.attending_doctor = XCN(xcn_1='ATT001', xcn_2='K.', xcn_3='Gräte', xcn_6='Dr.', xcn_8='med.')
-        segment.referring_doctor = XCN(xcn_1='REF001', xcn_2='Ö.', xcn_3='Fränz', xcn_6='Dr.', xcn_8='med.')
-        segment.consulting_doctor = XCN(xcn_1='CON001', xcn_2='W.', xcn_3='Hëlmut', xcn_6='Dr.', xcn_8='med.')
+        segment.pv1_7 = 'ATT001^K.^Gräte^^^Dr.^med.'
+        segment.pv1_8 = 'REF001^Ö.^Fränz^^^Dr.^med.'
+        segment.pv1_9 = 'CON001^W.^Hëlmut^^^Dr.^med.'
         segment.temporary_location = PL(pl_1='Station B', pl_2='Zimmer 222', pl_3='Bett 2', pl_4='Innere Medizin')
         segment.visit_number = CX(cx_1='FALL042')
         segment.pending_location = PL(pl_1='Station C', pl_2='Zimmer 333', pl_3='Bett 3', pl_4='Neurologie')
@@ -13454,6 +13513,7 @@ class Test_de_cloverleaf_19_19_ADT_A01_admission_with_insurance_Thieme_E_Consent
         message.msh.processing_id = PT(pt_1='P')
         message.msh.version_id = VID(vid_1='2.6')
 
+        message.evn.evn_1 = 'A01'
         message.evn.recorded_date_time = '20260101120000'
 
         message.pid.patient_identifier_list = CX(cx_1='PAT042', cx_4='Ahornhöhe-Klinik')
@@ -13461,12 +13521,13 @@ class Test_de_cloverleaf_19_19_ADT_A01_admission_with_insurance_Thieme_E_Consent
         message.pid.date_time_of_birth = '20080614'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Höhenstr. 55', xad_3='Brückstadt', xad_5='54321')
+        message.pid.pid_13 = '^^PH^05678901234~^^CP^05678901235~^^Internet^ulrike.schaeffer@example.com'
 
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.assigned_patient_location = PL(pl_1='Station A', pl_2='Zimmer 111', pl_3='Bett 1', pl_4='Chirurgie')
-        message.pv1.attending_doctor = XCN(xcn_1='ATT001', xcn_2='K.', xcn_3='Gräte', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.referring_doctor = XCN(xcn_1='REF001', xcn_2='Ö.', xcn_3='Fränz', xcn_6='Dr.', xcn_8='med.')
-        message.pv1.consulting_doctor = XCN(xcn_1='CON001', xcn_2='W.', xcn_3='Hëlmut', xcn_6='Dr.', xcn_8='med.')
+        message.pv1.pv1_7 = 'ATT001^K.^Gräte^^^Dr.^med.'
+        message.pv1.pv1_8 = 'REF001^Ö.^Fränz^^^Dr.^med.'
+        message.pv1.pv1_9 = 'CON001^W.^Hëlmut^^^Dr.^med.'
         message.pv1.temporary_location = PL(pl_1='Station B', pl_2='Zimmer 222', pl_3='Bett 2', pl_4='Innere Medizin')
         message.pv1.visit_number = CX(cx_1='FALL042')
         message.pv1.pending_location = PL(pl_1='Station C', pl_2='Zimmer 333', pl_3='Bett 3', pl_4='Neurologie')
@@ -13689,6 +13750,8 @@ class Test_de_cloverleaf_20_20_ORU_R01_ICU_observation_results_DETECT_UKD_Dresde
         segment = PID()
 
         segment.set_id_pid = '1'
+        segment.pid_2 = '5678'
+        segment.pid_4 = '43218765'
 
         serialized = segment.serialize()
         expected = 'PID|1|5678||43218765'
@@ -13701,6 +13764,7 @@ class Test_de_cloverleaf_20_20_ORU_R01_ICU_observation_results_DETECT_UKD_Dresde
 
         segment.set_id_pv1 = '1'
         segment.assigned_patient_location = PL(pl_1='SC110')
+        segment.pv1_4 = ''
 
         serialized = segment.serialize()
         expected = 'PV1|1||SC110|'
@@ -13714,7 +13778,7 @@ class Test_de_cloverleaf_20_20_ORU_R01_ICU_observation_results_DETECT_UKD_Dresde
         segment.set_id_obx = '1'
         segment.value_type = 'NM'
         segment.observation_identifier = CWE(cwe_1='RASS')
-        segment.observation_value = []
+        segment.obx_5 = '-4'
         segment.date_time_of_the_observation = '202601010600'
 
         serialized = segment.serialize()
@@ -13729,7 +13793,7 @@ class Test_de_cloverleaf_20_20_ORU_R01_ICU_observation_results_DETECT_UKD_Dresde
         segment.set_id_obx = '2'
         segment.value_type = 'ST'
         segment.observation_identifier = CWE(cwe_1='PupilleLinks')
-        segment.observation_value = []
+        segment.obx_5 = 'e+k'
         segment.date_time_of_the_observation = '202612301330'
 
         serialized = segment.serialize()
@@ -13744,7 +13808,7 @@ class Test_de_cloverleaf_20_20_ORU_R01_ICU_observation_results_DETECT_UKD_Dresde
         segment.set_id_obx = '3'
         segment.value_type = 'ST'
         segment.observation_identifier = CWE(cwe_1='PupilleRechts')
-        segment.observation_value = []
+        segment.obx_5 = 'e+k'
         segment.date_time_of_the_observation = '202601010600'
 
         serialized = segment.serialize()
