@@ -26,7 +26,7 @@ class TestFuzzInsurancePlan:
 
     @given(fhir_safe_text)
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_insurance_plan_id(self, value):
+    def test_fuzz_insurance_plan_id(self, value: str) -> None:
         r = InsurancePlan()
         r.id = value
         d = r.to_dict()
@@ -34,7 +34,7 @@ class TestFuzzInsurancePlan:
 
     @given(fhir_safe_text)
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_insurance_plan_roundtrip(self, value):
+    def test_fuzz_insurance_plan_roundtrip(self, value: str) -> None:
         r = InsurancePlan()
         r.id = value
         json_str = r.to_json()
@@ -43,7 +43,7 @@ class TestFuzzInsurancePlan:
 
     @given(st.lists(fhir_safe_text, min_size=0, max_size=10))
     @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_insurance_plan_extension_values(self, values):
+    def test_fuzz_insurance_plan_extension_values(self, values: list[str]) -> None:
         r = InsurancePlan()
         r.id = 'fuzz-test'
         r.extension = [{'url': f'http://example.org/ext{i}', 'valueString': v} for i, v in enumerate(values)]
@@ -52,7 +52,7 @@ class TestFuzzInsurancePlan:
 
     @given(fhir_safe_text, fhir_safe_text)
     @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_insurance_plan_meta_fields(self, version_id, source):
+    def test_fuzz_insurance_plan_meta_fields(self, version_id: str, source: str) -> None:
         r = InsurancePlan()
         r.id = 'fuzz-test'
         r.meta = {'versionId': version_id, 'source': source}
@@ -61,13 +61,13 @@ class TestFuzzInsurancePlan:
 
     @given(st.binary(min_size=0, max_size=200))
     @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_insurance_plan_binary_to_string(self, data):
+    def test_fuzz_insurance_plan_binary_to_string(self, data: bytes) -> None:
         r = InsurancePlan()
         r.id = data.decode('utf-8', errors='replace')
         d = r.to_dict()
         assert d.get('resourceType') == 'InsurancePlan'
 
-    def test_insurance_plan_validation_no_crash(self):
+    def test_insurance_plan_validation_no_crash(self) -> None:
         r = InsurancePlan()
         r.id = 'test-validation'
         result = validate(r)

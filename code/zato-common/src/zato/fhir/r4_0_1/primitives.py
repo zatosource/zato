@@ -1,24 +1,26 @@
 from __future__ import annotations
 
-from typing import NewType
+# Plain type aliases rather than NewType - user code assigns literals directly
+# (patient.active = True, observation.status = 'final') and NewType would reject
+# every such assignment under a type checker.
 
-Boolean = NewType("Boolean", bool)
-Integer = NewType("Integer", int)
-String = NewType("String", str)
-Decimal = NewType("Decimal", str)
-Uri = NewType("Uri", str)
-Url = NewType("Url", str)
-Canonical = NewType("Canonical", str)
-Base64Binary = NewType("Base64Binary", str)
-Instant = NewType("Instant", str)
-Date = NewType("Date", str)
-DateTime = NewType("DateTime", str)
-Time = NewType("Time", str)
-Code = NewType("Code", str)
-Oid = NewType("Oid", str)
-Id = NewType("Id", str)
-Markdown = NewType("Markdown", str)
-UnsignedInt = NewType("UnsignedInt", int)
-PositiveInt = NewType("PositiveInt", int)
-Uuid = NewType("Uuid", str)
-Xhtml = NewType("Xhtml", str)
+Boolean = bool
+Integer = int
+String = str
+Decimal = str
+Uri = str
+Url = str
+Canonical = str
+Base64Binary = str
+Instant = str
+Date = str
+DateTime = str
+Time = str
+Code = str
+Oid = str
+Id = str
+Markdown = str
+UnsignedInt = int
+PositiveInt = int
+Uuid = str
+Xhtml = str

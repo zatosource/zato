@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
 from __future__ import annotations
 
 from zato.hl7v2.base import HL7Group

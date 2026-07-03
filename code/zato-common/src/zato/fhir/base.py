@@ -46,6 +46,23 @@ class ListWrapper(FHIRList):
     pass
 
 
+class FHIRAttr(Generic[T]):
+    """ Typing-only descriptor for generated complex fields. Reads produce the typed
+    value while writes also accept plain dicts, lists and None, mirroring what
+    _fhir_setattr converts at runtime. It is never instantiated - it appears only in
+    class-body annotations, so runtime attribute access still goes through
+    __getattr__ and __setattr__.
+
+    TODO: not used by the generated resources.py and datatypes.py yet, they still
+    carry plain-union annotations - the switch is described in the TODO in
+    tools/generate_fhir_resources.py in the health repo.
+    """
+
+    def __get__(self, obj: Any, objtype: Any = None) -> T: ...
+
+    def __set__(self, obj: Any, value: T | dict | list | None) -> None: ...
+
+
 def _resolve_type(type_name: str) -> type:
     import zato.fhir.r4_0_1.datatypes as dt
     import zato.fhir.r4_0_1.resources as rs

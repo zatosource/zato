@@ -1,6 +1,12 @@
+# -*- coding: utf-8 -*-
+
 """
-Semantic component name mappings for HL7 v2.9 datatypes.
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
+
+# Semantic component name mappings for HL7 v2.9 datatypes.
 from __future__ import annotations
 
 

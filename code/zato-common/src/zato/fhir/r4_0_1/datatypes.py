@@ -32,7 +32,7 @@ class Element(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
 
 
 class BackboneElement(FHIRElement):
@@ -40,8 +40,8 @@ class BackboneElement(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
 
 
 class Address(FHIRElement):
@@ -49,17 +49,17 @@ class Address(FHIRElement):
     _field_types = {'extension': 'Extension', 'period': 'Period'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     use: Optional[Code] = None
     type_: Optional[Code] = None
     text: Optional[String] = None
-    line: String | FHIRList[String] = None
+    line: String | FHIRList[String] | list | None = None
     city: Optional[String] = None
     district: Optional[String] = None
     state: Optional[String] = None
     postalCode: Optional[String] = None
     country: Optional[String] = None
-    period: Optional[Period]
+    period: Period | dict | None
 
 
 class Age(FHIRElement):
@@ -67,7 +67,7 @@ class Age(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     value: Optional[Decimal] = None
     comparator: Optional[Code] = None
     unit: Optional[String] = None
@@ -81,8 +81,8 @@ class Annotation(FHIRElement):
     _choice_fields = {'author': ['authorReference', 'authorString']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    authorReference: Optional[Reference] = None
+    extension: Extension | FHIRList[Extension] | list | dict
+    authorReference: Reference | dict | None = None
     authorString: Optional[String] = None
     time: Optional[DateTime] = None
     text: Optional[Markdown] = None
@@ -93,7 +93,7 @@ class Attachment(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     contentType: Optional[Code] = None
     language: Optional[Code] = None
     data: Optional[Base64Binary] = None
@@ -109,8 +109,8 @@ class CodeableConcept(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Coding | FHIRList[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | FHIRList[Coding] | list | dict
     text: Optional[String] = None
 
 
@@ -119,7 +119,7 @@ class Coding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -132,9 +132,9 @@ class ContactDetail(FHIRElement):
     _field_types = {'extension': 'Extension', 'telecom': 'ContactPoint'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
-    telecom: ContactPoint | FHIRList[ContactPoint]
+    telecom: ContactPoint | FHIRList[ContactPoint] | list | dict
 
 
 class ContactPoint(FHIRElement):
@@ -142,12 +142,12 @@ class ContactPoint(FHIRElement):
     _field_types = {'extension': 'Extension', 'period': 'Period'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Code] = None
     value: Optional[String] = None
     use: Optional[Code] = None
     rank: Optional[PositiveInt] = None
-    period: Optional[Period]
+    period: Period | dict | None
 
 
 class Contributor(FHIRElement):
@@ -155,10 +155,10 @@ class Contributor(FHIRElement):
     _field_types = {'extension': 'Extension', 'contact': 'ContactDetail'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
     name: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
 
 
 class Count(FHIRElement):
@@ -166,7 +166,7 @@ class Count(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     value: Optional[Decimal] = None
     comparator: Optional[Code] = None
     unit: Optional[String] = None
@@ -187,16 +187,16 @@ class DataRequirement(FHIRElement):
     _choice_fields = {'subject': ['subjectCodeableConcept', 'subjectReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
-    profile: Canonical | FHIRList[Canonical] = None
-    subjectCodeableConcept: Optional[CodeableConcept] = None
-    subjectReference: Optional[Reference] = None
-    mustSupport: String | FHIRList[String] = None
-    codeFilter: Element | FHIRList[Element]
-    dateFilter: Element | FHIRList[Element]
+    profile: Canonical | FHIRList[Canonical] | list | None = None
+    subjectCodeableConcept: CodeableConcept | dict | None = None
+    subjectReference: Reference | dict | None = None
+    mustSupport: String | FHIRList[String] | list | None = None
+    codeFilter: Element | FHIRList[Element] | list | dict
+    dateFilter: Element | FHIRList[Element] | list | dict
     limit: Optional[PositiveInt] = None
-    sort: Element | FHIRList[Element]
+    sort: Element | FHIRList[Element] | list | dict
 
 
 class Distance(FHIRElement):
@@ -204,7 +204,7 @@ class Distance(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     value: Optional[Decimal] = None
     comparator: Optional[Code] = None
     unit: Optional[String] = None
@@ -231,22 +231,22 @@ class Dosage(FHIRElement):
     _choice_fields = {'asNeeded': ['asNeededBoolean', 'asNeededCodeableConcept']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     sequence: Optional[Integer] = None
     text: Optional[String] = None
-    additionalInstruction: CodeableConcept | FHIRList[CodeableConcept]
+    additionalInstruction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     patientInstruction: Optional[String] = None
-    timing: Optional[Timing]
+    timing: Timing | dict | None
     asNeededBoolean: Optional[Boolean] = None
-    asNeededCodeableConcept: Optional[CodeableConcept] = None
-    site: Optional[CodeableConcept]
-    route: Optional[CodeableConcept]
-    method: Optional[CodeableConcept]
-    doseAndRate: Element | FHIRList[Element]
-    maxDosePerPeriod: Optional[Ratio]
-    maxDosePerAdministration: Optional[Quantity]
-    maxDosePerLifetime: Optional[Quantity]
+    asNeededCodeableConcept: CodeableConcept | dict | None = None
+    site: CodeableConcept | dict | None
+    route: CodeableConcept | dict | None
+    method: CodeableConcept | dict | None
+    doseAndRate: Element | FHIRList[Element] | list | dict
+    maxDosePerPeriod: Ratio | dict | None
+    maxDosePerAdministration: Quantity | dict | None
+    maxDosePerLifetime: Quantity | dict | None
 
 
 class Duration(FHIRElement):
@@ -254,7 +254,7 @@ class Duration(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     value: Optional[Decimal] = None
     comparator: Optional[Code] = None
     unit: Optional[String] = None
@@ -553,25 +553,25 @@ class ElementDefinition(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     path: Optional[String] = None
-    representation: Code | FHIRList[Code] = None
+    representation: Code | FHIRList[Code] | list | None = None
     sliceName: Optional[String] = None
     sliceIsConstraining: Optional[Boolean] = None
     label: Optional[String] = None
-    code: Coding | FHIRList[Coding]
-    slicing: Optional[Element]
+    code: Coding | FHIRList[Coding] | list | dict
+    slicing: Element | dict | None
     short: Optional[String] = None
     definition: Optional[Markdown] = None
     comment: Optional[Markdown] = None
     requirements: Optional[Markdown] = None
-    alias: String | FHIRList[String] = None
+    alias: String | FHIRList[String] | list | None = None
     min: Optional[UnsignedInt] = None
     max: Optional[String] = None
-    base: Optional[Element]
+    base: Element | dict | None
     contentReference: Optional[Uri] = None
-    type_: Element | FHIRList[Element]
+    type_: Element | FHIRList[Element] | list | dict
     defaultValueBase64Binary: Optional[Base64Binary] = None
     defaultValueBoolean: Optional[Boolean] = None
     defaultValueCanonical: Optional[Canonical] = None
@@ -591,37 +591,37 @@ class ElementDefinition(FHIRElement):
     defaultValueUri: Optional[Uri] = None
     defaultValueUrl: Optional[Url] = None
     defaultValueUuid: Optional[Uuid] = None
-    defaultValueAddress: Optional[Address] = None
-    defaultValueAge: Optional[Age] = None
-    defaultValueAnnotation: Optional[Annotation] = None
-    defaultValueAttachment: Optional[Attachment] = None
-    defaultValueCodeableConcept: Optional[CodeableConcept] = None
-    defaultValueCoding: Optional[Coding] = None
-    defaultValueContactPoint: Optional[ContactPoint] = None
-    defaultValueCount: Optional[Count] = None
-    defaultValueDistance: Optional[Distance] = None
-    defaultValueDuration: Optional[Duration] = None
-    defaultValueHumanName: Optional[HumanName] = None
-    defaultValueIdentifier: Optional[Identifier] = None
-    defaultValueMoney: Optional[Money] = None
-    defaultValuePeriod: Optional[Period] = None
-    defaultValueQuantity: Optional[Quantity] = None
-    defaultValueRange: Optional[Range] = None
-    defaultValueRatio: Optional[Ratio] = None
-    defaultValueReference: Optional[Reference] = None
-    defaultValueSampledData: Optional[SampledData] = None
-    defaultValueSignature: Optional[Signature] = None
-    defaultValueTiming: Optional[Timing] = None
-    defaultValueContactDetail: Optional[ContactDetail] = None
-    defaultValueContributor: Optional[Contributor] = None
-    defaultValueDataRequirement: Optional[DataRequirement] = None
-    defaultValueExpression: Optional[Expression] = None
-    defaultValueParameterDefinition: Optional[ParameterDefinition] = None
-    defaultValueRelatedArtifact: Optional[RelatedArtifact] = None
-    defaultValueTriggerDefinition: Optional[TriggerDefinition] = None
-    defaultValueUsageContext: Optional[UsageContext] = None
-    defaultValueDosage: Optional[Dosage] = None
-    defaultValueMeta: Optional[Meta] = None
+    defaultValueAddress: Address | dict | None = None
+    defaultValueAge: Age | dict | None = None
+    defaultValueAnnotation: Annotation | dict | None = None
+    defaultValueAttachment: Attachment | dict | None = None
+    defaultValueCodeableConcept: CodeableConcept | dict | None = None
+    defaultValueCoding: Coding | dict | None = None
+    defaultValueContactPoint: ContactPoint | dict | None = None
+    defaultValueCount: Count | dict | None = None
+    defaultValueDistance: Distance | dict | None = None
+    defaultValueDuration: Duration | dict | None = None
+    defaultValueHumanName: HumanName | dict | None = None
+    defaultValueIdentifier: Identifier | dict | None = None
+    defaultValueMoney: Money | dict | None = None
+    defaultValuePeriod: Period | dict | None = None
+    defaultValueQuantity: Quantity | dict | None = None
+    defaultValueRange: Range | dict | None = None
+    defaultValueRatio: Ratio | dict | None = None
+    defaultValueReference: Reference | dict | None = None
+    defaultValueSampledData: SampledData | dict | None = None
+    defaultValueSignature: Signature | dict | None = None
+    defaultValueTiming: Timing | dict | None = None
+    defaultValueContactDetail: ContactDetail | dict | None = None
+    defaultValueContributor: Contributor | dict | None = None
+    defaultValueDataRequirement: DataRequirement | dict | None = None
+    defaultValueExpression: Expression | dict | None = None
+    defaultValueParameterDefinition: ParameterDefinition | dict | None = None
+    defaultValueRelatedArtifact: RelatedArtifact | dict | None = None
+    defaultValueTriggerDefinition: TriggerDefinition | dict | None = None
+    defaultValueUsageContext: UsageContext | dict | None = None
+    defaultValueDosage: Dosage | dict | None = None
+    defaultValueMeta: Meta | dict | None = None
     meaningWhenMissing: Optional[Markdown] = None
     orderMeaning: Optional[String] = None
     fixedBase64Binary: Optional[Base64Binary] = None
@@ -643,37 +643,37 @@ class ElementDefinition(FHIRElement):
     fixedUri: Optional[Uri] = None
     fixedUrl: Optional[Url] = None
     fixedUuid: Optional[Uuid] = None
-    fixedAddress: Optional[Address] = None
-    fixedAge: Optional[Age] = None
-    fixedAnnotation: Optional[Annotation] = None
-    fixedAttachment: Optional[Attachment] = None
-    fixedCodeableConcept: Optional[CodeableConcept] = None
-    fixedCoding: Optional[Coding] = None
-    fixedContactPoint: Optional[ContactPoint] = None
-    fixedCount: Optional[Count] = None
-    fixedDistance: Optional[Distance] = None
-    fixedDuration: Optional[Duration] = None
-    fixedHumanName: Optional[HumanName] = None
-    fixedIdentifier: Optional[Identifier] = None
-    fixedMoney: Optional[Money] = None
-    fixedPeriod: Optional[Period] = None
-    fixedQuantity: Optional[Quantity] = None
-    fixedRange: Optional[Range] = None
-    fixedRatio: Optional[Ratio] = None
-    fixedReference: Optional[Reference] = None
-    fixedSampledData: Optional[SampledData] = None
-    fixedSignature: Optional[Signature] = None
-    fixedTiming: Optional[Timing] = None
-    fixedContactDetail: Optional[ContactDetail] = None
-    fixedContributor: Optional[Contributor] = None
-    fixedDataRequirement: Optional[DataRequirement] = None
-    fixedExpression: Optional[Expression] = None
-    fixedParameterDefinition: Optional[ParameterDefinition] = None
-    fixedRelatedArtifact: Optional[RelatedArtifact] = None
-    fixedTriggerDefinition: Optional[TriggerDefinition] = None
-    fixedUsageContext: Optional[UsageContext] = None
-    fixedDosage: Optional[Dosage] = None
-    fixedMeta: Optional[Meta] = None
+    fixedAddress: Address | dict | None = None
+    fixedAge: Age | dict | None = None
+    fixedAnnotation: Annotation | dict | None = None
+    fixedAttachment: Attachment | dict | None = None
+    fixedCodeableConcept: CodeableConcept | dict | None = None
+    fixedCoding: Coding | dict | None = None
+    fixedContactPoint: ContactPoint | dict | None = None
+    fixedCount: Count | dict | None = None
+    fixedDistance: Distance | dict | None = None
+    fixedDuration: Duration | dict | None = None
+    fixedHumanName: HumanName | dict | None = None
+    fixedIdentifier: Identifier | dict | None = None
+    fixedMoney: Money | dict | None = None
+    fixedPeriod: Period | dict | None = None
+    fixedQuantity: Quantity | dict | None = None
+    fixedRange: Range | dict | None = None
+    fixedRatio: Ratio | dict | None = None
+    fixedReference: Reference | dict | None = None
+    fixedSampledData: SampledData | dict | None = None
+    fixedSignature: Signature | dict | None = None
+    fixedTiming: Timing | dict | None = None
+    fixedContactDetail: ContactDetail | dict | None = None
+    fixedContributor: Contributor | dict | None = None
+    fixedDataRequirement: DataRequirement | dict | None = None
+    fixedExpression: Expression | dict | None = None
+    fixedParameterDefinition: ParameterDefinition | dict | None = None
+    fixedRelatedArtifact: RelatedArtifact | dict | None = None
+    fixedTriggerDefinition: TriggerDefinition | dict | None = None
+    fixedUsageContext: UsageContext | dict | None = None
+    fixedDosage: Dosage | dict | None = None
+    fixedMeta: Meta | dict | None = None
     patternBase64Binary: Optional[Base64Binary] = None
     patternBoolean: Optional[Boolean] = None
     patternCanonical: Optional[Canonical] = None
@@ -693,38 +693,38 @@ class ElementDefinition(FHIRElement):
     patternUri: Optional[Uri] = None
     patternUrl: Optional[Url] = None
     patternUuid: Optional[Uuid] = None
-    patternAddress: Optional[Address] = None
-    patternAge: Optional[Age] = None
-    patternAnnotation: Optional[Annotation] = None
-    patternAttachment: Optional[Attachment] = None
-    patternCodeableConcept: Optional[CodeableConcept] = None
-    patternCoding: Optional[Coding] = None
-    patternContactPoint: Optional[ContactPoint] = None
-    patternCount: Optional[Count] = None
-    patternDistance: Optional[Distance] = None
-    patternDuration: Optional[Duration] = None
-    patternHumanName: Optional[HumanName] = None
-    patternIdentifier: Optional[Identifier] = None
-    patternMoney: Optional[Money] = None
-    patternPeriod: Optional[Period] = None
-    patternQuantity: Optional[Quantity] = None
-    patternRange: Optional[Range] = None
-    patternRatio: Optional[Ratio] = None
-    patternReference: Optional[Reference] = None
-    patternSampledData: Optional[SampledData] = None
-    patternSignature: Optional[Signature] = None
-    patternTiming: Optional[Timing] = None
-    patternContactDetail: Optional[ContactDetail] = None
-    patternContributor: Optional[Contributor] = None
-    patternDataRequirement: Optional[DataRequirement] = None
-    patternExpression: Optional[Expression] = None
-    patternParameterDefinition: Optional[ParameterDefinition] = None
-    patternRelatedArtifact: Optional[RelatedArtifact] = None
-    patternTriggerDefinition: Optional[TriggerDefinition] = None
-    patternUsageContext: Optional[UsageContext] = None
-    patternDosage: Optional[Dosage] = None
-    patternMeta: Optional[Meta] = None
-    example: Element | FHIRList[Element]
+    patternAddress: Address | dict | None = None
+    patternAge: Age | dict | None = None
+    patternAnnotation: Annotation | dict | None = None
+    patternAttachment: Attachment | dict | None = None
+    patternCodeableConcept: CodeableConcept | dict | None = None
+    patternCoding: Coding | dict | None = None
+    patternContactPoint: ContactPoint | dict | None = None
+    patternCount: Count | dict | None = None
+    patternDistance: Distance | dict | None = None
+    patternDuration: Duration | dict | None = None
+    patternHumanName: HumanName | dict | None = None
+    patternIdentifier: Identifier | dict | None = None
+    patternMoney: Money | dict | None = None
+    patternPeriod: Period | dict | None = None
+    patternQuantity: Quantity | dict | None = None
+    patternRange: Range | dict | None = None
+    patternRatio: Ratio | dict | None = None
+    patternReference: Reference | dict | None = None
+    patternSampledData: SampledData | dict | None = None
+    patternSignature: Signature | dict | None = None
+    patternTiming: Timing | dict | None = None
+    patternContactDetail: ContactDetail | dict | None = None
+    patternContributor: Contributor | dict | None = None
+    patternDataRequirement: DataRequirement | dict | None = None
+    patternExpression: Expression | dict | None = None
+    patternParameterDefinition: ParameterDefinition | dict | None = None
+    patternRelatedArtifact: RelatedArtifact | dict | None = None
+    patternTriggerDefinition: TriggerDefinition | dict | None = None
+    patternUsageContext: UsageContext | dict | None = None
+    patternDosage: Dosage | dict | None = None
+    patternMeta: Meta | dict | None = None
+    example: Element | FHIRList[Element] | list | dict
     minValueDate: Optional[Date] = None
     minValueDateTime: Optional[DateTime] = None
     minValueInstant: Optional[Instant] = None
@@ -733,7 +733,7 @@ class ElementDefinition(FHIRElement):
     minValueInteger: Optional[Integer] = None
     minValuePositiveInt: Optional[PositiveInt] = None
     minValueUnsignedInt: Optional[UnsignedInt] = None
-    minValueQuantity: Optional[Quantity] = None
+    minValueQuantity: Quantity | dict | None = None
     maxValueDate: Optional[Date] = None
     maxValueDateTime: Optional[DateTime] = None
     maxValueInstant: Optional[Instant] = None
@@ -742,16 +742,16 @@ class ElementDefinition(FHIRElement):
     maxValueInteger: Optional[Integer] = None
     maxValuePositiveInt: Optional[PositiveInt] = None
     maxValueUnsignedInt: Optional[UnsignedInt] = None
-    maxValueQuantity: Optional[Quantity] = None
+    maxValueQuantity: Quantity | dict | None = None
     maxLength: Optional[Integer] = None
-    condition: Id | FHIRList[Id] = None
-    constraint: Element | FHIRList[Element]
+    condition: Id | FHIRList[Id] | list | None = None
+    constraint: Element | FHIRList[Element] | list | dict
     mustSupport: Optional[Boolean] = None
     isModifier: Optional[Boolean] = None
     isModifierReason: Optional[String] = None
     isSummary: Optional[Boolean] = None
-    binding: Optional[Element]
-    mapping: Element | FHIRList[Element]
+    binding: Element | dict | None
+    mapping: Element | FHIRList[Element] | list | dict
 
 
 class Expression(FHIRElement):
@@ -759,7 +759,7 @@ class Expression(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     description: Optional[String] = None
     name: Optional[Id] = None
     language: Optional[Code] = None
@@ -859,7 +859,7 @@ class Extension(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     url: Optional[str] = None
     valueBase64Binary: Optional[Base64Binary] = None
     valueBoolean: Optional[Boolean] = None
@@ -880,37 +880,37 @@ class Extension(FHIRElement):
     valueUri: Optional[Uri] = None
     valueUrl: Optional[Url] = None
     valueUuid: Optional[Uuid] = None
-    valueAddress: Optional[Address] = None
-    valueAge: Optional[Age] = None
-    valueAnnotation: Optional[Annotation] = None
-    valueAttachment: Optional[Attachment] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
-    valueCoding: Optional[Coding] = None
-    valueContactPoint: Optional[ContactPoint] = None
-    valueCount: Optional[Count] = None
-    valueDistance: Optional[Distance] = None
-    valueDuration: Optional[Duration] = None
-    valueHumanName: Optional[HumanName] = None
-    valueIdentifier: Optional[Identifier] = None
-    valueMoney: Optional[Money] = None
-    valuePeriod: Optional[Period] = None
-    valueQuantity: Optional[Quantity] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueReference: Optional[Reference] = None
-    valueSampledData: Optional[SampledData] = None
-    valueSignature: Optional[Signature] = None
-    valueTiming: Optional[Timing] = None
-    valueContactDetail: Optional[ContactDetail] = None
-    valueContributor: Optional[Contributor] = None
-    valueDataRequirement: Optional[DataRequirement] = None
-    valueExpression: Optional[Expression] = None
-    valueParameterDefinition: Optional[ParameterDefinition] = None
-    valueRelatedArtifact: Optional[RelatedArtifact] = None
-    valueTriggerDefinition: Optional[TriggerDefinition] = None
-    valueUsageContext: Optional[UsageContext] = None
-    valueDosage: Optional[Dosage] = None
-    valueMeta: Optional[Meta] = None
+    valueAddress: Address | dict | None = None
+    valueAge: Age | dict | None = None
+    valueAnnotation: Annotation | dict | None = None
+    valueAttachment: Attachment | dict | None = None
+    valueCodeableConcept: CodeableConcept | dict | None = None
+    valueCoding: Coding | dict | None = None
+    valueContactPoint: ContactPoint | dict | None = None
+    valueCount: Count | dict | None = None
+    valueDistance: Distance | dict | None = None
+    valueDuration: Duration | dict | None = None
+    valueHumanName: HumanName | dict | None = None
+    valueIdentifier: Identifier | dict | None = None
+    valueMoney: Money | dict | None = None
+    valuePeriod: Period | dict | None = None
+    valueQuantity: Quantity | dict | None = None
+    valueRange: Range | dict | None = None
+    valueRatio: Ratio | dict | None = None
+    valueReference: Reference | dict | None = None
+    valueSampledData: SampledData | dict | None = None
+    valueSignature: Signature | dict | None = None
+    valueTiming: Timing | dict | None = None
+    valueContactDetail: ContactDetail | dict | None = None
+    valueContributor: Contributor | dict | None = None
+    valueDataRequirement: DataRequirement | dict | None = None
+    valueExpression: Expression | dict | None = None
+    valueParameterDefinition: ParameterDefinition | dict | None = None
+    valueRelatedArtifact: RelatedArtifact | dict | None = None
+    valueTriggerDefinition: TriggerDefinition | dict | None = None
+    valueUsageContext: UsageContext | dict | None = None
+    valueDosage: Dosage | dict | None = None
+    valueMeta: Meta | dict | None = None
 
 
 class HumanName(FHIRElement):
@@ -918,14 +918,14 @@ class HumanName(FHIRElement):
     _field_types = {'extension': 'Extension', 'period': 'Period'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     use: Optional[Code] = None
     text: Optional[String] = None
     family: Optional[String] = None
-    given: String | FHIRList[String] = None
-    prefix: String | FHIRList[String] = None
-    suffix: String | FHIRList[String] = None
-    period: Optional[Period]
+    given: String | FHIRList[String] | list | None = None
+    prefix: String | FHIRList[String] | list | None = None
+    suffix: String | FHIRList[String] | list | None = None
+    period: Period | dict | None
 
 
 class Identifier(FHIRElement):
@@ -933,13 +933,13 @@ class Identifier(FHIRElement):
     _field_types = {'extension': 'Extension', 'type_': 'CodeableConcept', 'period': 'Period', 'assigner': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     use: Optional[Code] = None
-    type_: Optional[CodeableConcept]
+    type_: CodeableConcept | dict | None
     system: Optional[Uri] = None
     value: Optional[String] = None
-    period: Optional[Period]
-    assigner: Optional[Reference]
+    period: Period | dict | None
+    assigner: Reference | dict | None
 
 
 class MarketingStatus(FHIRElement):
@@ -954,12 +954,12 @@ class MarketingStatus(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    country: Optional[CodeableConcept]
-    jurisdiction: Optional[CodeableConcept]
-    status: Optional[CodeableConcept]
-    dateRange: Optional[Period]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    country: CodeableConcept | dict | None
+    jurisdiction: CodeableConcept | dict | None
+    status: CodeableConcept | dict | None
+    dateRange: Period | dict | None
     restoreDate: Optional[DateTime] = None
 
 
@@ -968,13 +968,13 @@ class Meta(FHIRElement):
     _field_types = {'extension': 'Extension', 'security': 'Coding', 'tag': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     versionId: Optional[Id] = None
     lastUpdated: Optional[Instant] = None
     source: Optional[Uri] = None
-    profile: Canonical | FHIRList[Canonical] = None
-    security: Coding | FHIRList[Coding]
-    tag: Coding | FHIRList[Coding]
+    profile: Canonical | FHIRList[Canonical] | list | None = None
+    security: Coding | FHIRList[Coding] | list | dict
+    tag: Coding | FHIRList[Coding] | list | dict
 
 
 class Money(FHIRElement):
@@ -982,7 +982,7 @@ class Money(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     value: Optional[Decimal] = None
     currency: Optional[Code] = None
 
@@ -992,7 +992,7 @@ class MoneyQuantity(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     value: Optional[Decimal] = None
     comparator: Optional[Code] = None
     unit: Optional[String] = None
@@ -1005,7 +1005,7 @@ class Narrative(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     status: Optional[Code] = None
     div: Optional[Xhtml] = None
 
@@ -1015,7 +1015,7 @@ class ParameterDefinition(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     name: Optional[Code] = None
     use: Optional[Code] = None
     min: Optional[Integer] = None
@@ -1030,7 +1030,7 @@ class Period(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     start: Optional[DateTime] = None
     end: Optional[DateTime] = None
 
@@ -1049,13 +1049,13 @@ class Population(FHIRElement):
     _choice_fields = {'age': ['ageRange', 'ageCodeableConcept']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    ageRange: Optional[Range] = None
-    ageCodeableConcept: Optional[CodeableConcept] = None
-    gender: Optional[CodeableConcept]
-    race: Optional[CodeableConcept]
-    physiologicalCondition: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    ageRange: Range | dict | None = None
+    ageCodeableConcept: CodeableConcept | dict | None = None
+    gender: CodeableConcept | dict | None
+    race: CodeableConcept | dict | None
+    physiologicalCondition: CodeableConcept | dict | None
 
 
 class ProdCharacteristic(FHIRElement):
@@ -1074,19 +1074,19 @@ class ProdCharacteristic(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    height: Optional[Quantity]
-    width: Optional[Quantity]
-    depth: Optional[Quantity]
-    weight: Optional[Quantity]
-    nominalVolume: Optional[Quantity]
-    externalDiameter: Optional[Quantity]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    height: Quantity | dict | None
+    width: Quantity | dict | None
+    depth: Quantity | dict | None
+    weight: Quantity | dict | None
+    nominalVolume: Quantity | dict | None
+    externalDiameter: Quantity | dict | None
     shape: Optional[String] = None
-    color: String | FHIRList[String] = None
-    imprint: String | FHIRList[String] = None
-    image: Attachment | FHIRList[Attachment]
-    scoring: Optional[CodeableConcept]
+    color: String | FHIRList[String] | list | None = None
+    imprint: String | FHIRList[String] | list | None = None
+    image: Attachment | FHIRList[Attachment] | list | dict
+    scoring: CodeableConcept | dict | None
 
 
 class ProductShelfLife(FHIRElement):
@@ -1101,12 +1101,12 @@ class ProductShelfLife(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Optional[Identifier]
-    type_: Optional[CodeableConcept]
-    period: Optional[Quantity]
-    specialPrecautionsForStorage: CodeableConcept | FHIRList[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | dict | None
+    type_: CodeableConcept | dict | None
+    period: Quantity | dict | None
+    specialPrecautionsForStorage: CodeableConcept | FHIRList[CodeableConcept] | list | dict
 
 
 class Quantity(FHIRElement):
@@ -1114,7 +1114,7 @@ class Quantity(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     value: Optional[Decimal] = None
     comparator: Optional[Code] = None
     unit: Optional[String] = None
@@ -1127,9 +1127,9 @@ class Range(FHIRElement):
     _field_types = {'extension': 'Extension', 'low': 'Quantity', 'high': 'Quantity'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    low: Optional[Quantity]
-    high: Optional[Quantity]
+    extension: Extension | FHIRList[Extension] | list | dict
+    low: Quantity | dict | None
+    high: Quantity | dict | None
 
 
 class Ratio(FHIRElement):
@@ -1137,9 +1137,9 @@ class Ratio(FHIRElement):
     _field_types = {'extension': 'Extension', 'numerator': 'Quantity', 'denominator': 'Quantity'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    numerator: Optional[Quantity]
-    denominator: Optional[Quantity]
+    extension: Extension | FHIRList[Extension] | list | dict
+    numerator: Quantity | dict | None
+    denominator: Quantity | dict | None
 
 
 class Reference(FHIRElement):
@@ -1147,10 +1147,10 @@ class Reference(FHIRElement):
     _field_types = {'extension': 'Extension', 'identifier': 'Identifier'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     reference: Optional[String] = None
     type_: Optional[Uri] = None
-    identifier: Optional[Identifier]
+    identifier: Identifier | dict | None
     display: Optional[String] = None
 
 
@@ -1159,13 +1159,13 @@ class RelatedArtifact(FHIRElement):
     _field_types = {'extension': 'Extension', 'document': 'Attachment'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
     label: Optional[String] = None
     display: Optional[String] = None
     citation: Optional[Markdown] = None
     url: Optional[Url] = None
-    document: Optional[Attachment]
+    document: Attachment | dict | None
     resource: Optional[Canonical] = None
 
 
@@ -1174,8 +1174,8 @@ class SampledData(FHIRElement):
     _field_types = {'extension': 'Extension', 'origin': 'Quantity'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    origin: Optional[Quantity]
+    extension: Extension | FHIRList[Extension] | list | dict
+    origin: Quantity | dict | None
     period: Optional[Decimal] = None
     factor: Optional[Decimal] = None
     lowerLimit: Optional[Decimal] = None
@@ -1189,11 +1189,11 @@ class Signature(FHIRElement):
     _field_types = {'extension': 'Extension', 'type_': 'Coding', 'who': 'Reference', 'onBehalfOf': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    type_: Coding | FHIRList[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    type_: Coding | FHIRList[Coding] | list | dict
     when: Optional[Instant] = None
-    who: Optional[Reference]
-    onBehalfOf: Optional[Reference]
+    who: Reference | dict | None
+    onBehalfOf: Reference | dict | None
     targetFormat: Optional[Code] = None
     sigFormat: Optional[Code] = None
     data: Optional[Base64Binary] = None
@@ -1204,7 +1204,7 @@ class SimpleQuantity(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     value: Optional[Decimal] = None
     comparator: Optional[Code] = None
     unit: Optional[String] = None
@@ -1225,14 +1225,14 @@ class SubstanceAmount(FHIRElement):
     _choice_fields = {'amount': ['amountQuantity', 'amountRange', 'amountString']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    amountQuantity: Optional[Quantity] = None
-    amountRange: Optional[Range] = None
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    amountQuantity: Quantity | dict | None = None
+    amountRange: Range | dict | None = None
     amountString: Optional[String] = None
-    amountType: Optional[CodeableConcept]
+    amountType: CodeableConcept | dict | None
     amountText: Optional[String] = None
-    referenceRange: Optional[Element]
+    referenceRange: Element | dict | None
 
 
 class Timing(FHIRElement):
@@ -1240,11 +1240,11 @@ class Timing(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'repeat': 'Element', 'code': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    event: DateTime | FHIRList[DateTime] = None
-    repeat: Optional[Element]
-    code: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    event: DateTime | FHIRList[DateTime] | list | None = None
+    repeat: Element | dict | None
+    code: CodeableConcept | dict | None
 
 
 class TriggerDefinition(FHIRElement):
@@ -1253,15 +1253,15 @@ class TriggerDefinition(FHIRElement):
     _choice_fields = {'timing': ['timingTiming', 'timingReference', 'timingDate', 'timingDateTime']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
     name: Optional[String] = None
-    timingTiming: Optional[Timing] = None
-    timingReference: Optional[Reference] = None
+    timingTiming: Timing | dict | None = None
+    timingReference: Reference | dict | None = None
     timingDate: Optional[Date] = None
     timingDateTime: Optional[DateTime] = None
-    data: DataRequirement | FHIRList[DataRequirement]
-    condition: Optional[Expression]
+    data: DataRequirement | FHIRList[DataRequirement] | list | dict
+    condition: Expression | dict | None
 
 
 class UsageContext(FHIRElement):
@@ -1277,12 +1277,12 @@ class UsageContext(FHIRElement):
     _choice_fields = {'value': ['valueCodeableConcept', 'valueQuantity', 'valueRange', 'valueReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    code: Optional[Coding]
-    valueCodeableConcept: Optional[CodeableConcept] = None
-    valueQuantity: Optional[Quantity] = None
-    valueRange: Optional[Range] = None
-    valueReference: Optional[Reference] = None
+    extension: Extension | FHIRList[Extension] | list | dict
+    code: Coding | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None = None
+    valueQuantity: Quantity | dict | None = None
+    valueRange: Range | dict | None = None
+    valueReference: Reference | dict | None = None
 
 
 class bodySite(FHIRElement):
@@ -1290,9 +1290,9 @@ class bodySite(FHIRElement):
     _choice_fields = {'value': ['valueReference']}
 
     id: Optional[str] = None
-    extension: Optional[Extension]
+    extension: Extension | dict | None
     url: Optional[str] = None
-    valueReference: Optional[Reference] = None
+    valueReference: Reference | dict | None = None
 
 
 class capabilities(FHIRElement):
@@ -1300,7 +1300,7 @@ class capabilities(FHIRElement):
     _choice_fields = {'value': ['valueCode']}
 
     id: Optional[str] = None
-    extension: Optional[Extension]
+    extension: Extension | dict | None
     url: Optional[str] = None
     valueCode: Optional[Code] = None
 
@@ -1310,7 +1310,7 @@ class designNote(FHIRElement):
     _choice_fields = {'value': ['valueMarkdown']}
 
     id: Optional[str] = None
-    extension: Optional[Extension]
+    extension: Extension | dict | None
     url: Optional[str] = None
     valueMarkdown: Optional[Markdown] = None
 
@@ -1320,7 +1320,7 @@ class display(FHIRElement):
     _choice_fields = {'value': ['valueString']}
 
     id: Optional[str] = None
-    extension: Optional[Extension]
+    extension: Extension | dict | None
     url: Optional[str] = None
     valueString: Optional[String] = None
 
@@ -1330,7 +1330,7 @@ class entryFormat(FHIRElement):
     _choice_fields = {'value': ['valueString']}
 
     id: Optional[str] = None
-    extension: Optional[Extension]
+    extension: Extension | dict | None
     url: Optional[str] = None
     valueString: Optional[String] = None
 
@@ -1427,7 +1427,7 @@ class geolocation(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     url: Optional[str] = None
     valueBase64Binary: Optional[Base64Binary] = None
     valueBoolean: Optional[Boolean] = None
@@ -1448,37 +1448,37 @@ class geolocation(FHIRElement):
     valueUri: Optional[Uri] = None
     valueUrl: Optional[Url] = None
     valueUuid: Optional[Uuid] = None
-    valueAddress: Optional[Address] = None
-    valueAge: Optional[Age] = None
-    valueAnnotation: Optional[Annotation] = None
-    valueAttachment: Optional[Attachment] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
-    valueCoding: Optional[Coding] = None
-    valueContactPoint: Optional[ContactPoint] = None
-    valueCount: Optional[Count] = None
-    valueDistance: Optional[Distance] = None
-    valueDuration: Optional[Duration] = None
-    valueHumanName: Optional[HumanName] = None
-    valueIdentifier: Optional[Identifier] = None
-    valueMoney: Optional[Money] = None
-    valuePeriod: Optional[Period] = None
-    valueQuantity: Optional[Quantity] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueReference: Optional[Reference] = None
-    valueSampledData: Optional[SampledData] = None
-    valueSignature: Optional[Signature] = None
-    valueTiming: Optional[Timing] = None
-    valueContactDetail: Optional[ContactDetail] = None
-    valueContributor: Optional[Contributor] = None
-    valueDataRequirement: Optional[DataRequirement] = None
-    valueExpression: Optional[Expression] = None
-    valueParameterDefinition: Optional[ParameterDefinition] = None
-    valueRelatedArtifact: Optional[RelatedArtifact] = None
-    valueTriggerDefinition: Optional[TriggerDefinition] = None
-    valueUsageContext: Optional[UsageContext] = None
-    valueDosage: Optional[Dosage] = None
-    valueMeta: Optional[Meta] = None
+    valueAddress: Address | dict | None = None
+    valueAge: Age | dict | None = None
+    valueAnnotation: Annotation | dict | None = None
+    valueAttachment: Attachment | dict | None = None
+    valueCodeableConcept: CodeableConcept | dict | None = None
+    valueCoding: Coding | dict | None = None
+    valueContactPoint: ContactPoint | dict | None = None
+    valueCount: Count | dict | None = None
+    valueDistance: Distance | dict | None = None
+    valueDuration: Duration | dict | None = None
+    valueHumanName: HumanName | dict | None = None
+    valueIdentifier: Identifier | dict | None = None
+    valueMoney: Money | dict | None = None
+    valuePeriod: Period | dict | None = None
+    valueQuantity: Quantity | dict | None = None
+    valueRange: Range | dict | None = None
+    valueRatio: Ratio | dict | None = None
+    valueReference: Reference | dict | None = None
+    valueSampledData: SampledData | dict | None = None
+    valueSignature: Signature | dict | None = None
+    valueTiming: Timing | dict | None = None
+    valueContactDetail: ContactDetail | dict | None = None
+    valueContributor: Contributor | dict | None = None
+    valueDataRequirement: DataRequirement | dict | None = None
+    valueExpression: Expression | dict | None = None
+    valueParameterDefinition: ParameterDefinition | dict | None = None
+    valueRelatedArtifact: RelatedArtifact | dict | None = None
+    valueTriggerDefinition: TriggerDefinition | dict | None = None
+    valueUsageContext: UsageContext | dict | None = None
+    valueDosage: Dosage | dict | None = None
+    valueMeta: Meta | dict | None = None
 
 
 class language(FHIRElement):
@@ -1486,7 +1486,7 @@ class language(FHIRElement):
     _choice_fields = {'value': ['valueCode']}
 
     id: Optional[str] = None
-    extension: Optional[Extension]
+    extension: Extension | dict | None
     url: Optional[str] = None
     valueCode: Optional[Code] = None
 
@@ -1496,7 +1496,7 @@ class maxDecimalPlaces(FHIRElement):
     _choice_fields = {'value': ['valueInteger']}
 
     id: Optional[str] = None
-    extension: Optional[Extension]
+    extension: Extension | dict | None
     url: Optional[str] = None
     valueInteger: Optional[Integer] = None
 
@@ -1506,7 +1506,7 @@ class maxSize(FHIRElement):
     _choice_fields = {'value': ['valueDecimal']}
 
     id: Optional[str] = None
-    extension: Optional[Extension]
+    extension: Extension | dict | None
     url: Optional[str] = None
     valueDecimal: Optional[Decimal] = None
 
@@ -1516,7 +1516,7 @@ class maxValue(FHIRElement):
     _choice_fields = {'value': ['valueDate', 'valueDateTime', 'valueTime', 'valueInstant', 'valueDecimal', 'valueInteger']}
 
     id: Optional[str] = None
-    extension: Optional[Extension]
+    extension: Extension | dict | None
     url: Optional[str] = None
     valueDate: Optional[Date] = None
     valueDateTime: Optional[DateTime] = None
@@ -1531,7 +1531,7 @@ class mimeType(FHIRElement):
     _choice_fields = {'value': ['valueCode']}
 
     id: Optional[str] = None
-    extension: Optional[Extension]
+    extension: Extension | dict | None
     url: Optional[str] = None
     valueCode: Optional[Code] = None
 
@@ -1541,7 +1541,7 @@ class minLength(FHIRElement):
     _choice_fields = {'value': ['valueInteger']}
 
     id: Optional[str] = None
-    extension: Optional[Extension]
+    extension: Extension | dict | None
     url: Optional[str] = None
     valueInteger: Optional[Integer] = None
 
@@ -1551,7 +1551,7 @@ class minValue(FHIRElement):
     _choice_fields = {'value': ['valueDate', 'valueDateTime', 'valueTime', 'valueDecimal', 'valueInteger']}
 
     id: Optional[str] = None
-    extension: Optional[Extension]
+    extension: Extension | dict | None
     url: Optional[str] = None
     valueDate: Optional[Date] = None
     valueDateTime: Optional[DateTime] = None
@@ -1565,7 +1565,7 @@ class narrativeLink(FHIRElement):
     _choice_fields = {'value': ['valueUrl']}
 
     id: Optional[str] = None
-    extension: Optional[Extension]
+    extension: Extension | dict | None
     url: Optional[str] = None
     valueUrl: Optional[Url] = None
 
@@ -1575,7 +1575,7 @@ class ordinalValue(FHIRElement):
     _choice_fields = {'value': ['valueDecimal']}
 
     id: Optional[str] = None
-    extension: Optional[Extension]
+    extension: Extension | dict | None
     url: Optional[str] = None
     valueDecimal: Optional[Decimal] = None
 
@@ -1585,7 +1585,7 @@ class originalText(FHIRElement):
     _choice_fields = {'value': ['valueString']}
 
     id: Optional[str] = None
-    extension: Optional[Extension]
+    extension: Extension | dict | None
     url: Optional[str] = None
     valueString: Optional[String] = None
 
@@ -1595,7 +1595,7 @@ class regex(FHIRElement):
     _choice_fields = {'value': ['valueString']}
 
     id: Optional[str] = None
-    extension: Optional[Extension]
+    extension: Extension | dict | None
     url: Optional[str] = None
     valueString: Optional[String] = None
 
@@ -1605,7 +1605,7 @@ class replaces(FHIRElement):
     _choice_fields = {'value': ['valueCanonical']}
 
     id: Optional[str] = None
-    extension: Optional[Extension]
+    extension: Extension | dict | None
     url: Optional[str] = None
     valueCanonical: Optional[Canonical] = None
 
@@ -1702,7 +1702,7 @@ class translation(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     url: Optional[str] = None
     valueBase64Binary: Optional[Base64Binary] = None
     valueBoolean: Optional[Boolean] = None
@@ -1723,37 +1723,37 @@ class translation(FHIRElement):
     valueUri: Optional[Uri] = None
     valueUrl: Optional[Url] = None
     valueUuid: Optional[Uuid] = None
-    valueAddress: Optional[Address] = None
-    valueAge: Optional[Age] = None
-    valueAnnotation: Optional[Annotation] = None
-    valueAttachment: Optional[Attachment] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
-    valueCoding: Optional[Coding] = None
-    valueContactPoint: Optional[ContactPoint] = None
-    valueCount: Optional[Count] = None
-    valueDistance: Optional[Distance] = None
-    valueDuration: Optional[Duration] = None
-    valueHumanName: Optional[HumanName] = None
-    valueIdentifier: Optional[Identifier] = None
-    valueMoney: Optional[Money] = None
-    valuePeriod: Optional[Period] = None
-    valueQuantity: Optional[Quantity] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueReference: Optional[Reference] = None
-    valueSampledData: Optional[SampledData] = None
-    valueSignature: Optional[Signature] = None
-    valueTiming: Optional[Timing] = None
-    valueContactDetail: Optional[ContactDetail] = None
-    valueContributor: Optional[Contributor] = None
-    valueDataRequirement: Optional[DataRequirement] = None
-    valueExpression: Optional[Expression] = None
-    valueParameterDefinition: Optional[ParameterDefinition] = None
-    valueRelatedArtifact: Optional[RelatedArtifact] = None
-    valueTriggerDefinition: Optional[TriggerDefinition] = None
-    valueUsageContext: Optional[UsageContext] = None
-    valueDosage: Optional[Dosage] = None
-    valueMeta: Optional[Meta] = None
+    valueAddress: Address | dict | None = None
+    valueAge: Age | dict | None = None
+    valueAnnotation: Annotation | dict | None = None
+    valueAttachment: Attachment | dict | None = None
+    valueCodeableConcept: CodeableConcept | dict | None = None
+    valueCoding: Coding | dict | None = None
+    valueContactPoint: ContactPoint | dict | None = None
+    valueCount: Count | dict | None = None
+    valueDistance: Distance | dict | None = None
+    valueDuration: Duration | dict | None = None
+    valueHumanName: HumanName | dict | None = None
+    valueIdentifier: Identifier | dict | None = None
+    valueMoney: Money | dict | None = None
+    valuePeriod: Period | dict | None = None
+    valueQuantity: Quantity | dict | None = None
+    valueRange: Range | dict | None = None
+    valueRatio: Ratio | dict | None = None
+    valueReference: Reference | dict | None = None
+    valueSampledData: SampledData | dict | None = None
+    valueSignature: Signature | dict | None = None
+    valueTiming: Timing | dict | None = None
+    valueContactDetail: ContactDetail | dict | None = None
+    valueContributor: Contributor | dict | None = None
+    valueDataRequirement: DataRequirement | dict | None = None
+    valueExpression: Expression | dict | None = None
+    valueParameterDefinition: ParameterDefinition | dict | None = None
+    valueRelatedArtifact: RelatedArtifact | dict | None = None
+    valueTriggerDefinition: TriggerDefinition | dict | None = None
+    valueUsageContext: UsageContext | dict | None = None
+    valueDosage: Dosage | dict | None = None
+    valueMeta: Meta | dict | None = None
 
 
 class variable(FHIRElement):
@@ -1761,6 +1761,6 @@ class variable(FHIRElement):
     _choice_fields = {'value': ['valueExpression']}
 
     id: Optional[str] = None
-    extension: Optional[Extension]
+    extension: Extension | dict | None
     url: Optional[str] = None
-    valueExpression: Optional[Expression] = None
+    valueExpression: Expression | dict | None = None
