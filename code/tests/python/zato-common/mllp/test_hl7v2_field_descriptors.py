@@ -56,7 +56,7 @@ class TestEVNFieldDescriptors(unittest.TestCase):
     def test_evn_recorded_date_time_parsed_value(self) -> 'None':
         """ Parsing a message with EVN-2 populated must return the correct value.
         """
-        message = cast_('ADT_A01', parse_hl7(_Message_With_EVN2))
+        message = cast_(ADT_A01, parse_hl7(_Message_With_EVN2))
 
         out = message.evn.recorded_date_time
         self.assertEqual(out, '20260315083000')
@@ -112,7 +112,7 @@ class TestPIDFieldDescriptors(unittest.TestCase):
     def test_pid_set_id_pid_parsed_value(self) -> 'None':
         """ Parsing a message with PID-1 populated must return the value.
         """
-        message = cast_('ADT_A01', parse_hl7(_Message_With_PID1_PID7))
+        message = cast_(ADT_A01, parse_hl7(_Message_With_PID1_PID7))
 
         out = message.pid.set_id_pid
         self.assertEqual(out, '1')
@@ -120,7 +120,7 @@ class TestPIDFieldDescriptors(unittest.TestCase):
     def test_pid_date_time_of_birth_parsed_value(self) -> 'None':
         """ Parsing a message with PID-7 populated must return the value.
         """
-        message = cast_('ADT_A01', parse_hl7(_Message_With_PID1_PID7))
+        message = cast_(ADT_A01, parse_hl7(_Message_With_PID1_PID7))
 
         out = message.pid.date_time_of_birth
         self.assertEqual(out, '19880913')

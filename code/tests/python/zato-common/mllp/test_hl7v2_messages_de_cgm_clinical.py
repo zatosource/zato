@@ -20,7 +20,15 @@ from zato.hl7v2.v2_9.messages import *  # noqa: F403
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_01 = 'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260315083000||ADT^A01^ADT_A01|CTL00001|P|2.6\rEVN|A01|20260315083000\rPID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\rPV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260315083000\rIN1|1|0|KV001|BÜRGERKRANKENVERSICHERUNG|Königstraße 88^^München^^80331||||||||||||||||||||||||||||||||||||||||||||49'
+_Raw_de_cgm_clinical_01 = (
+    'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260315083000||ADT^A01^ADT_A01|CTL00001|P|2.6\r'
+    'EVN|A01|20260315083000\r'
+    'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
+    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\r'
+    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
+    'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260315083000\r'
+    'IN1|1|0|KV001|BÜRGERKRANKENVERSICHERUNG|Königstraße 88^^München^^80331||||||||||||||||||||||||||||||||||||||||||||49'
+)
 
 class Test_de_cgm_clinical_01_1_ADT_A01_station_re_Aufnahme_inpatient_admission_with_insurance(unittest.TestCase):
     """ 1. ADT^A01 - stationäre Aufnahme (inpatient admission) with insurance
@@ -527,7 +535,10 @@ class Test_de_cgm_clinical_01_1_ADT_A01_station_re_Aufnahme_inpatient_admission_
         segment.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
 
         serialized = segment.serialize()
-        expected = 'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+        expected = (
+            'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
+            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -546,7 +557,10 @@ class Test_de_cgm_clinical_01_1_ADT_A01_station_re_Aufnahme_inpatient_admission_
         segment.admit_date_time = '20260315083000'
 
         serialized = segment.serialize()
-        expected = 'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260315083000'
+        expected = (
+            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
+            'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260315083000'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -605,7 +619,14 @@ class Test_de_cgm_clinical_01_1_ADT_A01_station_re_Aufnahme_inpatient_admission_
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_02 = 'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260315093000||ADT^A02^ADT_A02|CTL00002|P|2.6\rEVN|A02|20260315093000\rPID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\rPV1||I|Nordflügel^Raum 502^Bett 2^Innere Medizin||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Südflügel^Raum 401^Bett 1^Orthopädie||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260315093000'
+_Raw_de_cgm_clinical_02 = (
+    'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260315093000||ADT^A02^ADT_A02|CTL00002|P|2.6\r'
+    'EVN|A02|20260315093000\r'
+    'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
+    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\r'
+    'PV1||I|Nordflügel^Raum 502^Bett 2^Innere Medizin||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.|'
+    '|Südflügel^Raum 401^Bett 1^Orthopädie||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260315093000'
+)
 
 class Test_de_cgm_clinical_02_2_ADT_A02_Verlegung_patient_transfer(unittest.TestCase):
     """ 2. ADT^A02 - Verlegung (patient transfer)
@@ -1056,7 +1077,10 @@ class Test_de_cgm_clinical_02_2_ADT_A02_Verlegung_patient_transfer(unittest.Test
         segment.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
 
         serialized = segment.serialize()
-        expected = 'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+        expected = (
+            'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
+            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -1075,7 +1099,11 @@ class Test_de_cgm_clinical_02_2_ADT_A02_Verlegung_patient_transfer(unittest.Test
         segment.admit_date_time = '20260315093000'
 
         serialized = segment.serialize()
-        expected = 'PV1||I|Nordflügel^Raum 502^Bett 2^Innere Medizin||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Südflügel^Raum 401^Bett 1^Orthopädie||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260315093000'
+        expected = (
+            'PV1||I|Nordflügel^Raum 502^Bett 2^Innere Medizin||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+            'ARZ300^Schröder^Jürgen^^^Dr.^med.|'
+            '|Südflügel^Raum 401^Bett 1^Orthopädie||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260315093000'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -1118,7 +1146,14 @@ class Test_de_cgm_clinical_02_2_ADT_A02_Verlegung_patient_transfer(unittest.Test
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_03 = 'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260320140000||ADT^A03^ADT_A03|CTL00003|P|2.6\rEVN|A03|20260320140000\rPID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\rPV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260320140000'
+_Raw_de_cgm_clinical_03 = (
+    'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260320140000||ADT^A03^ADT_A03|CTL00003|P|2.6\r'
+    'EVN|A03|20260320140000\r'
+    'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
+    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\r'
+    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
+    'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260320140000'
+)
 
 class Test_de_cgm_clinical_03_3_ADT_A03_Entlassung_discharge(unittest.TestCase):
     """ 3. ADT^A03 - Entlassung (discharge)
@@ -1569,7 +1604,10 @@ class Test_de_cgm_clinical_03_3_ADT_A03_Entlassung_discharge(unittest.TestCase):
         segment.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
 
         serialized = segment.serialize()
-        expected = 'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+        expected = (
+            'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
+            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -1588,7 +1626,10 @@ class Test_de_cgm_clinical_03_3_ADT_A03_Entlassung_discharge(unittest.TestCase):
         segment.admit_date_time = '20260320140000'
 
         serialized = segment.serialize()
-        expected = 'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260320140000'
+        expected = (
+            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
+            'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260320140000'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -1631,7 +1672,15 @@ class Test_de_cgm_clinical_03_3_ADT_A03_Entlassung_discharge(unittest.TestCase):
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_04 = 'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260321100000||ADT^A04^ADT_A01|CTL00004|P|2.6\rEVN|A04|20260321100000\rPID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\rPV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260321100000\rIN1|1|0|KV001|BÜRGERKRANKENVERSICHERUNG|Königstraße 88^^München^^80331||||||||||||||||||||||||||||||||||||||||||||49'
+_Raw_de_cgm_clinical_04 = (
+    'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260321100000||ADT^A04^ADT_A01|CTL00004|P|2.6\r'
+    'EVN|A04|20260321100000\r'
+    'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
+    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\r'
+    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
+    'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260321100000\r'
+    'IN1|1|0|KV001|BÜRGERKRANKENVERSICHERUNG|Königstraße 88^^München^^80331||||||||||||||||||||||||||||||||||||||||||||49'
+)
 
 class Test_de_cgm_clinical_04_4_ADT_A04_ambulante_Registrierung_outpatient_registration_with_insurance(unittest.TestCase):
     """ 4. ADT^A04 - ambulante Registrierung (outpatient registration) with insurance
@@ -2138,7 +2187,10 @@ class Test_de_cgm_clinical_04_4_ADT_A04_ambulante_Registrierung_outpatient_regis
         segment.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
 
         serialized = segment.serialize()
-        expected = 'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+        expected = (
+            'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
+            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -2157,7 +2209,10 @@ class Test_de_cgm_clinical_04_4_ADT_A04_ambulante_Registrierung_outpatient_regis
         segment.admit_date_time = '20260321100000'
 
         serialized = segment.serialize()
-        expected = 'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260321100000'
+        expected = (
+            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
+            'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260321100000'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -2216,7 +2271,15 @@ class Test_de_cgm_clinical_04_4_ADT_A04_ambulante_Registrierung_outpatient_regis
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_05 = 'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260322080000||ADT^A05^ADT_A05|CTL00005|P|2.6\rEVN|A05|20260322080000\rPID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\rPV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260322080000\rIN1|1|0|KV001|BÜRGERKRANKENVERSICHERUNG|Königstraße 88^^München^^80331||||||||||||||||||||||||||||||||||||||||||||49'
+_Raw_de_cgm_clinical_05 = (
+    'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260322080000||ADT^A05^ADT_A05|CTL00005|P|2.6\r'
+    'EVN|A05|20260322080000\r'
+    'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
+    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\r'
+    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
+    'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260322080000\r'
+    'IN1|1|0|KV001|BÜRGERKRANKENVERSICHERUNG|Königstraße 88^^München^^80331||||||||||||||||||||||||||||||||||||||||||||49'
+)
 
 class Test_de_cgm_clinical_05_5_ADT_A05_Voraufnahme_pre_admission_with_insurance(unittest.TestCase):
     """ 5. ADT^A05 - Voraufnahme (pre-admission) with insurance
@@ -2723,7 +2786,10 @@ class Test_de_cgm_clinical_05_5_ADT_A05_Voraufnahme_pre_admission_with_insurance
         segment.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
 
         serialized = segment.serialize()
-        expected = 'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+        expected = (
+            'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
+            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -2742,7 +2808,10 @@ class Test_de_cgm_clinical_05_5_ADT_A05_Voraufnahme_pre_admission_with_insurance
         segment.admit_date_time = '20260322080000'
 
         serialized = segment.serialize()
-        expected = 'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260322080000'
+        expected = (
+            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
+            'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260322080000'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -2801,7 +2870,15 @@ class Test_de_cgm_clinical_05_5_ADT_A05_Voraufnahme_pre_admission_with_insurance
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_06 = 'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260323090000||ADT^A08^ADT_A01|CTL00006|P|2.6\rEVN|A08|20260323090000\rPID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Märta^^Frau||19820501|F|||Überlandstraße 99^^Würzburg^^97070||^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@yähoo.de\rPV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260323090000\rIN1|1|0|KV001|BÜRGERKRANKENVERSICHERUNG|Königstraße 88^^München^^80331||||||||||||||||||||||||||||||||||||||||||||49'
+_Raw_de_cgm_clinical_06 = (
+    'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260323090000||ADT^A08^ADT_A01|CTL00006|P|2.6\r'
+    'EVN|A08|20260323090000\r'
+    'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Märta^^Frau||19820501|F|||Überlandstraße 99^^Würzburg^^97070||'
+    '^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@yähoo.de\r'
+    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
+    'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260323090000\r'
+    'IN1|1|0|KV001|BÜRGERKRANKENVERSICHERUNG|Königstraße 88^^München^^80331||||||||||||||||||||||||||||||||||||||||||||49'
+)
 
 class Test_de_cgm_clinical_06_6_ADT_A08_nderung_Patientendaten_update_patient_with_insurance(unittest.TestCase):
     """ 6. ADT^A08 - Änderung Patientendaten (update patient) with insurance
@@ -3308,7 +3385,10 @@ class Test_de_cgm_clinical_06_6_ADT_A08_nderung_Patientendaten_update_patient_wi
         segment.patient_address = XAD(xad_1='Überlandstraße 99', xad_3='Würzburg', xad_5='97070')
 
         serialized = segment.serialize()
-        expected = 'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Märta^^Frau||19820501|F|||Überlandstraße 99^^Würzburg^^97070||^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@yähoo.de'
+        expected = (
+            'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Märta^^Frau||19820501|F|||Überlandstraße 99^^Würzburg^^97070||'
+            '^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@yähoo.de'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -3327,7 +3407,10 @@ class Test_de_cgm_clinical_06_6_ADT_A08_nderung_Patientendaten_update_patient_wi
         segment.admit_date_time = '20260323090000'
 
         serialized = segment.serialize()
-        expected = 'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260323090000'
+        expected = (
+            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
+            'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260323090000'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -3386,7 +3469,14 @@ class Test_de_cgm_clinical_06_6_ADT_A08_nderung_Patientendaten_update_patient_wi
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_07 = 'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260324110000||ADT^A09^ADT_A09|CTL00007|P|2.6\rEVN|A09|20260324110000\rPID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\rPV1||I|Nordflügel^Raum 502^Bett 2^Innere Medizin||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Südflügel^Raum 401^Bett 1^Orthopädie||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260324110000'
+_Raw_de_cgm_clinical_07 = (
+    'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260324110000||ADT^A09^ADT_A09|CTL00007|P|2.6\r'
+    'EVN|A09|20260324110000\r'
+    'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
+    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\r'
+    'PV1||I|Nordflügel^Raum 502^Bett 2^Innere Medizin||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.|'
+    '|Südflügel^Raum 401^Bett 1^Orthopädie||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260324110000'
+)
 
 class Test_de_cgm_clinical_07_7_ADT_A09_Patient_verl_sst_Einrichtung_patient_departing(unittest.TestCase):
     """ 7. ADT^A09 - Patient verlässt Einrichtung (patient departing)
@@ -3837,7 +3927,10 @@ class Test_de_cgm_clinical_07_7_ADT_A09_Patient_verl_sst_Einrichtung_patient_dep
         segment.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
 
         serialized = segment.serialize()
-        expected = 'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+        expected = (
+            'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
+            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -3856,7 +3949,11 @@ class Test_de_cgm_clinical_07_7_ADT_A09_Patient_verl_sst_Einrichtung_patient_dep
         segment.admit_date_time = '20260324110000'
 
         serialized = segment.serialize()
-        expected = 'PV1||I|Nordflügel^Raum 502^Bett 2^Innere Medizin||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Südflügel^Raum 401^Bett 1^Orthopädie||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260324110000'
+        expected = (
+            'PV1||I|Nordflügel^Raum 502^Bett 2^Innere Medizin||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+            'ARZ300^Schröder^Jürgen^^^Dr.^med.|'
+            '|Südflügel^Raum 401^Bett 1^Orthopädie||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260324110000'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -3899,7 +3996,14 @@ class Test_de_cgm_clinical_07_7_ADT_A09_Patient_verl_sst_Einrichtung_patient_dep
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_08 = 'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260324113000||ADT^A10^ADT_A09|CTL00008|P|2.6\rEVN|A10|20260324113000\rPID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\rPV1||I|Westflügel^Raum 603^Bett 3^Neurochirurgie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Südflügel^Raum 401^Bett 1^Orthopädie||20260324113000'
+_Raw_de_cgm_clinical_08 = (
+    'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260324113000||ADT^A10^ADT_A09|CTL00008|P|2.6\r'
+    'EVN|A10|20260324113000\r'
+    'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
+    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\r'
+    'PV1||I|Westflügel^Raum 603^Bett 3^Neurochirurgie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.|'
+    '|Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Südflügel^Raum 401^Bett 1^Orthopädie||20260324113000'
+)
 
 class Test_de_cgm_clinical_08_8_ADT_A10_Patient_erreicht_Einrichtung_patient_arriving(unittest.TestCase):
     """ 8. ADT^A10 - Patient erreicht Einrichtung (patient arriving)
@@ -4350,7 +4454,10 @@ class Test_de_cgm_clinical_08_8_ADT_A10_Patient_erreicht_Einrichtung_patient_arr
         segment.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
 
         serialized = segment.serialize()
-        expected = 'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+        expected = (
+            'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
+            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -4369,7 +4476,11 @@ class Test_de_cgm_clinical_08_8_ADT_A10_Patient_erreicht_Einrichtung_patient_arr
         segment.admit_date_time = '20260324113000'
 
         serialized = segment.serialize()
-        expected = 'PV1||I|Westflügel^Raum 603^Bett 3^Neurochirurgie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Südflügel^Raum 401^Bett 1^Orthopädie||20260324113000'
+        expected = (
+            'PV1||I|Westflügel^Raum 603^Bett 3^Neurochirurgie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|'
+            'ARZ300^Schröder^Jürgen^^^Dr.^med.|'
+            '|Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Südflügel^Raum 401^Bett 1^Orthopädie||20260324113000'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -4412,7 +4523,14 @@ class Test_de_cgm_clinical_08_8_ADT_A10_Patient_erreicht_Einrichtung_patient_arr
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_09 = 'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260325070000||ADT^A11^ADT_A09|CTL00009|P|2.6\rEVN|A11|20260325070000\rPID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\rPV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260325070000'
+_Raw_de_cgm_clinical_09 = (
+    'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260325070000||ADT^A11^ADT_A09|CTL00009|P|2.6\r'
+    'EVN|A11|20260325070000\r'
+    'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
+    '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de\r'
+    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
+    'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260325070000'
+)
 
 class Test_de_cgm_clinical_09_9_ADT_A11_Stornierung_Aufnahme_cancel_admit(unittest.TestCase):
     """ 9. ADT^A11 - Stornierung Aufnahme (cancel admit)
@@ -4863,7 +4981,10 @@ class Test_de_cgm_clinical_09_9_ADT_A11_Stornierung_Aufnahme_cancel_admit(unitte
         segment.patient_address = XAD(xad_1='Böttcherstraße 47', xad_3='Nürnberg', xad_5='90402')
 
         serialized = segment.serialize()
-        expected = 'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+        expected = (
+            'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Ännchen^^Frau||19830214|F|||Böttcherstraße 47^^Nürnberg^^90402||'
+            '^^PH^09111234567~^^CP^01761234567~^^Internet^kaethe.gruenwald@yähoo.de'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -4882,7 +5003,10 @@ class Test_de_cgm_clinical_09_9_ADT_A11_Stornierung_Aufnahme_cancel_admit(unitte
         segment.admit_date_time = '20260325070000'
 
         serialized = segment.serialize()
-        expected = 'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260325070000'
+        expected = (
+            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
+            'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260325070000'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -4925,7 +5049,13 @@ class Test_de_cgm_clinical_09_9_ADT_A11_Stornierung_Aufnahme_cancel_admit(unitte
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_10 = 'MSH|^~\\&|termin-gw|praxis-süd|PRAXIS_APP|KLINIK_RÖNTGEN|20260401151846+0200||ADT^A08^ADT_A01|740298561038472159|P|2.5||||||UNICODE UTF-8\rEVN|A08|202604011516+0200\rPID|1|56789|xbc3def912a^^^&www.praxis-süd.de&DNS^PI~56789^^^^PT||Überström^Rikård^^^Prof.||19880913|M|||Straße der Einheit 42^^Zürich^^8001^CH||+41794321098^^CP^^^^^^^^^+41794321098~+41446789012^^PH^^^^^^^^^+41446789012~rikard.ueberstroem@praxis-süd.ch^NET^X.400^rikard.ueberstroem@praxis-süd.ch\rPV1|1|U'
+_Raw_de_cgm_clinical_10 = (
+    'MSH|^~\\&|termin-gw|praxis-süd|PRAXIS_APP|KLINIK_RÖNTGEN|20260401151846+0200||ADT^A08^ADT_A01|740298561038472159|P|2.5||||||UNICODE UTF-8\r'
+    'EVN|A08|202604011516+0200\r'
+    'PID|1|56789|xbc3def912a^^^&www.praxis-süd.de&DNS^PI~56789^^^^PT||Überström^Rikård^^^Prof.||19880913|M|||Straße der Einheit 42^^Zürich^^8001^CH||'
+    '+41794321098^^CP^^^^^^^^^+41794321098~+41446789012^^PH^^^^^^^^^+41446789012~rikard.ueberstroem@praxis-süd.ch^NET^X.400^rikard.ueberstroem@praxis-süd.ch\r'
+    'PV1|1|U'
+)
 
 class Test_de_cgm_clinical_10_10_ADT_A08_patient_update_via_samedi_HL7gateway(unittest.TestCase):
     """ 10. ADT^A08 - patient update via samedi HL7gateway
@@ -5224,7 +5354,11 @@ class Test_de_cgm_clinical_10_10_ADT_A08_patient_update_via_samedi_HL7gateway(un
         segment.patient_address = XAD(xad_1='Straße der Einheit 42', xad_3='Zürich', xad_5='8001', xad_6='CH')
 
         serialized = segment.serialize()
-        expected = 'PID|1|56789|xbc3def912a^^^&www.praxis-süd.de&DNS^PI~56789^^^^PT||Überström^Rikård^^^Prof.||19880913|M|||Straße der Einheit 42^^Zürich^^8001^CH||+41794321098^^CP^^^^^^^^^+41794321098~+41446789012^^PH^^^^^^^^^+41446789012~rikard.ueberstroem@praxis-süd.ch^NET^X.400^rikard.ueberstroem@praxis-süd.ch'
+        expected = (
+            'PID|1|56789|xbc3def912a^^^&www.praxis-süd.de&DNS^PI~56789^^^^PT||Überström^Rikård^^^Prof.||19880913|M|||Straße der Einheit 42^^Zürich^^8001^CH||'
+            '+41794321098^^CP^^^^^^^^^+41794321098~+41446789012^^PH^^^^^^^^^+41446789012~'
+            'rikard.ueberstroem@praxis-süd.ch^NET^X.400^rikard.ueberstroem@praxis-süd.ch'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -5274,7 +5408,12 @@ class Test_de_cgm_clinical_10_10_ADT_A08_patient_update_via_samedi_HL7gateway(un
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_11 = 'MSH|^~\\&|termin-gw|praxis-süd|PRAXIS_APP|KLINIK_RÖNTGEN|20260401152323+0200||ADT^A29^ADT_A21|829471036285019374|P|2.5||||||UNICODE UTF-8\rEVN|A29|202604011523+0200\rPID|1|44|y8a2bc7e31f^^^&www.praxis-süd.de&DNS^PI~44^^^^PT||Öztürk^Fátima||19751120\rPV1|1|U'
+_Raw_de_cgm_clinical_11 = (
+    'MSH|^~\\&|termin-gw|praxis-süd|PRAXIS_APP|KLINIK_RÖNTGEN|20260401152323+0200||ADT^A29^ADT_A21|829471036285019374|P|2.5||||||UNICODE UTF-8\r'
+    'EVN|A29|202604011523+0200\r'
+    'PID|1|44|y8a2bc7e31f^^^&www.praxis-süd.de&DNS^PI~44^^^^PT||Öztürk^Fátima||19751120\r'
+    'PV1|1|U'
+)
 
 class Test_de_cgm_clinical_11_11_ADT_A29_patient_deleted_via_samedi_HL7gateway(unittest.TestCase):
     """ 11. ADT^A29 - patient deleted via samedi HL7gateway
@@ -5577,7 +5716,12 @@ class Test_de_cgm_clinical_11_11_ADT_A29_patient_deleted_via_samedi_HL7gateway(u
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_12 = 'MSH|^~\\&|IntSrv|INTSRV_KH|termin-gw|praxis-süd|20260410123517||ADT^A08|2638150947283|P|2.5|9E72B53F8AC791B||AL|NE||8859/1\rEVN|A08|202604061019\rPID|1||5566^^^&www.praxis-süd.de&DNS^PI~331742^^^Röntgen^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||Brückenweg 23&Brückenweg 23^^Düsseldorf^^40545^DE^L||^^PH^^^^0211-7654321 Büro|^^PH'
+_Raw_de_cgm_clinical_12 = (
+    'MSH|^~\\&|IntSrv|INTSRV_KH|termin-gw|praxis-süd|20260410123517||ADT^A08|2638150947283|P|2.5|9E72B53F8AC791B||AL|NE||8859/1\r'
+    'EVN|A08|202604061019\r'
+    'PID|1||5566^^^&www.praxis-süd.de&DNS^PI~331742^^^Röntgen^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||'
+    'Brückenweg 23&Brückenweg 23^^Düsseldorf^^40545^DE^L||^^PH^^^^0211-7654321 Büro|^^PH'
+)
 
 class Test_de_cgm_clinical_12_12_ADT_A08_incoming_from_KIS_via_KomServer(unittest.TestCase):
     """ 12. ADT^A08 - incoming from KIS via KomServer
@@ -5893,7 +6037,10 @@ class Test_de_cgm_clinical_12_12_ADT_A08_incoming_from_KIS_via_KomServer(unittes
         segment.patient_address = XAD(xad_1='Brückenweg 23&Brückenweg 23', xad_3='Düsseldorf', xad_5='40545', xad_6='DE', xad_7='L')
 
         serialized = segment.serialize()
-        expected = 'PID|1||5566^^^&www.praxis-süd.de&DNS^PI~331742^^^Röntgen^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||Brückenweg 23&Brückenweg 23^^Düsseldorf^^40545^DE^L||^^PH^^^^0211-7654321 Büro|^^PH'
+        expected = (
+            'PID|1||5566^^^&www.praxis-süd.de&DNS^PI~331742^^^Röntgen^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||'
+            'Brückenweg 23&Brückenweg 23^^Düsseldorf^^40545^DE^L||^^PH^^^^0211-7654321 Büro|^^PH'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -5931,7 +6078,13 @@ class Test_de_cgm_clinical_12_12_ADT_A08_incoming_from_KIS_via_KomServer(unittes
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_13 = 'MSH|^~\\&|IntSrv|INTSRV_KH|befund-süd|BEFUND_SÜD|20260410123517||ADT^A08|2638150947283|P|2.5|9E72B53F8AC791B||AL|NE||8859/1\rEVN|A08|202604061019\rPID|1||331742~77777^^^&a1b2c3d4-e5f6-7890-abcd-ef1234567890&UUID^PI~88888^^^baz^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||Brückenweg 23&Brückenweg 23^^Köln^^50667^DE^L||^^PH^^^^0221-7654321 Büro|^^PH\rPV1|1|U'
+_Raw_de_cgm_clinical_13 = (
+    'MSH|^~\\&|IntSrv|INTSRV_KH|befund-süd|BEFUND_SÜD|20260410123517||ADT^A08|2638150947283|P|2.5|9E72B53F8AC791B||AL|NE||8859/1\r'
+    'EVN|A08|202604061019\r'
+    'PID|1||331742~77777^^^&a1b2c3d4-e5f6-7890-abcd-ef1234567890&UUID^PI~88888^^^baz^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||'
+    'Brückenweg 23&Brückenweg 23^^Köln^^50667^DE^L||^^PH^^^^0221-7654321 Büro|^^PH\r'
+    'PV1|1|U'
+)
 
 class Test_de_cgm_clinical_13_13_ADT_A08_incoming_with_multiple_external_identifiers(unittest.TestCase):
     """ 13. ADT^A08 - incoming with multiple external identifiers
@@ -6261,14 +6414,21 @@ class Test_de_cgm_clinical_13_13_ADT_A08_incoming_with_multiple_external_identif
         segment = PID()
 
         segment.set_id_pid = '1'
-        segment.patient_identifier_list = [CX(cx_1='331742'), CX(cx_1='77777', cx_4='&a1b2c3d4-e5f6-7890-abcd-ef1234567890&UUID', cx_5='PI'), CX(cx_1='88888', cx_4='baz', cx_5='PI')]
+        segment.patient_identifier_list = [
+            CX(cx_1='331742'),
+            CX(cx_1='77777', cx_4='&a1b2c3d4-e5f6-7890-abcd-ef1234567890&UUID', cx_5='PI'),
+            CX(cx_1='88888', cx_4='baz', cx_5='PI'),
+        ]
         segment.patient_name = XPN(xpn_1='Größe', xpn_2='Frédérique')
         segment.date_time_of_birth = '19560318'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Brückenweg 23&Brückenweg 23', xad_3='Köln', xad_5='50667', xad_6='DE', xad_7='L')
 
         serialized = segment.serialize()
-        expected = 'PID|1||331742~77777^^^&a1b2c3d4-e5f6-7890-abcd-ef1234567890&UUID^PI~88888^^^baz^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||Brückenweg 23&Brückenweg 23^^Köln^^50667^DE^L||^^PH^^^^0221-7654321 Büro|^^PH'
+        expected = (
+            'PID|1||331742~77777^^^&a1b2c3d4-e5f6-7890-abcd-ef1234567890&UUID^PI~88888^^^baz^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||'
+            'Brückenweg 23&Brückenweg 23^^Köln^^50667^DE^L||^^PH^^^^0221-7654321 Büro|^^PH'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -6305,7 +6465,11 @@ class Test_de_cgm_clinical_13_13_ADT_A08_incoming_with_multiple_external_identif
         message.evn.recorded_date_time = '202604061019'
 
         message.pid.set_id_pid = '1'
-        message.pid.patient_identifier_list = [CX(cx_1='331742'), CX(cx_1='77777', cx_4='&a1b2c3d4-e5f6-7890-abcd-ef1234567890&UUID', cx_5='PI'), CX(cx_1='88888', cx_4='baz', cx_5='PI')]
+        message.pid.patient_identifier_list = [
+            CX(cx_1='331742'),
+            CX(cx_1='77777', cx_4='&a1b2c3d4-e5f6-7890-abcd-ef1234567890&UUID', cx_5='PI'),
+            CX(cx_1='88888', cx_4='baz', cx_5='PI'),
+        ]
         message.pid.patient_name = XPN(xpn_1='Größe', xpn_2='Frédérique')
         message.pid.date_time_of_birth = '19560318'
         message.pid.administrative_sex = CWE(cwe_1='F')
@@ -6321,7 +6485,13 @@ class Test_de_cgm_clinical_13_13_ADT_A08_incoming_with_multiple_external_identif
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_14 = 'MSH|^~\\&|IntSrv|INTSRV_KH|termin-gw|praxis-süd|20260410123517||ADT^A40|2638150947283|P|2.5|9E72B53F8AC791B||AL|NE||8859/1\rEVN|A40|202604081715\rPID|1||5566^^^&www.praxis-süd.de&DNS^PI~331742^^^Röntgen^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||Brückenweg 23&Brückenweg 23^^Düsseldorf^^40545^DE^L||^^PH^^^^0211-7654321 Büro|^^PH\rMRG|9876~q283746bcde^^^&www.praxis-süd.de&DNS~5567823^^^&1.2.276.0.76.3.1.660.1.1.1.2.1&ISO^PI|'
+_Raw_de_cgm_clinical_14 = (
+    'MSH|^~\\&|IntSrv|INTSRV_KH|termin-gw|praxis-süd|20260410123517||ADT^A40|2638150947283|P|2.5|9E72B53F8AC791B||AL|NE||8859/1\r'
+    'EVN|A40|202604081715\r'
+    'PID|1||5566^^^&www.praxis-süd.de&DNS^PI~331742^^^Röntgen^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||'
+    'Brückenweg 23&Brückenweg 23^^Düsseldorf^^40545^DE^L||^^PH^^^^0211-7654321 Büro|^^PH\r'
+    'MRG|9876~q283746bcde^^^&www.praxis-süd.de&DNS~5567823^^^&1.2.276.0.76.3.1.660.1.1.1.2.1&ISO^PI|'
+)
 
 class Test_de_cgm_clinical_14_14_ADT_A40_Zusammenf_hrung_Patienten_merge_patient(unittest.TestCase):
     """ 14. ADT^A40 - Zusammenführung Patienten (merge patient)
@@ -6693,7 +6863,10 @@ class Test_de_cgm_clinical_14_14_ADT_A40_Zusammenf_hrung_Patienten_merge_patient
         segment.patient_address = XAD(xad_1='Brückenweg 23&Brückenweg 23', xad_3='Düsseldorf', xad_5='40545', xad_6='DE', xad_7='L')
 
         serialized = segment.serialize()
-        expected = 'PID|1||5566^^^&www.praxis-süd.de&DNS^PI~331742^^^Röntgen^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||Brückenweg 23&Brückenweg 23^^Düsseldorf^^40545^DE^L||^^PH^^^^0211-7654321 Büro|^^PH'
+        expected = (
+            'PID|1||5566^^^&www.praxis-süd.de&DNS^PI~331742^^^Röntgen^PI|20000077^^^KÖL^PI|Größe^Frédérique||19560318|F|||'
+            'Brückenweg 23&Brückenweg 23^^Düsseldorf^^40545^DE^L||^^PH^^^^0211-7654321 Büro|^^PH'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -6701,7 +6874,11 @@ class Test_de_cgm_clinical_14_14_ADT_A40_Zusammenf_hrung_Patienten_merge_patient
     def test_build_MRG(self) -> 'None':
         segment = MRG()
 
-        segment.prior_patient_identifier_list = [CX(cx_1='9876'), CX(cx_1='q283746bcde', cx_4='&www.praxis-süd.de&DNS'), CX(cx_1='5567823', cx_4='&1.2.276.0.76.3.1.660.1.1.1.2.1&ISO', cx_5='PI')]
+        segment.prior_patient_identifier_list = [
+            CX(cx_1='9876'),
+            CX(cx_1='q283746bcde', cx_4='&www.praxis-süd.de&DNS'),
+            CX(cx_1='5567823', cx_4='&1.2.276.0.76.3.1.660.1.1.1.2.1&ISO', cx_5='PI'),
+        ]
 
         serialized = segment.serialize()
         expected = 'MRG|9876~q283746bcde^^^&www.praxis-süd.de&DNS~5567823^^^&1.2.276.0.76.3.1.660.1.1.1.2.1&ISO^PI|'
@@ -6735,7 +6912,9 @@ class Test_de_cgm_clinical_14_14_ADT_A40_Zusammenf_hrung_Patienten_merge_patient
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_15 = 'MSH|^~\\&|KLINx||AUFN||20260401112408||ADT^A01^ADT_A01|77|P|2.5|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.1^^2.16.840.1.113883.2.6^ISO'
+_Raw_de_cgm_clinical_15 = (
+    'MSH|^~\\&|KLINx||AUFN||20260401112408||ADT^A01^ADT_A01|77|P|2.5|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.1^^2.16.840.1.113883.2.6^ISO'
+)
 
 class Test_de_cgm_clinical_15_15_ADT_A01_Aufnahme_from_MSH_segment_reference_HL7_DE(unittest.TestCase):
     """ 15. ADT^A01 - Aufnahme from MSH segment reference (HL7 DE)
@@ -6919,7 +7098,10 @@ class Test_de_cgm_clinical_15_15_ADT_A01_Aufnahme_from_MSH_segment_reference_HL7
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.1', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|KLINx||AUFN||20260401112408||ADT^A01^ADT_A01|77|P|2.5|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.1^^2.16.840.1.113883.2.6^ISO'
+        expected = (
+            'MSH|^~\\&|KLINx||AUFN||20260401112408||ADT^A01^ADT_A01|77|P|2.5|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.1^^2.16.840.1.113883.2.6^ISO'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -6948,7 +7130,15 @@ class Test_de_cgm_clinical_15_15_ADT_A01_Aufnahme_from_MSH_segment_reference_HL7
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_16 = 'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260401120000||ADT^A31^ADT_A05|CTL00010|P|2.6\rEVN|A31|20260401120000\rPID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Märta^^Frau||19820501|F|||Überlandstraße 99^^Würzburg^^97070||^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@yähoo.de\rPV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260401120000\rIN1|1|0|KV001|BÜRGERKRANKENVERSICHERUNG|Königstraße 88^^München^^80331||||||||||||||||||||||||||||||||||||||||||||49'
+_Raw_de_cgm_clinical_16 = (
+    'MSH|^~\\&|KLINIK_SND|STÄDTISCH_KH|LABOR_EMP|RÖNTGEN_KH|20260401120000||ADT^A31^ADT_A05|CTL00010|P|2.6\r'
+    'EVN|A31|20260401120000\r'
+    'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Märta^^Frau||19820501|F|||Überlandstraße 99^^Würzburg^^97070||'
+    '^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@yähoo.de\r'
+    'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
+    'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260401120000\r'
+    'IN1|1|0|KV001|BÜRGERKRANKENVERSICHERUNG|Königstraße 88^^München^^80331||||||||||||||||||||||||||||||||||||||||||||49'
+)
 
 class Test_de_cgm_clinical_16_16_ADT_A31_nderung_Personendaten_update_person_information(unittest.TestCase):
     """ 16. ADT^A31 - Änderung Personendaten (update person information)
@@ -7455,7 +7645,10 @@ class Test_de_cgm_clinical_16_16_ADT_A31_nderung_Personendaten_update_person_inf
         segment.patient_address = XAD(xad_1='Überlandstraße 99', xad_3='Würzburg', xad_5='97070')
 
         serialized = segment.serialize()
-        expected = 'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Märta^^Frau||19820501|F|||Überlandstraße 99^^Würzburg^^97070||^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@yähoo.de'
+        expected = (
+            'PID|||PT7890^^^Löwenklinik||Grünwald^Käthe^Märta^^Frau||19820501|F|||Überlandstraße 99^^Würzburg^^97070||'
+            '^^PH^09319876543~^^CP^01769876543~^^Internet^maerta.gruenwald@yähoo.de'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -7474,7 +7667,10 @@ class Test_de_cgm_clinical_16_16_ADT_A31_nderung_Personendaten_update_person_inf
         segment.admit_date_time = '20260401120000'
 
         serialized = segment.serialize()
-        expected = 'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260401120000'
+        expected = (
+            'PV1||I|Südflügel^Raum 401^Bett 1^Orthopädie||||ARZ100^Müller^Björn^^^Dr.^med.|ARZ200^Bäcker^Günther^^^Dr.^med.|ARZ300^Schröder^Jürgen^^^Dr.^med.||'
+            'Nordflügel^Raum 502^Bett 2^Innere Medizin||||||||FALL7890|||||||||||||||||||||||Westflügel^Raum 603^Bett 3^Neurochirurgie||20260401120000'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -7533,7 +7729,14 @@ class Test_de_cgm_clinical_16_16_ADT_A31_nderung_Personendaten_update_person_inf
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_17 = 'MSH|^~\\&|HÄMA LAB|ZLAB-7|BEFUND ÖST|GEBÄUDE9|20260215093000||ORU^R01|STRG-7890|P|2.4\rPID|||888-77-6666||LÖWENTHAL^ÉVA^M^^^^L|GRÖSSMANN|19750520|F|||Blücherstraße 28^^Göttingen^NI^37073||(0551)2345678|(0551)876-543||||AC888776666||89-B5667^NI^20260101\rOBR|1|934561^BEFUND ÖST|2078945^HÄMA LAB|17856^HÄMOGLOBIN|||20260215073000|||||||||888-77-6666^ÜBERALL^PÀTRÍCIA P^^^^MD^^|||||||||F||||||777-66-5555^HIPPÖKRÄTÉS^HÖRST H^^^^MD\rOBX|1|SN|718-7^HÄMOGLOBIN^BLUT:MCNC:PT:BLUT:QN||^145|g/L|120_160|N|||F'
+_Raw_de_cgm_clinical_17 = (
+    'MSH|^~\\&|HÄMA LAB|ZLAB-7|BEFUND ÖST|GEBÄUDE9|20260215093000||ORU^R01|STRG-7890|P|2.4\r'
+    'PID|||888-77-6666||LÖWENTHAL^ÉVA^M^^^^L|GRÖSSMANN|19750520|F|||Blücherstraße 28^^Göttingen^NI^37073||(0551)2345678|(0551)876-543||||AC888776666||'
+    '89-B5667^NI^20260101\r'
+    'OBR|1|934561^BEFUND ÖST|2078945^HÄMA LAB|17856^HÄMOGLOBIN|||20260215073000|||||||||888-77-6666^ÜBERALL^PÀTRÍCIA P^^^^MD^^|||||||||F||||||'
+    '777-66-5555^HIPPÖKRÄTÉS^HÖRST H^^^^MD\r'
+    'OBX|1|SN|718-7^HÄMOGLOBIN^BLUT:MCNC:PT:BLUT:QN||^145|g/L|120_160|N|||F'
+)
 
 class Test_de_cgm_clinical_17_17_ORU_R01_Laborbefund_laboratory_result(unittest.TestCase):
     """ 17. ORU^R01 - Laborbefund (laboratory result)
@@ -7926,7 +8129,10 @@ class Test_de_cgm_clinical_17_17_ORU_R01_Laborbefund_laboratory_result(unittest.
         segment.patient_account_number = CX(cx_1='AC888776666')
 
         serialized = segment.serialize()
-        expected = 'PID|||888-77-6666||LÖWENTHAL^ÉVA^M^^^^L|GRÖSSMANN|19750520|F|||Blücherstraße 28^^Göttingen^NI^37073||(0551)2345678|(0551)876-543||||AC888776666||89-B5667^NI^20260101'
+        expected = (
+            'PID|||888-77-6666||LÖWENTHAL^ÉVA^M^^^^L|GRÖSSMANN|19750520|F|||Blücherstraße 28^^Göttingen^NI^37073||(0551)2345678|(0551)876-543||||AC888776666||'
+            '89-B5667^NI^20260101'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -7943,7 +8149,10 @@ class Test_de_cgm_clinical_17_17_ORU_R01_Laborbefund_laboratory_result(unittest.
         segment.reason_for_study = CWE(cwe_1='777-66-5555', cwe_2='HIPPÖKRÄTÉS', cwe_3='HÖRST H', cwe_7='MD')
 
         serialized = segment.serialize()
-        expected = 'OBR|1|934561^BEFUND ÖST|2078945^HÄMA LAB|17856^HÄMOGLOBIN|||20260215073000|||||||||888-77-6666^ÜBERALL^PÀTRÍCIA P^^^^MD^^|||||||||F||||||777-66-5555^HIPPÖKRÄTÉS^HÖRST H^^^^MD'
+        expected = (
+            'OBR|1|934561^BEFUND ÖST|2078945^HÄMA LAB|17856^HÄMOGLOBIN|||20260215073000|||||||||888-77-6666^ÜBERALL^PÀTRÍCIA P^^^^MD^^|||||||||F||||||'
+            '777-66-5555^HIPPÖKRÄTÉS^HÖRST H^^^^MD'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -7986,7 +8195,14 @@ class Test_de_cgm_clinical_17_17_ORU_R01_Laborbefund_laboratory_result(unittest.
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_18 = "MSH|^~\\&|GrößeReg|KölnKlinikC|ÜberOE|ZürichBildZ|20260529090131-0500||ADT^A01^ADT_A01|01052901|P|2.5\rEVN||200605290901||||200605290900\rPID|||78452991^^^Hügelreg^PI||BRÜCKNER^BÄRBEL^Q^JR||19700815|M||2028-9^^HL70005^RA99113^^XYZ|Gänseblümchenweg 14^^Nürnberg^BY^90403^^M~MÜLLER'S BÄCKEREI^Königsallee 200^^Düsseldorf^NW^40212^^O|||||||0105I30001^^^99DEF^AN\rPV1||I|W^389^1^UABH^^^^3||||54321^WÖRNER^RÉX^J^^^MD^0010^UAMC^L||98765^GRÄBER^LÜCIA^X^^^MD^0010^UAMC^L|MED|||||A0||24680^TÖNJES^SÖRÉN^T^^^MD^0010^UAMC^L|||||||||||||||||||||||||||200605290900"
+_Raw_de_cgm_clinical_18 = (
+    "MSH|^~\\&|GrößeReg|KölnKlinikC|ÜberOE|ZürichBildZ|20260529090131-0500||ADT^A01^ADT_A01|01052901|P|2.5\r"
+    "EVN||200605290901||||200605290900\r"
+    "PID|||78452991^^^Hügelreg^PI||BRÜCKNER^BÄRBEL^Q^JR||19700815|M||2028-9^^HL70005^RA99113^^XYZ|"
+    "Gänseblümchenweg 14^^Nürnberg^BY^90403^^M~MÜLLER'S BÄCKEREI^Königsallee 200^^Düsseldorf^NW^40212^^O|||||||0105I30001^^^99DEF^AN\r"
+    "PV1||I|W^389^1^UABH^^^^3||||54321^WÖRNER^RÉX^J^^^MD^0010^UAMC^L||98765^GRÄBER^LÜCIA^X^^^MD^0010^UAMC^L|MED|||||A0||"
+    "24680^TÖNJES^SÖRÉN^T^^^MD^0010^UAMC^L|||||||||||||||||||||||||||200605290900"
+)
 
 class Test_de_cgm_clinical_18_18_ADT_A01_Aufnahme_with_Caristix_reference_encoding(unittest.TestCase):
     """ 18. ADT^A01 - Aufnahme with Caristix reference encoding
@@ -8576,11 +8792,17 @@ class Test_de_cgm_clinical_18_18_ADT_A01_Aufnahme_with_Caristix_reference_encodi
         segment.date_time_of_birth = '19700815'
         segment.administrative_sex = CWE(cwe_1='M')
         segment.race = CWE(cwe_1='2028-9', cwe_3='HL70005', cwe_4='RA99113', cwe_6='XYZ')
-        segment.patient_address = [XAD(xad_1='Gänseblümchenweg 14', xad_3='Nürnberg', xad_4='BY', xad_5='90403', xad_7='M'), XAD(xad_1="MÜLLER'S BÄCKEREI", xad_2='Königsallee 200', xad_4='Düsseldorf', xad_5='NW', xad_6='40212', xad_8='O')]
+        segment.patient_address = [
+            XAD(xad_1='Gänseblümchenweg 14', xad_3='Nürnberg', xad_4='BY', xad_5='90403', xad_7='M'),
+            XAD(xad_1="MÜLLER'S BÄCKEREI", xad_2='Königsallee 200', xad_4='Düsseldorf', xad_5='NW', xad_6='40212', xad_8='O'),
+        ]
         segment.patient_account_number = CX(cx_1='0105I30001', cx_4='99DEF', cx_5='AN')
 
         serialized = segment.serialize()
-        expected = "PID|||78452991^^^Hügelreg^PI||BRÜCKNER^BÄRBEL^Q^JR||19700815|M||2028-9^^HL70005^RA99113^^XYZ|Gänseblümchenweg 14^^Nürnberg^BY^90403^^M~MÜLLER'S BÄCKEREI^Königsallee 200^^Düsseldorf^NW^40212^^O|||||||0105I30001^^^99DEF^AN"
+        expected = (
+            "PID|||78452991^^^Hügelreg^PI||BRÜCKNER^BÄRBEL^Q^JR||19700815|M||2028-9^^HL70005^RA99113^^XYZ|"
+            "Gänseblümchenweg 14^^Nürnberg^BY^90403^^M~MÜLLER'S BÄCKEREI^Königsallee 200^^Düsseldorf^NW^40212^^O|||||||0105I30001^^^99DEF^AN"
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -8598,7 +8820,10 @@ class Test_de_cgm_clinical_18_18_ADT_A01_Aufnahme_with_Caristix_reference_encodi
         segment.admit_date_time = '200605290900'
 
         serialized = segment.serialize()
-        expected = 'PV1||I|W^389^1^UABH^^^^3||||54321^WÖRNER^RÉX^J^^^MD^0010^UAMC^L||98765^GRÄBER^LÜCIA^X^^^MD^0010^UAMC^L|MED|||||A0||24680^TÖNJES^SÖRÉN^T^^^MD^0010^UAMC^L|||||||||||||||||||||||||||200605290900'
+        expected = (
+            'PV1||I|W^389^1^UABH^^^^3||||54321^WÖRNER^RÉX^J^^^MD^0010^UAMC^L||98765^GRÄBER^LÜCIA^X^^^MD^0010^UAMC^L|MED|||||A0||'
+            '24680^TÖNJES^SÖRÉN^T^^^MD^0010^UAMC^L|||||||||||||||||||||||||||200605290900'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -8624,7 +8849,10 @@ class Test_de_cgm_clinical_18_18_ADT_A01_Aufnahme_with_Caristix_reference_encodi
         message.pid.date_time_of_birth = '19700815'
         message.pid.administrative_sex = CWE(cwe_1='M')
         message.pid.race = CWE(cwe_1='2028-9', cwe_3='HL70005', cwe_4='RA99113', cwe_6='XYZ')
-        message.pid.patient_address = [XAD(xad_1='Gänseblümchenweg 14', xad_3='Nürnberg', xad_4='BY', xad_5='90403', xad_7='M'), XAD(xad_1="MÜLLER'S BÄCKEREI", xad_2='Königsallee 200', xad_4='Düsseldorf', xad_5='NW', xad_6='40212', xad_8='O')]
+        message.pid.patient_address = [
+            XAD(xad_1='Gänseblümchenweg 14', xad_3='Nürnberg', xad_4='BY', xad_5='90403', xad_7='M'),
+            XAD(xad_1="MÜLLER'S BÄCKEREI", xad_2='Königsallee 200', xad_4='Düsseldorf', xad_5='NW', xad_6='40212', xad_8='O'),
+        ]
         message.pid.patient_account_number = CX(cx_1='0105I30001', cx_4='99DEF', cx_5='AN')
 
         message.pv1.patient_class = CWE(cwe_1='I')
@@ -8643,7 +8871,11 @@ class Test_de_cgm_clinical_18_18_ADT_A01_Aufnahme_with_Caristix_reference_encodi
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_19 = 'MSH|^~\\&|RÖNTGEN|AUFN|KLINIK_ÖST|AUFN|20260401170600||ACK^A02^ACK|RÖNT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.4^^2.16.840.1.113883.2.6^ISO\rMSA|CA|AUFN002|'
+_Raw_de_cgm_clinical_19 = (
+    'MSH|^~\\&|RÖNTGEN|AUFN|KLINIK_ÖST|AUFN|20260401170600||ACK^A02^ACK|RÖNT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.4^^2.16.840.1.113883.2.6^ISO\r'
+    'MSA|CA|AUFN002|'
+)
 
 class Test_de_cgm_clinical_19_19_ACK_A02_transport_acknowledgment_for_transfer(unittest.TestCase):
     """ 19. ACK^A02 - transport acknowledgment for transfer
@@ -8871,7 +9103,10 @@ class Test_de_cgm_clinical_19_19_ACK_A02_transport_acknowledgment_for_transfer(u
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.4', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|RÖNTGEN|AUFN|KLINIK_ÖST|AUFN|20260401170600||ACK^A02^ACK|RÖNT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.4^^2.16.840.1.113883.2.6^ISO'
+        expected = (
+            'MSH|^~\\&|RÖNTGEN|AUFN|KLINIK_ÖST|AUFN|20260401170600||ACK^A02^ACK|RÖNT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.4^^2.16.840.1.113883.2.6^ISO'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -8917,7 +9152,13 @@ class Test_de_cgm_clinical_19_19_ACK_A02_transport_acknowledgment_for_transfer(u
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_clinical_20 = 'MSH|^~\\&|SENDE_APPLIKATION|SENDE_EINRICHTUNG|EMPFANGS_APPLIKATION|EMPFANGS_EINRICHTUNG|20260613083617||ADT^A04|934576120260613083617|P|2.3||||\rEVN|A04|20260613083617|||\rPID|1||246813||MÜNCHHAUSEN^THÉODOR^||19550718|M|||Brückenstraße 5^^Zürich^ZH^8001||(044)9391289^^^theodor@zürich-mail.ch|||||2847|99999999||||||||||||||||||||\rPV1|1|O|||||7^Wörner^Güntér^^MD^^^^|||||||||||||||||||||||||||||||||||||||||||||'
+_Raw_de_cgm_clinical_20 = (
+    'MSH|^~\\&|SENDE_APPLIKATION|SENDE_EINRICHTUNG|EMPFANGS_APPLIKATION|EMPFANGS_EINRICHTUNG|20260613083617||ADT^A04|934576120260613083617|P|2.3||||\r'
+    'EVN|A04|20260613083617|||\r'
+    'PID|1||246813||MÜNCHHAUSEN^THÉODOR^||19550718|M|||Brückenstraße 5^^Zürich^ZH^8001||(044)9391289^^^theodor@zürich-mail.ch|||||2847|99999999||||||||||||'
+    '||||||||\r'
+    'PV1|1|O|||||7^Wörner^Güntér^^MD^^^^|||||||||||||||||||||||||||||||||||||||||||||'
+)
 
 class Test_de_cgm_clinical_20_20_ADT_A04_registration_from_ringholm_de_reference(unittest.TestCase):
     """ 20. ADT^A04 - registration from ringholm.de reference
@@ -9167,7 +9408,9 @@ class Test_de_cgm_clinical_20_20_ADT_A04_registration_from_ringholm_de_reference
         segment.version_id = VID(vid_1='2.3')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|SENDE_APPLIKATION|SENDE_EINRICHTUNG|EMPFANGS_APPLIKATION|EMPFANGS_EINRICHTUNG|20260613083617||ADT^A04|934576120260613083617|P|2.3||||'
+        expected = (
+            'MSH|^~\\&|SENDE_APPLIKATION|SENDE_EINRICHTUNG|EMPFANGS_APPLIKATION|EMPFANGS_EINRICHTUNG|20260613083617||ADT^A04|934576120260613083617|P|2.3||||'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -9195,7 +9438,11 @@ class Test_de_cgm_clinical_20_20_ADT_A04_registration_from_ringholm_de_reference
         segment.patient_account_number = CX(cx_1='2847')
 
         serialized = segment.serialize()
-        expected = 'PID|1||246813||MÜNCHHAUSEN^THÉODOR^||19550718|M|||Brückenstraße 5^^Zürich^ZH^8001||(044)9391289^^^theodor@zürich-mail.ch|||||2847|99999999||||||||||||||||||||'
+        expected = (
+            'PID|1||246813||MÜNCHHAUSEN^THÉODOR^||19550718|M|||Brückenstraße 5^^Zürich^ZH^8001||(044)9391289^^^theodor@zürich-mail.ch|||||2847|99999999||'
+            '||||||||||'
+            '||||||||'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################

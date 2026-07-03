@@ -8,6 +8,8 @@ from zato.hl7v2.v2_9.messages import ORM_O01
 from zato.hl7v2.v2_9.segments import DG1, MSH, OBR, ORC, PID, PV1
 from zato.hl7v2.v2_9.datatypes import CWE, CX, MSG, PL, XAD, XCN, XPN
 
+import unittest
+
 from zato.hl7v2.testing.live_util import load_message, md_path_for
 
 # ################################################################################################################################
@@ -17,8 +19,6 @@ _md_path = md_path_for('ar', 'ar-agfa-enterprise.md')
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-import unittest
 
 class TestMsg01(unittest.TestCase):
     """ Based on live/ar/ar-agfa-enterprise.md, message no. 1
