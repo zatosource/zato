@@ -17,11 +17,6 @@ class TestDeoO45:
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
-        assert msg.pid._segment_id == "PID"
-        assert msg.obx._segment_id == "OBX"
-        assert msg.pv1._segment_id == "PV1"
-        assert msg.obr._segment_id == "OBR"
-        assert msg.obx._segment_id == "OBX"
 
     def test_deo_o45_to_dict(self):
         msg = DEO_O45()

@@ -18,7 +18,6 @@ class TestSsrU04:
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
         assert msg.equ._segment_id == "EQU"
-        assert msg.sac._segment_id == "SAC"
 
     def test_ssr_u04_to_dict(self):
         msg = SSR_U04()

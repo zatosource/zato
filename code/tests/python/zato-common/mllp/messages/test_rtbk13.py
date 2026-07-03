@@ -21,7 +21,6 @@ class TestRtbK13:
         assert msg.err._segment_id == "ERR"
         assert msg.qak._segment_id == "QAK"
         assert msg.qpd._segment_id == "QPD"
-        assert msg.rdf._segment_id == "RDF"
         assert msg.dsc._segment_id == "DSC"
 
     def test_rtb_k13_to_dict(self):

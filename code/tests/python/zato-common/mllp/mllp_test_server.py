@@ -37,8 +37,8 @@ def _callback_ok(message_text:'str') -> 'None':
 def _callback_echo(message_text:'str') -> 'None':
     """ Logs the message text to stdout for debugging. Server still auto-ACKs with AA.
     """
-    sys.stdout.write(f'ECHO:{message_text}\n')
-    sys.stdout.flush()
+    _ = sys.stdout.write(f'ECHO:{message_text}\n')
+    _ = sys.stdout.flush()
     return None
 
 # ################################################################################################################################
@@ -98,37 +98,37 @@ def _build_argument_parser() -> 'argparse.ArgumentParser':
     parser = argparse.ArgumentParser(description='Standalone MLLP test server')
 
     # Network
-    parser.add_argument('--host', default='127.0.0.1')
-    parser.add_argument('--port', type=int, default=0)
+    _ = parser.add_argument('--host', default='127.0.0.1')
+    _ = parser.add_argument('--port', type=int, default=0)
 
     # Callback
-    parser.add_argument('--callback-mode', choices=list(_callback_map), default='ok')
-    parser.add_argument('--callback-delay', type=float, default=5.0)
+    _ = parser.add_argument('--callback-mode', choices=list(_callback_map), default='ok')
+    _ = parser.add_argument('--callback-delay', type=float, default=5.0)
 
     # Server tuning
-    parser.add_argument('--max-msg-size', type=int, default=2_000_000)
-    parser.add_argument('--read-buffer-size', type=int, default=4096)
-    parser.add_argument('--recv-timeout', type=float, default=30.0)
-    parser.add_argument('--log-messages', action=argparse.BooleanOptionalAction, default=False)
-    parser.add_argument('--should-return-errors', action=argparse.BooleanOptionalAction, default=False)
+    _ = parser.add_argument('--max-msg-size', type=int, default=2_000_000)
+    _ = parser.add_argument('--read-buffer-size', type=int, default=4096)
+    _ = parser.add_argument('--recv-timeout', type=float, default=30.0)
+    _ = parser.add_argument('--log-messages', action=argparse.BooleanOptionalAction, default=False)
+    _ = parser.add_argument('--should-return-errors', action=argparse.BooleanOptionalAction, default=False)
 
     # TLS
-    parser.add_argument('--tls-cert', default='')
-    parser.add_argument('--tls-key', default='')
-    parser.add_argument('--tls-ca', default='')
-    parser.add_argument('--tls-verify', choices=['none', 'optional', 'required'], default='none')
+    _ = parser.add_argument('--tls-cert', default='')
+    _ = parser.add_argument('--tls-key', default='')
+    _ = parser.add_argument('--tls-ca', default='')
+    _ = parser.add_argument('--tls-verify', choices=['none', 'optional', 'required'], default='none')
 
     # Pre-processing toggles (each has a --no- variant via BooleanOptionalAction)
-    parser.add_argument('--normalize-line-endings', action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument('--repair-truncated-msh', action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument('--split-concatenated-messages', action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument('--force-standard-delimiters', action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument('--use-msh18-encoding', action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument('--default-character-encoding', default='utf-8')
+    _ = parser.add_argument('--normalize-line-endings', action=argparse.BooleanOptionalAction, default=True)
+    _ = parser.add_argument('--repair-truncated-msh', action=argparse.BooleanOptionalAction, default=True)
+    _ = parser.add_argument('--split-concatenated-messages', action=argparse.BooleanOptionalAction, default=True)
+    _ = parser.add_argument('--force-standard-delimiters', action=argparse.BooleanOptionalAction, default=True)
+    _ = parser.add_argument('--use-msh18-encoding', action=argparse.BooleanOptionalAction, default=True)
+    _ = parser.add_argument('--default-character-encoding', default='utf-8')
 
     # Deduplication
-    parser.add_argument('--dedup-ttl-value', type=int, default=0)
-    parser.add_argument('--dedup-ttl-unit', default='')
+    _ = parser.add_argument('--dedup-ttl-value', type=int, default=0)
+    _ = parser.add_argument('--dedup-ttl-unit', default='')
 
     return parser
 
@@ -205,11 +205,11 @@ def main() -> 'None':
     def _on_sigterm(signum:'int', frame:'object') -> 'None':
         server.stop()
 
-    signal.signal(signal.SIGTERM, _on_sigterm)
+    _ = signal.signal(signal.SIGTERM, _on_sigterm)
 
     # Print the readiness signal that the test harness waits for
-    sys.stdout.write(f'READY:{port}\n')
-    sys.stdout.flush()
+    _ = sys.stdout.write(f'READY:{port}\n')
+    _ = sys.stdout.flush()
 
     # Block on the server loop
     server.start()

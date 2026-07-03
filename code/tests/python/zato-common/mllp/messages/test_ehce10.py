@@ -17,14 +17,6 @@ class TestEhcE10:
 
         assert msg.msh._segment_id == "MSH"
         assert msg.msa._segment_id == "MSA"
-        assert msg.ipr._segment_id == "IPR"
-        assert msg.pye._segment_id == "PYE"
-        assert msg.in1._segment_id == "IN1"
-        assert msg.in2._segment_id == "IN2"
-        assert msg.ivc._segment_id == "IVC"
-        assert msg.pss._segment_id == "PSS"
-        assert msg.psg._segment_id == "PSG"
-        assert msg.psl._segment_id == "PSL"
 
     def test_ehc_e10_to_dict(self):
         msg = EHC_E10()

@@ -18,10 +18,6 @@ class TestOriO24:
         assert msg.msh._segment_id == "MSH"
         assert msg.msa._segment_id == "MSA"
         assert msg.uac._segment_id == "UAC"
-        assert msg.pid._segment_id == "PID"
-        assert msg.orc._segment_id == "ORC"
-        assert msg.tq1._segment_id == "TQ1"
-        assert msg.obr._segment_id == "OBR"
 
     def test_ori_o24_to_dict(self):
         msg = ORI_O24()

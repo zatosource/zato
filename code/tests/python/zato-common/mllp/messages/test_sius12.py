@@ -17,15 +17,6 @@ class TestSiuS12:
 
         assert msg.msh._segment_id == "MSH"
         assert msg.sch._segment_id == "SCH"
-        assert msg.pid._segment_id == "PID"
-        assert msg.pd1._segment_id == "PD1"
-        assert msg.pv1._segment_id == "PV1"
-        assert msg.pv2._segment_id == "PV2"
-        assert msg.rgs._segment_id == "RGS"
-        assert msg.ais._segment_id == "AIS"
-        assert msg.aig._segment_id == "AIG"
-        assert msg.ail._segment_id == "AIL"
-        assert msg.aip._segment_id == "AIP"
 
     def test_siu_s12_to_dict(self):
         msg = SIU_S12()

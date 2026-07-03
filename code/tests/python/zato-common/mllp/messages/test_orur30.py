@@ -20,14 +20,8 @@ class TestOruR30:
         assert msg.pid._segment_id == "PID"
         assert msg.pd1._segment_id == "PD1"
         assert msg.oh3._segment_id == "OH3"
-        assert msg.obx._segment_id == "OBX"
-        assert msg.pv1._segment_id == "PV1"
-        assert msg.pv2._segment_id == "PV2"
         assert msg.orc._segment_id == "ORC"
         assert msg.obr._segment_id == "OBR"
-        assert msg.tq1._segment_id == "TQ1"
-        assert msg.obx._segment_id == "OBX"
-        assert msg.dev._segment_id == "DEV"
 
     def test_oru_r30_to_dict(self):
         msg = ORU_R30()

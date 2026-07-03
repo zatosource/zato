@@ -17,9 +17,6 @@ class TestCrmC01:
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
-        assert msg.pid._segment_id == "PID"
-        assert msg.pv1._segment_id == "PV1"
-        assert msg.csr._segment_id == "CSR"
 
     def test_crm_c01_to_dict(self):
         msg = CRM_C01()

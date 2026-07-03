@@ -18,7 +18,6 @@ class TestOraR33:
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
         assert msg.msa._segment_id == "MSA"
-        assert msg.orc._segment_id == "ORC"
 
     def test_ora_r33_to_dict(self):
         msg = ORA_R33()

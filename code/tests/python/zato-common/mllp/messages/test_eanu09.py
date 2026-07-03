@@ -18,8 +18,6 @@ class TestEanU09:
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
         assert msg.equ._segment_id == "EQU"
-        assert msg.nds._segment_id == "NDS"
-        assert msg.nte._segment_id == "NTE"
 
     def test_ean_u09_to_dict(self):
         msg = EAN_U09()

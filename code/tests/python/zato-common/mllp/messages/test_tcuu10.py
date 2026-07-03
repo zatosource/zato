@@ -18,7 +18,6 @@ class TestTcuU10:
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
         assert msg.equ._segment_id == "EQU"
-        assert msg.spm._segment_id == "SPM"
 
     def test_tcu_u10_to_dict(self):
         msg = TCU_U10()

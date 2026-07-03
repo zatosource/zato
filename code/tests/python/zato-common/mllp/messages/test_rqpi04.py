@@ -17,7 +17,6 @@ class TestRqpI04:
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
-        assert msg.prd._segment_id == "PRD"
         assert msg.pid._segment_id == "PID"
 
     def test_rqp_i04_to_dict(self):

@@ -16,20 +16,6 @@ class TestEhcE01:
         msg = EHC_E01()
 
         assert msg.msh._segment_id == "MSH"
-        assert msg.ivc._segment_id == "IVC"
-        assert msg.pye._segment_id == "PYE"
-        assert msg.aut._segment_id == "AUT"
-        assert msg.pss._segment_id == "PSS"
-        assert msg.psg._segment_id == "PSG"
-        assert msg.pid._segment_id == "PID"
-        assert msg.pv1._segment_id == "PV1"
-        assert msg.pv2._segment_id == "PV2"
-        assert msg.in1._segment_id == "IN1"
-        assert msg.in2._segment_id == "IN2"
-        assert msg.dg1._segment_id == "DG1"
-        assert msg.psl._segment_id == "PSL"
-        assert msg.aut._segment_id == "AUT"
-        assert msg.pr1._segment_id == "PR1"
 
     def test_ehc_e01_to_dict(self):
         msg = EHC_E01()

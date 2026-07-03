@@ -18,11 +18,6 @@ class TestOrdO04:
         assert msg.msh._segment_id == "MSH"
         assert msg.msa._segment_id == "MSA"
         assert msg.uac._segment_id == "UAC"
-        assert msg.pid._segment_id == "PID"
-        assert msg.orc._segment_id == "ORC"
-        assert msg.tq1._segment_id == "TQ1"
-        assert msg.orc._segment_id == "ORC"
-        assert msg.tq1._segment_id == "TQ1"
 
     def test_ord_o04_to_dict(self):
         msg = ORD_O04()

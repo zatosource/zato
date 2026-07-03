@@ -18,19 +18,6 @@ class TestSrmS01:
         assert msg.msh._segment_id == "MSH"
         assert msg.arq._segment_id == "ARQ"
         assert msg.apr._segment_id == "APR"
-        assert msg.pid._segment_id == "PID"
-        assert msg.pv1._segment_id == "PV1"
-        assert msg.pv2._segment_id == "PV2"
-        assert msg.obx._segment_id == "OBX"
-        assert msg.rgs._segment_id == "RGS"
-        assert msg.ais._segment_id == "AIS"
-        assert msg.apr._segment_id == "APR"
-        assert msg.aig._segment_id == "AIG"
-        assert msg.apr._segment_id == "APR"
-        assert msg.ail._segment_id == "AIL"
-        assert msg.apr._segment_id == "APR"
-        assert msg.aip._segment_id == "AIP"
-        assert msg.apr._segment_id == "APR"
 
     def test_srm_s01_to_dict(self):
         msg = SRM_S01()

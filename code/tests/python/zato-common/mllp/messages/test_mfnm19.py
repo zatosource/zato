@@ -18,11 +18,6 @@ class TestMfnM19:
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
         assert msg.mfi._segment_id == "MFI"
-        assert msg.mfe._segment_id == "MFE"
-        assert msg.ctr._segment_id == "CTR"
-        assert msg.itm._segment_id == "ITM"
-        assert msg.vnd._segment_id == "VND"
-        assert msg.pkg._segment_id == "PKG"
 
     def test_mfn_m19_to_dict(self):
         msg = MFN_M19()

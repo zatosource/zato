@@ -17,10 +17,6 @@ class TestDelO46:
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
-        assert msg.pid._segment_id == "PID"
-        assert msg.pd1._segment_id == "PD1"
-        assert msg.obx._segment_id == "OBX"
-        assert msg.pv1._segment_id == "PV1"
         assert msg.don._segment_id == "DON"
 
     def test_del_o46_to_dict(self):

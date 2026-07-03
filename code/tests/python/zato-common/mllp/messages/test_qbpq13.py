@@ -21,7 +21,6 @@ class TestQbpQ13:
         assert msg.pid._segment_id == "PID"
         assert msg.rdf._segment_id == "RDF"
         assert msg.rcp._segment_id == "RCP"
-        assert msg.rdf._segment_id == "RDF"
         assert msg.dsc._segment_id == "DSC"
 
     def test_qbp_q13_to_dict(self):

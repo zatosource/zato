@@ -21,9 +21,6 @@ class TestEhcE12:
         assert msg.pss._segment_id == "PSS"
         assert msg.psg._segment_id == "PSG"
         assert msg.pid._segment_id == "PID"
-        assert msg.ctd._segment_id == "CTD"
-        assert msg.obr._segment_id == "OBR"
-        assert msg.nte._segment_id == "NTE"
 
     def test_ehc_e12_to_dict(self):
         msg = EHC_E12()

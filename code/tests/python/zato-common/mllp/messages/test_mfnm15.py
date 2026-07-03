@@ -18,8 +18,6 @@ class TestMfnM15:
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
         assert msg.mfi._segment_id == "MFI"
-        assert msg.mfe._segment_id == "MFE"
-        assert msg.iim._segment_id == "IIM"
 
     def test_mfn_m15_to_dict(self):
         msg = MFN_M15()

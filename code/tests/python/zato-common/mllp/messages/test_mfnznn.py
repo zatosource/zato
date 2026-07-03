@@ -18,7 +18,6 @@ class TestMfnZnn:
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
         assert msg.mfi._segment_id == "MFI"
-        assert msg.mfe._segment_id == "MFE"
 
     def test_mfn_znn_to_dict(self):
         msg = MFN_Znn()

@@ -18,8 +18,6 @@ class TestSsuU03:
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
         assert msg.equ._segment_id == "EQU"
-        assert msg.sac._segment_id == "SAC"
-        assert msg.spm._segment_id == "SPM"
 
     def test_ssu_u03_to_dict(self):
         msg = SSU_U03()

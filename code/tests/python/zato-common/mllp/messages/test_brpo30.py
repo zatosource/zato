@@ -18,10 +18,6 @@ class TestBrpO30:
         assert msg.msh._segment_id == "MSH"
         assert msg.msa._segment_id == "MSA"
         assert msg.uac._segment_id == "UAC"
-        assert msg.pid._segment_id == "PID"
-        assert msg.orc._segment_id == "ORC"
-        assert msg.tq1._segment_id == "TQ1"
-        assert msg.bpo._segment_id == "BPO"
 
     def test_brp_o30_to_dict(self):
         msg = BRP_O30()

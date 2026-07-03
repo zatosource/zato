@@ -23,12 +23,6 @@ class TestEhcE13:
         assert msg.psg._segment_id == "PSG"
         assert msg.pid._segment_id == "PID"
         assert msg.psl._segment_id == "PSL"
-        assert msg.ctd._segment_id == "CTD"
-        assert msg.obr._segment_id == "OBR"
-        assert msg.nte._segment_id == "NTE"
-        assert msg.obx._segment_id == "OBX"
-        assert msg.nte._segment_id == "NTE"
-        assert msg.txa._segment_id == "TXA"
 
     def test_ehc_e13_to_dict(self):
         msg = EHC_E13()

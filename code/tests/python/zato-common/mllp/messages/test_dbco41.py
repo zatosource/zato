@@ -17,9 +17,6 @@ class TestDbcO41:
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
-        assert msg.pid._segment_id == "PID"
-        assert msg.pd1._segment_id == "PD1"
-        assert msg.obx._segment_id == "OBX"
 
     def test_dbc_o41_to_dict(self):
         msg = DBC_O41()

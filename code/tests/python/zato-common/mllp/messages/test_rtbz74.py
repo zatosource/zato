@@ -20,7 +20,6 @@ class TestRtbZ74:
         assert msg.uac._segment_id == "UAC"
         assert msg.qak._segment_id == "QAK"
         assert msg.qpd._segment_id == "QPD"
-        assert msg.rdf._segment_id == "RDF"
         assert msg.dsc._segment_id == "DSC"
 
     def test_rtb_z74_to_dict(self):

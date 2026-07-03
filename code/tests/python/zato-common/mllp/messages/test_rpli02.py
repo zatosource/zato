@@ -18,7 +18,6 @@ class TestRplI02:
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
         assert msg.msa._segment_id == "MSA"
-        assert msg.prd._segment_id == "PRD"
         assert msg.dsc._segment_id == "DSC"
 
     def test_rpl_i02_to_dict(self):

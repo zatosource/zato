@@ -20,7 +20,7 @@ class TestFuzzSerialization:
 
     @given(hl7_safe_text)
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_roundtrip_family_name(self, value):
+    def test_fuzz_roundtrip_family_name(self, value: str) -> None:
         raw = fake_msh("ADT", "A01", "ADT_A01") + fake_evn("A01") + fake_pid() + fake_pv1()
         msg = parse_hl7(raw)
         msg.set("PID.5.1", value)
@@ -30,7 +30,7 @@ class TestFuzzSerialization:
 
     @given(hl7_safe_text, hl7_safe_text)
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_roundtrip_multiple_fields(self, family, given_name):
+    def test_fuzz_roundtrip_multiple_fields(self, family: str, given_name: str) -> None:
         raw = fake_msh("ADT", "A01", "ADT_A01") + fake_evn("A01") + fake_pid() + fake_pv1()
         msg = parse_hl7(raw)
         msg.set("PID.5.1", family)
@@ -42,10 +42,11 @@ class TestFuzzSerialization:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=10))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_roundtrip_many_modifications(self, values):
+    def test_fuzz_roundtrip_many_modifications(self, values: list[str]) -> None:
         raw = fake_msh("ADT", "A01", "ADT_A01") + fake_evn("A01") + fake_pid() + fake_pv1()
         msg = parse_hl7(raw)
-        for i, v in enumerate(values[:5]):            msg.set(f"PID.5.{i+1}", v)
+        for i, v in enumerate(values[:5]):
+            msg.set(f"PID.5.{i+1}", v)
         serialized = serialize(msg)
         msg2 = parse_hl7(serialized)
         for i, v in enumerate(values[:5]):

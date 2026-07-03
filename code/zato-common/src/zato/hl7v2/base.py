@@ -306,7 +306,7 @@ class HL7Component(Generic[T]):
 
 # ################################################################################################################################
 
-    def __set__(self, instance:'any_', value:'T | None') -> 'None':
+    def __set__(self, instance:'any_', value:'T | str | None') -> 'None':
 
         instance.__dict__[self.attr_name] = value
 
@@ -1126,6 +1126,12 @@ class HL7Group:
 
 # ################################################################################################################################
 
+    def __setattr__(self, name:'str', value:'any_') -> 'None':
+        # Groups accept arbitrary child segments and subgroups assigned dynamically
+        super().__setattr__(name, value)
+
+# ################################################################################################################################
+
     def serialize(self) -> 'str':
         """ Serialize this group to ER7 format.
         """
@@ -1200,7 +1206,7 @@ class HL7Message:
     """ Base class for all HL7 message definitions.
     """
     _structure_id:'str'       = ''
-    _registry:'strtypedict'  = {}  # noqa: RUF012
+    _registry:'dict[str, type[HL7Message]]'  = {}  # noqa: RUF012
     _raw_message:'any_'        = None
 
 # ################################################################################################################################

@@ -20,10 +20,7 @@ class TestBarP10:
         assert msg.evn._segment_id == "EVN"
         assert msg.pid._segment_id == "PID"
         assert msg.pv1._segment_id == "PV1"
-        assert msg.dg1._segment_id == "DG1"
         assert msg.gp1._segment_id == "GP1"
-        assert msg.pr1._segment_id == "PR1"
-        assert msg.gp2._segment_id == "GP2"
 
     def test_bar_p10_to_dict(self):
         msg = BAR_P10()

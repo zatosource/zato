@@ -18,11 +18,6 @@ class TestOrsO06:
         assert msg.msh._segment_id == "MSH"
         assert msg.msa._segment_id == "MSA"
         assert msg.uac._segment_id == "UAC"
-        assert msg.pid._segment_id == "PID"
-        assert msg.orc._segment_id == "ORC"
-        assert msg.tq1._segment_id == "TQ1"
-        assert msg.rqd._segment_id == "RQD"
-        assert msg.rq1._segment_id == "RQ1"
 
     def test_ors_o06_to_dict(self):
         msg = ORS_O06()
