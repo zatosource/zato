@@ -40,6 +40,7 @@ def _build_adt_a01(control_id:'str', sender_application:'str'='TestSend', sender
     """
     message = (
         f'MSH|^~\\&|{sender_application}|{sender_facility}|ZatoRecv|ZatoFac|20260507120000||ADT^A01|{control_id}|P|2.5\r'
+        f'EVN|A01|20260507120000\r'
         f'PID|||12345^^^MRN||Doe^John||19800101|M\r'
         f'PV1||I|ICU^Room1'
     )
@@ -282,6 +283,7 @@ class TestMLLPChannelWire:
         # Build message with \n separators instead of \r ..
         message_text = (
             'MSH|^~\\&|LFApp|LFFac|ZatoRecv|ZatoFac|20260507120000||ADT^A01|LFTEST001|P|2.5\n'
+            'EVN|A01|20260507120000\n'
             'PID|||99999^^^MRN||Smith^Jane||19900101|F\n'
             'PV1||I|Ward^Bed2'
         )
@@ -427,7 +429,9 @@ class TestMLLPChannelWire:
         # Build a large message with many OBX segments ..
         segments_list = [
             'MSH|^~\\&|TestSend|TestFac|ZatoRecv|ZatoFac|20260507120000||ADT^A01|LARGE-001|P|2.5',
+            'EVN|A01|20260507120000',
             'PID|||12345^^^MRN||Doe^John||19800101|M',
+            'PV1||I|ICU^Room1',
         ]
 
         padding_text = 'A' * 1000

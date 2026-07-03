@@ -43,6 +43,7 @@ def _build_adt_a01(control_id:'str') -> 'bytes':
     """
     message = (
         f'MSH|^~\\&|TestSend|TestFac|ZatoRecv|ZatoFac|20260507120000||ADT^A01|{control_id}|P|2.5\r'
+        f'EVN|A01|20260507120000\r'
         f'PID|||12345^^^MRN||Doe^John||19800101|M\r'
         f'PV1||I|ICU^Room1'
     )
