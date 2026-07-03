@@ -70,6 +70,22 @@ def _sort_by_position(component:'HL7Component') -> 'int':
 
 # ################################################################################################################################
 
+def _collect_raw_segments(items:'any_', out:'anylist') -> 'anylist':
+    """ Collect raw segments from raw message or group items, descending into nested groups
+    so that segments living inside groups (e.g. an OBX in an OBSERVATION group) are found too.
+    """
+    for item in items:
+
+        # Segments carry a segment_id, groups carry a name and nested items
+        if hasattr(item, 'segment_id'):
+            out.append(item)
+        else:
+            _ = _collect_raw_segments(item.items, out)
+
+    return out
+
+# ################################################################################################################################
+
 def _get_v2_9_module() -> 'any_':
     """ Return the zato_hl7v2.v2_9 module, importing it on first call.
     """
@@ -558,31 +574,34 @@ class HL7SegmentAttr(Generic[T]):
 
             return segment
 
-        # .. otherwise resolve from raw data.
+        # .. otherwise resolve from raw data, descending into groups
+        # .. so that segments nested in groups are found as well,
+        # .. including segments the structure parser left unclaimed.
+        raw_segments = _collect_raw_segments(raw_message.items, [])
+        raw_segments.extend(raw_message.extra_segments)
+
         if self.repeatable:
             out = HL7RepeatableList()
 
-            for item in raw_message.items:
-                if hasattr(item, 'segment_id'):
-                    if item.segment_id == self.segment_id:
-                        segment = segment_class.__new__(segment_class)  # type: ignore[call-overload]
-                        segment._raw_segment = item
-                        segment._parent_message = instance
-                        out.append(segment)
+            for item in raw_segments:
+                if item.segment_id == self.segment_id:
+                    segment = segment_class.__new__(segment_class)  # type: ignore[call-overload]
+                    segment._raw_segment = item
+                    segment._parent_message = instance
+                    out.append(segment)
 
             cache[self.attr_name] = out
 
             return out
 
-        for item in raw_message.items:
-            if hasattr(item, 'segment_id'):
-                if item.segment_id == self.segment_id:
-                    segment = segment_class.__new__(segment_class)  # type: ignore[call-overload]
-                    segment._raw_segment = item
-                    segment._parent_message = instance
-                    cache[self.attr_name] = segment
+        for item in raw_segments:
+            if item.segment_id == self.segment_id:
+                segment = segment_class.__new__(segment_class)  # type: ignore[call-overload]
+                segment._raw_segment = item
+                segment._parent_message = instance
+                cache[self.attr_name] = segment
 
-                    return segment
+                return segment
 
         return None
 
@@ -844,6 +863,11 @@ class HL7DataType:
         max_position = components[-1].position
         parts:'strlist' = []
 
+        # Components explicitly assigned an empty string must be kept in the
+        # output (real-world messages carry trailing empty components), so only
+        # positions that were never set at all are trimmed from the end.
+        last_assigned_position = 0
+
         for position in range(1, max_position + 1):
             value = None
 
@@ -852,14 +876,13 @@ class HL7DataType:
                     value = getattr(self, component.attr_name, None)
                     break
 
+            if value is not None:
+                last_assigned_position = position
+
             string_value = str(value) if value is not None else ''
             parts.append(string_value)
 
-        while parts:
-            if parts[-1] == '':
-                _ = parts.pop()
-            else:
-                break
+        parts = parts[:last_assigned_position]
 
         out = '^'.join(parts)
         return out
@@ -1474,19 +1497,22 @@ def _resolve_segment(message:'HL7Message', segment_reference:'str') -> 'any_':
     """ Find a segment in a message by reference (segment ID or attribute name).
     """
 
-    # Try to find by segment ID in the raw message items ..
+    # Try to find by segment ID in the raw message items, descending into groups
+    # and including segments the structure parser left unclaimed ..
     segment_reference_upper = segment_reference.upper()
 
-    for item in message._raw_message.items:
-        if hasattr(item, 'segment_id'):
-            if item.segment_id == segment_reference_upper:
-                segment_class = _segment_classes.get(segment_reference_upper)
-                if segment_class:
-                    segment = segment_class.__new__(segment_class)  # type: ignore[call-overload]
-                    segment._raw_segment = item
-                    segment._parent_message = message
+    raw_segments = _collect_raw_segments(message._raw_message.items, [])
+    raw_segments.extend(message._raw_message.extra_segments)
 
-                    return segment
+    for item in raw_segments:
+        if item.segment_id == segment_reference_upper:
+            segment_class = _segment_classes.get(segment_reference_upper)
+            if segment_class:
+                segment = segment_class.__new__(segment_class)  # type: ignore[call-overload]
+                segment._raw_segment = item
+                segment._parent_message = message
+
+                return segment
 
     # .. or look up by attribute name on the message class.
     segment_reference_lower = segment_reference.lower()

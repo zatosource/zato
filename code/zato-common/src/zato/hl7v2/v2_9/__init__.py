@@ -3213,12 +3213,12 @@ __all__ = [
 def parse_hl7(raw: str, validate: bool = True, tolerance: 'ToleranceConfig | None' = None) -> HL7Message:
     if tolerance is not None:
         raw = _apply_tolerance(raw, tolerance)
-    raw_msg = _rust_parse(raw)
-    msg_class = HL7Message._registry.get(raw_msg.structure_id)
-    if msg_class is None:
-        raise ValueError(f"Unknown structure: {raw_msg.structure_id}")
-    msg = msg_class.__new__(msg_class)
-    msg._raw_message = raw_msg
+    raw_message = _rust_parse(raw)
+    message_class = HL7Message._registry.get(raw_message.structure_id)
+    if message_class is None:
+        raise ValueError(f"Unknown structure: {raw_message.structure_id}")
+    msg = message_class.__new__(message_class)
+    msg._raw_message = raw_message
     return msg
 
 
@@ -3229,28 +3229,36 @@ def serialize(msg: HL7Message) -> str:
 
     lines: list[str] = []
 
-    for name in msg.__class__.__annotations__:
-        attr = getattr(msg.__class__, name, None)
+    # Walk the class hierarchy in reverse MRO order so base-class descriptors
+    # come first, collecting HL7 descriptors in their declaration order.
+    # The descriptors are plain class attributes, not annotations.
+    descriptors: dict[str, object] = {}
+    for message_class in reversed(type(msg).__mro__):
+        for name, class_attribute in vars(message_class).items():
+            if isinstance(class_attribute, (HL7SegmentAttr, HL7GroupAttr)):
+                descriptors[name] = class_attribute
 
-        if isinstance(attr, HL7SegmentAttr):
-            seg = msg.__dict__.get(attr.attr_name)
-            if seg is not None:
-                if isinstance(seg, list):
-                    for s in seg:
-                        line = s.serialize()
+    for descriptor in descriptors.values():
+
+        if isinstance(descriptor, HL7SegmentAttr):
+            segment = msg.__dict__.get(descriptor.attr_name)
+            if segment is not None:
+                if isinstance(segment, list):
+                    for item in segment:
+                        line = item.serialize()
                         if line:
                             lines.append(line)
                 else:
-                    line = seg.serialize()
+                    line = segment.serialize()
                     if line:
                         lines.append(line)
 
-        elif isinstance(attr, HL7GroupAttr):
-            group = msg.__dict__.get(attr.attr_name)
+        elif isinstance(descriptor, HL7GroupAttr):
+            group = msg.__dict__.get(descriptor.attr_name)
             if group is not None:
                 if isinstance(group, list):
-                    for g in group:
-                        line = g.serialize()
+                    for item in group:
+                        line = item.serialize()
                         if line:
                             lines.append(line)
                 else:
