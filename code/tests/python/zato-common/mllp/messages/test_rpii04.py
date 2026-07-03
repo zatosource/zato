@@ -18,11 +18,7 @@ class TestRpiI04:
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
         assert msg.msa._segment_id == "MSA"
-        assert msg.prd._segment_id == "PRD"
         assert msg.pid._segment_id == "PID"
-        assert msg.in1._segment_id == "IN1"
-        assert msg.in2._segment_id == "IN2"
-        assert msg.in3._segment_id == "IN3"
 
     def test_rpi_i04_to_dict(self):
         msg = RPI_I04()

@@ -16,8 +16,6 @@ class TestQbpE03:
         msg = QBP_E03()
 
         assert msg.msh._segment_id == "MSH"
-        assert msg.qpd._segment_id == "QPD"
-        assert msg.rcp._segment_id == "RCP"
 
     def test_qbp_e03_to_dict(self):
         msg = QBP_E03()

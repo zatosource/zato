@@ -52,7 +52,7 @@ class TestMessageDeduplicator:
         """ Same control ID within TTL reports True.
         """
         dedup = MessageDeduplicator(ttl_seconds=60.0)
-        dedup.is_duplicate('CTRL001')
+        _ = dedup.is_duplicate('CTRL001')
 
         result = dedup.is_duplicate('CTRL001')
         assert result is True
@@ -61,7 +61,7 @@ class TestMessageDeduplicator:
         """ Different control ID reports False.
         """
         dedup = MessageDeduplicator(ttl_seconds=60.0)
-        dedup.is_duplicate('CTRL001')
+        _ = dedup.is_duplicate('CTRL001')
 
         result = dedup.is_duplicate('CTRL002')
         assert result is False
@@ -70,7 +70,7 @@ class TestMessageDeduplicator:
         """ After TTL expires, same control ID reports False.
         """
         dedup = MessageDeduplicator(ttl_seconds=0.1)
-        dedup.is_duplicate('CTRL001')
+        _ = dedup.is_duplicate('CTRL001')
 
         time.sleep(0.2)
 
@@ -81,12 +81,12 @@ class TestMessageDeduplicator:
         """ Expired entries are removed from _seen after a new is_duplicate call.
         """
         dedup = MessageDeduplicator(ttl_seconds=0.1)
-        dedup.is_duplicate('OLD_CTRL')
+        _ = dedup.is_duplicate('OLD_CTRL')
 
         time.sleep(0.2)
 
         # This call triggers eviction of OLD_CTRL before checking NEW_CTRL
-        dedup.is_duplicate('NEW_CTRL')
+        _ = dedup.is_duplicate('NEW_CTRL')
 
         assert 'OLD_CTRL' not in dedup._seen
         assert 'NEW_CTRL' in dedup._seen
@@ -95,8 +95,8 @@ class TestMessageDeduplicator:
         """ clear() empties the cache.
         """
         dedup = MessageDeduplicator(ttl_seconds=60.0)
-        dedup.is_duplicate('CTRL001')
-        dedup.is_duplicate('CTRL002')
+        _ = dedup.is_duplicate('CTRL001')
+        _ = dedup.is_duplicate('CTRL002')
 
         dedup.clear()
 
@@ -106,7 +106,7 @@ class TestMessageDeduplicator:
         """ After clear(), a previously seen ID is no longer considered duplicate.
         """
         dedup = MessageDeduplicator(ttl_seconds=60.0)
-        dedup.is_duplicate('CTRL001')
+        _ = dedup.is_duplicate('CTRL001')
         dedup.clear()
 
         result = dedup.is_duplicate('CTRL001')

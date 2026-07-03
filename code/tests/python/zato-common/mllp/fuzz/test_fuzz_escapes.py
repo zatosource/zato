@@ -9,23 +9,23 @@ class TestFuzzEscapes:
 
     @given(st.text(min_size=0, max_size=200))
     @settings(max_examples=200, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_decode_no_crash(self, value):
+    def test_fuzz_decode_no_crash(self, value: str) -> None:
         try:
-            decode_escapes(value, "\\")
+            _ = decode_escapes(value, "\\")
         except Exception:
             pass
 
     @given(st.text(min_size=0, max_size=200))
     @settings(max_examples=200, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_encode_no_crash(self, value):
+    def test_fuzz_encode_no_crash(self, value: str) -> None:
         try:
-            encode_escapes(value, "|", "^", "~", "\\", "&")
+            _ = encode_escapes(value, "|", "^", "~", "\\", "&")
         except Exception:
             pass
 
     @given(st.text(alphabet=st.characters(blacklist_categories=("Cs",)), min_size=1, max_size=100))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_encode_decode_roundtrip(self, value):
+    def test_fuzz_encode_decode_roundtrip(self, value: str) -> None:
         encoded = encode_escapes(value, "|", "^", "~", "\\", "&")
         decoded = decode_escapes(encoded, "\\")
         assert decoded == value

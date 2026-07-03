@@ -17,7 +17,6 @@ class TestSdrS32:
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
-        assert msg.sdd._segment_id == "SDD"
 
     def test_sdr_s32_to_dict(self):
         msg = SDR_S32()

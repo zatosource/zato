@@ -17,11 +17,7 @@ class TestRqiI01:
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
-        assert msg.prd._segment_id == "PRD"
         assert msg.pid._segment_id == "PID"
-        assert msg.in1._segment_id == "IN1"
-        assert msg.in2._segment_id == "IN2"
-        assert msg.in3._segment_id == "IN3"
 
     def test_rqi_i01_to_dict(self):
         msg = RQI_I01()

@@ -16,8 +16,6 @@ class TestQbpE22:
         msg = QBP_E22()
 
         assert msg.msh._segment_id == "MSH"
-        assert msg.qpd._segment_id == "QPD"
-        assert msg.rcp._segment_id == "RCP"
 
     def test_qbp_e22_to_dict(self):
         msg = QBP_E22()

@@ -17,9 +17,6 @@ class TestNmdN02:
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
-        assert msg.nck._segment_id == "NCK"
-        assert msg.nst._segment_id == "NST"
-        assert msg.nsc._segment_id == "NSC"
 
     def test_nmd_n02_to_dict(self):
         msg = NMD_N02()

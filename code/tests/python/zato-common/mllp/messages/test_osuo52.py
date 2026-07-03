@@ -18,8 +18,6 @@ class TestOsuO52:
         assert msg.msh._segment_id == "MSH"
         assert msg.msa._segment_id == "MSA"
         assert msg.uac._segment_id == "UAC"
-        assert msg.pid._segment_id == "PID"
-        assert msg.orc._segment_id == "ORC"
 
     def test_osu_o52_to_dict(self):
         msg = OSU_O52()

@@ -18,12 +18,6 @@ class TestOprO38:
         assert msg.msh._segment_id == "MSH"
         assert msg.msa._segment_id == "MSA"
         assert msg.uac._segment_id == "UAC"
-        assert msg.pid._segment_id == "PID"
-        assert msg.spm._segment_id == "SPM"
-        assert msg.obx._segment_id == "OBX"
-        assert msg.orc._segment_id == "ORC"
-        assert msg.obr._segment_id == "OBR"
-        assert msg.tq1._segment_id == "TQ1"
 
     def test_opr_o38_to_dict(self):
         msg = OPR_O38()

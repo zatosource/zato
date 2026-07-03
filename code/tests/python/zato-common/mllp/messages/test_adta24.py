@@ -21,9 +21,6 @@ class TestAdtA24:
         assert msg.pid._segment_id == "PID"
         assert msg.pd1._segment_id == "PD1"
         assert msg.pv1._segment_id == "PV1"
-        assert msg.pid._segment_id == "PID"
-        assert msg.pd1._segment_id == "PD1"
-        assert msg.pv1._segment_id == "PV1"
 
     def test_adt_a24_to_dict(self):
         msg = ADT_A24()

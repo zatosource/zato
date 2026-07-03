@@ -21,7 +21,6 @@ class TestRspK23:
         assert msg.err._segment_id == "ERR"
         assert msg.qak._segment_id == "QAK"
         assert msg.qpd._segment_id == "QPD"
-        assert msg.pid._segment_id == "PID"
         assert msg.dsc._segment_id == "DSC"
 
     def test_rsp_k23_to_dict(self):

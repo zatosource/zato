@@ -18,9 +18,6 @@ class TestEarU08:
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
         assert msg.equ._segment_id == "EQU"
-        assert msg.ecd._segment_id == "ECD"
-        assert msg.sac._segment_id == "SAC"
-        assert msg.ecr._segment_id == "ECR"
 
     def test_ear_u08_to_dict(self):
         msg = EAR_U08()

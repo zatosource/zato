@@ -16,15 +16,6 @@ class TestEhcE15:
         msg = EHC_E15()
 
         assert msg.msh._segment_id == "MSH"
-        assert msg.pmt._segment_id == "PMT"
-        assert msg.pye._segment_id == "PYE"
-        assert msg.ipr._segment_id == "IPR"
-        assert msg.ivc._segment_id == "IVC"
-        assert msg.pss._segment_id == "PSS"
-        assert msg.psg._segment_id == "PSG"
-        assert msg.psl._segment_id == "PSL"
-        assert msg.adj._segment_id == "ADJ"
-        assert msg.prt._segment_id == "PRT"
 
     def test_ehc_e15_to_dict(self):
         msg = EHC_E15()

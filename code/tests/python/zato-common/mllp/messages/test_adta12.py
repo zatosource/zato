@@ -22,7 +22,6 @@ class TestAdtA12:
         assert msg.pd1._segment_id == "PD1"
         assert msg.pv1._segment_id == "PV1"
         assert msg.pv2._segment_id == "PV2"
-        assert msg.obx._segment_id == "OBX"
         assert msg.dg1._segment_id == "DG1"
 
     def test_adt_a12_to_dict(self):

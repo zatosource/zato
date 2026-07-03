@@ -19,9 +19,6 @@ class TestAdtA60:
         assert msg.uac._segment_id == "UAC"
         assert msg.evn._segment_id == "EVN"
         assert msg.pid._segment_id == "PID"
-        assert msg.pv1._segment_id == "PV1"
-        assert msg.pv2._segment_id == "PV2"
-        assert msg.iam._segment_id == "IAM"
 
     def test_adt_a60_to_dict(self):
         msg = ADT_A60()

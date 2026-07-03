@@ -20,7 +20,7 @@ def _make_config(**overrides:'object') -> 'MagicMock':
     """ Builds a mock Bunch-like config object with all MLLP channel fields populated.
     """
 
-    defaults = {
+    defaults:'dict[str, object]' = {
         'name': 'test-mllp-channel',
         'service': 'test.hl7.mllp.echo',
         'is_active': True,

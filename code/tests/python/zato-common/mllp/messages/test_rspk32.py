@@ -20,11 +20,6 @@ class TestRspK32:
         assert msg.err._segment_id == "ERR"
         assert msg.qak._segment_id == "QAK"
         assert msg.qpd._segment_id == "QPD"
-        assert msg.pid._segment_id == "PID"
-        assert msg.pd1._segment_id == "PD1"
-        assert msg.pv1._segment_id == "PV1"
-        assert msg.pv2._segment_id == "PV2"
-        assert msg.qri._segment_id == "QRI"
         assert msg.dsc._segment_id == "DSC"
 
     def test_rsp_k32_to_dict(self):

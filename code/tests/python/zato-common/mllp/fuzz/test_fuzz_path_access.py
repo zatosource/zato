@@ -15,7 +15,7 @@ class TestFuzzPathAccess:
 
     @given(segment_ids, field_names)
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_get_segment_field(self, seg, field):
+    def test_fuzz_get_segment_field(self, seg: str, field: str) -> None:
         raw = fake_msh("ADT", "A01", "ADT_A01") + fake_evn("A01") + fake_pid() + fake_pv1()
         msg = parse_hl7(raw)
         try:
@@ -25,7 +25,7 @@ class TestFuzzPathAccess:
 
     @given(segment_ids, field_names, component_names)
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_get_segment_field_component(self, seg, field, comp):
+    def test_fuzz_get_segment_field_component(self, seg: str, field: str, comp: str) -> None:
         raw = fake_msh("ADT", "A01", "ADT_A01") + fake_evn("A01") + fake_pid() + fake_pv1()
         msg = parse_hl7(raw)
         try:
@@ -35,7 +35,7 @@ class TestFuzzPathAccess:
 
     @given(st.text(min_size=1, max_size=50))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_get_random_path(self, path):
+    def test_fuzz_get_random_path(self, path: str) -> None:
         raw = fake_msh("ADT", "A01", "ADT_A01") + fake_evn("A01") + fake_pid() + fake_pv1()
         msg = parse_hl7(raw)
         try:
@@ -45,7 +45,7 @@ class TestFuzzPathAccess:
 
     @given(st.text(min_size=1, max_size=50), st.text(min_size=0, max_size=50))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_set_random_path(self, path, value):
+    def test_fuzz_set_random_path(self, path: str, value: str) -> None:
         raw = fake_msh("ADT", "A01", "ADT_A01") + fake_evn("A01") + fake_pid() + fake_pv1()
         msg = parse_hl7(raw)
         try:

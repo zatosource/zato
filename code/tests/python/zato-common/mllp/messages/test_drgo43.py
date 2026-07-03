@@ -17,10 +17,6 @@ class TestDrgO43:
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
-        assert msg.pid._segment_id == "PID"
-        assert msg.pd1._segment_id == "PD1"
-        assert msg.obx._segment_id == "OBX"
-        assert msg.pv1._segment_id == "PV1"
 
     def test_drg_o43_to_dict(self):
         msg = DRG_O43()

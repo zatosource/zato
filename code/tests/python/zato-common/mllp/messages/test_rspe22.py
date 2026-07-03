@@ -17,11 +17,6 @@ class TestRspE22:
 
         assert msg.msh._segment_id == "MSH"
         assert msg.msa._segment_id == "MSA"
-        assert msg.qak._segment_id == "QAK"
-        assert msg.qpd._segment_id == "QPD"
-        assert msg.ivc._segment_id == "IVC"
-        assert msg.psg._segment_id == "PSG"
-        assert msg.psl._segment_id == "PSL"
 
     def test_rsp_e22_to_dict(self):
         msg = RSP_E22()

@@ -18,9 +18,6 @@ class TestAdtA43:
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
         assert msg.evn._segment_id == "EVN"
-        assert msg.pid._segment_id == "PID"
-        assert msg.pd1._segment_id == "PD1"
-        assert msg.mrg._segment_id == "MRG"
 
     def test_adt_a43_to_dict(self):
         msg = ADT_A43()

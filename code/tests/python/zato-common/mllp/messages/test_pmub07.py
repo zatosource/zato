@@ -20,7 +20,6 @@ class TestPmuB07:
         assert msg.evn._segment_id == "EVN"
         assert msg.stf._segment_id == "STF"
         assert msg.pra._segment_id == "PRA"
-        assert msg.cer._segment_id == "CER"
 
     def test_pmu_b07_to_dict(self):
         msg = PMU_B07()

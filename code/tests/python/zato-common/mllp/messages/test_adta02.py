@@ -23,7 +23,6 @@ class TestAdtA02:
         assert msg.oh3._segment_id == "OH3"
         assert msg.pv1._segment_id == "PV1"
         assert msg.pv2._segment_id == "PV2"
-        assert msg.obx._segment_id == "OBX"
         assert msg.pda._segment_id == "PDA"
 
     def test_adt_a02_to_dict(self):

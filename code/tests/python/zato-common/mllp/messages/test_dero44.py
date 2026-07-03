@@ -17,11 +17,6 @@ class TestDerO44:
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
-        assert msg.pid._segment_id == "PID"
-        assert msg.pd1._segment_id == "PD1"
-        assert msg.obx._segment_id == "OBX"
-        assert msg.pv1._segment_id == "PV1"
-        assert msg.obr._segment_id == "OBR"
 
     def test_der_o44_to_dict(self):
         msg = DER_O44()

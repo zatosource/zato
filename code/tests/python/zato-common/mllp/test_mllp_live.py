@@ -919,7 +919,7 @@ class TestTimeoutsAndErrors:
 
             # .. kill the server with SIGKILL ..
             process.send_signal(signal.SIGKILL)
-            process.wait()
+            _ = process.wait()
 
             # .. attempt to read should fail or return empty bytes.
             try:

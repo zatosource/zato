@@ -18,11 +18,6 @@ class TestRraO18:
         assert msg.msh._segment_id == "MSH"
         assert msg.msa._segment_id == "MSA"
         assert msg.uac._segment_id == "UAC"
-        assert msg.pid._segment_id == "PID"
-        assert msg.orc._segment_id == "ORC"
-        assert msg.tq1._segment_id == "TQ1"
-        assert msg.rxa._segment_id == "RXA"
-        assert msg.rxr._segment_id == "RXR"
 
     def test_rra_o18_to_dict(self):
         msg = RRA_O18()

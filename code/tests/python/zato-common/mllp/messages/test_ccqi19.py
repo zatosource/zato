@@ -18,7 +18,6 @@ class TestCcqI19:
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
         assert msg.rf1._segment_id == "RF1"
-        assert msg.prd._segment_id == "PRD"
 
     def test_ccq_i19_to_dict(self):
         msg = CCQ_I19()

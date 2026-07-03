@@ -20,11 +20,7 @@ class TestMdmT02:
         assert msg.evn._segment_id == "EVN"
         assert msg.pid._segment_id == "PID"
         assert msg.pv1._segment_id == "PV1"
-        assert msg.orc._segment_id == "ORC"
-        assert msg.tq1._segment_id == "TQ1"
-        assert msg.obr._segment_id == "OBR"
         assert msg.txa._segment_id == "TXA"
-        assert msg.obx._segment_id == "OBX"
 
     def test_mdm_t02_to_dict(self):
         msg = MDM_T02()

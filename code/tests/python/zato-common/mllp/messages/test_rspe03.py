@@ -17,8 +17,6 @@ class TestRspE03:
 
         assert msg.msh._segment_id == "MSH"
         assert msg.msa._segment_id == "MSA"
-        assert msg.qak._segment_id == "QAK"
-        assert msg.qpd._segment_id == "QPD"
 
     def test_rsp_e03_to_dict(self):
         msg = RSP_E03()

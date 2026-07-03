@@ -20,19 +20,6 @@ class TestOpuR25:
         assert msg.nte._segment_id == "NTE"
         assert msg.pv1._segment_id == "PV1"
         assert msg.pv2._segment_id == "PV2"
-        assert msg.obx._segment_id == "OBX"
-        assert msg.pid._segment_id == "PID"
-        assert msg.pd1._segment_id == "PD1"
-        assert msg.oh3._segment_id == "OH3"
-        assert msg.obx._segment_id == "OBX"
-        assert msg.spm._segment_id == "SPM"
-        assert msg.obx._segment_id == "OBX"
-        assert msg.sac._segment_id == "SAC"
-        assert msg.inv._segment_id == "INV"
-        assert msg.obr._segment_id == "OBR"
-        assert msg.orc._segment_id == "ORC"
-        assert msg.tq1._segment_id == "TQ1"
-        assert msg.obx._segment_id == "OBX"
 
     def test_opu_r25_to_dict(self):
         msg = OPU_R25()

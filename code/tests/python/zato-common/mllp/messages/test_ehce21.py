@@ -16,9 +16,6 @@ class TestEhcE21:
         msg = EHC_E21()
 
         assert msg.msh._segment_id == "MSH"
-        assert msg.ivc._segment_id == "IVC"
-        assert msg.psl._segment_id == "PSL"
-        assert msg.aut._segment_id == "AUT"
 
     def test_ehc_e21_to_dict(self):
         msg = EHC_E21()

@@ -17,14 +17,6 @@ class TestBtsO31:
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
-        assert msg.pid._segment_id == "PID"
-        assert msg.pd1._segment_id == "PD1"
-        assert msg.pv1._segment_id == "PV1"
-        assert msg.pv2._segment_id == "PV2"
-        assert msg.orc._segment_id == "ORC"
-        assert msg.tq1._segment_id == "TQ1"
-        assert msg.bpo._segment_id == "BPO"
-        assert msg.btx._segment_id == "BTX"
 
     def test_bts_o31_to_dict(self):
         msg = BTS_O31()

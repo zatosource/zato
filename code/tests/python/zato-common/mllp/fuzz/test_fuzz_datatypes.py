@@ -29,14 +29,14 @@ class TestFuzzAD:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ad_no_crash(self, values):
+    def test_fuzz_ad_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("AD", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ad_result_has_attributes(self, values):
+    def test_fuzz_ad_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("AD", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -47,14 +47,14 @@ class TestFuzzAUI:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_aui_no_crash(self, values):
+    def test_fuzz_aui_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("AUI", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_aui_result_has_attributes(self, values):
+    def test_fuzz_aui_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("AUI", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -65,14 +65,14 @@ class TestFuzzCCD:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ccd_no_crash(self, values):
+    def test_fuzz_ccd_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CCD", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ccd_result_has_attributes(self, values):
+    def test_fuzz_ccd_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CCD", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -83,14 +83,14 @@ class TestFuzzCCP:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ccp_no_crash(self, values):
+    def test_fuzz_ccp_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CCP", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ccp_result_has_attributes(self, values):
+    def test_fuzz_ccp_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CCP", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -101,14 +101,14 @@ class TestFuzzCD:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_cd_no_crash(self, values):
+    def test_fuzz_cd_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CD", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_cd_result_has_attributes(self, values):
+    def test_fuzz_cd_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CD", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -119,14 +119,14 @@ class TestFuzzCF:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_cf_no_crash(self, values):
+    def test_fuzz_cf_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CF", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_cf_result_has_attributes(self, values):
+    def test_fuzz_cf_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CF", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -137,14 +137,14 @@ class TestFuzzCNE:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_cne_no_crash(self, values):
+    def test_fuzz_cne_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CNE", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_cne_result_has_attributes(self, values):
+    def test_fuzz_cne_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CNE", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -155,14 +155,14 @@ class TestFuzzCNN:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_cnn_no_crash(self, values):
+    def test_fuzz_cnn_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CNN", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_cnn_result_has_attributes(self, values):
+    def test_fuzz_cnn_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CNN", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -173,14 +173,14 @@ class TestFuzzCP:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_cp_no_crash(self, values):
+    def test_fuzz_cp_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CP", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_cp_result_has_attributes(self, values):
+    def test_fuzz_cp_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CP", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -191,14 +191,14 @@ class TestFuzzCQ:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_cq_no_crash(self, values):
+    def test_fuzz_cq_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CQ", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_cq_result_has_attributes(self, values):
+    def test_fuzz_cq_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CQ", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -209,14 +209,14 @@ class TestFuzzCSU:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_csu_no_crash(self, values):
+    def test_fuzz_csu_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CSU", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_csu_result_has_attributes(self, values):
+    def test_fuzz_csu_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CSU", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -227,14 +227,14 @@ class TestFuzzCWE:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_cwe_no_crash(self, values):
+    def test_fuzz_cwe_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CWE", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_cwe_result_has_attributes(self, values):
+    def test_fuzz_cwe_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CWE", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -245,14 +245,14 @@ class TestFuzzCX:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_cx_no_crash(self, values):
+    def test_fuzz_cx_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CX", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_cx_result_has_attributes(self, values):
+    def test_fuzz_cx_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("CX", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -263,14 +263,14 @@ class TestFuzzDDI:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ddi_no_crash(self, values):
+    def test_fuzz_ddi_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("DDI", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ddi_result_has_attributes(self, values):
+    def test_fuzz_ddi_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("DDI", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -281,14 +281,14 @@ class TestFuzzDIN:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_din_no_crash(self, values):
+    def test_fuzz_din_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("DIN", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_din_result_has_attributes(self, values):
+    def test_fuzz_din_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("DIN", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -299,14 +299,14 @@ class TestFuzzDLD:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_dld_no_crash(self, values):
+    def test_fuzz_dld_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("DLD", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_dld_result_has_attributes(self, values):
+    def test_fuzz_dld_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("DLD", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -317,14 +317,14 @@ class TestFuzzDLN:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_dln_no_crash(self, values):
+    def test_fuzz_dln_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("DLN", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_dln_result_has_attributes(self, values):
+    def test_fuzz_dln_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("DLN", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -335,14 +335,14 @@ class TestFuzzDLT:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_dlt_no_crash(self, values):
+    def test_fuzz_dlt_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("DLT", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_dlt_result_has_attributes(self, values):
+    def test_fuzz_dlt_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("DLT", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -353,14 +353,14 @@ class TestFuzzDR:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_dr_no_crash(self, values):
+    def test_fuzz_dr_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("DR", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_dr_result_has_attributes(self, values):
+    def test_fuzz_dr_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("DR", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -371,14 +371,14 @@ class TestFuzzDT:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_dt_no_crash(self, values):
+    def test_fuzz_dt_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("DT", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_dt_result_has_attributes(self, values):
+    def test_fuzz_dt_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("DT", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -389,14 +389,14 @@ class TestFuzzDTM:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_dtm_no_crash(self, values):
+    def test_fuzz_dtm_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("DTM", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_dtm_result_has_attributes(self, values):
+    def test_fuzz_dtm_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("DTM", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -407,14 +407,14 @@ class TestFuzzDTN:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_dtn_no_crash(self, values):
+    def test_fuzz_dtn_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("DTN", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_dtn_result_has_attributes(self, values):
+    def test_fuzz_dtn_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("DTN", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -425,14 +425,14 @@ class TestFuzzED:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ed_no_crash(self, values):
+    def test_fuzz_ed_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("ED", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ed_result_has_attributes(self, values):
+    def test_fuzz_ed_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("ED", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -443,14 +443,14 @@ class TestFuzzEI:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ei_no_crash(self, values):
+    def test_fuzz_ei_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("EI", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ei_result_has_attributes(self, values):
+    def test_fuzz_ei_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("EI", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -461,14 +461,14 @@ class TestFuzzEIP:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_eip_no_crash(self, values):
+    def test_fuzz_eip_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("EIP", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_eip_result_has_attributes(self, values):
+    def test_fuzz_eip_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("EIP", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -479,14 +479,14 @@ class TestFuzzERL:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_erl_no_crash(self, values):
+    def test_fuzz_erl_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("ERL", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_erl_result_has_attributes(self, values):
+    def test_fuzz_erl_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("ERL", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -497,14 +497,14 @@ class TestFuzzFC:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_fc_no_crash(self, values):
+    def test_fuzz_fc_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("FC", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_fc_result_has_attributes(self, values):
+    def test_fuzz_fc_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("FC", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -515,14 +515,14 @@ class TestFuzzFN:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_fn_no_crash(self, values):
+    def test_fuzz_fn_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("FN", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_fn_result_has_attributes(self, values):
+    def test_fuzz_fn_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("FN", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -533,14 +533,14 @@ class TestFuzzFT:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ft_no_crash(self, values):
+    def test_fuzz_ft_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("FT", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ft_result_has_attributes(self, values):
+    def test_fuzz_ft_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("FT", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -551,14 +551,14 @@ class TestFuzzGTS:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_gts_no_crash(self, values):
+    def test_fuzz_gts_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("GTS", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_gts_result_has_attributes(self, values):
+    def test_fuzz_gts_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("GTS", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -569,14 +569,14 @@ class TestFuzzHD:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_hd_no_crash(self, values):
+    def test_fuzz_hd_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("HD", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_hd_result_has_attributes(self, values):
+    def test_fuzz_hd_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("HD", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -587,14 +587,14 @@ class TestFuzzICD:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_icd_no_crash(self, values):
+    def test_fuzz_icd_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("ICD", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_icd_result_has_attributes(self, values):
+    def test_fuzz_icd_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("ICD", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -605,14 +605,14 @@ class TestFuzzID:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_id_no_crash(self, values):
+    def test_fuzz_id_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("ID", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_id_result_has_attributes(self, values):
+    def test_fuzz_id_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("ID", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -623,14 +623,14 @@ class TestFuzzIS:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_is_no_crash(self, values):
+    def test_fuzz_is_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("IS", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_is_result_has_attributes(self, values):
+    def test_fuzz_is_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("IS", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -641,14 +641,14 @@ class TestFuzzJCC:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_jcc_no_crash(self, values):
+    def test_fuzz_jcc_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("JCC", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_jcc_result_has_attributes(self, values):
+    def test_fuzz_jcc_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("JCC", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -659,14 +659,14 @@ class TestFuzzMA:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ma_no_crash(self, values):
+    def test_fuzz_ma_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("MA", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ma_result_has_attributes(self, values):
+    def test_fuzz_ma_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("MA", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -677,14 +677,14 @@ class TestFuzzMO:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_mo_no_crash(self, values):
+    def test_fuzz_mo_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("MO", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_mo_result_has_attributes(self, values):
+    def test_fuzz_mo_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("MO", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -695,14 +695,14 @@ class TestFuzzMOC:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_moc_no_crash(self, values):
+    def test_fuzz_moc_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("MOC", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_moc_result_has_attributes(self, values):
+    def test_fuzz_moc_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("MOC", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -713,14 +713,14 @@ class TestFuzzMOP:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_mop_no_crash(self, values):
+    def test_fuzz_mop_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("MOP", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_mop_result_has_attributes(self, values):
+    def test_fuzz_mop_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("MOP", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -731,14 +731,14 @@ class TestFuzzMSG:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_msg_no_crash(self, values):
+    def test_fuzz_msg_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("MSG", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_msg_result_has_attributes(self, values):
+    def test_fuzz_msg_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("MSG", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -749,14 +749,14 @@ class TestFuzzNA:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_na_no_crash(self, values):
+    def test_fuzz_na_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("NA", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_na_result_has_attributes(self, values):
+    def test_fuzz_na_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("NA", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -767,14 +767,14 @@ class TestFuzzNDL:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ndl_no_crash(self, values):
+    def test_fuzz_ndl_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("NDL", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ndl_result_has_attributes(self, values):
+    def test_fuzz_ndl_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("NDL", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -785,14 +785,14 @@ class TestFuzzNM:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_nm_no_crash(self, values):
+    def test_fuzz_nm_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("NM", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_nm_result_has_attributes(self, values):
+    def test_fuzz_nm_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("NM", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -803,14 +803,14 @@ class TestFuzzNR:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_nr_no_crash(self, values):
+    def test_fuzz_nr_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("NR", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_nr_result_has_attributes(self, values):
+    def test_fuzz_nr_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("NR", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -821,14 +821,14 @@ class TestFuzzOCD:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ocd_no_crash(self, values):
+    def test_fuzz_ocd_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("OCD", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ocd_result_has_attributes(self, values):
+    def test_fuzz_ocd_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("OCD", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -839,14 +839,14 @@ class TestFuzzOG:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_og_no_crash(self, values):
+    def test_fuzz_og_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("OG", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_og_result_has_attributes(self, values):
+    def test_fuzz_og_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("OG", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -857,14 +857,14 @@ class TestFuzzOSP:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_osp_no_crash(self, values):
+    def test_fuzz_osp_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("OSP", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_osp_result_has_attributes(self, values):
+    def test_fuzz_osp_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("OSP", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -875,14 +875,14 @@ class TestFuzzPIP:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_pip_no_crash(self, values):
+    def test_fuzz_pip_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("PIP", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_pip_result_has_attributes(self, values):
+    def test_fuzz_pip_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("PIP", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -893,14 +893,14 @@ class TestFuzzPL:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_pl_no_crash(self, values):
+    def test_fuzz_pl_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("PL", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_pl_result_has_attributes(self, values):
+    def test_fuzz_pl_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("PL", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -911,14 +911,14 @@ class TestFuzzPLN:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_pln_no_crash(self, values):
+    def test_fuzz_pln_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("PLN", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_pln_result_has_attributes(self, values):
+    def test_fuzz_pln_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("PLN", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -929,14 +929,14 @@ class TestFuzzPPN:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ppn_no_crash(self, values):
+    def test_fuzz_ppn_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("PPN", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ppn_result_has_attributes(self, values):
+    def test_fuzz_ppn_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("PPN", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -947,14 +947,14 @@ class TestFuzzPRL:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_prl_no_crash(self, values):
+    def test_fuzz_prl_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("PRL", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_prl_result_has_attributes(self, values):
+    def test_fuzz_prl_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("PRL", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -965,14 +965,14 @@ class TestFuzzPT:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_pt_no_crash(self, values):
+    def test_fuzz_pt_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("PT", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_pt_result_has_attributes(self, values):
+    def test_fuzz_pt_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("PT", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -983,14 +983,14 @@ class TestFuzzPTA:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_pta_no_crash(self, values):
+    def test_fuzz_pta_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("PTA", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_pta_result_has_attributes(self, values):
+    def test_fuzz_pta_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("PTA", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1001,14 +1001,14 @@ class TestFuzzQIP:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_qip_no_crash(self, values):
+    def test_fuzz_qip_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("QIP", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_qip_result_has_attributes(self, values):
+    def test_fuzz_qip_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("QIP", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1019,14 +1019,14 @@ class TestFuzzQSC:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_qsc_no_crash(self, values):
+    def test_fuzz_qsc_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("QSC", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_qsc_result_has_attributes(self, values):
+    def test_fuzz_qsc_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("QSC", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1037,14 +1037,14 @@ class TestFuzzRCD:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_rcd_no_crash(self, values):
+    def test_fuzz_rcd_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("RCD", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_rcd_result_has_attributes(self, values):
+    def test_fuzz_rcd_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("RCD", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1055,14 +1055,14 @@ class TestFuzzRFR:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_rfr_no_crash(self, values):
+    def test_fuzz_rfr_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("RFR", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_rfr_result_has_attributes(self, values):
+    def test_fuzz_rfr_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("RFR", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1073,14 +1073,14 @@ class TestFuzzRI:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ri_no_crash(self, values):
+    def test_fuzz_ri_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("RI", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_ri_result_has_attributes(self, values):
+    def test_fuzz_ri_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("RI", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1091,14 +1091,14 @@ class TestFuzzRMC:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_rmc_no_crash(self, values):
+    def test_fuzz_rmc_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("RMC", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_rmc_result_has_attributes(self, values):
+    def test_fuzz_rmc_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("RMC", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1109,14 +1109,14 @@ class TestFuzzRP:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_rp_no_crash(self, values):
+    def test_fuzz_rp_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("RP", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_rp_result_has_attributes(self, values):
+    def test_fuzz_rp_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("RP", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1127,14 +1127,14 @@ class TestFuzzRPT:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_rpt_no_crash(self, values):
+    def test_fuzz_rpt_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("RPT", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_rpt_result_has_attributes(self, values):
+    def test_fuzz_rpt_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("RPT", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1145,14 +1145,14 @@ class TestFuzzSAD:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_sad_no_crash(self, values):
+    def test_fuzz_sad_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("SAD", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_sad_result_has_attributes(self, values):
+    def test_fuzz_sad_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("SAD", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1163,14 +1163,14 @@ class TestFuzzSCV:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_scv_no_crash(self, values):
+    def test_fuzz_scv_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("SCV", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_scv_result_has_attributes(self, values):
+    def test_fuzz_scv_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("SCV", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1181,14 +1181,14 @@ class TestFuzzSI:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_si_no_crash(self, values):
+    def test_fuzz_si_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("SI", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_si_result_has_attributes(self, values):
+    def test_fuzz_si_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("SI", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1199,14 +1199,14 @@ class TestFuzzSN:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_sn_no_crash(self, values):
+    def test_fuzz_sn_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("SN", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_sn_result_has_attributes(self, values):
+    def test_fuzz_sn_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("SN", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1217,14 +1217,14 @@ class TestFuzzSNM:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_snm_no_crash(self, values):
+    def test_fuzz_snm_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("SNM", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_snm_result_has_attributes(self, values):
+    def test_fuzz_snm_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("SNM", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1235,14 +1235,14 @@ class TestFuzzSPD:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_spd_no_crash(self, values):
+    def test_fuzz_spd_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("SPD", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_spd_result_has_attributes(self, values):
+    def test_fuzz_spd_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("SPD", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1253,14 +1253,14 @@ class TestFuzzSRT:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_srt_no_crash(self, values):
+    def test_fuzz_srt_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("SRT", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_srt_result_has_attributes(self, values):
+    def test_fuzz_srt_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("SRT", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1271,14 +1271,14 @@ class TestFuzzST:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_st_no_crash(self, values):
+    def test_fuzz_st_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("ST", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_st_result_has_attributes(self, values):
+    def test_fuzz_st_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("ST", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1289,14 +1289,14 @@ class TestFuzzTM:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_tm_no_crash(self, values):
+    def test_fuzz_tm_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("TM", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_tm_result_has_attributes(self, values):
+    def test_fuzz_tm_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("TM", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1307,14 +1307,14 @@ class TestFuzzTX:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_tx_no_crash(self, values):
+    def test_fuzz_tx_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("TX", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_tx_result_has_attributes(self, values):
+    def test_fuzz_tx_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("TX", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1325,14 +1325,14 @@ class TestFuzzUVC:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_uvc_no_crash(self, values):
+    def test_fuzz_uvc_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("UVC", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_uvc_result_has_attributes(self, values):
+    def test_fuzz_uvc_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("UVC", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1343,14 +1343,14 @@ class TestFuzzVH:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_vh_no_crash(self, values):
+    def test_fuzz_vh_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("VH", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_vh_result_has_attributes(self, values):
+    def test_fuzz_vh_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("VH", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1361,14 +1361,14 @@ class TestFuzzVID:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_vid_no_crash(self, values):
+    def test_fuzz_vid_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("VID", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_vid_result_has_attributes(self, values):
+    def test_fuzz_vid_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("VID", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1379,14 +1379,14 @@ class TestFuzzVR:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_vr_no_crash(self, values):
+    def test_fuzz_vr_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("VR", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_vr_result_has_attributes(self, values):
+    def test_fuzz_vr_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("VR", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1397,14 +1397,14 @@ class TestFuzzWVI:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_wvi_no_crash(self, values):
+    def test_fuzz_wvi_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("WVI", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_wvi_result_has_attributes(self, values):
+    def test_fuzz_wvi_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("WVI", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1415,14 +1415,14 @@ class TestFuzzWVS:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_wvs_no_crash(self, values):
+    def test_fuzz_wvs_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("WVS", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_wvs_result_has_attributes(self, values):
+    def test_fuzz_wvs_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("WVS", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1433,14 +1433,14 @@ class TestFuzzXAD:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_xad_no_crash(self, values):
+    def test_fuzz_xad_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("XAD", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_xad_result_has_attributes(self, values):
+    def test_fuzz_xad_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("XAD", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1451,14 +1451,14 @@ class TestFuzzXCN:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_xcn_no_crash(self, values):
+    def test_fuzz_xcn_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("XCN", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_xcn_result_has_attributes(self, values):
+    def test_fuzz_xcn_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("XCN", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1469,14 +1469,14 @@ class TestFuzzXON:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_xon_no_crash(self, values):
+    def test_fuzz_xon_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("XON", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_xon_result_has_attributes(self, values):
+    def test_fuzz_xon_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("XON", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1487,14 +1487,14 @@ class TestFuzzXPN:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_xpn_no_crash(self, values):
+    def test_fuzz_xpn_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("XPN", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_xpn_result_has_attributes(self, values):
+    def test_fuzz_xpn_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("XPN", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1505,14 +1505,14 @@ class TestFuzzXTN:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_xtn_no_crash(self, values):
+    def test_fuzz_xtn_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("XTN", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_xtn_result_has_attributes(self, values):
+    def test_fuzz_xtn_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("XTN", components, "TEST.1")
         assert hasattr(result, "is_valid")
@@ -1523,14 +1523,14 @@ class TestFuzzvaries:
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_varies_no_crash(self, values):
+    def test_fuzz_varies_no_crash(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("varies", components, "TEST.1")
         assert result is not None
 
     @given(st.lists(hl7_safe_text, min_size=1, max_size=20))
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_varies_result_has_attributes(self, values):
+    def test_fuzz_varies_result_has_attributes(self, values: list[str]) -> None:
         components = make_components(20, values)
         result = validate_datatype("varies", components, "TEST.1")
         assert hasattr(result, "is_valid")

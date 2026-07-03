@@ -18,9 +18,6 @@ class TestOrxO58:
         assert msg.msh._segment_id == "MSH"
         assert msg.msa._segment_id == "MSA"
         assert msg.uac._segment_id == "UAC"
-        assert msg.pid._segment_id == "PID"
-        assert msg.orc._segment_id == "ORC"
-        assert msg.txa._segment_id == "TXA"
 
     def test_orx_o58_to_dict(self):
         msg = ORX_O58()

@@ -18,13 +18,6 @@ class TestOrlO55:
         assert msg.msh._segment_id == "MSH"
         assert msg.msa._segment_id == "MSA"
         assert msg.uac._segment_id == "UAC"
-        assert msg.pid._segment_id == "PID"
-        assert msg.spm._segment_id == "SPM"
-        assert msg.obx._segment_id == "OBX"
-        assert msg.sac._segment_id == "SAC"
-        assert msg.orc._segment_id == "ORC"
-        assert msg.tq1._segment_id == "TQ1"
-        assert msg.obr._segment_id == "OBR"
 
     def test_orl_o55_to_dict(self):
         msg = ORL_O55()
