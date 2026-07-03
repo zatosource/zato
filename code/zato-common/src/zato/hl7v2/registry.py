@@ -40,6 +40,13 @@ def resolve_field(segment_id: str, field_ref: str) -> Tuple[Optional[int], Optio
     field_info = _field_registry[segment_id].get(field_ref_lower)
     if field_info:
         return field_info
+
+    # A numeric reference is a wire position and stays valid even when the v2.9 XSD
+    # withdraws the field (e.g. PID-2), so real-world messages remain navigable.
+    # There is no declared datatype for such positions.
+    if field_ref.isdigit():
+        return (int(field_ref), None)
+
     return (None, None)
 
 
