@@ -55,6 +55,10 @@ def _make_config(**overrides:'object') -> 'MagicMock':
         'should_log_messages': False,
         'should_return_errors': False,
 
+        # Parsing
+        'should_parse_on_input': True,
+        'should_validate': False,
+
         # Deduplication
         'dedup_ttl_value': 0,
         'dedup_ttl_unit': '',
