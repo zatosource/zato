@@ -191,6 +191,9 @@ def main() -> 'None':
         read_buffer_size=args.read_buffer_size,
         should_log_messages=args.log_messages,
         should_return_errors=args.should_return_errors,
+
+        # Callbacks receive the raw ER7 text so the echo mode can log it verbatim
+        should_parse_on_input=False,
         should_normalize_line_endings=args.normalize_line_endings,
         should_repair_truncated_msh=args.repair_truncated_msh,
         should_split_concatenated_messages=args.split_concatenated_messages,

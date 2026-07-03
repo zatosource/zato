@@ -57,6 +57,10 @@ channel_config_defaults:'dict[str, object]' = {
     'should_log_messages': False,
     'should_return_errors': False,
 
+    # Parsing
+    'should_parse_on_input': True,
+    'should_validate': False,
+
     # Tolerance toggles
     'normalize_line_endings': True,
     'repair_truncated_msh': True,
@@ -193,6 +197,8 @@ class ChannelHL7MLLPWrapper(Wrapper):
             max_message_size=max_msg_size_bytes,
             should_log_messages=asbool(self.config.should_log_messages),
             should_return_errors=asbool(self.config.should_return_errors),
+            should_parse_on_input=asbool(self.config.should_parse_on_input),
+            should_validate=asbool(self.config.should_validate),
             default_character_encoding=self.config.default_character_encoding,
             should_normalize_line_endings=asbool(self.config.normalize_line_endings),
             should_repair_truncated_msh=asbool(self.config.repair_truncated_msh),
@@ -248,12 +254,9 @@ class ChannelHL7MLLPWrapper(Wrapper):
             # .. if rest_only is set, the MLLP listener is not started ..
             rest_only = asbool(self.config.rest_only)
 
-            if not rest_only:
-
-                # Start the shared server if needed ..
-                self._ensure_shared_server_started()
-
-            # .. register this channel's routing rule only if the channel is active ..
+            # .. register this channel's routing rule only if the channel is active.
+            # The route is registered before the listener starts so the server
+            # never accepts a message for which no route exists yet ..
             if self.config.is_active and not rest_only:
                 _shared_state.router.add_route(
                     channel_name=self.config.name,
@@ -269,6 +272,10 @@ class ChannelHL7MLLPWrapper(Wrapper):
                     msh12_version_id=self.config.msh12_version_id,
                     is_default=asbool(self.config.is_default),
                 )
+
+            # .. start the shared server if needed, now that the route is in place ..
+            if not rest_only:
+                self._ensure_shared_server_started()
 
             _shared_state.channel_count += 1
             self.is_connected = True

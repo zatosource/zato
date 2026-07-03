@@ -185,6 +185,9 @@ class TestMLLPOutconnWire:
             service='test.hl7.mllp.forward',
             is_default=True,
             pool_size=1,
+
+            # The forward service needs the raw ER7 text to send it through the outconn
+            should_parse_on_input=False,
         )
 
         assert 'id' in response
@@ -312,6 +315,12 @@ class TestMLLPOutconnWire:
             service='test.hl7.mllp.forward',
             is_default=True,
             pool_size=1,
+
+            # The forward service needs the raw ER7 text to send it through the outconn
+            should_parse_on_input=False,
+
+            # The test asserts the ERR segment carries error details
+            should_return_errors=True,
         )
 
         assert 'id' in response

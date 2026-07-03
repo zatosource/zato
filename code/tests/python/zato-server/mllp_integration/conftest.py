@@ -268,10 +268,14 @@ def zato_server() -> 'strobj_dict_gen':
     # Pick the port for the shared internal MLLP server upfront so tests know it in advance
     mllp_port = _find_free_port()
 
+    # The file test services use to exchange received messages with the test process
+    messages_file = os.path.join(_temp_directory, 'mllp_messages.txt')
+
     server_environment = os.environ.copy()
     server_environment['Zato_Config_Bind_Port'] = str(port)
     server_environment['Zato_Broker_HTTP_Port'] = str(broker_port)
     server_environment['Zato_HL7_MLLP_Port'] = str(mllp_port)
+    server_environment['Zato_Test_MLLP_Messages_File'] = messages_file
     _ = server_environment.pop('COVERAGE_PROCESS_START', None)
 
     _server_process = subprocess.Popen(

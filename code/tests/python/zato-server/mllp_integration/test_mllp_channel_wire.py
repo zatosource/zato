@@ -145,6 +145,12 @@ class TestMLLPChannelWire:
             service='test.hl7.mllp.echo',
             is_default=True,
             pool_size=1,
+
+            # The echo service needs the raw ER7 text, not a parsed message object
+            should_parse_on_input=False,
+
+            # The error test asserts the ERR segment carries error details
+            should_return_errors=True,
         )
 
         assert 'id' in response
