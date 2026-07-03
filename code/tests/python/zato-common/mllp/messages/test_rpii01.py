@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import RpiI01
-from zato.hl7v2.v2_9.segments import IN1, IN2, IN3, MSA, MSH, PID, PRD, UAC
+from zato.hl7v2.v2_9.messages import RPI_I01
 
 
 class TestRpiI01:
     """Comprehensive tests for RpiI01 message."""
 
     def test_rpi_i01_create(self):
-        msg = RpiI01()
+        msg = RPI_I01()
         assert msg._structure_id == "RPI_I01"
 
     def test_rpi_i01_segment_access(self):
-        msg = RpiI01()
+        msg = RPI_I01()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -27,14 +25,14 @@ class TestRpiI01:
         assert msg.in3._segment_id == "IN3"
 
     def test_rpi_i01_to_dict(self):
-        msg = RpiI01()
+        msg = RPI_I01()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "RPI_I01"
 
     def test_rpi_i01_to_json(self):
-        msg = RpiI01()
+        msg = RPI_I01()
 
         result = json.loads(msg.to_json())
 

@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import EhcE15
-from zato.hl7v2.v2_9.segments import ADJ, IPR, IVC, MSH, PMT, PRT, PSG, PSL, PSS, PYE
+from zato.hl7v2.v2_9.messages import EHC_E15
 
 
 class TestEhcE15:
     """Comprehensive tests for EhcE15 message."""
 
     def test_ehc_e15_create(self):
-        msg = EhcE15()
+        msg = EHC_E15()
         assert msg._structure_id == "EHC_E15"
 
     def test_ehc_e15_segment_access(self):
-        msg = EhcE15()
+        msg = EHC_E15()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.pmt._segment_id == "PMT"
@@ -29,14 +27,14 @@ class TestEhcE15:
         assert msg.prt._segment_id == "PRT"
 
     def test_ehc_e15_to_dict(self):
-        msg = EhcE15()
+        msg = EHC_E15()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "EHC_E15"
 
     def test_ehc_e15_to_json(self):
-        msg = EhcE15()
+        msg = EHC_E15()
 
         result = json.loads(msg.to_json())
 

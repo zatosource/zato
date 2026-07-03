@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import OmnO07
-from zato.hl7v2.v2_9.segments import BLG, GT1, IN1, IN2, IN3, MSH, OBX, ORC, PD1, PID, PV1, PV2, RQ1, RQD, TQ1, UAC
+from zato.hl7v2.v2_9.messages import OMN_O07
 
 
 class TestOmnO07:
     """Comprehensive tests for OmnO07 message."""
 
     def test_omn_o07_create(self):
-        msg = OmnO07()
+        msg = OMN_O07()
         assert msg._structure_id == "OMN_O07"
 
     def test_omn_o07_segment_access(self):
-        msg = OmnO07()
+        msg = OMN_O07()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -35,14 +33,14 @@ class TestOmnO07:
         assert msg.blg._segment_id == "BLG"
 
     def test_omn_o07_to_dict(self):
-        msg = OmnO07()
+        msg = OMN_O07()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "OMN_O07"
 
     def test_omn_o07_to_json(self):
-        msg = OmnO07()
+        msg = OMN_O07()
 
         result = json.loads(msg.to_json())
 

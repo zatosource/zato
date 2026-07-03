@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import OpuR25
-from zato.hl7v2.v2_9.segments import INV, MSH, NTE, OBR, OBX, OH3, ORC, PD1, PID, PV1, PV2, SAC, SPM, TQ1, UAC
+from zato.hl7v2.v2_9.messages import OPU_R25
 
 
 class TestOpuR25:
     """Comprehensive tests for OpuR25 message."""
 
     def test_opu_r25_create(self):
-        msg = OpuR25()
+        msg = OPU_R25()
         assert msg._structure_id == "OPU_R25"
 
     def test_opu_r25_segment_access(self):
-        msg = OpuR25()
+        msg = OPU_R25()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -37,14 +35,14 @@ class TestOpuR25:
         assert msg.obx._segment_id == "OBX"
 
     def test_opu_r25_to_dict(self):
-        msg = OpuR25()
+        msg = OPU_R25()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "OPU_R25"
 
     def test_opu_r25_to_json(self):
-        msg = OpuR25()
+        msg = OPU_R25()
 
         result = json.loads(msg.to_json())
 

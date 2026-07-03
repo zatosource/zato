@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import PpgPcg
-from zato.hl7v2.v2_9.segments import GOL, MSH, OBR, OBX, ORC, PID, PRB, PRD, PRT, PTH, PV1, PV2, UAC
+from zato.hl7v2.v2_9.messages import PPG_PCG
 
 
 class TestPpgPcg:
     """Comprehensive tests for PpgPcg message."""
 
     def test_ppg_pcg_create(self):
-        msg = PpgPcg()
+        msg = PPG_PCG()
         assert msg._structure_id == "PPG_PCG"
 
     def test_ppg_pcg_segment_access(self):
-        msg = PpgPcg()
+        msg = PPG_PCG()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -36,14 +34,14 @@ class TestPpgPcg:
         assert msg.obx._segment_id == "OBX"
 
     def test_ppg_pcg_to_dict(self):
-        msg = PpgPcg()
+        msg = PPG_PCG()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "PPG_PCG"
 
     def test_ppg_pcg_to_json(self):
-        msg = PpgPcg()
+        msg = PPG_PCG()
 
         result = json.loads(msg.to_json())
 

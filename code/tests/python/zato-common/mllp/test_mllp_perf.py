@@ -14,7 +14,7 @@ import time
 # Zato
 from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
 
-from conftest import sample_adt_a01, start_sequence, end_sequence, perf_log
+from mllp_live_util import end_sequence, perf_log, sample_adt_a01, start_sequence
 
 # ################################################################################################################################
 # ################################################################################################################################

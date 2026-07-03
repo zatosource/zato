@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 
 class TestSegmentClassImports:
     """Test that all segment classes can be imported directly."""

@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import PppPcb
-from zato.hl7v2.v2_9.segments import GOL, MSH, OBR, OBX, ORC, PID, PRB, PRD, PRT, PTH, PV1, PV2, UAC
+from zato.hl7v2.v2_9.messages import PPP_PCB
 
 
 class TestPppPcb:
     """Comprehensive tests for PppPcb message."""
 
     def test_ppp_pcb_create(self):
-        msg = PppPcb()
+        msg = PPP_PCB()
         assert msg._structure_id == "PPP_PCB"
 
     def test_ppp_pcb_segment_access(self):
-        msg = PppPcb()
+        msg = PPP_PCB()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -36,14 +34,14 @@ class TestPppPcb:
         assert msg.obx._segment_id == "OBX"
 
     def test_ppp_pcb_to_dict(self):
-        msg = PppPcb()
+        msg = PPP_PCB()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "PPP_PCB"
 
     def test_ppp_pcb_to_json(self):
-        msg = PppPcb()
+        msg = PPP_PCB()
 
         result = json.loads(msg.to_json())
 

@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import CcrI16
-from zato.hl7v2.v2_9.segments import ACC, AIG, AIL, AIP, AIS, AL1, DB1, DG1, DRG, GOL, IAM, IN1, IN2, IN3, MSH, OBR, OBX, ODS, ORC, PD1, PID, PR1, PRB, PRD, PRT, PTH, PV1, PV2, RF1, RGS, RMI, RXA, RXE, RXO, RXR, SCH, TQ1, UAC
+from zato.hl7v2.v2_9.messages import CCR_I16
 
 
 class TestCcrI16:
     """Comprehensive tests for CcrI16 message."""
 
     def test_ccr_i16_create(self):
-        msg = CcrI16()
+        msg = CCR_I16()
         assert msg._structure_id == "CCR_I16"
 
     def test_ccr_i16_segment_access(self):
-        msg = CcrI16()
+        msg = CCR_I16()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -78,14 +76,14 @@ class TestCcrI16:
         assert msg.obx._segment_id == "OBX"
 
     def test_ccr_i16_to_dict(self):
-        msg = CcrI16()
+        msg = CCR_I16()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "CCR_I16"
 
     def test_ccr_i16_to_json(self):
-        msg = CcrI16()
+        msg = CCR_I16()
 
         result = json.loads(msg.to_json())
 

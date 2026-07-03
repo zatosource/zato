@@ -10,16 +10,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import contextlib
 import ipaddress
 import os
-import re
 import shutil
 import socket
 import ssl
-import subprocess
-import sys
 import tempfile
-import time
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import Generator
 
 # cryptography
@@ -28,25 +23,20 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
 
-# colorama
-from colorama import Fore, Style, init as colorama_init
-
 # pytest
 import pytest
 
 # Zato
 from zato.common.hl7.mllp.client import HL7MLLPClient
 
+# Zato
+from mllp_live_util import end_sequence, start_sequence, start_server, stop_server
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.typing_ import callable_
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-colorama_init(autoreset=True)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -59,94 +49,7 @@ socketgen      = Generator[socket.socket, None, None]
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# Standard MLLP framing bytes
-_start_sequence = b'\x0b'
-_end_sequence   = b'\x1c\x0d'
-
-# Path to the test server script
-_test_server_script = str(Path(__file__).parent / 'mllp_test_server.py')
-
-# How long to wait for the server to print READY
-_server_startup_timeout_seconds = 10
-
-# How long to wait for the server process to terminate after SIGTERM
-_server_shutdown_timeout_seconds = 5
-
-# ################################################################################################################################
-# ################################################################################################################################
-# Part 1 - Server process helpers
-# ################################################################################################################################
-# ################################################################################################################################
-
-def start_server(**overrides:'object') -> 'tuple[subprocess.Popen, int]':
-    """ Starts the MLLP test server as a subprocess and waits for the READY signal.
-    Returns (process, port).
-    """
-
-    command = [sys.executable, _test_server_script, '--port', '0']
-
-    for key, value in overrides.items():
-
-        # Convert Python snake_case kwarg to CLI --kebab-case arg
-        cli_key = '--' + key.replace('_', '-')
-
-        # Boolean toggles use --no- prefix for False
-        if isinstance(value, bool):
-            if not value:
-                cli_key = '--no-' + key.replace('_', '-')
-            command.append(cli_key)
-        else:
-            command.append(cli_key)
-            command.append(str(value))
-
-    process = subprocess.Popen(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-    )
-
-    # Read stdout until we see the READY line
-    deadline = time.monotonic() + _server_startup_timeout_seconds
-    port = 0
-
-    for line in process.stdout: # type: ignore[union-attr]
-
-        stripped_line = line.strip()
-        match = re.match(r'^READY:(\d+)$', stripped_line)
-
-        if match:
-            port = int(match.group(1))
-            break
-
-        if time.monotonic() > deadline:
-            process.kill()
-            raise RuntimeError(f'MLLP test server did not print READY within {_server_startup_timeout_seconds}s')
-
-    if port == 0:
-        process.kill()
-        raise RuntimeError('MLLP test server exited before printing READY')
-
-    return process, port
-
-# ################################################################################################################################
-
-def stop_server(process:'subprocess.Popen') -> 'None':
-    """ Sends SIGTERM to the server process and waits for it to exit.
-    Falls back to SIGKILL if it does not exit in time.
-    """
-    process.terminate()
-
-    try:
-        process.wait(timeout=_server_shutdown_timeout_seconds)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait()
-
-# ################################################################################################################################
-# ################################################################################################################################
-# Part 2 - TLS certificate generation
+# Part 1 - TLS certificate generation
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -246,9 +149,10 @@ def _write_cert(tmp_dir:'str', filename:'str', cert:'x509.Certificate') -> 'str'
     """ Writes a certificate to a PEM file and returns the path.
     """
     path = os.path.join(tmp_dir, filename)
+    cert_bytes = cert.public_bytes(serialization.Encoding.PEM)
 
     with open(path, 'wb') as file_handle:
-        file_handle.write(cert.public_bytes(serialization.Encoding.PEM))
+        _ = file_handle.write(cert_bytes)
 
     return path
 
@@ -259,20 +163,20 @@ def _write_key(tmp_dir:'str', filename:'str', key:'ec.EllipticCurvePrivateKey') 
     """
     path = os.path.join(tmp_dir, filename)
 
+    key_bytes = key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+
     with open(path, 'wb') as file_handle:
-        file_handle.write(
-            key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption(),
-            )
-        )
+        _ = file_handle.write(key_bytes)
 
     return path
 
 # ################################################################################################################################
 # ################################################################################################################################
-# Part 3 - Pytest fixtures
+# Part 2 - Pytest fixtures
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -312,7 +216,7 @@ def mllp_tls_server(tls_certs:'strstrdict') -> 'intgen':
 
 # ################################################################################################################################
 # ################################################################################################################################
-# Part 4 - Client factories and sample messages
+# Part 3 - Client factories
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -324,8 +228,8 @@ def make_client() -> 'callable_':
         return HL7MLLPClient(
             '127.0.0.1',
             port,
-            _start_sequence,
-            _end_sequence,
+            start_sequence,
+            end_sequence,
             receive_timeout=5.0,
             ssl_context=ssl_context,
         )
@@ -358,94 +262,3 @@ def make_raw_sender() -> 'callable_':
 
 # ################################################################################################################################
 # ################################################################################################################################
-# Sample HL7 messages
-# ################################################################################################################################
-# ################################################################################################################################
-
-def sample_adt_a01(control_id:'str'='CTRL001') -> 'bytes':
-    """ Returns a well-formed ADT^A01 message as bytes.
-    """
-    message = (
-        f'MSH|^~\\&|SendApp|SendFac|RecvApp|RecvFac|20230101120000||ADT^A01|{control_id}|P|2.5\r'
-        f'PID|||12345^^^MRN||Doe^John||19800101|M\r'
-        f'PV1||I|ICU^Room1'
-    )
-    return message.encode('utf-8')
-
-# ################################################################################################################################
-
-def sample_oru_r01(control_id:'str'='CTRL002') -> 'bytes':
-    """ Returns a well-formed ORU^R01 message as bytes.
-    """
-    message = (
-        f'MSH|^~\\&|LabSys|LabFac|OrderSys|OrderFac|20230101130000||ORU^R01|{control_id}|P|2.5\r'
-        f'PID|||67890^^^MRN||Smith^Jane||19900515|F\r'
-        f'OBR|1||LAB001|CBC^Complete Blood Count\r'
-        f'OBX|1|NM|WBC^White Blood Count||7.5|10*3/uL|4.5-11.0|N|||F'
-    )
-    return message.encode('utf-8')
-
-# ################################################################################################################################
-
-def sample_wellness_oru() -> 'bytes':
-    """ Returns a wellness ORU^R01 message with body temperature as bytes.
-    """
-    message = (
-        'MSH|^~\\&|VitalMon|ICU|EHR|Hospital|20260525100000||ORU^R01^ORU_R01|WLN001|P|2.9\r'
-        'PID|1||PAT001^^^Hosp^MR||Garcia^Maria||19750812|F\r'
-        'OBR|1||VIT001|VS^Vital Signs\r'
-        'OBX|1|NM|8310-5^Body temperature^LN||36.8|Cel|36.1-37.2|N|||F'
-    )
-    return message.encode('utf-8')
-
-# ################################################################################################################################
-# ################################################################################################################################
-# Performance logging helper
-# ################################################################################################################################
-# ################################################################################################################################
-
-_perf_label_width = 40
-
-def perf_log(label:'str', value:'float', unit:'str', threshold:'float'=0.0) -> 'None':
-    """ Prints a colorama-formatted performance result line.
-
-    Format: [PERF] Label ............. Value unit [PASS/FAIL]
-    """
-
-    # Build the dot-padded label
-    dots_needed = _perf_label_width - len(label)
-
-    if dots_needed < 3:
-        dots_needed = 3
-
-    dots = '.' * dots_needed
-
-    prefix = f'{Fore.CYAN}{Style.BRIGHT}[PERF]{Style.RESET_ALL}'
-    padded_label = f' {label} {Fore.WHITE}{Style.DIM}{dots}{Style.RESET_ALL} '
-
-    # Color the value green or red depending on threshold
-    if threshold > 0.0 and value < threshold:
-        colored_value = f'{Fore.RED}{Style.BRIGHT}{value:,.1f}{Style.RESET_ALL}'
-        suffix = f' {Fore.RED}{Style.BRIGHT}[FAIL]{Style.RESET_ALL}'
-    elif threshold > 0.0:
-        colored_value = f'{Fore.GREEN}{Style.BRIGHT}{value:,.1f}{Style.RESET_ALL}'
-        suffix = f' {Fore.GREEN}{Style.BRIGHT}[PASS]{Style.RESET_ALL}'
-    else:
-        colored_value = f'{Fore.GREEN}{Style.BRIGHT}{value:,.1f}{Style.RESET_ALL}'
-        suffix = ''
-
-    unit_display = f' {Fore.WHITE}{unit}{Style.RESET_ALL}'
-
-    print(f'{prefix}{padded_label}{colored_value}{unit_display}{suffix}')
-
-# ################################################################################################################################
-# ################################################################################################################################
-# Re-exports for convenience in test files
-# ################################################################################################################################
-# ################################################################################################################################
-
-# These are re-exported so test files can import from conftest without reaching
-# into the production code directly for framing constants.
-
-start_sequence = _start_sequence
-end_sequence   = _end_sequence

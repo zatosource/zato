@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import RtbKnn
-from zato.hl7v2.v2_9.segments import DSC, ERR, MSA, MSH, QAK, QPD, UAC
+from zato.hl7v2.v2_9.messages import RTB_Knn
 
 
 class TestRtbKnn:
     """Comprehensive tests for RtbKnn message."""
 
     def test_rtb_knn_create(self):
-        msg = RtbKnn()
+        msg = RTB_Knn()
         assert msg._structure_id == "RTB_Knn"
 
     def test_rtb_knn_segment_access(self):
-        msg = RtbKnn()
+        msg = RTB_Knn()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -26,14 +24,14 @@ class TestRtbKnn:
         assert msg.dsc._segment_id == "DSC"
 
     def test_rtb_knn_to_dict(self):
-        msg = RtbKnn()
+        msg = RTB_Knn()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "RTB_Knn"
 
     def test_rtb_knn_to_json(self):
-        msg = RtbKnn()
+        msg = RTB_Knn()
 
         result = json.loads(msg.to_json())
 

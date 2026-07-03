@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import OulR22
-from zato.hl7v2.v2_9.segments import DEV, DSC, INV, MSH, NTE, OBR, OBX, ORC, PD1, PID, PV1, PV2, SAC, SPM, TCD, TQ1, TXA, UAC
+from zato.hl7v2.v2_9.messages import OUL_R22
 
 
 class TestOulR22:
     """Comprehensive tests for OulR22 message."""
 
     def test_oul_r22_create(self):
-        msg = OulR22()
+        msg = OUL_R22()
         assert msg._structure_id == "OUL_R22"
 
     def test_oul_r22_segment_access(self):
-        msg = OulR22()
+        msg = OUL_R22()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -40,14 +38,14 @@ class TestOulR22:
         assert msg.dsc._segment_id == "DSC"
 
     def test_oul_r22_to_dict(self):
-        msg = OulR22()
+        msg = OUL_R22()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "OUL_R22"
 
     def test_oul_r22_to_json(self):
-        msg = OulR22()
+        msg = OUL_R22()
 
         result = json.loads(msg.to_json())
 

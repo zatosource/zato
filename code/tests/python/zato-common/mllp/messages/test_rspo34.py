@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import RspO34
-from zato.hl7v2.v2_9.segments import DON, ERR, MSA, MSH, OBX, PD1, PID, PV1, QAK, QPD, UAC
+from zato.hl7v2.v2_9.messages import RSP_O34
 
 
 class TestRspO34:
     """Comprehensive tests for RspO34 message."""
 
     def test_rsp_o34_create(self):
-        msg = RspO34()
+        msg = RSP_O34()
         assert msg._structure_id == "RSP_O34"
 
     def test_rsp_o34_segment_access(self):
-        msg = RspO34()
+        msg = RSP_O34()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -31,14 +29,14 @@ class TestRspO34:
         assert msg.obx._segment_id == "OBX"
 
     def test_rsp_o34_to_dict(self):
-        msg = RspO34()
+        msg = RSP_O34()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "RSP_O34"
 
     def test_rsp_o34_to_json(self):
-        msg = RspO34()
+        msg = RSP_O34()
 
         result = json.loads(msg.to_json())
 

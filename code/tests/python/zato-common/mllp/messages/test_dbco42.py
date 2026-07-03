@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import DbcO42
-from zato.hl7v2.v2_9.segments import MSH, OBX, PD1, PID, UAC
+from zato.hl7v2.v2_9.messages import DBC_O42
 
 
 class TestDbcO42:
     """Comprehensive tests for DbcO42 message."""
 
     def test_dbc_o42_create(self):
-        msg = DbcO42()
+        msg = DBC_O42()
         assert msg._structure_id == "DBC_O42"
 
     def test_dbc_o42_segment_access(self):
-        msg = DbcO42()
+        msg = DBC_O42()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -24,14 +22,14 @@ class TestDbcO42:
         assert msg.obx._segment_id == "OBX"
 
     def test_dbc_o42_to_dict(self):
-        msg = DbcO42()
+        msg = DBC_O42()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "DBC_O42"
 
     def test_dbc_o42_to_json(self):
-        msg = DbcO42()
+        msg = DBC_O42()
 
         result = json.loads(msg.to_json())
 

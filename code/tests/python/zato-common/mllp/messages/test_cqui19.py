@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import CquI19
-from zato.hl7v2.v2_9.segments import ACC, AIG, AIL, AIP, AIS, AL1, DB1, DG1, DRG, GOL, IAM, IN1, IN2, IN3, MSA, MSH, OBR, OBX, ODS, ORC, PD1, PDA, PID, PR1, PRB, PRD, PRT, PTH, PV1, PV2, RF1, RGS, RMI, RXE, RXO, RXR, SCH, UAC
+from zato.hl7v2.v2_9.messages import CQU_I19
 
 
 class TestCquI19:
     """Comprehensive tests for CquI19 message."""
 
     def test_cqu_i19_create(self):
-        msg = CquI19()
+        msg = CQU_I19()
         assert msg._structure_id == "CQU_I19"
 
     def test_cqu_i19_segment_access(self):
-        msg = CquI19()
+        msg = CQU_I19()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -73,14 +71,14 @@ class TestCquI19:
         assert msg.obx._segment_id == "OBX"
 
     def test_cqu_i19_to_dict(self):
-        msg = CquI19()
+        msg = CQU_I19()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "CQU_I19"
 
     def test_cqu_i19_to_json(self):
-        msg = CquI19()
+        msg = CQU_I19()
 
         result = json.loads(msg.to_json())
 

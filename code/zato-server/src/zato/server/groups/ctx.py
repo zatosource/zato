@@ -236,10 +236,19 @@ class SecurityGroupsCtx:
 
     def check_security_apikey(self, cid:'str', channel_name:'str', header_value:'str') -> 'intnone':
 
-        if sec_info := self.apikey_credentials.get(header_value):
-            return sec_info.security_id
-        else:
+        # Our response to produce
+        out = None
+
+        # Compare the incoming key against every stored one without stopping early ..
+        # .. so that the time taken does not reveal whether a key exists or how much of it matched.
+        for stored_value, sec_info in self.apikey_credentials.items():
+            if is_string_equal(header_value, stored_value):
+                out = sec_info.security_id
+
+        if out is None:
             logger.info(f'Invalid API key; channel={channel_name}; cid={cid}')
+
+        return out
 
 # ################################################################################################################################
 

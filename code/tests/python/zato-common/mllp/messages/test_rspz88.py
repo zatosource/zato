@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import RspZ88
-from zato.hl7v2.v2_9.segments import DSC, ERR, MSA, MSH, OBX, ORC, PD1, PID, PV1, PV2, QAK, QPD, RCP, RXD, RXE, RXO, TQ1, UAC
+from zato.hl7v2.v2_9.messages import RSP_Z88
 
 
 class TestRspZ88:
     """Comprehensive tests for RspZ88 message."""
 
     def test_rsp_z88_create(self):
-        msg = RspZ88()
+        msg = RSP_Z88()
         assert msg._structure_id == "RSP_Z88"
 
     def test_rsp_z88_segment_access(self):
-        msg = RspZ88()
+        msg = RSP_Z88()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -38,14 +36,14 @@ class TestRspZ88:
         assert msg.dsc._segment_id == "DSC"
 
     def test_rsp_z88_to_dict(self):
-        msg = RspZ88()
+        msg = RSP_Z88()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "RSP_Z88"
 
     def test_rsp_z88_to_json(self):
-        msg = RspZ88()
+        msg = RSP_Z88()
 
         result = json.loads(msg.to_json())
 

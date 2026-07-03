@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 from zato.hl7v2.v2_9.segments import (
     ABS,
     ACC,

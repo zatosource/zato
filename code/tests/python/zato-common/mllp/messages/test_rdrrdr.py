@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import RdrRdr
-from zato.hl7v2.v2_9.segments import DSC, MSA, MSH, ORC, PID, RXD, RXE, SFT, TQ1, UAC
+from zato.hl7v2.v2_9.messages import RDR_RDR
 
 
 class TestRdrRdr:
     """Comprehensive tests for RdrRdr message."""
 
     def test_rdr_rdr_create(self):
-        msg = RdrRdr()
+        msg = RDR_RDR()
         assert msg._structure_id == "RDR_RDR"
 
     def test_rdr_rdr_segment_access(self):
-        msg = RdrRdr()
+        msg = RDR_RDR()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.msa._segment_id == "MSA"
@@ -30,14 +28,14 @@ class TestRdrRdr:
         assert msg.dsc._segment_id == "DSC"
 
     def test_rdr_rdr_to_dict(self):
-        msg = RdrRdr()
+        msg = RDR_RDR()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "RDR_RDR"
 
     def test_rdr_rdr_to_json(self):
-        msg = RdrRdr()
+        msg = RDR_RDR()
 
         result = json.loads(msg.to_json())
 

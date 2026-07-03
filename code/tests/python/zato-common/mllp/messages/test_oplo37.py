@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import OplO37
-from zato.hl7v2.v2_9.segments import AL1, BLG, GT1, IN1, IN2, IN3, MSH, OBR, OBX, ORC, PD1, PID, PRT, PV1, PV2, SAC, SGH, SGT, SPM, TCD, TQ1, UAC
+from zato.hl7v2.v2_9.messages import OPL_O37
 
 
 class TestOplO37:
     """Comprehensive tests for OplO37 message."""
 
     def test_opl_o37_create(self):
-        msg = OplO37()
+        msg = OPL_O37()
         assert msg._structure_id == "OPL_O37"
 
     def test_opl_o37_segment_access(self):
-        msg = OplO37()
+        msg = OPL_O37()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -50,14 +48,14 @@ class TestOplO37:
         assert msg.blg._segment_id == "BLG"
 
     def test_opl_o37_to_dict(self):
-        msg = OplO37()
+        msg = OPL_O37()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "OPL_O37"
 
     def test_opl_o37_to_json(self):
-        msg = OplO37()
+        msg = OPL_O37()
 
         result = json.loads(msg.to_json())
 
