@@ -50,6 +50,7 @@ def _send_raw_and_recv(port:'int', message_bytes:'bytes') -> 'bytes':
 # A well-formed ADT^A01 with standard CR line endings
 _standard_adt = (
     'MSH|^~\\&|SendApp|SendFac|RecvApp|RecvFac|20230101120000||ADT^A01|QUIRK_CTRL|P|2.5\r'
+    'EVN|A01|20230101120000\r'
     'PID|||12345^^^MRN||Doe^John||19800101|M'
 )
 
@@ -107,6 +108,7 @@ class TestForceStandardDelimiters:
             # Use # as the component separator instead of ^ ..
             nonstandard_message = (
                 'MSH|#~\\&|SendApp|SendFac|RecvApp|RecvFac|20230101120000||ADT#A01|DELIM_CTRL|P|2.5\r'
+                'EVN|A01|20230101120000\r'
                 'PID|||12345^^^MRN||Doe^John||19800101|M'
             )
             response = _send_raw_and_recv(port, nonstandard_message.encode('utf-8'))
@@ -186,6 +188,7 @@ class TestSplitConcatenatedMessages:
             # Two messages concatenated without MLLP framing between them ..
             message_a = (
                 'MSH|^~\\&|SendApp|SendFac|RecvApp|RecvFac|20230101120000||ADT^A01|CONCAT_A|P|2.5\r'
+                'EVN|A01|20230101120000\r'
                 'PID|||12345^^^MRN||Doe^John||19800101|M'
             )
             message_b = (
@@ -267,6 +270,7 @@ class TestUseMSH18Encoding:
             # MSH-18 is field index 17 (0-based from split) ..
             msh18_message = (
                 'MSH|^~\\&|SendApp|SendFac|RecvApp|RecvFac|20230101120000||ADT^A01|MSH18_CTRL|P|2.5|||AL|NE||UNICODE UTF-8\r'
+                'EVN|A01|20230101120000\r'
                 'PID|||12345^^^MRN||Doe^John||19800101|M'
             )
             response = _send_raw_and_recv(port, msh18_message.encode('utf-8'))

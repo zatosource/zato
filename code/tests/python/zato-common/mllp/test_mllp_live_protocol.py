@@ -46,6 +46,7 @@ class TestEncodingISO88591:
             # Build a message with an ISO-8859-1 character (accented e) ..
             message_text = (
                 'MSH|^~\\&|SendApp|SendFac|RecvApp|RecvFac|20230101120000||ADT^A01|ISO_CTRL|P|2.5\r'
+                'EVN|A01|20230101120000\r'
                 'PID|||12345^^^MRN||M\xfcller^Hans||19800101|M'
             )
             message_bytes = message_text.encode('iso-8859-1')
